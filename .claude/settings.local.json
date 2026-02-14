@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(if not exist \"C:\\\\Users\\\\Jiraw\\\\OneDrive\\\\Documents\\\\qa-localization-tool\\\\_bmad-output\\\\planning-artifacts\\\\research\" mkdir \"C:\\\\Users\\\\Jiraw\\\\OneDrive\\\\Documents\\\\qa-localization-tool\\\\_bmad-output\\\\planning-artifacts\\\\research\")",
+      "WebSearch",
+      "Bash(if not exist \"C:\\\\Users\\\\Jiraw\\\\OneDrive\\\\Documents\\\\qa-localization-tool\\\\_bmad-output\\\\planning-artifacts\" mkdir \"C:\\\\Users\\\\Jiraw\\\\OneDrive\\\\Documents\\\\qa-localization-tool\\\\_bmad-output\\\\planning-artifacts\")",
+      "WebFetch(domain:docs.xbench.net)",
+      "WebFetch(domain:themqm.org)",
+      "WebFetch(domain:mitratranslations.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:benjamin-ayangbola.medium.com)",
+      "WebFetch(domain:arxiv.org)",
+      "WebFetch(domain:www.inngest.com)",
+      "WebFetch(domain:www.promptingguide.ai)",
+      "Bash(if not exist \"C:\\\\Users\\\\Jiraw\\\\OneDrive\\\\Documents\\\\qa-localization-tool\\\\_bmad-output\" mkdir \"C:\\\\Users\\\\Jiraw\\\\OneDrive\\\\Documents\\\\qa-localization-tool\\\\_bmad-output\")",
+      "WebFetch(domain:wiki.tqauditor.com)",
+      "WebFetch(domain:docs.lokalise.com)",
+      "Bash(git clone:*)",
+      "Bash(npx @kayvan/markdown-tree-parser:*)",
+      "Bash(\"C:\\\\Users\\\\Jiraw\\\\OneDrive\\\\Documents\\\\qa-localization-tool\\\\_bmad-output\\\\planning-artifacts\\\\validation-round2-results.txt\" << 'EOF'\n=== VALIDATION ROUND 2 RESULTS ===\n\nMVP SCOPE ITEMS \\(14 items from Section 3\\):\n1. 3-Layer QA Pipeline → FR8, FR9, FR10\n2. SDLXLIFF + XLIFF 1.2 + Excel parsing → FR3, FR4, FR5\n3. Batch upload + summary → FR1, FR2\n4. Issue list + segment navigation + severity filter → FR18, FR19, FR20, FR30\n5. AI suggestions with confidence + Accept/Reject/Flag → FR21, FR22, FR23, FR24, FR25, FR26\n6. Bulk accept/reject → FR27\n7. Auto-pass system → FR28, FR29, FR55, FR62\n8. Glossary import → FR36, FR37, FR38, FR39, FR67\n9. Report export + Smart report → FR40, FR41, FR42, FR43, FR44\n10. Role-based access → FR45, FR46, FR47, FR50, FR51\n11. Economy/Thorough modes → FR14\n12. Supabase Auth + project management → FR47\n13. Model-agnostic AI → FR66 \\(implied by architecture\\)\n14. Admin taxonomy mapping → FR48, FR49\n\nAll 14 MVP scope items have corresponding FRs.\nEOF)",
+      "Bash(git init:*)",
+      "Bash(git remote add:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

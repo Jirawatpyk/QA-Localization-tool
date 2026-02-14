@@ -1,0 +1,19 @@
+=== VALIDATION ROUND 2 RESULTS ===
+
+MVP SCOPE ITEMS (14 items from Section 3):
+1. 3-Layer QA Pipeline → FR8, FR9, FR10
+2. SDLXLIFF + XLIFF 1.2 + Excel parsing → FR3, FR4, FR5
+3. Batch upload + summary → FR1, FR2
+4. Issue list + segment navigation + severity filter → FR18, FR19, FR20, FR30
+5. AI suggestions with confidence + Accept/Reject/Flag → FR21, FR22, FR23, FR24, FR25, FR26
+6. Bulk accept/reject → FR27
+7. Auto-pass system → FR28, FR29, FR55, FR62
+8. Glossary import → FR36, FR37, FR38, FR39, FR67
+9. Report export + Smart report → FR40, FR41, FR42, FR43, FR44
+10. Role-based access → FR45, FR46, FR47, FR50, FR51
+11. Economy/Thorough modes → FR14
+12. Supabase Auth + project management → FR47
+13. Model-agnostic AI → FR66 (implied by architecture)
+14. Admin taxonomy mapping → FR48, FR49
+
+All 14 MVP scope items have corresponding FRs.
