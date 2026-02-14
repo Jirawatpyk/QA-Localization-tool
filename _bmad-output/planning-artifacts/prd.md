@@ -44,6 +44,8 @@ author: Mona
 lastEdited: '2026-02-14'
 editHistory:
   - date: '2026-02-14'
+    changes: 'UX Party Mode backport: Added 4 new review actions (Note, Source Issue, Severity Override, Add Finding) with FR76-FR80; added 8 Finding States lifecycle (Pending→Accepted→Accepted(override)→Rejected→Flagged→Noted→Source Issue→Manual); expanded FR30 Suppress Pattern with trigger/scope/duration detail from UX spec UJ6; enhanced FR56 Reviewer Selection for PM role with language-pair matching; updated Category 4 (7→12 items), Requirements Count (75→80), MVP Scope table, and roadmap accordingly'
+  - date: '2026-02-14'
     changes: 'PM review: FR73-FR75 (rule-based auto-fix) moved from MVP to Growth scope. MVP focuses on detection (Xbench parity), not correction. Schema design (fix_suggestions, self_healing_config tables) remains in MVP for Growth readiness. Updated Sections 3, 6, 8, 9 accordingly'
   - date: '2026-02-14'
     changes: 'Self-healing Translation integration: updated anti-pattern L696 + AI constraint L657 to allow rule-based auto-fix and verified AI fixes; added FR73-FR75 (rule-based auto-fix, preview, tracking); added Innovation #6 Self-healing Translation; updated Growth scope (Shadow+Assisted Mode) and Vision scope (Autonomous Mode+RAG+Analytics); added validation/risk entries for Self-healing; cross-referenced Self-healing Translation Research and separate Self-healing PRD. Party Mode review fixes: reconciled kill criteria thresholds (< 60% deprioritize / 60-85% retune / > 85% gate), clarified auto-apply paradigm shift (Growth=human approval, Vision=auto-apply verified), aligned with Self-healing PRD'
@@ -171,7 +173,7 @@ All 5 pillars must work together. If any one is missing, single-pass completion 
 - SDLXLIFF + XLIFF 1.2 + Excel bilingual parsing (Trados Studio primary)
 - Batch upload + batch summary ("7 auto-pass, 3 need review")
 - Issue list + segment navigation + severity filter (progressive disclosure)
-- AI suggestions with confidence scores + Accept/Reject/Flag actions
+- AI suggestions with confidence scores + 7 review actions (Accept/Reject/Flag/Note/Source Issue/Severity Override/Add Finding)
 - Bulk accept/reject for false positive fatigue reduction
 - Auto-pass system (Score > 95 + 0 Critical + AI Layer 2 clean) with audit trail
 - Glossary import (TBX, CSV, Excel)
@@ -350,7 +352,7 @@ All 5 pillars must work together. If any one is missing, single-pass completion 
 
 ### Journey Requirements Summary
 
-> 75 requirements จาก 6 journeys + 4 elicitation methods จัดกลุ่มเป็น 10 categories
+> 80 requirements จาก 6 journeys + 4 elicitation methods + UX Party Mode review จัดกลุ่มเป็น 10 categories
 > Source key: J=Journey, PM=Pre-mortem, WI=What-If, ST=Support-Theater
 
 #### 1. Core QA Engine (8 MVP, 0 Growth)
@@ -389,23 +391,28 @@ All 5 pillars must work together. If any one is missing, single-pass completion 
 | Confidence visual indicators (color-coded by threshold) | J3 | MVP |
 | AI explanation with back-translation (for non-native reviewers) | J3 | MVP |
 | Severity tooltips (definition + example + action guidance) | ST#5 | MVP |
-| Action tooltips (consequence explanation for Accept/Reject/Flag) | ST#5 | MVP |
+| Action tooltips (consequence explanation for all 7 review actions) | ST#5 | MVP |
 | First-time user onboarding tour (5-step walkthrough) | ST#5 | MVP |
 | Estimated time remaining + notification when complete | WI#1 | MVP |
 | Findings grouping by segment range (200+ findings) | WI#1 | Growth |
 | RTL support in segment viewer | WI#4 | Growth |
 
-#### 4. Review Actions & Decisions (7 MVP, 0 Growth)
+#### 4. Review Actions & Decisions (12 MVP, 0 Growth)
 
 | Capability | Source | Priority |
 |-----------|--------|:--------:|
-| Accept/Reject/Flag per finding | J2, J3, J5 | MVP |
+| 7 review actions per finding (Accept/Reject/Flag/Note/Source Issue/Severity Override/Add Finding) | J2, J3, J5, UX-PM | MVP |
+| Note action — stylistic observation, no state change (Hotkey: N) | UX-PM | MVP |
+| Source Issue action — reclassify as source text problem, not translation error (Hotkey: S) | UX-PM | MVP |
+| Severity Override — accept finding but downgrade severity (e.g., Critical → Minor) with score recalculation | UX-PM | MVP |
+| Add Finding — manually add finding not caught by system with Manual badge + MQM score impact (Hotkey: +) | UX-PM | MVP |
 | Bulk accept/reject | J2, J5 | MVP |
 | Bulk action confirmation dialog (> 5 items) | ST#4 | MVP |
 | Override action (append new entry, immutable + reversible) | ST#4 | MVP |
 | Flag for native review | J3 | MVP |
-| "Suppress this pattern" action (immediate, after 3+ rejects) | ST#3 | MVP |
+| "Suppress this pattern" action (trigger: 3+ rejects of same pattern; configurable scope + duration) | ST#3, UX-PM | MVP |
 | Option to disable AI suggestions temporarily (rule-based only) | J5 | MVP |
+| Finding lifecycle — 8 states (Pending/Accepted/Accepted-override/Rejected/Flagged/Noted/Source Issue/Manual) with defined score impact per state | UX-PM | MVP |
 
 #### 5. Collaboration & Workflow (4 MVP, 0 Growth)
 
@@ -482,9 +489,9 @@ All 5 pillars must work together. If any one is missing, single-pass completion 
 | Priority | Count |
 |----------|:-----:|
 | **MVP Gate** | 4 |
-| **MVP** | 59 |
+| **MVP** | 64 |
 | **Growth** | 12 |
-| **Total** | **75** |
+| **Total** | **80** |
 
 > **Notes:**
 > - F6 (Partial understanding spectrum): Handle via confidence threshold per user preference — no separate journey needed
@@ -492,6 +499,7 @@ All 5 pillars must work together. If any one is missing, single-pass completion 
 > - F10 (PM onboarding): Fold into Journey 4 opening scene or create lightweight onboarding wizard — defer to UX design phase
 > - คุณนิด: J3 = non-native flow; for native languages (EN→TH) she uses the same flow as J2
 > - FR73-75 (Rule-based Auto-fix): Added from Self-healing Translation integration, not from Journey elicitation. Source: Self-healing Translation Research + Innovation #6. See Self-healing Translation PRD for detailed requirements (FR-SH1 through FR-SH18)
+> - UX-PM (Party Mode Review backport): 5 capabilities added from UX Design Specification Party Mode cross-functional review. Source: Note/Source Issue/Severity Override/Add Finding actions + 8 Finding States lifecycle + Suppress Pattern detail. See UX spec "Party Mode Review Summary" section
 
 ### Deep Analysis (supplements Journey 1-6 above)
 
@@ -596,7 +604,7 @@ All 5 pillars must work together. If any one is missing, single-pass completion 
 
 #### Learnability — "tool ต้องสอนตัวเอง"
 - **Severity tooltips** — hover Critical/Major/Minor → definition + example + action guidance
-- **Action tooltips** — hover Accept/Reject/Flag → consequence explanation
+- **Action tooltips** — hover any review action (Accept/Reject/Flag/Note/Source Issue/Severity Override/Add Finding) → consequence explanation
 - **First-time user onboarding tour** — 5-step walkthrough: severity → actions → auto-pass → report
 - **"Learn more" links** — finding detail → link ไปหา QA Cosmetic standard ที่เกี่ยวข้อง
 
@@ -783,7 +791,7 @@ flowchart LR
 
 #### 4. Data-Driven Quality Moat
 
-**What's novel:** ทุก Accept/Reject/Flag จาก reviewer = training data สำหรับ AI → ยิ่งใช้ยิ่งแม่น **per language pair × per domain × per project**
+**What's novel:** ทุก review action (Accept/Reject/Flag/Note/Source Issue/Severity Override/Add Finding) จาก reviewer = training data สำหรับ AI → ยิ่งใช้ยิ่งแม่น **per language pair × per domain × per project** — Severity overrides + manual findings เป็น high-value signals ที่ช่วย AI calibrate ได้ดีขึ้น
 
 **Moat mechanism:** More files → More feedback → Better accuracy → Higher auto-pass rate → More files → ...
 
@@ -993,7 +1001,7 @@ flowchart LR
 - Internal tool for known team (~6-9 people) — no market risk, direct feedback loop
 - Mona = Admin + primary user + domain expert — fastest iteration cycle possible
 - "Problem-solving" not "experience" MVP because the team will tolerate rough UI if core function works
-- 63 MVP requirements is ambitious but justified: team already has defined workflow, requirements are interconnected, and most came from domain expert input
+- 68 MVP requirements is ambitious but justified: team already has defined workflow, requirements are interconnected, and most came from domain expert input (63 original + 5 backported from UX Party Mode review)
 
 ### MVP Scope Boundaries
 
@@ -1004,14 +1012,14 @@ flowchart LR
 | Core QA Engine | 8 | Xbench parity, 3-Layer pipeline, per-language calibration |
 | Auto-pass & Trust | 9 | Recommended-pass → Auto-pass progression, audit trail, blind audit |
 | UX & Navigation | 8 | Progressive disclosure, segment navigation, onboarding tour |
-| Review Actions | 7 | Accept/Reject/Flag, bulk actions, suppress pattern, override |
+| Review Actions | 12 | Accept/Reject/Flag/Note/Source Issue/Severity Override/Add Finding, bulk actions, suppress pattern, override, 8 finding states |
 | Collaboration | 4 | File assignment, priority queue, Economy/Thorough modes |
 | Glossary | 4 | Import, cache, per-project override, 1-click add |
 | Reporting | 5 | Smart report, audit trail, QA certificate, decision attribution |
 | AI Learning | 6 | Feedback loop, false positive tracking, learning indicator |
 | Resilience | 5 | Rule-first display, partial results, retry, fallback provider |
 | Architecture | 7 | Immutable log, run metadata, duplicate detection, cost visibility |
-| **Total** | **63** | **4 Gate + 59 MVP** |
+| **Total** | **68** | **4 Gate + 64 MVP** |
 
 **Out-of-scope (MVP):**
 - XLIFF 2.0 format (Growth — no current Trados use case)
@@ -1043,7 +1051,7 @@ Month 0-1: Foundation
 Month 1-2: AI Integration
 - AI Layer 2 (Quick Screen) integration
 - AI Layer 3 (Deep Analysis) for flagged segments
-- Accept/Reject/Flag workflow + bulk actions
+- 7 review actions (Accept/Reject/Flag/Note/Source Issue/Severity Override/Add Finding) + bulk actions + 8 finding states lifecycle
 - Progressive disclosure + confidence indicators
 - Economy/Thorough modes
 - "Recommended pass" soft launch
@@ -1099,7 +1107,7 @@ Month 2-3: Trust & Automation
 | SDLXLIFF parsing complexity (sdl: namespace) | High — blocks all QA | fast-xml-parser + namespace handler, test with real Trados files early | MVP Gate: parser must work before anything else |
 | AI false positive rate too high | Medium — erodes trust | Recommended-pass first, AI Layer 2 required for auto-pass | Start conservative, loosen over time |
 | CJK/Thai word segmentation | Medium — affects glossary matching | Intl.Segmenter API (built-in Node.js) | Test with real TH/ZH/JA files from Mona |
-| 63 MVP requirements scope | Medium — timeline risk | Prioritize Gate requirements first, then layer features | If behind: ship rule-based only, add AI in Month 2 |
+| 68 MVP requirements scope (63 original + 5 UX Party Mode backport) | Medium — timeline risk | Prioritize Gate requirements first, then layer features | If behind: ship rule-based only, add AI in Month 2 |
 
 **Market Risks:**
 
@@ -1123,7 +1131,7 @@ Month 2-3: Trust & Automation
 |----------|-----------|------|
 | XLIFF 2.0 → Growth | No current Trados use case, SDLXLIFF covers 1.2 as superset | 2026-02-12 |
 | MVP roles: Admin/QA Reviewer/Native Reviewer (not PM) | Matches real team structure, PM role → Growth | 2026-02-12 |
-| Keep 63 MVP requirements (no cuts) | Requirements are interconnected, came from domain expert, team is small enough to handle | 2026-02-12 |
+| Keep 68 MVP requirements (63 original + 5 UX Party Mode backport, no cuts) | Requirements are interconnected, came from domain expert, team is small enough to handle | 2026-02-14 |
 | Dual taxonomy admin UI → MVP (not Growth) | Mona's explicit request — team needs mapping editor from Day 1 | 2026-02-12 |
 | Recommended-pass → Auto-pass progression | De-risk auto-pass by proving reliability first | 2026-02-12 |
 | Rule-based engine = Gate requirement | Without Xbench parity, no adoption — everything else depends on this | 2026-02-12 |
@@ -1135,9 +1143,9 @@ Month 2-3: Trust & Automation
 > Every capability listed here will be built. Capabilities not listed here will not exist in the product.
 > Format: FR#: [Actor] can [capability]. Organized by capability area, not technology layer.
 >
-> **Relationship to Journey Requirements Summary (Section 4):** The Requirements Summary provides traceability — showing which journey or elicitation method revealed each requirement. These FRs are the synthesized, clean capability contract derived from those 75 requirements + Party Mode + Critique and Refine validation. FRs are authoritative for downstream work.
+> **Relationship to Journey Requirements Summary (Section 4):** The Requirements Summary provides traceability — showing which journey or elicitation method revealed each requirement. These FRs are the synthesized, clean capability contract derived from those 80 requirements + Party Mode + Critique and Refine validation. FRs are authoritative for downstream work.
 >
-> **FR Count (75) vs Journey Count (63 MVP):** Journey Requirements Summary lists 63 MVP-scope items (4 Gate + 59 MVP). FRs total 75: 69 from original synthesis + 3 from Party Mode adversarial review (FR22: score lifecycle, FR23: auto-pass rationale, FR44: multi-token glossary matching) + 3 from Self-healing Translation integration (FR73: rule-based auto-fix, FR74: auto-fix preview, FR75: auto-fix tracking). **Scope: FR1-FR72 = MVP, FR73-FR75 = Growth** (rule-based auto-fix moved to Growth — MVP focuses on detection, schema design included in MVP for readiness). The 75 FRs are the authoritative count for implementation.
+> **FR Count (80) vs Journey Count (68 MVP):** Journey Requirements Summary lists 68 MVP-scope items (4 Gate + 64 MVP). FRs total 80: 69 from original synthesis + 3 from Party Mode adversarial review (FR22: score lifecycle, FR23: auto-pass rationale, FR44: multi-token glossary matching) + 3 from Self-healing Translation integration (FR73: rule-based auto-fix, FR74: auto-fix preview, FR75: auto-fix tracking) + 5 from UX Party Mode backport (FR76: finding lifecycle states, FR77: Note action, FR78: Source Issue action, FR79: Severity Override action, FR80: Add Finding action). **Scope: FR1-FR72 + FR76-FR80 = MVP, FR73-FR75 = Growth** (rule-based auto-fix moved to Growth — MVP focuses on detection, schema design included in MVP for readiness). The 80 FRs are the authoritative count for implementation.
 
 ### 1. File Management & Parsing
 
@@ -1172,15 +1180,39 @@ Month 2-3: Trust & Automation
 
 - **FR24:** QA Reviewer can view findings organized by severity with progressive disclosure (Critical expanded, Minor collapsed by default)
 - **FR25:** QA Reviewer can navigate from any finding directly to its source/target segment in context
-- **FR26:** QA Reviewer can Accept, Reject, or Flag individual findings with recorded rationale
+- **FR26:** QA Reviewer can perform 7 review actions on individual findings with recorded rationale: Accept (✅ confirm error), Reject (❌ false positive), Flag (🚩 native review needed), Note (📝 stylistic observation), Source Issue (🔤 source text problem), Severity Override (accept with downgraded severity), and Add Finding (👤 manually add missed finding). See FR76-FR80 for extended action specifications
 - **FR27:** QA Reviewer can bulk accept or reject 2 or more findings, with confirmation dialog for large selections (> 5 items)
 - **FR28:** QA Reviewer can override a previous decision, creating a new immutable audit entry (not editing the original)
 - **FR29:** QA Reviewer can flag specific segments for native reviewer verification
-- **FR30:** QA Reviewer can suppress a recurring false positive pattern for the current project
+- **FR30:** QA Reviewer can suppress a recurring false positive pattern. Trigger: system detects 3+ rejections of the same error pattern (same language pair, within or across sessions) and proactively offers suppression. Scope options: this file only / this language pair / all language pairs. Duration options: until AI accuracy improves / permanently / this session only. Suppressed findings auto-rejected with "Suppressed" tag. Manageable in Settings → AI Learning → Suppressed Patterns with per-pattern re-enable. AI still receives rejection data for training despite suppression
 - **FR31:** QA Reviewer can temporarily disable AI suggestions to view rule-based results only
 - **FR32:** System can auto-pass files meeting defined criteria: score >= configurable threshold (default 95), 0 unresolved Critical findings (rejected/false-positive Criticals do not count), and required AI layers completed. Full audit trail recorded. Auto-pass evaluation occurs only on final score (per FR22). Criteria configurable per FR61
 - **FR33:** System can operate in recommended-pass mode where auto-pass suggestions require human confirmation (1-click). Transition between recommended-pass and auto-pass is an admin toggle per project. Can regress from auto-pass back to recommended-pass if accuracy drops. Default: recommended-pass for first 2 months per project
 - **FR34:** QA Reviewer can search and filter findings by severity, type, segment range, and keyword
+
+#### Extended Review Actions (Party Mode Backport)
+
+> **Source:** UX Design Specification Party Mode cross-functional review. These requirements expand FR26 with detailed specifications for 4 additional review actions and define the 8-state finding lifecycle.
+
+- **FR76:** System can track each finding through 8 lifecycle states with defined score impact:
+
+| State | Meaning | Score Impact |
+|-------|---------|:---:|
+| Pending | Not yet reviewed (default) | Pending |
+| Accepted | Reviewer confirms this is a real error | Yes (MQM penalty) |
+| Accepted (override) | Confirmed but severity downgraded by reviewer | Yes (reduced penalty) |
+| Rejected | False positive or intentional | No penalty |
+| Flagged | Needs native review (non-native reviewer only) | Pending until resolved |
+| Noted | Stylistic observation — no action required | No penalty |
+| Source Issue | Problem in source text, not translation | No penalty |
+| Manual | Manually added by reviewer (tool missed it) | Yes (MQM penalty) |
+
+  When all findings in a file are resolved → File status changes to "Review Complete" → Auto-navigate to next file in batch.
+
+- **FR77:** QA Reviewer can mark a finding as "Note" (Hotkey: N) — records a stylistic observation without requiring action. Finding state changes to Noted (📝), no score penalty applied. Note text is included in QA report but does not affect pass/fail status. Serves as documentation for team knowledge sharing
+- **FR78:** QA Reviewer can reclassify a finding as "Source Issue" (Hotkey: S) — indicates the problem exists in the source text, not the translation. Finding state changes to Source Issue (🔤), no translation score penalty. Source Issues appear in a separate "Source Quality Issues" section in reports for routing to the content/authoring team
+- **FR79:** QA Reviewer can accept a finding with Severity Override — accept dropdown offers "Accept" (keep original severity), "Accept as Major", "Accept as Minor". MQM score recalculates using overridden severity (e.g., Critical penalty 25 → Minor penalty 1). Audit trail records: original AI severity, reviewer override severity, and reason. Severity override data feeds AI training for improved future severity classification
+- **FR80:** QA Reviewer can manually add a finding not detected by the system (Hotkey: +). Reviewer selects segment, specifies error type and severity. Manual finding created with "👤 Manual" badge distinct from Rule-based and AI findings. Manual findings affect MQM score calculation and serve as high-value "missed issue" training data for AI improvement
 
 ### 4. Language Intelligence
 
@@ -1214,7 +1246,7 @@ Month 2-3: Trust & Automation
 - **FR53:** Admin can create and manage projects with associated QA rules, glossaries, and settings
 - **FR54:** Admin can manage dual taxonomy mapping between internal terminology (QA Cosmetic) and industry standard (MQM) via mapping editor
 - **FR55:** System can display internal terminology in UI and export industry-standard terminology in reports
-- **FR56:** Admin can assign files to specific QA Reviewers or Native Reviewers
+- **FR56:** Admin or PM can assign files to specific QA Reviewers or Native Reviewers via Reviewer Selection UI. Reviewer list filtered by file's language pair. PM can route critical issues to specific reviewer with urgency flag. Reviewer receives notification with issue count and priority level (e.g., "PM assigned 2 Critical issues — Urgent")
 - **FR57:** System can display file assignment status to prevent concurrent editing conflicts
 - **FR58:** QA Reviewer can set priority level on files for queue ordering (urgent files processed first)
 - **FR59:** QA Reviewer can view a dashboard showing recent files, pending reviews, auto-pass summary, and team activity
@@ -1225,7 +1257,7 @@ Month 2-3: Trust & Automation
 
 ### 8. AI Learning & Trust
 
-- **FR64:** System can log reviewer decisions (Accept/Reject/Flag) as structured feedback for AI accuracy improvement
+- **FR64:** System can log reviewer decisions (Accept/Reject/Flag/Note/Source Issue/Severity Override/Add Finding) as structured feedback for AI accuracy improvement. Severity overrides and manual findings are high-value training signals
 - **FR65:** System can track and display false positive rate per language pair over time
 - **FR66:** System can display AI learning progress showing patterns learned and accuracy trend
 - **FR67:** System can distinguish between feedback states: "logged" (received) vs "applied" (incorporated into AI behavior)
@@ -1281,7 +1313,7 @@ Month 2-3: Trust & Automation
 |------|------------|-------------|
 | NFR15 | System available 99.5% during business hours (Mon-Fri, 08:00-19:00 ICT) | Monthly uptime calculation. Planned maintenance excluded with 24h advance notice. Preferred maintenance window: Friday 19:00-22:00 ICT |
 | NFR16 | AI provider failure does not block QA workflow — rule-based results always available | Test: disconnect AI API → rule-based results still display within NFR2 performance target |
-| NFR17 | No review progress lost on browser crash or session timeout | Auto-save triggers on every decision action (Accept, Reject, Flag, Override, Suppress) — not on navigation or view changes |
+| NFR17 | No review progress lost on browser crash or session timeout | Auto-save triggers on every decision action (Accept, Reject, Flag, Note, Source Issue, Severity Override, Add Finding, Suppress) — not on navigation or view changes |
 | NFR18 | Queue jobs survive server restart — no silent job loss | Test: restart during batch processing → jobs resume or clearly show failed status |
 | NFR19 | Recovery time target: < 4 hours during business hours | Team uses Xbench as fallback — no emergency SLA needed |
 
@@ -1302,7 +1334,7 @@ Month 2-3: Trust & Automation
 | NFR# | Requirement | Standard |
 |------|------------|----------|
 | NFR25 | WCAG 2.1 Level AA compliance | Industry standard for B2B web apps |
-| NFR26 | All primary review actions reachable via keyboard only | Critical for power users doing high-volume QA |
+| NFR26 | All 7 primary review actions (Accept/Reject/Flag/Note/Source Issue/Severity Override/Add Finding) reachable via keyboard only. Hotkeys: A, X, F, N, S, —, + | Critical for power users doing high-volume QA |
 | NFR27 | Severity indicators use icon + text + color (never color alone) | Color independence for color-blind users |
 | NFR28 | Minimum contrast ratio: 4.5:1 (normal text), 3:1 (large text) | WCAG AA requirement |
 | NFR29 | UI functional at 200% browser zoom without layout breaking | Responsive text support |
