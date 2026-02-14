@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>qa-localization-tool — Review View Mockup</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwindcss.config = {
+  theme: {
+    extend: {
+      colors: {
+        primary: { 50:'#EEF2FF',100:'#E0E7FF',200:'#C7D2FE',300:'#A5B4FC',400:'#818CF8',500:'#6366F1',600:'#4F46E5',700:'#4338CA',800:'#3730A3',900:'#312E81' },
+        severity: { critical:'#DC2626', major:'#EA580C', minor:'#CA8A04' },
+        confidence: { high:'#16A34A', medium:'#CA8A04', low:'#DC2626' },
+        layer: { rule:'#2563EB', ai:'#7C3AED' }
+      }
+    }
+  }
+}
+</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+  body { font-family: 'Inter', system-ui, sans-serif; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  @keyframes pulse-indigo { 0%,100%{opacity:1} 50%{opacity:0.6} }
+  .pulse-indigo { animation: pulse-indigo 2s ease-in-out infinite; }
+  @keyframes score-up { 0%{transform:translateY(8px);opacity:0} 100%{transform:translateY(0);opacity:1} }
+  .score-animate { animation: score-up 0.3s ease-out; }
+  .finding-row { transition: all 0.15s ease-out; }
+  .finding-row:hover { background-color: #EEF2FF; }
+  .finding-row.expanded { background-color: #EEF2FF; border-left: 3px solid #4F46E5; }
+  .finding-row.accepted { background-color: #F0FDF4; opacity: 0.7; }
+  .finding-row.rejected { background-color: #FEF2F2; opacity: 0.7; }
+  .finding-row.flagged { background-color: #FEFCE8; }
+  .kbd { font-size: 10px; padding: 1px 5px; border: 1px solid #D1D5DB; border-radius: 3px; background: #F9FAFB; color: #6B7280; font-family: 'Inter', sans-serif; }
+  .tooltip-key { font-size: 9px; color: #9CA3AF; margin-left: 4px; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-900 h-screen flex overflow-hidden">
+
+<!-- Sidebar (Collapsed) -->
+<aside class="w-14 bg-slate-900 flex flex-col items-center py-4 gap-4 shrink-0">
+  <div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">Q</div>
+  <div class="w-px h-4 bg-slate-700"></div>
+  <button class="w-9 h-9 rounded-lg hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white" title="Dashboard">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+  </button>
+  <button class="w-9 h-9 rounded-lg bg-slate-800 flex items-center justify-center text-white" title="Review (Active)">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+  </button>
+  <button class="w-9 h-9 rounded-lg hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white" title="Reports">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+  </button>
+  <button class="w-9 h-9 rounded-lg hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white" title="Settings">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+  </button>
+  <div class="flex-1"></div>
+  <button class="w-9 h-9 rounded-lg hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white" title="Ctrl+K">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+  </button>
+</aside>
+
+<!-- Main Content -->
+<main class="flex-1 flex flex-col min-w-0">
+
+  <!-- Top Bar: Breadcrumb + Score -->
+  <header class="bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-between shrink-0">
+    <div class="flex items-center gap-2 text-sm">
+      <span class="text-slate-400 hover:text-primary-600 cursor-pointer">Dashboard</span>
+      <span class="text-slate-300">/</span>
+      <span class="text-slate-400 hover:text-primary-600 cursor-pointer">Client-ABC</span>
+      <span class="text-slate-300">/</span>
+      <span class="text-slate-400 hover:text-primary-600 cursor-pointer">Monday Batch</span>
+      <span class="text-slate-300">/</span>
+      <span class="font-medium text-slate-900">user-guide-03.xlf</span>
+    </div>
+    <div class="flex items-center gap-4">
+      <!-- Review Progress -->
+      <div class="flex items-center gap-3 text-xs">
+        <div class="flex items-center gap-1.5">
+          <span class="text-slate-500">Reviewed:</span>
+          <span class="font-medium tabular">14/28</span>
+          <div class="w-20 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+            <div class="h-full bg-primary-600 rounded-full" style="width:50%"></div>
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="text-slate-500">AI:</span>
+          <span class="font-medium text-layer-ai tabular">3 pending</span>
+          <div class="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+            <div class="h-full bg-layer-ai rounded-full pulse-indigo" style="width:80%"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Score Badge -->
+      <div class="flex items-center gap-2 pl-3 border-l border-slate-200">
+        <div class="text-center">
+          <div class="text-2xl font-bold tabular score-animate" style="color:#EA580C">82</div>
+          <div class="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Analyzing</div>
+        </div>
+      </div>
+      <!-- Mode -->
+      <div class="flex bg-slate-100 rounded-lg p-0.5 text-xs">
+        <button class="px-2 py-1 rounded-md text-slate-500">Economy</button>
+        <button class="px-2 py-1 rounded-md bg-white shadow-sm text-primary-700 font-medium">Thorough</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Filter Bar -->
+  <div class="bg-white border-b border-slate-200 px-4 py-1.5 flex items-center gap-2 text-xs shrink-0">
+    <span class="text-slate-400">Filter:</span>
+    <select class="border border-slate-200 rounded px-2 py-0.5 text-xs bg-white">
+      <option>Severity: All</option><option>Critical</option><option>Major</option><option>Minor</option>
+    </select>
+    <select class="border border-slate-200 rounded px-2 py-0.5 text-xs bg-white">
+      <option>Layer: All</option><option>Rule-based</option><option>AI</option>
+    </select>
+    <select class="border border-slate-200 rounded px-2 py-0.5 text-xs bg-white">
+      <option>Status: Pending</option><option>All</option><option>Accepted</option><option>Rejected</option><option>Flagged</option>
+    </select>
+    <div class="flex-1"></div>
+    <span class="text-slate-400 tabular">Showing 14 of 28 findings</span>
+    <span class="text-primary-600 hover:underline cursor-pointer">Clear all</span>
+  </div>
+
+  <!-- Content Area: Finding List + Detail Panel -->
+  <div class="flex-1 flex min-h-0">
+
+    <!-- Finding List -->
+    <div class="flex-1 overflow-y-auto">
+      <table class="w-full text-sm">
+        <thead class="sticky top-0 bg-slate-50 border-b border-slate-200">
+          <tr class="text-xs text-slate-500 uppercase tracking-wider">
+            <th class="py-1.5 px-3 text-left w-8"></th>
+            <th class="py-1.5 px-2 text-left" style="width:80px">Severity</th>
+            <th class="py-1.5 px-2 text-left" style="width:100px">Category</th>
+            <th class="py-1.5 px-2 text-left" style="width:56px">Layer</th>
+            <th class="py-1.5 px-2 text-left">Preview</th>
+            <th class="py-1.5 px-2 text-center" style="width:50px">Conf.</th>
+            <th class="py-1.5 px-2 text-center" style="width:80px">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Row 1: Accepted -->
+          <tr class="finding-row accepted border-b border-slate-100 cursor-pointer">
+            <td class="py-2 px-3 text-xs text-slate-400 tabular">1</td>
+            <td class="py-2 px-2"><span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-severity-major"></span><span class="text-severity-major font-medium text-xs">Major</span></span></td>
+            <td class="py-2 px-2 text-xs text-slate-600">Consistency</td>
+            <td class="py-2 px-2"><span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-layer-rule">Rule</span></td>
+            <td class="py-2 px-2 text-xs text-slate-500 truncate mono">"app" → "แอป" vs "แอพ"</td>
+            <td class="py-2 px-2 text-center text-xs tabular">—</td>
+            <td class="py-2 px-2 text-center"><span class="text-green-600 text-xs font-medium">✓ Accepted</span></td>
+          </tr>
+          <!-- Row 2: Accepted -->
+          <tr class="finding-row accepted border-b border-slate-100 cursor-pointer">
+            <td class="py-2 px-3 text-xs text-slate-400 tabular">2</td>
+            <td class="py-2 px-2"><span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-severity-minor"></span><span class="text-severity-minor font-medium text-xs">Minor</span></span></td>
+            <td class="py-2 px-2 text-xs text-slate-600">Number</td>
+            <td class="py-2 px-2"><span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-layer-rule">Rule</span></td>
+            <td class="py-2 px-2 text-xs text-slate-500 truncate mono">"500" → "๕๐๐" format</td>
+            <td class="py-2 px-2 text-center text-xs tabular">—</td>
+            <td class="py-2 px-2 text-center"><span class="text-green-600 text-xs font-medium">✓ Accepted</span></td>
+          </tr>
+
+          <!-- Row 3: CRITICAL - EXPANDED (focused) -->
+          <tr class="finding-row expanded border-b-0 cursor-pointer" id="finding-focused">
+            <td class="py-2 px-3 text-xs text-slate-400 tabular">3</td>
+            <td class="py-2 px-2"><span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-severity-critical"></span><span class="text-severity-critical font-semibold text-xs">Critical</span></span></td>
+            <td class="py-2 px-2 text-xs text-slate-700 font-medium">Terminology</td>
+            <td class="py-2 px-2"><span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-purple-50 text-layer-ai">AI</span></td>
+            <td class="py-2 px-2 text-xs text-slate-700 font-medium truncate mono">"bank account" → "ริมฝั่งแม่น้ำ"</td>
+            <td class="py-2 px-2 text-center"><span class="text-xs font-semibold text-confidence-high tabular">94%</span></td>
+            <td class="py-2 px-2 text-center text-xs text-slate-400">Pending</td>
+          </tr>
+          <!-- Expanded Card for Row 3 -->
+          <tr class="border-b border-slate-200 bg-primary-50/50">
+            <td colspan="7" class="p-0">
+              <div class="px-6 py-3 border-l-[3px] border-primary-600">
+                <!-- Source/Target -->
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <div class="text-[10px] uppercase tracking-wider text-slate-400 mb-1">Source (EN)</div>
+                    <div class="mono text-sm bg-white rounded px-3 py-2 border border-slate-200">
+                      "Please transfer to your <mark class="bg-red-100 px-0.5 rounded">bank account</mark>"
+                    </div>
+                  </div>
+                  <div>
+                    <div class="text-[10px] uppercase tracking-wider text-slate-400 mb-1">Target (TH)</div>
+                    <div class="mono text-sm bg-white rounded px-3 py-2 border border-slate-200">
+                      "กรุณาโอนไปยัง<mark class="bg-red-100 px-0.5 rounded">ริมฝั่งแม่น้ำ</mark>ของคุณ"
+                    </div>
+                  </div>
+                </div>
+                <!-- Suggestion -->
+                <div class="bg-white rounded-lg border border-slate-200 px-3 py-2 mb-3 flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-slate-400">💡 Suggestion:</span>
+                    <span class="mono text-sm font-medium text-primary-700">"บัญชีธนาคาร"</span>
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <div class="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                      <div class="h-full bg-confidence-high rounded-full" style="width:94%"></div>
+                    </div>
+                    <span class="text-xs font-semibold text-confidence-high tabular">94%</span>
+                  </div>
+                </div>
+                <!-- Actions -->
+                <div class="flex items-center gap-2">
+                  <button class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-md text-xs font-medium transition-colors" onclick="acceptFinding()">
+                    ✓ Accept <span class="kbd text-green-200 border-green-500">A</span>
+                  </button>
+                  <button class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-xs font-medium transition-colors">
+                    ✗ Reject <span class="kbd text-red-200 border-red-500">R</span>
+                  </button>
+                  <button class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-yellow-400 text-yellow-700 hover:bg-yellow-50 rounded-md text-xs font-medium transition-colors">
+                    🏳 Flag <span class="kbd">F</span>
+                  </button>
+                  <button class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-blue-300 text-blue-700 hover:bg-blue-50 rounded-md text-xs font-medium transition-colors">
+                    📝 Note <span class="kbd">N</span>
+                  </button>
+                  <button class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-slate-500 hover:bg-slate-50 rounded-md text-xs font-medium transition-colors">
+                    + More ▼
+                  </button>
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Row 4: Critical - Pending (compact) -->
+          <tr class="finding-row border-b border-slate-100 cursor-pointer hover:bg-primary-50">
+            <td class="py-2 px-3 text-xs text-slate-400 tabular">4</td>
+            <td class="py-2 px-2"><span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-severity-critical"></span><span class="text-severity-critical font-semibold text-xs">Critical</span></span></td>
+            <td class="py-2 px-2 text-xs text-slate-600">Mistranslation</td>
+            <td class="py-2 px-2"><span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-purple-50 text-layer-ai">AI</span></td>
+            <td class="py-2 px-2 text-xs text-slate-500 truncate mono">"quarterly" → "รายเดือน"</td>
+            <td class="py-2 px-2 text-center"><span class="text-xs font-medium text-confidence-medium tabular">68%</span></td>
+            <td class="py-2 px-2 text-center">
+              <div class="flex items-center justify-center gap-1">
+                <button class="w-6 h-6 rounded hover:bg-green-100 flex items-center justify-center text-green-600 text-xs" title="Accept (A)">✓</button>
+                <button class="w-6 h-6 rounded hover:bg-red-100 flex items-center justify-center text-red-600 text-xs" title="Reject (R)">✗</button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Row 5: Major - Pending -->
+          <tr class="finding-row border-b border-slate-100 cursor-pointer">
+            <td class="py-2 px-3 text-xs text-slate-400 tabular">5</td>
+            <td class="py-2 px-2"><span class="inline-flex items-center gap-1"><span class="w-2 h-2 bg-severity-major" style="clip-path:polygon(50% 0,100% 100%,0 100%)"></span><span class="text-severity-major font-medium text-xs">Major</span></span></td>
+            <td class="py-2 px-2 text-xs text-slate-600">Grammar</td>
+            <td class="py-2 px-2"><span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-purple-50 text-layer-ai">AI</span></td>
+            <td class="py-2 px-2 text-xs text-slate-500 truncate mono">"has been sent" → "ถูกส่ง" passive</td>
+            <td class="py-2 px-2 text-center"><span class="text-xs font-medium text-confidence-high tabular">91%</span></td>
+            <td class="py-2 px-2 text-center">
+              <div class="flex items-center justify-center gap-1">
+                <button class="w-6 h-6 rounded hover:bg-green-100 flex items-center justify-center text-green-600 text-xs">✓</button>
+                <button class="w-6 h-6 rounded hover:bg-red-100 flex items-center justify-center text-red-600 text-xs">✗</button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Row 6: Major - Rejected -->
+          <tr class="finding-row rejected border-b border-slate-100 cursor-pointer">
+            <td class="py-2 px-3 text-xs text-slate-400 tabular">6</td>
+            <td class="py-2 px-2"><span class="inline-flex items-center gap-1"><span class="w-2 h-2 bg-severity-major" style="clip-path:polygon(50% 0,100% 100%,0 100%)"></span><span class="text-severity-major font-medium text-xs">Major</span></span></td>
+            <td class="py-2 px-2 text-xs text-slate-600">Style</td>
+            <td class="py-2 px-2"><span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-purple-50 text-layer-ai">AI</span></td>
+            <td class="py-2 px-2 text-xs text-slate-500 truncate mono">"utilize" → "ใช้ประโยชน์" (idiom OK)</td>
+            <td class="py-2 px-2 text-center"><span class="text-xs font-medium text-confidence-medium tabular">72%</span></td>
+            <td class="py-2 px-2 text-center"><span class="text-red-600 text-xs font-medium">✗ Rejected</span></td>
+          </tr>
+
+          <!-- Row 7: Major - Pending -->
+          <tr class="finding-row border-b border-slate-100 cursor-pointer">
+            <td class="py-2 px-3 text-xs text-slate-400 tabular">7</td>
+            <td class="py-2 px-2"><span class="inline-flex items-center gap-1"><span class="w-2 h-2 bg-severity-major" style="clip-path:polygon(50% 0,100% 100%,0 100%)"></span><span class="text-severity-major font-medium text-xs">Major</span></span></td>
+            <td class="py-2 px-2 text-xs text-slate-600">Glossary</td>
+            <td class="py-2 px-2"><span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-layer-rule">Rule</span></td>
+            <td class="py-2 px-2 text-xs text-slate-500 truncate mono">"dashboard" → "แดชบอร์ด" not "หน้าหลัก"</td>
+            <td class="py-2 px-2 text-center text-xs tabular">—</td>
+            <td class="py-2 px-2 text-center">
+              <div class="flex items-center justify-center gap-1">
+                <button class="w-6 h-6 rounded hover:bg-green-100 flex items-center justify-center text-green-600 text-xs">✓</button>
+                <button class="w-6 h-6 rounded hover:bg-red-100 flex items-center justify-center text-red-600 text-xs">✗</button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Row 8: Flagged -->
+          <tr class="finding-row flagged border-b border-slate-100 cursor-pointer">
+            <td class="py-2 px-3 text-xs text-slate-400 tabular">8</td>
+            <td class="py-2 px-2"><span class="inline-flex items-center gap-1"><span class="w-2 h-2 bg-severity-major" style="clip-path:polygon(50% 0,100% 100%,0 100%)"></span><span class="text-severity-major font-medium text-xs">Major</span></span></td>
+            <td class="py-2 px-2 text-xs text-slate-600">Terminology</td>
+            <td class="py-2 px-2"><span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-purple-50 text-layer-ai">AI</span></td>
+            <td class="py-2 px-2 text-xs text-slate-500 truncate mono">"workflow" → "ขั้นตอนการทำงาน"</td>
+            <td class="py-2 px-2 text-center"><span class="text-xs font-medium text-confidence-medium tabular">76%</span></td>
+            <td class="py-2 px-2 text-center"><span class="text-yellow-600 text-xs font-medium">🏳 Flagged</span></td>
+          </tr>
+
+          <!-- Minor Section Header (Collapsed) -->
+          <tr class="bg-slate-50 border-b border-slate-200 cursor-pointer hover:bg-slate-100" onclick="toggleMinor()">
+            <td colspan="7" class="py-1.5 px-3">
+              <div class="flex items-center gap-2 text-xs">
+                <span id="minor-arrow" class="text-slate-400 transition-transform">▶</span>
+                <span class="w-2 h-2 bg-severity-minor" style="clip-path:polygon(50% 0,100% 87%,82% 87%,82% 100%,18% 100%,18% 87%,0 87%)"></span>
+                <span class="text-severity-minor font-medium">Minor</span>
+                <span class="text-slate-400">(14 findings — collapsed)</span>
+                <div class="flex-1"></div>
+                <span class="text-slate-400">Click to expand</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Detail Panel (Right Side) -->
+    <aside class="w-[360px] border-l border-slate-200 bg-white overflow-y-auto shrink-0">
+      <!-- Panel Header -->
+      <div class="sticky top-0 bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-between">
+        <span class="text-sm font-semibold">Finding #3 of 28</span>
+        <div class="flex items-center gap-1">
+          <span class="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-red-50 text-severity-critical">● Critical</span>
+          <span class="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-purple-50 text-layer-ai">AI L2</span>
+        </div>
+      </div>
+
+      <!-- Segment Context -->
+      <div class="px-4 py-3 border-b border-slate-100">
+        <div class="text-[10px] uppercase tracking-wider text-slate-400 mb-2 font-medium">Segment Context</div>
+        <div class="space-y-1 text-xs mono">
+          <div class="flex gap-2 text-slate-400">
+            <span class="tabular w-6 text-right shrink-0">#46</span>
+            <span class="truncate">"Click on the account settings..."</span>
+          </div>
+          <div class="flex gap-2 bg-primary-50 rounded px-1 py-0.5 text-slate-900 font-medium border-l-2 border-primary-600">
+            <span class="tabular w-6 text-right shrink-0 text-primary-600">#47</span>
+            <span>"Please transfer to your <mark class="bg-red-100 rounded px-0.5">bank account</mark>"</span>
+          </div>
+          <div class="flex gap-2 text-slate-400">
+            <span class="tabular w-6 text-right shrink-0">#48</span>
+            <span class="truncate">"Confirm the transaction amount..."</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Language Bridge -->
+      <div class="px-4 py-3 border-b border-slate-100">
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-[10px] uppercase tracking-wider text-slate-400 font-medium">🌐 Language Bridge</div>
+          <button class="text-slate-400 hover:text-slate-600 text-xs">?</button>
+        </div>
+        <div class="space-y-2.5">
+          <div>
+            <div class="text-[10px] text-slate-400 mb-0.5">SOURCE (EN)</div>
+            <div class="text-xs mono bg-slate-50 rounded px-2 py-1.5">"Please transfer to your <strong>bank account</strong>"</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-slate-400 mb-0.5">TARGET (TH)</div>
+            <div class="text-xs mono bg-slate-50 rounded px-2 py-1.5">"กรุณาโอนไปยัง<strong class="text-red-600">ริมฝั่งแม่น้ำ</strong>ของคุณ"</div>
+          </div>
+          <div class="bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5">
+            <div class="text-[10px] text-amber-600 mb-0.5 font-medium">🔄 BACK-TRANSLATION</div>
+            <div class="text-xs mono">"Please transfer to your <mark class="bg-amber-100 rounded px-0.5">riverside</mark>"</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-slate-400 mb-0.5">💡 AI EXPLANATION</div>
+            <div class="text-xs text-slate-600 leading-relaxed">
+              The source refers to a <strong>financial bank account</strong>, but the translation uses "ริมฝั่งแม่น้ำ" which means <strong>river bank</strong> (physical riverbank). This is a homonym error — "bank" has multiple meanings in English.
+            </div>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-20 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                <div class="h-full bg-confidence-high rounded-full" style="width:94%"></div>
+              </div>
+              <span class="text-xs font-semibold text-confidence-high tabular">94%</span>
+            </div>
+            <span class="text-[10px] text-slate-400">TH threshold: 85%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Score Impact -->
+      <div class="px-4 py-3 border-b border-slate-100">
+        <div class="text-[10px] uppercase tracking-wider text-slate-400 mb-2 font-medium">Score Impact</div>
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-slate-600">If accepted (fix applied):</span>
+          <span class="font-semibold text-green-600">Score 82 → 87 (+5)</span>
+        </div>
+        <div class="flex items-center justify-between text-xs mt-1">
+          <span class="text-slate-600">Penalty weight:</span>
+          <span class="font-medium text-severity-critical">Critical × 25 points</span>
+        </div>
+      </div>
+
+      <!-- Similar Findings -->
+      <div class="px-4 py-3">
+        <div class="text-[10px] uppercase tracking-wider text-slate-400 mb-2 font-medium">Similar Findings</div>
+        <div class="space-y-1">
+          <div class="flex items-center justify-between text-xs p-1.5 rounded hover:bg-slate-50 cursor-pointer">
+            <span class="text-primary-600">user-guide-07.xlf #12</span>
+            <span class="text-slate-400">"bank" → same issue</span>
+          </div>
+          <div class="flex items-center justify-between text-xs p-1.5 rounded hover:bg-slate-50 cursor-pointer">
+            <span class="text-primary-600">manual-02.xlf #34</span>
+            <span class="text-slate-400">"bank" → same issue</span>
+          </div>
+        </div>
+        <button class="mt-2 text-xs text-primary-600 hover:underline font-medium">Resolve all 3 instances →</button>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- Bottom Status Bar -->
+  <footer class="bg-slate-900 text-slate-400 px-4 py-1 flex items-center justify-between text-[11px] shrink-0">
+    <div class="flex items-center gap-4">
+      <span>EN → TH</span>
+      <span>|</span>
+      <span>4,200 segments</span>
+      <span>|</span>
+      <span>Thorough mode (L1+L2+L3)</span>
+    </div>
+    <div class="flex items-center gap-4">
+      <span class="flex items-center gap-1">
+        <span class="w-1.5 h-1.5 rounded-full bg-layer-ai pulse-indigo"></span>
+        AI L3 processing...
+      </span>
+      <span>|</span>
+      <span><span class="kbd">?</span> Shortcuts</span>
+      <span><span class="kbd">Ctrl</span>+<span class="kbd">K</span> Command</span>
+    </div>
+  </footer>
+
+</main>
+
+<!-- Toast Notification -->
+<div id="toast" class="fixed bottom-12 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm flex items-center gap-2 transition-all duration-300 translate-y-20 opacity-0">
+  <span>✓</span>
+  <span>Finding accepted. Score: 82 → 87</span>
+</div>
+
+<!-- Keyboard Shortcuts Overlay (hidden) -->
+<div id="shortcuts-overlay" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden" onclick="this.classList.add('hidden')">
+  <div class="bg-white rounded-xl shadow-2xl p-6 w-[480px]" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-semibold text-lg">Keyboard Shortcuts</h3>
+      <button onclick="document.getElementById('shortcuts-overlay').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">✕</button>
+    </div>
+    <div class="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
+      <div class="flex justify-between"><span class="text-slate-600">Next finding</span><span class="kbd">J</span></div>
+      <div class="flex justify-between"><span class="text-slate-600">Previous finding</span><span class="kbd">K</span></div>
+      <div class="flex justify-between"><span class="text-slate-600">Accept</span><span class="kbd">A</span></div>
+      <div class="flex justify-between"><span class="text-slate-600">Reject</span><span class="kbd">R</span></div>
+      <div class="flex justify-between"><span class="text-slate-600">Flag</span><span class="kbd">F</span></div>
+      <div class="flex justify-between"><span class="text-slate-600">Note</span><span class="kbd">N</span></div>
+      <div class="flex justify-between"><span class="text-slate-600">Expand/Collapse</span><span><span class="kbd">Enter</span> / <span class="kbd">Esc</span></span></div>
+      <div class="flex justify-between"><span class="text-slate-600">Next file</span><span class="kbd">]</span></div>
+      <div class="flex justify-between"><span class="text-slate-600">Previous file</span><span class="kbd">[</span></div>
+      <div class="flex justify-between"><span class="text-slate-600">Command palette</span><span><span class="kbd">Ctrl</span>+<span class="kbd">K</span></span></div>
+      <div class="flex justify-between"><span class="text-slate-600">Select range</span><span><span class="kbd">Shift</span>+<span class="kbd">J/K</span></span></div>
+      <div class="flex justify-between"><span class="text-slate-600">Shortcuts</span><span class="kbd">?</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function acceptFinding() {
+  const row = document.getElementById('finding-focused');
+  row.className = 'finding-row accepted border-b border-slate-100 cursor-pointer';
+  row.querySelector('td:last-child').innerHTML = '<span class="text-green-600 text-xs font-medium">✓ Accepted</span>';
+  // Remove expanded card
+  row.nextElementSibling.style.display = 'none';
+  // Show toast
+  const toast = document.getElementById('toast');
+  toast.classList.remove('translate-y-20', 'opacity-0');
+  setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3000);
+  // Update score
+  document.querySelector('.score-animate').textContent = '87';
+  document.querySelector('.score-animate').style.color = '#EA580C';
+}
+
+function toggleMinor() {
+  const arrow = document.getElementById('minor-arrow');
+  arrow.textContent = arrow.textContent === '▶' ? '▼' : '▶';
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (e.key === '?') {
+    document.getElementById('shortcuts-overlay').classList.toggle('hidden');
+  }
+  if (e.key === 'a' || e.key === 'A') {
+    acceptFinding();
+  }
+});
+</script>
+
+</body>
+</html>

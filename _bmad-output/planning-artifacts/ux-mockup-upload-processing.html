@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>qa-localization-tool — Upload & Processing Mockup</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #4F46E5;
+      --primary-hover: #4338CA;
+      --primary-muted: #EEF2FF;
+      --primary-subtle: #E0E7FF;
+      --bg: #0F172A;
+      --bg-card: #1E293B;
+      --bg-card-hover: #253348;
+      --border: #334155;
+      --border-light: #475569;
+      --text: #F1F5F9;
+      --text-secondary: #94A3B8;
+      --text-muted: #64748B;
+      --pass: #10B981;
+      --pass-bg: rgba(16, 185, 129, 0.1);
+      --review: #F59E0B;
+      --review-bg: rgba(245, 158, 11, 0.1);
+      --fail: #EF4444;
+      --fail-bg: rgba(239, 68, 68, 0.1);
+      --sidebar-bg: #0B1120;
+      --topbar-bg: #0F172A;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.5;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .app { display: flex; height: 100vh; }
+
+    /* ─── Sidebar ─── */
+    .sidebar {
+      width: 48px;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 0;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .sidebar-logo {
+      width: 32px; height: 32px;
+      background: var(--primary);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-weight: 700; font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .sidebar-btn {
+      width: 36px; height: 36px;
+      border: none; background: transparent;
+      border-radius: 8px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted);
+      transition: all 0.15s;
+      position: relative;
+    }
+    .sidebar-btn:hover { background: var(--bg-card); color: var(--text); }
+    .sidebar-btn.active { background: var(--primary-muted); color: var(--primary); }
+    .sidebar-btn.active::before {
+      content: '';
+      position: absolute; left: -6px;
+      width: 3px; height: 20px;
+      background: var(--primary);
+      border-radius: 0 3px 3px 0;
+    }
+    .sidebar-btn svg { width: 20px; height: 20px; }
+    .sidebar-spacer { flex: 1; }
+
+    /* ─── Main ─── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ─── Top Bar ─── */
+    .topbar {
+      height: 48px;
+      background: var(--topbar-bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .breadcrumb { display: flex; align-items: center; gap: 8px; flex: 1; }
+    .breadcrumb-item { color: var(--text-muted); cursor: pointer; font-size: 13px; }
+    .breadcrumb-item:hover { color: var(--primary); }
+    .breadcrumb-item.current { color: var(--text); font-weight: 600; cursor: default; }
+    .breadcrumb-sep { color: var(--text-muted); font-size: 11px; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--primary); color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600;
+    }
+
+    /* ─── Content ─── */
+    .content { flex: 1; overflow-y: auto; padding: 24px 28px; }
+
+    /* ─── Page Header ─── */
+    .page-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .page-title { font-size: 24px; font-weight: 700; }
+    .page-subtitle { color: var(--text-secondary); font-size: 13px; margin-top: 2px; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--bg-card);
+      color: var(--text); font-size: 13px; cursor: pointer;
+      transition: all 0.15s; font-family: inherit;
+    }
+    .btn:hover { background: var(--bg-card-hover); }
+    .btn-primary { background: var(--primary); border-color: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-danger { border-color: var(--fail); color: var(--fail); }
+    .btn-danger:hover { background: var(--fail-bg); }
+    .btn svg { width: 16px; height: 16px; }
+
+    /* ─── Overall Progress ─── */
+    .overall-progress {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+    .overall-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .overall-title { font-size: 14px; font-weight: 600; }
+    .overall-stats { display: flex; gap: 20px; }
+    .overall-stat {
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .overall-stat-value { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .overall-stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+
+    /* ─── Pipeline Progress Bar ─── */
+    .pipeline-bar {
+      display: flex; gap: 3px; height: 8px; border-radius: 4px;
+      overflow: hidden; margin-bottom: 12px;
+    }
+    .pipeline-segment {
+      height: 100%; border-radius: 2px; transition: flex 0.6s ease;
+    }
+    .pipeline-segment.done { background: var(--pass); }
+    .pipeline-segment.active { background: var(--primary); animation: pulse-bar 1.5s ease-in-out infinite; }
+    .pipeline-segment.pending { background: var(--border); }
+
+    @keyframes pulse-bar {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* ─── Pipeline Phases ─── */
+    .pipeline-phases {
+      display: flex; justify-content: space-between;
+      font-size: 11px; color: var(--text-muted);
+    }
+    .pipeline-phase {
+      display: flex; align-items: center; gap: 4px;
+    }
+    .phase-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      border: 2px solid var(--border);
+    }
+    .phase-dot.done { background: var(--pass); border-color: var(--pass); }
+    .phase-dot.active { background: var(--primary); border-color: var(--primary); animation: pulse-bar 1.5s ease-in-out infinite; }
+    .pipeline-phase.done { color: var(--pass); }
+    .pipeline-phase.active { color: var(--primary); font-weight: 500; }
+
+    .elapsed-time {
+      font-size: 12px; color: var(--text-muted);
+      display: flex; align-items: center; gap: 4px;
+    }
+
+    /* ─── File Processing List ─── */
+    .file-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .file-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      transition: all 0.3s ease;
+    }
+    .file-card.processing { border-color: var(--primary); border-left: 3px solid var(--primary); }
+    .file-card.done-pass { border-color: var(--pass); border-left: 3px solid var(--pass); }
+    .file-card.done-review { border-color: var(--review); border-left: 3px solid var(--review); }
+    .file-card.queued { opacity: 0.6; }
+
+    .file-card-header {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
+    }
+    .file-icon { color: var(--text-muted); flex-shrink: 0; }
+    .file-icon svg { width: 18px; height: 18px; }
+    .file-info { flex: 1; }
+    .file-name { font-size: 14px; font-weight: 600; }
+    .file-meta { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
+    /* ─── Score Badge (card) ─── */
+    .score-badge-card {
+      text-align: center; min-width: 48px;
+    }
+    .score-num {
+      font-size: 22px; font-weight: 700; line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .score-num.pass { color: var(--pass); }
+    .score-num.review { color: var(--review); }
+    .score-num.fail { color: var(--fail); }
+    .score-num.analyzing { color: var(--primary); }
+    .score-label {
+      font-size: 9px; text-transform: uppercase; letter-spacing: 0.3px;
+      margin-top: 2px;
+    }
+    .score-label.pass { color: var(--pass); }
+    .score-label.review { color: var(--review); }
+    .score-label.fail { color: var(--fail); }
+    .score-label.analyzing { color: var(--primary); }
+
+    /* ─── Layer Progress ─── */
+    .layer-progress {
+      display: flex; gap: 6px; align-items: center;
+    }
+    .layer-step {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 11px; padding: 3px 10px;
+      border-radius: 6px; background: rgba(51,65,85,0.3);
+      color: var(--text-muted);
+    }
+    .layer-step.done { background: var(--pass-bg); color: var(--pass); }
+    .layer-step.active { background: rgba(79,70,229,0.15); color: var(--primary); font-weight: 500; }
+    .layer-step.error { background: var(--fail-bg); color: var(--fail); }
+    .layer-step-icon { font-size: 12px; }
+    .layer-connector { width: 16px; height: 1px; background: var(--border); }
+    .layer-connector.done { background: var(--pass); }
+
+    /* ─── Findings Preview ─── */
+    .findings-preview {
+      margin-top: 10px;
+      display: flex; gap: 8px; align-items: center;
+      font-size: 12px;
+    }
+    .finding-tag {
+      padding: 2px 8px; border-radius: 4px;
+      font-size: 11px; font-weight: 500;
+    }
+    .finding-tag.critical { background: var(--fail-bg); color: var(--fail); }
+    .finding-tag.major { background: var(--review-bg); color: var(--review); }
+    .finding-tag.minor { background: rgba(100,116,139,0.15); color: var(--text-muted); }
+    .findings-preview-text { color: var(--text-muted); }
+    .findings-new {
+      color: var(--primary); font-weight: 500;
+      animation: fadeInSlide 0.4s ease;
+    }
+
+    @keyframes fadeInSlide {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── File Progress Bar ─── */
+    .file-progress-bar {
+      height: 3px; background: rgba(51,65,85,0.4);
+      border-radius: 2px; margin-top: 10px;
+      overflow: hidden;
+    }
+    .file-progress-fill {
+      height: 100%; border-radius: 2px;
+      transition: width 0.4s ease;
+    }
+
+    /* ─── Queued State ─── */
+    .queued-indicator {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .queued-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--text-muted);
+    }
+
+    /* ─── Status Row ─── */
+    .status-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 8px;
+    }
+    .status-text { font-size: 12px; color: var(--text-secondary); }
+    .status-action {
+      font-size: 12px; color: var(--primary); cursor: pointer;
+      background: none; border: none; font-family: inherit;
+    }
+    .status-action:hover { text-decoration: underline; }
+
+    /* ─── Score Change Animation ─── */
+    .score-change {
+      font-size: 11px; font-weight: 500;
+      animation: fadeInSlide 0.4s ease;
+    }
+    .score-up { color: var(--pass); }
+    .score-down { color: var(--fail); }
+
+    /* ─── Spinner ─── */
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ─── Completed Summary ─── */
+    .completed-summary {
+      display: flex; gap: 16px; align-items: center;
+      margin-top: 10px; padding-top: 10px;
+      border-top: 1px solid rgba(51,65,85,0.3);
+    }
+    .summary-item {
+      font-size: 12px; color: var(--text-secondary);
+      display: flex; align-items: center; gap: 4px;
+    }
+    .summary-item svg { width: 14px; height: 14px; }
+
+    /* ─── Status Bar ─── */
+    .statusbar {
+      height: 32px;
+      background: var(--sidebar-bg);
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center;
+      padding: 0 16px; font-size: 11px;
+      color: var(--text-muted); gap: 16px;
+      flex-shrink: 0;
+    }
+    .statusbar-sep { color: var(--border); }
+    .statusbar-right { margin-left: auto; display: flex; gap: 12px; align-items: center; }
+    .kbd {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 3px; padding: 0 4px;
+      font-size: 10px; font-family: 'SF Mono', 'Consolas', monospace;
+    }
+    .processing-indicator {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--primary);
+    }
+    .processing-dot {
+      width: 6px; height: 6px; background: var(--primary);
+      border-radius: 50%; animation: pulse-bar 1.5s ease-in-out infinite;
+    }
+
+    /* ─── Toast ─── */
+    .toast {
+      position: fixed; bottom: 48px; left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 20px;
+      font-size: 13px; color: var(--text);
+      display: flex; align-items: center; gap: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      opacity: 0; transition: all 0.3s ease;
+      pointer-events: none; z-index: 100;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ─── ETA Badge ─── */
+    .eta-badge {
+      font-size: 11px; padding: 2px 8px;
+      background: rgba(79,70,229,0.1); color: var(--primary);
+      border-radius: 4px; font-weight: 500;
+    }
+
+    /* ─── Scrollbar ─── */
+    .content::-webkit-scrollbar { width: 6px; }
+    .content::-webkit-scrollbar-track { background: transparent; }
+    .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ─── Check icon ─── */
+    .check-circle {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--pass); color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-logo">Q</div>
+      <button class="sidebar-btn active" title="Dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+      </button>
+      <button class="sidebar-btn" title="Review">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      </button>
+      <button class="sidebar-btn" title="Reports">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+      </button>
+      <button class="sidebar-btn" title="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      </button>
+      <div class="sidebar-spacer"></div>
+      <button class="sidebar-btn" title="Ctrl+K">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+    </nav>
+
+    <div class="main">
+      <!-- Top Bar -->
+      <header class="topbar">
+        <div class="breadcrumb">
+          <span class="breadcrumb-item" onclick="window.location.href='ux-mockup-dashboard.html'">Dashboard</span>
+          <span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-item">Client-ABC</span>
+          <span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-item current">Upload & Processing</span>
+        </div>
+        <div class="topbar-right">
+          <div class="avatar">MN</div>
+        </div>
+      </header>
+
+      <!-- Content -->
+      <div class="content">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div>
+            <div class="page-title">Processing Batch</div>
+            <div class="page-subtitle">Tuesday Batch &middot; 6 files &middot; EN → TH &middot; Thorough mode</div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-danger" onclick="showToast('Batch cancelled', '✕')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              Cancel Batch
+            </button>
+          </div>
+        </div>
+
+        <!-- Overall Progress -->
+        <div class="overall-progress">
+          <div class="overall-header">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div class="overall-title">Overall Pipeline Progress</div>
+              <span class="eta-badge">ETA: ~45s remaining</span>
+            </div>
+            <div class="overall-stats">
+              <div class="overall-stat">
+                <div class="overall-stat-value" style="color:var(--pass)">3</div>
+                <div class="overall-stat-label">Complete</div>
+              </div>
+              <div class="overall-stat">
+                <div class="overall-stat-value" style="color:var(--primary)">2</div>
+                <div class="overall-stat-label">Processing</div>
+              </div>
+              <div class="overall-stat">
+                <div class="overall-stat-value">1</div>
+                <div class="overall-stat-label">Queued</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pipeline Bar -->
+          <div class="pipeline-bar">
+            <div class="pipeline-segment done" style="flex:3"></div>
+            <div class="pipeline-segment active" style="flex:2"></div>
+            <div class="pipeline-segment pending" style="flex:1"></div>
+          </div>
+
+          <!-- Pipeline Phases -->
+          <div class="pipeline-phases">
+            <div class="pipeline-phase done">
+              <div class="phase-dot done"></div>
+              Upload (6/6)
+            </div>
+            <div class="pipeline-phase done">
+              <div class="phase-dot done"></div>
+              Parse XLIFF (6/6)
+            </div>
+            <div class="pipeline-phase done">
+              <div class="phase-dot done"></div>
+              L1 Rules (6/6)
+            </div>
+            <div class="pipeline-phase active">
+              <div class="phase-dot active"></div>
+              L2 AI Screen (4/6)
+            </div>
+            <div class="pipeline-phase">
+              <div class="phase-dot"></div>
+              L3 AI Deep (2/6)
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; margin-top:12px;">
+            <div class="elapsed-time">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+              Elapsed: 1m 32s
+            </div>
+            <div style="font-size:12px; color:var(--text-muted);">
+              Throughput: ~180 segments/sec (L1) &middot; ~12 segments/sec (AI)
+            </div>
+          </div>
+        </div>
+
+        <!-- File Processing List -->
+        <div class="file-list">
+
+          <!-- File 1: Fully Complete — Passed -->
+          <div class="file-card done-pass">
+            <div class="file-card-header">
+              <div class="check-circle">✓</div>
+              <div class="file-info">
+                <div class="file-name">user-guide-01.xlf</div>
+                <div class="file-meta">842 segments &middot; 12,400 words &middot; Completed in 48s</div>
+              </div>
+              <div class="score-badge-card">
+                <div class="score-num pass">97</div>
+                <div class="score-label pass">Passed</div>
+              </div>
+            </div>
+            <div class="layer-progress">
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> Upload</div>
+              <div class="layer-connector done"></div>
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> Parse</div>
+              <div class="layer-connector done"></div>
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> L1 Rules</div>
+              <div class="layer-connector done"></div>
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> L2 AI</div>
+              <div class="layer-connector done"></div>
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> L3 Deep</div>
+            </div>
+            <div class="completed-summary">
+              <div class="summary-item" style="color:var(--pass)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>
+                Auto-passed
+              </div>
+              <div class="summary-item">
+                <span class="finding-tag minor">3 Minor</span>
+              </div>
+              <div class="summary-item" style="color:var(--text-muted)">0 Critical &middot; 0 Major</div>
+              <button class="status-action" onclick="showToast('Opening review view...')">View findings →</button>
+            </div>
+          </div>
+
+          <!-- File 2: Fully Complete — Needs Review -->
+          <div class="file-card done-review">
+            <div class="file-card-header">
+              <div style="width:18px;height:18px;border-radius:50%;background:var(--review);color:white;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0">!</div>
+              <div class="file-info">
+                <div class="file-name">user-guide-02.xlf</div>
+                <div class="file-meta">1,204 segments &middot; 18,600 words &middot; Completed in 1m 12s</div>
+              </div>
+              <div class="score-badge-card">
+                <div class="score-num review">78</div>
+                <div class="score-label review">Review</div>
+              </div>
+            </div>
+            <div class="layer-progress">
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> Upload</div>
+              <div class="layer-connector done"></div>
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> Parse</div>
+              <div class="layer-connector done"></div>
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> L1 Rules</div>
+              <div class="layer-connector done"></div>
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> L2 AI</div>
+              <div class="layer-connector done"></div>
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> L3 Deep</div>
+            </div>
+            <div class="completed-summary">
+              <div class="summary-item" style="color:var(--review)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                Needs Review
+              </div>
+              <div class="summary-item">
+                <span class="finding-tag critical">2 Critical</span>
+                <span class="finding-tag major">4 Major</span>
+                <span class="finding-tag minor">8 Minor</span>
+              </div>
+              <button class="status-action" style="font-weight:600;" onclick="showToast('Opening review view...')">Start Review →</button>
+            </div>
+          </div>
+
+          <!-- File 3: Complete — Passed -->
+          <div class="file-card done-pass">
+            <div class="file-card-header">
+              <div class="check-circle">✓</div>
+              <div class="file-info">
+                <div class="file-name">user-guide-03.xlf</div>
+                <div class="file-meta">560 segments &middot; 8,200 words &middot; Completed in 35s</div>
+              </div>
+              <div class="score-badge-card">
+                <div class="score-num pass">99</div>
+                <div class="score-label pass">Passed</div>
+              </div>
+            </div>
+            <div class="layer-progress">
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> Upload</div>
+              <div class="layer-connector done"></div>
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> Parse</div>
+              <div class="layer-connector done"></div>
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> L1 Rules</div>
+              <div class="layer-connector done"></div>
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> L2 AI</div>
+              <div class="layer-connector done"></div>
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> L3 Deep</div>
+            </div>
+            <div class="completed-summary">
+              <div class="summary-item" style="color:var(--pass)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>
+                Auto-passed
+              </div>
+              <div class="summary-item">
+                <span class="finding-tag minor">1 Minor</span>
+              </div>
+              <div class="summary-item" style="color:var(--text-muted)">0 Critical &middot; 0 Major</div>
+              <button class="status-action" onclick="showToast('Opening review view...')">View findings →</button>
+            </div>
+          </div>
+
+          <!-- File 4: L2 AI in progress — Score updating live -->
+          <div class="file-card processing">
+            <div class="file-card-header">
+              <div class="spinner"></div>
+              <div class="file-info">
+                <div class="file-name">admin-panel-01.xlf</div>
+                <div class="file-meta">980 segments &middot; 14,800 words</div>
+              </div>
+              <div class="score-badge-card">
+                <div class="score-num analyzing" style="animation: pulse-bar 2s ease-in-out infinite;">88</div>
+                <div class="score-label analyzing">L2 AI...</div>
+              </div>
+            </div>
+            <div class="layer-progress">
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> Upload</div>
+              <div class="layer-connector done"></div>
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> Parse</div>
+              <div class="layer-connector done"></div>
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> L1 Rules<span style="margin-left:4px;font-size:10px;color:var(--text-muted)">4 found</span></div>
+              <div class="layer-connector done"></div>
+              <div class="layer-step active"><span class="layer-step-icon"><div class="spinner" style="width:12px;height:12px;border-width:1.5px;"></div></span> L2 AI<span style="margin-left:4px;font-size:10px;">68%</span></div>
+              <div class="layer-connector"></div>
+              <div class="layer-step"><span class="layer-step-icon">○</span> L3 Deep</div>
+            </div>
+            <div class="findings-preview">
+              <span class="finding-tag major">1 Major</span>
+              <span class="finding-tag minor">3 Minor</span>
+              <span class="findings-new">+1 new AI finding just now</span>
+            </div>
+            <div class="file-progress-bar">
+              <div class="file-progress-fill" style="width:75%; background: var(--primary);"></div>
+            </div>
+            <div class="status-row">
+              <div class="status-text">L2 AI screening... analyzing segments 665-980</div>
+              <div class="score-change score-down">Score: 92 → 88 (AI found 1 Major)</div>
+            </div>
+          </div>
+
+          <!-- File 5: L2 AI starting — Score from L1 only -->
+          <div class="file-card processing">
+            <div class="file-card-header">
+              <div class="spinner"></div>
+              <div class="file-info">
+                <div class="file-name">admin-panel-02.xlf</div>
+                <div class="file-meta">1,120 segments &middot; 16,200 words</div>
+              </div>
+              <div class="score-badge-card">
+                <div class="score-num analyzing" style="animation: pulse-bar 2s ease-in-out infinite;">94</div>
+                <div class="score-label" style="color: #60A5FA;">Rule-based</div>
+              </div>
+            </div>
+            <div class="layer-progress">
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> Upload</div>
+              <div class="layer-connector done"></div>
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> Parse</div>
+              <div class="layer-connector done"></div>
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> L1 Rules<span style="margin-left:4px;font-size:10px;color:var(--text-muted)">2 found</span></div>
+              <div class="layer-connector"></div>
+              <div class="layer-step active"><span class="layer-step-icon"><div class="spinner" style="width:12px;height:12px;border-width:1.5px;"></div></span> L2 AI<span style="margin-left:4px;font-size:10px;">12%</span></div>
+              <div class="layer-connector"></div>
+              <div class="layer-step"><span class="layer-step-icon">○</span> L3 Deep</div>
+            </div>
+            <div class="findings-preview">
+              <span class="finding-tag minor">2 Minor</span>
+              <span class="findings-preview-text">Rule-based findings only &middot; AI analysis starting...</span>
+            </div>
+            <div class="file-progress-bar">
+              <div class="file-progress-fill" style="width:55%; background: var(--primary);"></div>
+            </div>
+            <div class="status-row">
+              <div class="status-text">L2 AI screening... analyzing segments 1-134</div>
+              <div style="font-size:11px; color:var(--text-muted);">Interim score (L1 only): 94</div>
+            </div>
+          </div>
+
+          <!-- File 6: Queued -->
+          <div class="file-card queued">
+            <div class="file-card-header">
+              <div style="width:18px;height:18px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <div style="width:6px;height:6px;border-radius:50%;background:var(--text-muted);"></div>
+              </div>
+              <div class="file-info">
+                <div class="file-name">release-notes-v4.xlf</div>
+                <div class="file-meta">320 segments &middot; 4,800 words</div>
+              </div>
+              <div class="score-badge-card">
+                <div class="score-num" style="color:var(--text-muted)">—</div>
+                <div class="score-label" style="color:var(--text-muted)">Queued</div>
+              </div>
+            </div>
+            <div class="layer-progress">
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> Upload</div>
+              <div class="layer-connector done"></div>
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> Parse</div>
+              <div class="layer-connector done"></div>
+              <div class="layer-step done"><span class="layer-step-icon">✓</span> L1 Rules<span style="margin-left:4px;font-size:10px;color:var(--text-muted)">1 found</span></div>
+              <div class="layer-connector"></div>
+              <div class="layer-step"><span class="layer-step-icon">○</span> L2 AI</div>
+              <div class="layer-connector"></div>
+              <div class="layer-step"><span class="layer-step-icon">○</span> L3 Deep</div>
+            </div>
+            <div class="queued-indicator">
+              <div class="queued-dot"></div>
+              Waiting for AI queue &middot; Position: 3 of 3 &middot; L1 complete: 1 Minor found (interim score available)
+            </div>
+          </div>
+        </div>
+
+        <div style="height:32px;"></div>
+      </div>
+
+      <!-- Status Bar -->
+      <footer class="statusbar">
+        <span>Client-ABC</span>
+        <span class="statusbar-sep">|</span>
+        <span>EN → TH</span>
+        <span class="statusbar-sep">|</span>
+        <span>Thorough mode (L1+L2+L3)</span>
+        <span class="statusbar-sep">|</span>
+        <span class="processing-indicator">
+          <span class="processing-dot"></span>
+          Processing 2 of 6 files...
+        </span>
+        <div class="statusbar-right">
+          <span><span class="kbd">?</span> Shortcuts</span>
+          <span><span class="kbd">Ctrl</span> <span class="kbd">K</span> Command</span>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast">
+    <span id="toastIcon"></span>
+    <span id="toastText"></span>
+  </div>
+
+  <script>
+    function showToast(msg, icon) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastIcon').textContent = icon || '✓';
+      document.getElementById('toastText').textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    // Simulate live score update on file 4
+    let scoreEl = document.querySelectorAll('.file-card.processing .score-num')[0];
+    let progressEl = document.querySelectorAll('.file-progress-fill')[0];
+    let percentEl = document.querySelectorAll('.layer-step.active span:last-child')[0];
+    let currentScore = 88;
+    let currentProgress = 75;
+
+    setInterval(() => {
+      if (currentProgress < 95) {
+        currentProgress += 1;
+        if (progressEl) progressEl.style.width = currentProgress + '%';
+      }
+    }, 800);
+
+    // Simulate new findings appearing on file 4
+    let findingCount = 0;
+    const newFindingEl = document.querySelector('.findings-new');
+    setInterval(() => {
+      findingCount++;
+      if (newFindingEl && findingCount % 5 === 0) {
+        newFindingEl.style.animation = 'none';
+        newFindingEl.offsetHeight; // reflow
+        newFindingEl.style.animation = 'fadeInSlide 0.4s ease';
+        newFindingEl.textContent = '+1 new AI finding just now';
+      }
+    }, 4000);
+  </script>
+</body>
+</html>

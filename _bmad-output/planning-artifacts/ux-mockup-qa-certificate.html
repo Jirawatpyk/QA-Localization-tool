@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>qa-localization-tool — QA Certificate</title>
+  <style>
+    /* ─── Reset & Base ─── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #4F46E5;
+      --primary-hover: #4338CA;
+      --primary-muted: #EEF2FF;
+      --primary-subtle: #E0E7FF;
+      --bg: #0F172A;
+      --bg-card: #1E293B;
+      --bg-card-hover: #253348;
+      --bg-certificate: #243044;
+      --border: #334155;
+      --border-light: #475569;
+      --text: #F1F5F9;
+      --text-secondary: #94A3B8;
+      --text-muted: #64748B;
+      --pass: #10B981;
+      --pass-bg: rgba(16, 185, 129, 0.1);
+      --review: #F59E0B;
+      --review-bg: rgba(245, 158, 11, 0.1);
+      --fail: #EF4444;
+      --fail-bg: rgba(239, 68, 68, 0.1);
+      --sidebar-bg: #0B1120;
+      --topbar-bg: #0F172A;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.5;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ─── Layout ─── */
+    .app { display: flex; height: 100vh; }
+
+    /* ─── Sidebar ─── */
+    .sidebar {
+      width: 48px;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 0;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .sidebar-logo {
+      width: 32px; height: 32px;
+      background: var(--primary);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-weight: 700; font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .sidebar-btn {
+      width: 36px; height: 36px;
+      border: none; background: transparent;
+      border-radius: 8px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted);
+      transition: all 0.15s;
+      position: relative;
+    }
+    .sidebar-btn:hover { background: var(--bg-card); color: var(--text); }
+    .sidebar-btn.active {
+      background: var(--primary-muted);
+      color: var(--primary);
+    }
+    .sidebar-btn.active::before {
+      content: '';
+      position: absolute;
+      left: -6px;
+      width: 3px; height: 20px;
+      background: var(--primary);
+      border-radius: 0 3px 3px 0;
+    }
+    .sidebar-btn svg { width: 20px; height: 20px; }
+    .sidebar-spacer { flex: 1; }
+
+    /* ─── Main Area ─── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ─── Top Bar ─── */
+    .topbar {
+      height: 48px;
+      background: var(--topbar-bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+    .breadcrumb { display: flex; align-items: center; gap: 8px; flex: 1; }
+    .breadcrumb-item { color: var(--text-muted); cursor: pointer; font-size: 13px; }
+    .breadcrumb-item:hover { color: var(--primary); }
+    .breadcrumb-item.current { color: var(--text); font-weight: 600; cursor: default; }
+    .breadcrumb-sep { color: var(--text-muted); font-size: 11px; }
+
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .notification-btn {
+      position: relative;
+      background: none; border: none;
+      color: var(--text-muted); cursor: pointer;
+    }
+    .notification-btn svg { width: 18px; height: 18px; }
+    .notification-dot {
+      position: absolute; top: -2px; right: -2px;
+      width: 8px; height: 8px;
+      background: var(--fail);
+      border-radius: 50%;
+      border: 2px solid var(--topbar-bg);
+    }
+    .avatar {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600;
+    }
+
+    /* ─── Content ─── */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 28px;
+    }
+
+    /* ─── Buttons ─── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+    .btn:hover { background: var(--bg-card-hover); border-color: var(--border-light); }
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: white;
+    }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn svg { width: 16px; height: 16px; }
+
+    /* ─── Certificate Paper ─── */
+    .certificate {
+      background: var(--bg-certificate);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px 40px;
+      max-width: 960px;
+      margin: 0 auto;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    /* ─── Top Actions Bar ─── */
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 24px;
+      max-width: 960px;
+      margin-left: auto;
+      margin-right: auto;
+      margin-bottom: 20px;
+    }
+
+    /* ─── Certificate Header ─── */
+    .cert-header {
+      text-align: center;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .cert-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.3px;
+    }
+    .cert-id {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: 'SF Mono', 'Consolas', 'Courier New', monospace;
+      margin-bottom: 16px;
+    }
+    .cert-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .cert-badge.passed {
+      background: var(--pass);
+      color: white;
+    }
+    .cert-badge.review {
+      background: var(--review);
+      color: white;
+    }
+    .cert-badge.failed {
+      background: var(--fail);
+      color: white;
+    }
+    .cert-generated {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 12px;
+    }
+
+    /* ─── Project Info Grid ─── */
+    .project-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 24px;
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .info-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+    .info-label {
+      color: var(--text-muted);
+      min-width: 100px;
+      flex-shrink: 0;
+    }
+    .info-value {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    /* ─── Score Display ─── */
+    .score-display {
+      text-align: center;
+      padding: 28px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .score-large {
+      font-size: 48px;
+      font-weight: 700;
+      color: var(--pass);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .score-passed-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--pass);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+    .score-progression {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .score-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--pass);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    .score-arrow {
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    /* ─── Findings Table ─── */
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+    .findings-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+      font-size: 13px;
+    }
+    .findings-table th {
+      text-align: left;
+      padding: 10px 14px;
+      background: rgba(15, 23, 42, 0.5);
+      border-bottom: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+    .findings-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+      color: var(--text-secondary);
+    }
+    .findings-table tr:last-child td {
+      border-bottom: none;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .findings-table .severity-critical { color: var(--fail); }
+    .findings-table .severity-major { color: var(--review); }
+    .findings-table .severity-minor { color: var(--text-muted); }
+    .findings-table .severity-total { color: var(--text); font-weight: 700; }
+    .findings-table .em-dash { color: var(--text-muted); }
+
+    /* ─── Metrics Grid ─── */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .metric-card {
+      background: rgba(15, 23, 42, 0.4);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 18px;
+      text-align: center;
+    }
+    .metric-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 6px;
+    }
+    .metric-value {
+      font-size: 20px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .metric-value.green { color: var(--pass); }
+    .metric-value.neutral { color: var(--text); }
+
+    /* ─── Review Details ─── */
+    .review-details {
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .review-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 24px;
+    }
+    .review-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+    .review-item-label {
+      color: var(--text-muted);
+      min-width: 140px;
+    }
+    .review-item-value {
+      color: var(--text);
+      font-weight: 500;
+    }
+    .check-icon {
+      color: var(--pass);
+      font-weight: 700;
+    }
+
+    /* ─── Digital Verification ─── */
+    .verification {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .qr-placeholder {
+      width: 80px;
+      height: 80px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--text-muted);
+    }
+    .qr-placeholder .qr-text {
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .qr-placeholder .qr-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 4px;
+    }
+    .verification-info {
+      flex: 1;
+    }
+    .verification-scan {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    .verification-hash {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: 'SF Mono', 'Consolas', 'Courier New', monospace;
+      word-break: break-all;
+    }
+
+    /* ─── Certificate Footer ─── */
+    .cert-footer {
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* ─── Status Bar ─── */
+    .statusbar {
+      height: 32px;
+      background: var(--sidebar-bg);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      font-size: 11px;
+      color: var(--text-muted);
+      gap: 16px;
+      flex-shrink: 0;
+    }
+    .statusbar-sep { color: var(--border); }
+    .statusbar-right { margin-left: auto; display: flex; gap: 12px; align-items: center; }
+    .kbd {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 0 4px;
+      font-size: 10px;
+      font-family: 'SF Mono', 'Consolas', monospace;
+    }
+
+    /* ─── Toast ─── */
+    .toast {
+      position: fixed;
+      bottom: 48px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 13px;
+      color: var(--text);
+      display: flex; align-items: center; gap: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      opacity: 0;
+      transition: all 0.3s ease;
+      pointer-events: none;
+      z-index: 100;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .toast-icon { font-size: 16px; }
+
+    /* ─── Scrollbar ─── */
+    .content::-webkit-scrollbar { width: 6px; }
+    .content::-webkit-scrollbar-track { background: transparent; }
+    .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .content::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+
+    /* ─── Print Styles ─── */
+    @media print {
+      body { background: white; color: #111; }
+      .sidebar, .topbar, .statusbar, .top-actions, .toast { display: none !important; }
+      .main { width: 100%; }
+      .content { padding: 0; overflow: visible; }
+      .certificate {
+        background: white;
+        border: 2px solid #e5e7eb;
+        box-shadow: none;
+        max-width: 100%;
+        padding: 40px 48px;
+      }
+      .cert-header { border-bottom-color: #e5e7eb; }
+      .cert-title { color: #111; }
+      .cert-id { color: #6b7280; }
+      .project-info { border-bottom-color: #e5e7eb; }
+      .info-label { color: #6b7280; }
+      .info-value { color: #111; }
+      .score-display { border-bottom-color: #e5e7eb; }
+      .findings-table th { background: #f9fafb; color: #6b7280; border-bottom-color: #e5e7eb; }
+      .findings-table td { color: #374151; border-bottom-color: #e5e7eb; }
+      .findings-table tr:last-child td { color: #111; }
+      .metric-card { background: #f9fafb; border-color: #e5e7eb; }
+      .metric-label { color: #6b7280; }
+      .metric-value.neutral { color: #111; }
+      .review-details { border-bottom-color: #e5e7eb; }
+      .review-item-label { color: #6b7280; }
+      .review-item-value { color: #111; }
+      .verification { border-bottom-color: #e5e7eb; }
+      .qr-placeholder { background: #f3f4f6; border-color: #d1d5db; color: #6b7280; }
+      .verification-scan { color: #374151; }
+      .verification-hash { color: #6b7280; }
+      .cert-footer { color: #9ca3af; }
+      .section-title { color: #111; }
+      .metrics-grid { border-bottom-color: #e5e7eb; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- ─── Sidebar ─── -->
+    <nav class="sidebar" aria-label="Main navigation">
+      <div class="sidebar-logo">Q</div>
+      <button class="sidebar-btn" title="Dashboard" onclick="showToast('Navigate to Dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+      </button>
+      <button class="sidebar-btn" title="Review" onclick="showToast('Navigate to Review')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      </button>
+      <button class="sidebar-btn active" title="Reports">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+      </button>
+      <button class="sidebar-btn" title="Settings" onclick="showToast('Navigate to Settings')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      </button>
+      <div class="sidebar-spacer"></div>
+      <button class="sidebar-btn" title="Search (Ctrl+K)" onclick="showToast('Search opened')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+    </nav>
+
+    <!-- ─── Main ─── -->
+    <div class="main">
+      <!-- ─── Top Bar ─── -->
+      <header class="topbar">
+        <div class="breadcrumb">
+          <span class="breadcrumb-item" onclick="showToast('Navigate to Dashboard')">Dashboard</span>
+          <span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-item" onclick="showToast('Navigate to Client-ABC')">Client-ABC</span>
+          <span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-item" onclick="showToast('Navigate to user-guide-01.xlf')">user-guide-01.xlf</span>
+          <span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-item current">Certificate</span>
+        </div>
+        <div class="topbar-right">
+          <button class="notification-btn" title="Notifications" onclick="showToast('No new notifications')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+            <span class="notification-dot"></span>
+          </button>
+          <div class="avatar">MN</div>
+        </div>
+      </header>
+
+      <!-- ─── Content ─── -->
+      <div class="content">
+
+        <!-- ─── Top Actions ─── -->
+        <div class="top-actions">
+          <button class="btn btn-primary" onclick="handleDownloadPDF()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download PDF
+          </button>
+          <button class="btn" onclick="handlePrint()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6,9 6,2 18,2 18,9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Print
+          </button>
+          <button class="btn" onclick="handleShareLink()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            Share Link
+          </button>
+        </div>
+
+        <!-- ─── Certificate ─── -->
+        <div class="certificate">
+
+          <!-- Certificate Header -->
+          <div class="cert-header">
+            <div class="cert-title">QA Quality Certificate</div>
+            <div class="cert-id">Certificate ID: QC-2026-0214-047</div>
+            <div style="margin: 16px 0 4px;">
+              <span class="cert-badge passed">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><polyline points="22,4 12,14.01 9,11.01"/></svg>
+                PASSED
+              </span>
+            </div>
+            <div class="cert-generated">Generated: 2026-02-14 14:32 UTC</div>
+          </div>
+
+          <!-- Project Info -->
+          <div class="project-info">
+            <div class="info-row">
+              <span class="info-label">Project:</span>
+              <span class="info-value">Client-ABC</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Language:</span>
+              <span class="info-value">EN &rarr; TH</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">File:</span>
+              <span class="info-value">user-guide-01.xlf</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Segments:</span>
+              <span class="info-value">842 / Words: 12,400</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Mode:</span>
+              <span class="info-value">Thorough (L1+L2+L3)</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Pass Threshold:</span>
+              <span class="info-value">&ge; 95</span>
+            </div>
+          </div>
+
+          <!-- Score Display -->
+          <div class="score-display">
+            <div class="score-large">97</div>
+            <div class="score-passed-label">PASSED</div>
+            <div class="score-progression">
+              <span class="score-chip">L1: 97</span>
+              <span class="score-arrow">&rarr;</span>
+              <span class="score-chip">L2: 97</span>
+              <span class="score-arrow">&rarr;</span>
+              <span class="score-chip">L3: 97</span>
+            </div>
+          </div>
+
+          <!-- Findings Summary -->
+          <div style="margin-bottom: 24px;">
+            <div class="section-title">Findings Summary</div>
+            <table class="findings-table">
+              <thead>
+                <tr>
+                  <th>Severity</th>
+                  <th>Found</th>
+                  <th>Accepted</th>
+                  <th>Rejected</th>
+                  <th>Net Impact</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="severity-critical">Critical</td>
+                  <td>0</td>
+                  <td class="em-dash">&mdash;</td>
+                  <td class="em-dash">&mdash;</td>
+                  <td>0 pts</td>
+                </tr>
+                <tr>
+                  <td class="severity-major">Major</td>
+                  <td>0</td>
+                  <td class="em-dash">&mdash;</td>
+                  <td class="em-dash">&mdash;</td>
+                  <td>0 pts</td>
+                </tr>
+                <tr>
+                  <td class="severity-minor">Minor</td>
+                  <td>3</td>
+                  <td>3</td>
+                  <td>0</td>
+                  <td>-3 pts</td>
+                </tr>
+                <tr>
+                  <td class="severity-total">Total</td>
+                  <td><strong>3</strong></td>
+                  <td><strong>3</strong></td>
+                  <td><strong>0</strong></td>
+                  <td><strong>-3 pts</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Quality Metrics -->
+          <div class="section-title">Quality Metrics</div>
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-label">False Positive Rate</div>
+              <div class="metric-value green">0%</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Review Time</div>
+              <div class="metric-value neutral">2m 14s</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Auto-pass Eligible</div>
+              <div class="metric-value green">Yes &#10003;</div>
+            </div>
+          </div>
+
+          <!-- Review Details -->
+          <div class="review-details">
+            <div class="section-title">Review Details</div>
+            <div class="review-grid">
+              <div class="review-item">
+                <span class="review-item-label">Reviewed by:</span>
+                <span class="review-item-value">Mona N.</span>
+              </div>
+              <div class="review-item">
+                <span class="review-item-label">Completed:</span>
+                <span class="review-item-value">2026-02-14 14:28 UTC</span>
+              </div>
+              <div class="review-item">
+                <span class="review-item-label">Duration:</span>
+                <span class="review-item-value">2m 14s</span>
+              </div>
+              <div class="review-item">
+                <span class="review-item-label">All findings addressed:</span>
+                <span class="review-item-value"><span class="check-icon">&#10003;</span></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Digital Verification -->
+          <div class="verification">
+            <div class="qr-placeholder">
+              <span class="qr-text">QR</span>
+              <span class="qr-label">Code</span>
+            </div>
+            <div class="verification-info">
+              <div class="verification-scan">Scan to verify this certificate</div>
+              <div class="verification-hash">Hash: sha256:a1b2c3d4e5f6...</div>
+            </div>
+          </div>
+
+          <!-- Certificate Footer -->
+          <div class="cert-footer">
+            Generated by qa-localization-tool &middot; MQM methodology &middot; Score = 100 - (Penalties / WordCount &times; 1000)
+          </div>
+
+        </div><!-- /certificate -->
+
+        <div style="height: 32px;"></div>
+      </div>
+
+      <!-- ─── Status Bar ─── -->
+      <footer class="statusbar">
+        <span>Client-ABC</span>
+        <span class="statusbar-sep">|</span>
+        <span>EN &rarr; TH</span>
+        <span class="statusbar-sep">|</span>
+        <span>Certificate view</span>
+        <div class="statusbar-right">
+          <span><span class="kbd">?</span> Shortcuts</span>
+          <span><span class="kbd">Ctrl</span> <span class="kbd">K</span> Command</span>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast">
+    <span class="toast-icon" id="toastIcon"></span>
+    <span id="toastText"></span>
+  </div>
+
+  <script>
+    // ─── Toast Notification ───
+    let toastTimeout;
+    function showToast(msg, icon) {
+      const toast = document.getElementById('toast');
+      const text = document.getElementById('toastText');
+      const toastIcon = document.getElementById('toastIcon');
+      toastIcon.textContent = icon || '\u2713';
+      text.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    // ─── Button Handlers ───
+    function handleDownloadPDF() {
+      showToast('Preparing PDF download...', '\u2193');
+      // Simulate download delay
+      setTimeout(() => {
+        showToast('PDF downloaded: QC-2026-0214-047.pdf', '\u2713');
+      }, 1200);
+    }
+
+    function handlePrint() {
+      showToast('Opening print dialog...', '\u2399');
+      setTimeout(() => {
+        window.print();
+      }, 300);
+    }
+
+    function handleShareLink() {
+      const shareUrl = 'https://qa-tool.example.com/cert/QC-2026-0214-047';
+      // Attempt to copy to clipboard
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(shareUrl).then(() => {
+          showToast('Link copied to clipboard!', '\u{1F517}');
+        }).catch(() => {
+          showToast('Share link: ' + shareUrl, '\u{1F517}');
+        });
+      } else {
+        showToast('Share link: ' + shareUrl, '\u{1F517}');
+      }
+    }
+
+    // ─── Keyboard Shortcuts ───
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        showToast('Back to file view');
+      }
+      if (e.ctrlKey && e.key === 'p') {
+        e.preventDefault();
+        handlePrint();
+      }
+    });
+  </script>
+</body>
+</html>

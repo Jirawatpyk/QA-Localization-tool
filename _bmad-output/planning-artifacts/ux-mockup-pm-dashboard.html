@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>qa-localization-tool — PM Dashboard Mockup</title>
+  <style>
+    /* ─── Reset & Base ─── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #4F46E5;
+      --primary-hover: #4338CA;
+      --primary-muted: #EEF2FF;
+      --primary-subtle: #E0E7FF;
+      --bg: #0F172A;
+      --bg-card: #1E293B;
+      --bg-card-hover: #253348;
+      --border: #334155;
+      --border-light: #475569;
+      --text: #F1F5F9;
+      --text-secondary: #94A3B8;
+      --text-muted: #64748B;
+      --pass: #10B981;
+      --pass-bg: rgba(16, 185, 129, 0.1);
+      --review: #F59E0B;
+      --review-bg: rgba(245, 158, 11, 0.1);
+      --fail: #EF4444;
+      --fail-bg: rgba(239, 68, 68, 0.1);
+      --sidebar-bg: #0B1120;
+      --topbar-bg: #0F172A;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.5;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ─── Layout ─── */
+    .app { display: flex; height: 100vh; }
+
+    /* ─── Sidebar ─── */
+    .sidebar {
+      width: 48px;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 0;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .sidebar-logo {
+      width: 32px; height: 32px;
+      background: var(--primary);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-weight: 700; font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .sidebar-btn {
+      width: 36px; height: 36px;
+      border: none; background: transparent;
+      border-radius: 8px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted);
+      transition: all 0.15s;
+      position: relative;
+    }
+    .sidebar-btn:hover { background: var(--bg-card); color: var(--text); }
+    .sidebar-btn.active {
+      background: rgba(79, 70, 229, 0.15);
+      color: var(--primary);
+    }
+    .sidebar-btn.active::before {
+      content: '';
+      position: absolute;
+      left: -6px;
+      width: 3px; height: 20px;
+      background: var(--primary);
+      border-radius: 0 3px 3px 0;
+    }
+    .sidebar-btn svg { width: 20px; height: 20px; }
+    .sidebar-spacer { flex: 1; }
+
+    /* ─── Main Area ─── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ─── Top Bar ─── */
+    .topbar {
+      height: 48px;
+      background: var(--topbar-bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+    .breadcrumb { display: flex; align-items: center; gap: 8px; flex: 1; }
+    .breadcrumb-item { color: var(--text-muted); cursor: pointer; font-size: 13px; }
+    .breadcrumb-item:hover { color: var(--primary); }
+    .breadcrumb-item.current { color: var(--text); font-weight: 600; cursor: default; }
+    .breadcrumb-item.current:hover { color: var(--text); }
+    .breadcrumb-sep { color: var(--text-muted); font-size: 11px; }
+
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .project-select {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      color: var(--text);
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .avatar {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600;
+    }
+    .notification-btn {
+      position: relative;
+      background: none; border: none;
+      color: var(--text-muted); cursor: pointer;
+    }
+    .notification-btn svg { width: 18px; height: 18px; }
+    .notification-dot {
+      position: absolute; top: -2px; right: -2px;
+      width: 8px; height: 8px;
+      background: var(--fail);
+      border-radius: 50%;
+      border: 2px solid var(--topbar-bg);
+    }
+
+    /* ─── Content ─── */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 28px;
+    }
+
+    /* ─── Page Header ─── */
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 28px;
+    }
+    .page-title { font-size: 24px; font-weight: 700; }
+    .page-subtitle { color: var(--text-secondary); font-size: 13px; margin-top: 4px; }
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+
+    /* ─── Buttons ─── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .btn:hover { background: var(--bg-card-hover); border-color: var(--border-light); }
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: white;
+    }
+    .btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+    .btn svg { width: 16px; height: 16px; }
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+    .btn-sm svg { width: 14px; height: 14px; }
+
+    /* ─── Section ─── */
+    .section { margin-bottom: 28px; }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .section-title { font-size: 15px; font-weight: 600; }
+
+    /* ─── Team Performance Cards ─── */
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+    .team-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      transition: all 0.15s;
+      cursor: pointer;
+    }
+    .team-card:hover { border-color: var(--border-light); background: var(--bg-card-hover); }
+    .team-card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .team-avatar {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700;
+      color: white;
+      flex-shrink: 0;
+    }
+    .team-avatar.mona { background: #7C3AED; }
+    .team-avatar.john { background: #0891B2; }
+    .team-avatar.sara { background: #DB2777; }
+    .team-avatar.alex { background: #059669; }
+    .team-name { font-size: 14px; font-weight: 600; }
+    .team-role { font-size: 11px; color: var(--text-muted); }
+    .team-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+    .team-stat-item { text-align: center; }
+    .team-stat-value {
+      font-size: 18px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .team-stat-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-top: 2px;
+    }
+
+    /* ─── Table ─── */
+    .data-table {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+    .data-table thead th {
+      padding: 10px 16px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.3);
+    }
+    .data-table tbody tr {
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .data-table tbody tr:hover { background: var(--bg-card-hover); }
+    .data-table tbody td {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+      font-size: 13px;
+      vertical-align: middle;
+    }
+    .data-table tbody tr:last-child td { border-bottom: none; }
+
+    /* ─── Badges ─── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .badge-pass { background: var(--pass-bg); color: var(--pass); }
+    .badge-review { background: var(--review-bg); color: var(--review); }
+    .badge-pending { background: rgba(100, 116, 139, 0.15); color: var(--text-muted); }
+    .badge-processing { background: rgba(79, 70, 229, 0.12); color: var(--primary); }
+    .badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .badge-pass .badge-dot { background: var(--pass); }
+    .badge-review .badge-dot { background: var(--review); }
+    .badge-pending .badge-dot { background: var(--text-muted); }
+    .badge-processing .badge-dot { background: var(--primary); animation: pulse 1.5s ease-in-out infinite; }
+
+    .unassigned-label {
+      color: var(--text-muted);
+      font-style: italic;
+      font-size: 12px;
+    }
+
+    /* ─── Cost Panel ─── */
+    .cost-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .cost-panel-header {
+      padding: 18px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .cost-panel-title {
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .cost-total {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--pass);
+      font-variant-numeric: tabular-nums;
+    }
+    .cost-panel-body { padding: 0; }
+    .cost-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+    .cost-table thead th {
+      padding: 10px 20px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      text-align: left;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+    }
+    .cost-table tbody td {
+      padding: 10px 20px;
+      font-size: 13px;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+    }
+    .cost-table tbody tr:last-child td { border-bottom: none; }
+    .cost-table .num {
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+    .cost-budget-bar {
+      padding: 18px 20px;
+      border-top: 1px solid var(--border);
+    }
+    .budget-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+    .budget-label strong { color: var(--text); font-weight: 600; }
+    .budget-track {
+      height: 8px;
+      background: rgba(51, 65, 85, 0.4);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .budget-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--pass), var(--review));
+      transition: width 0.6s ease;
+    }
+    .cost-footer {
+      padding: 12px 20px;
+      border-top: 1px solid rgba(51, 65, 85, 0.4);
+      text-align: right;
+    }
+    .cost-footer a {
+      color: var(--primary);
+      font-size: 12px;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .cost-footer a:hover { text-decoration: underline; }
+
+    /* ─── Quality Trends ─── */
+    .trends-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+    .trend-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      transition: all 0.15s;
+    }
+    .trend-card:hover { border-color: var(--border-light); }
+    .trend-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .trend-value-row {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+    .trend-value {
+      font-size: 28px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .trend-change {
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      font-weight: 500;
+    }
+    .trend-change.up { color: var(--pass); }
+    .trend-change.down-good { color: var(--pass); }
+    .trend-change svg { width: 14px; height: 14px; }
+    .trend-subtext {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* ─── Modal Overlay ─── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s, visibility 0.2s;
+    }
+    .modal-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+    .modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 480px;
+      max-width: 90vw;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      transform: translateY(10px) scale(0.98);
+      transition: transform 0.2s;
+    }
+    .modal-overlay.show .modal {
+      transform: translateY(0) scale(1);
+    }
+    .modal-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 20px;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      transition: all 0.15s;
+    }
+    .modal-close:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+    .modal-body { padding: 20px 24px; }
+    .modal-footer {
+      padding: 16px 24px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    /* ─── Reviewer Option ─── */
+    .reviewer-option {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-bottom: 8px;
+    }
+    .reviewer-option:hover { border-color: var(--border-light); background: var(--bg-card-hover); }
+    .reviewer-option.selected {
+      border-color: var(--primary);
+      background: rgba(79, 70, 229, 0.08);
+    }
+    .reviewer-option-radio {
+      width: 18px; height: 18px;
+      border: 2px solid var(--border-light);
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .reviewer-option.selected .reviewer-option-radio {
+      border-color: var(--primary);
+    }
+    .reviewer-option.selected .reviewer-option-radio::after {
+      content: '';
+      width: 8px; height: 8px;
+      background: var(--primary);
+      border-radius: 50%;
+    }
+    .reviewer-option-info { flex: 1; min-width: 0; }
+    .reviewer-option-name { font-size: 13px; font-weight: 600; }
+    .reviewer-option-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 12px;
+      margin-top: 2px;
+    }
+    .reviewer-option-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    /* ─── Status Bar ─── */
+    .statusbar {
+      height: 32px;
+      background: var(--sidebar-bg);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      font-size: 11px;
+      color: var(--text-muted);
+      gap: 16px;
+      flex-shrink: 0;
+    }
+    .statusbar-sep { color: var(--border); }
+    .statusbar-right { margin-left: auto; display: flex; gap: 12px; align-items: center; }
+    .statusbar-budget {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .statusbar-budget-bar {
+      width: 60px;
+      height: 4px;
+      background: rgba(51, 65, 85, 0.4);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .statusbar-budget-fill {
+      height: 100%;
+      background: var(--pass);
+      border-radius: 2px;
+    }
+
+    /* ─── Toast ─── */
+    .toast {
+      position: fixed;
+      bottom: 48px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--bg-card);
+      border: 1px solid var(--pass);
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 13px;
+      color: var(--text);
+      display: flex; align-items: center; gap: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      opacity: 0;
+      transition: all 0.3s ease;
+      pointer-events: none;
+      z-index: 1000;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .toast-icon {
+      width: 20px; height: 20px;
+      background: var(--pass-bg);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .toast-icon svg { width: 12px; height: 12px; color: var(--pass); }
+
+    /* ─── Collapsible Cost ─── */
+    .cost-breakdown-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 12px 20px;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--text-secondary);
+      border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .cost-breakdown-toggle:hover { color: var(--text); background: rgba(255,255,255,0.02); }
+    .cost-breakdown-toggle svg {
+      width: 14px; height: 14px;
+      transition: transform 0.2s;
+    }
+    .cost-breakdown-toggle.expanded svg { transform: rotate(90deg); }
+    .cost-breakdown-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    .cost-breakdown-content.expanded { max-height: 400px; }
+
+    /* ─── Animations ─── */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* ─── Scrollbar ─── */
+    .content::-webkit-scrollbar { width: 6px; }
+    .content::-webkit-scrollbar-track { background: transparent; }
+    .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .content::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- ─── Sidebar ─── -->
+    <nav class="sidebar" aria-label="Main navigation">
+      <div class="sidebar-logo">Q</div>
+      <button class="sidebar-btn" title="Dashboard" onclick="window.location.href='ux-mockup-dashboard.html'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+      </button>
+      <button class="sidebar-btn" title="Review" onclick="window.location.href='ux-mockup-review-view.html'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      </button>
+      <button class="sidebar-btn active" title="PM Overview">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      </button>
+      <button class="sidebar-btn" title="Reports">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+      </button>
+      <button class="sidebar-btn" title="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      </button>
+      <div class="sidebar-spacer"></div>
+      <button class="sidebar-btn" title="Command Palette (Ctrl+K)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+    </nav>
+
+    <!-- ─── Main ─── -->
+    <div class="main">
+      <!-- ─── Top Bar ─── -->
+      <header class="topbar">
+        <div class="breadcrumb">
+          <span class="breadcrumb-item" onclick="window.location.href='ux-mockup-dashboard.html'">Dashboard</span>
+          <span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-item current">PM Overview</span>
+        </div>
+        <div class="topbar-right">
+          <select class="project-select">
+            <option>Client-ABC (EN &rarr; TH)</option>
+            <option>Client-XYZ (EN &rarr; ZH)</option>
+            <option>Internal-Docs (EN &rarr; JA)</option>
+          </select>
+          <button class="notification-btn" title="Notifications">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+            <span class="notification-dot"></span>
+          </button>
+          <div class="avatar" title="PM User">PM</div>
+        </div>
+      </header>
+
+      <!-- ─── Content ─── -->
+      <div class="content">
+
+        <!-- ═══ Page Header ═══ -->
+        <div class="page-header">
+          <div>
+            <div class="page-title">Project Manager Overview</div>
+            <div class="page-subtitle">Client-ABC &middot; EN &rarr; TH &middot; February 2026</div>
+          </div>
+          <div class="header-actions">
+            <button class="btn" onclick="showToast('Generating cost report...')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Cost Report
+            </button>
+            <button class="btn btn-primary" onclick="openModal()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+              Assign Reviewers
+            </button>
+          </div>
+        </div>
+
+        <!-- ═══ Section 1: Team Performance ═══ -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">Team Performance</div>
+            <span style="font-size: 12px; color: var(--text-muted);">This month</span>
+          </div>
+          <div class="team-grid">
+            <!-- Mona N. -->
+            <div class="team-card">
+              <div class="team-card-header">
+                <div class="team-avatar mona">MN</div>
+                <div>
+                  <div class="team-name">Mona N.</div>
+                  <div class="team-role">Senior Reviewer</div>
+                </div>
+              </div>
+              <div class="team-stats">
+                <div class="team-stat-item">
+                  <div class="team-stat-value">28</div>
+                  <div class="team-stat-label">Files</div>
+                </div>
+                <div class="team-stat-item">
+                  <div class="team-stat-value" style="color: var(--primary);">3.8</div>
+                  <div class="team-stat-label">Min/File</div>
+                </div>
+                <div class="team-stat-item">
+                  <div class="team-stat-value" style="color: var(--pass);">94.2</div>
+                  <div class="team-stat-label">Avg Score</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- John K. -->
+            <div class="team-card">
+              <div class="team-card-header">
+                <div class="team-avatar john">JK</div>
+                <div>
+                  <div class="team-name">John K.</div>
+                  <div class="team-role">Reviewer</div>
+                </div>
+              </div>
+              <div class="team-stats">
+                <div class="team-stat-item">
+                  <div class="team-stat-value">19</div>
+                  <div class="team-stat-label">Files</div>
+                </div>
+                <div class="team-stat-item">
+                  <div class="team-stat-value" style="color: var(--primary);">5.1</div>
+                  <div class="team-stat-label">Min/File</div>
+                </div>
+                <div class="team-stat-item">
+                  <div class="team-stat-value" style="color: var(--pass);">91.8</div>
+                  <div class="team-stat-label">Avg Score</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Sara T. -->
+            <div class="team-card">
+              <div class="team-card-header">
+                <div class="team-avatar sara">ST</div>
+                <div>
+                  <div class="team-name">Sara T.</div>
+                  <div class="team-role">Reviewer</div>
+                </div>
+              </div>
+              <div class="team-stats">
+                <div class="team-stat-item">
+                  <div class="team-stat-value">14</div>
+                  <div class="team-stat-label">Files</div>
+                </div>
+                <div class="team-stat-item">
+                  <div class="team-stat-value" style="color: var(--primary);">4.5</div>
+                  <div class="team-stat-label">Min/File</div>
+                </div>
+                <div class="team-stat-item">
+                  <div class="team-stat-value" style="color: var(--pass);">93.1</div>
+                  <div class="team-stat-label">Avg Score</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Alex R. -->
+            <div class="team-card">
+              <div class="team-card-header">
+                <div class="team-avatar alex">AR</div>
+                <div>
+                  <div class="team-name">Alex R.</div>
+                  <div class="team-role">Junior Reviewer</div>
+                </div>
+              </div>
+              <div class="team-stats">
+                <div class="team-stat-item">
+                  <div class="team-stat-value">8</div>
+                  <div class="team-stat-label">Files</div>
+                </div>
+                <div class="team-stat-item">
+                  <div class="team-stat-value" style="color: var(--review);">6.8</div>
+                  <div class="team-stat-label">Min/File</div>
+                </div>
+                <div class="team-stat-item">
+                  <div class="team-stat-value" style="color: var(--review);">88.5</div>
+                  <div class="team-stat-label">Avg Score</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ Section 2: Reviewer Assignment Table ═══ -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">Reviewer Assignment</div>
+            <span style="font-size: 12px; color: var(--text-muted);">This week &middot; 3 batches</span>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Batch</th>
+                <th>Files</th>
+                <th>Assigned To</th>
+                <th>Status</th>
+                <th style="text-align: right;">Score Avg</th>
+                <th>Due</th>
+                <th style="text-align: center;">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Row 1: Monday Batch -->
+              <tr onclick="showToast('Opening Monday Batch details...')">
+                <td>
+                  <div style="font-weight: 600;">Monday Batch</div>
+                </td>
+                <td>
+                  <span style="font-variant-numeric: tabular-nums;">12</span>
+                </td>
+                <td>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 24px; height: 24px; border-radius: 50%; background: #7C3AED; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; font-weight: 600;">MN</div>
+                    Mona N.
+                  </div>
+                </td>
+                <td>
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <span class="badge badge-pass"><span class="badge-dot"></span>8 passed</span>
+                    <span class="badge badge-review"><span class="badge-dot"></span>4 reviewing</span>
+                  </div>
+                </td>
+                <td style="text-align: right;">
+                  <span style="font-weight: 700; font-variant-numeric: tabular-nums; color: var(--pass);">92.3</span>
+                </td>
+                <td>
+                  <span style="font-size: 12px;">Feb 14</span>
+                </td>
+                <td style="text-align: center;">
+                  <button class="btn btn-sm" onclick="event.stopPropagation(); showToast('Opening Monday Batch...')">View</button>
+                </td>
+              </tr>
+              <!-- Row 2: Tuesday Batch (Unassigned) -->
+              <tr id="tuesdayRow" onclick="event.stopPropagation(); openModal()">
+                <td>
+                  <div style="font-weight: 600;">Tuesday Batch</div>
+                </td>
+                <td>
+                  <span style="font-variant-numeric: tabular-nums;">6</span>
+                </td>
+                <td>
+                  <span class="unassigned-label">&mdash; Unassigned</span>
+                </td>
+                <td>
+                  <span class="badge badge-processing"><span class="badge-dot"></span>Processing</span>
+                </td>
+                <td style="text-align: right;">
+                  <span style="color: var(--text-muted);">&mdash;</span>
+                </td>
+                <td>
+                  <span style="font-size: 12px;">Feb 15</span>
+                </td>
+                <td style="text-align: center;">
+                  <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); openModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Assign
+                  </button>
+                </td>
+              </tr>
+              <!-- Row 3: Wednesday Batch -->
+              <tr onclick="showToast('Opening Wednesday Batch details...')">
+                <td>
+                  <div style="font-weight: 600;">Wednesday Batch</div>
+                </td>
+                <td>
+                  <span style="font-variant-numeric: tabular-nums;">8</span>
+                </td>
+                <td>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 24px; height: 24px; border-radius: 50%; background: #0891B2; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; font-weight: 600;">JK</div>
+                    John K.
+                  </div>
+                </td>
+                <td>
+                  <span class="badge badge-pending"><span class="badge-dot"></span>Pending</span>
+                </td>
+                <td style="text-align: right;">
+                  <span style="color: var(--text-muted);">&mdash;</span>
+                </td>
+                <td>
+                  <span style="font-size: 12px;">Feb 16</span>
+                </td>
+                <td style="text-align: center;">
+                  <button class="btn btn-sm" onclick="event.stopPropagation(); showToast('Opening Wednesday Batch...')">View</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ═══ Section 3: Cost Estimation Panel ═══ -->
+        <div class="section">
+          <div class="cost-panel">
+            <div class="cost-panel-header">
+              <div>
+                <div class="cost-panel-title">AI Cost Estimation &mdash; This Month</div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">February 2026</div>
+              </div>
+              <div class="cost-total">$24.80</div>
+            </div>
+            <div class="cost-breakdown-toggle" id="costToggle" onclick="toggleCostBreakdown()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>
+              Cost Breakdown by Mode
+            </div>
+            <div class="cost-breakdown-content" id="costBreakdown">
+              <table class="cost-table">
+                <thead>
+                  <tr>
+                    <th>Mode</th>
+                    <th class="num">Files</th>
+                    <th class="num">Segments</th>
+                    <th class="num">AI Calls</th>
+                    <th class="num" style="text-align: right;">Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="width: 8px; height: 8px; border-radius: 2px; background: var(--primary); flex-shrink: 0;"></span>
+                        Economy (L1+L2)
+                      </div>
+                    </td>
+                    <td class="num" style="text-align: right;">32</td>
+                    <td class="num" style="text-align: right; font-variant-numeric: tabular-nums;">18,400</td>
+                    <td class="num" style="text-align: right;">64</td>
+                    <td class="num" style="text-align: right; font-weight: 600;">$8.20</td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="width: 8px; height: 8px; border-radius: 2px; background: #7C3AED; flex-shrink: 0;"></span>
+                        Thorough (L1+L2+L3)
+                      </div>
+                    </td>
+                    <td class="num" style="text-align: right;">15</td>
+                    <td class="num" style="text-align: right; font-variant-numeric: tabular-nums;">12,600</td>
+                    <td class="num" style="text-align: right;">90</td>
+                    <td class="num" style="text-align: right; font-weight: 600;">$16.60</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="cost-budget-bar">
+              <div class="budget-label">
+                <span>Monthly Budget Usage</span>
+                <span><strong>$24.80</strong> / $50.00 <span style="color: var(--review); margin-left: 6px;">49.6%</span></span>
+              </div>
+              <div class="budget-track">
+                <div class="budget-fill" style="width: 49.6%;"></div>
+              </div>
+            </div>
+            <div class="cost-footer">
+              <a onclick="showToast('Opening detailed breakdown...')">View detailed breakdown &rarr;</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ Section 4: Quality Trends ═══ -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">Quality Trends</div>
+            <span style="font-size: 12px; color: var(--text-muted);">vs. last week</span>
+          </div>
+          <div class="trends-grid">
+            <!-- Avg Score -->
+            <div class="trend-card">
+              <div class="trend-label">Avg Score This Week</div>
+              <div class="trend-value-row">
+                <div class="trend-value" style="color: var(--pass);">94.2</div>
+                <div class="trend-change up">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18,15 12,9 6,15"/></svg>
+                  +2.1
+                </div>
+              </div>
+              <div class="trend-subtext">from last week</div>
+            </div>
+
+            <!-- Auto-pass Rate -->
+            <div class="trend-card">
+              <div class="trend-label">Auto-pass Rate</div>
+              <div class="trend-value-row">
+                <div class="trend-value" style="color: var(--pass);">81%</div>
+                <div class="trend-change up">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18,15 12,9 6,15"/></svg>
+                  +5%
+                </div>
+              </div>
+              <div class="trend-subtext">from last week</div>
+            </div>
+
+            <!-- AI False Positive -->
+            <div class="trend-card">
+              <div class="trend-label">AI False Positive</div>
+              <div class="trend-value-row">
+                <div class="trend-value" style="color: var(--review);">12%</div>
+                <div class="trend-change down-good">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6,9 12,15 18,9"/></svg>
+                  -3%
+                </div>
+              </div>
+              <div class="trend-subtext">from last week (improving)</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="height: 32px;"></div>
+      </div>
+
+      <!-- ─── Status Bar ─── -->
+      <footer class="statusbar">
+        <span>Client-ABC</span>
+        <span class="statusbar-sep">|</span>
+        <span>EN &rarr; TH</span>
+        <span class="statusbar-sep">|</span>
+        <span>PM Overview</span>
+        <span class="statusbar-sep">|</span>
+        <div class="statusbar-budget">
+          <span>$24.80 / $50.00 budget</span>
+          <div class="statusbar-budget-bar">
+            <div class="statusbar-budget-fill" style="width: 49.6%;"></div>
+          </div>
+        </div>
+        <div class="statusbar-right">
+          <span style="font-size: 10px; color: var(--text-muted);">PM Dashboard v1.0</span>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ═══ Assignment Modal ═══ -->
+  <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">Assign Reviewer &mdash; Tuesday Batch (6 files)</div>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Select a reviewer to assign this batch:</div>
+
+        <!-- Mona N. -->
+        <div class="reviewer-option selected" id="opt-mona" onclick="selectReviewer('mona')">
+          <div class="reviewer-option-radio"></div>
+          <div class="reviewer-option-avatar" style="background: #7C3AED;">MN</div>
+          <div class="reviewer-option-info">
+            <div class="reviewer-option-name">Mona N.</div>
+            <div class="reviewer-option-meta">
+              <span>2 batches active</span>
+              <span>&middot;</span>
+              <span>Avg 3.8 min/file</span>
+            </div>
+          </div>
+          <span class="badge badge-pass" style="font-size: 10px;">Recommended</span>
+        </div>
+
+        <!-- John K. -->
+        <div class="reviewer-option" id="opt-john" onclick="selectReviewer('john')">
+          <div class="reviewer-option-radio"></div>
+          <div class="reviewer-option-avatar" style="background: #0891B2;">JK</div>
+          <div class="reviewer-option-info">
+            <div class="reviewer-option-name">John K.</div>
+            <div class="reviewer-option-meta">
+              <span>1 batch active</span>
+              <span>&middot;</span>
+              <span>Avg 5.1 min/file</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Auto-assign -->
+        <div class="reviewer-option" id="opt-auto" onclick="selectReviewer('auto')">
+          <div class="reviewer-option-radio"></div>
+          <div class="reviewer-option-avatar" style="background: var(--primary);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          </div>
+          <div class="reviewer-option-info">
+            <div class="reviewer-option-name">Auto-assign</div>
+            <div class="reviewer-option-meta">
+              <span>AI selects best-fit reviewer</span>
+              <span>&middot;</span>
+              <span>Based on workload &amp; skill</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="assignReviewer()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
+          Assign
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Toast ─── -->
+  <div class="toast" id="toast">
+    <span class="toast-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>
+    </span>
+    <span id="toastText"></span>
+  </div>
+
+  <script>
+    // ─── Toast ───
+    let toastTimer;
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const text = document.getElementById('toastText');
+      text.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
+    }
+
+    // ─── Modal ───
+    function openModal() {
+      document.getElementById('modalOverlay').classList.add('show');
+    }
+
+    function closeModal(e) {
+      if (e && e.target !== e.currentTarget) return;
+      document.getElementById('modalOverlay').classList.remove('show');
+    }
+
+    // Close modal on Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.getElementById('modalOverlay').classList.remove('show');
+      }
+    });
+
+    // ─── Reviewer Selection ───
+    let selectedReviewer = 'mona';
+
+    function selectReviewer(id) {
+      selectedReviewer = id;
+      document.querySelectorAll('.reviewer-option').forEach(opt => opt.classList.remove('selected'));
+      document.getElementById('opt-' + id).classList.add('selected');
+    }
+
+    // ─── Assign Reviewer ───
+    function assignReviewer() {
+      const names = { mona: 'Mona N.', john: 'John K.', auto: 'Auto-assigned reviewer' };
+      const avatarColors = { mona: '#7C3AED', john: '#0891B2', auto: '#4F46E5' };
+      const avatarInitials = { mona: 'MN', john: 'JK', auto: 'AI' };
+      const name = names[selectedReviewer];
+
+      // Update the Tuesday row
+      const row = document.getElementById('tuesdayRow');
+      const cells = row.querySelectorAll('td');
+
+      // Update Assigned To column
+      cells[2].innerHTML = '<div style="display: flex; align-items: center; gap: 8px;">' +
+        '<div style="width: 24px; height: 24px; border-radius: 50%; background: ' + avatarColors[selectedReviewer] + '; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; font-weight: 600;">' + avatarInitials[selectedReviewer] + '</div>' +
+        name +
+        '</div>';
+
+      // Update Status column
+      cells[3].innerHTML = '<span class="badge badge-pending"><span class="badge-dot"></span>Assigned</span>';
+
+      // Update Action column
+      cells[6].innerHTML = '<button class="btn btn-sm" onclick="event.stopPropagation(); showToast(\'Opening Tuesday Batch...\')">View</button>';
+
+      // Update row click handler
+      row.onclick = function() { showToast('Opening Tuesday Batch details...'); };
+
+      closeModal();
+      showToast('Reviewer assigned successfully');
+    }
+
+    // ─── Cost Breakdown Toggle ───
+    function toggleCostBreakdown() {
+      const toggle = document.getElementById('costToggle');
+      const content = document.getElementById('costBreakdown');
+      toggle.classList.toggle('expanded');
+      content.classList.toggle('expanded');
+    }
+
+    // Start with cost breakdown expanded
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('costToggle').classList.add('expanded');
+      document.getElementById('costBreakdown').classList.add('expanded');
+    });
+
+    // ─── Table Row Hover ───
+    document.querySelectorAll('.data-table tbody tr').forEach(row => {
+      row.addEventListener('mouseenter', () => {
+        row.style.background = 'var(--bg-card-hover)';
+      });
+      row.addEventListener('mouseleave', () => {
+        row.style.background = '';
+      });
+    });
+  </script>
+</body>
+</html>
