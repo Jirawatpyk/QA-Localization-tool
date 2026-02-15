@@ -118,9 +118,9 @@ App Layout
 |-------|--------|---------|:---:|
 | **Pending** | White background, full actions visible | Initial state | None |
 | **Focused** | Light indigo border, side panel syncs | Arrow key / click | None |
-| **Accepted** | Green-tinted, strikethrough on finding | `A` key / Accept click | Penalty removed |
-| **Re-accepted** | Green-tinted + override badge | Re-accept a previously Rejected finding | Penalty removed |
-| **Rejected** | Red-tinted, dimmed | `R` key / Reject click | Penalty kept |
+| **Accepted** | Green-tinted, strikethrough on finding | `A` key / Accept click | Yes (MQM penalty) |
+| **Re-accepted** | Green-tinted + override badge | Re-accept a previously Rejected finding | Penalty re-applied |
+| **Rejected** | Red-tinted, dimmed | `R` key / Reject click | No penalty (false positive) |
 | **Flagged** | Yellow-tinted, flag icon | `F` key / Flag click | Pending |
 | **Noted** | Blue-tinted, note icon | `N` key / Note click | Unchanged |
 | **Source Issue** | Purple-tinted, source icon | `S` key | Reclassified |
@@ -240,7 +240,7 @@ App Layout
 | **Processing** | Files appear one-by-one as L1 completes, AI status badges | During batch run |
 | **Complete** | Full summary with pass/review split | All layers done |
 | **Partial** | Some files complete, some still processing | Large batch, AI queue |
-| **All Passed** | Celebratory state — all green, prominent Confirm All | Score > 95 all files |
+| **All Passed** | Celebratory state — all green, prominent Confirm All | Score >= 95 all files |
 | **All Need Review** | No pass section, review section expanded | Score < 95 all files |
 
 **Interaction:**

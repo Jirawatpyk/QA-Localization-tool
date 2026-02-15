@@ -77,7 +77,7 @@ The project encompasses **80 FRs** (68 MVP + 12 Growth) across 10 categories plu
 | Layer | Technology | Rationale |
 |-------|-----------|-----------|
 | Framework | Next.js (App Router) | RSC for performance, API routes for backend, Vercel deployment |
-| UI | shadcn/ui + Tailwind CSS | 16 base + 14 custom components, Indigo primary (#4F46E5), Inter font |
+| UI | shadcn/ui + Tailwind CSS | 16 base + 14 custom + 2 Party Mode components (ReviewerSelector, PM Onboarding), Indigo primary (#4F46E5), Inter font |
 | Backend/DB | Supabase (Auth + PostgreSQL + Storage + Realtime) | Multi-tenant RLS, pgvector for RAG, real-time subscriptions |
 | ORM | Drizzle ORM | Type-safe queries, migration management |
 | Queue | Inngest | Durable functions, retry logic, fan-out for AI pipeline |

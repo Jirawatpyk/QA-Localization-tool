@@ -72,7 +72,7 @@ flowchart TD
     H --> I
 
     I --> J[Batch Summary Dashboard]
-    J --> K[8 files: Recommended Pass — Score > 95, 0 Critical]
+    J --> K[8 files: Recommended Pass — Score >= 95, 0 Critical]
     J --> L[4 files: Need Review]
 
     K --> M{Trust Level}

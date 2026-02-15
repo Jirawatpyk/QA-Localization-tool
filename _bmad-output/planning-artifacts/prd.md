@@ -44,7 +44,7 @@ author: Mona
 lastEdited: '2026-02-14'
 editHistory:
   - date: '2026-02-14'
-    changes: 'UX Party Mode backport: Added 4 new review actions (Note, Source Issue, Severity Override, Add Finding) with FR76-FR80; added 8 Finding States lifecycle (Pending→Accepted→Accepted(override)→Rejected→Flagged→Noted→Source Issue→Manual); expanded FR30 Suppress Pattern with trigger/scope/duration detail from UX spec UJ6; enhanced FR56 Reviewer Selection for PM role with language-pair matching; updated Category 4 (7→12 items), Requirements Count (75→80), MVP Scope table, and roadmap accordingly'
+    changes: 'UX Party Mode backport: Added 4 new review actions (Note, Source Issue, Severity Override, Add Finding) with FR76-FR80; added 8 Finding States lifecycle (Pending→Accepted→Re-accepted→Rejected→Flagged→Noted→Source Issue→Manual); expanded FR30 Suppress Pattern with trigger/scope/duration detail from UX spec UJ6; enhanced FR56 Reviewer Selection for PM role with language-pair matching; updated Category 4 (7→12 items), Requirements Count (75→80), MVP Scope table, and roadmap accordingly'
   - date: '2026-02-14'
     changes: 'PM review: FR73-FR75 (rule-based auto-fix) moved from MVP to Growth scope. MVP focuses on detection (Xbench parity), not correction. Schema design (fix_suggestions, self_healing_config tables) remains in MVP for Growth readiness. Updated Sections 3, 6, 8, 9 accordingly'
   - date: '2026-02-14'
@@ -175,7 +175,7 @@ All 5 pillars must work together. If any one is missing, single-pass completion 
 - Issue list + segment navigation + severity filter (progressive disclosure)
 - AI suggestions with confidence scores + 7 review actions (Accept/Reject/Flag/Note/Source Issue/Severity Override/Add Finding)
 - Bulk accept/reject for false positive fatigue reduction
-- Auto-pass system (Score > 95 + 0 Critical + AI Layer 2 clean) with audit trail
+- Auto-pass system (Score >= 95 + 0 Critical + AI Layer 2 clean) with audit trail
 - Glossary import (TBX, CSV, Excel)
 - Report export (PDF/Excel) + Smart report mode (verified vs needs-verification)
 - Role-based access: Admin (full), QA Reviewer (review + export), Native Reviewer (assigned segments only)
@@ -252,7 +252,7 @@ All 5 pillars must work together. If any one is missing, single-pass completion 
 3. 2 นาทีผ่านไป — Batch summary ขึ้น:
    - **Month 1:** "8 recommended-pass ✅, 4 need review ⚠️" (ต้อง confirm 1 click per file)
    - **Month 2+:** "8 auto-pass ✅, 4 need review ⚠️" (agreement rate > 99% → upgrade เป็น true auto-pass)
-4. 8 ไฟล์ pass — Score > 95, 0 Critical, **AI Layer 2 clean** — สัปดาห์แรกเธอยังเปิดดูทุกไฟล์ (spot check mode) เห็นว่า findings ตรงกับที่ตัวเองตรวจ → กด Confirm → สัปดาห์ที่ 3+ เริ่ม glance แล้ว Confirm (audit trail บันทึกไว้หมด)
+4. 8 ไฟล์ pass — Score >= 95, 0 Critical, **AI Layer 2 clean** — สัปดาห์แรกเธอยังเปิดดูทุกไฟล์ (spot check mode) เห็นว่า findings ตรงกับที่ตัวเองตรวจ → กด Confirm → สัปดาห์ที่ 3+ เริ่ม glance แล้ว Confirm (audit trail บันทึกไว้หมด)
 5. เข้าดูไฟล์แรกที่ต้อง review — Score 82, Critical 2, Major 3, **Minor 14 (collapsed by default)** — Progressive disclosure: เห็น Critical ก่อน → expand Major → Minor ซ่อนอยู่กด expand ถ้าต้องการ
 6. กดเข้า Critical #1 → กระโดดไปที่ segment → เห็น AI suggestion confidence 91% → Accept ✅
 7. Critical #2 → confidence 68% 🔴 → อ่านเอง → "อันนี้ AI ตีความผิด" → Reject ❌
@@ -373,7 +373,7 @@ All 5 pillars must work together. If any one is missing, single-pass completion 
 | Capability | Source | Priority |
 |-----------|--------|:--------:|
 | "Recommended pass" soft launch Month 1 → true Auto-pass Month 2+ | J2, PM-B | MVP |
-| Auto-pass requires Score > 95 + 0 Critical + AI Layer 2 clean | J2, PM-B | MVP |
+| Auto-pass requires Score >= 95 + 0 Critical + AI Layer 2 clean | J2, PM-B | MVP |
 | Auto-pass blocked if AI layer incomplete | WI#2 | MVP |
 | Auto-pass with audit trail | J2, J4, J6 | MVP |
 | Auto-pass spot check mode (expanded → collapsed over time) | J2 | MVP |
@@ -402,7 +402,7 @@ All 5 pillars must work together. If any one is missing, single-pass completion 
 | Capability | Source | Priority |
 |-----------|--------|:--------:|
 | 7 review actions per finding (Accept/Reject/Flag/Note/Source Issue/Severity Override/Add Finding) | J2, J3, J5, UX-PM | MVP |
-| Note action — stylistic observation, no state change (Hotkey: N) | UX-PM | MVP |
+| Note action — stylistic observation, state changes to Noted, no MQM penalty (Hotkey: N) | UX-PM | MVP |
 | Source Issue action — reclassify as source text problem, not translation error (Hotkey: S) | UX-PM | MVP |
 | Severity Override — accept finding but downgrade severity (e.g., Critical → Minor) with score recalculation | UX-PM | MVP |
 | Add Finding — manually add finding not caught by system with Manual badge + MQM score impact (Hotkey: +) | UX-PM | MVP |
@@ -412,7 +412,7 @@ All 5 pillars must work together. If any one is missing, single-pass completion 
 | Flag for native review | J3 | MVP |
 | "Suppress this pattern" action (trigger: 3+ rejects of same pattern; configurable scope + duration) | ST#3, UX-PM | MVP |
 | Option to disable AI suggestions temporarily (rule-based only) | J5 | MVP |
-| Finding lifecycle — 8 states (Pending/Accepted/Accepted-override/Rejected/Flagged/Noted/Source Issue/Manual) with defined score impact per state | UX-PM | MVP |
+| Finding lifecycle — 8 states (Pending/Accepted/Re-accepted/Rejected/Flagged/Noted/Source Issue/Manual) with defined score impact per state | UX-PM | MVP |
 
 #### 5. Collaboration & Workflow (4 MVP, 0 Growth)
 
@@ -1039,7 +1039,7 @@ flowchart LR
 
 ### Phased Development Roadmap
 
-**Phase 1: MVP (Month 0-3) — "Replace Xbench"**
+**Phase 1: MVP (Month 0-3, ~7 sprints) — "Replace Xbench"**
 
 Month 0-1: Foundation
 - SDLXLIFF/XLIFF 1.2 parser + Excel parser
@@ -1334,7 +1334,7 @@ Month 2-3: Trust & Automation
 | NFR# | Requirement | Standard |
 |------|------------|----------|
 | NFR25 | WCAG 2.1 Level AA compliance | Industry standard for B2B web apps |
-| NFR26 | All 7 primary review actions (Accept/Reject/Flag/Note/Source Issue/Severity Override/Add Finding) reachable via keyboard only. Hotkeys: A, X, F, N, S, —, + | Critical for power users doing high-volume QA |
+| NFR26 | All 7 primary review actions (Accept/Reject/Flag/Note/Source Issue/Severity Override/Add Finding) reachable via keyboard only. Hotkeys: A, R, F, N, S, —, + | Critical for power users doing high-volume QA |
 | NFR27 | Severity indicators use icon + text + color (never color alone) | Color independence for color-blind users |
 | NFR28 | Minimum contrast ratio: 4.5:1 (normal text), 3:1 (large text) | WCAG AA requirement |
 | NFR29 | UI functional at 200% browser zoom without layout breaking | Responsive text support |

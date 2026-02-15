@@ -164,7 +164,7 @@ Every finding is designed for a left-to-right, top-to-bottom scan completing in 
 |-------|:---:|---------|:---:|
 | Pending | ⬜ | Not yet reviewed (default) | Pending |
 | Accepted | ✅ | Reviewer confirms this is a real error | Yes (MQM penalty) |
-| Accepted (override) | ✅↓ | Confirmed but severity downgraded by reviewer | Yes (reduced penalty) |
+| Re-accepted | ✅↩ | Re-accepted after previous rejection by reviewer | Yes (MQM penalty re-applied) |
 | Rejected | ❌ | False positive or intentional | No penalty |
 | Flagged | 🚩 | Needs native review (non-native reviewer only) | Pending until resolved |
 | Noted | 📝 | Stylistic observation — no action required | No penalty |
