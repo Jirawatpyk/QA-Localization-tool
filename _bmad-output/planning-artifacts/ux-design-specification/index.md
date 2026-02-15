@@ -17,3 +17,4 @@
   - [Responsive Design & Accessibility](#responsive-design-accessibility)
   - [Party Mode Review Summary](#party-mode-review-summary)
   - [Interactive Mockups](#interactive-mockups)
+  - [Growth Phase UX Roadmap](#growth-phase-ux-roadmap) _(placeholder — design when entering Growth)_

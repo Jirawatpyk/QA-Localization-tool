@@ -1,0 +1,164 @@
+# generated: 2026-02-15
+# project: qa-localization-tool
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog -> in-progress: Automatically when first story is created (via create-story)
+#   - in-progress -> done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-02-15
+project: qa-localization-tool
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  # ============================================================
+  # Epic 1: Project Foundation & Configuration (MVP)
+  # ============================================================
+  epic-1: in-progress
+  1-1-project-initialization-design-system-setup: ready-for-dev
+  1-2-database-schema-authentication: backlog
+  1-3-project-management-configuration: backlog
+  1-4-glossary-import-management: backlog
+  1-5-glossary-matching-engine-no-space-languages: backlog
+  1-6-taxonomy-mapping-editor: backlog
+  1-7-dashboard-notifications-onboarding: backlog
+  epic-1-retrospective: optional
+
+  # ============================================================
+  # Epic 2: File Processing & Rule-based QA Engine (MVP)
+  # ============================================================
+  epic-2: backlog
+  2-1-file-upload-storage-infrastructure: backlog
+  2-2-sdlxliff-xliff-unified-parser: backlog
+  2-3-excel-bilingual-parser: backlog
+  2-4-rule-based-qa-engine-language-rules: backlog
+  2-5-mqm-score-calculation-language-calibration: backlog
+  2-6-inngest-pipeline-foundation-processing-modes: backlog
+  2-7-batch-summary-file-history-parity-tools: backlog
+  epic-2-retrospective: optional
+
+  # ============================================================
+  # Epic 3: AI-Powered Quality Analysis (MVP)
+  # ============================================================
+  epic-3: backlog
+  3-0-score-review-infrastructure: backlog
+  3-1-ai-cost-control-throttling-model-pinning: backlog
+  3-2a-ai-provider-integration-structured-output: backlog
+  3-2b-l2-batch-processing-pipeline-extension: backlog
+  3-2c-l2-results-display-score-update: backlog
+  3-3-ai-layer-3-deep-contextual-analysis: backlog
+  3-4-ai-resilience-fallback-retry-partial-results: backlog
+  3-5-score-lifecycle-confidence-display: backlog
+  epic-3-retrospective: optional
+
+  # ============================================================
+  # Epic 4: Review & Decision Workflow (MVP)
+  # ============================================================
+  epic-4: backlog
+  4-0-review-infrastructure-setup: backlog
+  4-1a-finding-list-display-progressive-disclosure: backlog
+  4-1b-keyboard-navigation-focus-management: backlog
+  4-1c-detail-panel-segment-context: backlog
+  4-1d-responsive-layout: backlog
+  4-2-core-review-actions: backlog
+  4-3-extended-actions: backlog
+  4-4a-bulk-operations-decision-override: backlog
+  4-4b-undo-redo-realtime-conflict-resolution: backlog
+  4-5-search-filter-ai-layer-toggle: backlog
+  4-6-suppress-false-positive-patterns: backlog
+  4-7-add-to-glossary-from-review: backlog
+  epic-4-retrospective: optional
+
+  # ============================================================
+  # Epic 5: Language Intelligence & Non-Native Support (MVP)
+  # ============================================================
+  epic-5: backlog
+  5-1-language-bridge-back-translation: backlog
+  5-2-non-native-auto-tag-native-reviewer-access: backlog
+  epic-5-retrospective: optional
+
+  # ============================================================
+  # Epic 6: Batch Processing & Team Collaboration (MVP)
+  # ============================================================
+  epic-6: backlog
+  6-1-file-assignment-language-pair-matching: backlog
+  6-2-event-notifications-real-time-updates: backlog
+  epic-6-retrospective: optional
+
+  # ============================================================
+  # Epic 7: Auto-Pass & Trust Automation (MVP)
+  # ============================================================
+  epic-7: backlog
+  7-1-recommended-pass-auto-pass-progression: backlog
+  7-2-blind-audit-trust-metrics: backlog
+  epic-7-retrospective: optional
+
+  # ============================================================
+  # Epic 8: Reporting & Certification (MVP)
+  # ============================================================
+  epic-8: backlog
+  8-1-report-export-pdf-excel: backlog
+  8-2-qa-certificate-audit-trail: backlog
+  epic-8-retrospective: optional
+
+  # ============================================================
+  # Epic 9: AI Learning & Continuous Improvement (MVP)
+  # ============================================================
+  epic-9: backlog
+  9-1-structured-feedback-logging-false-positive-tracking: backlog
+  9-2-ai-learning-indicators-improvement-visibility: backlog
+  9-3-false-positive-rate-time-series-tracking-alerting: backlog
+  9-4-ai-to-rule-promotion-candidate-detection: backlog
+  epic-9-retrospective: optional
+
+  # ============================================================
+  # Epic 10: Rule-based Auto-fix (Growth, Month 3-6)
+  # ============================================================
+  epic-10: backlog
+  10-1-deterministic-auto-fix-engine: backlog
+  10-2-auto-fix-preview-revert-acceptance-tracking: backlog
+  10-3-rule-candidate-proposal-admin-approval: backlog
+  10-4-promoted-rule-traceability: backlog
+  10-5-promoted-rule-monitoring-auto-demote: backlog
+  epic-10-retrospective: optional
+
+  # ============================================================
+  # Epic 11: Self-healing Translation (Growth/Vision, Month 3-12+)
+  # ============================================================
+  epic-11: backlog
+  11-1-fix-agent-ai-fix-generation-rag-context: backlog
+  11-2-judge-agent-independent-fix-verification: backlog
+  11-3-fix-presentation-user-interaction: backlog
+  11-4-progressive-trust-system: backlog
+  11-5-rag-knowledge-base-confidence-recalibration: backlog
+  11-6-self-healing-analytics-logging-cost-control: backlog
+  epic-11-retrospective: optional

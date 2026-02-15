@@ -376,23 +376,50 @@ function checkPlaceholders(segment: Segment): QAFinding[] {
 
 **Rule 5: Glossary Term Matching** — Severity: Major
 
+> **Cross-ref:** Architecture Decision 5.6 (Glossary Matching Strategy for CJK/Thai) and Research Spike `intl-segmenter-cjk-thai-research-spike-2026-02-15.md`
+
 ```typescript
 // What: Source terms from glossary must be translated with approved target terms
-// How: Term lookup in glossary + target text search
+// How: Hybrid approach — substring search (indexOf) + Intl.Segmenter boundary validation
+//      (Architecture Decision 5.6)
+//
+// Pre-processing pipeline:
+//   1. NFKC normalize text + glossary terms (halfwidth/fullwidth consistency)
+//   2. Strip inline markup/tags/placeholders before matching
+//   3. Substring search for glossary terms
+//   4. Validate matches against Intl.Segmenter word boundaries (CJK/Thai/Korean)
 
-function checkGlossary(segment: Segment, glossary: GlossaryEntry[]): QAFinding[] {
-  const sourceText = getPlainText(segment.source).toLowerCase();
-  const targetText = getPlainText(segment.target).toLowerCase();
+function checkGlossary(
+  segment: Segment,
+  glossary: GlossaryEntry[],
+  segmenter?: Intl.Segmenter  // cached per locale — see Architecture Decision 5.6
+): QAFinding[] {
+  // Step 1: NFKC normalization (halfwidth ﾌﾟﾛｸﾞﾗﾐﾝｸﾞ → fullwidth プログラミング)
+  const sourceText = getPlainText(segment.source).normalize('NFKC').toLowerCase();
+  const targetText = getPlainText(segment.target).normalize('NFKC').toLowerCase();
+
+  // Step 2: Strip inline markup for clean glossary matching
+  const cleanSource = stripInlineMarkup(sourceText);
+  const cleanTarget = stripInlineMarkup(targetText);
 
   const findings: QAFinding[] = [];
 
   for (const entry of glossary) {
-    // Check if source term exists in source text
-    if (sourceText.includes(entry.sourceTerm.toLowerCase())) {
-      // Check if approved target term exists in target text
-      const hasApprovedTerm = entry.targetTerms.some(
-        term => targetText.includes(term.toLowerCase())
-      );
+    const sourceTerm = entry.sourceTerm.normalize('NFKC').toLowerCase();
+
+    // Step 3: Substring search (primary — deterministic, cross-engine safe)
+    if (cleanSource.includes(sourceTerm)) {
+      const hasApprovedTerm = entry.targetTerms.some(term => {
+        const normalizedTerm = term.normalize('NFKC').toLowerCase();
+        const idx = cleanTarget.indexOf(normalizedTerm);
+        if (idx === -1) return false;
+
+        // Step 4: Boundary validation for CJK/Thai/Korean (if segmenter provided)
+        if (segmenter) {
+          return validateSegmentBoundary(cleanTarget, idx, normalizedTerm.length, segmenter);
+        }
+        return true; // Latin/space-based languages — substring match sufficient
+      });
 
       if (!hasApprovedTerm) {
         findings.push({
@@ -409,9 +436,14 @@ function checkGlossary(segment: Segment, glossary: GlossaryEntry[]): QAFinding[]
 
 // Edge cases:
 // - Case sensitivity: configurable per glossary
-// - Partial matches: "install" matching "installation" — use word boundary \b
+// - CJK/Thai/Korean: \b word boundary is UNUSABLE — use Intl.Segmenter boundary
+//   validation as specified in Architecture Decision 5.6 (hybrid approach)
+// - Korean: has spaces between eojeol but compound words (인공지능) still split
+// - NFKC normalization: required for Japanese halfwidth/fullwidth katakana matching
+// - Inline markup: strip tags/placeholders before matching, maintain offset map
+//   for position translation back to original text (Research Spike Section 7.7)
 // - Morphological variants: "run" vs "running" — stemming needed?
-//   → MVP: exact match with word boundary; Phase 2: stemming
+//   → MVP: exact substring match + boundary validation; Phase 2: stemming
 // - Multiple approved translations per term
 // - Context-dependent terms (same source → different target depending on context)
 //   → Flagged by AI Layer 3, not rule-based
@@ -432,13 +464,13 @@ function checkGlossary(segment: Segment, glossary: GlossaryEntry[]): QAFinding[]
 | Language | Edge Case | Handling |
 |----------|----------|---------|
 | **Arabic (AR)** | RTL text; placeholder order may reverse | Skip order check for RTL |
-| **Chinese (ZH)** | No spaces; fullwidth punctuation (。vs .) | Segmentation + fullwidth↔halfwidth mapping |
+| **Chinese (ZH)** | No spaces; fullwidth punctuation (。vs .); compounds split (人工智能→人工+智能) | Hybrid glossary matching (Decision 5.6) + NFKC normalization for fullwidth↔halfwidth |
 | **German (DE)** | Compound words (Rindfleischetikettierungsgesetz) | Skip length-based untranslated check |
-| **Japanese (JA)** | No spaces; mixed scripts (hiragana, katakana, kanji) | Script-aware comparison + segmentation |
-| **Korean (KO)** | Spacing rules differ from English | Korean-specific space validation |
-| **Thai (TH)** | No spaces between words (same challenge as ZH/JA) | Word segmentation (`Intl.Segmenter`) |
+| **Japanese (JA)** | No spaces; mixed scripts; kanji compounds split, katakana intact | Hybrid glossary matching (Decision 5.6) + NFKC normalization for halfwidth katakana |
+| **Korean (KO)** | Has spaces (eojeol) but Sino-Korean compounds split (인공지능→인공+지능); particles separated | Hybrid glossary matching (Decision 5.6) — spaces help but compounds still need substring+boundary approach |
+| **Thai (TH)** | No spaces; compounds split (โรงพยาบาล→โรง+พยาบาล, 4/10 terms affected) | Hybrid glossary matching (Decision 5.6) + `Intl.Segmenter` boundary validation |
 
-> **Shared challenge:** TH, ZH, JA all lack spaces between words — `\b` word boundary is unusable. All three require segmentation-based approaches for glossary matching and word-level rules.
+> **Shared challenge:** TH, ZH, JA, KO all have compound word splitting issues — `\b` word boundary is unusable for CJK/Thai, and insufficient for Korean compounds. All four require the **hybrid approach** (substring search + Intl.Segmenter boundary validation) as specified in Architecture Decision 5.6 and Research Spike `intl-segmenter-cjk-thai-research-spike-2026-02-15.md`. NFKC normalization is mandatory before segmentation.
 
 ### 3. Database Schema — Core Tables for QA Pipeline
 

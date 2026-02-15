@@ -35,6 +35,9 @@ _This document builds collaboratively through step-by-step discovery. Sections a
   - [Core Architectural Decisions](#core-architectural-decisions)
   - [Implementation Patterns & Consistency Rules](#implementation-patterns-consistency-rules)
   - [Project Structure & Boundaries](#project-structure-boundaries)
-  - [MVP Feedback Data Collection (Growth Foundation)](#mvp-feedback-data-collection-growth-foundation)
+  - [MVP Feedback Data Collection (Growth Foundation)](./mvp-feedback-data-collection-growth-foundation.md)
+    - [AI-to-Rule Promotion Foundation (FR81)](./mvp-feedback-data-collection-growth-foundation.md#ai-to-rule-promotion-foundation-fr81)
   - [Growth Architecture: Self-healing Translation Foundation](#growth-architecture-self-healing-translation-foundation)
   - [Architecture Validation Results](#architecture-validation-results)
+- **Supplementary Plans**
+  - [Language Pair Calibration Plan](./language-pair-calibration-plan.md) — Provisional → Production threshold calibration methodology (4-phase plan, cross-ref Decision 3.6)

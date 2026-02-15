@@ -89,5 +89,17 @@ await db.insert(feedbackEvents).values({
 
 **Data Moat Timeline:** After 3-6 months of MVP usage, accumulated feedback_events provide enough training data to fine-tune domain-specific models — a competitive advantage no competitor can replicate without similar usage data.
 
+### AI-to-Rule Promotion Foundation (FR81)
+
+MVP collects the data; Growth activates promotion. The `feedback_events` aggregation (grouped by error_type + language_pair) feeds AI-to-Rule Promotion (FR81-84, Epic 9 Story 9.4 + Epic 10 Stories 10.3-10.5):
+
+| MVP (FR81) | Growth (FR82-84) |
+|---|---|
+| Weekly aggregation of acceptance stats per pattern | Admin dashboard for candidate review + approve/reject |
+| Auto-flag patterns with ≥95% acceptance + ≥50 occurrences | Promoted rule with full traceability (source finding IDs) |
+| Store candidate data in `ai_metrics_timeseries` | Weekly monitoring + auto-demote if accuracy <80% |
+
+**No new tables in MVP** — aggregation results use existing `ai_metrics_timeseries` table (Story 9.3). Growth phase adds `rule_candidates` table for admin workflow.
+
 ---
 

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+<file target-language="ko" source-language="en" original="lit-localize-inputs" datatype="plaintext">
+<body>
+<trans-unit id="s6196153c4b0c1ea0">
+  <source>Install</source>
+  <target>설치</target>
+</trans-unit>
+<trans-unit id="sfea652f6580ff086">
+  <source>This site has app functionality.</source>
+  <target>이 사이트는 앱 기능을 가지고 있습니다.</target>
+</trans-unit>
+<trans-unit id="sba52286c21552a4e">
+  <source>Install it on your device for extensive experience and easy access.</source>
+  <target>더 많은 기능과 쉬운 접근을 위해 기기에 설치해주세요.</target>
+</trans-unit>
+<trans-unit id="sa5ef80b4bb9b39f8">
+  <source>Less</source>
+  <target>닫기</target>
+</trans-unit>
+<trans-unit id="s37a9e8aec5713460">
+  <source>More</source>
+  <target>더보기</target>
+</trans-unit>
+<trans-unit id="se740f75b95a51807">
+  <source>Add it to your Dock for extensive experience and easy access.</source>
+  <target>더 많은 기능과 쉬운 접근을 위해 Dock에 추가해주세요.</target>
+</trans-unit>
+<trans-unit id="s182ab2d6c997515f">
+  <source>Add it to your Home Screen for extensive experience and easy access.</source>
+  <target>더 많은 기능과 쉬운 접근을 위해 홈 화면에 추가해주세요.</target>
+</trans-unit>
+<trans-unit id="s8114bd55cae5a22b">
+  <source>Press Add to Dock</source>
+  <target>Dock에 추가 버튼 누르기</target>
+</trans-unit>
+<trans-unit id="s922329d6f6213590">
+  <source>Add to Dock</source>
+  <target>Dock에 추가</target>
+</trans-unit>
+<trans-unit id="scdaf4bbff76674c8">
+  <source>Add to Home Screen</source>
+  <target>홈 화면에 추가</target>
+</trans-unit>
+<trans-unit id="s633502f7cff4f847">
+  <source>Open your browser menu</source>
+  <target>브라우저 메뉴 열기</target>
+</trans-unit>
+<trans-unit id="s4e1e10a6ca408245">
+  <source>Tap "Add to Home screen"</source>
+  <target>"홈 화면에 추가" 탭하기</target>
+</trans-unit>
+<trans-unit id="s386eca8362ff6155">
+  <source>Press More if no Share icon</source>
+  <target>공유 아이콘이 없으면 더보기 누르기</target>
+</trans-unit>
+<trans-unit id="sc16e00a7a8b2fde2">
+  <source>Back</source>
+  <target>뒤로</target>
+</trans-unit>
+<trans-unit id="s681e399d63311fba">
+  <source>Show Gallery</source>
+  <target>갤러리 표시</target>
+</trans-unit>
+<trans-unit id="se0e473adfda8066c">
+  <source>Open in your main browser</source>
+  <target>주 브라우저에서 열기</target>
+</trans-unit>
+<trans-unit id="s224cbcec014ef6b5">
+  <source>Press Share in Navigation bar</source>
+  <target>내비게이션 바에서 공유 버튼 누르기</target>
+</trans-unit>
+<trans-unit id="s9af56bf005b49c74">
+  <source>Scroll down to "Add to Home Screen"</source>
+  <target>"홈 화면에 추가"로 스크롤하기</target>
+</trans-unit>
+<trans-unit id="s7f0591f08e318eda">
+  <source>Press More in Share menu</source>
+  <target>공유 메뉴에서 더보기 누르기</target>
+</trans-unit>
+</body>
+</file>
+</xliff>

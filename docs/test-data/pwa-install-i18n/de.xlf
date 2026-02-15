@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file target-language="de" source-language="en" original="lit-localize-inputs" datatype="plaintext">
+    <body>
+      <trans-unit id="s6196153c4b0c1ea0">
+        <source>Install</source>
+        <target>Installieren</target>
+      </trans-unit>
+      <trans-unit id="sa5ef80b4bb9b39f8">
+        <source>Less</source>
+        <target>Weniger</target>
+      </trans-unit>
+      <trans-unit id="s37a9e8aec5713460">
+        <source>More</source>
+        <target>Mehr</target>
+      </trans-unit>
+      <trans-unit id="scdaf4bbff76674c8">
+        <source>Add to Home Screen</source>
+        <target>Hinzufügen zum Startbildschirm</target>
+      </trans-unit>
+      <trans-unit id="sfea652f6580ff086">
+        <source>This site has app functionality.</source>
+        <target>Diese Website verfügt über App-Funktionalität.</target>
+      </trans-unit>
+      <trans-unit id="se740f75b95a51807">
+        <source>Add it to your Dock for extensive experience and easy access.</source>
+        <target>Fügen Sie es zu Ihrem Dock hinzu, um eine umfassende Erfahrung und einen leichten Zugriff zu erhalten.</target>
+      </trans-unit>
+      <trans-unit id="s182ab2d6c997515f">
+        <source>Add it to your Home Screen for extensive experience and easy access.</source>
+        <target>Fügen Sie es zu Ihrem Startbildschirm hinzu, um eine umfassende Erfahrung und einen leichten Zugriff zu erhalten.</target>
+      </trans-unit>
+      <trans-unit id="s8114bd55cae5a22b">
+        <source>Press Add to Dock</source>
+        <target>Drücken Sie auf Zum Dock hinzufügen</target>
+      </trans-unit>
+      <trans-unit id="s922329d6f6213590">
+        <source>Add to Dock</source>
+        <target>Zum Dock hinzufügen</target>
+      </trans-unit>
+      <trans-unit id="sba52286c21552a4e">
+        <source>Install it on your device for extensive experience and easy access.</source>
+        <target>Installieren Sie es auf Ihrem Gerät für eine umfassende Erfahrung und einen leichten Zugriff.</target>
+      </trans-unit>
+      <trans-unit id="s633502f7cff4f847">
+        <source>Open your browser menu</source>
+        <target>Öffnen Sie das Menü Ihres Browsers</target>
+      </trans-unit>
+      <trans-unit id="s4e1e10a6ca408245">
+        <source>Tap "Add to Home screen"</source>
+        <target>Tippen Sie auf "Zum Startbildschirm hinzufügen"</target>
+      </trans-unit>
+      <trans-unit id="s386eca8362ff6155">
+        <source>Press More if no Share icon</source>
+        <target>Drücken Sie auf Mehr, wenn kein Teilen-Symbol vorhanden ist</target>
+      </trans-unit>
+      <trans-unit id="sc16e00a7a8b2fde2">
+        <source>Back</source>
+        <target>Zurück</target>
+      </trans-unit>
+      <trans-unit id="s681e399d63311fba">
+        <source>Show Gallery</source>
+        <target>Galerie anzeigen</target>
+      </trans-unit>
+      <trans-unit id="se0e473adfda8066c">
+        <source>Open in your main browser</source>
+        <target>Öffnen Sie es in Ihrem Hauptbrowser</target>
+      </trans-unit>
+      <trans-unit id="s224cbcec014ef6b5">
+        <source>Press Share in Navigation bar</source>
+        <target>Drücken Sie auf Teilen in der Navigationsleiste</target>
+      </trans-unit>
+      <trans-unit id="s9af56bf005b49c74">
+        <source>Scroll down to "Add to Home Screen"</source>
+        <target>Scrollen Sie nach unten zu "Zum Startbildschirm hinzufügen"</target>
+      </trans-unit>
+      <trans-unit id="s7f0591f08e318eda">
+        <source>Press More in Share menu</source>
+        <target>Drücken Sie auf Mehr im Teilen-Menü</target>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

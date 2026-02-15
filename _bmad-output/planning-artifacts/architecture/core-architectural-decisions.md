@@ -1159,6 +1159,30 @@ Token count + estimated cost per request enables Economy vs Thorough cost tracki
 - **Decision:** Both audit log entry + structured pino log
 - **Rationale:** The audit entry creates a compliance trail — when glossary matching operates in degraded mode, it affects score reliability. The structured log enables monitoring and alerting if degraded mode frequency exceeds the threshold.
 
+#### 5.6 Glossary Matching Strategy for CJK/Thai (Research Spike 2026-02-15)
+
+- **Decision:** Hybrid approach — substring search (`indexOf`) as primary + Intl.Segmenter boundary validation as secondary
+- **Rationale:** Research spike (`research/intl-segmenter-cjk-thai-research-spike-2026-02-15.md`) found that `Intl.Segmenter` alone is insufficient for glossary matching because:
+  1. **Compound words are split** — Thai: โรงพยาบาล → โรง+พยาบาล (4/10 terms affected). Chinese: ALL 4-char terms split (人工智能 → 人工+智能). Japanese: Kanji compounds split, Katakana preserved. Korean: Sino-Korean compounds split (인공지능 → 인공+지능), loan words intact.
+  2. **Cross-engine inconsistency** — V8/JSC use ICU4C, Firefox uses ICU4X (Rust). Same text can produce different segment boundaries.
+  3. **Context-dependent segmentation** — Same term can segment differently depending on surrounding text.
+- **Implementation:**
+  ```
+  Pre-process: NFKC normalize text + glossary terms (halfwidth/fullwidth consistency)
+  Pre-process: Strip inline markup/tags/placeholders before segmentation (XLIFF <x/>, HTML <b>, {0}, %s)
+  Primary: substring search (indexOf) — deterministic, cross-engine safe
+  Secondary: Intl.Segmenter boundary validation — confirms match aligns to word edges
+  Fallback: if boundary validation fails, accept substring match with "Low confidence" flag
+  ```
+- **Intl.Segmenter valid uses:** Word counting (MQM NPT calculation), text highlighting at word boundaries, `isWordLike` filtering, boundary validation, Korean eojeol parsing (particle separation)
+- **Performance:** ~0.017ms per segment call, 5,000 segments in <250ms. Cache Segmenter instances per locale.
+- **Node.js requirement:** 18+ LTS with full ICU (small-icu will SEGFAULT)
+- **NFKC normalization:** Required before segmentation — halfwidth katakana (ﾌﾟﾛｸﾞﾗﾐﾝｸﾞ) won't match fullwidth (プログラミング) without `text.normalize('NFKC')`
+- **Markup pre-processing:** Strip inline tags/placeholders before segmentation, maintain character offset map for position translation back to original text
+- **Text size guard:** Chunk at 30,000 chars to prevent stack overflow
+- **Affects:** Story 1.5 (Glossary Matching Engine), Story 2.4 (Rule Engine glossary checks), FR43, FR44
+- **Cross-ref:** Research spike document (updated with Korean section, NFKC, localization edge cases), Architecture Decision 5.5 (fallback logging)
+
 ---
 
 ### Decision Impact Analysis

@@ -665,11 +665,11 @@ flowchart LR
 
 | Language Group | Constraint | Impact on Rule Engine |
 |---------------|-----------|---------------------|
-| **No-space languages** (TH, ZH, JA) | Word boundary `\b` ไม่ทำงาน | Glossary matching ต้องใช้ **Intl.Segmenter API** (built-in Node.js) สำหรับ word segmentation → match กับ segmented terms แทน substring match (ลด false positive) |
-| **Thai (TH)** | ไม่มีช่องว่างระหว่างคำ, Thai numerals (๐-๙), particles (ครับ/ค่ะ) | Thai numeral ↔ Arabic numeral mapping; glossary match = **Intl.Segmenter('th')** → segment target text → match terms |
-| **Chinese (ZH)** | Fullwidth punctuation (。，！？), Simplified vs Traditional | Punctuation check ต้องมี fullwidth mapping; glossary ต้องแยก SC/TC; word segmentation via **Intl.Segmenter('zh')** |
-| **Japanese (JA)** | Mixed scripts (hiragana/katakana/kanji), fullwidth | Script detection per segment; katakana loan words ≠ mistranslation; segmentation via **Intl.Segmenter('ja')** |
-| **Korean (KO)** | Korean spacing rules, Hangul syllable blocks | Spacing check ต้อง Korean-aware |
+| **No-space languages + compound-splitting** (TH, ZH, JA, KO) | Word boundary `\b` ไม่ทำงานสำหรับ TH/ZH/JA; KO มี spaces แต่ compound words ถูก split (인공지능→인공+지능) | Glossary matching ใช้ **Hybrid approach** (Architecture Decision 5.6): Primary = substring search (`indexOf`), Secondary = Intl.Segmenter boundary validation. NFKC normalization required before matching. Intl.Segmenter alone splits compound words — substring ensures no false negatives |
+| **Thai (TH)** | ไม่มีช่องว่างระหว่างคำ, Thai numerals (๐-๙), particles (ครับ/ค่ะ) | Thai numeral ↔ Arabic numeral mapping; glossary match = **Hybrid** (substring primary + `Intl.Segmenter('th')` boundary validation) — compound words like โรงพยาบาล found via substring even when segmenter splits them |
+| **Chinese (ZH)** | Fullwidth punctuation (。，！？), Simplified vs Traditional | Punctuation check ต้องมี fullwidth mapping; glossary ต้องแยก SC/TC; glossary match = **Hybrid** (substring primary + `Intl.Segmenter('zh')` boundary validation) |
+| **Japanese (JA)** | Mixed scripts (hiragana/katakana/kanji), fullwidth | Script detection per segment; katakana loan words ≠ mistranslation; glossary match = **Hybrid** (substring primary + `Intl.Segmenter('ja')` boundary validation) |
+| **Korean (KO)** | Has spaces (eojeol) but Sino-Korean compounds split (인공지능→인공+지능); particles separated; Hangul syllable blocks | Glossary match = **Hybrid** (substring primary + `Intl.Segmenter('ko')` boundary validation) — compounds need same approach as CJK; NFKC normalization; spacing check Korean-aware |
 | **RTL languages** (AR, HE) | Right-to-left text direction, bidi markers | UI ต้อง RTL-aware; tag order validation account for bidi |
 | **Latin with diacritics** (ES, FR, DE) | Accented characters (á, ñ, ü), inverted punctuation (¿¡) | Diacritics ≠ error; inverted punctuation = required for ES |
 
@@ -718,7 +718,7 @@ flowchart LR
 | Treat all languages the same | Per-language rule configuration + calibration |
 | Auto-fix without confirmation | Always suggest, never auto-apply — **except** rule-based deterministic fixes (tags, placeholders, numbers) which may auto-fix with audit trail (FR73). AI-generated fixes require human approval **during Growth Phase (Assisted Mode)**; Vision Phase enables auto-apply for verified high-confidence fixes (>95% + Judge Agent pass) per Self-healing Translation PRD progressive trust model (Shadow → Assisted → Autonomous) |
 | Ignore inline tags in AI prompt | Preserve tag structure; teach AI to recognize tags |
-| Word-boundary regex for CJK | **Intl.Segmenter API** for word segmentation (not substring) |
+| Word-boundary regex for CJK | **Hybrid approach** (Architecture Decision 5.6): substring search primary + Intl.Segmenter boundary validation secondary |
 | Single confidence threshold | Per-language calibration with cold start protocol |
 | Flatten XLIFF to plain text | Preserve full structure; extract text for AI, map back |
 | Sanitize translation content before AI | **Do NOT sanitize** — use structured output + input framing instead |
@@ -746,7 +746,7 @@ flowchart LR
 |--------------|-----------|--------|
 | XLIFF 2.0 = MVP | XLIFF 2.0 = **Growth** | Trados = primary source = XLIFF 1.2/SDLXLIFF; 2.0 = different spec, low ROI in MVP |
 | ~Dual taxonomy admin UI~ | **Admin mapping editor UI = MVP** (kept) | Mona ต้องการ control mapping เอง — mapping อาจเปลี่ยนบ่อย |
-| Substring match for CJK glossary | **Intl.Segmenter API** | Substring has high false positive for no-space languages |
+| Intl.Segmenter-only for CJK glossary | **Hybrid approach** (Decision 5.6) | Intl.Segmenter splits compound words (e.g., 图书馆→图书+馆) — substring search as primary ensures no missed terms; Segmenter validates boundaries as secondary |
 
 ## 6. Innovation & Novel Patterns
 
@@ -1162,7 +1162,7 @@ Month 2-3: Trust & Automation
 - **FR8:** System can execute rule-based QA checks achieving 100% parity with Xbench (tags, placeholders, numbers, glossary, consistency, spacing). **Prerequisite:** Xbench Parity Specification document (frozen check types, Xbench configuration, golden test corpus with known outputs, category mapping) must be completed before implementation begins
 - **FR9:** System can execute AI-powered semantic screening (Layer 2) to detect issues beyond rule-based checks
 - **FR10:** System can execute AI-powered deep contextual analysis (Layer 3) on segments flagged by semantic screening
-- **FR11:** System can calculate quality score per file using MQM-aligned formula: `Score = max(0, 100 - NPT)` where NPT = Normalized Penalty Total per 1,000 words. Severity weights: Critical = 25, Major = 5, Minor = 1. Edge cases: (a) word count 0 or file with only tags = score N/A with "unable to score" status, (b) word count for CJK/Thai = Intl.Segmenter token count, (c) score recalculates after each layer completes — interim scores displayed with "processing" badge until final layer completes, (d) findings spanning multiple segments count penalty once per finding not per segment
+- **FR11:** System can calculate quality score per file using MQM-aligned formula: `Score = max(0, 100 - NPT)` where NPT = Normalized Penalty Total per 1,000 words. Severity weights: Critical = 25, Major = 5, Minor = 1. Edge cases: (a) word count 0 or file with only tags = score N/A with "unable to score" status, (b) word count for CJK/Thai/Korean = Intl.Segmenter token count, (c) score recalculates after each layer completes — interim scores displayed with "processing" badge until final layer completes, (d) findings spanning multiple segments count penalty once per finding not per segment
 - **FR12:** System can apply separate confidence thresholds per language pair (per-language calibration)
 - **FR13:** System can apply conservative default settings for new or unseen language pairs, including mandatory manual review for the first 50 files of any new language pair per project. Counter tracks per language pair per project. System notifies admin when file 51 transitions to standard mode. Counter does not reset
 - **FR14:** QA Reviewer can select processing depth (Economy or Thorough mode) per file or batch
@@ -1227,8 +1227,8 @@ Month 2-3: Trust & Automation
 - **FR40:** Admin can import glossaries in CSV, TBX, and Excel formats and associate them with projects
 - **FR41:** Admin can configure per-project glossary overrides for approved terminology
 - **FR42:** QA Reviewer can add new terms to the project glossary directly from the review interface (1-click)
-- **FR43:** System can match glossary terms in no-space languages (Thai, Chinese, Japanese) using Intl.Segmenter-based tokenization with defined accuracy: false negative rate < 5% and false positive rate < 10% on reference test corpus per language. **Prerequisite:** Research spike required to validate Intl.Segmenter behavior for multi-token glossary terms, compound words, and cross-engine consistency (V8 vs JSC)
-- **FR44:** System can match multi-token glossary terms in no-space languages where glossary entry spans multiple Intl.Segmenter tokens, with fallback to substring matching when segmenter output is ambiguous
+- **FR43:** System can match glossary terms in no-space languages (Thai, Chinese, Japanese) and compound-splitting languages (Korean) using Hybrid approach (Architecture Decision 5.6): substring search primary + Intl.Segmenter boundary validation secondary. NFKC normalization applied before matching. Defined accuracy: false negative rate < 5% and false positive rate < 10% on reference test corpus per language. ✅ Research spike completed 2026-02-15 — validated Hybrid approach for compound words, cross-engine consistency (V8 vs JSC vs Firefox ICU4X), Korean compound splitting, NFKC normalization
+- **FR44:** System can match multi-token glossary terms in no-space and compound-splitting languages where glossary entry spans multiple Intl.Segmenter tokens — substring search (primary strategy) finds these terms regardless of segmentation; Intl.Segmenter boundary validation (secondary) confirms match positions where possible
 - **FR45:** System can notify assigned reviewers when glossary terms are added, modified, or deleted for their active projects
 
 ### 6. Reporting & Certification
@@ -1275,7 +1275,16 @@ Month 2-3: Trust & Automation
 - **FR74:** System can display auto-fix preview showing before/after comparison for each proposed fix before batch application, with option to exclude individual fixes
 - **FR75:** System can track auto-fix acceptance rate per category per language pair, feeding into confidence calibration for future Self-healing capabilities (see Self-healing Translation PRD)
 
-## 10. Non-Functional Requirements
+### 10. AI-to-Rule Promotion — MVP Foundation + Growth
+
+> **Note:** FR81 is MVP-scope (data collection foundation in Epic 9). FR82-FR84 are Growth-scope features (Epic 10) that activate once sufficient data has accumulated.
+
+- **FR81:** System shall continuously aggregate AI finding acceptance statistics per finding pattern (error type + language pair + context similarity). When a pattern reaches ≥95% acceptance rate across ≥50 occurrences, it is automatically flagged as a "promotion candidate" in the `feedback_events` aggregation. MVP scope: data collection and candidate flagging only (no UI, no promotion action). Cross-ref: Architecture Section 6 (MVP Feedback Data Collection)
+- **FR82:** System shall present promotion candidates to Admin in a dedicated "Rule Candidates" dashboard showing: pattern description, acceptance rate, occurrence count, sample findings (up to 5), affected language pairs, and one-click Approve/Reject actions. Approved candidates generate a new L1 rule definition with pre-filled parameters. Growth scope (Epic 10)
+- **FR83:** Each promoted rule shall maintain full traceability: `source_finding_ids[]` (AI findings that contributed to the pattern), `acceptance_rate` at time of promotion, `occurrence_count`, `promoted_at` timestamp, `promoted_by` (admin user ID), and `original_ai_layer` (L2 or L3). Traceability data is immutable and included in audit trail. Growth scope (Epic 10)
+- **FR84:** System shall monitor promoted rule accuracy on a weekly scheduled basis. If a promoted rule's acceptance rate drops below 90%, a warning alert is sent to Admin. If it drops below 80%, the rule is automatically demoted (disabled) with notification: "Promoted rule '{name}' demoted — accuracy dropped to {rate}%". Demoted rules retain traceability data and can be re-promoted after investigation. Growth scope (Epic 10)
+
+## 11. Non-Functional Requirements
 
 > NFRs define HOW WELL the system performs, not WHAT it does.
 > Only categories relevant to this product are included.
@@ -1294,7 +1303,7 @@ Month 2-3: Trust & Automation
 | NFR5 | Any page loads in < 2 seconds (TTI) | Time to Interactive, measured on Chrome | Standard web app expectation |
 | NFR6 | Report export (PDF/Excel) completes in < 10 seconds | Server-side generation, file < 5,000 segments | Acceptable wait for export action |
 | NFR7 | Batch of 10 files completes in < 5 minutes total | Queue-based, parallel processing | Realistic batch scenario |
-| NFR8 | System rejects uploaded files exceeding 50MB with clear error message | Hard limit enforced at upload, error shown before processing starts | Prevent system overload from oversized files |
+| NFR8 | System rejects uploaded files exceeding 15MB with clear error message | Hard limit enforced at upload, error shown before processing starts | Aligned with Architecture Decision 1.6 — DOM parser 6-10x memory overhead on Vercel (15MB covers 99%+ real-world SDLXLIFF). Growth: SAX streaming for larger files |
 
 ### Security
 
