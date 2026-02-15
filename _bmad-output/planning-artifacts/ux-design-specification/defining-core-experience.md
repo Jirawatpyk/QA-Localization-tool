@@ -136,13 +136,13 @@ Receive translated files → Put in QA queue → Wait 1-3 days →
 
 ### Experience Mechanics
 
-The detailed step-by-step mechanics of the Core Action Loop are defined in the **Core User Experience** section (Step 3), including visual scan path, per-persona views, 7 action types, 8 finding states, bulk operations, keyboard navigation, 10 design safeguards, and 12 edge case responses.
+The detailed step-by-step mechanics of the Core Action Loop are defined in the **Core User Experience** section (core-user-experience.md), including visual scan path, per-persona views, 7 action types, 8 finding states, bulk operations, keyboard navigation, 10 design safeguards, and 12 edge case responses.
 
 **Mechanics summary — 4 phases of core interaction:**
 
 | Phase | User Action | System Response | Completion Signal |
 |-------|-----------|----------------|------------------|
-| **1. Initiation** | Drag & drop files → Select mode → Run | Validation → Queue → Processing | "Processing: 3 files queued" |
+| **1. Initiation** | Drag & drop files → Processing Mode Dialog (Economy/Thorough card selection) → Run | Validation → Queue → Processing | "Processing: 3 files queued" |
 | **2. Scanning** | View batch summary → Identify files needing review | Rule-based < 5s → AI streams progressively | "7 auto-pass, 3 need review" |
 | **3. Reviewing** | Drill into file → Core Loop × N findings | States update → Progress advances → Score recalculates | "Review Complete" per file |
 | **4. Completing** | Export report → Generate certificate → Deliver | Report → Certificate PDF → Audit trail sealed | "Batch complete — Export ready" |

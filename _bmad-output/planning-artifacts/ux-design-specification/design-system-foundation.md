@@ -48,14 +48,13 @@
 | **Card** | Batch summary cards, dashboard metric cards | Medium — compact variant for density |
 | **Progress** | Review progress, file processing progress | Medium — dual progress variant |
 | **Accordion** | Expandable finding detail (compact/detailed toggle) | Light |
-| **Dialog** | Bulk accept Major confirmation, glossary quick-edit | Light |
+| **Dialog** | Bulk accept Major confirmation, glossary quick-edit, Processing Mode selection | Light |
 | **Select/Combobox** | Language pair, filter dropdowns, severity override | Light |
 | **Dropdown Menu** | Action menus, context menus, reason selection | Light |
 | **Tooltip** | Confidence details, cost estimation, help text | Light |
 | **Alert** | Error states, file parse failure, warnings | Light |
 | **Skeleton** | Loading states for AI processing | Light |
 | **Tabs** | Score breakdown sections | Light |
-| **Dialog** | Processing Mode selection (Economy/Thorough cards at upload time) | Light |
 | **Charts** | Dashboard quality trends, AI accuracy graphs | Medium — MQM score visualization |
 
 #### Custom Components to Build

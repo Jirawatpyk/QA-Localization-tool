@@ -517,7 +517,7 @@ erDiagram
         uuid project_id FK
         uuid tenant_id FK
         uuid review_session_id FK "nullable"
-        varchar status "pending | accepted | rejected | edited | deferred | escalated | false_positive | confirmed"
+        varchar status "pending | accepted | re_accepted | rejected | flagged | noted | source_issue | manual"
         varchar severity "critical | major | minor"
         varchar category "MQM category"
         text description

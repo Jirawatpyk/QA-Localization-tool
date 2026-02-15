@@ -37,10 +37,10 @@
 
 **Persona 3: PM/Coordinator — Self-service User**
 - Not a QA expert → auto-pass + simple summary is sufficient
-- Economy mode as default (cost-aware, tooltip explains Thorough cost)
+- Economy mode pre-selected in the Processing Mode Dialog at upload time (cost-aware, tooltip explains Thorough cost)
 - Route to QA reviewer when score is low (manual reviewer selection)
-- Content-type warning for sensitive content (legal/medical/financial)
-- Client feedback loop: simple ✅/❌ after delivery
+- Content-type warning for sensitive content (legal/medical/financial) (Deferred — Growth Phase)
+- Client feedback loop: simple ✅/❌ after delivery (Deferred — Growth Phase)
 - **Goal**: Ship files to client without waiting in QA queue
 
 **Secondary — VP/Director (Dashboard Only)**
@@ -75,21 +75,21 @@
 **4. False Positive Management** 💣
 - Bulk reject + "Suppress this pattern" (offered after 3+ rejects of same pattern) → reduce fatigue
 - AI Learning status with 2 distinct states: "📝 Feedback logged (50)" vs "✅ Applied to AI (32 patterns)"
-- Option to disable AI suggestions temporarily (use rule-based only mode)
+- Option to filter AI suggestions from view (show rule-based findings only) — this is a view filter, not a processing mode change
 - False positive rate tracking per language pair with visible improvement trend
 - AI update changelog: "AI updated: +12 patterns, accuracy EN→TH: 85% → 91%"
 
 **5. Dual Taxonomy UX (QA Cosmetic + MQM)** 🏷️
 - UI displays QA Cosmetic terms familiar to the team (from production standards)
 - Reports/exports use MQM standard terms (industry-standard for clients/enterprise)
-- Admin mapping editor UI — Mona must control the mapping herself without dev involvement
+- Admin mapping editor UI — Mona must control the mapping herself without dev involvement (Deferred — Growth Phase admin persona)
 - Challenge: prevent user confusion between 2 taxonomy systems in the same interface
 
 **6. First 5 Minutes — Onboarding that delivers value immediately** ⏱️
 - "Time to first value < 5 minutes" — must budget time carefully: Create Project + set language pair + import glossary + upload file → all must be minimal friction
 - First 30 seconds: guided onboarding flow, not empty dashboard
 - First-time user onboarding tour: 5-step walkthrough (severity → actions → auto-pass → report → feedback)
-- Cost estimation before Run: "Thorough: ~$0.15 for this file, ~2 min | Economy: ~$0.03, ~30s"
+- Cost estimation in Processing Mode Dialog: "Economy: ~$0.15/file, ~30s | Thorough: ~$0.35/file, ~2 min" (estimates vary by file size)
 - Trust calibration messaging: communicate that AI is assistant not oracle, false positive target < 10%
 
 **7. Progressive Streaming Score Behavior** ⚡

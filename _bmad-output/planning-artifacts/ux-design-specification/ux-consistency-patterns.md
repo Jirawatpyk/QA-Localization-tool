@@ -9,7 +9,7 @@
 | **Primary** | Accept | Green filled button | `A` | Confirm finding is valid — most frequent action |
 | **Primary** | Reject | Red filled button | `R` | Dismiss finding as false positive |
 | **Secondary** | Flag | Yellow outline button | `F` | Mark for native review / escalation |
-| **Secondary** | Note | Blue outline button | `N` | Add comment without changing state |
+| **Secondary** | Note | Blue outline button | `N` | Add stylistic observation — marks finding as 'Noted' (no MQM score penalty) |
 | **Tertiary** | Source Issue | Purple outline button | `S` | Reclassify as source problem |
 | **Tertiary** | Add Finding | Ghost button with `+` | `+` | Manually add finding not caught by system |
 | **Destructive** | Severity Override | Dropdown in context menu | — | Change severity level (logged + reversible) |
@@ -203,7 +203,8 @@ Dashboard / Project-ABC / Batch-Mon / file-03.xlf / Finding #14
 | **Finding List** | `A` `R` `F` `N` `S` | Action on focused finding |
 | **Finding List** | `Shift+J/K` | Extend selection |
 | **Finding List** | `Ctrl+A` | Select all visible |
-| **Batch View** | `]` / `[` | Next / Previous file |
+| **Batch View** | `]` / `Alt+↓` | Next file |
+| **Batch View** | `[` / `Alt+↑` | Previous file |
 | **Batch View** | `Enter` | Open focused file |
 | **Command Palette** | Type | Filter actions/files/findings |
 | **Command Palette** | `Enter` | Execute selected action |
@@ -291,6 +292,8 @@ Global search across all contexts:
 ```
 
 **Scopes:** Type `>` for actions only, `#` for findings only, `@` for files only
+
+> **Note:** 'Upgrade to Thorough' triggers a re-processing confirmation dialog — this is a one-way upgrade that runs additional L3 analysis on Economy-processed files.
 
 #### Filter Bar Pattern
 

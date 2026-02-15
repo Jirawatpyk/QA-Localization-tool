@@ -58,7 +58,7 @@ flowchart TD
 ```mermaid
 flowchart TD
     A[Monday Morning — 12 files waiting] --> B[Batch Upload 12 XLIFF files]
-    B --> C[Select Mode]
+    B --> C[Processing Mode Dialog]
     C -->|Economy L1+L2| C1[Fast + cheap]
     C -->|Thorough L1+L2+L3| C2[Deep + comprehensive]
     C1 --> D[Run Batch]
@@ -158,12 +158,12 @@ flowchart TD
 #### Keyboard-First Flow
 | Phase | Keys | Action |
 |-------|------|--------|
-| Navigate findings | `J` / `K` | Next / Previous finding |
+| Navigate findings | `J / ↓` / `K / ↑` | Next / Previous finding |
 | Expand/Collapse | `Enter` / `Esc` | Open detail / Close detail |
 | Quick actions | `A` `R` `F` `N` | Accept / Reject / Flag / Note |
 | Bulk select | `Shift+J/K` | Extend selection |
-| Bulk action | `Ctrl+A` `Ctrl+R` | Bulk Accept / Bulk Reject |
-| File navigation | `]` / `[` | Next file / Previous file |
+| Bulk action | `Ctrl+Shift+A` `Ctrl+Shift+R` | Bulk Accept / Bulk Reject |
+| File navigation | `] / Alt+↓` / `[ / Alt+↑` | Next file / Previous file |
 | Command palette | `Ctrl+K` | Search actions, files, findings |
 
 ---
@@ -253,6 +253,8 @@ flowchart TD
 | EN→JA | >= 92% | 75-91% | Non-native — higher bar needed |
 | EN→AR | >= 90% | 72-89% | RTL + non-native |
 
+> **Distinction:** These per-language acceptance thresholds are separate from the universal Confidence Badge levels (High >85%, Medium 70-85%, Low <70%) shown on every finding. The badge indicates AI confidence; the threshold determines when non-native reviewers should Flag rather than Accept.
+
 #### Non-Native Safety Net
 - Every Accept by non-native auto-tagged: `"Accepted by non-native reviewer — subject to native audit"`
 - Smart Report separates native-verified vs non-native-accepted sections
@@ -316,8 +318,8 @@ flowchart TD
 │ file-02.xlf   1,800 seg   ~$0.05            │
 │ file-03.xlf   3,100 seg   ~$0.09            │
 │──────────────────────────────────────────────│
-│ Mode: [Economy ─────] [★ Thorough ═══]       │
-│ Est:   ~$0.26 / ~2min   ~$1.30 / ~10min     │
+│ Mode: Selected via Processing Mode Dialog    │
+│ Est:   Economy ~$0.26    Thorough ~$1.30    │
 │                                              │
 │ Estimate based on segment count.             │
 │ Actual cost may vary by AI complexity.       │

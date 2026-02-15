@@ -80,7 +80,11 @@ Every finding is designed for a left-to-right, top-to-bottom scan completing in 
 | Core actions | Accept / Reject | Accept / Reject / **Flag** |
 | Extended actions | Note / Source Issue / Add Finding / Severity Override | Note / Source Issue / Add Finding / Severity Override |
 
+> **Flag action availability:** Flag is available based on the reviewer's native language vs the file's target language, not based on persona role. Example: คุณแพร reviewing EN→TH (her native language): no Flag. คุณแพร reviewing EN→JA: Flag available.
+
 #### Action Sub-flows
+
+> **Note:** Safeguard and Edge Case references below are defined later in this document under [Core Loop Design Safeguards](#core-loop-design-safeguards) and [Edge Cases](#edge-cases).
 
 **✓ Accept (Hotkey: A)** — Zero friction
 - 1 click → finding greyed out → cursor auto-advances to next finding
@@ -124,18 +128,22 @@ Every finding is designed for a left-to-right, top-to-bottom scan completing in 
 
 - **Shift+Click** multi-select → "Accept Selected (N)"
 - **Filter + Accept All:** Filter by Confidence: High + Severity: Minor → "Accept All Filtered"
-- **Rules:** ❌ Cannot bulk accept Critical (must review individually) / ⚠️ Bulk accept Major requires confirmation / ✅ Bulk accept Minor + High confidence — no confirmation needed
+- **Rules:** ❌ Cannot bulk accept Critical — button is disabled when Critical findings are selected (tooltip: 'Critical findings must be reviewed individually') / ⚠️ Bulk accept Major requires confirmation / ✅ Bulk accept Minor + High confidence — no confirmation needed
 - **Spot check safety net:** After bulk accept >10 findings → show 2-3 random samples for quick verification (see Safeguard #8)
 - **Bulk accept accuracy tracking:** Per-user metric visible in profile — builds accountability
+
+> **Two separate bulk safety mechanisms:** (1) Confirmation dialog for bulk actions on ≥6 items, (2) Spot-check sample display after bulk accept of ≥11 findings — both apply independently.
 
 #### Keyboard Navigation
 
 | Scope | Shortcut | Action |
 |-------|----------|--------|
-| Within file | ↓ / ↑ | Next / Previous finding |
+| Within file | J / ↓ | Next finding |
+| Within file | K / ↑ | Previous finding |
 | Within file | Tab | Next **unresolved** finding (skip accepted/rejected) |
 | Within file | Ctrl+↓ / Ctrl+↑ | Next / Previous **Critical** finding |
-| Between files | Alt+↓ / Alt+↑ | Next / Previous file in batch |
+| Between files | ] / Alt+↓ | Next file in batch |
+| Between files | [ / Alt+↑ | Previous file in batch |
 | Global | Alt+Home | Back to batch summary |
 
 | Global | Ctrl+K | **Command palette** — search, filter, navigate (see Safeguard #4) |
@@ -172,8 +180,8 @@ Ten failure modes identified through pre-mortem analysis, with preventive design
 **Safeguard 1: Decision Fatigue Prevention** (Severity: Critical)
 - Problem: 450 Accept/Reject decisions/day causes cognitive exhaustion — Xbench doesn't require per-finding decisions
 - Prevention:
-  - **Auto-resolve mode**: Findings with High confidence (>90%) + Minor severity → auto-accepted with "Auto-accepted" badge, reviewable in audit log
-  - **"Acknowledge & Continue" mode**: Alternative to mandatory Accept/Reject — reviewer sees finding, moves on, finding logged as "Reviewed — no action" for audit trail
+  - **Auto-resolve mode**: Findings with High confidence (>90%) + Minor severity → auto-accepted with "Auto-accepted" badge, reviewable in audit log. Finding state: 'Auto-accepted' — uses Accepted state with 'Auto' badge. Visible in FindingCard as green-tinted with ⚡ Auto badge. Configurable per project in Settings (default: enabled for Minor + High confidence >90%).
+  - **"Acknowledge & Continue" mode**: Alternative to mandatory Accept/Reject — reviewer sees finding, moves on, finding logged as "Reviewed — no action" for audit trail (equivalent to the Note action — marks finding as reviewed without Accept/Reject, see Note action definition above)
   - **Smart batching**: Group similar findings (e.g., 8 terminology issues of same pattern) → resolve as group with single decision
 
 **Safeguard 2: False Positive Management** (Severity: Critical)
@@ -255,6 +263,7 @@ Twelve edge case scenarios explored through What If analysis, with design implic
   - **Triage mode**: Auto-activate when findings > 50 — show Critical + Major only, Minor collapsed under "and 147 Minor findings"
   - **Error pattern grouping**: "23 Terminology errors (same pattern: 'cloud computing')" → resolve as group with single decision
   - **Re-translation threshold**: When findings > N and score < 50 → "This file may need re-translation — review top issues or reject file?"
+  - **Component behavior:** FindingList applies Triage filter preset — Critical + Major findings shown, Minor collapsed under summary row 'and N Minor findings (tap to expand)'. Filter bar shows active 'Triage Mode' badge.
 
 **Edge Case 2: AI Findings Arrive Mid-Review**
 - Scenario: User reviewing rule-based findings → AI completes → 8 new findings appear
@@ -396,14 +405,14 @@ Twelve edge case scenarios explored through What If analysis, with design implic
 | Duplicate detection | File hash comparison | "Uploaded yesterday (Score 97) — re-run?" prompt |
 | Batch summary | Aggregate all file results | "7 auto-pass, 3 need review" at a glance |
 | Severity classification | Rule-based = predetermined, AI = MQM auto-classify | Color-coded severity badges |
-| Economy mode for PM | Role-based default | PM sees Economy as default, QA sees mode selector |
+| Economy mode for PM | Role-based default | Processing Mode Dialog pre-selects Economy for PM role, Thorough for QA role — selected per batch at upload time |
 
 **Effortless Patterns:**
 - **Drag & drop upload** — drop files anywhere on the page
 - **Batch = default** — uploading multiple files is the primary flow, single file is the exception
 - **Progressive results** — start reviewing rule-based findings while AI still processing
 - **Bulk accept** — select multiple high-confidence findings, one click to accept all
-- **Smart defaults** — Economy for PM, Thorough available for QA, threshold set once per project
+- **Smart defaults** — Processing Mode Dialog pre-selects Economy for PM, Thorough for QA, threshold set once per project
 
 ### Critical Success Moments
 
@@ -448,6 +457,6 @@ Seven guiding principles that govern every UX decision in this product:
 | 3 | **Decide in 3 Seconds** | Every finding must provide enough context for a 3-5 second decision. Confidence indicator + suggestion + severity = instant decision support. | 🟢 High confidence + suggestion shown inline = Accept immediately |
 | 4 | **Batch First, File Second** | The default experience is batch processing (10-15 files). Single file is the exception. Summary → Drill down, never the reverse. | Batch summary as landing page after processing |
 | 5 | **Show the Learning** | Make AI improvement visible and personal. Users who see the system learning from THEIR feedback develop loyalty no competitor can replicate. | "AI learned 12 patterns from your feedback — accuracy: 85% → 91%" |
-| 6 | **Safe to Trust, Easy to Override** | Auto-pass must be safe (audit trail, weekly blind audit). But overriding must be frictionless (1-click reject, report missed issue). Trust is earned gradually, never forced. | "Recommended pass" Month 1 → true "Auto-pass" Month 2+ |
+| 6 | **Safe to Trust, Easy to Override** | Auto-pass must be safe (audit trail, weekly blind audit (Deferred — Growth Phase: system randomly selects 5% of auto-passed findings for manual re-review)). But overriding must be frictionless (1-click reject, report missed issue). Trust is earned gradually, never forced. | "Recommended pass" Month 1 → true "Auto-pass" Month 2+ |
 | 7 | **Design for the Dual Monitor QA Reviewer** | Core users work with CAT tool on one screen and our tool on the other. Information density matters. Every click saved is multiplied by 10-15 files/day. | Side panel for detail, keyboard shortcuts, compact data tables |
 

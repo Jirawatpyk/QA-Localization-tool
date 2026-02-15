@@ -11,4 +11,6 @@ Interactive HTML mockups created to communicate design intent to the development
 | **Command Palette** | `ux-mockup-command-palette.html` | Ctrl+K overlay, 3-tier search (Actions/Files/Findings), keyboard navigation |
 | **PM Dashboard** | `ux-mockup-pm-dashboard.html` | Team performance, Reviewer assignment, AI Cost estimation, Quality trends |
 
-All mockups located in: `_bmad-output/planning-artifacts/`
+All mockups located in: `_bmad-output/planning-artifacts/ux-mockup-*.html`
+
+> **Note:** The Processing Mode Dialog (upload-time mode selection) is documented as a wireframe in `ux-design-specification/ux-consistency-patterns.md` (Upload Confirmation Pattern section) and implemented in the Dashboard mockup (`ux-mockup-dashboard.html` — click the upload zone to open).

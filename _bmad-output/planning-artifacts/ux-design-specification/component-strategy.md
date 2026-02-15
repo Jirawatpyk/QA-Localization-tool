@@ -35,18 +35,18 @@ App Layout
 │   │   │       ├── Button (shadcn — Confirm All Passed)
 │   │   │       └── Button (shadcn — Export Report)
 │   │   │
-│   │   └── ProcessingModeDialog (shadcn Dialog — triggered on upload)
-│   │       ├── ModeCard ★ (Economy: L1+L2, cost/time estimates)
-│   │       ├── ModeCard ★ (Thorough: L1+L2+L3, Recommended badge)
-│   │       ├── CostEstimateBar (total cost, time, budget remaining)
-│   │       └── Button (shadcn — Start Processing)
+│   │   ├── ProcessingModeDialog (shadcn Dialog — modal overlay triggered on upload)
+│   │   │   ├── ModeCard ★ (Economy: L1+L2, cost/time estimates)
+│   │   │   ├── ModeCard ★ (Thorough: L1+L2+L3, Recommended badge)
+│   │   │   ├── CostEstimateBar (total cost, time, budget remaining)
+│   │   │   └── Button (shadcn — Start Processing)
 │   │   │
 │   │   └── ReviewView (per-file)
 │   │       ├── ReviewHeader
 │   │       │   ├── ScoreBadge ★
 │   │       │   ├── ReviewProgress ★
 │   │       │   └── ModeBadge ★ (display-only — shows active mode e.g. "✓ Thorough L1+L2+L3")
-│   │       │       └── UpgradeButton (Economy→Thorough one-way, hidden if already Thorough)
+│   │       │       └── UpgradeButton (Economy→Thorough one-way upgrade — triggers re-processing confirmation dialog, hidden if already Thorough)
 │   │       │
 │   │       ├── FindingList (shadcn Data Table)
 │   │       │   ├── FindingCardCompact ★ (default row)
@@ -119,11 +119,13 @@ App Layout
 | **Pending** | White background, full actions visible | Initial state | None |
 | **Focused** | Light indigo border, side panel syncs | Arrow key / click | None |
 | **Accepted** | Green-tinted, strikethrough on finding | `A` key / Accept click | Penalty removed |
-| **Accepted (override)** | Green-tinted + override badge | Accept after previous Reject | Penalty removed |
+| **Re-accepted** | Green-tinted + override badge | Re-accept a previously Rejected finding | Penalty removed |
 | **Rejected** | Red-tinted, dimmed | `R` key / Reject click | Penalty kept |
 | **Flagged** | Yellow-tinted, flag icon | `F` key / Flag click | Pending |
 | **Noted** | Blue-tinted, note icon | `N` key / Note click | Unchanged |
 | **Source Issue** | Purple-tinted, source icon | `S` key | Reclassified |
+
+> **Note:** 'Re-accepted' (re-accepting a rejected finding) is distinct from Severity Override (changing a finding's severity level via the Severity Override action). Both produce an 'override' badge but serve different purposes.
 
 **Variants:**
 
@@ -453,7 +455,7 @@ App Layout
 | 19 | Card (metric cards) | shadcn | None | S |
 | 20 | Charts (trend graphs) | shadcn | None | M |
 | 21 | AILearningIndicator | Custom | Charts | M |
-| 22 | Tabs (mode selector, score breakdown) | shadcn | None | S |
+| 22 | Tabs (score breakdown sections) | shadcn | None | S |
 | 23 | ScoreChangeLog | Custom | None | M |
 | 24 | Lightweight PM Onboarding (3-step) | Custom | BatchSummary | M |
 

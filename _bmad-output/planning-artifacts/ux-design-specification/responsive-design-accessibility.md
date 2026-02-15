@@ -21,7 +21,7 @@ DESKTOP 1440px+ (Primary — Dual Monitor Right Panel)
 ┌──────┬──────────────────────────────┬───────────────┐
 │ Side │ Finding List (Data Table)     │ Detail Panel  │
 │ bar  │ Compact rows, full columns   │ Always visible│
-│ (56px│ 8-12 rows visible            │ (360px fixed) │
+│ (48px│ 8-12 rows visible            │ (400px fixed) │
 │ coll)│                              │               │
 └──────┴──────────────────────────────┴───────────────┘
 
@@ -29,7 +29,7 @@ DESKTOP 1024-1439px (Laptop)
 ┌──────┬──────────────────────────────┬───────────────┐
 │ Side │ Finding List                  │ Detail Panel  │
 │ bar  │ Some columns hidden          │ Collapsible   │
-│(icon │ 6-8 rows visible             │ (300px)       │
+│(icon │ 6-8 rows visible             │ (360px)       │
 │ only)│                              │               │
 └──────┴──────────────────────────────┴───────────────┘
 
@@ -59,9 +59,9 @@ MOBILE < 768px (Dashboard Only)
 
 | Breakpoint | Tailwind Class | Layout Change |
 |:----------:|:--------------:|---------------|
-| **>= 1440px** | `2xl:` | Full layout — sidebar + finding list + detail panel side-by-side |
-| **>= 1280px** | `xl:` | Detail panel width reduces to 300px |
-| **>= 1024px** | `lg:` | Sidebar collapses to icon-only (56px), detail panel collapsible |
+| **>= 1440px** | `2xl:` | Full layout — sidebar + finding list + detail panel (400px) side-by-side |
+| **>= 1280px** | `xl:` | Detail panel width reduces to 360px |
+| **>= 1024px** | `lg:` | Sidebar collapses to icon-only (48px), detail panel 300px collapsible |
 | **>= 768px** | `md:` | Single column — finding list OR detail (toggle), bottom sheet for detail |
 | **< 768px** | default | Dashboard-only mode — no review functionality |
 
@@ -180,11 +180,16 @@ MOBILE < 768px (Dashboard Only)
 ```css
 /* Approach: Desktop-first with min-width degradation */
 
-/* Base styles = Desktop (>= 1024px) */
-.finding-list { display: grid; grid-template-columns: 1fr 360px; }
+/* Base styles = Desktop (>= 1440px) */
+.finding-list { display: grid; grid-template-columns: 1fr 400px; }
 
-/* Laptop adaptation */
+/* xl adaptation (1280-1439px) */
 @media (max-width: 1439px) {
+  .detail-panel { width: 360px; }
+}
+
+/* lg adaptation (1024-1279px) */
+@media (max-width: 1279px) {
   .detail-panel { width: 300px; }
 }
 

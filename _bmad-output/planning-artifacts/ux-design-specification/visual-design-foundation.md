@@ -34,7 +34,7 @@ Product must convey: Trust (professional, reliable), Intelligence (AI-powered, i
 | `--text-body` | `slate-700` | Body text | #334155 |
 | `--text-heading` | `slate-900` | Headings, primary text | #0F172A |
 
-#### Semantic Colors (expanded from Step 6)
+#### Semantic Colors (expanded from design-system-foundation.md)
 
 **Severity:**
 
@@ -151,7 +151,7 @@ Comfortable mode: all sizes scale up by 1 step.
 |---------|-------|----------|
 | **Sidebar** | 48px collapsed (icons) / 240px expanded | Default collapsed in review mode |
 | **Main Content** | Flexible (min 600px) | Fills remaining space |
-| **Detail Panel** | 400px | Always visible in review mode, resizable |
+| **Detail Panel** | 400px (default at ≥1440px, reduces to 360px at ≥1280px, 300px at ≥1024px) | Always visible in review mode, resizable |
 | **Top Bar** | Full width, 48px | Fixed — never scrolls |
 | **Status Bar** | Full width, 32px | Fixed — persistent indicators |
 | **Minimum app width** | 1024px | Must work on single monitor |
@@ -186,7 +186,7 @@ Comfortable mode: all sizes scale up by 1 step.
 | **Color contrast** | All text 4.5:1, UI components 3:1 (WCAG 2.1 AA) |
 | **Color independence** | Color always paired with icon or text label |
 | **Focus indicators** | 2px `slate-300` focus ring on all interactive elements |
-| **Keyboard navigation** | Full keyboard access (Step 3 shortcuts) |
+| **Keyboard navigation** | Full keyboard access (see core-user-experience.md, Keyboard Navigation section) |
 | **Screen reader** | Radix UI provides ARIA attributes automatically |
 | **Text scaling** | Layout intact at 200% zoom |
 | **Motion** | Respect `prefers-reduced-motion` for animations |
