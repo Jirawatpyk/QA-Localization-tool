@@ -2,7 +2,7 @@
 
 > Cross-functional review conducted with 5 BMAD agents: Sally (UX), Winston (Architect), John (PM), Amelia (Developer), Quinn (QA). Date: 2026-02-14.
 
-### Changes Applied from Review
+## Changes Applied from Review
 
 | # | Finding | Category | Change Made |
 |:-:|---------|:--------:|-------------|
@@ -22,7 +22,7 @@
 | 14 | FindingCard 40 state×variant combos | Dev Planning | Noted need for comprehensive Storybook coverage planning |
 | 15 | 4 new actions to backport to PRD | PRD Sync | John to backport Note, Source Issue, Severity Override, Add Finding to PRD |
 
-### Items Deferred to Architecture Phase
+## Items Deferred to Architecture Phase
 
 | Item | Owner | Why Deferred |
 |------|:-----:|-------------|
@@ -33,7 +33,7 @@
 | Concurrent editing real-time sync | Winston | Requires Supabase Realtime channel design |
 | Detail Panel width on 1024px | Sally | Requires testing with real content during implementation |
 
-### PRD Backport Required
+## PRD Backport Required
 
 John (PM) to update PRD with:
 - 4 new review actions: Note (N), Source Issue (S), Severity Override, Add Finding (+)

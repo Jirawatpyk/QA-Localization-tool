@@ -1,12 +1,12 @@
 # Visual Design Foundation
 
-### Color System
+## Color System
 
-#### Brand Color Direction: "Intelligent Professional"
+### Brand Color Direction: "Intelligent Professional"
 
 Product must convey: Trust (professional, reliable), Intelligence (AI-powered, innovative), Calm focus (reduces QA anxiety).
 
-#### Primary Palette
+### Primary Palette
 
 **Primary: Indigo** — conveys intelligence + innovation, differentiates from generic blue enterprise tools
 
@@ -20,7 +20,7 @@ Product must convey: Trust (professional, reliable), Intelligence (AI-powered, i
 
 **Why Indigo:** Blue is too generic (every enterprise tool). Purple is too playful. Teal feels medical. Green conflicts with "pass/success" semantic. Indigo = intelligence + trust + modern.
 
-#### Neutral Palette: Slate
+### Neutral Palette: Slate
 
 | Token | Tailwind | Usage | Hex |
 |-------|----------|-------|-----|
@@ -34,7 +34,7 @@ Product must convey: Trust (professional, reliable), Intelligence (AI-powered, i
 | `--text-body` | `slate-700` | Body text | #334155 |
 | `--text-heading` | `slate-900` | Headings, primary text | #0F172A |
 
-#### Semantic Colors (expanded from design-system-foundation.md)
+### Semantic Colors (expanded from design-system-foundation.md)
 
 **Severity:**
 
@@ -70,7 +70,7 @@ Product must convey: Trust (professional, reliable), Intelligence (AI-powered, i
 | **Needs Review** | `orange-500` | Files requiring human review |
 | **Error / Failed** | `red-500` | Parse failure, AI timeout |
 
-#### Color Accessibility (WCAG 2.1 AA)
+### Color Accessibility (WCAG 2.1 AA)
 
 - All body text meets 4.5:1 contrast ratio against background
 - UI components (badges, buttons) meet 3:1 minimum
@@ -78,9 +78,9 @@ Product must convey: Trust (professional, reliable), Intelligence (AI-powered, i
 - Severity = color AND label, Confidence = color AND percentage
 - All interactive elements have visible focus ring (2px `slate-300`)
 
-### Typography System
+## Typography System
 
-#### Font Stack
+### Font Stack
 
 | Role | Font | Fallback | Rationale |
 |------|------|----------|-----------|
@@ -90,7 +90,7 @@ Product must convey: Trust (professional, reliable), Intelligence (AI-powered, i
 | **Thai text** | Sarabun or system Thai | Tahoma, sans-serif | Thai readability at compact sizes |
 | **CJK text** | Noto Sans CJK | system CJK stack | Chinese, Japanese, Korean consistency |
 
-#### Type Scale — Compact Mode (default)
+### Type Scale — Compact Mode (default)
 
 | Level | Size | Weight | Line Height | Usage |
 |-------|:---:|:---:|:---:|-------|
@@ -115,9 +115,9 @@ Comfortable mode: all sizes scale up by 1 step.
 - Thai text: line-height 1.6+ for tall characters
 - CJK text: line-height 1.7+ and slightly larger base size
 
-### Spacing & Layout Foundation
+## Spacing & Layout Foundation
 
-#### Spacing Scale (Base: 4px)
+### Spacing Scale (Base: 4px)
 
 | Token | Compact | Comfortable | Usage |
 |-------|:---:|:---:|-------|
@@ -129,7 +129,7 @@ Comfortable mode: all sizes scale up by 1 step.
 | `space-6` | 24px | 32px | Major section divisions |
 | `space-8` | 32px | 48px | Page-level spacing |
 
-#### Application Layout Structure
+### Application Layout Structure
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -162,14 +162,14 @@ Comfortable mode: all sizes scale up by 1 step.
 - Main content scrolls independently from Detail Panel
 - Status bar persists — score, progress, AI status always visible (VS Code pattern)
 
-#### Grid System
+### Grid System
 
 - 12-column grid for main content (Tailwind default)
 - Gutter: 16px (compact) / 24px (comfortable)
 - Content max-width: none — fill available space (information density)
 - Dashboard: max-width 1440px centered
 
-#### Component Spacing Patterns
+### Component Spacing Patterns
 
 | Component | Padding (compact) | Notes |
 |-----------|:---:|-----------|
@@ -179,7 +179,7 @@ Comfortable mode: all sizes scale up by 1 step.
 | Data table row | 8px vert | More findings visible without scroll |
 | Side panel section | 12px padding, 8px gap | Clear separation |
 
-### Accessibility Considerations
+## Accessibility Considerations
 
 | Requirement | Implementation |
 |-------------|---------------|

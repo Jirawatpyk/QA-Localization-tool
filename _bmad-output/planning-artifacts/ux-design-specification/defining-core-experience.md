@@ -1,6 +1,6 @@
 # Defining Core Experience
 
-### The Defining Experience
+## The Defining Experience
 
 **"Upload, scan, decide, ship — in one pass."**
 
@@ -17,11 +17,11 @@ If a user had to describe qa-localization-tool to a colleague in one sentence:
 
 Tinder = Swipe right/left. qa-localization-tool = **"See finding → Accept/Reject in 3 seconds."** The 3-second finding decision is our "swipe" — repeated hundreds of times per day, must be instant, satisfying, and decisive. Everything in the product exists to make this moment perfect.
 
-### User Mental Model
+## User Mental Model
 
 **How users currently think about QA — and where our tool shifts their model:**
 
-#### คุณแพร's Mental Model (Power User — Xbench Veteran)
+### คุณแพร's Mental Model (Power User — Xbench Veteran)
 
 **Current model (Xbench):**
 ```
@@ -53,7 +53,7 @@ Run Xbench → Get static report → Read top to bottom →
 - Mental note of recurring false positives → pattern suppression after 3 rejects
 - Ask colleagues on Slack about uncertain findings → Flag action with notification
 
-#### คุณนิด's Mental Model (Non-native Reviewer)
+### คุณนิด's Mental Model (Non-native Reviewer)
 
 **Current model:**
 ```
@@ -78,7 +78,7 @@ Open file → Read what I can → Guess what I can't →
 | Binary: I understand / I don't | Spectrum: High / Use with caution / Flag for native | "It's OK to be partially confident?" → Confidence levels give permission |
 | My value = my language skills | My value = my QA judgment + AI augmentation | "Am I being replaced?" → AI assists, human decides |
 
-#### PM's Mental Model
+### PM's Mental Model
 
 **Current model:**
 ```
@@ -91,13 +91,13 @@ Receive translated files → Put in QA queue → Wait 1-3 days →
 
 **Mental model shift:** Wait in QA queue → Self-service upload and instant answer. "But what if auto-pass is wrong?" → Audit trail + QA Certificate provides proof.
 
-#### VP's Mental Model
+### VP's Mental Model
 
 **Current:** Cannot measure QA team output, cannot prove ROI to C-level, quality is subjective.
 
 **Shift:** Dashboard transforms QA from invisible process to measurable asset with KPIs (files processed, average score, auto-pass rate, hours saved).
 
-### Success Criteria
+## Success Criteria
 
 **Measurable "this just works" indicators:**
 
@@ -114,7 +114,7 @@ Receive translated files → Put in QA queue → Wait 1-3 days →
 | **Score comprehension** | Users who understand and trust the score | < 5% report "score confusion" |
 | **Zero re-review** | Files needing second QA round | < 3% (vs current ~40%) |
 
-### Novel vs Established UX Patterns
+## Novel vs Established UX Patterns
 
 | Pattern | Classification | Education Needed? |
 |---------|:---:|---------|
@@ -134,7 +134,7 @@ Receive translated files → Put in QA queue → Wait 1-3 days →
 
 8/13 patterns are Established or Adapted — users feel familiar with ~60% of the interface immediately. The 5 Novel patterns are our differentiators and need targeted onboarding.
 
-### Experience Mechanics
+## Experience Mechanics
 
 The detailed step-by-step mechanics of the Core Action Loop are defined in the **Core User Experience** section (core-user-experience.md), including visual scan path, per-persona views, 7 action types, 8 finding states, bulk operations, keyboard navigation, 10 design safeguards, and 12 edge case responses.
 

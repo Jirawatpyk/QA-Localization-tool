@@ -1,6 +1,6 @@
 # Executive Summary
 
-### Project Vision
+## Project Vision
 
 **qa-localization-tool** is a standalone AI-powered localization QA web application — the first in the market to combine deterministic rule-based checks (Xbench parity) with multi-layer AI semantic analysis and confidence-based automation in a standalone platform.
 
@@ -14,7 +14,7 @@
 | 4 | **Language Bridge** | AI explanation + back-translation for non-native reviewers — must be designed as first-class feature |
 | 5 | **Actionable Suggestions** | Not just "wrong" but "here's the fix" with confidence — inline display alongside each finding |
 
-### Target Users
+## Target Users
 
 **Primary Personas — 3 roles, 3 distinct need profiles:**
 
@@ -48,15 +48,15 @@
 - Must prove ROI to C-level → dashboard = survival tool for QA team's headcount justification
 - Measures: total files processed, average score, auto-pass rate, estimated hours saved
 
-### Key Design Challenges
+## Key Design Challenges
 
 **1. Trust Architecture — The challenge that defines product success** 🔑
 - Rule-based must achieve 100% Xbench parity before users will trust AI layer
-- "Recommended pass" soft launch Month 1 → true "Auto-pass" Month 2+ (based on agreement rate > 99%)
-- Spot check mode: expanded detail (Week 1-2) → collapsed (Week 3+) → glance & confirm (Month 2+)
+- "Recommended pass" soft launch during initial adoption phase → true "Auto-pass" after trust established (based on agreement rate > 99%)
+- Spot check mode: expanded detail (early adoption) → collapsed (growing familiarity) → glance & confirm (full trust established)
 - Trust recovery path: if parity test fails → "Report missing check" + recovery messaging + visible fix
 - AI Learning Indicator: show patterns learned + accuracy trend ("AI accuracy EN→TH: 85% → 91%")
-- Pre-launch parity certification: คุณแพร must sign-off at least 3 rounds
+- Pre-launch parity certification: คุณแพร must sign-off after repeated parity validation
 
 **2. Dual-layer Information Architecture** 📊
 - **Horizontal layers**: Batch summary → File detail → Segment detail → Issue detail
@@ -109,7 +109,7 @@
 - Concurrent reviewers: file assignment/lock — "In review by คุณแพร" visible to others
 - Duplicate file detection: "This file was uploaded yesterday (Score 97) — re-run?"
 
-### Design Opportunities
+## Design Opportunities
 
 **1. Language Bridge — Core differentiator no competitor offers** ⭐
 - AI explanation in English + back-translation enables non-native reviewers to understand meaning without reading target language
@@ -148,11 +148,11 @@
 
 **7. Emotional Journey Design** 💝
 - Map emotional states alongside functional journey:
-  - **Skepticism** (Day 1) → comparison-friendly UX, Xbench parity visible and prominent
-  - **Cautious testing** (Week 1-2) → spot check mode expanded, easy Xbench side-by-side comparison
+  - **Skepticism** (initial exposure) → comparison-friendly UX, Xbench parity visible and prominent
+  - **Cautious testing** (early adoption) → spot check mode expanded, easy Xbench side-by-side comparison
   - **Pleasant surprise** (Aha! moment) → AI catches what Xbench can't — highlight prominently with celebration moment
-  - **Growing trust** (Week 3-4) → spot check mode reduces, auto-pass begins to feel safe
-  - **Full reliance** (Month 2+) → streamlined flow, minimal detail shown, maximum efficiency
+  - **Growing trust** (growing familiarity) → spot check mode reduces, auto-pass begins to feel safe
+  - **Full reliance** (trust established) → streamlined flow, minimal detail shown, maximum efficiency
 - "Xbench Comfort Blanket" pattern: design for easy side-by-side comparison during transition period — let user close Xbench on their own terms
 - Trust recovery path: if tool misses something → "Report missing check" + visible fix deployed + rebuild cycle with messaging
 

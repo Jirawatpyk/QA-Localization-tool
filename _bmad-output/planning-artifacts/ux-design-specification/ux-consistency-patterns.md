@@ -1,8 +1,8 @@
 # UX Consistency Patterns
 
-### 1. Action Patterns
+## 1. Action Patterns
 
-#### Action Hierarchy
+### Action Hierarchy
 
 | Level | Action | Visual | Shortcut | Usage |
 |:-----:|--------|--------|:--------:|-------|
@@ -14,7 +14,7 @@
 | **Tertiary** | Add Finding | Ghost button with `+` | `+` | Manually add finding not caught by system |
 | **Destructive** | Severity Override | Dropdown in context menu | — | Change severity level (logged + reversible) |
 
-#### Action Feedback Pattern
+### Action Feedback Pattern
 
 Every action follows the same feedback cycle:
 
@@ -30,7 +30,7 @@ User Action → Visual State Change (instant) → Score Update (300ms morph)
 | Toast | 500ms | "Finding accepted. Score: 87 → 89" — auto-dismiss 3s |
 | Auto-advance | 200ms after action | Focus moves to next pending finding |
 
-#### Action Reversibility
+### Action Reversibility
 
 | Pattern | Rule | Implementation |
 |---------|------|----------------|
@@ -42,7 +42,7 @@ User Action → Visual State Change (instant) → Score Update (300ms morph)
 | **Bulk undo = undo entire batch** | `Ctrl+Z` after bulk accept 8 items → undo all 8, not just last 1 | Bulk action is atomic — undo is atomic too |
 | **Undo stack depth** | 20 actions per session, oldest dropped on overflow | Balance memory vs safety |
 
-#### Bulk Action Pattern
+### Bulk Action Pattern
 
 ```
 Select (Shift+Click or Shift+J/K) → Bulk Action Bar appears at bottom
@@ -52,9 +52,9 @@ Select (Shift+Click or Shift+J/K) → Bulk Action Bar appears at bottom
 → Execute → Individual toasts suppressed → Single summary toast
 ```
 
-### 2. Feedback & Status Patterns
+## 2. Feedback & Status Patterns
 
-#### Notification Hierarchy
+### Notification Hierarchy
 
 | Type | Visual | Position | Duration | Use Case |
 |------|--------|:--------:|:--------:|----------|
@@ -65,7 +65,7 @@ Select (Shift+Click or Shift+J/K) → Bulk Action Bar appears at bottom
 | **Progress** | Indigo inline indicator | In-context | Until complete | AI processing, file uploading |
 | **Learning** | Purple inline badge | After action | 5s | "AI learning from your feedback" |
 
-#### Status Color System
+### Status Color System
 
 Consistent across all components:
 
@@ -79,7 +79,7 @@ Consistent across all components:
 | **Purple/Indigo** | AI / Processing / Premium | AI layer, processing state, AI learning |
 | **Gray** | Inactive / Pending | Pending state, disabled, placeholder |
 
-#### Score Change Feedback
+### Score Change Feedback
 
 Every score change is communicated consistently:
 
@@ -90,9 +90,9 @@ Every score change is communicated consistently:
 | AI findings arrive | Score may drop, orange flash if significant | Slide down 300ms |
 | Batch confirm | All files update simultaneously | Staggered animation per file |
 
-### 3. Loading & Progressive Patterns
+## 3. Loading & Progressive Patterns
 
-#### 3-Layer Progressive Loading
+### 3-Layer Progressive Loading
 
 ```
 PHASE 1: Upload (0-1s)
@@ -131,7 +131,7 @@ PHASE 5: Complete
 └──────────────────────────────────────┘
 ```
 
-#### Loading State Rules
+### Loading State Rules
 
 | Rule | Implementation |
 |------|----------------|
@@ -142,7 +142,7 @@ PHASE 5: Complete
 | **Notification on completion** | Toast + badge when AI layers finish for background processing |
 | **Partial results are preserved** | If AI times out, rule-based results remain valid and actionable |
 
-#### Skeleton Loading Pattern
+### Skeleton Loading Pattern
 
 ```
 Before AI loads:
@@ -161,9 +161,9 @@ Before AI loads:
 
 Actions are available even before AI suggestion loads — user can Accept/Reject based on source/target alone.
 
-### 4. Navigation Patterns
+## 4. Navigation Patterns
 
-#### Drill-Down Hierarchy
+### Drill-Down Hierarchy
 
 ```
 Dashboard → Project → Batch → File → Finding → Detail Panel
@@ -178,7 +178,7 @@ Dashboard → Project → Batch → File → Finding → Detail Panel
 | L4 | File review (finding list) | Breadcrumb → Batch | `Esc` or `[` |
 | L5 | Finding focused + detail panel | `Esc` → unfocus finding | `Esc` |
 
-#### Breadcrumb Pattern
+### Breadcrumb Pattern
 
 Always visible at top of content area:
 
@@ -190,7 +190,7 @@ Dashboard / Project-ABC / Batch-Mon / file-03.xlf / Finding #14
 - Current level is bold, not clickable
 - Truncation: middle segments collapse to `...` if > 4 levels
 
-#### Keyboard Navigation Master Pattern
+### Keyboard Navigation Master Pattern
 
 | Context | Key | Action |
 |---------|:---:|--------|
@@ -210,7 +210,7 @@ Dashboard / Project-ABC / Batch-Mon / file-03.xlf / Finding #14
 | **Command Palette** | `Enter` | Execute selected action |
 | **Command Palette** | `Esc` | Close palette |
 
-#### Focus Management Rules
+### Focus Management Rules
 
 | Rule | Implementation |
 |------|----------------|
@@ -220,9 +220,9 @@ Dashboard / Project-ABC / Batch-Mon / file-03.xlf / Finding #14
 | **Focus persists** | Returning to a file restores last focused finding |
 | **Skip resolved** | J/K skip accepted/rejected findings (configurable) |
 
-### 5. Empty & Edge States
+## 5. Empty & Edge States
 
-#### Empty State Pattern
+### Empty State Pattern
 
 | State | Message | Action | Visual |
 |-------|---------|--------|--------|
@@ -233,7 +233,7 @@ Dashboard / Project-ABC / Batch-Mon / file-03.xlf / Finding #14
 | **AI unavailable** | "AI analysis unavailable — rule-based results shown" | [Retry AI] button | Warning icon, rule-based results visible |
 | **First batch** | "Your first batch! Here's what to expect..." | Brief explanation + [Start Review] | Onboarding card |
 
-#### Error State Pattern
+### Error State Pattern
 
 All errors follow this structure:
 
@@ -256,7 +256,7 @@ All errors follow this structure:
 | Batch partial failure | "2 of 12 files could not be processed" | [Retry failed files] — successful files unaffected |
 | Glossary import error | "Some glossary entries could not be imported" | [View skipped entries] + [Import valid entries] |
 
-#### Edge State: Concurrent Editing
+### Edge State: Concurrent Editing
 
 | Scenario | Handling |
 |----------|----------|
@@ -266,9 +266,9 @@ All errors follow this structure:
 | AI updates during review | New findings appear with "New" badge at bottom of list, existing decisions preserved, toast notification |
 | Re-run on already reviewed file | Warning dialog (not just banner): "This file has existing reviews. Re-run will add new findings but preserve your decisions. [Re-run] [Cancel]" |
 
-### 6. Search & Filter Patterns
+## 6. Search & Filter Patterns
 
-#### Command Palette (Ctrl+K)
+### Command Palette (Ctrl+K)
 
 Global search across all contexts:
 
@@ -295,7 +295,7 @@ Global search across all contexts:
 
 > **Note:** 'Upgrade to Thorough' triggers a re-processing confirmation dialog — this is a one-way upgrade that runs additional L3 analysis on Economy-processed files.
 
-#### Filter Bar Pattern
+### Filter Bar Pattern
 
 Persistent filter bar above finding list:
 
@@ -320,9 +320,9 @@ Persistent filter bar above finding list:
 - Filter state persists per file within session
 - `Ctrl+K` → "Clear all filters" action available
 
-### 7. Form & Input Patterns
+## 7. Form & Input Patterns
 
-#### File Upload Pattern
+### File Upload Pattern
 
 ```
 ┌──────────────────────────────────────────────┐
@@ -360,7 +360,7 @@ Note: Thorough is pre-selected (Recommended). Mode is locked
 after processing starts — Economy can upgrade to Thorough later.
 ```
 
-#### Form Validation Pattern
+### Form Validation Pattern
 
 | Rule | Implementation |
 |------|----------------|
@@ -370,7 +370,7 @@ after processing starts — Economy can upgrade to Thorough later.
 | **Submit button state** | Disabled until all required fields valid |
 | **Success indicator** | Green checkmark on valid fields (subtle) |
 
-#### Settings Pattern
+### Settings Pattern
 
 Project settings use a consistent form layout:
 
@@ -389,7 +389,7 @@ Project settings use a consistent form layout:
 └──────────────────────────────────────────────┘
 ```
 
-### Cross-Pattern Consistency Rules
+## Cross-Pattern Consistency Rules
 
 Rules that apply across ALL patterns:
 

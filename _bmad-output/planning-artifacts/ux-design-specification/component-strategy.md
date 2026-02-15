@@ -1,6 +1,6 @@
 # Component Strategy
 
-### Component-to-Journey Dependency Map
+## Component-to-Journey Dependency Map
 
 | Component | UJ1 | UJ2 | UJ3 | UJ4 | UJ5 | UJ6 | Criticality |
 |-----------|:---:|:---:|:---:|:---:|:---:|:---:|:-----------:|
@@ -17,7 +17,7 @@
 | **QACertificate** | | | | | Core | | P2 |
 | **FindingPattern** | | Used | | | | Used | P2 |
 
-### Component Composition Tree
+## Component Composition Tree
 
 ```
 App Layout
@@ -92,9 +92,9 @@ App Layout
 
 ★ = Custom component | unmarked = shadcn/ui component
 
-### Custom Component Specifications
+## Custom Component Specifications
 
-#### FindingCard (P0 — Core Loop)
+### FindingCard (P0 — Core Loop)
 
 **Purpose:** Primary interaction unit — where reviewers make accept/reject decisions 100-300 times/day
 
@@ -150,7 +150,7 @@ App Layout
 - Action key → apply state + auto-advance to next pending finding
 - `Shift+A/R` → add to bulk selection instead of individual action
 
-#### FindingCardCompact (P0 — Scanning Mode)
+### FindingCardCompact (P0 — Scanning Mode)
 
 **Purpose:** Maximally dense row for rapid scanning — power user default
 
@@ -165,7 +165,7 @@ App Layout
 
 **Interaction:** Click/Enter → expands inline to full FindingCard. Quick action icons allow Accept/Reject without expanding.
 
-#### LanguageBridge (P0 — Non-Native Critical)
+### LanguageBridge (P0 — Non-Native Critical)
 
 **Purpose:** Enable non-native reviewers to understand and act on findings in languages they cannot read
 
@@ -212,7 +212,7 @@ App Layout
 - Back-translation diff highlighted with `<mark>` + `aria-label="difference from source"`
 - "When in doubt, Flag" — visible guidance reduces decision anxiety
 
-#### BatchSummary (P0 — Entry Point for UJ2/UJ3/UJ4)
+### BatchSummary (P0 — Entry Point for UJ2/UJ3/UJ4)
 
 **Purpose:** First view after batch processing — instant triage of files into pass/review categories
 
@@ -248,7 +248,7 @@ App Layout
 - "Need Review" files sorted worst-first (lowest score at top) — helps prioritize
 - "Confirm All Passed" — single action for all passing files (audit trail records per-file)
 
-#### ScoreBadge (P0 — Ubiquitous)
+### ScoreBadge (P0 — Ubiquitous)
 
 **Purpose:** MQM quality score display — the most-glanced element in the entire UI
 
@@ -280,7 +280,7 @@ App Layout
 
 **Animation:** Score number morphs on change (300ms ease-out). Old value fades out, new value fades in. Direction indicates improvement (slide up) or decline (slide down). Respects `prefers-reduced-motion`.
 
-#### ReviewProgress (P0 — Review Session Tracking)
+### ReviewProgress (P0 — Review Session Tracking)
 
 **Purpose:** Dual-track progress showing reviewed findings vs total, with AI processing status
 
@@ -299,7 +299,7 @@ App Layout
 - **Review Complete:** Left bar full, "All reviewed" with checkmark
 - **All Done:** Both complete — file summary and next file prompt
 
-#### SegmentContext (P1 — Decision Support)
+### SegmentContext (P1 — Decision Support)
 
 **Purpose:** Show surrounding segments for translation context — prevents out-of-context decisions
 
@@ -318,7 +318,7 @@ App Layout
 
 **Interaction:** Click any surrounding segment → navigate there (if it has findings). Segment count configurable (1-3 segments before/after, default 2).
 
-#### AILearningIndicator (P1 — Trust Building)
+### AILearningIndicator (P1 — Trust Building)
 
 **Purpose:** Make AI improvement visible — builds trust through demonstrated growth
 
@@ -330,7 +330,7 @@ App Layout
 │ Accuracy:  47% → 92%   +45%         │
 │ Patterns learned: 23                 │
 │ From your feedback: 18               │
-│ Last improved: 2 hours ago           │
+│ Last improved: 2 hours ago              │
 │──────────────────────────────────────│
 │ [View learned patterns]              │
 └──────────────────────────────────────┘
@@ -342,7 +342,7 @@ App Layout
 - **Stable:** Neutral — no recent changes
 - **New Language:** "Building model for EN→ZH — needs 10+ feedbacks to calibrate"
 
-#### FileStatusCard (P1 — Batch Context)
+### FileStatusCard (P1 — Batch Context)
 
 **Purpose:** Per-file status row in batch summary and dashboard
 
@@ -353,7 +353,7 @@ App Layout
 
 **Columns:** Filename | ScoreBadge (sm) | Status | Issue counts by severity | Action button
 
-#### QACertificate (P2 — Client Deliverable)
+### QACertificate (P2 — Client Deliverable)
 
 **Purpose:** 1-click PDF generation for client quality proof
 
@@ -361,13 +361,13 @@ App Layout
 
 **Interaction:** Preview in modal (React component) → "Download PDF" button → server-side PDF generation via Puppeteer/Playwright snapshot for pixel-perfect Thai text rendering. Client-side jsPDF fallback if server unavailable.
 
-#### ScoreChangeLog (P2 — Audit Trail)
+### ScoreChangeLog (P2 — Audit Trail)
 
 **Purpose:** Timeline of score changes with reasons — audit trail for accountability
 
 **Anatomy:** Vertical timeline: each entry shows timestamp, action (Accept/Reject/Flag), score delta, cumulative score. Git-commit-history style.
 
-#### ReviewerSelector (P1 — Collaboration)
+### ReviewerSelector (P1 — Collaboration)
 
 **Purpose:** PM selects QA reviewer to route critical issues to — with availability and language pair matching
 
@@ -380,7 +380,7 @@ App Layout
 
 **Accessibility:** `role="listbox"` with `aria-label="Select reviewer"`, availability indicator has text label not just color
 
-#### FindingPattern (P2 — Cross-File Intelligence)
+### FindingPattern (P2 — Cross-File Intelligence)
 
 **Purpose:** Group related findings across multiple files — "This pattern appears in 5 files"
 
@@ -392,9 +392,9 @@ App Layout
 - "Resolve all" = batch mutation across multiple files
 - Must be designed in Architecture phase alongside the UI component
 
-### Component Implementation Strategy
+## Component Implementation Strategy
 
-#### Build Approach
+### Build Approach
 
 | Principle | Implementation |
 |-----------|---------------|
@@ -404,7 +404,7 @@ App Layout
 | **Storybook-driven** | Each custom component gets Storybook stories for all states/variants |
 | **Accessibility-first** | ARIA attributes and keyboard support built in from day 1, not bolted on |
 
-#### Shared Patterns Across Custom Components
+### Shared Patterns Across Custom Components
 
 | Pattern | Components Using It | Implementation |
 |---------|-------------------|----------------|
@@ -416,9 +416,9 @@ App Layout
 | **Keyboard range select** | FindingCard (Shift+J/K) | Shared `useKeyboardRangeSelect` hook — TanStack Table lacks native keyboard range select |
 | **Optimistic update** | FindingCard, ScoreBadge | Shared pattern: `useMutation` + optimistic UI + server reconciliation |
 
-### Implementation Roadmap
+## Implementation Roadmap
 
-#### Phase 1 — Core Review Loop (MVP Sprint 1-3)
+### Phase 1 — Core Review Loop (MVP Sprint 1-3)
 
 > **Note (Party Mode Review):** Timeline adjusted from 2 to 3 sprints based on developer review. FindingCardCompact→FindingCard inline transition requires custom TanStack Table work, and keyboard range select needs a new custom hook.
 
@@ -436,7 +436,7 @@ App Layout
 | 10 | Command palette (3-tier search) | shadcn | None | M |
 | 11 | Toast notifications | shadcn | None | S |
 
-#### Phase 2 — Batch & Language Bridge (MVP Sprint 4-5)
+### Phase 2 — Batch & Language Bridge (MVP Sprint 4-5)
 
 | Order | Component | Type | Dependency | Effort |
 |:-----:|-----------|:----:|------------|:------:|
@@ -448,7 +448,7 @@ App Layout
 | 17 | Skeleton (AI loading) | shadcn | None | S |
 | 18 | Alert (error states) | shadcn | None | S |
 
-#### Phase 3 — Dashboard & Trust (MVP Sprint 6-7)
+### Phase 3 — Dashboard & Trust (MVP Sprint 6-7)
 
 | Order | Component | Type | Dependency | Effort |
 |:-----:|-----------|:----:|------------|:------:|
@@ -459,7 +459,7 @@ App Layout
 | 23 | ScoreChangeLog | Custom | None | M |
 | 24 | Lightweight PM Onboarding (3-step) | Custom | BatchSummary | M |
 
-#### Phase 4 — Polish & Advanced (Post-MVP)
+### Phase 4 — Polish & Advanced (Post-MVP)
 
 | Order | Component | Type | Dependency | Effort |
 |:-----:|-----------|:----:|------------|:------:|

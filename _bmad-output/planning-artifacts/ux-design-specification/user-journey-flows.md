@@ -1,6 +1,6 @@
 # User Journey Flows
 
-### UJ1: First-Time Setup — "The Trust Test" (คุณแพร, Week 1-2)
+## UJ1: First-Time Setup — "The Trust Test" (คุณแพร, Initial Phase)
 
 **Goal:** สร้าง trust ให้ power user ที่มี baseline expectation จาก Xbench
 
@@ -33,8 +33,8 @@ flowchart TD
     N --> J
     L --> O[AI findings stream in progressively]
     O --> P[First 'wow' moment — AI catches what Xbench can't]
-    P --> Q[Week 2: Glance at Xbench then close]
-    Q --> R[Week 3: Stop opening Xbench entirely]
+    P --> Q[Early adoption: Glance at Xbench then close]
+    Q --> R[Full adoption: Stop opening Xbench entirely]
 ```
 
 **Key UX Decisions:**
@@ -49,7 +49,7 @@ flowchart TD
 
 ---
 
-### UJ2: Batch QA Review — "Single-Pass Day" (คุณแพร, Daily, Month 1+) — Critical
+## UJ2: Batch QA Review — "Single-Pass Day" (คุณแพร, Daily, Post-Onboarding) — Critical
 
 **Goal:** ทำ 12 ไฟล์ให้เสร็จใน half day — ไม่มี proofreader loop
 
@@ -76,8 +76,8 @@ flowchart TD
     J --> L[4 files: Need Review]
 
     K --> M{Trust Level}
-    M -->|Month 1: Low| M1[Spot Check Mode — expanded details]
-    M -->|Month 2+: High| M2[True Auto-pass — 1-click confirm]
+    M -->|Initial: Low| M1[Spot Check Mode — expanded details]
+    M -->|Established: High| M2[True Auto-pass — 1-click confirm]
     M1 --> M3[Glance at findings → Confirm per file]
     M2 --> M4[Batch Confirm all passed files]
     M3 --> N[8 files done]
@@ -124,7 +124,7 @@ flowchart TD
 
 **Detailed Sub-flows:**
 
-#### Batch Summary Interaction
+### Batch Summary Interaction
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Batch Summary: Monday batch (12 files)         2m 14s      │
@@ -146,7 +146,7 @@ flowchart TD
 └─────────────────────────────────────────────────────────────┘
 ```
 
-#### Progressive Disclosure Detail
+### Progressive Disclosure Detail
 | Phase | Visible | Interaction |
 |:-----:|---------|-------------|
 | **Initial** | Critical findings expanded, Major headers visible, Minor collapsed | Auto-scroll to first Critical |
@@ -155,7 +155,7 @@ flowchart TD
 | **Bulk** | Checkbox column visible, bulk action bar appears on selection | Shift+Click range select |
 | **Complete** | Score recalculates, next file auto-loads if in batch | Summary toast notification |
 
-#### Keyboard-First Flow
+### Keyboard-First Flow
 | Phase | Keys | Action |
 |-------|------|--------|
 | Navigate findings | `J / ↓` / `K / ↑` | Next / Previous finding |
@@ -168,7 +168,7 @@ flowchart TD
 
 ---
 
-### UJ3: Non-Native Language Review — "The Language Bridge" (คุณนิด) — Critical
+## UJ3: Non-Native Language Review — "The Language Bridge" (คุณนิด) — Critical
 
 **Goal:** Review ไฟล์ภาษาที่อ่านไม่ออก (EN→ZH, EN→JA) โดยไม่ต้องรอ native reviewer
 
@@ -216,7 +216,7 @@ flowchart TD
     S --> T
 ```
 
-#### Language Bridge Panel Design
+### Language Bridge Panel Design
 ```
 ┌───────────────────────────────────────────┐
 │ Language Bridge                            │
@@ -245,7 +245,7 @@ flowchart TD
 └───────────────────────────────────────────┘
 ```
 
-#### Per-Language Confidence Thresholds
+### Per-Language Confidence Thresholds
 | Language Pair | Accept Threshold | Flag Threshold | Rationale |
 |:---:|:---:|:---:|---------|
 | EN→TH | >= 85% | 70-84% | Reviewer (คุณแพร) reads target |
@@ -255,15 +255,15 @@ flowchart TD
 
 > **Distinction:** These per-language acceptance thresholds are separate from the universal Confidence Badge levels (High >85%, Medium 70-85%, Low <70%) shown on every finding. The badge indicates AI confidence; the threshold determines when non-native reviewers should Flag rather than Accept.
 
-#### Non-Native Safety Net
+### Non-Native Safety Net
 - Every Accept by non-native auto-tagged: `"Accepted by non-native reviewer — subject to native audit"`
 - Smart Report separates native-verified vs non-native-accepted sections
-- Weekly audit: random 10% of non-native accepts reviewed by native speaker
+- Periodic audit: random 10% of non-native accepts reviewed by native speaker
 - Per-language accuracy tracking drives threshold calibration
 
 ---
 
-### UJ4: PM Self-Service — "The Self-Service Shortcut" (PM, Month 2+)
+## UJ4: PM Self-Service — "The Self-Service Shortcut" (PM, Established Phase)
 
 **Goal:** PM ส่งไฟล์ให้ลูกค้าได้วันศุกร์ โดยไม่ต้องรอคิว QA
 
@@ -308,7 +308,7 @@ flowchart TD
 | Onboarding | Lightweight 3-step PM guide | Skippable 5-step tour |
 | Reviewer routing | Reviewer selector with availability | N/A (is the reviewer) |
 
-#### PM Cost Estimation Display
+### PM Cost Estimation Display
 
 ```
 ┌──────────────────────────────────────────────┐
@@ -326,7 +326,7 @@ flowchart TD
 └──────────────────────────────────────────────┘
 ```
 
-#### Reviewer Selection UI (Route to QA)
+### Reviewer Selection UI (Route to QA)
 
 ```
 ┌──────────────────────────────────────────────┐
@@ -353,7 +353,7 @@ Reviewer receives notification: "PM assigned 2 Critical issues — Urgent"
 
 ---
 
-### UJ5: Dashboard & Reporting — "The Auto-Pass Audit" (PM)
+## UJ5: Dashboard & Reporting — "The Auto-Pass Audit" (PM)
 
 **Goal:** พิสูจน์คุณภาพให้ลูกค้าด้วย audit trail และ QA certificate
 
@@ -386,7 +386,7 @@ flowchart TD
     L -->|No| P[Trust reinforced]
 ```
 
-#### Dashboard Overview Layout
+### Dashboard Overview Layout
 ```
 ┌──────────────────────────────────────────────────────────┐
 │  Project Dashboard: Client-ABC EN→TH                     │
@@ -412,7 +412,7 @@ flowchart TD
 
 ---
 
-### UJ6: AI Feedback & Learning — "The False Positive Storm" (คุณแพร)
+## UJ6: AI Feedback & Learning — "The False Positive Storm" (คุณแพร)
 
 **Goal:** ลด false positive rate ผ่าน feedback loop — user sees AI improving from their input
 
@@ -433,14 +433,14 @@ flowchart TD
 
     G --> I["AI Learning Indicator: Learning from your feedback — 8 patterns improved for EN→TH"]
 
-    I --> J[Next month — same type of file]
+    I --> J[Later — same type of file]
     J --> K["AI flags only 3 issues — down from 15"]
     K --> L["False positive: 53% → 8%"]
 
     L --> M["Banner: AI accuracy for EN→TH idioms: 47% → 92% — learned from 23 feedbacks"]
 
     M --> N{User trust trajectory}
-    N --> O["Reject rate decreases monthly"]
+    N --> O["Reject rate decreases over time"]
     N --> P["User enables more AI features"]
     N --> Q["AI-to-Rule promotion: Repeated patterns become rules"]
 
@@ -459,7 +459,7 @@ flowchart TD
 | Pattern count | Settings → AI Learning | "23 patterns learned for EN→TH" |
 | Suppress action | Finding context menu | After 3+ rejects of same pattern (see below) |
 
-#### Suppress Pattern Interaction
+### Suppress Pattern Interaction
 
 **Trigger:** System detects 3+ rejections of the same error pattern (e.g., "Thai idiom misclassified as mistranslation") within a session or across sessions for the same language pair.
 
@@ -498,11 +498,11 @@ After suppression:
 
 ---
 
-### Journey Patterns
+## Journey Patterns
 
 Cross-journey patterns identified across all 6 user journeys:
 
-#### Navigation Patterns
+### Navigation Patterns
 | Pattern | Used In | Implementation |
 |---------|---------|----------------|
 | **Progressive Loading** | UJ1, UJ2, UJ3 | Rule-based instant → AI streams in → badge updates |
@@ -510,15 +510,15 @@ Cross-journey patterns identified across all 6 user journeys:
 | **Keyboard-First Navigation** | UJ2, UJ3 | J/K navigate, A/R/F/N act, Ctrl+K command palette |
 | **Panel Auto-Update** | UJ2, UJ3 | Side panel reflects focused finding — no click needed |
 
-#### Decision Patterns
+### Decision Patterns
 | Pattern | Used In | Implementation |
 |---------|---------|----------------|
 | **Confidence-Guided Action** | UJ2, UJ3 | High confidence → quick Accept, Low → read context → decide |
-| **Trust Escalation** | UJ1, UJ2, UJ4 | Recommended pass → Spot check → Auto-pass (over months) |
+| **Trust Escalation** | UJ1, UJ2, UJ4 | Recommended pass → Spot check → Auto-pass (progressive) |
 | **Non-Native Safety Net** | UJ3 | Auto-tag + 3-tier report + native audit sample |
 | **Bulk with Safeguard** | UJ2, UJ6 | Bulk select → confirmation dialog if > 5 items |
 
-#### Feedback Patterns
+### Feedback Patterns
 | Pattern | Used In | Implementation |
 |---------|---------|----------------|
 | **Visible Learning** | UJ5, UJ6 | AI Learning Indicator + accuracy trend + improvement banner |
@@ -526,7 +526,7 @@ Cross-journey patterns identified across all 6 user journeys:
 | **Trust Signal** | UJ1, UJ2 | Score prominence, audit trail, QA certificate |
 | **Progressive Trust** | UJ1, UJ2 | Skepticism → Evidence → Confidence → Reliance |
 
-### Flow Optimization Principles
+## Flow Optimization Principles
 
 | # | Principle | Application | Journeys |
 |:-:|-----------|------------|:--------:|

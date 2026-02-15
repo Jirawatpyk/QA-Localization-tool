@@ -1,8 +1,8 @@
 # Responsive Design & Accessibility
 
-### Responsive Strategy
+## Responsive Strategy
 
-#### Design Philosophy: Desktop-First Professional Tool
+### Design Philosophy: Desktop-First Professional Tool
 
 qa-localization-tool is a **desktop-first professional workspace** — not a consumer app. Users work at desks with dual monitors (CAT tool left, QA tool right). Responsive design serves graceful degradation, not mobile-first.
 
@@ -14,7 +14,7 @@ qa-localization-tool is a **desktop-first professional workspace** — not a con
 | **Tablet 768-1023px** | Low | Quick status check, batch confirm | PM only |
 | **Mobile < 768px** | Minimal | Dashboard glance, notifications only | PM only |
 
-#### Layout Adaptation Strategy
+### Layout Adaptation Strategy
 
 ```
 DESKTOP 1440px+ (Primary — Dual Monitor Right Panel)
@@ -55,7 +55,7 @@ MOBILE < 768px (Dashboard Only)
 └──────────────────────────┘
 ```
 
-### Breakpoint Strategy
+## Breakpoint Strategy
 
 | Breakpoint | Tailwind Class | Layout Change |
 |:----------:|:--------------:|---------------|
@@ -75,9 +75,9 @@ MOBILE < 768px (Dashboard Only)
 | **Banner on small screens** | "For the best review experience, use a desktop browser" |
 | **User preference persists** | Sidebar collapsed/expanded state saved per user |
 
-### Accessibility Strategy
+## Accessibility Strategy
 
-#### Compliance Target: WCAG 2.1 AA
+### Compliance Target: WCAG 2.1 AA
 
 | Criterion | Requirement | Our Implementation |
 |-----------|-------------|-------------------|
@@ -95,7 +95,7 @@ MOBILE < 768px (Dashboard Only)
 | **4.1.2 Name, Role, Value** | ARIA labels on all controls | Every action button, badge, and status labeled |
 | **4.1.3 Status Messages** | Live regions for updates | Score changes via `aria-live="polite"` |
 
-#### Screen Reader Implementation
+### Screen Reader Implementation
 
 | Component | ARIA Pattern | Announcement |
 |-----------|-------------|--------------|
@@ -110,7 +110,7 @@ MOBILE < 768px (Dashboard Only)
 | **Filter Bar** | `aria-controls` pointing to finding list | "Severity filter: All. Layer filter: All. Showing 28 of 28 findings." |
 | **Command Palette** | `role="combobox"` + `aria-expanded` | "Command palette. Type to search actions, files, or findings." |
 
-#### Focus Management Strategy
+### Focus Management Strategy
 
 | Scenario | Focus Behavior | ARIA |
 |----------|----------------|------|
@@ -123,7 +123,7 @@ MOBILE < 768px (Dashboard Only)
 | Batch confirm dialog | Focus moves to primary action button | Focus trap inside dialog |
 | Error toast | Announced but focus stays | `role="alert"` auto-announces |
 
-#### Color Accessibility
+### Color Accessibility
 
 | Consideration | Implementation |
 |---------------|----------------|
@@ -132,7 +132,7 @@ MOBILE < 768px (Dashboard Only)
 | **High contrast mode** | `@media (forced-colors: active)` — borders replace color fills |
 | **Severity system** | Critical = filled circle + red, Major = triangle + orange, Minor = diamond + yellow — shape + color |
 
-#### Multilingual Accessibility
+### Multilingual Accessibility
 
 | Language Challenge | Solution |
 |-------------------|----------|
@@ -142,9 +142,9 @@ MOBILE < 768px (Dashboard Only)
 | **RTL (Arabic)** | `dir="rtl"` on Arabic segments, layout uses logical CSS properties (not left/right) |
 | **Font sizing** | CJK characters at same font-size appear smaller — use 1.1x scale for CJK |
 
-### Testing Strategy
+## Testing Strategy
 
-#### Automated Testing
+### Automated Testing
 
 | Tool | What It Tests | When |
 |------|--------------|:----:|
@@ -153,7 +153,7 @@ MOBILE < 768px (Dashboard Only)
 | **Lighthouse CI** | Performance + accessibility score | Every PR (target: a11y >= 95) |
 | **Playwright** | Keyboard navigation flows | E2E test suite |
 
-#### Manual Testing Checklist
+### Manual Testing Checklist
 
 | Test | Frequency | Owner |
 |------|:---------:|-------|
@@ -164,7 +164,7 @@ MOBILE < 768px (Dashboard Only)
 | Tablet layout verification (iPad) | Every 2 sprints | QA |
 | Thai/CJK text rendering across browsers | Every sprint | QA |
 
-#### Browser Support Matrix
+### Browser Support Matrix
 
 | Browser | Version | Priority | Notes |
 |---------|:-------:|:--------:|-------|
@@ -173,9 +173,9 @@ MOBILE < 768px (Dashboard Only)
 | **Firefox** | Latest 2 | Secondary | Test keyboard nav differences |
 | **Safari** | Latest 2 | Secondary | macOS users, VoiceOver testing |
 
-### Implementation Guidelines
+## Implementation Guidelines
 
-#### CSS Architecture for Responsive
+### CSS Architecture for Responsive
 
 ```css
 /* Approach: Desktop-first with min-width degradation */
@@ -206,7 +206,7 @@ MOBILE < 768px (Dashboard Only)
 }
 ```
 
-#### Accessibility Development Rules
+### Accessibility Development Rules
 
 | # | Rule | Enforcement |
 |:-:|------|-------------|

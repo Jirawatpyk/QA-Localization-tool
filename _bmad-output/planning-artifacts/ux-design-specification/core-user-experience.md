@@ -1,6 +1,6 @@
 # Core User Experience
 
-### Defining Experience
+## Defining Experience
 
 **Core Action Loop — "Review & Decide":**
 
@@ -48,7 +48,7 @@ The defining interaction of qa-localization-tool is the **Finding Review Decisio
                     └─────────────────────────┘
 ```
 
-#### Visual Scan Path — "3-Second Decision"
+### Visual Scan Path — "3-Second Decision"
 
 Every finding is designed for a left-to-right, top-to-bottom scan completing in 3 seconds:
 
@@ -58,7 +58,7 @@ Every finding is designed for a left-to-right, top-to-bottom scan completing in 
 | 2nd | **UNDERSTAND** | Source segment (highlighted) → Target segment (error highlighted) → AI Suggestion + Confidence indicator |
 | 3rd | **DECIDE** | Action buttons: Accept (A) / Reject (R) / Flag (F) with keyboard hotkeys |
 
-#### Finding Information Hierarchy
+### Finding Information Hierarchy
 
 | Priority | Element | Purpose | Source |
 |:---:|---------|--------|--------|
@@ -69,7 +69,7 @@ Every finding is designed for a left-to-right, top-to-bottom scan completing in 
 | 5th | **Confidence** | "How trustworthy" — 🟢 High >85% / 🟡 Medium 70-85% / 🔴 Low <70% | PRD Pillar 3: Confidence-based Trust |
 | 6th | **Layer badge** | Rule-based (deterministic) vs AI (semantic) — builds trust literacy over time | 3-Layer Pipeline |
 
-#### Per-Persona View Differences
+### Per-Persona View Differences
 
 | Element | คุณแพร (Native QA) | คุณนิด (Non-native QA) |
 |---------|-------------------|----------------------|
@@ -82,7 +82,7 @@ Every finding is designed for a left-to-right, top-to-bottom scan completing in 
 
 > **Flag action availability:** Flag is available based on the reviewer's native language vs the file's target language, not based on persona role. Example: คุณแพร reviewing EN→TH (her native language): no Flag. คุณแพร reviewing EN→JA: Flag available.
 
-#### Action Sub-flows
+### Action Sub-flows
 
 > **Note:** Safeguard and Edge Case references below are defined later in this document under [Core Loop Design Safeguards](#core-loop-design-safeguards) and [Edge Cases](#edge-cases).
 
@@ -124,7 +124,7 @@ Every finding is designed for a left-to-right, top-to-bottom scan completing in 
 - Select segment → specify error type + severity → creates manual finding with "👤 Manual" badge
 - Affects MQM score + serves as AI training data for missed issues
 
-#### Bulk Operations
+### Bulk Operations
 
 - **Shift+Click** multi-select → "Accept Selected (N)"
 - **Filter + Accept All:** Filter by Confidence: High + Severity: Minor → "Accept All Filtered"
@@ -134,7 +134,7 @@ Every finding is designed for a left-to-right, top-to-bottom scan completing in 
 
 > **Two separate bulk safety mechanisms:** (1) Confirmation dialog for bulk actions on ≥6 items, (2) Spot-check sample display after bulk accept of ≥11 findings — both apply independently.
 
-#### Keyboard Navigation
+### Keyboard Navigation
 
 | Scope | Shortcut | Action |
 |-------|----------|--------|
@@ -158,7 +158,7 @@ Every finding is designed for a left-to-right, top-to-bottom scan completing in 
 - Progress indicator: "Finding 3/17 (14 remaining)"
 - **Resume on return:** "Continue from Finding #15?" when returning to partially-reviewed file (see Safeguard #9)
 
-#### Finding States
+### Finding States
 
 | State | Icon | Meaning | Score Impact |
 |-------|:---:|---------|:---:|
@@ -173,7 +173,7 @@ Every finding is designed for a left-to-right, top-to-bottom scan completing in 
 
 When all findings in a file are resolved → File status changes to "Review Complete ✅" → Auto-navigate to next file in batch.
 
-#### Core Loop Design Safeguards (Pre-mortem Findings)
+### Core Loop Design Safeguards (Pre-mortem Findings)
 
 Ten failure modes identified through pre-mortem analysis, with preventive design measures:
 
@@ -253,7 +253,7 @@ Ten failure modes identified through pre-mortem analysis, with preventive design
   - **Dual back-translation**: For Low reliability cases, show 2 alternative back-translations for cross-reference
   - **Back-translation accuracy tracking**: Per language pair, improves over time with feedback
 
-#### Core Loop Edge Cases (What If Scenarios)
+### Core Loop Edge Cases (What If Scenarios)
 
 Twelve edge case scenarios explored through What If analysis, with design implications:
 
@@ -366,7 +366,7 @@ Twelve edge case scenarios explored through What If analysis, with design implic
 
 **"Zero-click Value" Target:** Files that are clean should flow from upload to auto-pass without any user interaction — the ultimate expression of single-pass completion.
 
-### Platform Strategy
+## Platform Strategy
 
 **Platform:** Web application (Next.js App Router + shadcn/ui + Tailwind CSS)
 
@@ -389,7 +389,7 @@ Twelve edge case scenarios explored through What If analysis, with design implic
 
 **Offline:** Not required — all processing requires AI API access. Graceful handling of connection loss with auto-retry.
 
-### Effortless Interactions
+## Effortless Interactions
 
 **Things that happen automatically (zero user effort):**
 
@@ -414,39 +414,39 @@ Twelve edge case scenarios explored through What If analysis, with design implic
 - **Bulk accept** — select multiple high-confidence findings, one click to accept all
 - **Smart defaults** — Processing Mode Dialog pre-selects Economy for PM, Thorough for QA, threshold set once per project
 
-### Critical Success Moments
+## Critical Success Moments
 
-**Moment 1: "Xbench Parity Proof" (Day 1) — TRUST FOUNDATION**
+**Moment 1: "Xbench Parity Proof" (Initial Exposure) — TRUST FOUNDATION**
 > คุณแพรเปิด Xbench report ข้างๆ เทียบทีละจุด → tool ของเราจับได้ทุกอย่างที่ Xbench จับได้ → "ไม่พลาดแม้แต่จุดเดียว"
 > **If this fails:** Trust destroyed permanently. Tool becomes "another check" not "the one check."
 > **UX requirement:** Rule-based results must appear instantly and be clearly labeled by check type for easy comparison.
 
-**Moment 2: "AI Sees What Xbench Can't" (Day 1-3) — AHA! MOMENT**
+**Moment 2: "AI Sees What Xbench Can't" (Early Usage) — AHA! MOMENT**
 > AI flags: "Segment #47: 'bank account' translated as 'ริมฝั่งแม่น้ำ' — should be 'บัญชีธนาคาร'" confidence 94%
 > **If this succeeds:** "โอ้โห Xbench ไม่เคยจับแบบนี้ได้!" → emotional hook that drives continued usage
 > **UX requirement:** AI findings must visually stand out from rule-based findings. The first AI finding should feel like a revelation.
 
-**Moment 3: "The Language Bridge" (Week 1) — SCALABILITY UNLOCK**
+**Moment 3: "The Language Bridge" (Early Adoption) — SCALABILITY UNLOCK**
 > คุณนิด sees AI explanation + back-translation for EN→ZH file → understands the meaning error without reading Chinese
 > **If this succeeds:** Team of 6-9 can cover all languages without native reviewers → game changer
 > **UX requirement:** Back-translation + explanation must be prominent, not collapsed or hidden.
 
-**Moment 4: "Batch Summary Magic" (Week 1-2) — EFFICIENCY PROOF**
+**Moment 4: "Batch Summary Magic" (Early Adoption) — EFFICIENCY PROOF**
 > Upload 12 files → "8 auto-pass, 4 need review" → done by lunch instead of 2 days with proofreader loop
 > **If this succeeds:** Single-pass completion proven. Proofreader loop eliminated.
 > **UX requirement:** Batch summary must be the FIRST thing seen after processing. Clear, immediate, actionable.
 
-**Moment 5: "Auto-pass Trusted" (Month 2+) — FULL ADOPTION**
+**Moment 5: "Auto-pass Trusted" (Trust Established) — FULL ADOPTION**
 > PM uploads urgent files → 2 auto-pass → ships to client without waiting for QA → no complaints from client
 > **If this succeeds:** QA becomes self-service. Team capacity 2-3x.
 > **UX requirement:** Auto-pass audit trail must be accessible and convincing. QA Certificate available.
 
-**Moment 6: "AI Learning Visible" (Month 1-3) — EMOTIONAL INVESTMENT**
+**Moment 6: "AI Learning Visible" (Ongoing Usage) — EMOTIONAL INVESTMENT**
 > "AI accuracy EN→TH: 85% → 91% (learned from your 23 feedback signals)"
 > **If this succeeds:** User feels ownership. "MY tool is getting smarter because of ME."
 > **UX requirement:** AI learning indicator must be visible, personal, and tied to user's own contributions.
 
-### Experience Principles
+## Experience Principles
 
 Seven guiding principles that govern every UX decision in this product:
 
@@ -457,6 +457,6 @@ Seven guiding principles that govern every UX decision in this product:
 | 3 | **Decide in 3 Seconds** | Every finding must provide enough context for a 3-5 second decision. Confidence indicator + suggestion + severity = instant decision support. | 🟢 High confidence + suggestion shown inline = Accept immediately |
 | 4 | **Batch First, File Second** | The default experience is batch processing (10-15 files). Single file is the exception. Summary → Drill down, never the reverse. | Batch summary as landing page after processing |
 | 5 | **Show the Learning** | Make AI improvement visible and personal. Users who see the system learning from THEIR feedback develop loyalty no competitor can replicate. | "AI learned 12 patterns from your feedback — accuracy: 85% → 91%" |
-| 6 | **Safe to Trust, Easy to Override** | Auto-pass must be safe (audit trail, weekly blind audit (Deferred — Growth Phase: system randomly selects 5% of auto-passed findings for manual re-review)). But overriding must be frictionless (1-click reject, report missed issue). Trust is earned gradually, never forced. | "Recommended pass" Month 1 → true "Auto-pass" Month 2+ |
+| 6 | **Safe to Trust, Easy to Override** | Auto-pass must be safe (audit trail, periodic blind audit (Deferred — Growth Phase: system randomly selects 5% of auto-passed findings for manual re-review)). But overriding must be frictionless (1-click reject, report missed issue). Trust is earned gradually, never forced. | "Recommended pass" during initial adoption → true "Auto-pass" after trust established |
 | 7 | **Design for the Dual Monitor QA Reviewer** | Core users work with CAT tool on one screen and our tool on the other. Information density matters. Every click saved is multiplied by 10-15 files/day. | Side panel for detail, keyboard shortcuts, compact data tables |
 

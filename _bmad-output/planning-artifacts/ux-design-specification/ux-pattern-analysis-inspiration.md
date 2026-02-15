@@ -1,6 +1,6 @@
 # UX Pattern Analysis & Inspiration
 
-### Inspiring Products Analysis
+## Inspiring Products Analysis
 
 **1. Xbench — Direct Competitor (Replace & Surpass)**
 
@@ -71,7 +71,7 @@ Power user patterns for information-dense, dual-monitor workflows.
 
 Key insight: VS Code's **Problems Panel** is the closest existing UX to our finding list — severity icons, click-to-navigate, count badges. Primary reference for our finding list component.
 
-### Transferable UX Patterns
+## Transferable UX Patterns
 
 **Navigation Patterns:**
 - **Command palette** (from Linear) — keyboard-first search/navigate/action for power users
@@ -91,7 +91,7 @@ Key insight: VS Code's **Problems Panel** is the closest existing UX to our find
 - **Persistent status bar** (from VS Code) — global indicators always visible
 - **Optimistic UI** (from Linear) — instant visual feedback on actions, no loading delay
 
-### Anti-Patterns to Avoid
+## Anti-Patterns to Avoid
 
 | Anti-Pattern | Source | Why Avoid | Our Prevention |
 |-------------|--------|-----------|---------------|
@@ -104,7 +104,7 @@ Key insight: VS Code's **Problems Panel** is the closest existing UX to our find
 | **Forced onboarding tour** | Many SaaS | 15-step tour before you can do anything | Optional 5-step walkthrough, dismissible, value visible immediately |
 | **Excel-based QA workflow** | Current fallback | No structure, no automation, copy-paste errors | Structured review flow, automated checks, complete audit trail |
 
-### Design Inspiration Strategy
+## Design Inspiration Strategy
 
 **Adopt (use directly):**
 

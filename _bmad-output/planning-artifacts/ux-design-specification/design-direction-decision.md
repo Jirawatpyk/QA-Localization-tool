@@ -1,10 +1,10 @@
 # Design Direction Decision
 
-### Design Direction: "Intelligent Professional Workspace"
+## Design Direction: "Intelligent Professional Workspace"
 
 A keyboard-first, information-dense review workspace with Linear's speed, VS Code's panel system, and Grammarly's suggestion UX — powered by an indigo-toned professional aesthetic.
 
-### Design Directions Explored
+## Design Directions Explored
 
 | Direction | Finding Card | Detail Panel | Density | Best For |
 |:-:|-------------|-------------|:---:|---------|
@@ -12,7 +12,7 @@ A keyboard-first, information-dense review workspace with Linear's speed, VS Cod
 | **B: Card-based** | Individual cards with full info (Grammarly) | Inline expand within card | Medium | Non-native users needing Language Bridge space |
 | **C: Hybrid** | Compact rows default + expand to card on focus | Side panel, always visible | Adaptive | All personas — compact scan, detailed when needed |
 
-### Chosen Direction: Hybrid (C)
+## Chosen Direction: Hybrid (C)
 
 Combines density of row-based for scanning with richness of card-based for decision-making.
 
@@ -57,7 +57,7 @@ DETAIL PANEL (Side — for deep context):
 └─────────────────────┘
 ```
 
-### Design Rationale
+## Design Rationale
 
 | Decision | Rationale | Principle |
 |----------|-----------|:-:|
@@ -73,7 +73,7 @@ DETAIL PANEL (Side — for deep context):
 - **Not Card-only (B):** Too spacious — only 3-4 visible without scroll, คุณแพร needs density for 300+ findings/day
 - **Hybrid:** 8-12 rows visible in compact → expand selected row for rich context → side panel for deep detail. Adapts to persona: คุณแพร stays compact, คุณนิด expands for Language Bridge
 
-### Implementation Approach
+## Implementation Approach
 
 | View | Component | Trigger |
 |------|----------|---------|

@@ -1,6 +1,6 @@
 # Design System Foundation
 
-### Design System Choice
+## Design System Choice
 
 **Selected: shadcn/ui + Tailwind CSS** (Themeable System)
 
@@ -13,7 +13,7 @@
 | **Accessibility** | Radix UI handles ARIA attributes automatically |
 | **CLI** | `npx shadcn@latest init` / `npx shadcn@latest add` |
 
-### Rationale for Selection
+## Rationale for Selection
 
 | Factor | shadcn/ui | MUI (Material) | Ant Design | Custom |
 |--------|:---------:|:--------------:|:----------:|:------:|
@@ -34,9 +34,9 @@
 4. **Inspiration: VS Code** — shadcn/ui's Data Table + Command component enable Problems Panel and Command Palette patterns
 5. **Code ownership** — No dependency lock-in, no breaking changes from upstream — essential for a long-lived product
 
-### Implementation Approach
+## Implementation Approach
 
-#### shadcn/ui Components to Use
+### shadcn/ui Components to Use
 
 | shadcn/ui Component | Our Usage | Customization Level |
 |--------------------|-----------|:---:|
@@ -57,7 +57,7 @@
 | **Tabs** | Score breakdown sections | Light |
 | **Charts** | Dashboard quality trends, AI accuracy graphs | Medium — MQM score visualization |
 
-#### Custom Components to Build
+### Custom Components to Build
 
 Components designed from scratch using Radix primitives + Tailwind:
 
@@ -76,9 +76,9 @@ Components designed from scratch using Radix primitives + Tailwind:
 | **FileStatusCard** | Per-file status in batch | Filename + score + finding count + AI status + review status | GitHub PR file row |
 | **SegmentContext** | Surrounding segments view | 1-2 segments before/after with highlight on target segment | GitHub diff context lines |
 
-### Customization Strategy
+## Customization Strategy
 
-#### Design Tokens — Color System
+### Design Tokens — Color System
 
 | Token | Usage | Value Intent |
 |-------|-------|-------------|
@@ -94,7 +94,7 @@ Components designed from scratch using Radix primitives + Tailwind:
 | `--status-pending` | Processing, awaiting review | Gray — waiting |
 | `--status-fail` | Needs review, issues found | Red — action needed |
 
-#### Typography Strategy
+### Typography Strategy
 
 | Context | Font Choice | Rationale |
 |---------|------------|-----------|
@@ -103,7 +103,7 @@ Components designed from scratch using Radix primitives + Tailwind:
 | Score numbers | Tabular figures (monospaced numerals) | Numbers align properly, score changes don't shift layout |
 | Thai/CJK text | System font stack with CJK fallbacks | Proper rendering across all target languages |
 
-#### Spacing & Density
+### Spacing & Density
 
 | Mode | Use Case | Spacing Scale |
 |------|----------|:---:|
@@ -112,7 +112,7 @@ Components designed from scratch using Radix primitives + Tailwind:
 
 Compact mode is default because Experience Principle #7 demands information density for dual-monitor QA reviewers processing 10-15 files/day.
 
-#### Dark Mode
+### Dark Mode
 
 - Not MVP priority — professional QA environment typically uses well-lit offices
 - Easy to add later — shadcn/ui CSS variables make dark mode a theme switch, not a rebuild

@@ -1,6 +1,6 @@
 # Desired Emotional Response
 
-### Primary Emotional Goals
+## Primary Emotional Goals
 
 **Overarching Emotion: "Provable Confidence" (ความมั่นใจที่พิสูจน์ได้)**
 
@@ -13,7 +13,7 @@ Not just "feeling" confident — the tool must provide **evidence** for every co
 | **PM** | Waiting in QA queue, afraid to ship without QA sign-off | **Relieved + Fast** — "ส่งได้เลย ไม่ต้องรอใคร" | Auto-pass badge, QA Certificate, score threshold |
 | **VP** | Cannot prove QA team value to C-level | **Justified + Proud** — "ทีม QA สร้าง ROI ชัดเจน" | Dashboard metrics, quality trends, hours saved calculation |
 
-### Emotional Journey Mapping
+## Emotional Journey Mapping
 
 **Phase 1: Skepticism (Day 1)**
 - User emotion: "อีก tool หนึ่ง... ได้จริงเหรอ?"
@@ -45,7 +45,7 @@ Not just "feeling" confident — the tool must provide **evidence** for every co
 - Design response: AI learning indicator personal and visible — "AI learned 23 patterns from YOUR feedback"
 - Target transition trigger: "AI accuracy EN→TH: 85% → 91%" — user feels invested, switching cost becomes emotional not just functional
 
-### Micro-Emotions
+## Micro-Emotions
 
 **Critical micro-emotion pairs within the Core Action Loop:**
 
@@ -64,7 +64,7 @@ Not just "feeling" confident — the tool must provide **evidence** for every co
 | Complete a batch | **Definitive completion** — "เสร็จจริงๆ ไม่ต้องส่งซ้ำ" | Lingering doubt — "hope the client doesn't find anything" | QA Certificate + audit trail + score summary |
 | Return to tool next day | **Familiarity** — "back to my tool" | Dread — "ugh, more reviewing" | Resume prompt + show yesterday's progress + AI learning update |
 
-### Design Implications
+## Design Implications
 
 **Emotion-to-UX Design Connection Map:**
 
@@ -91,7 +91,7 @@ Not just "feeling" confident — the tool must provide **evidence** for every co
 | **Lost progress panic** | Close browser, lose position | Auto-save, resume prompt, unresolved filter default on return |
 | **Overwhelm** | Too much information per finding | Compact/Detailed mode toggle, progressive disclosure within finding |
 
-### Emotional Design Principles
+## Emotional Design Principles
 
 Five principles that translate emotional goals into actionable design rules:
 
