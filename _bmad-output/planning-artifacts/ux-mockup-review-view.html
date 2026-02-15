@@ -101,10 +101,13 @@ tailwindcss.config = {
           <div class="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Analyzing</div>
         </div>
       </div>
-      <!-- Mode -->
-      <div class="flex bg-slate-100 rounded-lg p-0.5 text-xs">
-        <button class="px-2 py-1 rounded-md text-slate-500">Economy</button>
-        <button class="px-2 py-1 rounded-md bg-white shadow-sm text-primary-700 font-medium">Thorough</button>
+      <!-- Mode (one-way upgrade: Economy → Thorough only) -->
+      <div class="flex items-center gap-1.5 text-xs">
+        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-primary-50 text-primary-700 font-medium border border-primary-200">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Thorough
+        </span>
+        <span class="text-[10px] text-slate-400">L1+L2+L3</span>
       </div>
     </div>
   </header>

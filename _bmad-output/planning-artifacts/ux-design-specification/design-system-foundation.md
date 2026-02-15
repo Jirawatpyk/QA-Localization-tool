@@ -54,7 +54,8 @@
 | **Tooltip** | Confidence details, cost estimation, help text | Light |
 | **Alert** | Error states, file parse failure, warnings | Light |
 | **Skeleton** | Loading states for AI processing | Light |
-| **Tabs** | Economy/Thorough mode, score breakdown | Light |
+| **Tabs** | Score breakdown sections | Light |
+| **Dialog** | Processing Mode selection (Economy/Thorough cards at upload time) | Light |
 | **Charts** | Dashboard quality trends, AI accuracy graphs | Medium — MQM score visualization |
 
 #### Custom Components to Build

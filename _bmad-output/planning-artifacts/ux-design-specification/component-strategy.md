@@ -35,11 +35,18 @@ App Layout
 │   │   │       ├── Button (shadcn — Confirm All Passed)
 │   │   │       └── Button (shadcn — Export Report)
 │   │   │
+│   │   └── ProcessingModeDialog (shadcn Dialog — triggered on upload)
+│   │       ├── ModeCard ★ (Economy: L1+L2, cost/time estimates)
+│   │       ├── ModeCard ★ (Thorough: L1+L2+L3, Recommended badge)
+│   │       ├── CostEstimateBar (total cost, time, budget remaining)
+│   │       └── Button (shadcn — Start Processing)
+│   │   │
 │   │   └── ReviewView (per-file)
 │   │       ├── ReviewHeader
 │   │       │   ├── ScoreBadge ★
 │   │       │   ├── ReviewProgress ★
-│   │       │   └── ModeSelector (shadcn Tabs — Economy/Thorough)
+│   │       │   └── ModeBadge ★ (display-only — shows active mode e.g. "✓ Thorough L1+L2+L3")
+│   │       │       └── UpgradeButton (Economy→Thorough one-way, hidden if already Thorough)
 │   │       │
 │   │       ├── FindingList (shadcn Data Table)
 │   │       │   ├── FindingCardCompact ★ (default row)

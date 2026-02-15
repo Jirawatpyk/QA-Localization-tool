@@ -705,7 +705,7 @@
         </div>
 
         <!-- ─── Upload Zone ─── -->
-        <div class="upload-zone" id="uploadZone" onclick="showToast('File dialog would open here')">
+        <div class="upload-zone" id="uploadZone" onclick="openProcessingDialog()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           <div class="upload-zone-text">
             Drag & drop XLIFF files here, or <strong>browse</strong>
@@ -944,6 +944,104 @@
     </div>
   </div>
 
+  <!-- ─── Processing Mode Dialog ─── -->
+  <div id="processingDialog" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:200; align-items:center; justify-content:center;">
+    <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:0; max-width:580px; width:92%; box-shadow: 0 20px 60px rgba(0,0,0,0.5); overflow:hidden;">
+      <!-- Dialog Header -->
+      <div style="padding:20px 24px 16px; border-bottom:1px solid var(--border);">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <div>
+            <div style="font-size:18px; font-weight:700;">Start Processing</div>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Tuesday Batch &middot; 6 files &middot; EN → TH &middot; 4,820 segments</div>
+          </div>
+          <button onclick="closeProcessingDialog()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:20px; padding:4px;">&times;</button>
+        </div>
+      </div>
+
+      <!-- Mode Selection -->
+      <div style="padding:20px 24px;">
+        <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px; font-weight:500;">Select QA Mode</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <!-- Economy Card -->
+          <div id="modeEconomy" onclick="selectMode('economy')" style="border:2px solid var(--border); border-radius:10px; padding:16px; cursor:pointer; transition:all 0.15s; position:relative;">
+            <div style="font-size:15px; font-weight:600; margin-bottom:2px;">Economy</div>
+            <div style="font-size:11px; color:var(--primary); font-weight:500; margin-bottom:12px;">L1 + L2</div>
+            <div style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--text-secondary);">
+              <div style="display:flex; align-items:center; gap:6px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px; color:var(--text-muted);"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+                ~30s / file
+              </div>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px; color:var(--text-muted);"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                $0.15 / file
+              </div>
+              <div style="display:flex; align-items:center; gap:6px; margin-top:4px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px; color:var(--text-muted);"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>
+                Rule-based + AI Screening
+              </div>
+            </div>
+            <div style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(51,65,85,0.3); font-size:11px; color:var(--text-muted);">
+              Can upgrade to Thorough later
+            </div>
+          </div>
+
+          <!-- Thorough Card -->
+          <div id="modeThorough" onclick="selectMode('thorough')" style="border:2px solid var(--primary); border-radius:10px; padding:16px; cursor:pointer; transition:all 0.15s; position:relative; background:rgba(79,70,229,0.05);">
+            <div style="position:absolute; top:10px; right:10px; font-size:10px; background:var(--primary); color:white; padding:1px 8px; border-radius:4px; font-weight:500;">Recommended</div>
+            <div style="font-size:15px; font-weight:600; margin-bottom:2px;">Thorough</div>
+            <div style="font-size:11px; color:var(--primary); font-weight:500; margin-bottom:12px;">L1 + L2 + L3</div>
+            <div style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--text-secondary);">
+              <div style="display:flex; align-items:center; gap:6px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px; color:var(--text-muted);"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+                ~2min / file
+              </div>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px; color:var(--text-muted);"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                $0.35 / file
+              </div>
+              <div style="display:flex; align-items:center; gap:6px; margin-top:4px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px; color:var(--primary);"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>
+                <span style="color:var(--text);">+ Deep AI Analysis</span>
+              </div>
+            </div>
+            <div style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(79,70,229,0.2); font-size:11px; color:var(--primary);">
+              Best accuracy &middot; Catches semantic errors
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cost Estimate -->
+      <div style="padding:0 24px 16px;">
+        <div style="background:rgba(51,65,85,0.2); border-radius:8px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; gap:20px; font-size:12px;">
+            <div>
+              <span style="color:var(--text-muted);">Est. cost: </span>
+              <span id="estCost" style="font-weight:600; color:var(--pass);">$2.10</span>
+            </div>
+            <div>
+              <span style="color:var(--text-muted);">Est. time: </span>
+              <span id="estTime" style="font-weight:600;">~12 min</span>
+            </div>
+            <div>
+              <span style="color:var(--text-muted);">Budget remaining: </span>
+              <span style="font-weight:500; color:var(--text-secondary);">$25.20 / $50.00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dialog Actions -->
+      <div style="padding:12px 24px 20px; display:flex; justify-content:flex-end; gap:8px;">
+        <button onclick="closeProcessingDialog()" style="padding:8px 16px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text); font-size:13px; cursor:pointer; font-family:inherit;">Cancel</button>
+        <button onclick="startProcessing()" style="padding:8px 20px; border-radius:6px; border:1px solid var(--primary); background:var(--primary); color:white; font-size:13px; cursor:pointer; font-family:inherit; font-weight:500; display:flex; align-items:center; gap:6px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px; height:16px;"><polygon points="5,3 19,12 5,21 5,3"/></svg>
+          Start Processing
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // Toast
     function showToast(msg, icon) {
@@ -981,10 +1079,54 @@
       }
       if (e.key === 'Escape') {
         document.getElementById('shortcutsOverlay').style.display = 'none';
+        closeProcessingDialog();
       }
     });
 
-    // Drag & Drop visual
+    // Processing Dialog
+    let selectedMode = 'thorough';
+
+    function openProcessingDialog() {
+      const dialog = document.getElementById('processingDialog');
+      dialog.style.display = 'flex';
+      selectMode('thorough');
+    }
+
+    function closeProcessingDialog() {
+      document.getElementById('processingDialog').style.display = 'none';
+    }
+
+    function selectMode(mode) {
+      selectedMode = mode;
+      const eco = document.getElementById('modeEconomy');
+      const thor = document.getElementById('modeThorough');
+      const cost = document.getElementById('estCost');
+      const time = document.getElementById('estTime');
+
+      if (mode === 'economy') {
+        eco.style.borderColor = 'var(--primary)';
+        eco.style.background = 'rgba(79,70,229,0.05)';
+        thor.style.borderColor = 'var(--border)';
+        thor.style.background = 'transparent';
+        cost.textContent = '$0.90';
+        time.textContent = '~3 min';
+      } else {
+        thor.style.borderColor = 'var(--primary)';
+        thor.style.background = 'rgba(79,70,229,0.05)';
+        eco.style.borderColor = 'var(--border)';
+        eco.style.background = 'transparent';
+        cost.textContent = '$2.10';
+        time.textContent = '~12 min';
+      }
+    }
+
+    function startProcessing() {
+      closeProcessingDialog();
+      const modeLabel = selectedMode === 'thorough' ? 'Thorough (L1+L2+L3)' : 'Economy (L1+L2)';
+      showToast('Processing started — ' + modeLabel, '▶');
+    }
+
+    // Drag & Drop → open dialog
     const uploadZone = document.getElementById('uploadZone');
     uploadZone.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -999,7 +1141,7 @@
       e.preventDefault();
       uploadZone.style.borderColor = 'var(--border)';
       uploadZone.style.background = 'transparent';
-      showToast('Files would be uploaded and processed', '📁');
+      openProcessingDialog();
     });
 
     // File row click → navigate

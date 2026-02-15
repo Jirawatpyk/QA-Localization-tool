@@ -278,7 +278,7 @@ Global search across all contexts:
 │ ACTIONS                                      │
 │   Accept all high-confidence findings        │
 │   Export Smart Report                        │
-│   Switch to Economy mode                     │
+│   Upgrade to Thorough mode                   │
 │                                              │
 │ FILES                                        │
 │   file-03.xlf (Score: 82, 5 findings)        │
@@ -332,18 +332,29 @@ Persistent filter bar above finding list:
 │                                              │
 └──────────────────────────────────────────────┘
 
-After files dropped:
+After files dropped — Processing Mode Dialog opens:
 ┌──────────────────────────────────────────────┐
-│ 12 files ready                               │
+│ Start Processing                         [×] │
+│ Tuesday Batch · 12 files · EN→TH · 9,100 seg│
 │──────────────────────────────────────────────│
-│ file-01.xlf          4,200 segments          │
-│ file-02.xlf          1,800 segments          │
-│ file-03.xlf          Format warning          │
-│──────────────────────────────────────────────│
-│ Mode: [Economy]  Priority: [Normal]          │
+│ SELECT QA MODE                               │
 │                                              │
-│ [Run QA]                    [Cancel]          │
+│ ┌─────────────┐  ┌──────────────────┐        │
+│ │ Economy     │  │ ★ Recommended    │        │
+│ │ L1 + L2     │  │ Thorough         │        │
+│ │ ~30s/file   │  │ L1 + L2 + L3     │        │
+│ │ $0.15/file  │  │ ~2min/file       │        │
+│ │             │  │ $0.35/file       │        │
+│ │ Can upgrade │  │ + Deep AI        │        │
+│ │ later       │  │ Best accuracy    │        │
+│ └─────────────┘  └──────────────────┘        │
+│──────────────────────────────────────────────│
+│ Est. cost: $4.20  Time: ~24min  Budget: $25  │
+│──────────────────────────────────────────────│
+│ [Cancel]              [▶ Start Processing]   │
 └──────────────────────────────────────────────┘
+Note: Thorough is pre-selected (Recommended). Mode is locked
+after processing starts — Economy can upgrade to Thorough later.
 ```
 
 #### Form Validation Pattern

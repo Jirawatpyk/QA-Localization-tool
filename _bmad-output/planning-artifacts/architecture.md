@@ -131,17 +131,33 @@ These 8 items were explicitly flagged for resolution in this Architecture Docume
 
 ### Technology Versions (Verified February 2026)
 
-| Technology | Version | Key Changes |
-|-----------|---------|-------------|
-| Next.js | 16.1.6 LTS | Turbopack default, React Compiler stable, async APIs mandatory |
-| shadcn/ui | CLI-based | `npx shadcn@latest init`, unified Radix UI package, RTL support |
-| @supabase/supabase-js | 2.95.3 | SSR via `@supabase/ssr`, cookie-based auth |
-| Drizzle ORM | 0.45.1 (stable) | v1.0 beta available; use stable for production |
-| Inngest | 3.52.0 | App Router support, Vercel Fluid Compute streaming |
-| Vercel AI SDK | 6.0.86 | Agent abstraction, human-in-the-loop, structured output |
-| Tailwind CSS | 4.1.18 | Zero-config, CSS `@theme` directive, no tailwind.config.js |
-| TypeScript | 5.9.x | 6.0 Beta announced but not stable; use 5.9.x |
-| fast-xml-parser | 5.3.5 | ESM support, no C/C++ dependencies |
+> **IMPORTANT — Version Verification Required at Project Init:** The versions below were verified via web search on 2026-02-14. Package ecosystems move fast — **before running `npm install`, verify each version is still current** by checking the npm registry (`npm info <package> version`) or the project's GitHub releases page. If a major version has changed (e.g., Next.js 17 released), this section and all affected architectural decisions must be reviewed.
+
+| Technology | Version | Key Changes | Verify At |
+|-----------|---------|-------------|-----------|
+| Next.js | 16.1.6 LTS | Turbopack default, React Compiler stable, async APIs mandatory | `npm info next version` |
+| shadcn/ui | CLI-based | `npx shadcn@latest init`, unified Radix UI package, RTL support | `npx shadcn@latest --version` |
+| @supabase/supabase-js | 2.95.3 | SSR via `@supabase/ssr`, cookie-based auth | `npm info @supabase/supabase-js version` |
+| Drizzle ORM | 0.45.1 (stable) | v1.0 beta available; use stable for production (see migration plan below) | `npm info drizzle-orm version` |
+| Inngest | 3.52.0 | App Router support, Vercel Fluid Compute streaming | `npm info inngest version` |
+| Vercel AI SDK | 6.0.86 | Agent abstraction, human-in-the-loop, structured output | `npm info ai version` |
+| Tailwind CSS | 4.1.18 | Zero-config, CSS `@theme` directive, no tailwind.config.js | `npm info tailwindcss version` |
+| TypeScript | 5.9.x | 6.0 Beta announced but not stable; use 5.9.x | `npm info typescript version` |
+| fast-xml-parser | 5.3.5 | ESM support, no C/C++ dependencies | `npm info fast-xml-parser version` |
+
+**Version Lock Strategy:** After project initialization, use `npm ci` (not `npm install`) in CI and pin exact versions in `package.json` (no `^` or `~` prefixes for core dependencies) to prevent drift between environments.
+
+**Drizzle ORM 0.x → 1.0 Migration Plan:**
+
+Drizzle ORM is pre-1.0 (0.45.x). The v1.0 release may introduce breaking changes to schema definitions, migration format, or query builder API. Mitigation strategy:
+
+| Risk | Mitigation |
+|------|-----------|
+| Schema definition API changes | All schemas in `src/db/schema/` — single location to update. Drizzle Kit `generate` will flag incompatibilities. |
+| Migration format changes | Existing SQL migrations in `src/db/migrations/` are plain SQL — format-independent. Only `drizzle.config.ts` may need updates. |
+| Query builder API changes | All queries use Drizzle via Server Actions and Inngest functions — no scattered raw queries. Search `from(` across codebase to find all query sites. |
+| **Upgrade trigger** | When Drizzle 1.0 reaches stable release (not beta), create a dedicated upgrade branch. Run `drizzle-kit generate` to verify all schemas pass. Run full test suite including RLS tests. |
+| **Fallback** | If 1.0 migration proves too disruptive, stay on 0.45.x — Drizzle team maintains patch releases for latest 0.x. |
 
 ### Starter Options Considered
 
@@ -171,10 +187,10 @@ npx create-next-app@latest qa-localization-tool --typescript --tailwind --eslint
 npx shadcn@latest init
 
 # 3. Install core dependencies
-npm i @supabase/supabase-js @supabase/ssr drizzle-orm inngest ai fast-xml-parser
+npm i @supabase/supabase-js @supabase/ssr drizzle-orm inngest ai fast-xml-parser zustand pino sonner zod @upstash/ratelimit @upstash/redis
 
 # 4. Install dev dependencies
-npm i -D drizzle-kit @types/node
+npm i -D drizzle-kit @types/node vitest @vitejs/plugin-react jsdom @testing-library/react @faker-js/faker playwright @playwright/test drizzle-zod
 ```
 
 **Architectural Decisions Provided by Starter:**
@@ -246,17 +262,31 @@ src/db/
 
 #### 1.3 Caching Strategy
 
-- **Decision:** Next.js built-in caching + Supabase connection pooling (MVP) → Upstash Redis if needed (Growth)
-- **Rationale:** MVP doesn't need shared cross-instance cache; Supabase Supavisor handles DB connections
-- **Escape Hatch:** If performance gate fails (P95 > 2s rule layer), upgrade to Redis
+- **Decision:** Next.js `"use cache"` directive (stable in Next.js 16) + `cacheTag` / `cacheLife` APIs + Supabase connection pooling (MVP) → Upstash Redis if needed (Growth)
+- **Rationale:** Next.js 16 promoted the `"use cache"` directive to stable, replacing the legacy `unstable_cache`. MVP doesn't need shared cross-instance cache; Supabase Supavisor handles DB connections.
+- **Escape Hatch:** If performance gate fails (P95 > 2s rule layer), upgrade to Upstash Redis
+- **Migration Note:** If `"use cache"` API changes between Next.js releases, the caching layer is isolated in `src/lib/cache/` — swap implementation without touching feature code.
 
 **Rule Layer Hot Data Caching:**
 
 | Data | Cache Strategy | TTL | Invalidation |
 |------|---------------|-----|-------------|
-| Glossary terms | `unstable_cache` + tag `glossary-{projectId}` | 5 min | `revalidateTag` on glossary mutation |
-| Taxonomy config | `unstable_cache` + tag `taxonomy-{projectId}` | 10 min | `revalidateTag` on config change |
+| Glossary terms | `"use cache"` + `cacheTag(`glossary-${projectId}`)` | `cacheLife("minutes")` (5 min) | `revalidateTag` on glossary mutation |
+| Taxonomy config | `"use cache"` + `cacheTag(`taxonomy-${projectId}`)` | `cacheLife("minutes")` (10 min) | `revalidateTag` on config change |
 | Language rules | In-memory static module | ∞ | Redeploy only |
+
+**Cache Isolation Pattern:**
+```typescript
+// src/lib/cache/glossaryCache.ts
+"use cache"
+import { cacheTag, cacheLife } from "next/cache"
+
+export async function getCachedGlossary(projectId: string) {
+  cacheTag(`glossary-${projectId}`)
+  cacheLife("minutes") // 5 min default
+  return await db.select().from(glossaries).where(eq(glossaries.projectId, projectId))
+}
+```
 
 **Pipeline Design:** Load cached data once per project run, reuse across all segments (not per-segment queries)
 
@@ -299,15 +329,331 @@ src/db/
 
 #### 1.6 SDLXLIFF Parser Memory Strategy (Handoff #6)
 
-- **Decision:** DOM parsing (full parse) with 30MB file size guard
-- **Rationale:** SDLXLIFF files typically range from 5-15MB (about 100K words). The DOM approach simplifies segment extraction and namespace handling. A 30MB file-size guard protects against Vercel's 1024MB serverless memory limit: a 30MB XML file incurs roughly 4x parse overhead (120MB), leaving adequate headroom.
+- **Decision:** DOM parsing (full parse) with **15MB file size guard** (hard limit)
+- **Rationale:** SDLXLIFF files typically range from 5-15MB (about 100K words). The DOM approach simplifies segment extraction and namespace handling. Memory budget analysis:
 - **Affects:** File upload endpoint, parser module
+
+**Memory Budget Analysis (Vercel Serverless — 1024MB limit):**
+
+| Component | Estimated Memory | Notes |
+|-----------|:---------------:|-------|
+| Node.js runtime + Next.js framework | ~150–200MB | Base overhead before any app code |
+| Drizzle ORM + connection pool | ~30–50MB | DB driver and query builder |
+| fast-xml-parser DOM (15MB file) | ~90–150MB | 6–10x overhead for complex SDLXLIFF with namespaces, CDATA, attributes |
+| Segment extraction + processing | ~30–50MB | Extracted segments, metadata objects |
+| **Total estimated peak** | **~300–450MB** | Leaves 574–724MB headroom |
+
+**Why 15MB, not 30MB:**
+- fast-xml-parser with `preserveOrder`, namespace handling, and CDATA sections can reach 6–10x memory overhead (not 4x)
+- Concurrent requests on the same function instance share memory — a second request during parsing would OOM at 30MB
+- 15MB covers 99%+ of real-world SDLXLIFF files (100K words ≈ 8–12MB)
+- Files > 15MB should be split by the translator in Trados before export
+
+**Guard Implementation:**
+```typescript
+const MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024 // 15MB hard limit
+// Reject at upload endpoint BEFORE reading file into memory
+```
+
+**Escape Hatch (Growth):** If users need > 15MB files, implement SAX streaming parser (fast-xml-parser `XMLParser` with streaming mode) as an alternative code path.
 
 #### 1.7 Migration Strategy
 
 - **Decision:** Drizzle Kit generate + migrate (SQL files in version control)
 - **Rationale:** Reproducible migrations, version controlled, auditable
 - **Command:** `drizzle-kit generate` → SQL files → `drizzle-kit migrate` to apply
+
+#### 1.8 Backup, Disaster Recovery & Data Retention
+
+- **Decision:** Supabase PITR (Point-in-Time Recovery) + automated daily logical backups + audit log retention policy
+- **Rationale:** Immutable audit logs and multi-tenant data require formal backup, recovery, and retention strategies. GDPR Article 17 (right to erasure) requires tenant data deletion capability.
+- **Affects:** All data tables, operational procedures, compliance
+
+**Backup Strategy:**
+
+| Layer | Method | Frequency | Retention |
+|-------|--------|-----------|-----------|
+| Full DB | Supabase automatic backups (Pro plan) | Daily | 7 days (Pro), 14 days (Team) |
+| Point-in-Time Recovery | Supabase PITR (Pro plan) | Continuous WAL | 7-day window |
+| Logical export | `pg_dump` via scheduled GitHub Action | Weekly | 30 days in Supabase Storage (encrypted) |
+| Uploaded files | Supabase Storage (redundant) | Real-time | Retained with project lifecycle |
+
+**Disaster Recovery:**
+
+| Metric | Target | Method |
+|--------|--------|--------|
+| RPO (Recovery Point Objective) | < 1 hour | PITR continuous WAL archiving |
+| RTO (Recovery Time Objective) | < 4 hours | Supabase restore + Vercel redeploy |
+| Failover | Manual | Supabase dashboard restore → Vercel env update → redeploy |
+
+**Audit Log Retention Policy:**
+
+| Period | Strategy | Implementation |
+|--------|----------|---------------|
+| 0–12 months | Hot storage (main table) | Direct queries, full performance |
+| 12–36 months | Warm storage (partitioned) | Monthly partitioned tables (`audit_logs_2026_01`, etc.) |
+| 36+ months | Cold export | Scheduled `pg_dump` of old partitions → Supabase Storage (compressed) → DROP partition |
+
+**Partition Implementation:**
+```sql
+-- Create partitioned audit_logs table
+CREATE TABLE audit_logs (
+  id uuid DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  -- ... other columns
+) PARTITION BY RANGE (created_at);
+
+-- Create monthly partitions (automated via scheduled Inngest function)
+CREATE TABLE audit_logs_2026_02 PARTITION OF audit_logs
+  FOR VALUES FROM ('2026-02-01') TO ('2026-03-01');
+```
+
+**Tenant Data Deletion (GDPR Article 17):**
+- Soft delete: set `tenant.status = 'deleted'`, RLS blocks all queries for that tenant_id
+- Hard delete (30-day grace period): scheduled Inngest function cascades DELETE across all tenant tables
+- Audit log exception: audit entries anonymized (replace user identifiers with `'[REDACTED]'`) but not deleted — compliance requires audit trail retention
+- Export before deletion: tenant admin can export all data via dashboard before deletion
+
+#### 1.9 Entity-Relationship Diagram (ERD)
+
+- **Decision:** Formal ERD with cardinality, foreign keys, and tenant scoping documented here (not deferred)
+- **Rationale:** 15+ tables with multi-tenant isolation and cross-entity audit trails require explicit relationship documentation to prevent implementation inconsistencies
+- **Affects:** All schema files, RLS policies, query patterns
+
+**ERD (Mermaid notation):**
+
+```mermaid
+erDiagram
+    tenants ||--o{ projects : "has many"
+    tenants ||--o{ users : "has many"
+    tenants ||--o{ audit_logs : "has many"
+    tenants ||--o{ glossaries : "has many"
+    tenants ||--o{ language_pair_configs : "has many"
+
+    users ||--o{ user_roles : "has many"
+    users ||--o{ review_sessions : "reviews"
+    users ||--o{ feedback_events : "generates"
+
+    projects ||--o{ files : "contains"
+    projects ||--o{ scores : "has"
+    projects ||--o{ review_sessions : "has"
+    projects ||--o{ feedback_events : "generates"
+
+    files ||--o{ segments : "contains"
+
+    segments ||--o{ findings : "has"
+
+    findings ||--o{ feedback_events : "triggers"
+
+    review_sessions ||--o{ findings : "reviews"
+
+    glossaries ||--o{ glossary_terms : "contains"
+
+    tenants {
+        uuid id PK
+        varchar name
+        varchar status
+        timestamptz created_at
+    }
+
+    users {
+        uuid id PK "Supabase Auth UID"
+        uuid tenant_id FK
+        varchar email
+        varchar display_name
+        timestamptz created_at
+    }
+
+    user_roles {
+        uuid id PK
+        uuid user_id FK
+        uuid tenant_id FK
+        varchar role "admin | qa_reviewer | native_reviewer"
+        timestamptz created_at
+    }
+
+    projects {
+        uuid id PK
+        uuid tenant_id FK
+        varchar name
+        varchar source_lang
+        varchar target_lang
+        varchar processing_mode "economy | thorough"
+        varchar status "draft | processing | reviewed | completed"
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    files {
+        uuid id PK
+        uuid project_id FK
+        uuid tenant_id FK
+        varchar file_name
+        varchar file_type "sdlxliff | xliff | xlsx"
+        integer file_size_bytes
+        varchar storage_path
+        varchar status "uploaded | parsing | parsed | error"
+        timestamptz created_at
+    }
+
+    segments {
+        uuid id PK
+        uuid file_id FK
+        uuid project_id FK
+        uuid tenant_id FK
+        integer segment_number
+        text source_text
+        text target_text
+        varchar source_lang
+        varchar target_lang
+        integer word_count
+        timestamptz created_at
+    }
+
+    findings {
+        uuid id PK
+        uuid segment_id FK
+        uuid project_id FK
+        uuid tenant_id FK
+        uuid review_session_id FK "nullable"
+        varchar status "pending | accepted | rejected | edited | deferred | escalated | false_positive | confirmed"
+        varchar severity "critical | major | minor"
+        varchar category "MQM category"
+        text description
+        varchar detected_by_layer "L1 | L2 | L3"
+        varchar ai_model "nullable"
+        real ai_confidence "nullable, 0-100"
+        text suggested_fix "nullable"
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    scores {
+        uuid id PK
+        uuid project_id FK
+        uuid tenant_id FK
+        real mqm_score "0-100"
+        integer total_words
+        integer critical_count
+        integer major_count
+        integer minor_count
+        real npt "Normalized Penalty Total"
+        varchar status "calculating | calculated | overridden | auto_passed"
+        varchar auto_pass_rationale "nullable"
+        timestamptz calculated_at
+        timestamptz created_at
+    }
+
+    review_sessions {
+        uuid id PK
+        uuid project_id FK
+        uuid tenant_id FK
+        uuid reviewer_id FK
+        varchar status "in_progress | completed | abandoned"
+        timestamptz started_at
+        timestamptz completed_at
+    }
+
+    glossaries {
+        uuid id PK
+        uuid tenant_id FK
+        varchar name
+        varchar source_lang
+        varchar target_lang
+        timestamptz created_at
+    }
+
+    glossary_terms {
+        uuid id PK
+        uuid glossary_id FK
+        varchar source_term
+        varchar target_term
+        boolean case_sensitive
+        timestamptz created_at
+    }
+
+    audit_logs {
+        uuid id PK
+        uuid tenant_id FK
+        uuid user_id FK "nullable for system events"
+        varchar entity_type
+        uuid entity_id
+        varchar action
+        jsonb old_value "nullable"
+        jsonb new_value "nullable"
+        timestamptz created_at
+    }
+
+    feedback_events {
+        uuid id PK
+        uuid tenant_id FK
+        uuid finding_id FK
+        uuid project_id FK
+        uuid reviewer_id FK
+        varchar action "accept | reject | edit | change_severity"
+        varchar finding_category
+        varchar finding_severity
+        varchar new_severity "nullable"
+        varchar source_lang
+        varchar target_lang
+        text source_text
+        text original_target
+        text corrected_target "nullable"
+        varchar detected_by_layer
+        varchar ai_model "nullable"
+        real ai_confidence "nullable"
+        timestamptz created_at
+    }
+
+    language_pair_configs {
+        uuid id PK
+        uuid tenant_id FK
+        varchar source_lang
+        varchar target_lang
+        integer auto_pass_threshold
+        integer l2_confidence_min
+        integer l3_confidence_min
+        jsonb muted_categories
+        varchar word_segmenter "intl | space"
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    taxonomy_definitions {
+        uuid id PK
+        varchar category "MQM category name"
+        varchar parent_category "nullable"
+        text description
+        boolean is_custom
+        timestamptz created_at
+    }
+
+    severity_configs {
+        uuid id PK
+        uuid tenant_id FK "nullable for defaults"
+        varchar severity "critical | major | minor"
+        real penalty_weight "critical=25, major=5, minor=1"
+        timestamptz created_at
+    }
+```
+
+**Key Relationships & Cardinality:**
+
+| Relationship | Cardinality | FK Column | Cascade |
+|-------------|:-----------:|-----------|---------|
+| tenant → projects | 1:N | `projects.tenant_id` | RESTRICT (no orphan projects) |
+| tenant → users | 1:N | `users.tenant_id` | RESTRICT |
+| project → files | 1:N | `files.project_id` | CASCADE (delete project → delete files) |
+| file → segments | 1:N | `segments.file_id` | CASCADE |
+| segment → findings | 1:N | `findings.segment_id` | CASCADE |
+| project → scores | 1:N | `scores.project_id` | CASCADE |
+| project → review_sessions | 1:N | `review_sessions.project_id` | CASCADE |
+| finding → feedback_events | 1:N | `feedback_events.finding_id` | SET NULL (preserve training data) |
+| glossary → glossary_terms | 1:N | `glossary_terms.glossary_id` | CASCADE |
+| tenant → audit_logs | 1:N | `audit_logs.tenant_id` | RESTRICT (never delete audit) |
+
+**Tenant Scoping Rule:** Every table except `taxonomy_definitions` (shared reference data) has a `tenant_id` column. All queries must include tenant filter via `withTenant()` helper or RLS policy.
 
 ---
 
@@ -325,7 +671,22 @@ src/db/
 | Read (view data, UI guards) | JWT `app_metadata` claims | Fast, no DB query |
 | Write (mutations, approve, delete) | `user_roles` DB table query | Accurate, no sync gap |
 
-**Role Sync:** The `user_roles` table serves as the source of truth. The Supabase Admin API writes updated claims to `app_metadata`. The client-side Realtime subscription detects the change and refreshes the JWT.
+**Role Sync & JWT Lifecycle:**
+
+The `user_roles` table serves as the source of truth. The Supabase Admin API writes updated claims to `app_metadata`. The client-side Realtime subscription detects the change and refreshes the JWT.
+
+| Parameter | Value | Rationale |
+|-----------|-------|-----------|
+| JWT expiry (`jwt_expiry` in Supabase) | **15 minutes** | Limits stale-claim window; Supabase auto-refreshes silently |
+| Client Realtime subscription | `user_roles` table changes for `auth.uid()` | Triggers immediate `supabase.auth.refreshSession()` on role change |
+| Fallback poll | Every 5 minutes | If Realtime subscription drops, periodic refresh catches stale claims |
+| Max stale window | **15 minutes worst case** | JWT expires naturally even if Realtime + poll both fail |
+
+**Stale JWT UI Mitigation (TOCTOU):**
+- When Realtime detects role change → force JWT refresh → Zustand `useUIStore` re-evaluates navigation guards
+- If JWT refresh reveals role downgrade → toast notification ("Your permissions have been updated") + hide now-unauthorized UI elements
+- **Sensitive data**: Admin-only data (user management, tenant settings) is fetched via Server Actions that perform M3 DB lookup — stale JWT only affects UI visibility, never data access
+- **No information disclosure**: Admin routes use Server Component data fetching (DB-verified role), not client-side conditional rendering based on JWT claims alone
 
 **Security Test Scenarios (CI Gate):**
 
@@ -335,6 +696,7 @@ src/db/
 | S2 | User tampers JWT claims | BLOCKED by Supabase signature verification |
 | S3 | Tenant A admin assigns role in Tenant B | BLOCKED by user_roles RLS (tenant_id) |
 | S4 | Rate limit bypass via multiple tokens | BLOCKED by rate limiting per user_id |
+| S5 | Stale JWT → user sees admin page → clicks admin action | BLOCKED by M3 DB lookup; if page was SSR, data already filtered by server-side role check |
 
 #### 2.2 API Security Middleware Pattern
 
@@ -356,7 +718,41 @@ Server Helper (requireRole):
   3. Insufficient role → throw 403
 ```
 
-**Rate Limiting:** Edge middleware includes rate limiting per user_id (Vercel built-in or simple in-memory counter for MVP)
+**Rate Limiting:**
+
+Edge Functions are stateless and distributed — in-memory counters do NOT work (reset on cold start, not shared across edge nodes).
+
+| Approach | MVP | Growth |
+|----------|-----|--------|
+| **Implementation** | Upstash Redis (`@upstash/ratelimit`) | Vercel WAF rate limiting (if available on plan) |
+| **Storage** | Upstash Redis free tier (10K requests/day) | Same or upgrade |
+| **Algorithm** | Sliding window | Sliding window |
+| **Key** | `user_id` (authenticated) or IP (unauthenticated) | Same |
+
+**Rate Limit Configuration:**
+
+| Endpoint Category | Limit | Window | Rationale |
+|-------------------|:-----:|:------:|-----------|
+| API mutations (Server Actions) | 100 req | 1 min | Prevent rapid automated abuse |
+| File upload | 10 req | 1 min | Prevent storage abuse |
+| AI pipeline trigger | 5 req | 1 min | Prevent cost abuse |
+| Auth endpoints (login/signup) | 10 req | 15 min | Brute-force protection |
+| Read endpoints | 300 req | 1 min | Generous for UI interactivity |
+
+**Implementation:**
+```typescript
+// src/middleware.ts
+import { Ratelimit } from "@upstash/ratelimit"
+import { Redis } from "@upstash/redis"
+
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(100, "1 m"),
+  prefix: "rl",
+})
+```
+
+**Env vars required:** `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (added to `.env.example`)
 
 #### 2.3 AI Version Pinning vs Fallback (Handoff #1)
 
@@ -451,7 +847,17 @@ inngest.createFunction(
 
 **Client-side debounce:** 500ms debounce on finding changes to reduce event volume during rapid reviewer edits
 
-**UX:** Score shows "recalculating..." → Realtime subscription pushes updated score (~1-2s delay, acceptable)
+**Score Transition UX (preventing stale-score decisions):**
+
+| Phase | Score Display | User Can Approve? | Duration |
+|-------|-------------|:-----------------:|----------|
+| 1. Finding changed | Previous score shown (dimmed) + "Recalculating..." badge | **NO** — approve button disabled | 0–500ms (debounce) |
+| 2. Event emitted | "Recalculating..." badge (animated) | **NO** — approve button disabled | ~1–2s (Inngest processing) |
+| 3. Realtime push | New score displayed (highlighted briefly) | **YES** — approve button re-enabled | Instant |
+
+**Critical rule:** The "Approve/Auto-pass" action MUST check `scores.status = 'calculated'` server-side. If status is `'calculating'`, the Server Action returns `{ success: false, code: 'SCORE_STALE' }` and the UI shows "Please wait for score recalculation to complete."
+
+**Concurrent recalculation:** If a reviewer changes finding A (triggers recalc), waits 600ms, then changes finding B (triggers second recalc) — Inngest serial queue (`concurrency: { key: projectId, limit: 1 }`) ensures the second recalc waits for the first to finish. The UI stays in "Recalculating..." until the final score arrives via Realtime.
 
 #### 3.5 AI Model Selection per Pipeline Layer
 
@@ -467,12 +873,36 @@ inngest.createFunction(
 | L2 (AI Screening) | GPT-4o-mini | Cheapest ($0.15/1M input), structured output 9/10, sufficient for screening | Gemini 2.0 Flash ($0.10/1M) |
 | L3 (Deep AI) | Claude Sonnet | Best semantic (10/10), Thai (9/10), tone/register (10/10), cultural (9/10) | GPT-4o ($2.50/1M, 9/10 CJK) |
 
-**Cost Estimates per 100K Words (from Research):**
+**Cost Estimates per 100K Words:**
 
-| Mode | L2 Cost | L3 Cost | Total |
-|------|---------|---------|-------|
+*AI API Variable Cost (per-run, scales with volume):*
+
+| Mode | L2 Cost | L3 Cost | AI Total |
+|------|---------|---------|----------|
 | Economy (L1+L2) | ~$0.40 | — | ~$0.40 |
 | Thorough (L1+L2+L3) | ~$0.40 | ~$2.00 | ~$2.40 |
+
+*Infrastructure Fixed Cost (monthly, amortized per 100K words at 500K words/month):*
+
+| Service | Plan | Monthly Cost | Per 100K Words |
+|---------|------|:------------:|:--------------:|
+| Vercel Pro | Pro | $20/mo | ~$4.00 |
+| Supabase | Pro | $25/mo | ~$5.00 |
+| Inngest | Free → Pro | $0–$50/mo | ~$0–$10.00 |
+| Upstash Redis (rate limiting) | Free | $0/mo | $0 |
+| Better Stack | Free | $0/mo | $0 |
+| **Infrastructure subtotal** | | **$45–$95/mo** | **~$9–$19** |
+
+*Total Cost per 100K Words (at 500K words/month volume):*
+
+| Mode | AI Cost | Infra (amortized) | **Total** |
+|------|---------|:-----------------:|:---------:|
+| Economy | ~$0.40 | ~$9–$19 | **~$9.40–$19.40** |
+| Thorough | ~$2.40 | ~$9–$19 | **~$11.40–$21.40** |
+
+**Important:** Infrastructure cost is fixed — at higher volumes (2M+ words/month), amortized cost drops to ~$2–$5 per 100K words. At low volumes (50K words/month), it rises to ~$90–$190 per 100K words. **AI API cost scales linearly; infrastructure cost is fixed overhead.**
+
+**Break-even vs manual QA:** Human QA costs $150–300 per 100K words. The tool breaks even at any volume where amortized total < $150 — roughly **>30K words/month at Economy mode.**
 
 **Provider Configuration (in `src/lib/ai/providers.ts`):**
 ```typescript
@@ -519,7 +949,7 @@ export const languagePairConfigs = pgTable('language_pair_configs', {
 })
 ```
 
-**Default Configurations:**
+**Default Configurations (PROVISIONAL — requires calibration):**
 
 | Language Pair | Auto-pass | L2 Confidence Min | Word Segmenter | Notes |
 |--------------|-----------|-------------------|----------------|-------|
@@ -529,7 +959,30 @@ export const languagePairConfigs = pgTable('language_pair_configs', {
 | EN → ZH-CN | 94 | 72 | `intl` | Simplified Chinese |
 | EN → * (default) | 95 | 70 | `space` | European/Latin languages |
 
-**MVP Scope:** Ship with hardcoded defaults per table above. Admin UI for editing = Growth phase.
+**Calibration Methodology & Status:**
+
+These threshold values are **initial estimates** derived from:
+1. **Research basis:** AI/LLM QA Research §1.5 — Claude Sonnet Thai 9/10, GPT-4o CJK 8-9/10, Gemini Flash Thai 7/10. CJK+Thai consistently score lower on automated detection accuracy → lower auto-pass prevents false approvals.
+2. **Industry reference:** MQM auto-pass at 95 is standard for European languages (TAUS benchmark). CJK+Thai reduced by 1-2 points per research recommendation.
+3. **Conservative stance:** All thresholds intentionally lean toward "more human review" rather than "more auto-pass." Wrong auto-pass is costlier than unnecessary review.
+
+**These values are NOT production-validated.** They MUST be calibrated during MVP beta:
+
+| Calibration Step | When | Method |
+|-----------------|------|--------|
+| 1. Baseline collection | First 2 weeks of beta | Run pipeline on 10+ real projects per language pair, record all scores |
+| 2. False positive/negative analysis | After 500+ findings per pair | Compare auto-pass decisions vs reviewer overrides |
+| 3. Threshold adjustment | After analysis | If >10% of auto-passed files get reviewer objections → lower threshold by 2 points |
+| 4. Ongoing monitoring | Continuous | `feedback_events` table tracks accept/reject rates per language pair |
+
+**Data source for calibration:** `feedback_events.action` + `language_pair_configs` → calculate per-pair accuracy:
+```
+Accuracy = accepted_findings / (accepted_findings + rejected_findings)
+If accuracy < 85% for a pair → lower l2_confidence_min by 5
+If auto_pass_override_rate > 10% → lower auto_pass_threshold by 2
+```
+
+**MVP Scope:** Ship with provisional defaults per table above. Admin UI for editing = Growth phase. Calibration adjustments applied via DB migration during beta.
 
 #### 3.7 Neural QE Validation Layer (COMET-QE / xCOMET)
 
@@ -717,6 +1170,47 @@ src/
 
 ### Category 5: Infrastructure & Deployment
 
+#### 5.0 Infrastructure Capacity & Service Tier Requirements
+
+- **Decision:** Supabase Pro + Vercel Pro + Inngest Free (MVP), with defined upgrade triggers
+- **Rationale:** The 50 concurrent users NFR requires specific service tiers — free tiers have connection and execution limits that would fail under load
+- **Affects:** Budget, deployment configuration, scaling strategy
+
+**Service Tier Requirements for 50 Concurrent Users:**
+
+| Service | Required Plan | Key Limits | Why This Tier |
+|---------|:------------:|------------|---------------|
+| **Supabase** | Pro ($25/mo) | 200 concurrent DB connections (Supavisor), 8GB DB, 250GB bandwidth | Free tier: 50 connections max — each user may hold 2-3 connections (queries + Realtime), exhausted at ~20 users |
+| **Vercel** | Pro ($20/mo) | 100 concurrent serverless executions, 10s max duration, 1024MB memory | Hobby: 10s timeout may fail for pipeline orchestration; Pro gives 60s |
+| **Inngest** | Free (MVP) | 5K function runs/month, 5 concurrent | Free covers MVP beta; upgrade to Pro at >5K runs/month |
+| **Upstash Redis** | Free | 10K commands/day | Rate limiting only — 50 users × 100 req/min = 5K/min peak; upgrade if sustained peak |
+
+**Connection Pooling Configuration (Supabase Supavisor):**
+```
+# Supabase Dashboard → Settings → Database → Connection Pooling
+Pool Mode: Transaction (recommended for serverless)
+Pool Size: 15 (per-region)
+# Drizzle connects via pooler URL (port 6543), not direct (port 5432)
+```
+
+**Load Testing Strategy (pre-launch):**
+
+| Test | Tool | Pass Criteria |
+|------|------|---------------|
+| 50 concurrent dashboard loads | k6 or Artillery | P95 < 3s, 0 errors |
+| 10 concurrent pipeline runs | k6 + Inngest Dev Server | All complete, no timeout |
+| 50 concurrent Realtime subscriptions | Custom script via Supabase client | All receive updates within 2s |
+| Sustained 100 req/min for 10 min | k6 | P99 < 5s, <1% error rate |
+
+**Upgrade Triggers:**
+
+| Metric | Threshold | Action |
+|--------|-----------|--------|
+| DB connections saturation | >80% pool utilization sustained 5 min | Increase pool size or upgrade Supabase plan |
+| Vercel function timeouts | >2% of invocations | Investigate + optimize or upgrade plan |
+| Inngest monthly runs | >4K (80% of 5K free limit) | Upgrade to Inngest Pro |
+| Upstash daily commands | >8K (80% of 10K free limit) | Upgrade to Upstash Pay-as-you-go |
+
 #### 5.1 CI/CD Pipeline
 
 - **Decision:** GitHub Actions (quality gate) + Vercel Git Integration (deploy)
@@ -797,6 +1291,8 @@ INNGEST_EVENT_KEY=              # Inngest event key
 INNGEST_SIGNING_KEY=            # Inngest webhook signing
 OPENAI_API_KEY=                 # Primary AI provider
 ANTHROPIC_API_KEY=              # Fallback AI provider
+UPSTASH_REDIS_REST_URL=         # Upstash Redis for rate limiting (Edge-compatible)
+UPSTASH_REDIS_REST_TOKEN=       # Upstash Redis auth token
 ```
 
 **Convention:** `NEXT_PUBLIC_` prefix = exposed to client browser; no prefix = server-only
@@ -806,7 +1302,53 @@ ANTHROPIC_API_KEY=              # Fallback AI provider
 - **Decision:** pino structured JSON logging (Node.js runtime) → Vercel Logs (MVP) → Better Stack Logs (Growth)
 - **Rationale:** Structured logging from Day 1 avoids format refactoring later; Vercel Logs free for MVP
 
-**Runtime Constraint:** pino for Server Components + Route Handlers + Inngest functions (Node.js). Edge Middleware uses `console.log` (Edge Runtime incompatibility).
+**Runtime Constraint:** pino for Server Components + Route Handlers + Inngest functions (Node.js runtime). Edge Middleware requires a separate structured logging approach because pino depends on Node.js APIs unavailable in the Edge Runtime.
+
+**Edge Middleware Structured Logging:**
+
+Edge Middleware handles auth, tenant verification, and rate limiting — the most security-critical code path. Unstructured `console.log` is unacceptable for this path.
+
+```typescript
+// src/lib/logger-edge.ts — Edge-compatible structured logger
+type LogLevel = 'info' | 'warn' | 'error'
+
+interface EdgeLogEntry {
+  level: LogLevel
+  msg: string
+  timestamp: string
+  [key: string]: unknown
+}
+
+function edgeLog(level: LogLevel, msg: string, data?: Record<string, unknown>) {
+  const entry: EdgeLogEntry = {
+    level,
+    msg,
+    timestamp: new Date().toISOString(),
+    ...data,
+  }
+  // Vercel Logs captures console output — structured JSON ensures parseability
+  console[level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'log'](
+    JSON.stringify(entry)
+  )
+}
+
+export const edgeLogger = {
+  info: (msg: string, data?: Record<string, unknown>) => edgeLog('info', msg, data),
+  warn: (msg: string, data?: Record<string, unknown>) => edgeLog('warn', msg, data),
+  error: (msg: string, data?: Record<string, unknown>) => edgeLog('error', msg, data),
+}
+```
+
+**Usage in middleware.ts:**
+```typescript
+import { edgeLogger } from '@/lib/logger-edge'
+
+// Instead of: console.log('Auth failed')
+edgeLogger.warn('Auth failed', { userId, tenantId, reason: 'expired_jwt', ip: request.ip })
+edgeLogger.error('Rate limit exceeded', { userId, endpoint: request.nextUrl.pathname, limit: 100 })
+```
+
+**Rule:** All Edge Middleware logging MUST use `edgeLogger` — never raw `console.log`. This ensures security events (auth failure, rate limit, tenant mismatch) are searchable in Vercel Logs and alertable in Better Stack.
 
 **AI Layer Log Fields (mandatory):**
 ```json
@@ -866,7 +1408,7 @@ Token count + estimated cost per request enables Economy vs Thorough cost tracki
 | 3 | FR72 substring fallback logging | Decision 5.5 | Both audit entry + structured log |
 | 4 | RLS enforcement strategy | Decision 1.5 | Enforce critical tables from Day 1, defer reference |
 | 5 | Immutable audit log mechanism | Decision 1.4 | App-level + Write-only RLS + DB trigger |
-| 6 | SDLXLIFF parser memory strategy | Decision 1.6 | DOM with 30MB guard |
+| 6 | SDLXLIFF parser memory strategy | Decision 1.6 | DOM with 15MB guard (memory budget analysis) |
 | 7 | Uptime monitoring tool | Decision 5.2 | Vercel Analytics + Better Stack |
 | 8 | AI fallback chaos testing | Decision 5.1 (R31) | Weekly scheduled CI + manual trigger |
 
@@ -876,9 +1418,9 @@ Token count + estimated cost per request enables Economy vs Thorough cost tracki
 |---|-----------|--------|----------|
 | R1 | Audit log composite indexes + monthly partitioning | Amelia (Dev) | Data |
 | R2 | Audit log DB trigger DELETE/UPDATE block | Murat (Test) | Data |
-| R3 | Parser limit 50MB → 30MB (Vercel memory) | Amelia (Dev) | Data |
+| R3 | Parser limit 50MB → 15MB (Vercel memory, 6-10x overhead analysis) | Amelia (Dev) | Data |
 | R4 | RLS mandatory cross-tenant leak test suite in CI | Murat (Test) | Data |
-| R5 | Rule layer hot data caching plan (unstable_cache + tags) | Mary (Analyst) | Data |
+| R5 | Rule layer hot data caching plan (`"use cache"` + `cacheTag`/`cacheLife`) | Mary (Analyst) | Data |
 | R6 | RBAC M3 pattern: JWT reads, DB writes | Amelia (Dev) | Auth |
 | R7 | Security test scenarios S1-S4 in test suite | Murat (Test) | Auth |
 | R8 | Edge middleware rate limiting | Murat (Test) | Auth |
@@ -902,7 +1444,7 @@ Token count + estimated cost per request enables Economy vs Thorough cost tracki
 | R26 | Split quality-gate (every PR) + e2e-gate (main only) + 4 E2E tests | Murat (Test) | Infra |
 | R27 | /api/health endpoint with Cache-Control: no-store | Amelia (Dev) | Infra |
 | R28 | Better Stack 5 monitors + alert escalation config | Murat (Test) | Infra |
-| R29 | pino Node.js only, console.log for Edge | Amelia (Dev) | Infra |
+| R29 | pino Node.js only, `edgeLogger` structured JSON for Edge (not raw console.log) | Amelia (Dev) | Infra |
 | R30 | AI layer must log token count + estimated cost | Mary (Analyst) | Infra |
 | R31 | AI chaos test weekly scheduled (not every PR) | Mary (Analyst) | Infra |
 | R32 | .env.example with all keys + descriptions | Amelia (Dev) | Infra |
@@ -931,6 +1473,21 @@ Token count + estimated cost per request enables Economy vs Thorough cost tracki
 | R55 | feedback_events table in MVP for Growth-phase ML training data | Research Integration | Data |
 | R56 | Growth Architecture section: Self-healing pipeline, patterns, roadmap | Research Integration | Structure |
 | R57 | COMET-QE/xCOMET neural QE validation layer (Decision 3.7, Growth) | Research Integration | API |
+| R58 | Validation scope disclosure + prototype spike recommendation | Adversarial Review | Validation |
+| R59 | Full ERD with Mermaid diagram, FKs, cardinality, cascade rules (Decision 1.9) | Adversarial Review | Data |
+| R60 | Parser limit 30MB → 15MB with detailed memory budget analysis (6-10x overhead) | Adversarial Review | Data |
+| R61 | `unstable_cache` → stable `"use cache"` directive + `cacheTag`/`cacheLife` | Adversarial Review | Data |
+| R62 | Backup, DR, data retention, GDPR deletion strategy (Decision 1.8) | Adversarial Review | Data |
+| R63 | JWT 15min expiry, Realtime role sync, stale-JWT UI mitigation, S5 test | Adversarial Review | Auth |
+| R64 | Edge rate limiting: Upstash Redis (not in-memory) + per-endpoint limits | Adversarial Review | Auth |
+| R65 | Language-pair thresholds labeled PROVISIONAL + calibration methodology | Adversarial Review | API |
+| R66 | Score recalculation transition UX: approve button disabled during recalc | Adversarial Review | API |
+| R67 | Cost estimates: full operational cost breakdown (infra + AI + amortized) | Adversarial Review | API |
+| R68 | Infrastructure capacity analysis + service tier requirements (Decision 5.0) | Adversarial Review | Infra |
+| R69 | Anti-pattern #3 clarified: SQL boundary (app code vs migrations/tests) | Adversarial Review | Patterns |
+| R70 | Technology versions: verification commands + version lock strategy | Adversarial Review | Infra |
+| R71 | Drizzle 0.x → 1.0 migration plan with risk/mitigation table | Adversarial Review | Infra |
+| R72 | `edgeLogger` structured JSON for Edge Runtime (replaces raw console.log) | Adversarial Review | Infra |
 
 ## Implementation Patterns & Consistency Rules
 
@@ -1153,6 +1710,8 @@ const envSchema = z.object({
   ANTHROPIC_API_KEY: z.string(),
   INNGEST_EVENT_KEY: z.string(),
   INNGEST_SIGNING_KEY: z.string(),
+  UPSTASH_REDIS_REST_URL: z.string().url(),
+  UPSTASH_REDIS_REST_TOKEN: z.string(),
 })
 
 export const env = envSchema.parse(process.env)
@@ -1315,19 +1874,28 @@ export function buildFinding(overrides?: Partial<Finding>): Finding {
 |---|-------------|-----------------|
 | 1 | Default export (except page/layout) | Use named exports |
 | 2 | `any` type | Define proper types/interfaces |
-| 3 | Direct DB query without Drizzle | Use Drizzle ORM |
+| 3 | Raw SQL in **application code** (Server Actions, API routes, lib/) | Use Drizzle ORM query builder. **Exception:** Raw SQL is required and expected in `src/db/migrations/` and `supabase/migrations/` for RLS policies, triggers, functions, and partition DDL — these are infrastructure SQL, not application queries. |
 | 4 | `service_role` key in client code | Use `anon` key for client, restrict `service_role` to server-only |
 | 5 | Hardcode tenant_id | Read from JWT/session |
 | 6 | Mutate Zustand state directly | Use `set()` function |
 | 7 | `"use client"` on page component | Use feature boundary pattern |
 | 8 | Skip audit log for state change | Log every state change to audit |
-| 9 | `console.log` in production | Use pino logger (Node.js) |
+| 9 | `console.log` in production (Node.js runtime) | Use pino logger (Node.js) or `edgeLogger` (Edge Runtime) |
 | 10 | Inline Tailwind colors | Use CSS custom properties from tokens.css |
 | 11 | `process.env` direct access | Use `@/lib/env` validated config |
 | 12 | Inline Supabase client creation | Use factory from `@/lib/supabase/` |
 | 13 | try-catch inside Inngest step.run() | Let Inngest handle retries |
 | 14 | Arbitrary responsive breakpoints | Use Tailwind defaults only |
 | 15 | Hardcoded test data | Use factory functions from `src/test/factories.ts` |
+
+**SQL Boundary Clarification:**
+
+| Location | Raw SQL Allowed? | Purpose |
+|----------|:---------------:|---------|
+| `src/db/migrations/*.sql` | **YES** | Drizzle-generated DDL |
+| `supabase/migrations/*.sql` | **YES** | RLS policies, triggers, auth hooks, partition DDL |
+| `src/**/*.ts` (application code) | **NO** | Use Drizzle query builder only |
+| `src/db/__tests__/rls/*.test.ts` | **YES** | RLS tests need raw SQL to test policies with different JWT claims |
 
 ### Enforcement
 
@@ -1513,7 +2081,7 @@ qa-localization-tool/
     │   │   ├── segmentExtractor.ts
     │   │   ├── segmentExtractor.test.ts
     │   │   ├── namespaceHandler.ts
-    │   │   └── constants.ts              # MAX_FILE_SIZE_BYTES (30MB)
+    │   │   └── constants.ts              # MAX_FILE_SIZE_BYTES (15MB)
     │   │
     │   ├── scoring/                      # FR23-FR30, FR70
     │   │   ├── components/
@@ -1574,9 +2142,13 @@ qa-localization-tool/
     │
     ├── lib/                              # Shared utilities
     │   ├── env.ts                        # Zod-validated env access (R35)
-    │   ├── logger.ts                     # pino configuration
+    │   ├── logger.ts                     # pino configuration (Node.js runtime)
+    │   ├── logger-edge.ts                # Structured JSON logger (Edge Runtime)
     │   ├── utils.ts                      # cn(), general utilities
     │   ├── constants.ts                  # App-wide constants
+    │   ├── cache/                        # Cache isolation layer
+    │   │   ├── glossaryCache.ts          # "use cache" + cacheTag for glossary
+    │   │   └── taxonomyCache.ts          # "use cache" + cacheTag for taxonomy
     │   ├── supabase/                     # Client factories (R36)
     │   │   ├── server.ts                 # Server Component/Action client
     │   │   ├── client.ts                 # Browser client
@@ -1978,9 +2550,11 @@ Self-healing adds fix generation cost on top of QA detection:
 
 ## Architecture Validation Results
 
+> **Validation Scope Disclosure:** This validation was performed as self-assessment during architecture authoring (Party Mode review with simulated personas). It has NOT been independently validated by an external architect or verified via prototype spike. The checklist below reflects internal consistency — not production-proven correctness. A proof-of-concept spike (DB schema + auth + 1 pipeline layer) is recommended before full implementation to surface integration issues not caught by document review.
+
 ### Coherence Validation ✅
 
-**Decision Compatibility:** All 9 core technologies verified compatible. No version conflicts detected. Next.js 16 + Tailwind v4 + shadcn/ui + Drizzle 0.45.1 + Supabase 2.95.3 + Inngest 3.52.0 + AI SDK v6 + pino + fast-xml-parser 5.3.5 all work together without issues.
+**Decision Compatibility:** All 9 core technologies verified compatible based on documentation review. No version conflicts detected. Next.js 16 + Tailwind v4 + shadcn/ui + Drizzle 0.45.1 + Supabase 2.95.3 + Inngest 3.52.0 + AI SDK v6 + pino + fast-xml-parser 5.3.5 all work together without issues. **Note:** Compatibility is based on documentation and API surface review — not a running prototype.
 
 **Pattern Consistency:** The following patterns are internally consistent with no contradictions:
 
@@ -2011,7 +2585,7 @@ Self-healing adds fix generation cost on top of QA detection:
 ### Implementation Readiness ✅
 
 **Decision Completeness:**
-- 24 architectural decisions across 5 categories — all documented with rationale
+- 29 architectural decisions across 5 categories — all documented with rationale
 - 9 technology versions verified via web search (February 2026)
 - Initialization command sequence provided (4 steps)
 
@@ -2022,21 +2596,21 @@ Self-healing adds fix generation cost on top of QA detection:
 - Integration points for 8 external services defined
 
 **Pattern Completeness:**
-- 57 refinements applied (R1-R52 Party Mode + R53-R57 Research Integration) from 5 review rounds
+- 72 refinements applied (R1-R52 Party Mode + R53-R57 Research Integration + R58-R72 Adversarial Review) from 7 review rounds
 - 15 anti-patterns documented
 - Code examples for all major patterns
 - Test conventions with workspace configuration
 
 ### Gap Analysis
 
-**Critical Gaps:** 0
+**Critical Gaps:** 0 (after adversarial review remediation — see Adversarial Review Remediation Log below)
 
-**Important Gaps (non-blocking):**
+**Important Gaps — Resolved:**
 
 | # | Gap | Impact | Resolution |
 |---|-----|--------|------------|
-| G1 | DB Schema ERD not included | Developers infer relationships from schema files | Create ERD as part of first implementation story |
-| G2 | API rate limit values not specified | Developers implement rate limits without consistent values | Define in story: 100 req/min per user default |
+| G1 | ~~DB Schema ERD not included~~ | ~~Developers infer relationships from schema files~~ | ✅ Addressed — Decision 1.9 adds full ERD with cardinality, FKs, and cascade rules |
+| G2 | ~~API rate limit values not specified~~ | ~~Developers implement rate limits without consistent values~~ | ✅ Addressed — Decision 2.2 rate limiting section defines limits per endpoint category |
 | G3 | ~~Self-healing feature structure not detailed~~ | ~~No MVP impact~~ | ✅ Addressed — Growth Architecture section added with pipeline, file structure, and phased roadmap |
 
 **Nice-to-Have Gaps:**
@@ -2084,26 +2658,56 @@ Self-healing adds fix generation cost on top of QA detection:
 - [x] Vitest workspace configuration defined
 - [x] Party Mode review (R44-R52)
 
+### Adversarial Review Remediation Log
+
+The following 15 findings were identified via adversarial review and remediated in this document:
+
+| # | Finding | Severity | Resolution | Section Updated |
+|---|---------|----------|------------|-----------------|
+| F1 | Self-validation declared zero critical gaps without external review | Medium | Added validation scope disclosure and prototype spike recommendation | Validation Results header |
+| F2 | No ERD, no FK diagram, no cardinality specs | High | Added Decision 1.9 with full Mermaid ERD, FK definitions, cardinality, and cascade rules | Decision 1.9 |
+| F3 | 30MB DOM parsing memory math optimistic (4x claim) | High | Reduced to 15MB guard with detailed memory budget analysis (6-10x overhead) | Decision 1.6 |
+| F4 | Caching relies on `unstable_cache` (unstable API) | Medium | Replaced with stable `"use cache"` directive + `cacheTag`/`cacheLife` APIs (stable in Next.js 16) | Decision 1.3 |
+| F5 | Edge rate limiting via in-memory counter is non-functional | High | Replaced with Upstash Redis `@upstash/ratelimit` + defined limits per endpoint category | Decision 2.2 |
+| F6 | M3 RBAC sync gap creates UI information disclosure window | Medium | Added JWT expiry (15min), Realtime refresh, fallback poll, stale-JWT UI mitigation, S5 test | Decision 2.1 |
+| F7 | Language-pair thresholds are arbitrary without calibration | Medium | Labeled as PROVISIONAL, added calibration methodology, beta validation steps, ongoing monitoring | Decision 3.6 |
+| F8 | No backup, DR, or data retention strategy | High | Added Decision 1.8 with PITR, backup schedule, DR targets, audit log retention, GDPR deletion | Decision 1.8 |
+| F9 | 50 concurrent users lacks capacity analysis | High | Added Decision 5.0 with service tier requirements, connection pooling config, load testing strategy | Decision 5.0 |
+| F10 | Anti-pattern #3 contradicts RLS SQL migrations | Low | Clarified boundary: raw SQL forbidden in app code, required in migrations/RLS/tests | Anti-Patterns section |
+| F11 | Score recalculation has stale-score UX gap | Medium | Added transition state UX table, approve button disabled during recalc, server-side status check | Decision 3.4 |
+| F12 | Cost estimates only show AI costs, not total operational cost | Medium | Added infrastructure fixed costs, amortized per-volume breakdown, break-even analysis | Decision 3.5 |
+| F13 | Technology versions unverifiable | Low | Added verification commands per package, version lock strategy, pre-init verification note | Technology Versions |
+| F14 | Drizzle pre-1.0 has no migration plan to v1.0 | Low | Added Drizzle 0.x→1.0 migration plan with risk/mitigation table | Technology Versions |
+| F15 | Edge Middleware logs via unstructured console.log | Medium | Added `edgeLogger` structured JSON logger for Edge Runtime | Decision 5.4 |
+
 ### Architecture Readiness Assessment
 
-**Overall Status:** ✅ READY FOR IMPLEMENTATION
+**Overall Status:** ✅ READY FOR IMPLEMENTATION (after adversarial review remediation)
 
-**Confidence Level:** HIGH
+**Confidence Level:** HIGH (self-assessed — external validation recommended via prototype spike)
 
 **Key Strengths:**
-- Thoroughly validated through 5 rounds of Party Mode review (52 refinements) + 5 Research Integration refinements (R53-R57)
+- Thoroughly validated through 7 review rounds: 52 Party Mode refinements (R1-R52) + 5 Research Integration (R53-R57) + 15 Adversarial Review (R58-R72) = 72 total refinements
 - All 8 PRD handoff items resolved with specific decisions
 - Complete project structure with ~120+ files mapped to requirements
-- Defense-in-depth security (M3 RBAC, RLS Day 1, 3-layer audit)
+- Defense-in-depth security (M3 RBAC with TOCTOU mitigation, RLS Day 1, 3-layer audit, Upstash rate limiting)
 - Comprehensive patterns prevent AI agent implementation conflicts
 - Performance gates and benchmarks defined before MVP ship
+- Full ERD with cardinality and cascade rules
+- Infrastructure capacity analysis with service tier requirements and load testing strategy
+- Backup, DR, and data retention strategy with GDPR compliance
 
 **Areas for Future Enhancement:**
-- DB Schema ERD (create during first implementation story)
-- Rate limit configuration (define in implementation stories)
-- ~~Self-healing feature architecture~~ ✅ Growth Architecture section added (R56)
+- ~~DB Schema ERD~~ ✅ Decision 1.9
+- ~~Rate limit configuration~~ ✅ Decision 2.2
+- ~~Self-healing feature architecture~~ ✅ Growth Architecture section (R56)
+- ~~Backup/DR strategy~~ ✅ Decision 1.8
 - Storybook for component library (post-MVP)
 - OpenTelemetry tracing (Growth phase)
+- External architect review (recommended before MVP launch)
+
+**Recommended Pre-Implementation Spike:**
+Before full implementation, build a minimal spike covering: Supabase Auth → Drizzle schema (3 tables) → RLS policy → 1 Inngest function → 1 Server Action. This validates the core integration pattern in ~1-2 days and surfaces any version compatibility issues.
 
 ### Implementation Handoff
 
@@ -2112,13 +2716,18 @@ Self-healing adds fix generation cost on top of QA detection:
 2. Use implementation patterns consistently across all components
 3. Respect project structure and boundaries — files go where specified
 4. Refer to this document for all architectural questions
-5. Follow the 15 anti-patterns list — violations must be fixed before merge
+5. Follow the anti-patterns list — violations must be fixed before merge
 6. Every Server Action must return ActionResult<T> and write audit log
 7. Every Inngest step must have deterministic ID for idempotency
 8. Every component must follow accessibility patterns (WCAG 2.1 AA)
+9. Verify technology versions before project initialization (see Technology Versions section)
+10. Use `edgeLogger` in Edge Middleware — never raw `console.log`
 
 **First Implementation Priority:**
 ```bash
+# Step 0: Verify technology versions are still current
+npm info next version && npm info drizzle-orm version && npm info inngest version
+
 # Step 1: Initialize project
 npx create-next-app@latest qa-localization-tool --typescript --tailwind --eslint --app --src-dir
 
@@ -2126,7 +2735,7 @@ npx create-next-app@latest qa-localization-tool --typescript --tailwind --eslint
 npx shadcn@latest init
 
 # Step 3: Install core dependencies
-npm i @supabase/supabase-js @supabase/ssr drizzle-orm inngest ai fast-xml-parser zustand pino sonner zod
+npm i @supabase/supabase-js @supabase/ssr drizzle-orm inngest ai fast-xml-parser zustand pino sonner zod @upstash/ratelimit @upstash/redis
 
 # Step 4: Install dev dependencies
 npm i -D drizzle-kit @types/node vitest @vitejs/plugin-react jsdom @testing-library/react @faker-js/faker playwright @playwright/test drizzle-zod
@@ -2136,9 +2745,9 @@ npm i -D drizzle-kit @types/node vitest @vitejs/plugin-react jsdom @testing-libr
 
 **Implementation Sequence:**
 1. Project initialization + folder structure + design tokens
-2. DB schema (Drizzle) + RLS policies + audit trigger
-3. Supabase Auth + RBAC (JWT + user_roles + M3 helpers)
-4. Edge middleware + rate limiting
-5. Feature modules: parser → pipeline → scoring → review → glossary → dashboard → audit
-6. CI/CD pipeline (GitHub Actions)
-7. Monitoring (Vercel Analytics + Better Stack)
+2. DB schema (Drizzle) + ERD validation + RLS policies + audit trigger + partitioned audit_logs
+3. Supabase Auth + RBAC (JWT 15min expiry + user_roles + M3 helpers + Realtime role sync)
+4. Edge middleware + Upstash rate limiting + `edgeLogger`
+5. Feature modules: parser (15MB guard) → pipeline → scoring → review → glossary → dashboard → audit
+6. CI/CD pipeline (GitHub Actions) + load testing
+7. Monitoring (Vercel Analytics + Better Stack) + backup verification

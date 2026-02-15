@@ -316,8 +316,8 @@ flowchart TD
 │ file-02.xlf   1,800 seg   ~$0.05            │
 │ file-03.xlf   3,100 seg   ~$0.09            │
 │──────────────────────────────────────────────│
-│ Mode: [Economy ▼]    Total: ~$0.26           │
-│       [Thorough ▼]   Total: ~$1.30 (5x)     │
+│ Mode: [Economy ─────] [★ Thorough ═══]       │
+│ Est:   ~$0.26 / ~2min   ~$1.30 / ~10min     │
 │                                              │
 │ Estimate based on segment count.             │
 │ Actual cost may vary by AI complexity.       │
