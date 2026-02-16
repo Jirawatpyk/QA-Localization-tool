@@ -1,0 +1,45 @@
+@theme {
+  /* Primary — Indigo */
+  --color-primary: #4F46E5;
+  --color-primary-hover: #4338CA;
+  --color-primary-light: #EEF2FF;
+  --color-primary-foreground: #FFFFFF;
+
+  /* Neutral — Slate */
+  --color-surface: #FFFFFF;
+  --color-surface-secondary: #F9FAFB;
+  --color-border: #E2E8F0;
+  --color-border-strong: #CBD5E1;
+  --color-muted: #F1F5F9;
+  --color-text-primary: #111827;
+  --color-text-secondary: #6B7280;
+  --color-text-muted: #94A3B8;
+
+  /* Semantic */
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --color-info: #3B82F6;
+
+  /* Finding Severity */
+  --color-severity-critical: #DC2626;
+  --color-severity-major: #F59E0B;
+  --color-severity-minor: #3B82F6;
+  --color-severity-enhancement: #10B981;
+
+  /* Score Status */
+  --color-status-pass: #10B981;
+  --color-status-pending: #F59E0B;
+  --color-status-fail: #EF4444;
+  --color-status-analyzing: #4F46E5;
+
+  /* Layout */
+  --sidebar-width: 240px;
+  --sidebar-width-collapsed: 48px;
+  --detail-panel-width: 400px;
+  --content-max-width: 1400px;
+
+  /* Spacing (4px base, compact 0.75x) */
+  --spacing-unit: 4px;
+  --density-factor: 0.75;
+}

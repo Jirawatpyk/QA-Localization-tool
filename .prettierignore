@@ -1,0 +1,7 @@
+.next
+node_modules
+_bmad
+_bmad-output
+docs
+public
+package-lock.json

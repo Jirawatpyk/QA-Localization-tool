@@ -44,7 +44,7 @@ development_status:
   # Epic 1: Project Foundation & Configuration (MVP)
   # ============================================================
   epic-1: in-progress
-  1-1-project-initialization-design-system-setup: ready-for-dev
+  1-1-project-initialization-design-system-setup: done
   1-2-database-schema-authentication: backlog
   1-3-project-management-configuration: backlog
   1-4-glossary-import-management: backlog
