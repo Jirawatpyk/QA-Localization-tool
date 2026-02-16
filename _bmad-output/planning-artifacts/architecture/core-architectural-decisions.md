@@ -104,7 +104,13 @@ export async function getCachedGlossary(projectId: string) {
 
 | Enforce RLS (MVP) | No RLS Needed (MVP) |
 |---|---|
-| projects, files, segments, findings, scores, audit_logs, glossaries, review_sessions | taxonomy_definitions, severity_configs (shared reference data) |
+| projects, files, segments, findings, scores, audit_logs, glossaries, review_sessions, review_actions, ai_usage_logs, run_metadata, suppression_rules, file_assignments, notifications, exported_reports, audit_results, ai_metrics_timeseries, feedback_events, fix_suggestions, self_healing_config | taxonomy_definitions, severity_configs |
+
+**Why severity_configs has NO RLS despite having tenant_id:**
+- `tenant_id` is **nullable** — `NULL` = system defaults (critical=25, major=5, minor=1), non-NULL = per-tenant overrides
+- RLS policy `tenant_id = jwt.tenant_id` would **hide NULL rows** (system defaults become invisible)
+- Application code must query: `WHERE tenant_id = :tenantId OR tenant_id IS NULL` (with tenant override taking precedence)
+- This is a legitimate hybrid pattern — access control handled at application level via `withTenant()` variant that includes NULL defaults
 
 **Mandatory Test Suite (CI Gate):**
 - Cross-tenant leak tests: Tenant A must NOT see Tenant B data
@@ -225,16 +231,30 @@ erDiagram
     projects ||--o{ scores : "has"
     projects ||--o{ review_sessions : "has"
     projects ||--o{ feedback_events : "generates"
+    projects ||--o{ suppression_rules : "has"
+    projects ||--o{ exported_reports : "has"
+    projects ||--o{ audit_results : "has"
+    projects ||--o{ ai_metrics_timeseries : "tracks"
 
     files ||--o{ segments : "contains"
+    files ||--o{ scores : "scored by"
+    files ||--o{ ai_usage_logs : "logs"
+    files ||--o{ run_metadata : "tracks"
+    files ||--o{ file_assignments : "assigned via"
 
     segments ||--o{ findings : "has"
 
     findings ||--o{ feedback_events : "triggers"
+    findings ||--o{ review_actions : "has"
+    findings ||--o{ fix_suggestions : "has"
 
     review_sessions ||--o{ findings : "reviews"
 
     glossaries ||--o{ glossary_terms : "contains"
+
+    users ||--o{ notifications : "receives"
+
+    tenants ||--o{ self_healing_config : "configures"
 
     tenants {
         uuid id PK
@@ -248,6 +268,7 @@ erDiagram
         uuid tenant_id FK
         varchar email
         varchar display_name
+        jsonb native_languages "nullable — BCP-47 array for reviewer language matching"
         timestamptz created_at
     }
 
@@ -263,10 +284,13 @@ erDiagram
         uuid id PK
         uuid tenant_id FK
         varchar name
+        text description "nullable"
         varchar source_lang
-        varchar target_lang
+        jsonb target_langs
         varchar processing_mode "economy | thorough"
         varchar status "draft | processing | reviewed | completed"
+        integer auto_pass_threshold "default 95"
+        decimal ai_budget_monthly_usd "nullable — NULL means unlimited"
         timestamptz created_at
         timestamptz updated_at
     }
@@ -311,12 +335,14 @@ erDiagram
         varchar ai_model "nullable"
         real ai_confidence "nullable, 0-100"
         text suggested_fix "nullable"
+        integer segment_count "default 1 — multi-segment span tracking"
         timestamptz created_at
         timestamptz updated_at
     }
 
     scores {
         uuid id PK
+        uuid file_id FK "nullable — null for project-level aggregate"
         uuid project_id FK
         uuid tenant_id FK
         real mqm_score "0-100"
@@ -325,8 +351,9 @@ erDiagram
         integer major_count
         integer minor_count
         real npt "Normalized Penalty Total"
-        varchar status "calculating | calculated | overridden | auto_passed"
-        varchar auto_pass_rationale "nullable"
+        varchar layer_completed "L1 | L1L2 | L1L2L3"
+        varchar status "calculating | calculated | partial | overridden | auto_passed | na"
+        text auto_pass_rationale "nullable"
         timestamptz calculated_at
         timestamptz created_at
     }
@@ -344,6 +371,7 @@ erDiagram
     glossaries {
         uuid id PK
         uuid tenant_id FK
+        uuid project_id FK "nullable"
         varchar name
         varchar source_lang
         varchar target_lang
@@ -375,20 +403,25 @@ erDiagram
         uuid id PK
         uuid tenant_id FK
         uuid finding_id FK
+        uuid file_id FK
         uuid project_id FK
         uuid reviewer_id FK
-        varchar action "accept | reject | edit | change_severity"
+        varchar action "accept | reject | edit | change_severity | flag | note | source_issue"
         varchar finding_category
-        varchar finding_severity
-        varchar new_severity "nullable"
+        varchar original_severity "severity before any override"
+        varchar new_severity "nullable — only if severity changed"
+        varchar layer "L1 | L2 | L3"
+        boolean is_false_positive "true if action=reject"
+        boolean reviewer_is_native "reviewer native for this language pair"
         varchar source_lang
         varchar target_lang
-        text source_text
+        text source_text "denormalized for ML training"
         text original_target
         text corrected_target "nullable"
         varchar detected_by_layer
         varchar ai_model "nullable"
         real ai_confidence "nullable"
+        jsonb metadata "nullable — high_value signals, context"
         timestamptz created_at
     }
 
@@ -422,6 +455,144 @@ erDiagram
         real penalty_weight "critical=25, major=5, minor=1"
         timestamptz created_at
     }
+
+    review_actions {
+        uuid id PK
+        uuid finding_id FK
+        uuid file_id FK
+        uuid project_id FK
+        uuid tenant_id FK
+        varchar action_type
+        varchar previous_state
+        varchar new_state
+        uuid user_id FK
+        uuid batch_id "nullable"
+        jsonb metadata
+        timestamptz created_at
+    }
+
+    ai_usage_logs {
+        uuid id PK
+        uuid file_id FK
+        uuid project_id FK
+        uuid tenant_id FK
+        varchar layer "L1 | L2 | L3"
+        varchar model
+        varchar provider
+        integer input_tokens
+        integer output_tokens
+        real estimated_cost
+        integer latency_ms
+        varchar status
+        timestamptz created_at
+    }
+
+    run_metadata {
+        uuid id PK
+        uuid file_id FK
+        uuid project_id FK
+        uuid tenant_id FK
+        jsonb model_versions
+        varchar glossary_version
+        varchar rule_config_hash
+        varchar processing_mode
+        real total_cost
+        integer duration_ms
+        varchar layer_completed
+        timestamptz created_at
+    }
+
+    suppression_rules {
+        uuid id PK
+        uuid project_id FK
+        uuid tenant_id FK
+        text pattern
+        varchar category
+        varchar scope "project | tenant"
+        text reason
+        uuid created_by FK
+        boolean is_active "default true"
+        timestamptz created_at
+    }
+
+    file_assignments {
+        uuid id PK
+        uuid file_id FK
+        uuid project_id FK
+        uuid tenant_id FK
+        uuid assigned_to FK
+        uuid assigned_by FK
+        varchar status "pending | accepted | completed"
+        varchar priority "nullable"
+        text notes "nullable"
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    notifications {
+        uuid id PK
+        uuid tenant_id FK
+        uuid user_id FK
+        varchar type
+        varchar title
+        text body
+        boolean is_read "default false"
+        jsonb metadata "nullable"
+        timestamptz created_at
+    }
+
+    exported_reports {
+        uuid id PK
+        uuid project_id FK
+        uuid tenant_id FK
+        varchar format "pdf | xlsx"
+        varchar storage_path
+        uuid generated_by FK
+        timestamptz created_at
+    }
+
+    audit_results {
+        uuid id PK
+        uuid project_id FK
+        uuid tenant_id FK
+        varchar audit_type
+        jsonb result
+        timestamptz created_at
+    }
+
+    ai_metrics_timeseries {
+        uuid id PK
+        uuid project_id FK
+        uuid tenant_id FK
+        varchar metric_type
+        real metric_value
+        timestamptz period_start
+        timestamptz period_end
+        jsonb metadata "nullable"
+        timestamptz created_at
+    }
+
+    fix_suggestions {
+        uuid id PK
+        uuid finding_id FK
+        uuid tenant_id FK
+        text suggested_text
+        varchar model
+        real confidence
+        varchar status "pending | accepted | rejected"
+        varchar mode "default disabled"
+        timestamptz created_at
+    }
+
+    self_healing_config {
+        uuid id PK
+        uuid tenant_id FK
+        uuid project_id FK "nullable"
+        jsonb config
+        varchar mode "default disabled"
+        timestamptz created_at
+        timestamptz updated_at
+    }
 ```
 
 **Key Relationships & Cardinality:**
@@ -433,13 +604,24 @@ erDiagram
 | project → files | 1:N | `files.project_id` | CASCADE (delete project → delete files) |
 | file → segments | 1:N | `segments.file_id` | CASCADE |
 | segment → findings | 1:N | `findings.segment_id` | CASCADE |
+| file → scores | 1:N | `scores.file_id` | CASCADE |
 | project → scores | 1:N | `scores.project_id` | CASCADE |
 | project → review_sessions | 1:N | `review_sessions.project_id` | CASCADE |
+| finding → review_actions | 1:N | `review_actions.finding_id` | CASCADE |
 | finding → feedback_events | 1:N | `feedback_events.finding_id` | SET NULL (preserve training data) |
+| finding → fix_suggestions | 1:N | `fix_suggestions.finding_id` | CASCADE |
 | glossary → glossary_terms | 1:N | `glossary_terms.glossary_id` | CASCADE |
 | tenant → audit_logs | 1:N | `audit_logs.tenant_id` | RESTRICT (never delete audit) |
+| file → ai_usage_logs | 1:N | `ai_usage_logs.file_id` | CASCADE |
+| file → run_metadata | 1:N | `run_metadata.file_id` | CASCADE |
+| project → suppression_rules | 1:N | `suppression_rules.project_id` | CASCADE |
+| file → file_assignments | 1:N | `file_assignments.file_id` | CASCADE |
+| project → exported_reports | 1:N | `exported_reports.project_id` | CASCADE |
+| project → audit_results | 1:N | `audit_results.project_id` | CASCADE |
+| project → ai_metrics_timeseries | 1:N | `ai_metrics_timeseries.project_id` | CASCADE |
+| project → glossaries | 1:N | `glossaries.project_id` | SET NULL (glossary survives project deletion) |
 
-**Tenant Scoping Rule:** Every table except `taxonomy_definitions` (shared reference data) has a `tenant_id` column. All queries must include tenant filter via `withTenant()` helper or RLS policy.
+**Tenant Scoping Rule:** Every table except `taxonomy_definitions` and `severity_configs` (shared reference data) has a `tenant_id` column. All queries must include tenant filter via `withTenant()` helper or RLS policy.
 
 ---
 
@@ -848,6 +1030,51 @@ await step.run(`segment-${id}-comet-qe`, async () => {
 | xCOMET annotation | ~$0.15 | Heavier model, span-level output |
 | **AI cost savings** | -$0.10 to -$0.30 | Smart routing skips L2 for clear segments |
 | **Net impact** | ~$0.00 to -$0.10 | Roughly cost-neutral or slight savings |
+
+#### 3.8 Finding Status Lifecycle & Transition Matrix
+
+- **Decision:** 8-state lifecycle with unrestricted reviewer transitions + `re_accepted` distinction
+- **Rationale:** QA reviewers need full flexibility to change decisions during review. The `re_accepted` state preserves audit trail when a previously rejected finding is accepted (indicates reviewer reconsidered).
+- **Affects:** Review workflow, review_actions audit, finding card UI, keyboard shortcuts
+
+**Entry States:**
+
+| State | How Created |
+|-------|------------|
+| `pending` | Auto-detected by L1/L2/L3 pipeline |
+| `manual` | Reviewer creates finding manually |
+
+**Review States:**
+
+| State | Meaning |
+|-------|---------|
+| `accepted` | Finding confirmed as valid issue (first time) |
+| `re_accepted` | Finding re-confirmed after previous `rejected` |
+| `rejected` | Finding dismissed as false positive |
+| `flagged` | Needs further review / escalation |
+| `noted` | Acknowledged but no action required |
+| `source_issue` | Problem in source text, not translation |
+
+**Transition Matrix (From → To):**
+
+| From ↓ \ To → | accepted | re_accepted | rejected | flagged | noted | source_issue |
+|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **pending** | ✅ | — | ✅ | ✅ | ✅ | ✅ |
+| **manual** | ✅ | — | ✅ | ✅ | ✅ | ✅ |
+| **accepted** | — | — | ✅ | ✅ | ✅ | ✅ |
+| **re_accepted** | — | — | ✅ | ✅ | ✅ | ✅ |
+| **rejected** | — | ✅ | — | ✅ | ✅ | ✅ |
+| **flagged** | ✅ | ✅* | ✅ | — | ✅ | ✅ |
+| **noted** | ✅ | ✅* | ✅ | ✅ | — | ✅ |
+| **source_issue** | ✅ | ✅* | ✅ | ✅ | ✅ | — |
+
+_* `re_accepted` is used instead of `accepted` when finding was previously `rejected` at any point in its history (check `review_actions` for prior rejected state)._
+
+**Key Rules:**
+1. Every transition MUST write to `review_actions` table (audit trail)
+2. Every transition that changes severity MUST also write to `feedback_events` (ML training data)
+3. Bulk operations apply the same transition to multiple findings — each gets its own `review_actions` entry with shared `batch_id`
+4. Score recalculation triggers after any status transition via Inngest event
 
 ---
 
@@ -1298,4 +1525,44 @@ Token count + estimated cost per request enables Economy vs Thorough cost tracki
 | R70 | Technology versions: verification commands + version lock strategy | Adversarial Review | Infra |
 | R71 | Drizzle 0.x → 1.0 migration plan with risk/mitigation table | Adversarial Review | Infra |
 | R72 | `edgeLogger` structured JSON for Edge Runtime (replaces raw console.log) | Adversarial Review | Infra |
+
+### Gap Resolution Addenda (2026-02-16)
+
+Architectural clarifications resolving implementation gap analysis findings.
+
+#### GA-1: Review Page Route (Gap #31)
+
+- **Conflict:** Epic uses `(dashboard)/projects/[projectId]/files/[fileId]/review/`, Architecture uses `(app)/projects/[projectId]/review/[sessionId]/`
+- **Decision:** Architecture is authoritative. Route is `(app)/projects/[projectId]/review/[sessionId]/page.tsx`
+- **Rationale:** (1) Route group is `(app)` not `(dashboard)` — matches project-structure-boundaries.md. (2) Review is session-based, not file-based — a review session spans a project, reviewer navigates files within the session UI. (3) `review_sessions` table has `project_id` (not `file_id`), confirming project-level scope. File selection is a UI concern within the review page, not a route parameter.
+- **Action:** Epic route references should be updated to match Architecture when those stories are created.
+
+#### GA-2: Suppression Pattern Detection Algorithm (Gap #34)
+
+- **Conflict:** Story 4.6 specifies "semantic similarity > 0.85" but no embedding model in tech stack
+- **Decision:** MVP uses word-overlap similarity (Jaccard index on normalized tokens). Semantic similarity via embeddings deferred to Growth phase.
+- **Rationale:** Adding an embedding model (e.g., `@xenova/transformers`) to MVP increases bundle size and complexity without clear ROI at launch. Word-overlap catches the most common false positive patterns (same rule firing on same source pattern). Growth phase can add embeddings when suppression accuracy data from MVP informs the decision.
+- **MVP Formula:** `similarity = |intersection(tokens_a, tokens_b)| / |union(tokens_a, tokens_b)|` where tokens are NFKC-normalized, lowercased, whitespace-split (or Intl.Segmenter for CJK/Thai). Threshold: 0.70 for "similar enough to suggest suppression".
+
+#### GA-3: Auto-Pass Mode Transition (Gap #41)
+
+- **Conflict:** Story 7.1 says "project operated 2+ months" triggers auto-pass progression but no programmatic check
+- **Decision:** Admin enables auto-pass mode manually via project settings. "2+ months" is a **recommendation in documentation**, not an enforced constraint.
+- **Rationale:** (1) "2+ months" is a trust-building guideline, not a hard rule — some projects may be ready sooner, others later. (2) Adding a date-check adds complexity with no safety benefit (Admin already has full control). (3) The UI should display a recommendation tooltip: "Recommended after 2+ months of consistent QA results" but the toggle is always available.
+- **Implementation:** `projects.auto_pass_threshold` (already in ERD) controls the score threshold. A new `projects.auto_pass_enabled boolean DEFAULT false` field will be added when Story 7.1 is implemented (not in initial ERD — Growth phase table alteration).
+
+#### GA-4: Blind Audit PRNG Seed (Gap #42)
+
+- **Conflict:** Story 7.2 specifies `seed = project_id + audit_week` but project_id is UUID — cannot add integer
+- **Decision:** Use hash-based deterministic seed: `seed = SHA-256(project_id + '_' + audit_week_iso).slice(0, 8)` parsed as hex integer
+- **Rationale:** SHA-256 produces uniform distribution regardless of input format. Slicing first 8 hex chars gives a 32-bit integer range (0 to ~4.3 billion), sufficient for PRNG seeding. The `audit_week_iso` format is `YYYY-Www` (e.g., `2026-W07`), ensuring weekly rotation.
+- **Implementation:**
+```typescript
+function auditSeed(projectId: string, auditWeekIso: string): number {
+  const hash = crypto.createHash('sha256')
+    .update(`${projectId}_${auditWeekIso}`)
+    .digest('hex')
+  return parseInt(hash.slice(0, 8), 16)
+}
+```
 

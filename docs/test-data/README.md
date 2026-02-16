@@ -28,9 +28,10 @@ Data for building and testing the qa-localization-tool.
 | 5 | Excel bilingual (source/target columns) | ≥ 1 | `excel/` | Epic 2 |
 | 6 | Thai reference สำหรับ back-translation | 100 segments | `back-translation/th-reference.json` | Epic 5 |
 
-> **หมายเหตุ:** ภาษาอื่น (JA/KO/ZH) มีจาก public data แล้ว — Mona เตรียมแค่ **ภาษาไทย** เป็นหลัก
->
-> **วิธีทำข้อ 4:** เปิด Xbench → โหลด XLIFF → Run QA → Export CSV → ตั้งชื่อตาม naming rule ด้านล่าง
+> **หมายเหตุ:**
+> - ภาษาอื่น (JA/KO/ZH) — XLIFF, language samples, back-translation reference ใช้จาก SAP public data ได้หมด
+> - **Mona เตรียมแค่ภาษาไทย** เพราะไม่มี public TH data
+> - **วิธีทำข้อ 4:** เปิด Xbench → โหลด XLIFF → Run QA → Export CSV → ตั้งชื่อตาม naming rule ด้านล่าง
 
 ---
 
@@ -106,7 +107,10 @@ Purpose-specific test data referenced in Epic acceptance criteria. Created from 
 |-----------|-------------|--------------|-------------|
 | `glossary-matching/th.json` | Epic 1 / Story 1.5 | 500+ annotated Thai segments for glossary matching validation | ← `glossaries/` |
 | `segmenter/{language}.json` | Epic 2 / Story 2.1 | Token count verification for CJK/Thai (Intl.Segmenter) | ← `sap-xliff/` + Mona's TH data |
-| `back-translation/th-reference.json` | Epic 5 / Story 5.1 | 100 Thai reference segments for back-translation accuracy | ← Mona (bilingual reference) |
+| `back-translation/th-reference.json` | Epic 5 / Story 5.1 | 100 Thai reference segments — Mona เขียน reference back-translation | ← Mona (bilingual reference) |
+| `back-translation/ja-reference.json` | Epic 5 / Story 5.1 | JA back-translation reference — extract EN source from SAP | ← Dev extract จาก `sap-xliff/en-ja/` |
+| `back-translation/ko-reference.json` | Epic 5 / Story 5.1 | KO back-translation reference — extract EN source from SAP | ← Dev extract จาก `sap-xliff/en-ko/` |
+| `back-translation/zh-reference.json` | Epic 5 / Story 5.1 | ZH back-translation reference — extract EN source from SAP | ← Dev extract จาก `sap-xliff/en-zh/` |
 
 ---
 
@@ -119,6 +123,7 @@ Purpose-specific test data referenced in Epic acceptance criteria. Created from 
 | Provide production XLIFF EN→TH + Xbench output | **Mona** | Before Epic 2 / Story 2.4 | ⬜ |
 | Provide glossaries | **Mona** | Before Epic 1 / Story 1.5 | ⬜ |
 | Provide Thai back-translation reference | **Mona** | Before Epic 5 / Story 5.1 | ⬜ |
+| Extract JA/KO/ZH back-translation reference from SAP | Dev | Before Epic 5 / Story 5.1 | ⬜ |
 | Create Epic test fixtures from all data | Dev | During each Epic | ⬜ |
 
 ---

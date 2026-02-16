@@ -353,13 +353,305 @@ App Layout
 
 **Columns:** Filename | ScoreBadge (sm) | Status | Issue counts by severity | Action button
 
-### QACertificate (P2 — Client Deliverable)
+### OnboardingTour (P2 — First-Time Experience) — Gap #17
 
-**Purpose:** 1-click PDF generation for client quality proof
+**Purpose:** 5-step guided tour for first-time users — builds initial trust and reduces time-to-first-value
 
-**Anatomy:** Modal preview showing: file metadata, score, all check categories with pass/fail status, issue summary, conclusion statement, timestamp + reviewer info.
+**Library:** `driver.js` (v1.3+)
+- 5KB gzipped, zero dependencies, TypeScript native
+- Supports highlight + popover positioning, step-by-step navigation
+- `prefers-reduced-motion` respected, keyboard accessible (Tab/Enter/Esc)
+- Install: `npm install driver.js`
 
-**Interaction:** Preview in modal (React component) → "Download PDF" button → server-side PDF generation via Puppeteer/Playwright snapshot for pixel-perfect Thai text rendering. Client-side jsPDF fallback if server unavailable.
+**5-Step Flow** (from UJ1: First-Time Setup):
+
+| Step | Target Element | Title | Content | Position |
+|:---:|---|---|---|:---:|
+| 1 | App shell (full overlay) | Welcome to QA Localization Tool | "Your AI-powered QA assistant — catches everything Xbench catches, plus semantic issues Xbench can't." Skip tour link visible. | center |
+| 2 | Project create button | Create a Project | "Start by setting your language pair and QA mode. Tip: try with a file you already QA'd in Xbench." | bottom |
+| 3 | Glossary nav item | Import Your Glossary | "Import your existing glossary (CSV/XLSX/TBX) — terminology checks start immediately." | right |
+| 4 | Upload zone | Upload & Process | "Drag XLIFF/SDLXLIFF files here. Rule-based results appear in under 3 seconds." | bottom |
+| 5 | Keyboard shortcuts indicator | Keyboard-First Review | "A=Accept, R=Reject, F=Flag, J/K=Navigate. Review 300+ findings/day without touching your mouse." | left |
+
+**Wireframe:**
+```
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│   ┌─── Highlighted Element ───────────────┐             │
+│   │   (pulsing border, rest dimmed)       │             │
+│   └───────────────────────────────────────┘             │
+│       ┌─────────────────────────────────┐               │
+│       │ Step 2 of 5                     │               │
+│       │                                 │               │
+│       │ 🚀 Create a Project             │               │
+│       │                                 │               │
+│       │ Start by setting your language  │               │
+│       │ pair and QA mode.               │               │
+│       │                                 │               │
+│       │ Tip: try with a file you        │               │
+│       │ already QA'd in Xbench.         │               │
+│       │                                 │               │
+│       │ [← Back]  ● ● ◉ ● ●  [Next →]  │               │
+│       │              [Skip tour]         │               │
+│       └─────────────────────────────────┘               │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Variants:**
+
+| Variant | Steps | Target User | Trigger |
+|---------|:---:|---|---|
+| `full` (default) | 5 | QA Reviewer first login | `!user.hasCompletedOnboarding` |
+| `pm-lite` | 3 | PM first login (from UJ4) | Role = PM + first login |
+| `feature-spotlight` | 1 | Any user after feature release | Feature flag per spotlight |
+
+**States:**
+- **Active:** Dimmed overlay, highlighted element, popover visible
+- **Skipped:** User clicks "Skip tour" → `onboarding_completed_at` set, tour never shows again
+- **Completed:** All 5 steps done → success toast "You're all set! Press Ctrl+K anytime for help."
+- **Re-triggerable:** Settings → Help → "Replay onboarding tour"
+
+**Accessibility:**
+- `aria-live="polite"` announces step changes
+- `Esc` exits tour at any step
+- Tab cycles through Back/Next/Skip buttons
+- Tour content readable by screen reader
+
+**Persistence:** `users` metadata or localStorage flag `onboarding_completed`. Server-side preferred (persists across devices).
+
+---
+
+### AIConfigurationPanel (P1 — AI Budget & Model Settings) — Gap #27
+
+**Purpose:** Admin/PM configures AI budget limits, views usage, and manages model preferences per project
+
+**Location:** `(app)/projects/[projectId]/settings/page.tsx` — AI Configuration tab
+
+**Wireframe — Settings Tab:**
+```
+┌─────────────────────────────────────────────────────────┐
+│ Project Settings                                        │
+│ [General] [AI Configuration] [Glossary] [Team]          │
+│─────────────────────────────────────────────────────────│
+│                                                         │
+│ AI Budget                                               │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ Monthly budget:  [$50.00        ]  (leave blank =   │ │
+│ │                                     unlimited)      │ │
+│ │                                                     │ │
+│ │ Current usage:   $12.40 / $50.00                    │ │
+│ │ ████████████░░░░░░░░░░░░  24.8%                     │ │
+│ │                                                     │ │
+│ │ Projected:  $38.20 this month                       │ │
+│ │ Status:     ✅ Within budget                        │ │
+│ └─────────────────────────────────────────────────────┘ │
+│                                                         │
+│ Processing Mode Default                                 │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ Default mode:  (●) Economy (L1+L2)                  │ │
+│ │                ( ) Thorough (L1+L2+L3)              │ │
+│ │                                                     │ │
+│ │ Note: Users can override per-batch at upload time.  │ │
+│ └─────────────────────────────────────────────────────┘ │
+│                                                         │
+│ AI Model Configuration                                  │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ L2 Screening:   gpt-4o-mini (pinned)       [Info]  │ │
+│ │ L3 Deep:        claude-sonnet-4-5 (pinned)  [Info]  │ │
+│ │                                                     │ │
+│ │ ⓘ Models are pinned for reproducibility.            │ │
+│ │   Contact admin to update model versions.           │ │
+│ └─────────────────────────────────────────────────────┘ │
+│                                                         │
+│ [Save Changes]                                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Wireframe — AI Usage Dashboard (read-only, visible to all roles):**
+```
+┌─────────────────────────────────────────────────────────┐
+│ AI Usage — This Month                                   │
+│─────────────────────────────────────────────────────────│
+│                                                         │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────┐  │
+│  │ Total    │  │ L2 Cost  │  │ L3 Cost  │  │ Files  │  │
+│  │ $12.40   │  │ $4.20    │  │ $8.20    │  │ 47     │  │
+│  │ +12% MoM │  │ 34%      │  │ 66%      │  │ +8     │  │
+│  └──────────┘  └──────────┘  └──────────┘  └────────┘  │
+│                                                         │
+│  Cost Trend (30 days)                                   │
+│  ┌─────────────────────────────────────────────────┐    │
+│  │     $2                                          │    │
+│  │      ╱╲    ╱╲                                   │    │
+│  │  $1 ╱  ╲──╱  ╲──╱╲                             │    │
+│  │    ╱              ╲──                           │    │
+│  │  $0───────────────────────────────────          │    │
+│  │    W1     W2     W3     W4                      │    │
+│  └─────────────────────────────────────────────────┘    │
+│                                                         │
+│  Per-File Breakdown                                     │
+│  ┌──────────┬──────┬───────┬───────┬────────┐           │
+│  │ File     │ Segs │ L2    │ L3    │ Total  │           │
+│  │ doc-47   │ 342  │ $0.08 │ $0.22 │ $0.30  │           │
+│  │ doc-46   │ 218  │ $0.05 │ —     │ $0.05  │           │
+│  │ doc-45   │ 156  │ $0.04 │ $0.12 │ $0.16  │           │
+│  └──────────┴──────┴───────┴───────┴────────┘           │
+│                                                         │
+│  Budget Alert Threshold                                 │
+│  ┌─────────────────────────────────────────────────┐    │
+│  │ Alert when usage reaches: [80] %  of budget     │    │
+│  │ Alert method: Toast notification + Email         │    │
+│  └─────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────┘
+```
+
+**States:**
+
+| State | Visual | Condition |
+|-------|--------|-----------|
+| **Within budget** | Green progress bar, "✅ Within budget" | Usage < alert threshold |
+| **Approaching limit** | Orange progress bar, "⚠️ 80% of budget used" | Usage >= alert threshold |
+| **Over budget** | Red progress bar, "🚫 Budget exceeded — AI processing paused" | Usage > 100% |
+| **Unlimited** | No progress bar, "No budget limit set" | `ai_budget_monthly_usd` = NULL |
+| **No data** | Empty state with "Process your first file to see AI usage" | Zero usage |
+
+**RBAC:**
+
+| Element | Admin | QA Reviewer | PM |
+|---------|:---:|:---:|:---:|
+| Budget setting | Edit | View | View |
+| Mode default | Edit | View | Edit |
+| Model config | View | View | View |
+| Usage dashboard | Full | Own files | Full |
+| Alert threshold | Edit | — | Edit |
+
+**Accessibility:**
+- Budget input: `aria-label="Monthly AI budget in USD"`, `type="number"`, `step="0.01"`
+- Progress bar: `role="progressbar"`, `aria-valuenow`, `aria-valuemin="0"`, `aria-valuemax`
+- Chart: `aria-label` with text summary, data table fallback for screen readers
+
+---
+
+### QACertificate (P2 — Client Deliverable) — Gap #44
+
+**Purpose:** 1-click PDF generation for client quality proof — must render Thai/CJK text correctly
+
+**Wireframe — PDF Layout (A4 portrait):**
+```
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│              ◆ QA QUALITY CERTIFICATE ◆                 │
+│              ─────────────────────────                   │
+│                                                         │
+│  Project:    Client-ABC Localization                    │
+│  File:       report_TH.sdlxliff                        │
+│  Language:   EN → TH                                    │
+│  Date:       2026-02-16                                 │
+│  Reviewer:   คุณแพร (QA Reviewer)                       │
+│                                                         │
+│  ═══════════════════════════════════════════════════     │
+│                                                         │
+│                    QUALITY SCORE                         │
+│                                                         │
+│                  ┌──────────┐                            │
+│                  │          │                            │
+│                  │    97    │                            │
+│                  │  / 100   │                            │
+│                  │  PASSED  │                            │
+│                  └──────────┘                            │
+│                                                         │
+│  ═══════════════════════════════════════════════════     │
+│                                                         │
+│  CHECK SUMMARY                                          │
+│  ┌─────────────────────────────────┬────────┐           │
+│  │ Rule-based checks (127 rules)  │ ✅ Pass │           │
+│  │ AI screening (L2 — 342 segs)   │ ✅ Pass │           │
+│  │ Deep analysis (L3 — 342 segs)  │ ✅ Pass │           │
+│  │ Glossary compliance            │ ✅ Pass │           │
+│  │ Consistency checks             │ ✅ Pass │           │
+│  └─────────────────────────────────┴────────┘           │
+│                                                         │
+│  FINDINGS SUMMARY                                       │
+│  ┌──────────┬───────┬──────────────────────┐            │
+│  │ Severity │ Count │ Resolution           │            │
+│  │ Critical │   0   │ —                    │            │
+│  │ Major    │   0   │ —                    │            │
+│  │ Minor    │   2   │ 2 Accepted (cosmetic)│            │
+│  └──────────┴───────┴──────────────────────┘            │
+│                                                         │
+│  MQM SCORE BREAKDOWN                                    │
+│  Total words: 4,218                                     │
+│  NPT (Normalized Penalty Total): 0.47 per 1,000 words  │
+│  Penalty: 0 × 25 + 0 × 5 + 2 × 1 = 2                  │
+│  Score: max(0, 100 − (2 / 4.218)) = 99.53 → 97*       │
+│  * Rounded display score                                │
+│                                                         │
+│  ═══════════════════════════════════════════════════     │
+│                                                         │
+│  CONCLUSION                                             │
+│                                                         │
+│  This file has passed automated quality assurance.      │
+│  All rule-based and AI-powered checks completed.        │
+│  No critical or major issues found.                     │
+│                                                         │
+│  ─────────────────────────────────────────────────      │
+│  Generated: 2026-02-16 14:32 UTC                        │
+│  Tool: qa-localization-tool v1.0                        │
+│  Certificate ID: cert-a1b2c3d4                          │
+│  Verify: /verify/cert-a1b2c3d4                          │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Typography for PDF:**
+
+| Element | Font | Size | Weight | Notes |
+|---------|------|:---:|:---:|-------|
+| Title "QA QUALITY CERTIFICATE" | Inter | 24px | 700 | Uppercase, letter-spacing 2px |
+| Section headers | Inter | 14px | 600 | Uppercase, letter-spacing 1px |
+| Body text (EN) | Inter | 12px | 400 | |
+| Body text (TH) | Sarabun | 14px | 400 | 2px larger for Thai readability |
+| Body text (CJK) | Noto Sans CJK | 14px | 400 | |
+| Score number | Inter (tabular) | 48px | 700 | Centered in score circle |
+| Table data | Inter | 11px | 400 | |
+| Footer/metadata | Inter | 9px | 400 | Slate-500 color |
+
+**Score Circle Color:**
+
+| Score Range | Circle Color | Label |
+|:---:|---|---|
+| >= 95 | `emerald-500` (#10B981) | PASSED |
+| 70-94 | `orange-500` (#F97316) | REVIEWED |
+| < 70 | `red-500` (#EF4444) | BELOW THRESHOLD |
+
+**PDF Generation Strategy:**
+
+| Option | Pros | Cons | Recommendation |
+|--------|------|------|:---:|
+| `@react-pdf/renderer` | Lightweight, React components, SSR-friendly | Limited CJK font support, layout constraints | MVP ⭐ |
+| Puppeteer/Playwright | Pixel-perfect, full CSS, Thai/CJK native | Heavy (Chrome binary), memory on Vercel | Growth |
+| HTML → PDF service (e.g., DocRaptor) | Best quality, no infra | External dependency, cost | Alternative |
+
+**MVP approach:** Use `@react-pdf/renderer` with embedded Sarabun (Thai) and Noto Sans CJK fonts. Font files bundled in `/public/fonts/`. If CJK rendering quality is insufficient, upgrade to Puppeteer in Growth phase.
+
+**Interaction Flow:**
+1. User clicks "Generate Certificate" on reviewed file
+2. Modal opens with live preview (React component rendering)
+3. "Download PDF" → server-side generation via Route Handler
+4. PDF returned as blob → browser download dialog
+5. Certificate ID stored in `exported_reports` table with `format: 'pdf'`
+
+**States:**
+
+| State | Visual |
+|-------|--------|
+| **Ready** | "Generate Certificate" button enabled (file must be review-complete) |
+| **Preview** | Modal with certificate preview, "Download PDF" button |
+| **Generating** | Spinner on download button, "Generating PDF..." |
+| **Complete** | Toast "Certificate downloaded", link to re-download in file history |
+| **Error** | Toast error + "Retry" button |
+| **Not eligible** | Button disabled, tooltip "Complete review to generate certificate" |
 
 ### ScoreChangeLog (P2 — Audit Trail)
 
