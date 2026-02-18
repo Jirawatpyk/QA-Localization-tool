@@ -1,10 +1,10 @@
 'use server'
 
 import { db } from '@/db/client'
-import { auditLogs } from '@/db/schema/auditLogs'
 import { userRoles } from '@/db/schema/userRoles'
 import { users } from '@/db/schema/users'
 import { createUserSchema } from '@/features/admin/validation/userSchemas'
+import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import type { AppRole } from '@/lib/auth/getCurrentUser'
 import { requireRole } from '@/lib/auth/requireRole'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -63,7 +63,7 @@ export async function createUser(input: unknown): Promise<ActionResult<CreateUse
       role,
     })
 
-    await db.insert(auditLogs).values({
+    await writeAuditLog({
       tenantId: currentUser.tenantId,
       userId: currentUser.id,
       entityType: 'user',

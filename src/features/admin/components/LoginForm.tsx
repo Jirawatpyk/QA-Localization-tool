@@ -21,6 +21,12 @@ export function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
+  // Read redirect destination from query param (set by proxy.ts when redirecting unauthenticated users)
+  const redirectTo = searchParams.get('redirect') ?? '/dashboard'
+  // Validate: must start with / and not // (prevent open redirect)
+  const safeRedirect =
+    redirectTo.startsWith('/') && !redirectTo.startsWith('//') ? redirectTo : '/dashboard'
+
   // Show toast for error query params (e.g., rate_limit, auth_callback_failed)
   useEffect(() => {
     const errorParam = searchParams.get('error')
@@ -41,7 +47,7 @@ export function LoginForm() {
       }
 
       // Full page reload to pick up fresh JWT claims from custom_access_token_hook
-      window.location.href = '/dashboard'
+      window.location.href = safeRedirect
     })
   }
 

@@ -3,9 +3,9 @@
 import { eq, and } from 'drizzle-orm'
 
 import { db } from '@/db/client'
-import { auditLogs } from '@/db/schema/auditLogs'
 import { userRoles } from '@/db/schema/userRoles'
 import { updateRoleSchema } from '@/features/admin/validation/userSchemas'
+import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import type { AppRole } from '@/lib/auth/getCurrentUser'
 import { requireRole } from '@/lib/auth/requireRole'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -73,7 +73,7 @@ export async function updateUserRole(input: unknown): Promise<ActionResult<Updat
   }
 
   // Audit log
-  await db.insert(auditLogs).values({
+  await writeAuditLog({
     tenantId: currentUser.tenantId,
     userId: currentUser.id,
     entityType: 'user_role',

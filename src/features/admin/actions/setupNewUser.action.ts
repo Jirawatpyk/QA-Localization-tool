@@ -55,75 +55,78 @@ export async function setupNewUser(): Promise<ActionResult<SetupResult>> {
     const displayName =
       (user.user_metadata?.display_name as string) ?? user.email?.split('@')[0] ?? 'User'
 
-    const [tenant] = await db
-      .insert(tenants)
-      .values({ name: `${displayName}'s Organization` })
-      .returning({ id: tenants.id })
+    // Atomic transaction: all-or-nothing to prevent orphan records
+    const result = await db.transaction(async (tx) => {
+      const [tenant] = await tx
+        .insert(tenants)
+        .values({ name: `${displayName}'s Organization` })
+        .returning({ id: tenants.id })
 
-    if (!tenant) {
-      return { success: false, code: 'INTERNAL_ERROR', error: 'Failed to create tenant' }
-    }
+      if (!tenant) throw new Error('Failed to create tenant')
 
-    await db.insert(users).values({
-      id: user.id,
-      tenantId: tenant.id,
-      email: user.email ?? '',
-      displayName,
+      await tx.insert(users).values({
+        id: user.id,
+        tenantId: tenant.id,
+        email: user.email ?? '',
+        displayName,
+      })
+
+      await tx.insert(userRoles).values({
+        userId: user.id,
+        tenantId: tenant.id,
+        role: 'admin',
+      })
+
+      // Seed default language pair configs (Architecture Decision 3.6)
+      await tx.insert(languagePairConfigs).values([
+        {
+          tenantId: tenant.id,
+          sourceLang: 'en',
+          targetLang: 'th',
+          autoPassThreshold: 93,
+          l2ConfidenceMin: 70,
+          l3ConfidenceMin: 80,
+        },
+        {
+          tenantId: tenant.id,
+          sourceLang: 'en',
+          targetLang: 'ja',
+          autoPassThreshold: 93,
+          l2ConfidenceMin: 70,
+          l3ConfidenceMin: 80,
+        },
+        {
+          tenantId: tenant.id,
+          sourceLang: 'en',
+          targetLang: 'ko',
+          autoPassThreshold: 94,
+          l2ConfidenceMin: 70,
+          l3ConfidenceMin: 80,
+        },
+        {
+          tenantId: tenant.id,
+          sourceLang: 'en',
+          targetLang: 'zh-CN',
+          autoPassThreshold: 94,
+          l2ConfidenceMin: 70,
+          l3ConfidenceMin: 80,
+        },
+      ])
+
+      // Audit log
+      await tx.insert(auditLogs).values({
+        tenantId: tenant.id,
+        userId: user.id,
+        entityType: 'user',
+        entityId: user.id,
+        action: 'user.created',
+        newValue: { email: user.email, role: 'admin', tenantId: tenant.id },
+      })
+
+      return { tenantId: tenant.id }
     })
 
-    await db.insert(userRoles).values({
-      userId: user.id,
-      tenantId: tenant.id,
-      role: 'admin',
-    })
-
-    // Seed default language pair configs (Architecture Decision 3.6)
-    await db.insert(languagePairConfigs).values([
-      {
-        tenantId: tenant.id,
-        sourceLang: 'en',
-        targetLang: 'th',
-        autoPassThreshold: 93,
-        l2ConfidenceMin: 70,
-        l3ConfidenceMin: 80,
-      },
-      {
-        tenantId: tenant.id,
-        sourceLang: 'en',
-        targetLang: 'ja',
-        autoPassThreshold: 93,
-        l2ConfidenceMin: 70,
-        l3ConfidenceMin: 80,
-      },
-      {
-        tenantId: tenant.id,
-        sourceLang: 'en',
-        targetLang: 'ko',
-        autoPassThreshold: 94,
-        l2ConfidenceMin: 70,
-        l3ConfidenceMin: 80,
-      },
-      {
-        tenantId: tenant.id,
-        sourceLang: 'en',
-        targetLang: 'zh-CN',
-        autoPassThreshold: 94,
-        l2ConfidenceMin: 70,
-        l3ConfidenceMin: 80,
-      },
-    ])
-
-    // Audit log
-    await db.insert(auditLogs).values({
-      tenantId: tenant.id,
-      userId: user.id,
-      entityType: 'user',
-      entityId: user.id,
-      action: 'user.created',
-      newValue: { email: user.email, role: 'admin', tenantId: tenant.id },
-    })
-
-    return { success: true, data: { tenantId: tenant.id, role: 'admin' } }
+    return { success: true, data: { tenantId: result.tenantId, role: 'admin' } }
   } catch (err) {
     // Race condition: concurrent signup hit unique constraint — retry lookup
     const isUniqueViolation = err instanceof Error && err.message.includes('unique constraint')
