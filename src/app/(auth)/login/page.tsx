@@ -1,3 +1,4 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { LoginForm } from '@/features/admin/components/LoginForm'
 
 export const metadata = {
@@ -6,14 +7,14 @@ export const metadata = {
 
 export default function LoginPage() {
   return (
-    <div className="mx-auto w-full max-w-md space-y-6">
-      <div className="space-y-2 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
-        <p className="text-muted-foreground text-sm">
-          Enter your credentials to access the QA tool
-        </p>
-      </div>
-      <LoginForm />
-    </div>
+    <Card className="mx-auto w-full max-w-md">
+      <CardHeader className="text-center">
+        <CardTitle className="text-2xl">Sign in</CardTitle>
+        <CardDescription>Enter your credentials to access the QA tool</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <LoginForm />
+      </CardContent>
+    </Card>
   )
 }

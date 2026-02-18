@@ -36,7 +36,7 @@ describe('requireRole', () => {
     await expect(requireRole('admin')).rejects.toEqual({
       success: false,
       code: 'UNAUTHORIZED',
-      message: 'Not authenticated',
+      error: 'Not authenticated',
     })
   })
 
@@ -68,7 +68,7 @@ describe('requireRole', () => {
     await expect(requireRole('admin', 'read')).rejects.toEqual({
       success: false,
       code: 'FORBIDDEN',
-      message: 'Insufficient permissions',
+      error: 'Insufficient permissions',
     })
   })
 
@@ -117,7 +117,7 @@ describe('requireRole', () => {
     await expect(requireRole('admin', 'write')).rejects.toEqual({
       success: false,
       code: 'FORBIDDEN',
-      message: 'Insufficient permissions',
+      error: 'Insufficient permissions',
     })
   })
 })

@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
+import { setupNewUser } from '@/features/admin/actions/setupNewUser.action'
 import { createServerClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
@@ -12,6 +13,8 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error) {
+      // Ensure first-time OAuth users get tenant + admin role (AC2)
+      await setupNewUser()
       return NextResponse.redirect(`${origin}${next}`)
     }
   }

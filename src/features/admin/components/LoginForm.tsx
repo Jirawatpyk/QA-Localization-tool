@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { type ChangeEvent, type FormEvent, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
+import { GoogleLogo } from '@/components/icons/GoogleLogo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -86,7 +87,8 @@ export function LoginForm() {
       </div>
 
       <Button variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={isPending}>
-        Google
+        <GoogleLogo className="size-4" />
+        Continue with Google
       </Button>
 
       <p className="text-muted-foreground text-center text-sm">

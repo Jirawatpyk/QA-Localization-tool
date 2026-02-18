@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { type ChangeEvent, type FormEvent, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
+import { GoogleLogo } from '@/components/icons/GoogleLogo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,6 +17,20 @@ export function SignupForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
+
+  function handleGoogleSignup() {
+    startTransition(async () => {
+      const supabase = createBrowserClient()
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}/callback` },
+      })
+
+      if (error) {
+        toast.error(error.message)
+      }
+    })
+  }
 
   function handleSignup(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -85,6 +100,26 @@ export function SignupForm() {
       </div>
       <Button type="submit" className="w-full" disabled={isPending}>
         {isPending ? 'Creating account...' : 'Create account'}
+      </Button>
+
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-card text-muted-foreground px-2">Or continue with</span>
+        </div>
+      </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full"
+        onClick={handleGoogleSignup}
+        disabled={isPending}
+      >
+        <GoogleLogo className="size-4" />
+        Continue with Google
       </Button>
 
       <p className="text-muted-foreground text-center text-sm">

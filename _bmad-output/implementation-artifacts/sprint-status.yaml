@@ -45,7 +45,7 @@ development_status:
   # ============================================================
   epic-1: in-progress
   1-1-project-initialization-design-system-setup: done
-  1-2-database-schema-authentication: ready-for-dev
+  1-2-database-schema-authentication: done
   1-3-project-management-configuration: backlog
   1-4-glossary-import-management: backlog
   1-5-glossary-matching-engine-no-space-languages: backlog

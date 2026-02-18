@@ -28,13 +28,13 @@ export async function requireRole(
   const user = await getCurrentUser()
 
   if (!user) {
-    throw { success: false, code: 'UNAUTHORIZED', message: 'Not authenticated' }
+    throw { success: false, code: 'UNAUTHORIZED', error: 'Not authenticated' }
   }
 
   if (operation === 'read') {
     // Fast path: trust JWT claims for read operations
     if (!hasRequiredRole(user.role, requiredRole)) {
-      throw { success: false, code: 'FORBIDDEN', message: 'Insufficient permissions' }
+      throw { success: false, code: 'FORBIDDEN', error: 'Insufficient permissions' }
     }
     return user
   }
@@ -47,7 +47,7 @@ export async function requireRole(
     .limit(1)
 
   if (!dbRole || !hasRequiredRole(dbRole.role as AppRole, requiredRole)) {
-    throw { success: false, code: 'FORBIDDEN', message: 'Insufficient permissions' }
+    throw { success: false, code: 'FORBIDDEN', error: 'Insufficient permissions' }
   }
 
   return { ...user, role: dbRole.role as AppRole }

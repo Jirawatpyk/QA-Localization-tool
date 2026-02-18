@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
 
 import { CompactLayout } from '@/components/layout/compact-layout'
@@ -31,7 +31,10 @@ export default async function AdminPage() {
       role: userRoles.role,
     })
     .from(users)
-    .leftJoin(userRoles, eq(users.id, userRoles.userId))
+    .leftJoin(
+      userRoles,
+      and(eq(users.id, userRoles.userId), eq(userRoles.tenantId, currentUser.tenantId)),
+    )
     .where(withTenant(users.tenantId, currentUser.tenantId))
 
   return (

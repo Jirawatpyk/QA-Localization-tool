@@ -39,12 +39,14 @@ export async function proxy(request: NextRequest) {
         return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
       }
     } catch {
-      // Redis unavailable — allow request but log warning
-      logger.warn('Rate limiting unavailable — Redis connection failed')
+      // Redis unavailable — fail-closed for auth endpoints (brute-force protection)
+      logger.warn('Rate limiting unavailable — blocking auth request (fail-closed)')
+      return NextResponse.json({ error: 'Service temporarily unavailable' }, { status: 503 })
     }
   }
 
   // Create Supabase server client with cookie handling
+  // NOTE: process.env used directly — proxy runs before app init; env.ts Proxy may not be ready.
   const supabase = _createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -63,12 +65,12 @@ export async function proxy(request: NextRequest) {
     },
   )
 
-  // Validate JWT via getClaims (local validation, no network call)
-  const { data, error } = await supabase.auth.getUser()
+  // Validate JWT via getClaims — local validation, no network call (~1ms)
+  const { data: claimsData, error } = await supabase.auth.getClaims()
 
   const isPublicRoute = PUBLIC_ROUTES.some((r) => pathname.startsWith(r))
 
-  if (error || !data.user) {
+  if (error || !claimsData) {
     // Not authenticated
     if (!isPublicRoute) {
       const loginUrl = new URL('/login', request.url)
@@ -83,13 +85,15 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  // Extract tenant_id from claims for downstream use
-  const tenantId = data.user.app_metadata?.tenant_id as string | undefined
+  // Extract tenant_id from JWT claims for downstream use
+  const claims = claimsData.claims as Record<string, unknown>
+  const tenantId = claims.tenant_id as string | undefined
   if (tenantId) {
     response.headers.set('x-tenant-id', tenantId)
   }
 
-  logger.debug({ pathname, userId: data.user.id, tenantId }, 'Proxy: authenticated request')
+  const userId = claims.sub as string | undefined
+  logger.debug({ pathname, userId, tenantId }, 'Proxy: authenticated request')
 
   return response
 }
