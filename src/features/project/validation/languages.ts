@@ -1,0 +1,17 @@
+export const COMMON_LANGUAGES = [
+  { code: 'en', label: 'English' },
+  { code: 'th', label: 'Thai' },
+  { code: 'ja', label: 'Japanese' },
+  { code: 'ko', label: 'Korean' },
+  { code: 'zh', label: 'Chinese (Simplified)' },
+  { code: 'zh-Hant', label: 'Chinese (Traditional)' },
+  { code: 'fr', label: 'French' },
+  { code: 'de', label: 'German' },
+  { code: 'es', label: 'Spanish' },
+  { code: 'pt', label: 'Portuguese' },
+  { code: 'it', label: 'Italian' },
+  { code: 'ar', label: 'Arabic' },
+  { code: 'vi', label: 'Vietnamese' },
+  { code: 'id', label: 'Indonesian' },
+  { code: 'ms', label: 'Malay' },
+] as const
