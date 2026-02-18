@@ -16,7 +16,6 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Select,
   SelectContent,
@@ -39,7 +38,6 @@ export function ProjectCreateDialog({ open, onOpenChange }: ProjectCreateDialogP
   const [isPending, startTransition] = useTransition()
   const [sourceLang, setSourceLang] = useState('')
   const [targetLangs, setTargetLangs] = useState<string[]>([])
-  const [processingMode, setProcessingMode] = useState<'economy' | 'thorough'>('economy')
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   function toggleTargetLang(code: string) {
@@ -57,7 +55,6 @@ export function ProjectCreateDialog({ open, onOpenChange }: ProjectCreateDialogP
       description: (formData.get('description') as string) || undefined,
       sourceLang,
       targetLangs,
-      processingMode,
     }
 
     const parsed = createProjectSchema.safeParse(input)
@@ -82,7 +79,6 @@ export function ProjectCreateDialog({ open, onOpenChange }: ProjectCreateDialogP
         onOpenChange(false)
         setSourceLang('')
         setTargetLangs([])
-        setProcessingMode('economy')
         router.refresh()
       } else {
         toast.error(result.error)
@@ -175,35 +171,6 @@ export function ProjectCreateDialog({ open, onOpenChange }: ProjectCreateDialogP
                 {errors['targetLangs']}
               </p>
             )}
-          </div>
-
-          <div className="space-y-2">
-            <Label>
-              Processing Mode <span className="text-destructive">*</span>
-            </Label>
-            <RadioGroup
-              value={processingMode}
-              onValueChange={(v) => setProcessingMode(v as 'economy' | 'thorough')}
-            >
-              <div className="flex items-start gap-2">
-                <RadioGroupItem value="economy" id="mode-economy" />
-                <div>
-                  <Label htmlFor="mode-economy" className="font-normal">
-                    Economy (L1 + L2)
-                  </Label>
-                  <p className="text-xs text-text-muted">~$0.40 per 100K words</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <RadioGroupItem value="thorough" id="mode-thorough" />
-                <div>
-                  <Label htmlFor="mode-thorough" className="font-normal">
-                    Thorough (L1 + L2 + L3)
-                  </Label>
-                  <p className="text-xs text-text-muted">~$2.40 per 100K words</p>
-                </div>
-              </div>
-            </RadioGroup>
           </div>
 
           <DialogFooter>

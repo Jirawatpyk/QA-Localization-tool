@@ -86,9 +86,33 @@ describe('projectSchemas', () => {
         name: 'Test',
         sourceLang: 'en',
         targetLangs: ['th'],
-        processingMode: 'economy',
       })
       expect(result.success).toBe(true)
+    })
+
+    it('should default processingMode to economy when omitted', () => {
+      const result = createProjectSchema.safeParse({
+        name: 'Test',
+        sourceLang: 'en',
+        targetLangs: ['th'],
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.processingMode).toBe('economy')
+      }
+    })
+
+    it('should accept explicit processingMode override', () => {
+      const result = createProjectSchema.safeParse({
+        name: 'Test',
+        sourceLang: 'en',
+        targetLangs: ['th'],
+        processingMode: 'thorough',
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.processingMode).toBe('thorough')
+      }
     })
   })
 

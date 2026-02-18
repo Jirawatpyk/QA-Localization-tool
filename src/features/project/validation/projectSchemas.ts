@@ -9,7 +9,7 @@ export const createProjectSchema = z.object({
   description: z.string().max(1000).optional(),
   sourceLang: bcp47Schema,
   targetLangs: z.array(bcp47Schema).min(1, 'At least one target language required'),
-  processingMode: z.enum(['economy', 'thorough']),
+  processingMode: z.enum(['economy', 'thorough']).default('economy'),
 })
 
 export const updateProjectSchema = z.object({
