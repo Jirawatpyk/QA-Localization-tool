@@ -15,4 +15,16 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
 })
 
-export const env = envSchema.parse(process.env)
+// Lazy evaluation: validates on first access, not at module load.
+// This allows `next build` to succeed without env vars while still
+// failing fast at runtime when any server code actually runs.
+let _env: z.infer<typeof envSchema> | undefined
+
+export const env = new Proxy({} as z.infer<typeof envSchema>, {
+  get(_target, prop: string) {
+    if (!_env) {
+      _env = envSchema.parse(process.env)
+    }
+    return _env[prop as keyof z.infer<typeof envSchema>]
+  },
+})

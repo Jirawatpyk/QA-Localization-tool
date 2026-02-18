@@ -41,9 +41,9 @@ Based on [Xbench QA Features](https://docs.xbench.net/user-guide/work-qa-feature
 
 | # | Xbench Check | Tool Phase | Implementation |
 |---|-------------|:----------:|----------------|
-| 11 | Same source → different target | Phase 2 | Cross-segment comparison (file-level index) |
-| 12 | Same target → different source | Phase 2 | Reverse consistency check |
-| 13 | Key term inconsistency | Phase 2 | Cross-segment term usage tracking |
+| 11 | Same source → different target | MVP | Cross-segment comparison (file-level index) |
+| 12 | Same target → different source | MVP | Reverse consistency check |
+| 13 | Key term inconsistency | MVP | Cross-segment term usage tracking |
 
 ### 2.4 Terminology Checks (2)
 
@@ -71,13 +71,13 @@ Based on [Xbench QA Features](https://docs.xbench.net/user-guide/work-qa-feature
 |----------|:------------:|:---:|:-----:|:-------:|:--:|:---:|
 | Content | 2 | 2 | — | — | — | 0 |
 | Formal/Structural | 8 | 5 | 3 | — | — | 0 |
-| Consistency | 3 | — | — | 3 | — | 0 |
+| Consistency | 3 | 3 | — | — | — | 0 |
 | Terminology | 2 | 1 | 1 | — | — | 0 |
 | Capitalization | 2 | 1 | 1 | — | — | 0 |
 | Spelling | 1 | — | — | — | 1 | 0 |
-| **Total** | **18** | **9** | **5** | **3** | **1** | **0** |
+| **Total** | **18** | **12** | **5** | **—** | **1** | **0** |
 
-> **MVP + Bonus = 14 direct checks.** Phase 2 adds 3 consistency checks. AI covers spelling. Total gap: 0.
+> **MVP + Bonus = 17 direct checks.** AI covers spelling. Total gap: 0. No Phase 2 deferred checks.
 
 ---
 

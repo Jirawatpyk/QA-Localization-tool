@@ -4,10 +4,12 @@ import { AppHeader } from '@/components/layout/app-header'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import { DetailPanel } from '@/components/layout/detail-panel'
 import { MobileBanner } from '@/components/layout/mobile-banner'
+import { AuthListener } from '@/features/admin/components/AuthListener'
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-screen flex-col">
+      <AuthListener />
       {/* Mobile banner: visible below md */}
       <div className="p-2 md:hidden">
         <MobileBanner />
