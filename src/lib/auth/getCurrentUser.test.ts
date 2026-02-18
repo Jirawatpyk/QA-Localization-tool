@@ -4,11 +4,11 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 vi.mock('server-only', () => ({}))
 
 // Mock Supabase server client
-const mockGetUser = vi.fn()
+const mockGetClaims = vi.fn()
 vi.mock('@/lib/supabase/server', () => ({
   createServerClient: vi.fn(async () => ({
     auth: {
-      getUser: mockGetUser,
+      getClaims: mockGetClaims,
     },
   })),
 }))
@@ -19,7 +19,7 @@ describe('getCurrentUser', () => {
   })
 
   it('should return null when not authenticated', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: null }, error: { message: 'No session' } })
+    mockGetClaims.mockResolvedValue({ data: null, error: { message: 'No session' } })
 
     const { getCurrentUser } = await import('./getCurrentUser')
     const result = await getCurrentUser()
@@ -27,13 +27,50 @@ describe('getCurrentUser', () => {
     expect(result).toBeNull()
   })
 
-  it('should return null when user has no tenant_id in claims', async () => {
-    mockGetUser.mockResolvedValue({
+  it('should return null when claims have no tenant_id', async () => {
+    mockGetClaims.mockResolvedValue({
       data: {
-        user: {
-          id: 'user-1',
+        claims: {
+          sub: 'user-1',
           email: 'test@example.com',
-          app_metadata: {},
+        },
+      },
+      error: null,
+    })
+
+    const { getCurrentUser } = await import('./getCurrentUser')
+    const result = await getCurrentUser()
+
+    expect(result).toBeNull()
+  })
+
+  it('should return null when claims have "none" values (pre-setupNewUser)', async () => {
+    mockGetClaims.mockResolvedValue({
+      data: {
+        claims: {
+          sub: 'user-1',
+          email: 'test@example.com',
+          tenant_id: 'none',
+          user_role: 'none',
+        },
+      },
+      error: null,
+    })
+
+    const { getCurrentUser } = await import('./getCurrentUser')
+    const result = await getCurrentUser()
+
+    expect(result).toBeNull()
+  })
+
+  it('should return null when role is not a valid AppRole', async () => {
+    mockGetClaims.mockResolvedValue({
+      data: {
+        claims: {
+          sub: 'user-1',
+          email: 'test@example.com',
+          tenant_id: 'tenant-1',
+          user_role: 'superadmin',
         },
       },
       error: null,
@@ -46,15 +83,13 @@ describe('getCurrentUser', () => {
   })
 
   it('should return CurrentUser when authenticated with valid claims', async () => {
-    mockGetUser.mockResolvedValue({
+    mockGetClaims.mockResolvedValue({
       data: {
-        user: {
-          id: 'user-1',
+        claims: {
+          sub: 'user-1',
           email: 'admin@example.com',
-          app_metadata: {
-            tenant_id: 'tenant-1',
-            user_role: 'admin',
-          },
+          tenant_id: 'tenant-1',
+          user_role: 'admin',
         },
       },
       error: null,

@@ -27,8 +27,14 @@ export async function proxy(request: NextRequest) {
     request: { headers: request.headers },
   })
 
-  // Rate limiting for auth endpoints
-  if (AUTH_ROUTES.some((r) => pathname.startsWith(r))) {
+  // Server actions use Next-Action header — always pass through (they handle auth internally)
+  const isServerAction = request.headers.has('Next-Action')
+  if (isServerAction) {
+    return response
+  }
+
+  // Rate limiting for auth form submissions only (POST), not page loads (GET)
+  if (request.method === 'POST' && AUTH_ROUTES.some((r) => pathname.startsWith(r))) {
     try {
       const { authLimiter } = await import('@/lib/ratelimit')
       const ip =
@@ -36,12 +42,17 @@ export async function proxy(request: NextRequest) {
       const { success } = await authLimiter.limit(ip)
       if (!success) {
         logger.warn({ pathname, ip }, 'Rate limit exceeded for auth endpoint')
-        return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+        const rateLimitUrl = new URL('/login', request.url)
+        rateLimitUrl.searchParams.set('error', 'rate_limit')
+        return NextResponse.redirect(rateLimitUrl)
       }
     } catch {
-      // Redis unavailable — fail-closed for auth endpoints (brute-force protection)
-      logger.warn('Rate limiting unavailable — blocking auth request (fail-closed)')
-      return NextResponse.json({ error: 'Service temporarily unavailable' }, { status: 503 })
+      // Redis unavailable — fail-open in dev, fail-closed in prod
+      if (process.env.NODE_ENV === 'production') {
+        logger.error('Rate limiting unavailable — blocking auth request (fail-closed)')
+        return NextResponse.json({ error: 'Service temporarily unavailable' }, { status: 503 })
+      }
+      logger.warn('Rate limiting unavailable — allowing request (fail-open, dev mode)')
     }
   }
 

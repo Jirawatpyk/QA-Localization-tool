@@ -1,7 +1,7 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { type ChangeEvent, type FormEvent, useState, useTransition } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { type ChangeEvent, type FormEvent, useEffect, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { GoogleLogo } from '@/components/icons/GoogleLogo'
@@ -10,11 +10,24 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createBrowserClient } from '@/lib/supabase/client'
 
+const ERROR_MESSAGES: Record<string, string> = {
+  rate_limit: 'Too many requests. Please wait a moment and try again.',
+  auth_callback_failed: 'Authentication failed. Please try again.',
+}
+
 export function LoginForm() {
-  const router = useRouter()
+  const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+
+  // Show toast for error query params (e.g., rate_limit, auth_callback_failed)
+  useEffect(() => {
+    const errorParam = searchParams.get('error')
+    if (errorParam && ERROR_MESSAGES[errorParam]) {
+      toast.error(ERROR_MESSAGES[errorParam])
+    }
+  }, [searchParams])
 
   function handleEmailLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -27,8 +40,8 @@ export function LoginForm() {
         return
       }
 
-      router.push('/dashboard')
-      router.refresh()
+      // Full page reload to pick up fresh JWT claims from custom_access_token_hook
+      window.location.href = '/dashboard'
     })
   }
 

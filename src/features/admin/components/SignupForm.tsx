@@ -1,6 +1,5 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { type ChangeEvent, type FormEvent, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
@@ -12,7 +11,6 @@ import { setupNewUser } from '@/features/admin/actions/setupNewUser.action'
 import { createBrowserClient } from '@/lib/supabase/client'
 
 export function SignupForm() {
-  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -54,9 +52,10 @@ export function SignupForm() {
           return
         }
 
+        // Refresh session to get updated JWT claims (with tenant_id + role)
+        await supabase.auth.refreshSession()
         toast.success('Account created! Redirecting...')
-        router.push('/dashboard')
-        router.refresh()
+        window.location.href = '/dashboard'
       }
     })
   }

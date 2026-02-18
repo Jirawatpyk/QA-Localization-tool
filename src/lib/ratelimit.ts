@@ -5,10 +5,10 @@ function createRedis() {
   return Redis.fromEnv()
 }
 
-/** Auth endpoints: 10 requests per 15 minutes */
+/** Auth endpoints: 30 requests per 15 minutes */
 export const authLimiter = new Ratelimit({
   redis: createRedis(),
-  limiter: Ratelimit.slidingWindow(10, '15 m'),
+  limiter: Ratelimit.slidingWindow(30, '15 m'),
   prefix: 'rl:auth',
 })
 

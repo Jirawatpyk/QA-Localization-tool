@@ -15,6 +15,8 @@ export async function GET(request: NextRequest) {
     if (!error) {
       // Ensure first-time OAuth users get tenant + admin role (AC2)
       await setupNewUser()
+      // Refresh session to get updated JWT claims (tenant_id + role from hook)
+      await supabase.auth.refreshSession()
       return NextResponse.redirect(`${origin}${next}`)
     }
   }
