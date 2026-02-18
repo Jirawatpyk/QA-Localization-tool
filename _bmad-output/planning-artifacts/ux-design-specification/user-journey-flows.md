@@ -13,14 +13,13 @@ flowchart TD
     B -->|Yes| D[Dashboard]
     C --> D
     D --> E{First visit?}
-    E -->|Yes| F[Onboarding Tour - 5 steps]
+    E -->|Yes| F[Onboarding Setup Tour - 4 steps]
     E -->|No| G[Project List]
     F --> F1[Step 1: Welcome + Tool positioning vs Xbench]
     F1 --> F2[Step 2: Create Project — name + language pair]
     F2 --> F3[Step 3: Import Glossary CSV]
-    F3 --> F4[Step 4: Set auto-pass threshold 95]
-    F4 --> F5[Step 5: Upload first XLIFF — 'Try with a file you already QA'd']
-    F5 --> H[First Run — Trust Building Mode]
+    F3 --> F4[Step 4: Upload first XLIFF — 'Try with a file you already QA'd']
+    F4 --> H[First Run — Trust Building Mode]
     G --> G1[Select/Create Project]
     G1 --> H
 
@@ -40,7 +39,7 @@ flowchart TD
 **Key UX Decisions:**
 | Decision | Rationale |
 |----------|-----------|
-| Onboarding tour = 5 steps max | Respect power user patience — skippable after step 1 |
+| Onboarding Setup Tour = 4 steps (auto-pass threshold removed — default 95 sufficient) | Respect power user patience — skippable after step 1. Review Tour (5 separate steps) triggers on first ReviewView entry |
 | "Try with a file you already QA'd" prompt | Enables side-by-side comparison — builds trust through evidence |
 | Rule-based first, AI streams later | Match Xbench mental model first, then exceed it |
 | Report Missing Check = prominent action | Trust recovery path — user feels heard, not ignored |

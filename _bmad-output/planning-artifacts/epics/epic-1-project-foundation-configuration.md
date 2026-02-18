@@ -318,6 +318,16 @@ So that I can quickly orient myself and stay informed.
 **And** onboarding completion state is saved per user in user_preferences (does not re-appear)
 **And** the tour is accessible via Help menu: "Restart Tour" option
 
+> **UX Spec Refinement (2026-02-16):** UX spec (`component-strategy.md`) expands onboarding into a 2-phase tour system using `driver.js` (v1.3+): (1) **Setup Tour** — 4 steps on first login (Welcome, Create Project, Import Glossary, Upload First File) triggered on dashboard, (2) **Review Tour** — the 5 steps defined above, triggered on first ReviewView entry. This separation was necessary because the 5 feature-focused steps require ReviewView UI elements to highlight, which don't exist at first login. Both tours track completion independently via server-side persistence (`users.metadata` jsonb). PM role gets a PM-Lite 3-step variant. Auto-pass threshold step was removed from Setup Tour — default 95 is sufficient for first-time users. See `component-strategy.md#OnboardingTour` for full wireframes and interaction spec.
+
+**Given** a first-time user reaches the dashboard after login
+**When** `user.metadata.setup_tour_completed` is null
+**Then** a 4-step Setup Tour activates via `driver.js` overlay: (1) Welcome — tool positioning vs Xbench, (2) Create Project — name + language pair, (3) Import Glossary — CSV/XLSX/TBX, (4) Upload First File — "Try with a file you already QA'd in Xbench"
+**And** each step highlights the relevant UI area with a spotlight overlay
+**And** users can navigate: Next, Previous, Dismiss (pauses at current step), or Skip All (permanently completes)
+**And** on completion, `user.metadata.setup_tour_completed` is set to current timestamp
+**And** on mobile (<768px), Setup Tour is suppressed — banner shown instead: "Switch to desktop for the best onboarding experience"
+
 **Given** the notification system
 **When** events fire (glossary updated, analysis complete, file assigned, auto-pass triggered)
 **Then** relevant users receive notifications via Supabase Realtime push (FR60 foundation — full implementation in Epic 6)

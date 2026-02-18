@@ -32,8 +32,8 @@ previous_report: 'implementation-readiness-report-2026-02-15-v2.md'
 
 | Impact Level | Count | Description |
 |:---:|:---:|---|
-| BLOCKER | **16** (5 open, 10 resolved, 1 downgraded→resolved) | ต้องแก้ก่อน Dev เริ่มงาน Story นั้นได้ |
-| CONFUSION | **42** (28 open, 14 resolved) | Dev จะสับสน/เสียเวลาถ้าไม่ชี้แจง |
+| BLOCKER | **16** (4 open, 11 resolved, 1 downgraded→resolved) | ต้องแก้ก่อน Dev เริ่มงาน Story นั้นได้ |
+| CONFUSION | **42** (25 open, 17 resolved) | Dev จะสับสน/เสียเวลาถ้าไม่ชี้แจง |
 
 ### Gap Categories
 
@@ -42,7 +42,7 @@ previous_report: 'implementation-readiness-report-2026-02-15-v2.md'
 | Missing technical specs | 18 |
 | Missing dependencies | 7 |
 | Missing test data | 7 |
-| Missing design specs | 5 |
+| Missing design specs | 5 (3 resolved: #17, #27, #44) |
 | Ambiguous acceptance criteria | 10 |
 | Missing env/config specs | 5 |
 | Missing external service setup | 4 |
@@ -119,7 +119,7 @@ npm install recharts
 | 14 | 1.5 | **Glossary matching test corpus ไม่มี.** `docs/test-data/glossary-matching/th.json` ต้องมี 500+ segments — ยังไม่มี (Mona dependency) | BLOCKER | Missing test data |
 | 15 | 1.5 | **Glossary files จาก Mona ยังไม่มี.** `glossaries/` ว่างเปล่า — Story 1.4/1.5 ต้องใช้ | BLOCKER | Missing test data |
 | 16 | 1.6 | **Taxonomy seed data format ไม่ระบุ.** Story 1.6 ต้อง seed จาก `docs/QA _ Quality Cosmetic.md` แต่ไม่บอกว่าเป็น SQL insert, JSON fixture, หรือ migration file | CONFUSION | Ambiguous acceptance criteria |
-| 17 | 1.7 | **OnboardingTour component ไม่มี implementation spec.** Story 1.7 บอก 5-step tour แต่ไม่เลือก library (react-joyride, driver.js, หรือ custom) ไม่มี wireframe | CONFUSION | Missing design specs |
+| 17 | 1.7 | ~~**OnboardingTour component ไม่มี implementation spec.** Story 1.7 บอก 5-step tour แต่ไม่เลือก library (react-joyride, driver.js, หรือ custom) ไม่มี wireframe~~ — **RESOLVED:** `component-strategy.md` อัปเดต: library = `driver.js` v1.3+, 2-phase tour (Setup 3 steps + Review 5 steps per Epic AC), wireframes, variants (full/pm-lite/feature-spotlight), states, mobile behavior, server-side persistence, accessibility | ✅ RESOLVED | Missing design specs |
 
 #### Suggested Fixes — Epic 1
 
@@ -127,6 +127,7 @@ npm install recharts
 - **#5:** ✅ **RESOLVED 2026-02-16** — `src/styles/tokens.css` สร้างแล้ว (Story 1.1), import ใน `globals.css`, ใช้งานจริง
 - **#10:** เพิ่ม Google OAuth setup guide (5 steps) ใน setup doc
 - **#12:** ✅ **RESOLVED 2026-02-16** — `exceljs` installed
+- **#17:** ✅ **RESOLVED 2026-02-16** — `component-strategy.md` เพิ่ม OnboardingTour spec: `driver.js`, 2-phase tour (Setup 3 + Review 5 steps), wireframes, variants, mobile, accessibility
 - **#14+#15:** Escalate Mona สำหรับ glossary data; Dev สร้าง synthetic 50-100 terms ก่อน
 
 ---
@@ -159,7 +160,7 @@ npm install recharts
 | # | Story | Gap | Impact | Category |
 |---|:-----:|-----|:------:|----------|
 | 26 | 3.1 | ~~**`project.ai_budget_monthly_usd` ไม่มีใน schema.** Story 3.1 อ้างอิง budget enforcement แต่ field ไม่มีใน projects table~~ — **RESOLVED:** เพิ่ม `ai_budget_monthly_usd (decimal nullable)` ใน ERD projects table + Story 1-2 | ✅ RESOLVED | Missing technical specs |
-| 27 | 3.1 | **ไม่มี UI spec สำหรับ AI Configuration / AI Usage Dashboard.** ไม่มี component spec, layout, wireframe | CONFUSION | Missing design specs |
+| 27 | 3.1 | ~~**ไม่มี UI spec สำหรับ AI Configuration / AI Usage Dashboard.** ไม่มี component spec, layout, wireframe~~ — **RESOLVED:** `component-strategy.md` อัปเดต: Settings tab wireframe (budget + mode + model selector), Usage dashboard wireframe (metrics + trend + per-file), Admin model version `<Select>` dropdown, rate limiting notes (backend-only + toast), budget override UI, admin-level tenant aggregate view cross-ref, RBAC matrix 7 elements, states 5 แบบ | ✅ RESOLVED | Missing design specs |
 | 28 | 3.2a | **L2 prompt template ไม่มี.** Dev ต้องเขียน prompt จาก scratch โดยไม่มี reference | CONFUSION | Missing technical specs |
 | 29 | 3.3 | **L3 prompt template ไม่มี.** เหมือน #28 — ต้องการ system message structure, segment format, output format | CONFUSION | Missing technical specs |
 | 30 | 3.5 | ~~**`scores.auto_pass_rationale` type ขัดแย้ง.** Story บอก jsonb, ERD บอก varchar nullable~~ — **RESOLVED:** ERD อัปเดตเป็น `text nullable` | ✅ RESOLVED | Missing technical specs |
@@ -167,6 +168,7 @@ npm install recharts
 #### Suggested Fixes — Epic 3
 
 - **#26:** ✅ **RESOLVED 2026-02-16** — เพิ่ม `ai_budget_monthly_usd (decimal nullable)` ใน ERD projects table + Story 1-2
+- **#27:** ✅ **RESOLVED 2026-02-16** — `component-strategy.md` เพิ่ม AIConfigurationPanel spec: Settings wireframe, Dashboard wireframe, model selector, rate limiting notes, budget override, admin tenant view, RBAC
 - **#28+#29:** สร้าง prompt template reference doc (system message, segment format, output format)
 - **#30:** ✅ **RESOLVED** — ERD อัปเดตเป็น `text nullable`
 
@@ -238,14 +240,14 @@ npm install recharts
 
 | # | Story | Gap | Impact | Category |
 |---|:-----:|-----|:------:|----------|
-| 43 | 8.1 | **PDF generation library ไม่มีใน `package.json`.** Story บอก Puppeteer/Playwright แต่ไม่มีใน dependencies. `@playwright/test` เป็น E2E testing ไม่ใช่ PDF | BLOCKER | Missing dependencies |
-| 44 | 8.1 | **QA Certificate PDF template ไม่มี.** ไม่มี wireframe, layout, stamp position, font choices (สำคัญสำหรับ Thai/CJK) | CONFUSION | Missing design specs |
+| 43 | 8.1 | ~~**PDF generation library ไม่มีใน `package.json`.** Story บอก Puppeteer/Playwright แต่ไม่มีใน dependencies. `@playwright/test` เป็น E2E testing ไม่ใช่ PDF~~ — **RESOLVED:** `@react-pdf/renderer` installed (Decision per `component-strategy.md`: MVP ใช้ `@react-pdf/renderer` + Thai/CJK POC required ก่อน Story 8.1) | ✅ RESOLVED | Missing dependencies |
+| 44 | 8.1 | ~~**QA Certificate PDF template ไม่มี.** ไม่มี wireframe, layout, stamp position, font choices (สำคัญสำหรับ Thai/CJK)~~ — **RESOLVED:** `component-strategy.md` อัปเดต: A4 certificate wireframe (page 1), detailed findings page wireframe (page 2+), Smart Report 3-tier wireframe (separate doc), Excel export wireframe (3 sheets), staleness UI wireframe, typography table (Thai: Sarabun 14px, CJK: Noto Sans CJK), PDF generation strategy (`@react-pdf/renderer` MVP + Thai POC required), report metadata footer, verify URL (public route), states 7 แบบ | ✅ RESOLVED | Missing design specs |
 | 45 | 8.1 | ~~**Excel export library ไม่ระบุ.** ต้องการ .xlsx export with formatting — ต้องใช้ `exceljs` (เหมือน #12)~~ — **RESOLVED:** `exceljs` installed (see #12) | ✅ RESOLVED | Missing dependencies |
 
 #### Suggested Fixes — Epic 8
 
-- **#43:** เลือก approach: (a) `@react-pdf/renderer` (lightweight), (b) `puppeteer` (heavy, ต้อง Chrome), (c) Vercel serverless + puppeteer (memory limits)
-- **#44:** สร้าง certificate wireframe ก่อน implementation
+- **#43:** ✅ **RESOLVED 2026-02-16** — `@react-pdf/renderer` installed. Decision per `component-strategy.md`: MVP ใช้ `@react-pdf/renderer` (lightweight, React-native PDF). Thai/CJK font POC required ก่อน Story 8.1. Puppeteer เป็น fallback ถ้า font rendering มีปัญหา
+- **#44:** ✅ **RESOLVED 2026-02-16** — `component-strategy.md` เพิ่ม QACertificate spec: A4 wireframe, detailed findings page, Smart Report 3-tier, Excel export 3 sheets, staleness UI, typography (Thai/CJK), PDF generation strategy, report metadata, verify URL
 - **#45:** ✅ **RESOLVED 2026-02-16** — `exceljs` installed (see #12)
 
 ---
@@ -332,7 +334,7 @@ Growth phase — ไม่ block MVP. Note ไว้เฉยๆ แก้เม
 | Gap # | Description | Owner | Status |
 |:-----:|-------------|-------|:------:|
 | 26 | `ai_budget_monthly_usd` in schema | Architect | ✅ 2026-02-16 |
-| 43 | PDF generation library decision | Architect/Dev | ⬜ |
+| 43 | ~~PDF generation library~~ → `@react-pdf/renderer` installed | Dev | ✅ 2026-02-16 |
 
 ### External Dependencies (Mona) — All ⬜
 
@@ -356,8 +358,8 @@ Growth phase — ไม่ block MVP. Note ไว้เฉยๆ แก้เม
 | Story Quality | 10/10 | พบ ambiguity 10 stories (ไม่ block แต่ Dev จะสับสน) |
 | AC Specificity | 10/10 | พบ 10 ACs ที่ ambiguous — 6 resolved (~~#32~~, ~~#34~~, ~~#41~~, ~~#42~~, ~~#57~~, ~~#58~~), 4 open (#23, #25, #40, #16) |
 | Architecture Alignment | 10/10 | ~~พบ ERD ขาด 11 ตาราง (#52)~~ ✅ resolved — ERD ครบ 27 ตาราง + Decision 3.8 transition matrix + GA-1~4 addenda |
-| Prerequisites | 8/10 | เพิ่ม: ~~missing dependencies (#12, #48, #53)~~ ✅ resolved, remaining: #43 (PDF lib), missing test data (#14, #15, #19, #22, #35) |
-| **Revised Overall** | **8.8/10** | 58 gaps → 29 resolved, 29 open (5 BLOCKER + 24 CONFUSION) |
+| Prerequisites | 8.5/10 | เพิ่ม: ~~missing dependencies (#12, #43, #48, #53)~~ ✅ all resolved, remaining: missing test data (#14, #15, #19, #22, #35) — Mona dependency |
+| **Revised Overall** | **9.0/10** | 58 gaps → 33 resolved, 25 open (4 BLOCKER + 21 CONFUSION) |
 
 ---
 

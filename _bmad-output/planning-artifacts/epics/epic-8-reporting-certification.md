@@ -16,9 +16,11 @@ So that I can share quality results with clients and stakeholders in their prefe
 
 **Given** a file has completed QA review (all findings reviewed)
 **When** the reviewer clicks "Export Report" and selects PDF
-**Then** a QA report PDF is generated server-side (Puppeteer/Playwright) containing: file summary (filename, language pair, score, date), finding list grouped by severity, each finding with: category, description, segment reference, reviewer decision, and overall quality assessment
+**Then** a QA report PDF is generated server-side containing: file summary (filename, language pair, score, date), finding list grouped by severity, each finding with: category, description, segment reference, reviewer decision, and overall quality assessment
 **And** segment_reference in findings = `{ file_id, segment_number, source_excerpt_50chars, target_excerpt_50chars }`
 **And** the report uses MQM standard terminology (not internal QA Cosmetic terms) for external audiences (FR46)
+
+> **UX Spec Decision (2026-02-16):** PDF generation library decision per `component-strategy.md#QACertificate`: MVP uses `@react-pdf/renderer` (lightweight, React components, SSR-friendly). Puppeteer/Playwright deferred to Growth phase due to heavy Chrome binary and Vercel memory limits. **CRITICAL:** Thai/CJK rendering POC required before Story 8.1 implementation — test Sarabun + Noto Sans CJK font embedding with 50+ segments. If POC fails, fallback to Puppeteer immediately. Certificate wireframe includes: Page 1 (certificate summary + score circle + check summary + MQM breakdown + report metadata), Page 2+ (detailed findings grouped by severity). Smart Report (3-tier classification) is a separate PDF document. Excel export spec covers 3 sheets (Summary, Findings, Segments). See `component-strategy.md#QACertificate` for full wireframes.
 
 **Given** a report has been exported for a file
 **When** a finding state is overridden AFTER the export
@@ -53,8 +55,10 @@ So that clients receive quality proof and every QA action is fully traceable.
 **Given** a file has been fully reviewed and passed (manual pass or auto-pass)
 **When** the reviewer clicks "Generate Certificate"
 **Then** a QA Certificate PDF is generated server-side containing: project name, file name, language pair, final MQM score, review date, reviewer name(s), and a "Quality Certified" stamp
-**And** the certificate is rendered server-side (Puppeteer/Playwright) to handle Thai/CJK text correctly (FR49)
+**And** the certificate is rendered server-side to handle Thai/CJK text correctly (FR49)
 **And** generation completes within 5 seconds
+
+> **UX Spec Decision (2026-02-16):** PDF library for Story 8.2 follows same decision as Story 8.1 — MVP uses `@react-pdf/renderer`, contingent on Thai/CJK POC passing. If POC fails, fallback to Puppeteer/Playwright. See `component-strategy.md#QACertificate` for full specification, wireframes, and font requirements.
 
 **Given** a decision is overridden on a file that has an exported report
 **When** the override is saved

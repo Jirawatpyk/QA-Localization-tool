@@ -94,6 +94,7 @@ So that I can control costs, prevent abuse, and ensure consistent AI behavior ac
 **When** the dashboard loads
 **Then** it shows: monthly AI spend by project, spend by model/provider, average cost per file, trend over time
 **And** budget alerts can be configured: warn at 80% of monthly budget, block at 100%
+**And** alert threshold percentage is editable by both Admin and PM roles (PM manages day-to-day budget awareness; Admin manages budget ceiling and overrides). QA Reviewer cannot edit alert settings.
 
 ### Story 3.2a: AI Provider Integration & Structured Output
 
