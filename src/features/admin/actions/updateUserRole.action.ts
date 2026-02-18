@@ -69,6 +69,16 @@ export async function updateUserRole(input: unknown): Promise<ActionResult<Updat
       .update(userRoles)
       .set({ role: previousRole })
       .where(and(eq(userRoles.userId, userId), eq(userRoles.tenantId, currentUser.tenantId)))
+    // Audit the failed attempt + rollback for traceability
+    await writeAuditLog({
+      tenantId: currentUser.tenantId,
+      userId: currentUser.id,
+      entityType: 'user_role',
+      entityId: userId,
+      action: 'role.update_rolled_back',
+      oldValue: { role: previousRole, attemptedRole: newRole },
+      newValue: { role: previousRole, reason: 'auth_metadata_update_failed' },
+    })
     return { success: false, code: 'INTERNAL_ERROR', error: 'Failed to update auth metadata' }
   }
 

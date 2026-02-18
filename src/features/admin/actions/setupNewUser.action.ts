@@ -55,6 +55,9 @@ export async function setupNewUser(): Promise<ActionResult<SetupResult>> {
     const displayName =
       (user.user_metadata?.display_name as string) ?? user.email?.split('@')[0] ?? 'User'
 
+    // IMPORTANT: Uses Drizzle (DATABASE_URL direct connection) which bypasses RLS.
+    // This is required because at this point the user's JWT has tenant_id: "none"
+    // (no tenant exists yet). DO NOT refactor to use Supabase client — RLS would block.
     // Atomic transaction: all-or-nothing to prevent orphan records
     const result = await db.transaction(async (tx) => {
       const [tenant] = await tx

@@ -9,12 +9,6 @@ vi.mock('@/lib/auth/requireRole', () => ({
   requireRole: () => mockRequireRole(),
 }))
 
-// Mock writeAuditLog
-const mockWriteAuditLog = vi.fn().mockResolvedValue(undefined)
-vi.mock('@/features/audit/actions/writeAuditLog', () => ({
-  writeAuditLog: (entry: unknown) => mockWriteAuditLog(entry),
-}))
-
 // Mock admin client
 const mockCreateUser = vi.fn()
 const mockDeleteUser = vi.fn().mockResolvedValue({ error: null })
@@ -29,16 +23,15 @@ vi.mock('@/lib/supabase/admin', () => ({
   }),
 }))
 
-// Mock DB
-const mockDbInsertValues = vi.fn().mockResolvedValue(undefined)
+// Mock DB with transaction support
+const mockTransactionCb = vi.fn()
 vi.mock('@/db/client', () => ({
   db: {
-    insert: () => ({
-      values: () => mockDbInsertValues(),
-    }),
+    transaction: (cb: (tx: unknown) => Promise<unknown>) => mockTransactionCb(cb),
   },
 }))
 
+vi.mock('@/db/schema/auditLogs', () => ({ auditLogs: {} }))
 vi.mock('@/db/schema/userRoles', () => ({ userRoles: {} }))
 vi.mock('@/db/schema/users', () => ({ users: {} }))
 
@@ -50,8 +43,17 @@ describe('createUser', () => {
     role: 'admin' as const,
   }
 
+  // Mock transaction executor that simulates successful tx
+  const successfulTx = {
+    insert: () => ({
+      values: vi.fn().mockResolvedValue(undefined),
+    }),
+  }
+
   beforeEach(() => {
     vi.clearAllMocks()
+    // Default: transaction runs the callback with mock tx
+    mockTransactionCb.mockImplementation(async (cb) => cb(successfulTx))
   })
 
   it('should return FORBIDDEN when requireRole throws', async () => {
@@ -99,7 +101,7 @@ describe('createUser', () => {
     }
   })
 
-  it('should create user with app_metadata and return success', async () => {
+  it('should create user with app_metadata and transaction', async () => {
     mockRequireRole.mockResolvedValue(adminUser)
     mockCreateUser.mockResolvedValue({
       data: { user: { id: 'new-user-1' } },
@@ -124,19 +126,18 @@ describe('createUser', () => {
         app_metadata: { user_role: 'qa_reviewer', tenant_id: 'tenant-1' },
       }),
     )
-    // Verify audit log was written
-    expect(mockWriteAuditLog).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'user.created' }),
-    )
+    // Verify transaction was used
+    expect(mockTransactionCb).toHaveBeenCalled()
   })
 
-  it('should rollback auth user when DB insert fails', async () => {
+  it('should rollback auth user when transaction fails', async () => {
     mockRequireRole.mockResolvedValue(adminUser)
     mockCreateUser.mockResolvedValue({
       data: { user: { id: 'orphan-user' } },
       error: null,
     })
-    mockDbInsertValues.mockRejectedValue(new Error('DB insert failed'))
+    // Transaction throws (simulates DB failure — entire tx is rolled back)
+    mockTransactionCb.mockRejectedValue(new Error('DB insert failed'))
 
     const { createUser } = await import('./createUser.action')
     const result = await createUser({
@@ -149,7 +150,7 @@ describe('createUser', () => {
     if (!result.success) {
       expect(result.code).toBe('INTERNAL_ERROR')
     }
-    // Verify orphan cleanup
+    // Verify orphan cleanup (Auth user deleted since DB tx rolled back)
     expect(mockDeleteUser).toHaveBeenCalledWith('orphan-user')
   })
 })

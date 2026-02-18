@@ -1134,3 +1134,80 @@ The following 5 bugs were discovered during the first production signup test and
 | src/features/admin/actions/updateUserRole.action.ts | Modified | try-catch requireRole + self-demotion guard + API error check + DB rollback |
 | src/lib/auth/getCurrentUser.ts | Modified | Removed redundant `as string` cast |
 | 1-2-database-schema-authentication.md | Modified | Added CR3 review record |
+
+### Senior Developer Review 4 (AI) — Transaction Safety & Test Coverage
+
+**Reviewer:** Claude Opus 4.6 (Adversarial CR) — 2026-02-18
+**Scope:** Full Story 1-2 codebase after CR3 fixes
+
+**Issues Found:** 1 High, 2 Medium, 1 Low — **All Fixed**
+
+| # | Severity | Issue | Fix Applied |
+|---|----------|-------|-------------|
+| CR4-1 | HIGH | Server actions (createUser, setupNewUser, updateUserRole) have no unit tests — 0% coverage on critical auth mutation paths | Added 16 unit tests across 3 test files: createUser (5), setupNewUser (5), updateUserRole (6) |
+| CR4-2 | MEDIUM | Post-login redirect broken — LoginForm doesn't read `?redirect=` search param from proxy redirect | LoginForm reads `redirect` param with open redirect validation (`/` prefix, no `//`) |
+| CR4-3 | MEDIUM | `setupNewUser` DB operations not wrapped in `db.transaction()` — partial failures leave orphan records | Wrapped all inserts (tenant, user, userRole, languagePairConfigs, auditLog) in `db.transaction()` |
+| CR4-4 | LOW | `createUser` and `updateUserRole` use inline `db.insert(auditLogs)` instead of `writeAuditLog` utility | Replaced with `writeAuditLog()` calls for consistency (later reverted for createUser in CR5 due to transaction requirement) |
+
+**Validation Gates After Fixes:**
+- `npm run test:unit` — **118/118 passed** (+16 new action tests)
+- `npm run type-check` — passed
+- `npm run lint` — 0 errors, 0 warnings
+- `npm run build` — passed
+
+**Files Changed in Review 4:**
+| File | Action | Description |
+|------|--------|-------------|
+| src/features/admin/components/LoginForm.tsx | Modified | Read `redirect` search param with open redirect guard |
+| src/features/admin/actions/setupNewUser.action.ts | Modified | Wrapped in `db.transaction()` with RLS bypass comment |
+| src/features/admin/actions/createUser.action.ts | Modified | Used `writeAuditLog()` (later changed in CR5) |
+| src/features/admin/actions/updateUserRole.action.ts | Modified | Used `writeAuditLog()` for audit |
+| src/features/admin/actions/createUser.action.test.ts | Created | 5 unit tests (FORBIDDEN, validation, auth error, success, rollback) |
+| src/features/admin/actions/setupNewUser.action.test.ts | Created | 5 unit tests (UNAUTHORIZED, existing user, new user tx, race condition, error) |
+| src/features/admin/actions/updateUserRole.action.test.ts | Created | 6 unit tests (FORBIDDEN, validation, self-demotion, NOT_FOUND, success+audit, rollback) |
+
+### Senior Developer Review 5 (AI) — RLS, Realtime & Auth State
+
+**Reviewer:** Claude Opus 4.6 (Adversarial CR) — 2026-02-18
+**Scope:** Full Story 1-2 codebase after CR4 fixes — deep dive into security policies, Realtime, and client-side auth
+
+**Issues Found:** 2 High, 3 Medium, 2 Low — **All Fixed**
+
+| # | Severity | Issue | Fix Applied |
+|---|----------|-------|-------------|
+| CR5-1 | HIGH | `createUser.action.ts` DB inserts (users, userRoles, auditLogs) not in a transaction — partial failure leaves orphan DB rows even though Supabase Auth user cleanup exists | Wrapped all 3 inserts in `db.transaction()` with `tx.insert()` (reverted from `writeAuditLog` to inline insert since audit must be in same tx) |
+| CR5-2 | HIGH | `severity_configs` RLS INSERT/UPDATE policies allow `OR tenant_id IS NULL` — any authenticated user can write NULL-tenant rows, polluting shared reference data | Created migration `00008_fix_severity_configs_rls.sql` removing NULL tenant allowance; added DELETE policy |
+| CR5-3 | MEDIUM | `useRoleSync` subscribes to `postgres_changes` on `user_roles` but table not added to `supabase_realtime` publication — Realtime events will never fire | Created migration `00009_enable_realtime_user_roles.sql`: `ALTER PUBLICATION supabase_realtime ADD TABLE user_roles` |
+| CR5-4 | MEDIUM | `updateUserRole` rolls back DB on auth metadata failure but doesn't audit the rollback — silent failure violates audit completeness requirement | Added `writeAuditLog()` call with `role.update_rolled_back` action + reason on rollback path |
+| CR5-5 | MEDIUM | `AuthListener` doesn't handle `SIGNED_OUT` event — cross-tab logout leaves stale UI on other tabs | Added `event === 'SIGNED_OUT'` check with `window.location.href = '/login'` redirect |
+| CR5-6 | LOW | `setupNewUser` uses Drizzle (bypasses RLS) without documenting WHY — future dev might "fix" by switching to Supabase client, breaking signup | Added comment explaining JWT has `tenant_id: "none"` at this point; RLS bypass is intentional |
+| CR5-7 | LOW | `proxy.ts` uses full `x-forwarded-for` header as rate limit key — attacker can bypass by adding fake IPs | Extract first (client) IP: `xff?.split(',')[0]?.trim()` with `x-real-ip` fallback |
+
+**Validation Gates After Fixes:**
+- `npm run test:unit` — **120/120 passed** (test mocks updated for transaction pattern)
+- `npm run type-check` — passed
+- `npm run lint` — 0 errors, 0 warnings
+- `npm run build` — passed
+
+**Files Changed in Review 5:**
+| File | Action | Description |
+|------|--------|-------------|
+| src/features/admin/actions/createUser.action.ts | Modified | `db.transaction()` wrapping 3 inserts; inline `tx.insert(auditLogs)` |
+| src/features/admin/actions/updateUserRole.action.ts | Modified | `writeAuditLog()` on rollback path with `role.update_rolled_back` |
+| src/features/admin/actions/setupNewUser.action.ts | Modified | RLS bypass documentation comment |
+| src/features/admin/components/AuthListener.tsx | Modified | `SIGNED_OUT` event → `window.location.href = '/login'` |
+| src/proxy.ts | Modified | Extract first IP from `x-forwarded-for` |
+| src/features/admin/actions/createUser.action.test.ts | Modified | Updated mock from `db.insert` to `db.transaction` pattern |
+| supabase/migrations/00008_fix_severity_configs_rls.sql | Created | Remove NULL tenant allowance from severity_configs RLS |
+| supabase/migrations/00009_enable_realtime_user_roles.sql | Created | Enable Realtime publication for user_roles |
+
+### Cumulative Review Summary (CR1–CR5)
+
+| Round | Issues Found | Severity Breakdown | Test Count After |
+|-------|:------------:|-------------------|:----------------:|
+| CR1 | 10 | 2 Critical, 3 High, 4 Medium, 1 Low | 60 |
+| CR2 | 8 | 3 High, 3 Medium, 2 Low | 62 |
+| CR3 | 5 (+2 extra) | 1 Critical, 2 High, 1 Medium, 1 Low | 102 |
+| CR4 | 4 | 1 High, 2 Medium, 1 Low | 118 |
+| CR5 | 7 | 2 High, 3 Medium, 2 Low | 120 |
+| **Total** | **34** | **3 Critical, 11 High, 13 Medium, 7 Low** | **120 tests** |

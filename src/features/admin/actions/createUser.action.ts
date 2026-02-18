@@ -1,10 +1,10 @@
 'use server'
 
 import { db } from '@/db/client'
+import { auditLogs } from '@/db/schema/auditLogs'
 import { userRoles } from '@/db/schema/userRoles'
 import { users } from '@/db/schema/users'
 import { createUserSchema } from '@/features/admin/validation/userSchemas'
-import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import type { AppRole } from '@/lib/auth/getCurrentUser'
 import { requireRole } from '@/lib/auth/requireRole'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -48,31 +48,34 @@ export async function createUser(input: unknown): Promise<ActionResult<CreateUse
     }
   }
 
-  // DB inserts in try-catch: rollback Supabase Auth user on failure to prevent orphans
+  // Atomic transaction: all-or-nothing to prevent orphan DB rows
+  // On failure, compensate by deleting the Supabase Auth user
   try {
-    await db.insert(users).values({
-      id: authData.user.id,
-      tenantId: currentUser.tenantId,
-      email,
-      displayName,
-    })
+    await db.transaction(async (tx) => {
+      await tx.insert(users).values({
+        id: authData.user.id,
+        tenantId: currentUser.tenantId,
+        email,
+        displayName,
+      })
 
-    await db.insert(userRoles).values({
-      userId: authData.user.id,
-      tenantId: currentUser.tenantId,
-      role,
-    })
+      await tx.insert(userRoles).values({
+        userId: authData.user.id,
+        tenantId: currentUser.tenantId,
+        role,
+      })
 
-    await writeAuditLog({
-      tenantId: currentUser.tenantId,
-      userId: currentUser.id,
-      entityType: 'user',
-      entityId: authData.user.id,
-      action: 'user.created',
-      newValue: { email, role, displayName },
+      await tx.insert(auditLogs).values({
+        tenantId: currentUser.tenantId,
+        userId: currentUser.id,
+        entityType: 'user',
+        entityId: authData.user.id,
+        action: 'user.created',
+        newValue: { email, role, displayName },
+      })
     })
   } catch {
-    // Compensate: delete orphaned Supabase Auth user
+    // Compensate: delete orphaned Supabase Auth user (DB transaction already rolled back)
     await adminClient.auth.admin.deleteUser(authData.user.id)
     return { success: false, code: 'INTERNAL_ERROR', error: 'Failed to create user records' }
   }

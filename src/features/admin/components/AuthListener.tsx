@@ -26,8 +26,13 @@ export function AuthListener() {
     // Listen for auth state changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setUserId(session?.user?.id)
+      if (event === 'SIGNED_OUT') {
+        // Redirect immediately — router.refresh() alone won't leave the protected page
+        window.location.href = '/login'
+        return
+      }
       router.refresh()
     })
 

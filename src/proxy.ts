@@ -37,8 +37,10 @@ export async function proxy(request: NextRequest) {
   if (request.method === 'POST' && AUTH_ROUTES.some((r) => pathname.startsWith(r))) {
     try {
       const { authLimiter } = await import('@/lib/ratelimit')
-      const ip =
-        request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? '127.0.0.1'
+      // Extract first (client) IP from x-forwarded-for (format: "client, proxy1, proxy2")
+      // Assumes deployment behind a trusted reverse proxy that sets these headers
+      const xff = request.headers.get('x-forwarded-for')
+      const ip = xff?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip') ?? '127.0.0.1'
       const { success } = await authLimiter.limit(ip)
       if (!success) {
         logger.warn({ pathname, ip }, 'Rate limit exceeded for auth endpoint')
