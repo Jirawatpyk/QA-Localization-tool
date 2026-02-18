@@ -1101,3 +1101,36 @@ The following 5 bugs were discovered during the first production signup test and
 | src/features/admin/actions/setupNewUser.action.ts | Modified | Generic error message to client, `logger.error()` for real error |
 | src/app/(auth)/callback/route.ts | Modified | Added `refreshSession()` after `setupNewUser()` |
 | 1-2-database-schema-authentication.md | Modified | Updated AC5 rate limit note, Task 9.3 deferral reason, added review record |
+
+### Senior Developer Review 3 (AI) — Security Hardening
+
+**Reviewer:** Claude Opus 4.6 (Adversarial CR) — 2026-02-18
+**Scope:** Full Story 1-2 codebase after CR2 fixes
+
+**Issues Found:** 1 Critical, 2 High, 1 Medium, 1 Low — **All Fixed**
+
+| # | Severity | Issue | Fix Applied |
+|---|----------|-------|-------------|
+| CR3-1 | CRITICAL | Open redirect in `callback/route.ts` — `?next=//evil.com` bypasses validation | Added path validation: must start with `/` and NOT `//` |
+| CR3-2 | HIGH | `createUser.action.ts` missing `app_metadata` on Supabase `createUser` call — new users won't have JWT claims until next token refresh | Added `app_metadata: { user_role: role, tenant_id: currentUser.tenantId }` to admin createUser call |
+| CR3-3 | HIGH | `createUser.action.ts` not atomic — if DB inserts fail after Supabase Auth user created, orphaned auth user remains | Wrapped DB inserts in try-catch; on failure, compensate by deleting Supabase Auth user via `adminClient.auth.admin.deleteUser()` |
+| CR3-4 | MEDIUM | `updateUserRole.action.ts` ignores Supabase API error on `updateUserById` — DB and Auth metadata can get out of sync | Capture `{ error: metaError }` from API call; on failure, rollback DB change to previous role |
+| CR3-5 | LOW | Redundant `as string` cast on `email` in `getCurrentUser.ts` — `email` is already typed as `string \| undefined` | Removed redundant cast, `email ?? ''` suffices |
+
+**Additional Security Fix:** Added self-demotion guard to `updateUserRole.action.ts` — admin cannot change their own role (prevents lock-out scenario where last admin demotes themselves).
+
+**Additional Resilience Fix:** Both `createUser` and `updateUserRole` now wrap `requireRole('admin', 'write')` in try-catch returning `ActionResult` instead of letting the throw propagate to Next.js generic "Something went wrong" error.
+
+**Validation Gates After Fixes:**
+- `npm run test:unit` — **102/102 passed** (includes Story 1.3 tests picked up by vitest)
+- `npm run build` — passed
+- `npm run lint` — 0 errors (12 warnings from Story 1.3 files, not Story 1-2)
+
+**Files Changed in Review 3:**
+| File | Action | Description |
+|------|--------|-------------|
+| src/app/(auth)/callback/route.ts | Modified | Open redirect prevention: validate `next` param |
+| src/features/admin/actions/createUser.action.ts | Modified | try-catch requireRole + app_metadata + atomic rollback |
+| src/features/admin/actions/updateUserRole.action.ts | Modified | try-catch requireRole + self-demotion guard + API error check + DB rollback |
+| src/lib/auth/getCurrentUser.ts | Modified | Removed redundant `as string` cast |
+| 1-2-database-schema-authentication.md | Modified | Added CR3 review record |

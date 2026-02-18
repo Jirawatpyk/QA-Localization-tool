@@ -19,7 +19,12 @@ type UpdateRoleResult = { userId: string; newRole: AppRole }
  * Triggers JWT claim refresh via app_metadata update.
  */
 export async function updateUserRole(input: unknown): Promise<ActionResult<UpdateRoleResult>> {
-  const currentUser = await requireRole('admin', 'write')
+  let currentUser
+  try {
+    currentUser = await requireRole('admin', 'write')
+  } catch {
+    return { success: false, code: 'FORBIDDEN', error: 'Admin access required' }
+  }
 
   const parsed = updateRoleSchema.safeParse(input)
   if (!parsed.success) {
@@ -27,6 +32,11 @@ export async function updateUserRole(input: unknown): Promise<ActionResult<Updat
   }
 
   const { userId, newRole } = parsed.data
+
+  // Prevent self-demotion: admin cannot change their own role
+  if (userId === currentUser.id) {
+    return { success: false, code: 'VALIDATION_ERROR', error: 'Cannot change your own role' }
+  }
 
   // Get current role for audit
   const [current] = await db
@@ -49,9 +59,18 @@ export async function updateUserRole(input: unknown): Promise<ActionResult<Updat
 
   // Update Supabase Auth app_metadata to trigger JWT claim refresh
   const adminClient = createAdminClient()
-  await adminClient.auth.admin.updateUserById(userId, {
+  const { error: metaError } = await adminClient.auth.admin.updateUserById(userId, {
     app_metadata: { user_role: newRole, tenant_id: currentUser.tenantId },
   })
+
+  if (metaError) {
+    // Rollback DB change to keep DB and Auth in sync
+    await db
+      .update(userRoles)
+      .set({ role: previousRole })
+      .where(and(eq(userRoles.userId, userId), eq(userRoles.tenantId, currentUser.tenantId)))
+    return { success: false, code: 'INTERNAL_ERROR', error: 'Failed to update auth metadata' }
+  }
 
   // Audit log
   await db.insert(auditLogs).values({

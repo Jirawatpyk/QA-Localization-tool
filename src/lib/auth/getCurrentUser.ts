@@ -42,7 +42,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   return {
     id: userId,
-    email: (email as string) ?? '',
+    email: email ?? '',
     tenantId,
     role: role as AppRole,
   }

@@ -17,7 +17,12 @@ type CreateUserResult = { id: string; email: string; role: AppRole }
  * Admin-only operation (M3 DB check via requireRole write).
  */
 export async function createUser(input: unknown): Promise<ActionResult<CreateUserResult>> {
-  const currentUser = await requireRole('admin', 'write')
+  let currentUser
+  try {
+    currentUser = await requireRole('admin', 'write')
+  } catch {
+    return { success: false, code: 'FORBIDDEN', error: 'Admin access required' }
+  }
 
   const parsed = createUserSchema.safeParse(input)
   if (!parsed.success) {
@@ -26,12 +31,13 @@ export async function createUser(input: unknown): Promise<ActionResult<CreateUse
 
   const { email, displayName, role } = parsed.data
 
-  // Create user in Supabase Auth via admin API
+  // Create user in Supabase Auth via admin API (with app_metadata for JWT claims)
   const adminClient = createAdminClient()
   const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
     email,
     email_confirm: true,
     user_metadata: { display_name: displayName },
+    app_metadata: { user_role: role, tenant_id: currentUser.tenantId },
   })
 
   if (authError || !authData.user) {
@@ -42,30 +48,34 @@ export async function createUser(input: unknown): Promise<ActionResult<CreateUse
     }
   }
 
-  // Insert user record
-  await db.insert(users).values({
-    id: authData.user.id,
-    tenantId: currentUser.tenantId,
-    email,
-    displayName,
-  })
+  // DB inserts in try-catch: rollback Supabase Auth user on failure to prevent orphans
+  try {
+    await db.insert(users).values({
+      id: authData.user.id,
+      tenantId: currentUser.tenantId,
+      email,
+      displayName,
+    })
 
-  // Assign role
-  await db.insert(userRoles).values({
-    userId: authData.user.id,
-    tenantId: currentUser.tenantId,
-    role,
-  })
+    await db.insert(userRoles).values({
+      userId: authData.user.id,
+      tenantId: currentUser.tenantId,
+      role,
+    })
 
-  // Audit log
-  await db.insert(auditLogs).values({
-    tenantId: currentUser.tenantId,
-    userId: currentUser.id,
-    entityType: 'user',
-    entityId: authData.user.id,
-    action: 'user.created',
-    newValue: { email, role, displayName },
-  })
+    await db.insert(auditLogs).values({
+      tenantId: currentUser.tenantId,
+      userId: currentUser.id,
+      entityType: 'user',
+      entityId: authData.user.id,
+      action: 'user.created',
+      newValue: { email, role, displayName },
+    })
+  } catch {
+    // Compensate: delete orphaned Supabase Auth user
+    await adminClient.auth.admin.deleteUser(authData.user.id)
+    return { success: false, code: 'INTERNAL_ERROR', error: 'Failed to create user records' }
+  }
 
   return { success: true, data: { id: authData.user.id, email, role } }
 }
