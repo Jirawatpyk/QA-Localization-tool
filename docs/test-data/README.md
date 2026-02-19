@@ -117,7 +117,10 @@ Purpose-specific test data referenced in Epic acceptance criteria.
 
 | Directory | Epic / Story | What's Inside | Data Source | Status |
 |-----------|-------------|--------------|-------------|:------:|
-| `glossary-matching/th.json` | Epic 1 / Story 1.5 | 500+ annotated Thai segments for glossary matching validation | ← `microsoft-terminology/THAI.tbx` + `yaitron-en-th/` | 🟢 **Data ready** — generate fixture from public data |
+| `glossary-matching/th.json` | Epic 1 / Story 1.5 | 759 annotated Thai cases from `THAI.tbx` (34,515 EN→TH terms) | ← `microsoft-terminology/THAI.tbx` | ✅ **Done** — `scripts/generate-th-fixture.mjs` |
+| `glossary-matching/ja.json` | Epic 1 / Story 1.5 | 759 annotated Japanese cases from `JAPANESE.tbx` (51,578 EN→JA pairs) | ← `microsoft-terminology/JAPANESE.tbx` | ✅ **Done** — `scripts/generate-multilang-fixtures.mjs` |
+| `glossary-matching/zh.json` | Epic 1 / Story 1.5 | 759 annotated Chinese (Simplified) cases from `CHINESE (SIMPLIFIED).tbx` | ← `microsoft-terminology/CHINESE (SIMPLIFIED).tbx` | ✅ **Done** — `scripts/generate-multilang-fixtures.mjs` |
+| `glossary-matching/en-fr-de.json` | Epic 1 / Story 1.5 | 686 annotated EN/FR/DE cases (mixed lang field) from `FRENCH.tbx` + `GERMAN.tbx` | ← `microsoft-terminology/FRENCH.tbx` + `GERMAN.tbx` | ✅ **Done** — `scripts/generate-multilang-fixtures.mjs` |
 | `segmenter/{language}.json` | Epic 2 / Story 2.1 | Token count verification for CJK/Thai (Intl.Segmenter) | ← `sap-xliff/` | 🟢 Data ready |
 | `back-translation/th-reference.json` | Epic 5 / Story 5.1 | 100 Thai reference segments — Mona เขียน reference back-translation | ← Mona (bilingual reference) | ⬜ Mona |
 | `back-translation/ja-reference.json` | Epic 5 / Story 5.1 | JA back-translation reference — extract EN source from SAP | ← Dev extract จาก `sap-xliff/en-ja/` | 🟢 Data ready |
@@ -140,7 +143,7 @@ Purpose-specific test data referenced in Epic acceptance criteria.
 | Provide glossaries (เสริม) | **Mona** | Nice-to-have for Story 1.5 | 🟡 Optional — public data sufficient |
 | Provide Thai back-translation reference | **Mona** | Before Epic 5 / Story 5.1 | ⬜ |
 | Extract JA/KO/ZH back-translation reference from SAP | Dev | Before Epic 5 / Story 5.1 | ⬜ |
-| Generate glossary-matching fixture from public data | Dev | Story 1.5 | 🟢 Ready to generate |
+| Generate glossary-matching fixtures from public data (TH/JA/ZH/EN/FR/DE) | Dev | Story 1.5 | ✅ Done — TH=759 JA=759 ZH=759 EN-FR-DE=686 cases, `scripts/generate-th-fixture.mjs` + `scripts/generate-multilang-fixtures.mjs` |
 | Create other Epic test fixtures | Dev | During each Epic | ⬜ |
 
 ---

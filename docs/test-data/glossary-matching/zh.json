@@ -1,0 +1,6099 @@
+{
+  "_meta": {
+    "description": "Annotated Chinese (Simplified) glossary matching test corpus — generated from Microsoft Terminology Collection CHINESE (SIMPLIFIED).tbx",
+    "created": "2026-02-19",
+    "owner": "QA team",
+    "generator": "scripts/generate-multilang-fixtures.mjs",
+    "source": "docs/test-data/microsoft-terminology/CHINESE (SIMPLIFIED).tbx",
+    "note": "expectedConfidence determined by actual Intl.Segmenter(\"zh\") on this machine. ICU version differences may cause confidence mismatches — treat as soft warning. Acceptance thresholds (FR43): false-negative < 5%, false-positive < 10%.",
+    "stats": {
+      "total": 759,
+      "positive": 648,
+      "negative": 111,
+      "high_confidence": 647,
+      "low_confidence": 1
+    },
+    "schema": {
+      "text": "target segment text (ZH)",
+      "term": "glossary term to search for",
+      "caseSensitive": "boolean",
+      "expectedFound": "true if term should be found",
+      "expectedConfidence": "high | low | null",
+      "note": "explanation"
+    }
+  },
+  "cases": [
+    {
+      "text": "我去图书馆借书",
+      "term": "图书馆",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "ZH compound: segmenter may split 图书+馆 — substring finds full compound"
+    },
+    {
+      "text": "人工智能技术发展迅速",
+      "term": "人工智能",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "ZH AI compound: 人工+智能 — split by segmenter, found by substring"
+    },
+    {
+      "text": "这里没有该术语",
+      "term": "软件",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "ZH term not present"
+    },
+    {
+      "text": "",
+      "term": "软件",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "ZH empty text — must not throw"
+    },
+    {
+      "text": "<b>软件</b>开发过程",
+      "term": "软件",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "ZH markup stripped — 2-char term at boundary"
+    },
+    {
+      "text": "打开初级设置",
+      "term": "初级",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"beginner\" → ZH=\"初级\" | conf=high"
+    },
+    {
+      "text": "初级设置已完成",
+      "term": "初级",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"beginner\" → ZH=\"初级\" | conf=high"
+    },
+    {
+      "text": "<i>初级</i>已启用",
+      "term": "初级",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"beginner\" → ZH=\"初级\" | conf=high"
+    },
+    {
+      "text": "初级{0}操作完成",
+      "term": "初级",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"beginner\" → ZH=\"初级\" | conf=high"
+    },
+    {
+      "text": "初级和初级已选择",
+      "term": "初级",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"beginner\" → ZH=\"初级\" | conf=high"
+    },
+    {
+      "text": "命令栏设置已完成",
+      "term": "初级",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"初级\""
+    },
+    {
+      "text": "",
+      "term": "初级",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"初级\""
+    },
+    {
+      "text": "命令栏已成功安装",
+      "term": "命令栏",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"command bar\" → ZH=\"命令栏\" | conf=high"
+    },
+    {
+      "text": "系统支持命令栏",
+      "term": "命令栏",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"command bar\" → ZH=\"命令栏\" | conf=high"
+    },
+    {
+      "text": "重新启动批",
+      "term": "批",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"batch\" → ZH=\"批\" | conf=high"
+    },
+    {
+      "text": "批设置已完成",
+      "term": "批",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"batch\" → ZH=\"批\" | conf=high"
+    },
+    {
+      "text": "使用上架进行操作",
+      "term": "上架",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"onboard\" → ZH=\"上架\" | conf=high"
+    },
+    {
+      "text": "下载上架完成",
+      "term": "上架",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"onboard\" → ZH=\"上架\" | conf=high"
+    },
+    {
+      "text": "事件设置已完成",
+      "term": "上架",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"上架\""
+    },
+    {
+      "text": "下载事件完成",
+      "term": "事件",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"event\" → ZH=\"事件\" | conf=high"
+    },
+    {
+      "text": "事件已成功安装",
+      "term": "事件",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"event\" → ZH=\"事件\" | conf=high"
+    },
+    {
+      "text": "<i>事件</i>已启用",
+      "term": "事件",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"event\" → ZH=\"事件\" | conf=high"
+    },
+    {
+      "text": "选择地缘组选项",
+      "term": "地缘组",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"affinity group\" → ZH=\"地缘组\" | conf=high"
+    },
+    {
+      "text": "使用地缘组进行操作",
+      "term": "地缘组",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"affinity group\" → ZH=\"地缘组\" | conf=high"
+    },
+    {
+      "text": "%s中的地缘组",
+      "term": "地缘组",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"affinity group\" → ZH=\"地缘组\" | conf=high"
+    },
+    {
+      "text": "系统支持三元",
+      "term": "三元",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"ternary\" → ZH=\"三元\" | conf=high"
+    },
+    {
+      "text": "三元是重要功能",
+      "term": "三元",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"ternary\" → ZH=\"三元\" | conf=high"
+    },
+    {
+      "text": "注册设置已完成",
+      "term": "三元",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"三元\""
+    },
+    {
+      "text": "查看注册详情",
+      "term": "注册",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"sign up\" → ZH=\"注册\" | conf=high"
+    },
+    {
+      "text": "注册运行正常",
+      "term": "注册",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"sign up\" → ZH=\"注册\" | conf=high"
+    },
+    {
+      "text": "管理组设置已完成",
+      "term": "管理组",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"management group\" → ZH=\"管理组\" | conf=high"
+    },
+    {
+      "text": "使用管理组进行操作",
+      "term": "管理组",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"management group\" → ZH=\"管理组\" | conf=high"
+    },
+    {
+      "text": "<b>管理组</b>设置完成",
+      "term": "管理组",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"management group\" → ZH=\"管理组\" | conf=high"
+    },
+    {
+      "text": "管理组和管理组已选择",
+      "term": "管理组",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"management group\" → ZH=\"管理组\" | conf=high"
+    },
+    {
+      "text": "错误：未找到卸载",
+      "term": "卸载",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"uninstall\" → ZH=\"卸载\" | conf=high"
+    },
+    {
+      "text": "卸载是重要功能",
+      "term": "卸载",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"uninstall\" → ZH=\"卸载\" | conf=high"
+    },
+    {
+      "text": "隔离设置已完成",
+      "term": "卸载",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"卸载\""
+    },
+    {
+      "text": "查看隔离详情",
+      "term": "隔离",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"quarantine\" → ZH=\"隔离\" | conf=high"
+    },
+    {
+      "text": "重新启动隔离",
+      "term": "隔离",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"quarantine\" → ZH=\"隔离\" | conf=high"
+    },
+    {
+      "text": "隔离{0}操作完成",
+      "term": "隔离",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"quarantine\" → ZH=\"隔离\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "隔离",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"隔离\""
+    },
+    {
+      "text": "打开域操作设置",
+      "term": "域操作",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"domain operation\" → ZH=\"域操作\" | conf=high"
+    },
+    {
+      "text": "域操作功能已启用",
+      "term": "域操作",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"domain operation\" → ZH=\"域操作\" | conf=high"
+    },
+    {
+      "text": "选择容错选项",
+      "term": "容错",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"fault tolerance\" → ZH=\"容错\" | conf=high"
+    },
+    {
+      "text": "容错已成功安装",
+      "term": "容错",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"fault tolerance\" → ZH=\"容错\" | conf=high"
+    },
+    {
+      "text": "<i>容错</i>已启用",
+      "term": "容错",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"fault tolerance\" → ZH=\"容错\" | conf=high"
+    },
+    {
+      "text": "子区域设置已完成",
+      "term": "容错",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"容错\""
+    },
+    {
+      "text": "错误：未找到子区域",
+      "term": "子区域",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"sub-territory\" → ZH=\"子区域\" | conf=high"
+    },
+    {
+      "text": "子区域已成功安装",
+      "term": "子区域",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"sub-territory\" → ZH=\"子区域\" | conf=high"
+    },
+    {
+      "text": "关闭手机锁",
+      "term": "手机锁",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"subsidy lock\" → ZH=\"手机锁\" | conf=high"
+    },
+    {
+      "text": "错误：未找到手机锁",
+      "term": "手机锁",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"subsidy lock\" → ZH=\"手机锁\" | conf=high"
+    },
+    {
+      "text": "包是重要功能",
+      "term": "包",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"package\" → ZH=\"包\" | conf=high"
+    },
+    {
+      "text": "使用包进行操作",
+      "term": "包",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"package\" → ZH=\"包\" | conf=high"
+    },
+    {
+      "text": "包{0}操作完成",
+      "term": "包",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"package\" → ZH=\"包\" | conf=high"
+    },
+    {
+      "text": "子进程设置已完成",
+      "term": "包",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"包\""
+    },
+    {
+      "text": "子进程设置已完成",
+      "term": "子进程",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"child process\" → ZH=\"子进程\" | conf=high"
+    },
+    {
+      "text": "系统支持子进程",
+      "term": "子进程",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"child process\" → ZH=\"子进程\" | conf=high"
+    },
+    {
+      "text": "<i>子进程</i>已启用",
+      "term": "子进程",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"child process\" → ZH=\"子进程\" | conf=high"
+    },
+    {
+      "text": "子进程和子进程已选择",
+      "term": "子进程",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"child process\" → ZH=\"子进程\" | conf=high"
+    },
+    {
+      "text": "打开部署包设置",
+      "term": "部署包",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"deployment package\" → ZH=\"部署包\" | conf=high"
+    },
+    {
+      "text": "错误：未找到部署包",
+      "term": "部署包",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"deployment package\" → ZH=\"部署包\" | conf=high"
+    },
+    {
+      "text": "东-西运行正常",
+      "term": "东-西",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"East-West\" → ZH=\"东-西\" | conf=high"
+    },
+    {
+      "text": "打开东-西设置",
+      "term": "东-西",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"East-West\" → ZH=\"东-西\" | conf=high"
+    },
+    {
+      "text": "订单设置已完成",
+      "term": "东-西",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"东-西\""
+    },
+    {
+      "text": "订单设置已完成",
+      "term": "订单",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"order\" → ZH=\"订单\" | conf=high"
+    },
+    {
+      "text": "使用订单进行操作",
+      "term": "订单",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"order\" → ZH=\"订单\" | conf=high"
+    },
+    {
+      "text": "授权设置已完成",
+      "term": "授权",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"authorize\" → ZH=\"授权\" | conf=high"
+    },
+    {
+      "text": "错误：未找到授权",
+      "term": "授权",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"authorize\" → ZH=\"授权\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>授权已找到",
+      "term": "授权",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"authorize\" → ZH=\"授权\" | conf=high"
+    },
+    {
+      "text": "授权{0}操作完成",
+      "term": "授权",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"authorize\" → ZH=\"授权\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "授权",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"授权\""
+    },
+    {
+      "text": "请更新替代品",
+      "term": "替代品",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"substitute product\" → ZH=\"替代品\" | conf=high"
+    },
+    {
+      "text": "系统支持替代品",
+      "term": "替代品",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"substitute product\" → ZH=\"替代品\" | conf=high"
+    },
+    {
+      "text": "借记卡设置已完成",
+      "term": "替代品",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"替代品\""
+    },
+    {
+      "text": "借记卡是重要功能",
+      "term": "借记卡",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"check card\" → ZH=\"借记卡\" | conf=high"
+    },
+    {
+      "text": "借记卡已成功安装",
+      "term": "借记卡",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"check card\" → ZH=\"借记卡\" | conf=high"
+    },
+    {
+      "text": "资产是重要功能",
+      "term": "资产",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"asset\" → ZH=\"资产\" | conf=high"
+    },
+    {
+      "text": "系统支持资产",
+      "term": "资产",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"asset\" → ZH=\"资产\" | conf=high"
+    },
+    {
+      "text": "查看区域详情",
+      "term": "区域",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"region\" → ZH=\"区域\" | conf=high"
+    },
+    {
+      "text": "区域是重要功能",
+      "term": "区域",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"region\" → ZH=\"区域\" | conf=high"
+    },
+    {
+      "text": "<i>区域</i>已启用",
+      "term": "区域",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"region\" → ZH=\"区域\" | conf=high"
+    },
+    {
+      "text": "区域和区域已选择",
+      "term": "区域",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"region\" → ZH=\"区域\" | conf=high"
+    },
+    {
+      "text": "热管设置已完成",
+      "term": "区域",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"区域\""
+    },
+    {
+      "text": "热管已成功安装",
+      "term": "热管",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"heat pipe\" → ZH=\"热管\" | conf=high"
+    },
+    {
+      "text": "关闭热管",
+      "term": "热管",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"heat pipe\" → ZH=\"热管\" | conf=high"
+    },
+    {
+      "text": "热管{0}操作完成",
+      "term": "热管",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"heat pipe\" → ZH=\"热管\" | conf=high"
+    },
+    {
+      "text": "控件库设置已完成",
+      "term": "控件库",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Control Gallery\" → ZH=\"控件库\" | conf=high"
+    },
+    {
+      "text": "控件库功能已启用",
+      "term": "控件库",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Control Gallery\" → ZH=\"控件库\" | conf=high"
+    },
+    {
+      "text": "编码已成功安装",
+      "term": "编码",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"encode\" → ZH=\"编码\" | conf=high"
+    },
+    {
+      "text": "查看编码详情",
+      "term": "编码",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"encode\" → ZH=\"编码\" | conf=high"
+    },
+    {
+      "text": "原型设置已完成",
+      "term": "编码",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"编码\""
+    },
+    {
+      "text": "原型设置已完成",
+      "term": "原型",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"prototype\" → ZH=\"原型\" | conf=high"
+    },
+    {
+      "text": "原型功能已启用",
+      "term": "原型",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"prototype\" → ZH=\"原型\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>原型已找到",
+      "term": "原型",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"prototype\" → ZH=\"原型\" | conf=high"
+    },
+    {
+      "text": "打开字符集设置",
+      "term": "字符集",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"character set\" → ZH=\"字符集\" | conf=high"
+    },
+    {
+      "text": "重新启动字符集",
+      "term": "字符集",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"character set\" → ZH=\"字符集\" | conf=high"
+    },
+    {
+      "text": "脏功能已启用",
+      "term": "脏",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"dirty\" → ZH=\"脏\" | conf=high"
+    },
+    {
+      "text": "脏设置已完成",
+      "term": "脏",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"dirty\" → ZH=\"脏\" | conf=high"
+    },
+    {
+      "text": "脏{0}操作完成",
+      "term": "脏",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"dirty\" → ZH=\"脏\" | conf=high"
+    },
+    {
+      "text": "引用键设置已完成",
+      "term": "脏",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"脏\""
+    },
+    {
+      "text": "",
+      "term": "脏",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"脏\""
+    },
+    {
+      "text": "关闭引用键",
+      "term": "引用键",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"FK\" → ZH=\"引用键\" | conf=high"
+    },
+    {
+      "text": "引用键已成功安装",
+      "term": "引用键",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"FK\" → ZH=\"引用键\" | conf=high"
+    },
+    {
+      "text": "履行功能已启用",
+      "term": "履行",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"fulfillment\" → ZH=\"履行\" | conf=high"
+    },
+    {
+      "text": "重新启动履行",
+      "term": "履行",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"fulfillment\" → ZH=\"履行\" | conf=high"
+    },
+    {
+      "text": "<b>履行</b>设置完成",
+      "term": "履行",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"fulfillment\" → ZH=\"履行\" | conf=high"
+    },
+    {
+      "text": "履行和履行已选择",
+      "term": "履行",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"fulfillment\" → ZH=\"履行\" | conf=high"
+    },
+    {
+      "text": "工作区设置已完成",
+      "term": "工作区",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Workplace\" → ZH=\"工作区\" | conf=high"
+    },
+    {
+      "text": "工作区已成功安装",
+      "term": "工作区",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Workplace\" → ZH=\"工作区\" | conf=high"
+    },
+    {
+      "text": "棱锥型设置已完成",
+      "term": "工作区",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"工作区\""
+    },
+    {
+      "text": "下载棱锥型完成",
+      "term": "棱锥型",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Pyramid\" → ZH=\"棱锥型\" | conf=high"
+    },
+    {
+      "text": "错误：未找到棱锥型",
+      "term": "棱锥型",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Pyramid\" → ZH=\"棱锥型\" | conf=high"
+    },
+    {
+      "text": "标记云功能已启用",
+      "term": "标记云",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"tag cloud\" → ZH=\"标记云\" | conf=high"
+    },
+    {
+      "text": "标记云运行正常",
+      "term": "标记云",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"tag cloud\" → ZH=\"标记云\" | conf=high"
+    },
+    {
+      "text": "%s中的标记云",
+      "term": "标记云",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"tag cloud\" → ZH=\"标记云\" | conf=high"
+    },
+    {
+      "text": "计划设置已完成",
+      "term": "计划",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"program\" → ZH=\"计划\" | conf=high"
+    },
+    {
+      "text": "计划是重要功能",
+      "term": "计划",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"program\" → ZH=\"计划\" | conf=high"
+    },
+    {
+      "text": "<b>计划</b>设置完成",
+      "term": "计划",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"program\" → ZH=\"计划\" | conf=high"
+    },
+    {
+      "text": "页拆分设置已完成",
+      "term": "计划",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"计划\""
+    },
+    {
+      "text": "错误：未找到页拆分",
+      "term": "页拆分",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"page split\" → ZH=\"页拆分\" | conf=high"
+    },
+    {
+      "text": "页拆分已成功安装",
+      "term": "页拆分",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"page split\" → ZH=\"页拆分\" | conf=high"
+    },
+    {
+      "text": "贴靠功能已启用",
+      "term": "贴靠",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Snap\" → ZH=\"贴靠\" | conf=high"
+    },
+    {
+      "text": "系统支持贴靠",
+      "term": "贴靠",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Snap\" → ZH=\"贴靠\" | conf=high"
+    },
+    {
+      "text": "执行是重要功能",
+      "term": "执行",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"execute\" → ZH=\"执行\" | conf=high"
+    },
+    {
+      "text": "系统支持执行",
+      "term": "执行",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"execute\" → ZH=\"执行\" | conf=high"
+    },
+    {
+      "text": "系统驱动器设置已完成",
+      "term": "执行",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"执行\""
+    },
+    {
+      "text": "错误：未找到系统驱动器",
+      "term": "系统驱动器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"system drive\" → ZH=\"系统驱动器\" | conf=high"
+    },
+    {
+      "text": "系统支持系统驱动器",
+      "term": "系统驱动器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"system drive\" → ZH=\"系统驱动器\" | conf=high"
+    },
+    {
+      "text": "<i>系统驱动器</i>已启用",
+      "term": "系统驱动器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"system drive\" → ZH=\"系统驱动器\" | conf=high"
+    },
+    {
+      "text": "%s中的系统驱动器",
+      "term": "系统驱动器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"system drive\" → ZH=\"系统驱动器\" | conf=high"
+    },
+    {
+      "text": "系统驱动器和系统驱动器已选择",
+      "term": "系统驱动器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"system drive\" → ZH=\"系统驱动器\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "系统驱动器",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"系统驱动器\""
+    },
+    {
+      "text": "系统支持活动群组成员",
+      "term": "活动群组成员",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"event group member\" → ZH=\"活动群组成员\" | conf=high"
+    },
+    {
+      "text": "打开活动群组成员设置",
+      "term": "活动群组成员",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"event group member\" → ZH=\"活动群组成员\" | conf=high"
+    },
+    {
+      "text": "数据驱动订阅是重要功能",
+      "term": "数据驱动订阅",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"data-driven subscription\" → ZH=\"数据驱动订阅\" | conf=high"
+    },
+    {
+      "text": "打开数据驱动订阅设置",
+      "term": "数据驱动订阅",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"data-driven subscription\" → ZH=\"数据驱动订阅\" | conf=high"
+    },
+    {
+      "text": "报告单位设置已完成",
+      "term": "数据驱动订阅",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"数据驱动订阅\""
+    },
+    {
+      "text": "下载报告单位完成",
+      "term": "报告单位",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"reporting unit\" → ZH=\"报告单位\" | conf=high"
+    },
+    {
+      "text": "请更新报告单位",
+      "term": "报告单位",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"reporting unit\" → ZH=\"报告单位\" | conf=high"
+    },
+    {
+      "text": "用户定义的字段设置已完成",
+      "term": "用户定义的字段",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"user-defined field\" → ZH=\"用户定义的字段\" | conf=high"
+    },
+    {
+      "text": "关闭用户定义的字段",
+      "term": "用户定义的字段",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"user-defined field\" → ZH=\"用户定义的字段\" | conf=high"
+    },
+    {
+      "text": "<i>用户定义的字段</i>已启用",
+      "term": "用户定义的字段",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"user-defined field\" → ZH=\"用户定义的字段\" | conf=high"
+    },
+    {
+      "text": "打开分类器角色设置",
+      "term": "分类器角色",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"ClassifierRole\" → ZH=\"分类器角色\" | conf=high"
+    },
+    {
+      "text": "系统支持分类器角色",
+      "term": "分类器角色",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"ClassifierRole\" → ZH=\"分类器角色\" | conf=high"
+    },
+    {
+      "text": "{0}的分类器角色已更新",
+      "term": "分类器角色",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"ClassifierRole\" → ZH=\"分类器角色\" | conf=high"
+    },
+    {
+      "text": "复式记帐设置已完成",
+      "term": "分类器角色",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"分类器角色\""
+    },
+    {
+      "text": "系统支持复式记帐",
+      "term": "复式记帐",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"double entry accounting\" → ZH=\"复式记帐\" | conf=high"
+    },
+    {
+      "text": "查看复式记帐详情",
+      "term": "复式记帐",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"double entry accounting\" → ZH=\"复式记帐\" | conf=high"
+    },
+    {
+      "text": "错误：未找到虚拟路径",
+      "term": "虚拟路径",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"virtual path\" → ZH=\"虚拟路径\" | conf=high"
+    },
+    {
+      "text": "重新启动虚拟路径",
+      "term": "虚拟路径",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"virtual path\" → ZH=\"虚拟路径\" | conf=high"
+    },
+    {
+      "text": "查看鼠标按钮详情",
+      "term": "鼠标按钮",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"button\" → ZH=\"鼠标按钮\" | conf=high"
+    },
+    {
+      "text": "使用鼠标按钮进行操作",
+      "term": "鼠标按钮",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"button\" → ZH=\"鼠标按钮\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>鼠标按钮已找到",
+      "term": "鼠标按钮",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"button\" → ZH=\"鼠标按钮\" | conf=high"
+    },
+    {
+      "text": "鼠标按钮和鼠标按钮已选择",
+      "term": "鼠标按钮",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"button\" → ZH=\"鼠标按钮\" | conf=high"
+    },
+    {
+      "text": "导入格式设置已完成",
+      "term": "鼠标按钮",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"鼠标按钮\""
+    },
+    {
+      "text": "查看导入格式详情",
+      "term": "导入格式",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"import format\" → ZH=\"导入格式\" | conf=high"
+    },
+    {
+      "text": "重新启动导入格式",
+      "term": "导入格式",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"import format\" → ZH=\"导入格式\" | conf=high"
+    },
+    {
+      "text": "查看角色中缓存详情",
+      "term": "角色中缓存",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"In-Role Cache\" → ZH=\"角色中缓存\" | conf=high"
+    },
+    {
+      "text": "使用角色中缓存进行操作",
+      "term": "角色中缓存",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"In-Role Cache\" → ZH=\"角色中缓存\" | conf=high"
+    },
+    {
+      "text": "{0}的角色中缓存已更新",
+      "term": "角色中缓存",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"In-Role Cache\" → ZH=\"角色中缓存\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "角色中缓存",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"角色中缓存\""
+    },
+    {
+      "text": "下载计费分类完成",
+      "term": "计费分类",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"billing classification\" → ZH=\"计费分类\" | conf=high"
+    },
+    {
+      "text": "计费分类已成功安装",
+      "term": "计费分类",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"billing classification\" → ZH=\"计费分类\" | conf=high"
+    },
+    {
+      "text": "CD 盘片盒设置已完成",
+      "term": "计费分类",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"计费分类\""
+    },
+    {
+      "text": "CD 盘片盒是重要功能",
+      "term": "CD 盘片盒",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"CD jewel case\" → ZH=\"CD 盘片盒\" | conf=high"
+    },
+    {
+      "text": "使用CD 盘片盒进行操作",
+      "term": "CD 盘片盒",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"CD jewel case\" → ZH=\"CD 盘片盒\" | conf=high"
+    },
+    {
+      "text": "<i>CD 盘片盒</i>已启用",
+      "term": "CD 盘片盒",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"CD jewel case\" → ZH=\"CD 盘片盒\" | conf=high"
+    },
+    {
+      "text": "错误：未找到腕部疲劳综合症",
+      "term": "腕部疲劳综合症",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"carpal tunnel syndrome\" → ZH=\"腕部疲劳综合症\" | conf=high"
+    },
+    {
+      "text": "重新启动腕部疲劳综合症",
+      "term": "腕部疲劳综合症",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"carpal tunnel syndrome\" → ZH=\"腕部疲劳综合症\" | conf=high"
+    },
+    {
+      "text": "使用同步引擎进行操作",
+      "term": "同步引擎",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"synchronization engine\" → ZH=\"同步引擎\" | conf=high"
+    },
+    {
+      "text": "同步引擎设置已完成",
+      "term": "同步引擎",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"synchronization engine\" → ZH=\"同步引擎\" | conf=high"
+    },
+    {
+      "text": "右双引号设置已完成",
+      "term": "同步引擎",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"同步引擎\""
+    },
+    {
+      "text": "右双引号设置已完成",
+      "term": "右双引号",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"closing quotation mark\" → ZH=\"右双引号\" | conf=high"
+    },
+    {
+      "text": "下载右双引号完成",
+      "term": "右双引号",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"closing quotation mark\" → ZH=\"右双引号\" | conf=high"
+    },
+    {
+      "text": "{0}的右双引号已更新",
+      "term": "右双引号",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"closing quotation mark\" → ZH=\"右双引号\" | conf=high"
+    },
+    {
+      "text": "使用加密控制协议进行操作",
+      "term": "加密控制协议",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"ECP\" → ZH=\"加密控制协议\" | conf=high"
+    },
+    {
+      "text": "加密控制协议功能已启用",
+      "term": "加密控制协议",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"ECP\" → ZH=\"加密控制协议\" | conf=high"
+    },
+    {
+      "text": "<i>加密控制协议</i>已启用",
+      "term": "加密控制协议",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"ECP\" → ZH=\"加密控制协议\" | conf=high"
+    },
+    {
+      "text": "加密控制协议和加密控制协议已选择",
+      "term": "加密控制协议",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"ECP\" → ZH=\"加密控制协议\" | conf=high"
+    },
+    {
+      "text": "选择主题资源选项",
+      "term": "主题资源",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"theme resource\" → ZH=\"主题资源\" | conf=high"
+    },
+    {
+      "text": "主题资源运行正常",
+      "term": "主题资源",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"theme resource\" → ZH=\"主题资源\" | conf=high"
+    },
+    {
+      "text": "射线维恩图设置已完成",
+      "term": "主题资源",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"主题资源\""
+    },
+    {
+      "text": "射线维恩图运行正常",
+      "term": "射线维恩图",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Radial Venn\" → ZH=\"射线维恩图\" | conf=high"
+    },
+    {
+      "text": "射线维恩图功能已启用",
+      "term": "射线维恩图",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Radial Venn\" → ZH=\"射线维恩图\" | conf=high"
+    },
+    {
+      "text": "非法使用已成功安装",
+      "term": "非法使用",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"unlawful use\" → ZH=\"非法使用\" | conf=high"
+    },
+    {
+      "text": "非法使用设置已完成",
+      "term": "非法使用",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"unlawful use\" → ZH=\"非法使用\" | conf=high"
+    },
+    {
+      "text": "选择SIP 地址选项",
+      "term": "SIP 地址",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"SIP address\" → ZH=\"SIP 地址\" | conf=high"
+    },
+    {
+      "text": "SIP 地址功能已启用",
+      "term": "SIP 地址",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"SIP address\" → ZH=\"SIP 地址\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>SIP 地址已找到",
+      "term": "SIP 地址",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"SIP address\" → ZH=\"SIP 地址\" | conf=high"
+    },
+    {
+      "text": "SIP 地址{0}操作完成",
+      "term": "SIP 地址",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"SIP address\" → ZH=\"SIP 地址\" | conf=high"
+    },
+    {
+      "text": "潜在销售顾客设置已完成",
+      "term": "SIP 地址",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"SIP 地址\""
+    },
+    {
+      "text": "",
+      "term": "SIP 地址",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"SIP 地址\""
+    },
+    {
+      "text": "系统支持潜在销售顾客",
+      "term": "潜在销售顾客",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"lead\" → ZH=\"潜在销售顾客\" | conf=high"
+    },
+    {
+      "text": "潜在销售顾客是重要功能",
+      "term": "潜在销售顾客",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"lead\" → ZH=\"潜在销售顾客\" | conf=high"
+    },
+    {
+      "text": "系统支持详细清单",
+      "term": "详细清单",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"detailed inventory\" → ZH=\"详细清单\" | conf=high"
+    },
+    {
+      "text": "详细清单是重要功能",
+      "term": "详细清单",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"detailed inventory\" → ZH=\"详细清单\" | conf=high"
+    },
+    {
+      "text": "注释容器设置已完成",
+      "term": "注释容器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"note container\" → ZH=\"注释容器\" | conf=high"
+    },
+    {
+      "text": "选择注释容器选项",
+      "term": "注释容器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"note container\" → ZH=\"注释容器\" | conf=high"
+    },
+    {
+      "text": "永久性存储设置已完成",
+      "term": "注释容器",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"注释容器\""
+    },
+    {
+      "text": "永久性存储设置已完成",
+      "term": "永久性存储",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"nonvolatile storage\" → ZH=\"永久性存储\" | conf=high"
+    },
+    {
+      "text": "打开永久性存储设置",
+      "term": "永久性存储",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"nonvolatile storage\" → ZH=\"永久性存储\" | conf=high"
+    },
+    {
+      "text": "<i>永久性存储</i>已启用",
+      "term": "永久性存储",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"nonvolatile storage\" → ZH=\"永久性存储\" | conf=high"
+    },
+    {
+      "text": "永久性存储和永久性存储已选择",
+      "term": "永久性存储",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"nonvolatile storage\" → ZH=\"永久性存储\" | conf=high"
+    },
+    {
+      "text": "连续箭头流程功能已启用",
+      "term": "连续箭头流程",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Continuous Arrow Process\" → ZH=\"连续箭头流程\" | conf=high"
+    },
+    {
+      "text": "关闭连续箭头流程",
+      "term": "连续箭头流程",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Continuous Arrow Process\" → ZH=\"连续箭头流程\" | conf=high"
+    },
+    {
+      "text": "{0}的连续箭头流程已更新",
+      "term": "连续箭头流程",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Continuous Arrow Process\" → ZH=\"连续箭头流程\" | conf=high"
+    },
+    {
+      "text": "系统支持报告中心",
+      "term": "报告中心",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Report Center\" → ZH=\"报告中心\" | conf=high"
+    },
+    {
+      "text": "报告中心运行正常",
+      "term": "报告中心",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Report Center\" → ZH=\"报告中心\" | conf=high"
+    },
+    {
+      "text": "脉冲密度设置已完成",
+      "term": "报告中心",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"报告中心\""
+    },
+    {
+      "text": "关闭脉冲密度",
+      "term": "脉冲密度",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"burst density\" → ZH=\"脉冲密度\" | conf=high"
+    },
+    {
+      "text": "重新启动脉冲密度",
+      "term": "脉冲密度",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"burst density\" → ZH=\"脉冲密度\" | conf=high"
+    },
+    {
+      "text": "传送日志设置已完成",
+      "term": "传送日志",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"transfer log\" → ZH=\"传送日志\" | conf=high"
+    },
+    {
+      "text": "使用传送日志进行操作",
+      "term": "传送日志",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"transfer log\" → ZH=\"传送日志\" | conf=high"
+    },
+    {
+      "text": "<i>传送日志</i>已启用",
+      "term": "传送日志",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"transfer log\" → ZH=\"传送日志\" | conf=high"
+    },
+    {
+      "text": "错误：未找到自动更新",
+      "term": "自动更新",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Automatic Updates\" → ZH=\"自动更新\" | conf=high"
+    },
+    {
+      "text": "关闭自动更新",
+      "term": "自动更新",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Automatic Updates\" → ZH=\"自动更新\" | conf=high"
+    },
+    {
+      "text": "快速部署设置已完成",
+      "term": "自动更新",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"自动更新\""
+    },
+    {
+      "text": "查看快速部署详情",
+      "term": "快速部署",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"quick deploy\" → ZH=\"快速部署\" | conf=high"
+    },
+    {
+      "text": "重新启动快速部署",
+      "term": "快速部署",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"quick deploy\" → ZH=\"快速部署\" | conf=high"
+    },
+    {
+      "text": "%s中的快速部署",
+      "term": "快速部署",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"quick deploy\" → ZH=\"快速部署\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "快速部署",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"快速部署\""
+    },
+    {
+      "text": "系统支持触摸键盘",
+      "term": "触摸键盘",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"touch keyboard\" → ZH=\"触摸键盘\" | conf=high"
+    },
+    {
+      "text": "触摸键盘已成功安装",
+      "term": "触摸键盘",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"touch keyboard\" → ZH=\"触摸键盘\" | conf=high"
+    },
+    {
+      "text": "主题管理功能已启用",
+      "term": "主题管理",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Subject Manager\" → ZH=\"主题管理\" | conf=high"
+    },
+    {
+      "text": "重新启动主题管理",
+      "term": "主题管理",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Subject Manager\" → ZH=\"主题管理\" | conf=high"
+    },
+    {
+      "text": "<b>主题管理</b>设置完成",
+      "term": "主题管理",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Subject Manager\" → ZH=\"主题管理\" | conf=high"
+    },
+    {
+      "text": "主题管理和主题管理已选择",
+      "term": "主题管理",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"Subject Manager\" → ZH=\"主题管理\" | conf=high"
+    },
+    {
+      "text": "关系终止设置已完成",
+      "term": "主题管理",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"主题管理\""
+    },
+    {
+      "text": "重新启动关系终止",
+      "term": "关系终止",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"relationship termination\" → ZH=\"关系终止\" | conf=high"
+    },
+    {
+      "text": "关系终止运行正常",
+      "term": "关系终止",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"relationship termination\" → ZH=\"关系终止\" | conf=high"
+    },
+    {
+      "text": "通知区域已成功安装",
+      "term": "通知区域",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"notification area\" → ZH=\"通知区域\" | conf=high"
+    },
+    {
+      "text": "下载通知区域完成",
+      "term": "通知区域",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"notification area\" → ZH=\"通知区域\" | conf=high"
+    },
+    {
+      "text": "重新启动平衡记分卡方法",
+      "term": "平衡记分卡方法",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"balanced scorecard methodology\" → ZH=\"平衡记分卡方法\" | conf=high"
+    },
+    {
+      "text": "选择平衡记分卡方法选项",
+      "term": "平衡记分卡方法",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"balanced scorecard methodology\" → ZH=\"平衡记分卡方法\" | conf=high"
+    },
+    {
+      "text": "{0}的平衡记分卡方法已更新",
+      "term": "平衡记分卡方法",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"balanced scorecard methodology\" → ZH=\"平衡记分卡方法\" | conf=high"
+    },
+    {
+      "text": "审批搜索文件夹设置已完成",
+      "term": "平衡记分卡方法",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"平衡记分卡方法\""
+    },
+    {
+      "text": "系统支持审批搜索文件夹",
+      "term": "审批搜索文件夹",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"approvals search folder\" → ZH=\"审批搜索文件夹\" | conf=high"
+    },
+    {
+      "text": "审批搜索文件夹功能已启用",
+      "term": "审批搜索文件夹",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"approvals search folder\" → ZH=\"审批搜索文件夹\" | conf=high"
+    },
+    {
+      "text": "<b>审批搜索文件夹</b>设置完成",
+      "term": "审批搜索文件夹",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"approvals search folder\" → ZH=\"审批搜索文件夹\" | conf=high"
+    },
+    {
+      "text": "存储库对象是重要功能",
+      "term": "存储库对象",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"repository object\" → ZH=\"存储库对象\" | conf=high"
+    },
+    {
+      "text": "关闭存储库对象",
+      "term": "存储库对象",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"repository object\" → ZH=\"存储库对象\" | conf=high"
+    },
+    {
+      "text": "使用不当是重要功能",
+      "term": "使用不当",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"misapplication\" → ZH=\"使用不当\" | conf=high"
+    },
+    {
+      "text": "打开使用不当设置",
+      "term": "使用不当",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"misapplication\" → ZH=\"使用不当\" | conf=high"
+    },
+    {
+      "text": "台式计算机平台设置已完成",
+      "term": "使用不当",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"使用不当\""
+    },
+    {
+      "text": "关闭台式计算机平台",
+      "term": "台式计算机平台",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"desktop platform\" → ZH=\"台式计算机平台\" | conf=high"
+    },
+    {
+      "text": "台式计算机平台设置已完成",
+      "term": "台式计算机平台",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"desktop platform\" → ZH=\"台式计算机平台\" | conf=high"
+    },
+    {
+      "text": "查阅字段设置已完成",
+      "term": "查阅字段",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Lookup field\" → ZH=\"查阅字段\" | conf=high"
+    },
+    {
+      "text": "查阅字段功能已启用",
+      "term": "查阅字段",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Lookup field\" → ZH=\"查阅字段\" | conf=high"
+    },
+    {
+      "text": "<b>查阅字段</b>设置完成",
+      "term": "查阅字段",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Lookup field\" → ZH=\"查阅字段\" | conf=high"
+    },
+    {
+      "text": "%s中的查阅字段",
+      "term": "查阅字段",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Lookup field\" → ZH=\"查阅字段\" | conf=high"
+    },
+    {
+      "text": "查阅字段和查阅字段已选择",
+      "term": "查阅字段",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"Lookup field\" → ZH=\"查阅字段\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "查阅字段",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"查阅字段\""
+    },
+    {
+      "text": "打印架构关键字设置已完成",
+      "term": "打印架构关键字",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Print Schema Keywords\" → ZH=\"打印架构关键字\" | conf=high"
+    },
+    {
+      "text": "打印架构关键字功能已启用",
+      "term": "打印架构关键字",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Print Schema Keywords\" → ZH=\"打印架构关键字\" | conf=high"
+    },
+    {
+      "text": "层次结构设置已完成",
+      "term": "打印架构关键字",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"打印架构关键字\""
+    },
+    {
+      "text": "层次结构设置已完成",
+      "term": "层次结构",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Hierarchy\" → ZH=\"层次结构\" | conf=high"
+    },
+    {
+      "text": "错误：未找到层次结构",
+      "term": "层次结构",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Hierarchy\" → ZH=\"层次结构\" | conf=high"
+    },
+    {
+      "text": "请更新分组筛选",
+      "term": "分组筛选",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Group Filtering\" → ZH=\"分组筛选\" | conf=high"
+    },
+    {
+      "text": "查看分组筛选详情",
+      "term": "分组筛选",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Group Filtering\" → ZH=\"分组筛选\" | conf=high"
+    },
+    {
+      "text": "文本编辑器设置已完成",
+      "term": "文本编辑器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"editor\" → ZH=\"文本编辑器\" | conf=high"
+    },
+    {
+      "text": "错误：未找到文本编辑器",
+      "term": "文本编辑器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"editor\" → ZH=\"文本编辑器\" | conf=high"
+    },
+    {
+      "text": "<i>文本编辑器</i>已启用",
+      "term": "文本编辑器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"editor\" → ZH=\"文本编辑器\" | conf=high"
+    },
+    {
+      "text": "日志读取器代理设置已完成",
+      "term": "文本编辑器",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"文本编辑器\""
+    },
+    {
+      "text": "日志读取器代理已成功安装",
+      "term": "日志读取器代理",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Log Reader Agent\" → ZH=\"日志读取器代理\" | conf=high"
+    },
+    {
+      "text": "系统支持日志读取器代理",
+      "term": "日志读取器代理",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Log Reader Agent\" → ZH=\"日志读取器代理\" | conf=high"
+    },
+    {
+      "text": "%s中的日志读取器代理",
+      "term": "日志读取器代理",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Log Reader Agent\" → ZH=\"日志读取器代理\" | conf=high"
+    },
+    {
+      "text": "加载项主机视图已成功安装",
+      "term": "加载项主机视图",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"host view of the add-in\" → ZH=\"加载项主机视图\" | conf=high"
+    },
+    {
+      "text": "加载项主机视图设置已完成",
+      "term": "加载项主机视图",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"host view of the add-in\" → ZH=\"加载项主机视图\" | conf=high"
+    },
+    {
+      "text": "选择脚本内存选项",
+      "term": "脚本内存",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"script memory\" → ZH=\"脚本内存\" | conf=high"
+    },
+    {
+      "text": "脚本内存是重要功能",
+      "term": "脚本内存",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"script memory\" → ZH=\"脚本内存\" | conf=high"
+    },
+    {
+      "text": "代理托管设置已完成",
+      "term": "脚本内存",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"脚本内存\""
+    },
+    {
+      "text": "代理托管已成功安装",
+      "term": "代理托管",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"agent-managed\" → ZH=\"代理托管\" | conf=high"
+    },
+    {
+      "text": "请更新代理托管",
+      "term": "代理托管",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"agent-managed\" → ZH=\"代理托管\" | conf=high"
+    },
+    {
+      "text": "<b>代理托管</b>设置完成",
+      "term": "代理托管",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"agent-managed\" → ZH=\"代理托管\" | conf=high"
+    },
+    {
+      "text": "代理托管和代理托管已选择",
+      "term": "代理托管",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"agent-managed\" → ZH=\"代理托管\" | conf=high"
+    },
+    {
+      "text": "内部专用队列是重要功能",
+      "term": "内部专用队列",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"internal private queue\" → ZH=\"内部专用队列\" | conf=high"
+    },
+    {
+      "text": "选择内部专用队列选项",
+      "term": "内部专用队列",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"internal private queue\" → ZH=\"内部专用队列\" | conf=high"
+    },
+    {
+      "text": "系统支持绑定文件",
+      "term": "绑定文件",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"binding file\" → ZH=\"绑定文件\" | conf=high"
+    },
+    {
+      "text": "重新启动绑定文件",
+      "term": "绑定文件",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"binding file\" → ZH=\"绑定文件\" | conf=high"
+    },
+    {
+      "text": "绑定文件{0}操作完成",
+      "term": "绑定文件",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"binding file\" → ZH=\"绑定文件\" | conf=high"
+    },
+    {
+      "text": "拨号键盘设置已完成",
+      "term": "绑定文件",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"绑定文件\""
+    },
+    {
+      "text": "",
+      "term": "绑定文件",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"绑定文件\""
+    },
+    {
+      "text": "拨号键盘是重要功能",
+      "term": "拨号键盘",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"keypad\" → ZH=\"拨号键盘\" | conf=high"
+    },
+    {
+      "text": "重新启动拨号键盘",
+      "term": "拨号键盘",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"keypad\" → ZH=\"拨号键盘\" | conf=high"
+    },
+    {
+      "text": "打开简单控制协议设置",
+      "term": "简单控制协议",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Simple Control Protocol\" → ZH=\"简单控制协议\" | conf=high"
+    },
+    {
+      "text": "简单控制协议运行正常",
+      "term": "简单控制协议",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Simple Control Protocol\" → ZH=\"简单控制协议\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>简单控制协议已找到",
+      "term": "简单控制协议",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Simple Control Protocol\" → ZH=\"简单控制协议\" | conf=high"
+    },
+    {
+      "text": "数字视频广播运行正常",
+      "term": "数字视频广播",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Digital Video Broadcasting\" → ZH=\"数字视频广播\" | conf=high"
+    },
+    {
+      "text": "请更新数字视频广播",
+      "term": "数字视频广播",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Digital Video Broadcasting\" → ZH=\"数字视频广播\" | conf=high"
+    },
+    {
+      "text": "编程标识符设置已完成",
+      "term": "数字视频广播",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"数字视频广播\""
+    },
+    {
+      "text": "打开编程标识符设置",
+      "term": "编程标识符",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"programmatic identifier\" → ZH=\"编程标识符\" | conf=high"
+    },
+    {
+      "text": "选择编程标识符选项",
+      "term": "编程标识符",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"programmatic identifier\" → ZH=\"编程标识符\" | conf=high"
+    },
+    {
+      "text": "传递通道设置已完成",
+      "term": "传递通道",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"delivery channel\" → ZH=\"传递通道\" | conf=high"
+    },
+    {
+      "text": "使用传递通道进行操作",
+      "term": "传递通道",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"delivery channel\" → ZH=\"传递通道\" | conf=high"
+    },
+    {
+      "text": "%s中的传递通道",
+      "term": "传递通道",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"delivery channel\" → ZH=\"传递通道\" | conf=high"
+    },
+    {
+      "text": "关闭空闲环路",
+      "term": "空闲环路",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"idle loop\" → ZH=\"空闲环路\" | conf=high"
+    },
+    {
+      "text": "选择空闲环路选项",
+      "term": "空闲环路",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"idle loop\" → ZH=\"空闲环路\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>空闲环路已找到",
+      "term": "空闲环路",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"idle loop\" → ZH=\"空闲环路\" | conf=high"
+    },
+    {
+      "text": "空闲环路和空闲环路已选择",
+      "term": "空闲环路",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"idle loop\" → ZH=\"空闲环路\" | conf=high"
+    },
+    {
+      "text": "强制约束设置已完成",
+      "term": "空闲环路",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"空闲环路\""
+    },
+    {
+      "text": "关闭强制约束",
+      "term": "强制约束",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"mandatory constraint\" → ZH=\"强制约束\" | conf=high"
+    },
+    {
+      "text": "重新启动强制约束",
+      "term": "强制约束",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"mandatory constraint\" → ZH=\"强制约束\" | conf=high"
+    },
+    {
+      "text": "使用校正订单进行操作",
+      "term": "校正订单",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"true-up order\" → ZH=\"校正订单\" | conf=high"
+    },
+    {
+      "text": "选择校正订单选项",
+      "term": "校正订单",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"true-up order\" → ZH=\"校正订单\" | conf=high"
+    },
+    {
+      "text": "统一跟踪模型已成功安装",
+      "term": "统一跟踪模型",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Unified Tracing Model\" → ZH=\"统一跟踪模型\" | conf=high"
+    },
+    {
+      "text": "错误：未找到统一跟踪模型",
+      "term": "统一跟踪模型",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Unified Tracing Model\" → ZH=\"统一跟踪模型\" | conf=high"
+    },
+    {
+      "text": "自定义调色板设置已完成",
+      "term": "统一跟踪模型",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"统一跟踪模型\""
+    },
+    {
+      "text": "查看自定义调色板详情",
+      "term": "自定义调色板",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"custom palette\" → ZH=\"自定义调色板\" | conf=high"
+    },
+    {
+      "text": "自定义调色板是重要功能",
+      "term": "自定义调色板",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"custom palette\" → ZH=\"自定义调色板\" | conf=high"
+    },
+    {
+      "text": "<i>自定义调色板</i>已启用",
+      "term": "自定义调色板",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"custom palette\" → ZH=\"自定义调色板\" | conf=high"
+    },
+    {
+      "text": "自定义调色板{0}操作完成",
+      "term": "自定义调色板",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"custom palette\" → ZH=\"自定义调色板\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "自定义调色板",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"自定义调色板\""
+    },
+    {
+      "text": "选择仪表板设计器选项",
+      "term": "仪表板设计器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"PerformancePoint Dashboard Designer\" → ZH=\"仪表板设计器\" | conf=high"
+    },
+    {
+      "text": "仪表板设计器功能已启用",
+      "term": "仪表板设计器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"PerformancePoint Dashboard Designer\" → ZH=\"仪表板设计器\" | conf=high"
+    },
+    {
+      "text": "UIDL 命令功能已启用",
+      "term": "UIDL 命令",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"UIDL command\" → ZH=\"UIDL 命令\" | conf=high"
+    },
+    {
+      "text": "选择UIDL 命令选项",
+      "term": "UIDL 命令",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"UIDL command\" → ZH=\"UIDL 命令\" | conf=high"
+    },
+    {
+      "text": "计划转移单设置已完成",
+      "term": "UIDL 命令",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"UIDL 命令\""
+    },
+    {
+      "text": "请更新计划转移单",
+      "term": "计划转移单",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"planned transfer order\" → ZH=\"计划转移单\" | conf=high"
+    },
+    {
+      "text": "计划转移单功能已启用",
+      "term": "计划转移单",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"planned transfer order\" → ZH=\"计划转移单\" | conf=high"
+    },
+    {
+      "text": "选择高级流格式选项",
+      "term": "高级流格式",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"ASF\" → ZH=\"高级流格式\" | conf=high"
+    },
+    {
+      "text": "系统支持高级流格式",
+      "term": "高级流格式",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"ASF\" → ZH=\"高级流格式\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>高级流格式已找到",
+      "term": "高级流格式",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"ASF\" → ZH=\"高级流格式\" | conf=high"
+    },
+    {
+      "text": "高级流格式和高级流格式已选择",
+      "term": "高级流格式",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"ASF\" → ZH=\"高级流格式\" | conf=high"
+    },
+    {
+      "text": "关闭广告网络",
+      "term": "广告网络",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"ad network\" → ZH=\"广告网络\" | conf=high"
+    },
+    {
+      "text": "下载广告网络完成",
+      "term": "广告网络",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"ad network\" → ZH=\"广告网络\" | conf=high"
+    },
+    {
+      "text": "%s中的广告网络",
+      "term": "广告网络",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"ad network\" → ZH=\"广告网络\" | conf=high"
+    },
+    {
+      "text": "属性层次结构设置已完成",
+      "term": "广告网络",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"广告网络\""
+    },
+    {
+      "text": "查看属性层次结构详情",
+      "term": "属性层次结构",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"attribute hierarchy\" → ZH=\"属性层次结构\" | conf=high"
+    },
+    {
+      "text": "关闭属性层次结构",
+      "term": "属性层次结构",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"attribute hierarchy\" → ZH=\"属性层次结构\" | conf=high"
+    },
+    {
+      "text": "使用计算机辅助培训进行操作",
+      "term": "计算机辅助培训",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"CBT\" → ZH=\"计算机辅助培训\" | conf=high"
+    },
+    {
+      "text": "下载计算机辅助培训完成",
+      "term": "计算机辅助培训",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"CBT\" → ZH=\"计算机辅助培训\" | conf=high"
+    },
+    {
+      "text": "字处理器是重要功能",
+      "term": "字处理器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"word processor\" → ZH=\"字处理器\" | conf=high"
+    },
+    {
+      "text": "使用字处理器进行操作",
+      "term": "字处理器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"word processor\" → ZH=\"字处理器\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>字处理器已找到",
+      "term": "字处理器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"word processor\" → ZH=\"字处理器\" | conf=high"
+    },
+    {
+      "text": "对话框启动器设置已完成",
+      "term": "字处理器",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"字处理器\""
+    },
+    {
+      "text": "使用对话框启动器进行操作",
+      "term": "对话框启动器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Dialog Box Launcher\" → ZH=\"对话框启动器\" | conf=high"
+    },
+    {
+      "text": "关闭对话框启动器",
+      "term": "对话框启动器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Dialog Box Launcher\" → ZH=\"对话框启动器\" | conf=high"
+    },
+    {
+      "text": "打开图片重点列表设置",
+      "term": "图片重点列表",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Picture Accent List\" → ZH=\"图片重点列表\" | conf=high"
+    },
+    {
+      "text": "重新启动图片重点列表",
+      "term": "图片重点列表",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Picture Accent List\" → ZH=\"图片重点列表\" | conf=high"
+    },
+    {
+      "text": "{0}的图片重点列表已更新",
+      "term": "图片重点列表",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Picture Accent List\" → ZH=\"图片重点列表\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "图片重点列表",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"图片重点列表\""
+    },
+    {
+      "text": "多级林组验证设置已完成",
+      "term": "多级林组验证",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"multiple forest group validation\" → ZH=\"多级林组验证\" | conf=high"
+    },
+    {
+      "text": "错误：未找到多级林组验证",
+      "term": "多级林组验证",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"multiple forest group validation\" → ZH=\"多级林组验证\" | conf=high"
+    },
+    {
+      "text": "退出代码设置已完成",
+      "term": "多级林组验证",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"多级林组验证\""
+    },
+    {
+      "text": "系统支持退出代码",
+      "term": "退出代码",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"exit code\" → ZH=\"退出代码\" | conf=high"
+    },
+    {
+      "text": "退出代码功能已启用",
+      "term": "退出代码",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"exit code\" → ZH=\"退出代码\" | conf=high"
+    },
+    {
+      "text": "<i>退出代码</i>已启用",
+      "term": "退出代码",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"exit code\" → ZH=\"退出代码\" | conf=high"
+    },
+    {
+      "text": "退出代码和退出代码已选择",
+      "term": "退出代码",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"exit code\" → ZH=\"退出代码\" | conf=high"
+    },
+    {
+      "text": "Z 顺序功能已启用",
+      "term": "Z 顺序",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"z-order\" → ZH=\"Z 顺序\" | conf=high"
+    },
+    {
+      "text": "Z 顺序已成功安装",
+      "term": "Z 顺序",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"z-order\" → ZH=\"Z 顺序\" | conf=high"
+    },
+    {
+      "text": "请更新网络连接存储",
+      "term": "网络连接存储",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"network-attached storage\" → ZH=\"网络连接存储\" | conf=high"
+    },
+    {
+      "text": "网络连接存储功能已启用",
+      "term": "网络连接存储",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"network-attached storage\" → ZH=\"网络连接存储\" | conf=high"
+    },
+    {
+      "text": "非对称多重处理设置已完成",
+      "term": "网络连接存储",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"网络连接存储\""
+    },
+    {
+      "text": "选择非对称多重处理选项",
+      "term": "非对称多重处理",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"ASMP\" → ZH=\"非对称多重处理\" | conf=high"
+    },
+    {
+      "text": "打开非对称多重处理设置",
+      "term": "非对称多重处理",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"ASMP\" → ZH=\"非对称多重处理\" | conf=high"
+    },
+    {
+      "text": "%s中的非对称多重处理",
+      "term": "非对称多重处理",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"ASMP\" → ZH=\"非对称多重处理\" | conf=high"
+    },
+    {
+      "text": "请更新登记有效期",
+      "term": "登记有效期",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"enrollment term\" → ZH=\"登记有效期\" | conf=high"
+    },
+    {
+      "text": "登记有效期功能已启用",
+      "term": "登记有效期",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"enrollment term\" → ZH=\"登记有效期\" | conf=high"
+    },
+    {
+      "text": "<i>登记有效期</i>已启用",
+      "term": "登记有效期",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"enrollment term\" → ZH=\"登记有效期\" | conf=high"
+    },
+    {
+      "text": "查看安装技术人员详情",
+      "term": "安装技术人员",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"setup technician\" → ZH=\"安装技术人员\" | conf=high"
+    },
+    {
+      "text": "系统支持安装技术人员",
+      "term": "安装技术人员",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"setup technician\" → ZH=\"安装技术人员\" | conf=high"
+    },
+    {
+      "text": "分叉箭头设置已完成",
+      "term": "安装技术人员",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"安装技术人员\""
+    },
+    {
+      "text": "查看分叉箭头详情",
+      "term": "分叉箭头",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Diverging Arrows\" → ZH=\"分叉箭头\" | conf=high"
+    },
+    {
+      "text": "分叉箭头设置已完成",
+      "term": "分叉箭头",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Diverging Arrows\" → ZH=\"分叉箭头\" | conf=high"
+    },
+    {
+      "text": "会话主机已成功安装",
+      "term": "会话主机",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"session host\" → ZH=\"会话主机\" | conf=high"
+    },
+    {
+      "text": "系统支持会话主机",
+      "term": "会话主机",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"session host\" → ZH=\"会话主机\" | conf=high"
+    },
+    {
+      "text": "Azure 中国市场设置已完成",
+      "term": "Azure 中国市场",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Azure China Marketplace\" → ZH=\"Azure 中国市场\" | conf=high"
+    },
+    {
+      "text": "使用Azure 中国市场进行操作",
+      "term": "Azure 中国市场",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Azure China Marketplace\" → ZH=\"Azure 中国市场\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>Azure 中国市场已找到",
+      "term": "Azure 中国市场",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Azure China Marketplace\" → ZH=\"Azure 中国市场\" | conf=high"
+    },
+    {
+      "text": "{0}的Azure 中国市场已更新",
+      "term": "Azure 中国市场",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Azure China Marketplace\" → ZH=\"Azure 中国市场\" | conf=high"
+    },
+    {
+      "text": "Azure 中国市场和Azure 中国市场已选择",
+      "term": "Azure 中国市场",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"Azure China Marketplace\" → ZH=\"Azure 中国市场\" | conf=high"
+    },
+    {
+      "text": "预付款日记帐凭证设置已完成",
+      "term": "Azure 中国市场",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"Azure 中国市场\""
+    },
+    {
+      "text": "",
+      "term": "Azure 中国市场",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"Azure 中国市场\""
+    },
+    {
+      "text": "系统支持预付款日记帐凭证",
+      "term": "预付款日记帐凭证",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"prepayment journal voucher\" → ZH=\"预付款日记帐凭证\" | conf=high"
+    },
+    {
+      "text": "预付款日记帐凭证是重要功能",
+      "term": "预付款日记帐凭证",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"prepayment journal voucher\" → ZH=\"预付款日记帐凭证\" | conf=high"
+    },
+    {
+      "text": "BAS 业务管理员角色设置已完成",
+      "term": "BAS 业务管理员角色",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"BizTalk BAS Managers\" → ZH=\"BAS 业务管理员角色\" | conf=high"
+    },
+    {
+      "text": "选择BAS 业务管理员角色选项",
+      "term": "BAS 业务管理员角色",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"BizTalk BAS Managers\" → ZH=\"BAS 业务管理员角色\" | conf=high"
+    },
+    {
+      "text": "选择DWORD/双字选项",
+      "term": "DWORD/双字",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"DWORD\" → ZH=\"DWORD/双字\" | conf=high"
+    },
+    {
+      "text": "使用DWORD/双字进行操作",
+      "term": "DWORD/双字",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"DWORD\" → ZH=\"DWORD/双字\" | conf=high"
+    },
+    {
+      "text": "托管文件夹邮箱策略设置已完成",
+      "term": "DWORD/双字",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"DWORD/双字\""
+    },
+    {
+      "text": "重新启动托管文件夹邮箱策略",
+      "term": "托管文件夹邮箱策略",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"UM mailbox policy\" → ZH=\"托管文件夹邮箱策略\" | conf=high"
+    },
+    {
+      "text": "托管文件夹邮箱策略功能已启用",
+      "term": "托管文件夹邮箱策略",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"UM mailbox policy\" → ZH=\"托管文件夹邮箱策略\" | conf=high"
+    },
+    {
+      "text": "<i>托管文件夹邮箱策略</i>已启用",
+      "term": "托管文件夹邮箱策略",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"UM mailbox policy\" → ZH=\"托管文件夹邮箱策略\" | conf=high"
+    },
+    {
+      "text": "重新启动Windows 7 旗舰版",
+      "term": "Windows 7 旗舰版",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows 7 Ultimate\" → ZH=\"Windows 7 旗舰版\" | conf=high"
+    },
+    {
+      "text": "Windows 7 旗舰版是重要功能",
+      "term": "Windows 7 旗舰版",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows 7 Ultimate\" → ZH=\"Windows 7 旗舰版\" | conf=high"
+    },
+    {
+      "text": "%s中的Windows 7 旗舰版",
+      "term": "Windows 7 旗舰版",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Windows 7 Ultimate\" → ZH=\"Windows 7 旗舰版\" | conf=high"
+    },
+    {
+      "text": "打开Office 365 大专院校版设置",
+      "term": "Office 365 大专院校版",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Microsoft Office 365 University\" → ZH=\"Office 365 大专院校版\" | conf=high"
+    },
+    {
+      "text": "Office 365 大专院校版设置已完成",
+      "term": "Office 365 大专院校版",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Microsoft Office 365 University\" → ZH=\"Office 365 大专院校版\" | conf=high"
+    },
+    {
+      "text": "部分符合规则的科目编号设置已完成",
+      "term": "Office 365 大专院校版",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"Office 365 大专院校版\""
+    },
+    {
+      "text": "错误：未找到部分符合规则的科目编号",
+      "term": "部分符合规则的科目编号",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"partially qualified account number\" → ZH=\"部分符合规则的科目编号\" | conf=high"
+    },
+    {
+      "text": "关闭部分符合规则的科目编号",
+      "term": "部分符合规则的科目编号",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"partially qualified account number\" → ZH=\"部分符合规则的科目编号\" | conf=high"
+    },
+    {
+      "text": "MFC 智能设备 DLL 向导设置已完成",
+      "term": "MFC 智能设备 DLL 向导",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"MFC Smart Device DLL Wizard\" → ZH=\"MFC 智能设备 DLL 向导\" | conf=high"
+    },
+    {
+      "text": "查看MFC 智能设备 DLL 向导详情",
+      "term": "MFC 智能设备 DLL 向导",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"MFC Smart Device DLL Wizard\" → ZH=\"MFC 智能设备 DLL 向导\" | conf=high"
+    },
+    {
+      "text": "<i>MFC 智能设备 DLL 向导</i>已启用",
+      "term": "MFC 智能设备 DLL 向导",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"MFC Smart Device DLL Wizard\" → ZH=\"MFC 智能设备 DLL 向导\" | conf=high"
+    },
+    {
+      "text": "MFC 智能设备 DLL 向导和MFC 智能设备 DLL 向导已选择",
+      "term": "MFC 智能设备 DLL 向导",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"MFC Smart Device DLL Wizard\" → ZH=\"MFC 智能设备 DLL 向导\" | conf=high"
+    },
+    {
+      "text": "系统支持研究图书馆信息网络",
+      "term": "研究图书馆信息网络",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Research Libraries Information Network\" → ZH=\"研究图书馆信息网络\" | conf=high"
+    },
+    {
+      "text": "查看研究图书馆信息网络详情",
+      "term": "研究图书馆信息网络",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Research Libraries Information Network\" → ZH=\"研究图书馆信息网络\" | conf=high"
+    },
+    {
+      "text": "Windows 属性系统设置已完成",
+      "term": "研究图书馆信息网络",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"研究图书馆信息网络\""
+    },
+    {
+      "text": "Windows 属性系统已成功安装",
+      "term": "Windows 属性系统",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows Property System\" → ZH=\"Windows 属性系统\" | conf=high"
+    },
+    {
+      "text": "重新启动Windows 属性系统",
+      "term": "Windows 属性系统",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows Property System\" → ZH=\"Windows 属性系统\" | conf=high"
+    },
+    {
+      "text": "{0}的Windows 属性系统已更新",
+      "term": "Windows 属性系统",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Windows Property System\" → ZH=\"Windows 属性系统\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "Windows 属性系统",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"Windows 属性系统\""
+    },
+    {
+      "text": "蛇形图片重点列表运行正常",
+      "term": "蛇形图片重点列表",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Bending Picture Accent List\" → ZH=\"蛇形图片重点列表\" | conf=high"
+    },
+    {
+      "text": "蛇形图片重点列表是重要功能",
+      "term": "蛇形图片重点列表",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Bending Picture Accent List\" → ZH=\"蛇形图片重点列表\" | conf=high"
+    },
+    {
+      "text": "错误：未找到本地安全机构子系统服务",
+      "term": "本地安全机构子系统服务",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"LSASS\" → ZH=\"本地安全机构子系统服务\" | conf=high"
+    },
+    {
+      "text": "重新启动本地安全机构子系统服务",
+      "term": "本地安全机构子系统服务",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"LSASS\" → ZH=\"本地安全机构子系统服务\" | conf=high"
+    },
+    {
+      "text": "<i>本地安全机构子系统服务</i>已启用",
+      "term": "本地安全机构子系统服务",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"LSASS\" → ZH=\"本地安全机构子系统服务\" | conf=high"
+    },
+    {
+      "text": "WebBrowser 控件设置已完成",
+      "term": "本地安全机构子系统服务",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"本地安全机构子系统服务\""
+    },
+    {
+      "text": "WebBrowser 控件是重要功能",
+      "term": "WebBrowser 控件",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"WebBrowser control\" → ZH=\"WebBrowser 控件\" | conf=high"
+    },
+    {
+      "text": "下载WebBrowser 控件完成",
+      "term": "WebBrowser 控件",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"WebBrowser control\" → ZH=\"WebBrowser 控件\" | conf=high"
+    },
+    {
+      "text": "查看全国自动化票据交换协会详情",
+      "term": "全国自动化票据交换协会",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"National Automated Clearing House Association\" → ZH=\"全国自动化票据交换协会\" | conf=high"
+    },
+    {
+      "text": "全国自动化票据交换协会运行正常",
+      "term": "全国自动化票据交换协会",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"National Automated Clearing House Association\" → ZH=\"全国自动化票据交换协会\" | conf=high"
+    },
+    {
+      "text": "PowerPivot 服务设置已完成",
+      "term": "PowerPivot 服务",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"PowerPivot service\" → ZH=\"PowerPivot 服务\" | conf=high"
+    },
+    {
+      "text": "重新启动PowerPivot 服务",
+      "term": "PowerPivot 服务",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"PowerPivot service\" → ZH=\"PowerPivot 服务\" | conf=high"
+    },
+    {
+      "text": "%s中的PowerPivot 服务",
+      "term": "PowerPivot 服务",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"PowerPivot service\" → ZH=\"PowerPivot 服务\" | conf=high"
+    },
+    {
+      "text": "GxP 预测规则设置已完成",
+      "term": "PowerPivot 服务",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"PowerPivot 服务\""
+    },
+    {
+      "text": "重新启动GxP 预测规则",
+      "term": "GxP 预测规则",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"GxP Predicate Rules\" → ZH=\"GxP 预测规则\" | conf=high"
+    },
+    {
+      "text": "GxP 预测规则已成功安装",
+      "term": "GxP 预测规则",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"GxP Predicate Rules\" → ZH=\"GxP 预测规则\" | conf=high"
+    },
+    {
+      "text": "<i>GxP 预测规则</i>已启用",
+      "term": "GxP 预测规则",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"GxP Predicate Rules\" → ZH=\"GxP 预测规则\" | conf=high"
+    },
+    {
+      "text": "GxP 预测规则和GxP 预测规则已选择",
+      "term": "GxP 预测规则",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"GxP Predicate Rules\" → ZH=\"GxP 预测规则\" | conf=high"
+    },
+    {
+      "text": "打开应用程序许可协议设置",
+      "term": "应用程序许可协议",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"application license\" → ZH=\"应用程序许可协议\" | conf=high"
+    },
+    {
+      "text": "错误：未找到应用程序许可协议",
+      "term": "应用程序许可协议",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"application license\" → ZH=\"应用程序许可协议\" | conf=high"
+    },
+    {
+      "text": "RemoteApp 和桌面连接管理设置已完成",
+      "term": "RemoteApp 和桌面连接管理",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"RemoteApp and Desktop Connection Management\" → ZH=\"RemoteApp 和桌面连接管理\" | conf=high"
+    },
+    {
+      "text": "选择RemoteApp 和桌面连接管理选项",
+      "term": "RemoteApp 和桌面连接管理",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"RemoteApp and Desktop Connection Management\" → ZH=\"RemoteApp 和桌面连接管理\" | conf=high"
+    },
+    {
+      "text": "水平标记的层次结构设置已完成",
+      "term": "RemoteApp 和桌面连接管理",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"RemoteApp 和桌面连接管理\""
+    },
+    {
+      "text": "下载水平标记的层次结构完成",
+      "term": "水平标记的层次结构",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Horizontal Labeled Hierarchy\" → ZH=\"水平标记的层次结构\" | conf=high"
+    },
+    {
+      "text": "关闭水平标记的层次结构",
+      "term": "水平标记的层次结构",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Horizontal Labeled Hierarchy\" → ZH=\"水平标记的层次结构\" | conf=high"
+    },
+    {
+      "text": "包装的 PST 存储区功能已启用",
+      "term": "包装的 PST 存储区",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Wrapped PST store\" → ZH=\"包装的 PST 存储区\" | conf=high"
+    },
+    {
+      "text": "重新启动包装的 PST 存储区",
+      "term": "包装的 PST 存储区",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Wrapped PST store\" → ZH=\"包装的 PST 存储区\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>包装的 PST 存储区已找到",
+      "term": "包装的 PST 存储区",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Wrapped PST store\" → ZH=\"包装的 PST 存储区\" | conf=high"
+    },
+    {
+      "text": "%s中的包装的 PST 存储区",
+      "term": "包装的 PST 存储区",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Wrapped PST store\" → ZH=\"包装的 PST 存储区\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "包装的 PST 存储区",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"包装的 PST 存储区\""
+    },
+    {
+      "text": "Directory 对象设置已完成",
+      "term": "Directory 对象",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Active Directory object\" → ZH=\"Directory 对象\" | conf=high"
+    },
+    {
+      "text": "使用Directory 对象进行操作",
+      "term": "Directory 对象",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Active Directory object\" → ZH=\"Directory 对象\" | conf=high"
+    },
+    {
+      "text": "闭合 V 形流程设置已完成",
+      "term": "Directory 对象",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"Directory 对象\""
+    },
+    {
+      "text": "打开闭合 V 形流程设置",
+      "term": "闭合 V 形流程",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Closed Chevron Process\" → ZH=\"闭合 V 形流程\" | conf=high"
+    },
+    {
+      "text": "下载闭合 V 形流程完成",
+      "term": "闭合 V 形流程",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Closed Chevron Process\" → ZH=\"闭合 V 形流程\" | conf=high"
+    },
+    {
+      "text": "面向移动设备的 Windows Live设置已完成",
+      "term": "面向移动设备的 Windows Live",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows Live for mobile\" → ZH=\"面向移动设备的 Windows Live\" | conf=high"
+    },
+    {
+      "text": "下载面向移动设备的 Windows Live完成",
+      "term": "面向移动设备的 Windows Live",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows Live for mobile\" → ZH=\"面向移动设备的 Windows Live\" | conf=high"
+    },
+    {
+      "text": "请更新小型双内联内存模块",
+      "term": "小型双内联内存模块",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"small outline dual inline memory module\" → ZH=\"小型双内联内存模块\" | conf=high"
+    },
+    {
+      "text": "查看小型双内联内存模块详情",
+      "term": "小型双内联内存模块",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"small outline dual inline memory module\" → ZH=\"小型双内联内存模块\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>小型双内联内存模块已找到",
+      "term": "小型双内联内存模块",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"small outline dual inline memory module\" → ZH=\"小型双内联内存模块\" | conf=high"
+    },
+    {
+      "text": "小型双内联内存模块和小型双内联内存模块已选择",
+      "term": "小型双内联内存模块",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"small outline dual inline memory module\" → ZH=\"小型双内联内存模块\" | conf=high"
+    },
+    {
+      "text": "IIS 动态 IP 限制设置已完成",
+      "term": "小型双内联内存模块",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"小型双内联内存模块\""
+    },
+    {
+      "text": "关闭IIS 动态 IP 限制",
+      "term": "IIS 动态 IP 限制",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Dynamic IP Restrictions\" → ZH=\"IIS 动态 IP 限制\" | conf=high"
+    },
+    {
+      "text": "重新启动IIS 动态 IP 限制",
+      "term": "IIS 动态 IP 限制",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Dynamic IP Restrictions\" → ZH=\"IIS 动态 IP 限制\" | conf=high"
+    },
+    {
+      "text": "%s中的IIS 动态 IP 限制",
+      "term": "IIS 动态 IP 限制",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Dynamic IP Restrictions\" → ZH=\"IIS 动态 IP 限制\" | conf=high"
+    },
+    {
+      "text": "外部应用程序 XML功能已启用",
+      "term": "外部应用程序 XML",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"External Application XML\" → ZH=\"外部应用程序 XML\" | conf=high"
+    },
+    {
+      "text": "系统支持外部应用程序 XML",
+      "term": "外部应用程序 XML",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"External Application XML\" → ZH=\"外部应用程序 XML\" | conf=high"
+    },
+    {
+      "text": "系统支持Windows Live 登录助手",
+      "term": "Windows Live 登录助手",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows Live Sign-in Assistant\" → ZH=\"Windows Live 登录助手\" | conf=high"
+    },
+    {
+      "text": "Windows Live 登录助手功能已启用",
+      "term": "Windows Live 登录助手",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows Live Sign-in Assistant\" → ZH=\"Windows Live 登录助手\" | conf=high"
+    },
+    {
+      "text": "Windows 便携设备 API设置已完成",
+      "term": "Windows Live 登录助手",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"Windows Live 登录助手\""
+    },
+    {
+      "text": "Windows 便携设备 API设置已完成",
+      "term": "Windows 便携设备 API",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows Portable Device API\" → ZH=\"Windows 便携设备 API\" | conf=high"
+    },
+    {
+      "text": "Windows 便携设备 API功能已启用",
+      "term": "Windows 便携设备 API",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows Portable Device API\" → ZH=\"Windows 便携设备 API\" | conf=high"
+    },
+    {
+      "text": "<i>Windows 便携设备 API</i>已启用",
+      "term": "Windows 便携设备 API",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Windows Portable Device API\" → ZH=\"Windows 便携设备 API\" | conf=high"
+    },
+    {
+      "text": "系统支持基本输入输出系统",
+      "term": "基本输入输出系统",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"BIOS\" → ZH=\"基本输入输出系统\" | conf=high"
+    },
+    {
+      "text": "基本输入输出系统已成功安装",
+      "term": "基本输入输出系统",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"BIOS\" → ZH=\"基本输入输出系统\" | conf=high"
+    },
+    {
+      "text": "个人计算机存储卡国际协会功能已启用",
+      "term": "个人计算机存储卡国际协会",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"PCMCIA\" → ZH=\"个人计算机存储卡国际协会\" | conf=high"
+    },
+    {
+      "text": "个人计算机存储卡国际协会是重要功能",
+      "term": "个人计算机存储卡国际协会",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"PCMCIA\" → ZH=\"个人计算机存储卡国际协会\" | conf=high"
+    },
+    {
+      "text": "个人计算机存储卡国际协会{0}操作完成",
+      "term": "个人计算机存储卡国际协会",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"PCMCIA\" → ZH=\"个人计算机存储卡国际协会\" | conf=high"
+    },
+    {
+      "text": "MSRC 严重程度设置已完成",
+      "term": "个人计算机存储卡国际协会",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"个人计算机存储卡国际协会\""
+    },
+    {
+      "text": "",
+      "term": "个人计算机存储卡国际协会",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"个人计算机存储卡国际协会\""
+    },
+    {
+      "text": "系统支持MSRC 严重程度",
+      "term": "MSRC 严重程度",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"MSRC severity\" → ZH=\"MSRC 严重程度\" | conf=high"
+    },
+    {
+      "text": "选择MSRC 严重程度选项",
+      "term": "MSRC 严重程度",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"MSRC severity\" → ZH=\"MSRC 严重程度\" | conf=high"
+    },
+    {
+      "text": "错误：未找到Microsoft 服务",
+      "term": "Microsoft 服务",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Microsoft services\" → ZH=\"Microsoft 服务\" | conf=high"
+    },
+    {
+      "text": "关闭Microsoft 服务",
+      "term": "Microsoft 服务",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Microsoft services\" → ZH=\"Microsoft 服务\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>Microsoft 服务已找到",
+      "term": "Microsoft 服务",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Microsoft services\" → ZH=\"Microsoft 服务\" | conf=high"
+    },
+    {
+      "text": "Microsoft 服务和Microsoft 服务已选择",
+      "term": "Microsoft 服务",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"Microsoft services\" → ZH=\"Microsoft 服务\" | conf=high"
+    },
+    {
+      "text": "逻辑卷完整性描述符运行正常",
+      "term": "逻辑卷完整性描述符",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Logical Volume Integrity Descriptor\" → ZH=\"逻辑卷完整性描述符\" | conf=high"
+    },
+    {
+      "text": "逻辑卷完整性描述符是重要功能",
+      "term": "逻辑卷完整性描述符",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Logical Volume Integrity Descriptor\" → ZH=\"逻辑卷完整性描述符\" | conf=high"
+    },
+    {
+      "text": "每秒兆位 (Mbps)设置已完成",
+      "term": "逻辑卷完整性描述符",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"逻辑卷完整性描述符\""
+    },
+    {
+      "text": "查看每秒兆位 (Mbps)详情",
+      "term": "每秒兆位 (Mbps)",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"megabits per second\" → ZH=\"每秒兆位 (Mbps)\" | conf=high"
+    },
+    {
+      "text": "每秒兆位 (Mbps)功能已启用",
+      "term": "每秒兆位 (Mbps)",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"megabits per second\" → ZH=\"每秒兆位 (Mbps)\" | conf=high"
+    },
+    {
+      "text": "选择交换多兆位数据服务选项",
+      "term": "交换多兆位数据服务",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"SMDS\" → ZH=\"交换多兆位数据服务\" | conf=high"
+    },
+    {
+      "text": "交换多兆位数据服务是重要功能",
+      "term": "交换多兆位数据服务",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"SMDS\" → ZH=\"交换多兆位数据服务\" | conf=high"
+    },
+    {
+      "text": "{0}的交换多兆位数据服务已更新",
+      "term": "交换多兆位数据服务",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"SMDS\" → ZH=\"交换多兆位数据服务\" | conf=high"
+    },
+    {
+      "text": "请更新Microsoft Azure 服务总线",
+      "term": "Microsoft Azure 服务总线",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Service Bus\" → ZH=\"Microsoft Azure 服务总线\" | conf=high"
+    },
+    {
+      "text": "系统支持Microsoft Azure 服务总线",
+      "term": "Microsoft Azure 服务总线",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Service Bus\" → ZH=\"Microsoft Azure 服务总线\" | conf=high"
+    },
+    {
+      "text": "<i>Microsoft Azure 服务总线</i>已启用",
+      "term": "Microsoft Azure 服务总线",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Service Bus\" → ZH=\"Microsoft Azure 服务总线\" | conf=high"
+    },
+    {
+      "text": "动态公平共享调度设置已完成",
+      "term": "Microsoft Azure 服务总线",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"Microsoft Azure 服务总线\""
+    },
+    {
+      "text": "动态公平共享调度是重要功能",
+      "term": "动态公平共享调度",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Dynamic Fair-Share Scheduling\" → ZH=\"动态公平共享调度\" | conf=high"
+    },
+    {
+      "text": "动态公平共享调度功能已启用",
+      "term": "动态公平共享调度",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Dynamic Fair-Share Scheduling\" → ZH=\"动态公平共享调度\" | conf=high"
+    },
+    {
+      "text": "安全套接字层的超文本传输协议已成功安装",
+      "term": "安全套接字层的超文本传输协议",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Hypertext Transfer Protocol over Secure Sockets Layer\" → ZH=\"安全套接字层的超文本传输协议\" | conf=high"
+    },
+    {
+      "text": "打开安全套接字层的超文本传输协议设置",
+      "term": "安全套接字层的超文本传输协议",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Hypertext Transfer Protocol over Secure Sockets Layer\" → ZH=\"安全套接字层的超文本传输协议\" | conf=high"
+    },
+    {
+      "text": "查看自动执行一致性检查详情",
+      "term": "自动执行一致性检查",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"auto-consistency check\" → ZH=\"自动执行一致性检查\" | conf=high"
+    },
+    {
+      "text": "自动执行一致性检查功能已启用",
+      "term": "自动执行一致性检查",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"auto-consistency check\" → ZH=\"自动执行一致性检查\" | conf=high"
+    },
+    {
+      "text": "Internet 服务提供商设置已完成",
+      "term": "自动执行一致性检查",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"自动执行一致性检查\""
+    },
+    {
+      "text": "系统支持Internet 服务提供商",
+      "term": "Internet 服务提供商",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Internet service provider\" → ZH=\"Internet 服务提供商\" | conf=high"
+    },
+    {
+      "text": "关闭Internet 服务提供商",
+      "term": "Internet 服务提供商",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Internet service provider\" → ZH=\"Internet 服务提供商\" | conf=high"
+    },
+    {
+      "text": "<i>Internet 服务提供商</i>已启用",
+      "term": "Internet 服务提供商",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Internet service provider\" → ZH=\"Internet 服务提供商\" | conf=high"
+    },
+    {
+      "text": "%s中的Internet 服务提供商",
+      "term": "Internet 服务提供商",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Internet service provider\" → ZH=\"Internet 服务提供商\" | conf=high"
+    },
+    {
+      "text": "Internet 服务提供商和Internet 服务提供商已选择",
+      "term": "Internet 服务提供商",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"Internet service provider\" → ZH=\"Internet 服务提供商\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "Internet 服务提供商",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"Internet 服务提供商\""
+    },
+    {
+      "text": "使用监控服务器配置管理器进行操作",
+      "term": "监控服务器配置管理器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"PerformancePoint Monitoring Server Configuration Manager\" → ZH=\"监控服务器配置管理器\" | conf=high"
+    },
+    {
+      "text": "打开监控服务器配置管理器设置",
+      "term": "监控服务器配置管理器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"PerformancePoint Monitoring Server Configuration Manager\" → ZH=\"监控服务器配置管理器\" | conf=high"
+    },
+    {
+      "text": "Windows Internet 游戏功能已启用",
+      "term": "Windows Internet 游戏",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Internet game\" → ZH=\"Windows Internet 游戏\" | conf=high"
+    },
+    {
+      "text": "使用Windows Internet 游戏进行操作",
+      "term": "Windows Internet 游戏",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Internet game\" → ZH=\"Windows Internet 游戏\" | conf=high"
+    },
+    {
+      "text": "面向公众的 URL设置已完成",
+      "term": "Windows Internet 游戏",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"Windows Internet 游戏\""
+    },
+    {
+      "text": "选择面向公众的 URL选项",
+      "term": "面向公众的 URL",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Internet-facing URL\" → ZH=\"面向公众的 URL\" | conf=high"
+    },
+    {
+      "text": "打开面向公众的 URL设置",
+      "term": "面向公众的 URL",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Internet-facing URL\" → ZH=\"面向公众的 URL\" | conf=high"
+    },
+    {
+      "text": "运行状况策略验证设置已完成",
+      "term": "运行状况策略验证",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"health policy validation\" → ZH=\"运行状况策略验证\" | conf=high"
+    },
+    {
+      "text": "选择运行状况策略验证选项",
+      "term": "运行状况策略验证",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"health policy validation\" → ZH=\"运行状况策略验证\" | conf=high"
+    },
+    {
+      "text": "<b>运行状况策略验证</b>设置完成",
+      "term": "运行状况策略验证",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"health policy validation\" → ZH=\"运行状况策略验证\" | conf=high"
+    },
+    {
+      "text": "业务数据任务窗格库设置已完成",
+      "term": "业务数据任务窗格库",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Business Data Task Panes Gallery\" → ZH=\"业务数据任务窗格库\" | conf=high"
+    },
+    {
+      "text": "使用业务数据任务窗格库进行操作",
+      "term": "业务数据任务窗格库",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Business Data Task Panes Gallery\" → ZH=\"业务数据任务窗格库\" | conf=high"
+    },
+    {
+      "text": "%s中的业务数据任务窗格库",
+      "term": "业务数据任务窗格库",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Business Data Task Panes Gallery\" → ZH=\"业务数据任务窗格库\" | conf=high"
+    },
+    {
+      "text": "发送者提供的密码设置已完成",
+      "term": "业务数据任务窗格库",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"业务数据任务窗格库\""
+    },
+    {
+      "text": "发送者提供的密码运行正常",
+      "term": "发送者提供的密码",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"sender password\" → ZH=\"发送者提供的密码\" | conf=high"
+    },
+    {
+      "text": "请更新发送者提供的密码",
+      "term": "发送者提供的密码",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"sender password\" → ZH=\"发送者提供的密码\" | conf=high"
+    },
+    {
+      "text": "Windows 7 软件徽标已成功安装",
+      "term": "Windows 7 软件徽标",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows 7 software logo\" → ZH=\"Windows 7 软件徽标\" | conf=high"
+    },
+    {
+      "text": "Windows 7 软件徽标设置已完成",
+      "term": "Windows 7 软件徽标",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows 7 software logo\" → ZH=\"Windows 7 软件徽标\" | conf=high"
+    },
+    {
+      "text": "Microsoft 消息运行正常",
+      "term": "Microsoft 消息",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows Messaging\" → ZH=\"Microsoft 消息\" | conf=high"
+    },
+    {
+      "text": "关闭Microsoft 消息",
+      "term": "Microsoft 消息",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows Messaging\" → ZH=\"Microsoft 消息\" | conf=high"
+    },
+    {
+      "text": "<i>Microsoft 消息</i>已启用",
+      "term": "Microsoft 消息",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Windows Messaging\" → ZH=\"Microsoft 消息\" | conf=high"
+    },
+    {
+      "text": "Microsoft 消息和Microsoft 消息已选择",
+      "term": "Microsoft 消息",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"Windows Messaging\" → ZH=\"Microsoft 消息\" | conf=high"
+    },
+    {
+      "text": "基于 Internet 的站点系统设置已完成",
+      "term": "Microsoft 消息",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"Microsoft 消息\""
+    },
+    {
+      "text": "打开基于 Internet 的站点系统设置",
+      "term": "基于 Internet 的站点系统",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Internet-based site system\" → ZH=\"基于 Internet 的站点系统\" | conf=high"
+    },
+    {
+      "text": "基于 Internet 的站点系统是重要功能",
+      "term": "基于 Internet 的站点系统",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Internet-based site system\" → ZH=\"基于 Internet 的站点系统\" | conf=high"
+    },
+    {
+      "text": "系统支持主控形状资源管理器",
+      "term": "主控形状资源管理器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Master Explorer\" → ZH=\"主控形状资源管理器\" | conf=high"
+    },
+    {
+      "text": "主控形状资源管理器设置已完成",
+      "term": "主控形状资源管理器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Master Explorer\" → ZH=\"主控形状资源管理器\" | conf=high"
+    },
+    {
+      "text": "主控形状资源管理器{0}操作完成",
+      "term": "主控形状资源管理器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Master Explorer\" → ZH=\"主控形状资源管理器\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "主控形状资源管理器",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"主控形状资源管理器\""
+    },
+    {
+      "text": "使用压缩的 SLIP进行操作",
+      "term": "压缩的 SLIP",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Compressed SLIP\" → ZH=\"压缩的 SLIP\" | conf=high"
+    },
+    {
+      "text": "压缩的 SLIP已成功安装",
+      "term": "压缩的 SLIP",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Compressed SLIP\" → ZH=\"压缩的 SLIP\" | conf=high"
+    },
+    {
+      "text": "SMS 安装程序设置已完成",
+      "term": "压缩的 SLIP",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"压缩的 SLIP\""
+    },
+    {
+      "text": "错误：未找到SMS 安装程序",
+      "term": "SMS 安装程序",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"SMS Installer\" → ZH=\"SMS 安装程序\" | conf=high"
+    },
+    {
+      "text": "系统支持SMS 安装程序",
+      "term": "SMS 安装程序",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"SMS Installer\" → ZH=\"SMS 安装程序\" | conf=high"
+    },
+    {
+      "text": "<i>SMS 安装程序</i>已启用",
+      "term": "SMS 安装程序",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"SMS Installer\" → ZH=\"SMS 安装程序\" | conf=high"
+    },
+    {
+      "text": "启用邮件的通用通讯组已成功安装",
+      "term": "启用邮件的通用通讯组",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"mail-enabled universal distribution group\" → ZH=\"启用邮件的通用通讯组\" | conf=high"
+    },
+    {
+      "text": "启用邮件的通用通讯组设置已完成",
+      "term": "启用邮件的通用通讯组",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"mail-enabled universal distribution group\" → ZH=\"启用邮件的通用通讯组\" | conf=high"
+    },
+    {
+      "text": "使用Microsoft 业务中心进行操作",
+      "term": "Microsoft 业务中心",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Microsoft Volume Licensing Service Center\" → ZH=\"Microsoft 业务中心\" | conf=high"
+    },
+    {
+      "text": "Microsoft 业务中心运行正常",
+      "term": "Microsoft 业务中心",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Microsoft Volume Licensing Service Center\" → ZH=\"Microsoft 业务中心\" | conf=high"
+    },
+    {
+      "text": "Windows Live 设备设置已完成",
+      "term": "Microsoft 业务中心",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"Microsoft 业务中心\""
+    },
+    {
+      "text": "系统支持Windows Live 设备",
+      "term": "Windows Live 设备",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows Live Devices\" → ZH=\"Windows Live 设备\" | conf=high"
+    },
+    {
+      "text": "使用Windows Live 设备进行操作",
+      "term": "Windows Live 设备",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows Live Devices\" → ZH=\"Windows Live 设备\" | conf=high"
+    },
+    {
+      "text": "{0}的Windows Live 设备已更新",
+      "term": "Windows Live 设备",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Windows Live Devices\" → ZH=\"Windows Live 设备\" | conf=high"
+    },
+    {
+      "text": "RD 授权宽限期是重要功能",
+      "term": "RD 授权宽限期",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"RD Licensing grace period\" → ZH=\"RD 授权宽限期\" | conf=high"
+    },
+    {
+      "text": "打开RD 授权宽限期设置",
+      "term": "RD 授权宽限期",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"RD Licensing grace period\" → ZH=\"RD 授权宽限期\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>RD 授权宽限期已找到",
+      "term": "RD 授权宽限期",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"RD Licensing grace period\" → ZH=\"RD 授权宽限期\" | conf=high"
+    },
+    {
+      "text": "RD 授权宽限期和RD 授权宽限期已选择",
+      "term": "RD 授权宽限期",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"RD Licensing grace period\" → ZH=\"RD 授权宽限期\" | conf=high"
+    },
+    {
+      "text": "Windows 防火墙配置提供程序设置已完成",
+      "term": "Windows 防火墙配置提供程序",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows Firewall Configuration Provider\" → ZH=\"Windows 防火墙配置提供程序\" | conf=high"
+    },
+    {
+      "text": "系统支持Windows 防火墙配置提供程序",
+      "term": "Windows 防火墙配置提供程序",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows Firewall Configuration Provider\" → ZH=\"Windows 防火墙配置提供程序\" | conf=high"
+    },
+    {
+      "text": "垃圾邮件报告工具设置已完成",
+      "term": "Windows 防火墙配置提供程序",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"Windows 防火墙配置提供程序\""
+    },
+    {
+      "text": "垃圾邮件报告工具运行正常",
+      "term": "垃圾邮件报告工具",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Junk E-mail Reporting Tool\" → ZH=\"垃圾邮件报告工具\" | conf=high"
+    },
+    {
+      "text": "错误：未找到垃圾邮件报告工具",
+      "term": "垃圾邮件报告工具",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Junk E-mail Reporting Tool\" → ZH=\"垃圾邮件报告工具\" | conf=high"
+    },
+    {
+      "text": "错误：未找到索尼和飞利浦数字接口",
+      "term": "索尼和飞利浦数字接口",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Sony/Philips Digital Interface\" → ZH=\"索尼和飞利浦数字接口\" | conf=high"
+    },
+    {
+      "text": "系统支持索尼和飞利浦数字接口",
+      "term": "索尼和飞利浦数字接口",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Sony/Philips Digital Interface\" → ZH=\"索尼和飞利浦数字接口\" | conf=high"
+    },
+    {
+      "text": "近距离通信传感器是重要功能",
+      "term": "近距离通信传感器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"near field communication sensor\" → ZH=\"近距离通信传感器\" | conf=high"
+    },
+    {
+      "text": "错误：未找到近距离通信传感器",
+      "term": "近距离通信传感器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"near field communication sensor\" → ZH=\"近距离通信传感器\" | conf=high"
+    },
+    {
+      "text": "<i>近距离通信传感器</i>已启用",
+      "term": "近距离通信传感器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"near field communication sensor\" → ZH=\"近距离通信传感器\" | conf=high"
+    },
+    {
+      "text": "%s中的近距离通信传感器",
+      "term": "近距离通信传感器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"near field communication sensor\" → ZH=\"近距离通信传感器\" | conf=high"
+    },
+    {
+      "text": "Canary 值设置已完成",
+      "term": "近距离通信传感器",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"近距离通信传感器\""
+    },
+    {
+      "text": "",
+      "term": "近距离通信传感器",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"近距离通信传感器\""
+    },
+    {
+      "text": "Canary 值是重要功能",
+      "term": "Canary 值",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"canary\" → ZH=\"Canary 值\" | conf=high"
+    },
+    {
+      "text": "错误：未找到Canary 值",
+      "term": "Canary 值",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"canary\" → ZH=\"Canary 值\" | conf=high"
+    },
+    {
+      "text": "错误：未找到针对验证的扩展保护",
+      "term": "针对验证的扩展保护",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Extended Protection for Authentication\" → ZH=\"针对验证的扩展保护\" | conf=high"
+    },
+    {
+      "text": "针对验证的扩展保护已成功安装",
+      "term": "针对验证的扩展保护",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Extended Protection for Authentication\" → ZH=\"针对验证的扩展保护\" | conf=high"
+    },
+    {
+      "text": "自定义驱动程序访问设置已完成",
+      "term": "自定义驱动程序访问",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"custom driver access\" → ZH=\"自定义驱动程序访问\" | conf=high"
+    },
+    {
+      "text": "使用自定义驱动程序访问进行操作",
+      "term": "自定义驱动程序访问",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"custom driver access\" → ZH=\"自定义驱动程序访问\" | conf=high"
+    },
+    {
+      "text": "Lync Online 合作伙伴设置已完成",
+      "term": "自定义驱动程序访问",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"自定义驱动程序访问\""
+    },
+    {
+      "text": "系统支持Lync Online 合作伙伴",
+      "term": "Lync Online 合作伙伴",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Lync Online Partner\" → ZH=\"Lync Online 合作伙伴\" | conf=high"
+    },
+    {
+      "text": "Lync Online 合作伙伴是重要功能",
+      "term": "Lync Online 合作伙伴",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Lync Online Partner\" → ZH=\"Lync Online 合作伙伴\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>Lync Online 合作伙伴已找到",
+      "term": "Lync Online 合作伙伴",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Lync Online Partner\" → ZH=\"Lync Online 合作伙伴\" | conf=high"
+    },
+    {
+      "text": "Lync Online 合作伙伴和Lync Online 合作伙伴已选择",
+      "term": "Lync Online 合作伙伴",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"Lync Online Partner\" → ZH=\"Lync Online 合作伙伴\" | conf=high"
+    },
+    {
+      "text": "whois 服务器是重要功能",
+      "term": "whois 服务器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"whois server\" → ZH=\"whois 服务器\" | conf=high"
+    },
+    {
+      "text": "whois 服务器功能已启用",
+      "term": "whois 服务器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"whois server\" → ZH=\"whois 服务器\" | conf=high"
+    },
+    {
+      "text": "%s中的whois 服务器",
+      "term": "whois 服务器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"whois server\" → ZH=\"whois 服务器\" | conf=high"
+    },
+    {
+      "text": "任务工作区定位器列表运行正常",
+      "term": "任务工作区定位器列表",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Task Workspace Locator List\" → ZH=\"任务工作区定位器列表\" | conf=high"
+    },
+    {
+      "text": "重新启动任务工作区定位器列表",
+      "term": "任务工作区定位器列表",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Task Workspace Locator List\" → ZH=\"任务工作区定位器列表\" | conf=high"
+    },
+    {
+      "text": "DirectX 直接模式设置已完成",
+      "term": "任务工作区定位器列表",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"任务工作区定位器列表\""
+    },
+    {
+      "text": "DirectX 直接模式是重要功能",
+      "term": "DirectX 直接模式",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"DirectX Immediate Mode\" → ZH=\"DirectX 直接模式\" | conf=high"
+    },
+    {
+      "text": "系统支持DirectX 直接模式",
+      "term": "DirectX 直接模式",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"DirectX Immediate Mode\" → ZH=\"DirectX 直接模式\" | conf=high"
+    },
+    {
+      "text": "重新启动无法识别的媒体池",
+      "term": "无法识别的媒体池",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"unrecognized media pool\" → ZH=\"无法识别的媒体池\" | conf=high"
+    },
+    {
+      "text": "系统支持无法识别的媒体池",
+      "term": "无法识别的媒体池",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"unrecognized media pool\" → ZH=\"无法识别的媒体池\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>无法识别的媒体池已找到",
+      "term": "无法识别的媒体池",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"unrecognized media pool\" → ZH=\"无法识别的媒体池\" | conf=high"
+    },
+    {
+      "text": "垂直图片重点列表是重要功能",
+      "term": "垂直图片重点列表",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Vertical Picture Accent List\" → ZH=\"垂直图片重点列表\" | conf=high"
+    },
+    {
+      "text": "错误：未找到垂直图片重点列表",
+      "term": "垂直图片重点列表",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Vertical Picture Accent List\" → ZH=\"垂直图片重点列表\" | conf=high"
+    },
+    {
+      "text": "外部 URL 映射设置已完成",
+      "term": "垂直图片重点列表",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"垂直图片重点列表\""
+    },
+    {
+      "text": "外部 URL 映射已成功安装",
+      "term": "外部 URL 映射",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"external URL mapping\" → ZH=\"外部 URL 映射\" | conf=high"
+    },
+    {
+      "text": "查看外部 URL 映射详情",
+      "term": "外部 URL 映射",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"external URL mapping\" → ZH=\"外部 URL 映射\" | conf=high"
+    },
+    {
+      "text": "%s中的外部 URL 映射",
+      "term": "外部 URL 映射",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"external URL mapping\" → ZH=\"外部 URL 映射\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "外部 URL 映射",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"外部 URL 映射\""
+    },
+    {
+      "text": "数字生活网络联盟功能已启用",
+      "term": "数字生活网络联盟",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Digital Living Network Alliance\" → ZH=\"数字生活网络联盟\" | conf=high"
+    },
+    {
+      "text": "错误：未找到数字生活网络联盟",
+      "term": "数字生活网络联盟",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Digital Living Network Alliance\" → ZH=\"数字生活网络联盟\" | conf=high"
+    },
+    {
+      "text": "系统支持独立证书颁发机构",
+      "term": "独立证书颁发机构",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"stand-alone CA\" → ZH=\"独立证书颁发机构\" | conf=high"
+    },
+    {
+      "text": "独立证书颁发机构功能已启用",
+      "term": "独立证书颁发机构",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"stand-alone CA\" → ZH=\"独立证书颁发机构\" | conf=high"
+    },
+    {
+      "text": "<i>独立证书颁发机构</i>已启用",
+      "term": "独立证书颁发机构",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"stand-alone CA\" → ZH=\"独立证书颁发机构\" | conf=high"
+    },
+    {
+      "text": "独立证书颁发机构和独立证书颁发机构已选择",
+      "term": "独立证书颁发机构",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"stand-alone CA\" → ZH=\"独立证书颁发机构\" | conf=high"
+    },
+    {
+      "text": "Microsoft 批量许可服务中心设置已完成",
+      "term": "独立证书颁发机构",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"独立证书颁发机构\""
+    },
+    {
+      "text": "错误：未找到Microsoft 批量许可服务中心",
+      "term": "Microsoft 批量许可服务中心",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Microsoft Volume Licensing Service Center\" → ZH=\"Microsoft 批量许可服务中心\" | conf=high"
+    },
+    {
+      "text": "关闭Microsoft 批量许可服务中心",
+      "term": "Microsoft 批量许可服务中心",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Microsoft Volume Licensing Service Center\" → ZH=\"Microsoft 批量许可服务中心\" | conf=high"
+    },
+    {
+      "text": "关闭POS 对象链接与嵌入",
+      "term": "POS 对象链接与嵌入",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"OPOS\" → ZH=\"POS 对象链接与嵌入\" | conf=high"
+    },
+    {
+      "text": "POS 对象链接与嵌入已成功安装",
+      "term": "POS 对象链接与嵌入",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"OPOS\" → ZH=\"POS 对象链接与嵌入\" | conf=high"
+    },
+    {
+      "text": "错误：未找到Microsoft 预配管理框架",
+      "term": "Microsoft 预配管理框架",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Microsoft Provisioning Framework\" → ZH=\"Microsoft 预配管理框架\" | conf=high"
+    },
+    {
+      "text": "Microsoft 预配管理框架设置已完成",
+      "term": "Microsoft 预配管理框架",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Microsoft Provisioning Framework\" → ZH=\"Microsoft 预配管理框架\" | conf=high"
+    },
+    {
+      "text": "{0}的Microsoft 预配管理框架已更新",
+      "term": "Microsoft 预配管理框架",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Microsoft Provisioning Framework\" → ZH=\"Microsoft 预配管理框架\" | conf=high"
+    },
+    {
+      "text": "数据中心 TCP设置已完成",
+      "term": "Microsoft 预配管理框架",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"Microsoft 预配管理框架\""
+    },
+    {
+      "text": "查看数据中心 TCP详情",
+      "term": "数据中心 TCP",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Data Center Transmission Control Protocol\" → ZH=\"数据中心 TCP\" | conf=high"
+    },
+    {
+      "text": "数据中心 TCP是重要功能",
+      "term": "数据中心 TCP",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Data Center Transmission Control Protocol\" → ZH=\"数据中心 TCP\" | conf=high"
+    },
+    {
+      "text": "<b>数据中心 TCP</b>设置完成",
+      "term": "数据中心 TCP",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Data Center Transmission Control Protocol\" → ZH=\"数据中心 TCP\" | conf=high"
+    },
+    {
+      "text": "下载人力资本管理循环完成",
+      "term": "人力资本管理循环",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"human capital management cycle\" → ZH=\"人力资本管理循环\" | conf=high"
+    },
+    {
+      "text": "关闭人力资本管理循环",
+      "term": "人力资本管理循环",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"human capital management cycle\" → ZH=\"人力资本管理循环\" | conf=high"
+    },
+    {
+      "text": "下载Microsoft 数据库实用工具完成",
+      "term": "Microsoft 数据库实用工具",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Microsoft Database Utility\" → ZH=\"Microsoft 数据库实用工具\" | conf=high"
+    },
+    {
+      "text": "Microsoft 数据库实用工具功能已启用",
+      "term": "Microsoft 数据库实用工具",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Microsoft Database Utility\" → ZH=\"Microsoft 数据库实用工具\" | conf=high"
+    },
+    {
+      "text": "GxP 关键记录设置已完成",
+      "term": "Microsoft 数据库实用工具",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"Microsoft 数据库实用工具\""
+    },
+    {
+      "text": "GxP 关键记录设置已完成",
+      "term": "GxP 关键记录",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"GxP critical record\" → ZH=\"GxP 关键记录\" | conf=high"
+    },
+    {
+      "text": "选择GxP 关键记录选项",
+      "term": "GxP 关键记录",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"GxP critical record\" → ZH=\"GxP 关键记录\" | conf=high"
+    },
+    {
+      "text": "Internet 服务管理器已成功安装",
+      "term": "Internet 服务管理器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Internet Services Manager\" → ZH=\"Internet 服务管理器\" | conf=high"
+    },
+    {
+      "text": "Internet 服务管理器是重要功能",
+      "term": "Internet 服务管理器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Internet Services Manager\" → ZH=\"Internet 服务管理器\" | conf=high"
+    },
+    {
+      "text": "<i>Internet 服务管理器</i>已启用",
+      "term": "Internet 服务管理器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Internet Services Manager\" → ZH=\"Internet 服务管理器\" | conf=high"
+    },
+    {
+      "text": "{0}的Internet 服务管理器已更新",
+      "term": "Internet 服务管理器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Internet Services Manager\" → ZH=\"Internet 服务管理器\" | conf=high"
+    },
+    {
+      "text": "Internet 服务管理器和Internet 服务管理器已选择",
+      "term": "Internet 服务管理器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"Internet Services Manager\" → ZH=\"Internet 服务管理器\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "Internet 服务管理器",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"Internet 服务管理器\""
+    },
+    {
+      "text": "使用Active Directory 站点进行操作",
+      "term": "Active Directory 站点",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Active Directory site\" → ZH=\"Active Directory 站点\" | conf=high"
+    },
+    {
+      "text": "错误：未找到Active Directory 站点",
+      "term": "Active Directory 站点",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Active Directory site\" → ZH=\"Active Directory 站点\" | conf=high"
+    },
+    {
+      "text": "触控注入 API设置已完成",
+      "term": "Active Directory 站点",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"Active Directory 站点\""
+    },
+    {
+      "text": "触控注入 API运行正常",
+      "term": "触控注入 API",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Touch Injection API\" → ZH=\"触控注入 API\" | conf=high"
+    },
+    {
+      "text": "下载触控注入 API完成",
+      "term": "触控注入 API",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Touch Injection API\" → ZH=\"触控注入 API\" | conf=high"
+    },
+    {
+      "text": "系统支持应用程序性能监视代理",
+      "term": "应用程序性能监视代理",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"APM agent\" → ZH=\"应用程序性能监视代理\" | conf=high"
+    },
+    {
+      "text": "重新启动应用程序性能监视代理",
+      "term": "应用程序性能监视代理",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"APM agent\" → ZH=\"应用程序性能监视代理\" | conf=high"
+    },
+    {
+      "text": "关闭SQL Azure 管理门户",
+      "term": "SQL Azure 管理门户",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Management Portal for SQL Azure\" → ZH=\"SQL Azure 管理门户\" | conf=high"
+    },
+    {
+      "text": "SQL Azure 管理门户功能已启用",
+      "term": "SQL Azure 管理门户",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Management Portal for SQL Azure\" → ZH=\"SQL Azure 管理门户\" | conf=high"
+    },
+    {
+      "text": "<i>SQL Azure 管理门户</i>已启用",
+      "term": "SQL Azure 管理门户",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Management Portal for SQL Azure\" → ZH=\"SQL Azure 管理门户\" | conf=high"
+    },
+    {
+      "text": "SCOPE 语句设置已完成",
+      "term": "SQL Azure 管理门户",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"SQL Azure 管理门户\""
+    },
+    {
+      "text": "SCOPE 语句已成功安装",
+      "term": "SCOPE 语句",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"SCOPE statement\" → ZH=\"SCOPE 语句\" | conf=high"
+    },
+    {
+      "text": "错误：未找到SCOPE 语句",
+      "term": "SCOPE 语句",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"SCOPE statement\" → ZH=\"SCOPE 语句\" | conf=high"
+    },
+    {
+      "text": "SCOPE 语句{0}操作完成",
+      "term": "SCOPE 语句",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"SCOPE statement\" → ZH=\"SCOPE 语句\" | conf=high"
+    },
+    {
+      "text": "重新启动播放声音疑难解答",
+      "term": "播放声音疑难解答",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Play Sound troubleshooter\" → ZH=\"播放声音疑难解答\" | conf=high"
+    },
+    {
+      "text": "播放声音疑难解答已成功安装",
+      "term": "播放声音疑难解答",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Play Sound troubleshooter\" → ZH=\"播放声音疑难解答\" | conf=high"
+    },
+    {
+      "text": "Office 兼容性定义文件设置已完成",
+      "term": "Office 兼容性定义文件",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Office compatibility definition file\" → ZH=\"Office 兼容性定义文件\" | conf=high"
+    },
+    {
+      "text": "使用Office 兼容性定义文件进行操作",
+      "term": "Office 兼容性定义文件",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Office compatibility definition file\" → ZH=\"Office 兼容性定义文件\" | conf=high"
+    },
+    {
+      "text": "燃速 (burn rate)设置已完成",
+      "term": "Office 兼容性定义文件",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"Office 兼容性定义文件\""
+    },
+    {
+      "text": "重新启动燃速 (burn rate)",
+      "term": "燃速 (burn rate)",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"burn rate\" → ZH=\"燃速 (burn rate)\" | conf=high"
+    },
+    {
+      "text": "打开燃速 (burn rate)设置",
+      "term": "燃速 (burn rate)",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"burn rate\" → ZH=\"燃速 (burn rate)\" | conf=high"
+    },
+    {
+      "text": "<i>燃速 (burn rate)</i>已启用",
+      "term": "燃速 (burn rate)",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "low",
+      "note": "markup stripped | EN=\"burn rate\" → ZH=\"燃速 (burn rate)\" | conf=low"
+    },
+    {
+      "text": "燃速 (burn rate)和燃速 (burn rate)已选择",
+      "term": "燃速 (burn rate)",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"burn rate\" → ZH=\"燃速 (burn rate)\" | conf=high"
+    },
+    {
+      "text": "重新启动CIM 对象管理器存储库",
+      "term": "CIM 对象管理器存储库",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"CIM repository\" → ZH=\"CIM 对象管理器存储库\" | conf=high"
+    },
+    {
+      "text": "查看CIM 对象管理器存储库详情",
+      "term": "CIM 对象管理器存储库",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"CIM repository\" → ZH=\"CIM 对象管理器存储库\" | conf=high"
+    },
+    {
+      "text": "服务级别协议时间运行正常",
+      "term": "服务级别协议时间",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"service level agreement time\" → ZH=\"服务级别协议时间\" | conf=high"
+    },
+    {
+      "text": "选择服务级别协议时间选项",
+      "term": "服务级别协议时间",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"service level agreement time\" → ZH=\"服务级别协议时间\" | conf=high"
+    },
+    {
+      "text": "{0}的服务级别协议时间已更新",
+      "term": "服务级别协议时间",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"service level agreement time\" → ZH=\"服务级别协议时间\" | conf=high"
+    },
+    {
+      "text": "Xbox 360 快速充电套件设置已完成",
+      "term": "服务级别协议时间",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"服务级别协议时间\""
+    },
+    {
+      "text": "",
+      "term": "服务级别协议时间",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"服务级别协议时间\""
+    },
+    {
+      "text": "选择Xbox 360 快速充电套件选项",
+      "term": "Xbox 360 快速充电套件",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Xbox 360 Quick Charge Kit\" → ZH=\"Xbox 360 快速充电套件\" | conf=high"
+    },
+    {
+      "text": "系统支持Xbox 360 快速充电套件",
+      "term": "Xbox 360 快速充电套件",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Xbox 360 Quick Charge Kit\" → ZH=\"Xbox 360 快速充电套件\" | conf=high"
+    },
+    {
+      "text": "Microsoft 工作区分析已成功安装",
+      "term": "Microsoft 工作区分析",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Microsoft Workplace Analytics\" → ZH=\"Microsoft 工作区分析\" | conf=high"
+    },
+    {
+      "text": "请更新Microsoft 工作区分析",
+      "term": "Microsoft 工作区分析",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Microsoft Workplace Analytics\" → ZH=\"Microsoft 工作区分析\" | conf=high"
+    },
+    {
+      "text": "<i>Microsoft 工作区分析</i>已启用",
+      "term": "Microsoft 工作区分析",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Microsoft Workplace Analytics\" → ZH=\"Microsoft 工作区分析\" | conf=high"
+    },
+    {
+      "text": "重新启动Windows 7 徽标计划",
+      "term": "Windows 7 徽标计划",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows 7 Logo Program\" → ZH=\"Windows 7 徽标计划\" | conf=high"
+    },
+    {
+      "text": "关闭Windows 7 徽标计划",
+      "term": "Windows 7 徽标计划",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows 7 Logo Program\" → ZH=\"Windows 7 徽标计划\" | conf=high"
+    },
+    {
+      "text": "Windows Live 联系人设置已完成",
+      "term": "Windows 7 徽标计划",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"Windows 7 徽标计划\""
+    },
+    {
+      "text": "下载Windows Live 联系人完成",
+      "term": "Windows Live 联系人",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows Live Contacts\" → ZH=\"Windows Live 联系人\" | conf=high"
+    },
+    {
+      "text": "重新启动Windows Live 联系人",
+      "term": "Windows Live 联系人",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows Live Contacts\" → ZH=\"Windows Live 联系人\" | conf=high"
+    },
+    {
+      "text": "系统支持风险驱动的进度安排",
+      "term": "风险驱动的进度安排",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"risk-driven scheduling\" → ZH=\"风险驱动的进度安排\" | conf=high"
+    },
+    {
+      "text": "打开风险驱动的进度安排设置",
+      "term": "风险驱动的进度安排",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"risk-driven scheduling\" → ZH=\"风险驱动的进度安排\" | conf=high"
+    },
+    {
+      "text": "{0}的风险驱动的进度安排已更新",
+      "term": "风险驱动的进度安排",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"risk-driven scheduling\" → ZH=\"风险驱动的进度安排\" | conf=high"
+    },
+    {
+      "text": "公钥基础结构证书设置已完成",
+      "term": "公钥基础结构证书",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"PKI certificate\" → ZH=\"公钥基础结构证书\" | conf=high"
+    },
+    {
+      "text": "请更新公钥基础结构证书",
+      "term": "公钥基础结构证书",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"PKI certificate\" → ZH=\"公钥基础结构证书\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>公钥基础结构证书已找到",
+      "term": "公钥基础结构证书",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"PKI certificate\" → ZH=\"公钥基础结构证书\" | conf=high"
+    },
+    {
+      "text": "公钥基础结构证书和公钥基础结构证书已选择",
+      "term": "公钥基础结构证书",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"PKI certificate\" → ZH=\"公钥基础结构证书\" | conf=high"
+    },
+    {
+      "text": "Azure 移动服务后端设置已完成",
+      "term": "公钥基础结构证书",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"公钥基础结构证书\""
+    },
+    {
+      "text": "Azure 移动服务后端功能已启用",
+      "term": "Azure 移动服务后端",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Azure Mobile Services Backend\" → ZH=\"Azure 移动服务后端\" | conf=high"
+    },
+    {
+      "text": "重新启动Azure 移动服务后端",
+      "term": "Azure 移动服务后端",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Azure Mobile Services Backend\" → ZH=\"Azure 移动服务后端\" | conf=high"
+    },
+    {
+      "text": "密钥证书颁发机构设置已完成",
+      "term": "密钥证书颁发机构",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"key authority\" → ZH=\"密钥证书颁发机构\" | conf=high"
+    },
+    {
+      "text": "密钥证书颁发机构是重要功能",
+      "term": "密钥证书颁发机构",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"key authority\" → ZH=\"密钥证书颁发机构\" | conf=high"
+    },
+    {
+      "text": "打开Click2Run 更新支持设置",
+      "term": "Click2Run 更新支持",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Click2Run Update Support\" → ZH=\"Click2Run 更新支持\" | conf=high"
+    },
+    {
+      "text": "Click2Run 更新支持设置已完成",
+      "term": "Click2Run 更新支持",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Click2Run Update Support\" → ZH=\"Click2Run 更新支持\" | conf=high"
+    },
+    {
+      "text": "MorphX 报表设置已完成",
+      "term": "Click2Run 更新支持",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"Click2Run 更新支持\""
+    },
+    {
+      "text": "系统支持MorphX 报表",
+      "term": "MorphX 报表",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"MorphX report\" → ZH=\"MorphX 报表\" | conf=high"
+    },
+    {
+      "text": "选择MorphX 报表选项",
+      "term": "MorphX 报表",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"MorphX report\" → ZH=\"MorphX 报表\" | conf=high"
+    },
+    {
+      "text": "<i>MorphX 报表</i>已启用",
+      "term": "MorphX 报表",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"MorphX report\" → ZH=\"MorphX 报表\" | conf=high"
+    },
+    {
+      "text": "%s中的MorphX 报表",
+      "term": "MorphX 报表",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"MorphX report\" → ZH=\"MorphX 报表\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "MorphX 报表",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"MorphX 报表\""
+    },
+    {
+      "text": "下载Microsoft 应用安装程序完成",
+      "term": "Microsoft 应用安装程序",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Microsoft App Installer\" → ZH=\"Microsoft 应用安装程序\" | conf=high"
+    },
+    {
+      "text": "Microsoft 应用安装程序功能已启用",
+      "term": "Microsoft 应用安装程序",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Microsoft App Installer\" → ZH=\"Microsoft 应用安装程序\" | conf=high"
+    },
+    {
+      "text": "错误：未找到Exchange 命令行管理程序",
+      "term": "Exchange 命令行管理程序",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Exchange Management Shell\" → ZH=\"Exchange 命令行管理程序\" | conf=high"
+    },
+    {
+      "text": "Exchange 命令行管理程序功能已启用",
+      "term": "Exchange 命令行管理程序",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Exchange Management Shell\" → ZH=\"Exchange 命令行管理程序\" | conf=high"
+    },
+    {
+      "text": "采购类别层次结构设置已完成",
+      "term": "Exchange 命令行管理程序",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"Exchange 命令行管理程序\""
+    },
+    {
+      "text": "重新启动采购类别层次结构",
+      "term": "采购类别层次结构",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"procurement category hierarchy\" → ZH=\"采购类别层次结构\" | conf=high"
+    },
+    {
+      "text": "采购类别层次结构运行正常",
+      "term": "采购类别层次结构",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"procurement category hierarchy\" → ZH=\"采购类别层次结构\" | conf=high"
+    },
+    {
+      "text": "为 Null 性功能已启用",
+      "term": "为 Null 性",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"nullability\" → ZH=\"为 Null 性\" | conf=high"
+    },
+    {
+      "text": "为 Null 性是重要功能",
+      "term": "为 Null 性",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"nullability\" → ZH=\"为 Null 性\" | conf=high"
+    },
+    {
+      "text": "<b>为 Null 性</b>设置完成",
+      "term": "为 Null 性",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"nullability\" → ZH=\"为 Null 性\" | conf=high"
+    },
+    {
+      "text": "为 Null 性和为 Null 性已选择",
+      "term": "为 Null 性",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"nullability\" → ZH=\"为 Null 性\" | conf=high"
+    },
+    {
+      "text": "管道和仪表设备图运行正常",
+      "term": "管道和仪表设备图",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"P&amp;ID\" → ZH=\"管道和仪表设备图\" | conf=high"
+    },
+    {
+      "text": "打开管道和仪表设备图设置",
+      "term": "管道和仪表设备图",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"P&amp;ID\" → ZH=\"管道和仪表设备图\" | conf=high"
+    },
+    {
+      "text": "管道和仪表设备图{0}操作完成",
+      "term": "管道和仪表设备图",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"P&amp;ID\" → ZH=\"管道和仪表设备图\" | conf=high"
+    },
+    {
+      "text": "多用途 Internet 邮件扩展类型设置已完成",
+      "term": "管道和仪表设备图",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"管道和仪表设备图\""
+    },
+    {
+      "text": "系统支持多用途 Internet 邮件扩展类型",
+      "term": "多用途 Internet 邮件扩展类型",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Multipurpose Internet Mail Extensions type\" → ZH=\"多用途 Internet 邮件扩展类型\" | conf=high"
+    },
+    {
+      "text": "重新启动多用途 Internet 邮件扩展类型",
+      "term": "多用途 Internet 邮件扩展类型",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Multipurpose Internet Mail Extensions type\" → ZH=\"多用途 Internet 邮件扩展类型\" | conf=high"
+    },
+    {
+      "text": "Azure 服务运行状况功能已启用",
+      "term": "Azure 服务运行状况",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Azure Service Health\" → ZH=\"Azure 服务运行状况\" | conf=high"
+    },
+    {
+      "text": "Azure 服务运行状况设置已完成",
+      "term": "Azure 服务运行状况",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Azure Service Health\" → ZH=\"Azure 服务运行状况\" | conf=high"
+    },
+    {
+      "text": "WINS 代理程序功能已启用",
+      "term": "WINS 代理程序",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"WINS proxy\" → ZH=\"WINS 代理程序\" | conf=high"
+    },
+    {
+      "text": "打开WINS 代理程序设置",
+      "term": "WINS 代理程序",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"WINS proxy\" → ZH=\"WINS 代理程序\" | conf=high"
+    },
+    {
+      "text": "<b>WINS 代理程序</b>设置完成",
+      "term": "WINS 代理程序",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"WINS proxy\" → ZH=\"WINS 代理程序\" | conf=high"
+    },
+    {
+      "text": "Office 365 合作伙伴管理中心设置已完成",
+      "term": "WINS 代理程序",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"WINS 代理程序\""
+    },
+    {
+      "text": "使用Office 365 合作伙伴管理中心进行操作",
+      "term": "Office 365 合作伙伴管理中心",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Office 365 Partner admin center\" → ZH=\"Office 365 合作伙伴管理中心\" | conf=high"
+    },
+    {
+      "text": "选择Office 365 合作伙伴管理中心选项",
+      "term": "Office 365 合作伙伴管理中心",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Office 365 Partner admin center\" → ZH=\"Office 365 合作伙伴管理中心\" | conf=high"
+    },
+    {
+      "text": "呼叫号码和骚扰拦截运行正常",
+      "term": "呼叫号码和骚扰拦截",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"ID &amp; Filter\" → ZH=\"呼叫号码和骚扰拦截\" | conf=high"
+    },
+    {
+      "text": "呼叫号码和骚扰拦截已成功安装",
+      "term": "呼叫号码和骚扰拦截",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"ID &amp; Filter\" → ZH=\"呼叫号码和骚扰拦截\" | conf=high"
+    },
+    {
+      "text": "%s中的呼叫号码和骚扰拦截",
+      "term": "呼叫号码和骚扰拦截",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"ID &amp; Filter\" → ZH=\"呼叫号码和骚扰拦截\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "呼叫号码和骚扰拦截",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"呼叫号码和骚扰拦截\""
+    },
+    {
+      "text": "选择多重身份验证注册策略选项",
+      "term": "多重身份验证注册策略",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"multi-factor authentication registration policy\" → ZH=\"多重身份验证注册策略\" | conf=high"
+    },
+    {
+      "text": "错误：未找到多重身份验证注册策略",
+      "term": "多重身份验证注册策略",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"multi-factor authentication registration policy\" → ZH=\"多重身份验证注册策略\" | conf=high"
+    },
+    {
+      "text": "已连接的用户体验和遥测设置已完成",
+      "term": "多重身份验证注册策略",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"多重身份验证注册策略\""
+    },
+    {
+      "text": "重新启动已连接的用户体验和遥测",
+      "term": "已连接的用户体验和遥测",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Connected User Experience and Telemetry\" → ZH=\"已连接的用户体验和遥测\" | conf=high"
+    },
+    {
+      "text": "选择已连接的用户体验和遥测选项",
+      "term": "已连接的用户体验和遥测",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Connected User Experience and Telemetry\" → ZH=\"已连接的用户体验和遥测\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>已连接的用户体验和遥测已找到",
+      "term": "已连接的用户体验和遥测",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Connected User Experience and Telemetry\" → ZH=\"已连接的用户体验和遥测\" | conf=high"
+    },
+    {
+      "text": "已连接的用户体验和遥测和已连接的用户体验和遥测已选择",
+      "term": "已连接的用户体验和遥测",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"Connected User Experience and Telemetry\" → ZH=\"已连接的用户体验和遥测\" | conf=high"
+    },
+    {
+      "text": "Microsoft 正版标签是重要功能",
+      "term": "Microsoft 正版标签",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Genuine Microsoft label\" → ZH=\"Microsoft 正版标签\" | conf=high"
+    },
+    {
+      "text": "重新启动Microsoft 正版标签",
+      "term": "Microsoft 正版标签",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Genuine Microsoft label\" → ZH=\"Microsoft 正版标签\" | conf=high"
+    },
+    {
+      "text": "错误：未找到基于位置的 Azure 服务",
+      "term": "基于位置的 Azure 服务",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Azure Location Based Services\" → ZH=\"基于位置的 Azure 服务\" | conf=high"
+    },
+    {
+      "text": "基于位置的 Azure 服务功能已启用",
+      "term": "基于位置的 Azure 服务",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Azure Location Based Services\" → ZH=\"基于位置的 Azure 服务\" | conf=high"
+    },
+    {
+      "text": "Azure 计费 API设置已完成",
+      "term": "基于位置的 Azure 服务",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"基于位置的 Azure 服务\""
+    },
+    {
+      "text": "错误：未找到Azure 计费 API",
+      "term": "Azure 计费 API",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Azure Billing APIs\" → ZH=\"Azure 计费 API\" | conf=high"
+    },
+    {
+      "text": "查看Azure 计费 API详情",
+      "term": "Azure 计费 API",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Azure Billing APIs\" → ZH=\"Azure 计费 API\" | conf=high"
+    },
+    {
+      "text": "Azure 计费 API{0}操作完成",
+      "term": "Azure 计费 API",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Azure Billing APIs\" → ZH=\"Azure 计费 API\" | conf=high"
+    },
+    {
+      "text": "查看IoT 即插即用详情",
+      "term": "IoT 即插即用",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"IoT Plug and Play\" → ZH=\"IoT 即插即用\" | conf=high"
+    },
+    {
+      "text": "使用IoT 即插即用进行操作",
+      "term": "IoT 即插即用",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"IoT Plug and Play\" → ZH=\"IoT 即插即用\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>IoT 即插即用已找到",
+      "term": "IoT 即插即用",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"IoT Plug and Play\" → ZH=\"IoT 即插即用\" | conf=high"
+    },
+    {
+      "text": "自动样式应用程序模式功能已启用",
+      "term": "自动样式应用程序模式",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"auto style application mode\" → ZH=\"自动样式应用程序模式\" | conf=high"
+    },
+    {
+      "text": "自动样式应用程序模式设置已完成",
+      "term": "自动样式应用程序模式",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"auto style application mode\" → ZH=\"自动样式应用程序模式\" | conf=high"
+    },
+    {
+      "text": "Windows Live 主页设置已完成",
+      "term": "自动样式应用程序模式",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"自动样式应用程序模式\""
+    },
+    {
+      "text": "Windows Live 主页设置已完成",
+      "term": "Windows Live 主页",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows Live Home\" → ZH=\"Windows Live 主页\" | conf=high"
+    },
+    {
+      "text": "使用Windows Live 主页进行操作",
+      "term": "Windows Live 主页",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows Live Home\" → ZH=\"Windows Live 主页\" | conf=high"
+    },
+    {
+      "text": "重新启动应用程序到应用程序的集成",
+      "term": "应用程序到应用程序的集成",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"enterprise application integration\" → ZH=\"应用程序到应用程序的集成\" | conf=high"
+    },
+    {
+      "text": "系统支持应用程序到应用程序的集成",
+      "term": "应用程序到应用程序的集成",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"enterprise application integration\" → ZH=\"应用程序到应用程序的集成\" | conf=high"
+    },
+    {
+      "text": "椭圆曲线数字签名算法设置已完成",
+      "term": "椭圆曲线数字签名算法",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Elliptic Curve Digital Signature Algorithm\" → ZH=\"椭圆曲线数字签名算法\" | conf=high"
+    },
+    {
+      "text": "错误：未找到椭圆曲线数字签名算法",
+      "term": "椭圆曲线数字签名算法",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Elliptic Curve Digital Signature Algorithm\" → ZH=\"椭圆曲线数字签名算法\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>椭圆曲线数字签名算法已找到",
+      "term": "椭圆曲线数字签名算法",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Elliptic Curve Digital Signature Algorithm\" → ZH=\"椭圆曲线数字签名算法\" | conf=high"
+    },
+    {
+      "text": "{0}的椭圆曲线数字签名算法已更新",
+      "term": "椭圆曲线数字签名算法",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Elliptic Curve Digital Signature Algorithm\" → ZH=\"椭圆曲线数字签名算法\" | conf=high"
+    },
+    {
+      "text": "椭圆曲线数字签名算法和椭圆曲线数字签名算法已选择",
+      "term": "椭圆曲线数字签名算法",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"Elliptic Curve Digital Signature Algorithm\" → ZH=\"椭圆曲线数字签名算法\" | conf=high"
+    },
+    {
+      "text": "Cmdlet 日志记录查看器设置已完成",
+      "term": "椭圆曲线数字签名算法",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"椭圆曲线数字签名算法\""
+    },
+    {
+      "text": "",
+      "term": "椭圆曲线数字签名算法",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | ZH=\"椭圆曲线数字签名算法\""
+    },
+    {
+      "text": "请更新Cmdlet 日志记录查看器",
+      "term": "Cmdlet 日志记录查看器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Cmdlet Logging Viewer\" → ZH=\"Cmdlet 日志记录查看器\" | conf=high"
+    },
+    {
+      "text": "重新启动Cmdlet 日志记录查看器",
+      "term": "Cmdlet 日志记录查看器",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Cmdlet Logging Viewer\" → ZH=\"Cmdlet 日志记录查看器\" | conf=high"
+    },
+    {
+      "text": "错误：未找到虚拟显示设备驱动程序",
+      "term": "虚拟显示设备驱动程序",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"virtual display device driver\" → ZH=\"虚拟显示设备驱动程序\" | conf=high"
+    },
+    {
+      "text": "虚拟显示设备驱动程序设置已完成",
+      "term": "虚拟显示设备驱动程序",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"virtual display device driver\" → ZH=\"虚拟显示设备驱动程序\" | conf=high"
+    },
+    {
+      "text": "SQL Server 实用工具设置已完成",
+      "term": "SQL Server 实用工具",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"SQL Server Utility\" → ZH=\"SQL Server 实用工具\" | conf=high"
+    },
+    {
+      "text": "错误：未找到SQL Server 实用工具",
+      "term": "SQL Server 实用工具",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"SQL Server Utility\" → ZH=\"SQL Server 实用工具\" | conf=high"
+    },
+    {
+      "text": "正电子发射断层显像设置已完成",
+      "term": "SQL Server 实用工具",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"SQL Server 实用工具\""
+    },
+    {
+      "text": "使用正电子发射断层显像进行操作",
+      "term": "正电子发射断层显像",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"positron emission tomography\" → ZH=\"正电子发射断层显像\" | conf=high"
+    },
+    {
+      "text": "关闭正电子发射断层显像",
+      "term": "正电子发射断层显像",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"positron emission tomography\" → ZH=\"正电子发射断层显像\" | conf=high"
+    },
+    {
+      "text": "<i>正电子发射断层显像</i>已启用",
+      "term": "正电子发射断层显像",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"positron emission tomography\" → ZH=\"正电子发射断层显像\" | conf=high"
+    },
+    {
+      "text": "请更新Microsoft 软件下载",
+      "term": "Microsoft 软件下载",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Microsoft Software Download\" → ZH=\"Microsoft 软件下载\" | conf=high"
+    },
+    {
+      "text": "查看Microsoft 软件下载详情",
+      "term": "Microsoft 软件下载",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Microsoft Software Download\" → ZH=\"Microsoft 软件下载\" | conf=high"
+    },
+    {
+      "text": "%s中的Microsoft 软件下载",
+      "term": "Microsoft 软件下载",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Microsoft Software Download\" → ZH=\"Microsoft 软件下载\" | conf=high"
+    },
+    {
+      "text": "错误：未找到Office 365 入门版",
+      "term": "Office 365 入门版",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Office 365 Starter\" → ZH=\"Office 365 入门版\" | conf=high"
+    },
+    {
+      "text": "使用Office 365 入门版进行操作",
+      "term": "Office 365 入门版",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Office 365 Starter\" → ZH=\"Office 365 入门版\" | conf=high"
+    },
+    {
+      "text": "网络和 Internet设置已完成",
+      "term": "Office 365 入门版",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"Office 365 入门版\""
+    },
+    {
+      "text": "系统支持网络和 Internet",
+      "term": "网络和 Internet",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Network &amp; Internet\" → ZH=\"网络和 Internet\" | conf=high"
+    },
+    {
+      "text": "关闭网络和 Internet",
+      "term": "网络和 Internet",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Network &amp; Internet\" → ZH=\"网络和 Internet\" | conf=high"
+    },
+    {
+      "text": "授予潜在顾客资格设置已完成",
+      "term": "授予潜在顾客资格",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Qualify Lead\" → ZH=\"授予潜在顾客资格\" | conf=high"
+    },
+    {
+      "text": "下载授予潜在顾客资格完成",
+      "term": "授予潜在顾客资格",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Qualify Lead\" → ZH=\"授予潜在顾客资格\" | conf=high"
+    },
+    {
+      "text": "<b>授予潜在顾客资格</b>设置完成",
+      "term": "授予潜在顾客资格",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Qualify Lead\" → ZH=\"授予潜在顾客资格\" | conf=high"
+    },
+    {
+      "text": "授予潜在顾客资格和授予潜在顾客资格已选择",
+      "term": "授予潜在顾客资格",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"Qualify Lead\" → ZH=\"授予潜在顾客资格\" | conf=high"
+    },
+    {
+      "text": "选择统一可扩展固件接口选项",
+      "term": "统一可扩展固件接口",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Unified Extensible Firmware Interface\" → ZH=\"统一可扩展固件接口\" | conf=high"
+    },
+    {
+      "text": "系统支持统一可扩展固件接口",
+      "term": "统一可扩展固件接口",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Unified Extensible Firmware Interface\" → ZH=\"统一可扩展固件接口\" | conf=high"
+    },
+    {
+      "text": "初级设置已完成",
+      "term": "统一可扩展固件接口",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | ZH=\"统一可扩展固件接口\""
+    }
+  ]
+}

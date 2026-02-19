@@ -1,0 +1,6099 @@
+{
+  "_meta": {
+    "description": "Annotated Japanese glossary matching test corpus — generated from Microsoft Terminology Collection JAPANESE.tbx",
+    "created": "2026-02-19",
+    "owner": "QA team",
+    "generator": "scripts/generate-multilang-fixtures.mjs",
+    "source": "docs/test-data/microsoft-terminology/JAPANESE.tbx",
+    "note": "expectedConfidence determined by actual Intl.Segmenter(\"ja\") on this machine. ICU version differences may cause confidence mismatches — treat as soft warning. Acceptance thresholds (FR43): false-negative < 5%, false-positive < 10%.",
+    "stats": {
+      "total": 759,
+      "positive": 648,
+      "negative": 111,
+      "high_confidence": 648,
+      "low_confidence": 0
+    },
+    "schema": {
+      "text": "target segment text (JA)",
+      "term": "glossary term to search for",
+      "caseSensitive": "boolean",
+      "expectedFound": "true if term should be found",
+      "expectedConfidence": "high | low | null",
+      "note": "explanation"
+    }
+  },
+  "cases": [
+    {
+      "text": "コンピュータの設定を変更する",
+      "term": "コンピュータ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "JA katakana loan word — segmenter keeps katakana as single segment"
+    },
+    {
+      "text": "ソフトウェアのインストール",
+      "term": "インストール",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "JA katakana — at end of text boundary"
+    },
+    {
+      "text": "設定を変更してください",
+      "term": "データベース",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "JA term absent from text"
+    },
+    {
+      "text": "",
+      "term": "ソフトウェア",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "JA empty text — must not throw"
+    },
+    {
+      "text": "<b>ソフトウェア</b>の更新",
+      "term": "ソフトウェア",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "JA HTML markup stripped — position preserved"
+    },
+    {
+      "text": "定義を使用してください",
+      "term": "定義",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Define\" → JA=\"定義\" | conf=high"
+    },
+    {
+      "text": "エラー: 定義が見つかりません",
+      "term": "定義",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Define\" → JA=\"定義\" | conf=high"
+    },
+    {
+      "text": "<b>定義</b>を使用してください",
+      "term": "定義",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Define\" → JA=\"定義\" | conf=high"
+    },
+    {
+      "text": "定義{0}が完了しました",
+      "term": "定義",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Define\" → JA=\"定義\" | conf=high"
+    },
+    {
+      "text": "定義と定義を選択します",
+      "term": "定義",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"Define\" → JA=\"定義\" | conf=high"
+    },
+    {
+      "text": "配色を使用してください",
+      "term": "定義",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"定義\""
+    },
+    {
+      "text": "",
+      "term": "定義",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"定義\""
+    },
+    {
+      "text": "配色を選択します",
+      "term": "配色",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"color scheme\" → JA=\"配色\" | conf=high"
+    },
+    {
+      "text": "システムは配色をサポートします",
+      "term": "配色",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"color scheme\" → JA=\"配色\" | conf=high"
+    },
+    {
+      "text": "誤用を閉じてください",
+      "term": "誤用",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"misapplication\" → JA=\"誤用\" | conf=high"
+    },
+    {
+      "text": "誤用をインストールします",
+      "term": "誤用",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"misapplication\" → JA=\"誤用\" | conf=high"
+    },
+    {
+      "text": "気象計の設定を確認する",
+      "term": "気象計",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"weather station\" → JA=\"気象計\" | conf=high"
+    },
+    {
+      "text": "気象計を再起動してください",
+      "term": "気象計",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"weather station\" → JA=\"気象計\" | conf=high"
+    },
+    {
+      "text": "サンクを使用してください",
+      "term": "気象計",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"気象計\""
+    },
+    {
+      "text": "サンクを使用してください",
+      "term": "サンク",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"thunk\" → JA=\"サンク\" | conf=high"
+    },
+    {
+      "text": "システムはサンクをサポートします",
+      "term": "サンク",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"thunk\" → JA=\"サンク\" | conf=high"
+    },
+    {
+      "text": "<i>サンク</i>の設定を開く",
+      "term": "サンク",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"thunk\" → JA=\"サンク\" | conf=high"
+    },
+    {
+      "text": "提案の設定を確認する",
+      "term": "提案",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"proposal\" → JA=\"提案\" | conf=high"
+    },
+    {
+      "text": "提案を選択します",
+      "term": "提案",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"proposal\" → JA=\"提案\" | conf=high"
+    },
+    {
+      "text": "提案{0}が完了しました",
+      "term": "提案",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"proposal\" → JA=\"提案\" | conf=high"
+    },
+    {
+      "text": "ダンプを使用してください",
+      "term": "ダンプ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"crash dump\" → JA=\"ダンプ\" | conf=high"
+    },
+    {
+      "text": "ダンプの詳細を確認する",
+      "term": "ダンプ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"crash dump\" → JA=\"ダンプ\" | conf=high"
+    },
+    {
+      "text": "関連端を使用してください",
+      "term": "ダンプ",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"ダンプ\""
+    },
+    {
+      "text": "関連端を選択します",
+      "term": "関連端",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"association end\" → JA=\"関連端\" | conf=high"
+    },
+    {
+      "text": "関連端を閉じてください",
+      "term": "関連端",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"association end\" → JA=\"関連端\" | conf=high"
+    },
+    {
+      "text": "仮想化ダウンロードが完了しました",
+      "term": "仮想化",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"File and Registry Virtualization\" → JA=\"仮想化\" | conf=high"
+    },
+    {
+      "text": "仮想化を使用してください",
+      "term": "仮想化",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"File and Registry Virtualization\" → JA=\"仮想化\" | conf=high"
+    },
+    {
+      "text": "<b>仮想化</b>を使用してください",
+      "term": "仮想化",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"File and Registry Virtualization\" → JA=\"仮想化\" | conf=high"
+    },
+    {
+      "text": "仮想化と仮想化を選択します",
+      "term": "仮想化",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"File and Registry Virtualization\" → JA=\"仮想化\" | conf=high"
+    },
+    {
+      "text": "テープダウンロードが完了しました",
+      "term": "テープ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"tape\" → JA=\"テープ\" | conf=high"
+    },
+    {
+      "text": "テープの詳細を確認する",
+      "term": "テープ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"tape\" → JA=\"テープ\" | conf=high"
+    },
+    {
+      "text": "継承者を使用してください",
+      "term": "テープ",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"テープ\""
+    },
+    {
+      "text": "継承者が正常に動作します",
+      "term": "継承者",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"inheritor\" → JA=\"継承者\" | conf=high"
+    },
+    {
+      "text": "エラー: 継承者が見つかりません",
+      "term": "継承者",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"inheritor\" → JA=\"継承者\" | conf=high"
+    },
+    {
+      "text": "%sの継承者を確認",
+      "term": "継承者",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"inheritor\" → JA=\"継承者\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "継承者",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"継承者\""
+    },
+    {
+      "text": "システムは下ひげをサポートします",
+      "term": "下ひげ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"low whisker\" → JA=\"下ひげ\" | conf=high"
+    },
+    {
+      "text": "下ひげをインストールします",
+      "term": "下ひげ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"low whisker\" → JA=\"下ひげ\" | conf=high"
+    },
+    {
+      "text": "複合型の更新が利用可能です",
+      "term": "複合型",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"complex type\" → JA=\"複合型\" | conf=high"
+    },
+    {
+      "text": "複合型を再起動してください",
+      "term": "複合型",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"complex type\" → JA=\"複合型\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>複合型が見つかりました",
+      "term": "複合型",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"complex type\" → JA=\"複合型\" | conf=high"
+    },
+    {
+      "text": "セピアを使用してください",
+      "term": "複合型",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"複合型\""
+    },
+    {
+      "text": "セピアを使用してください",
+      "term": "セピア",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Sepia\" → JA=\"セピア\" | conf=high"
+    },
+    {
+      "text": "設定でセピアを有効にする",
+      "term": "セピア",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Sepia\" → JA=\"セピア\" | conf=high"
+    },
+    {
+      "text": "開示の更新が利用可能です",
+      "term": "開示",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"disclosure\" → JA=\"開示\" | conf=high"
+    },
+    {
+      "text": "エラー: 開示が見つかりません",
+      "term": "開示",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"disclosure\" → JA=\"開示\" | conf=high"
+    },
+    {
+      "text": "記録を選択します",
+      "term": "記録",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"chronicle\" → JA=\"記録\" | conf=high"
+    },
+    {
+      "text": "記録ダウンロードが完了しました",
+      "term": "記録",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"chronicle\" → JA=\"記録\" | conf=high"
+    },
+    {
+      "text": "%sの記録を確認",
+      "term": "記録",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"chronicle\" → JA=\"記録\" | conf=high"
+    },
+    {
+      "text": "社員を使用してください",
+      "term": "記録",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"記録\""
+    },
+    {
+      "text": "社員をインストールします",
+      "term": "社員",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"employee\" → JA=\"社員\" | conf=high"
+    },
+    {
+      "text": "社員が正常に動作します",
+      "term": "社員",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"employee\" → JA=\"社員\" | conf=high"
+    },
+    {
+      "text": "<i>社員</i>の設定を開く",
+      "term": "社員",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"employee\" → JA=\"社員\" | conf=high"
+    },
+    {
+      "text": "社員と社員を選択します",
+      "term": "社員",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"employee\" → JA=\"社員\" | conf=high"
+    },
+    {
+      "text": "解除を選択します",
+      "term": "解除",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"termination of an agreement\" → JA=\"解除\" | conf=high"
+    },
+    {
+      "text": "解除を開きます",
+      "term": "解除",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"termination of an agreement\" → JA=\"解除\" | conf=high"
+    },
+    {
+      "text": "税務署の更新が利用可能です",
+      "term": "税務署",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"tax authority\" → JA=\"税務署\" | conf=high"
+    },
+    {
+      "text": "税務署を選択します",
+      "term": "税務署",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"tax authority\" → JA=\"税務署\" | conf=high"
+    },
+    {
+      "text": "セリフを使用してください",
+      "term": "税務署",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"税務署\""
+    },
+    {
+      "text": "メニューからセリフを選択",
+      "term": "セリフ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"serif\" → JA=\"セリフ\" | conf=high"
+    },
+    {
+      "text": "セリフの詳細を確認する",
+      "term": "セリフ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"serif\" → JA=\"セリフ\" | conf=high"
+    },
+    {
+      "text": "可視性を使用してください",
+      "term": "可視性",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"visibility\" → JA=\"可視性\" | conf=high"
+    },
+    {
+      "text": "可視性の設定を確認する",
+      "term": "可視性",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"visibility\" → JA=\"可視性\" | conf=high"
+    },
+    {
+      "text": "<b>可視性</b>を使用してください",
+      "term": "可視性",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"visibility\" → JA=\"可視性\" | conf=high"
+    },
+    {
+      "text": "可視性{0}が完了しました",
+      "term": "可視性",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"visibility\" → JA=\"可視性\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "可視性",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"可視性\""
+    },
+    {
+      "text": "算出値を閉じてください",
+      "term": "算出値",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"calculated value\" → JA=\"算出値\" | conf=high"
+    },
+    {
+      "text": "エラー: 算出値が見つかりません",
+      "term": "算出値",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"calculated value\" → JA=\"算出値\" | conf=high"
+    },
+    {
+      "text": "中間色を使用してください",
+      "term": "算出値",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"算出値\""
+    },
+    {
+      "text": "中間色を再起動してください",
+      "term": "中間色",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"midtone\" → JA=\"中間色\" | conf=high"
+    },
+    {
+      "text": "中間色が正常に動作します",
+      "term": "中間色",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"midtone\" → JA=\"中間色\" | conf=high"
+    },
+    {
+      "text": "誓約を再起動してください",
+      "term": "誓約",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"pledge\" → JA=\"誓約\" | conf=high"
+    },
+    {
+      "text": "誓約を選択します",
+      "term": "誓約",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"pledge\" → JA=\"誓約\" | conf=high"
+    },
+    {
+      "text": "メニューから装飾を選択",
+      "term": "装飾",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"adorner\" → JA=\"装飾\" | conf=high"
+    },
+    {
+      "text": "装飾を閉じてください",
+      "term": "装飾",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"adorner\" → JA=\"装飾\" | conf=high"
+    },
+    {
+      "text": "<b>装飾</b>を使用してください",
+      "term": "装飾",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"adorner\" → JA=\"装飾\" | conf=high"
+    },
+    {
+      "text": "装飾と装飾を選択します",
+      "term": "装飾",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"adorner\" → JA=\"装飾\" | conf=high"
+    },
+    {
+      "text": "マシンを使用してください",
+      "term": "装飾",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"装飾\""
+    },
+    {
+      "text": "マシンを使用してください",
+      "term": "マシン",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"machine\" → JA=\"マシン\" | conf=high"
+    },
+    {
+      "text": "マシンの更新が利用可能です",
+      "term": "マシン",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"machine\" → JA=\"マシン\" | conf=high"
+    },
+    {
+      "text": "マシン{0}が完了しました",
+      "term": "マシン",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"machine\" → JA=\"マシン\" | conf=high"
+    },
+    {
+      "text": "システムは事業をサポートします",
+      "term": "事業",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Business\" → JA=\"事業\" | conf=high"
+    },
+    {
+      "text": "事業の設定を確認する",
+      "term": "事業",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Business\" → JA=\"事業\" | conf=high"
+    },
+    {
+      "text": "システムは固定をサポートします",
+      "term": "固定",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"pin\" → JA=\"固定\" | conf=high"
+    },
+    {
+      "text": "固定の更新が利用可能です",
+      "term": "固定",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"pin\" → JA=\"固定\" | conf=high"
+    },
+    {
+      "text": "合併を使用してください",
+      "term": "固定",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"固定\""
+    },
+    {
+      "text": "システムは合併をサポートします",
+      "term": "合併",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"merger\" → JA=\"合併\" | conf=high"
+    },
+    {
+      "text": "合併の設定を確認する",
+      "term": "合併",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"merger\" → JA=\"合併\" | conf=high"
+    },
+    {
+      "text": "<i>合併</i>の設定を開く",
+      "term": "合併",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"merger\" → JA=\"合併\" | conf=high"
+    },
+    {
+      "text": "倍精度の更新が利用可能です",
+      "term": "倍精度",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"double-precision\" → JA=\"倍精度\" | conf=high"
+    },
+    {
+      "text": "倍精度が正常に動作します",
+      "term": "倍精度",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"double-precision\" → JA=\"倍精度\" | conf=high"
+    },
+    {
+      "text": "n 層をインストールします",
+      "term": "n 層",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"n-tier\" → JA=\"n 層\" | conf=high"
+    },
+    {
+      "text": "n 層を閉じてください",
+      "term": "n 層",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"n-tier\" → JA=\"n 層\" | conf=high"
+    },
+    {
+      "text": "{0}のn 層を更新しました",
+      "term": "n 層",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"n-tier\" → JA=\"n 層\" | conf=high"
+    },
+    {
+      "text": "空間列を使用してください",
+      "term": "n 層",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"n 層\""
+    },
+    {
+      "text": "",
+      "term": "n 層",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"n 層\""
+    },
+    {
+      "text": "システムは空間列をサポートします",
+      "term": "空間列",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"spatial column\" → JA=\"空間列\" | conf=high"
+    },
+    {
+      "text": "空間列を閉じてください",
+      "term": "空間列",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"spatial column\" → JA=\"空間列\" | conf=high"
+    },
+    {
+      "text": "関連行ダウンロードが完了しました",
+      "term": "関連行",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"association line\" → JA=\"関連行\" | conf=high"
+    },
+    {
+      "text": "関連行をインストールします",
+      "term": "関連行",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"association line\" → JA=\"関連行\" | conf=high"
+    },
+    {
+      "text": "<i>関連行</i>の設定を開く",
+      "term": "関連行",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"association line\" → JA=\"関連行\" | conf=high"
+    },
+    {
+      "text": "関連行と関連行を選択します",
+      "term": "関連行",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"association line\" → JA=\"関連行\" | conf=high"
+    },
+    {
+      "text": "作業の更新が利用可能です",
+      "term": "作業",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"work\" → JA=\"作業\" | conf=high"
+    },
+    {
+      "text": "作業を使用してください",
+      "term": "作業",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"work\" → JA=\"作業\" | conf=high"
+    },
+    {
+      "text": "侵害を使用してください",
+      "term": "作業",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"作業\""
+    },
+    {
+      "text": "侵害ダウンロードが完了しました",
+      "term": "侵害",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"infringement\" → JA=\"侵害\" | conf=high"
+    },
+    {
+      "text": "侵害の詳細を確認する",
+      "term": "侵害",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"infringement\" → JA=\"侵害\" | conf=high"
+    },
+    {
+      "text": "エラー: 陸上が見つかりません",
+      "term": "陸上",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"running\" → JA=\"陸上\" | conf=high"
+    },
+    {
+      "text": "陸上をインストールします",
+      "term": "陸上",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"running\" → JA=\"陸上\" | conf=high"
+    },
+    {
+      "text": "%sの陸上を確認",
+      "term": "陸上",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"running\" → JA=\"陸上\" | conf=high"
+    },
+    {
+      "text": "釣銭の更新が利用可能です",
+      "term": "釣銭",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"cash float\" → JA=\"釣銭\" | conf=high"
+    },
+    {
+      "text": "釣銭を閉じてください",
+      "term": "釣銭",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"cash float\" → JA=\"釣銭\" | conf=high"
+    },
+    {
+      "text": "<i>釣銭</i>の設定を開く",
+      "term": "釣銭",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"cash float\" → JA=\"釣銭\" | conf=high"
+    },
+    {
+      "text": "ビンを使用してください",
+      "term": "釣銭",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"釣銭\""
+    },
+    {
+      "text": "ビンを開きます",
+      "term": "ビン",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"bin\" → JA=\"ビン\" | conf=high"
+    },
+    {
+      "text": "ビンをインストールします",
+      "term": "ビン",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"bin\" → JA=\"ビン\" | conf=high"
+    },
+    {
+      "text": "編集者を開きます",
+      "term": "編集者",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Authors\" → JA=\"編集者\" | conf=high"
+    },
+    {
+      "text": "編集者を使用してください",
+      "term": "編集者",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Authors\" → JA=\"編集者\" | conf=high"
+    },
+    {
+      "text": "置くを閉じてください",
+      "term": "置く",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Place\" → JA=\"置く\" | conf=high"
+    },
+    {
+      "text": "置くを再起動してください",
+      "term": "置く",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Place\" → JA=\"置く\" | conf=high"
+    },
+    {
+      "text": "注目の統計を使用してください",
+      "term": "置く",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"置く\""
+    },
+    {
+      "text": "注目の統計の設定を確認する",
+      "term": "注目の統計",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"featured stats\" → JA=\"注目の統計\" | conf=high"
+    },
+    {
+      "text": "注目の統計を使用してください",
+      "term": "注目の統計",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"featured stats\" → JA=\"注目の統計\" | conf=high"
+    },
+    {
+      "text": "<b>注目の統計</b>を使用してください",
+      "term": "注目の統計",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"featured stats\" → JA=\"注目の統計\" | conf=high"
+    },
+    {
+      "text": "%sの注目の統計を確認",
+      "term": "注目の統計",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"featured stats\" → JA=\"注目の統計\" | conf=high"
+    },
+    {
+      "text": "注目の統計と注目の統計を選択します",
+      "term": "注目の統計",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"featured stats\" → JA=\"注目の統計\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "注目の統計",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"注目の統計\""
+    },
+    {
+      "text": "メニューからクロール範囲を選択",
+      "term": "クロール範囲",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"crawl scope\" → JA=\"クロール範囲\" | conf=high"
+    },
+    {
+      "text": "クロール範囲ダウンロードが完了しました",
+      "term": "クロール範囲",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"crawl scope\" → JA=\"クロール範囲\" | conf=high"
+    },
+    {
+      "text": "共有パスを選択します",
+      "term": "共有パス",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"share path\" → JA=\"共有パス\" | conf=high"
+    },
+    {
+      "text": "共有パスをインストールします",
+      "term": "共有パス",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"share path\" → JA=\"共有パス\" | conf=high"
+    },
+    {
+      "text": "スタック順位を使用してください",
+      "term": "共有パス",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"共有パス\""
+    },
+    {
+      "text": "スタック順位の詳細を確認する",
+      "term": "スタック順位",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"stack rank\" → JA=\"スタック順位\" | conf=high"
+    },
+    {
+      "text": "スタック順位を再起動してください",
+      "term": "スタック順位",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"stack rank\" → JA=\"スタック順位\" | conf=high"
+    },
+    {
+      "text": "再割当するが正常に動作します",
+      "term": "再割当する",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"reassign\" → JA=\"再割当する\" | conf=high"
+    },
+    {
+      "text": "再割当するダウンロードが完了しました",
+      "term": "再割当する",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"reassign\" → JA=\"再割当する\" | conf=high"
+    },
+    {
+      "text": "<i>再割当する</i>の設定を開く",
+      "term": "再割当する",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"reassign\" → JA=\"再割当する\" | conf=high"
+    },
+    {
+      "text": "タグを付けるの設定を確認する",
+      "term": "タグを付ける",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"tag\" → JA=\"タグを付ける\" | conf=high"
+    },
+    {
+      "text": "タグを付けるを開きます",
+      "term": "タグを付ける",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"tag\" → JA=\"タグを付ける\" | conf=high"
+    },
+    {
+      "text": "{0}のタグを付けるを更新しました",
+      "term": "タグを付ける",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"tag\" → JA=\"タグを付ける\" | conf=high"
+    },
+    {
+      "text": "仮想サービスを使用してください",
+      "term": "タグを付ける",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"タグを付ける\""
+    },
+    {
+      "text": "仮想サービスを使用してください",
+      "term": "仮想サービス",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"virtual services\" → JA=\"仮想サービス\" | conf=high"
+    },
+    {
+      "text": "仮想サービスを閉じてください",
+      "term": "仮想サービス",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"virtual services\" → JA=\"仮想サービス\" | conf=high"
+    },
+    {
+      "text": "ラベルを付けるダウンロードが完了しました",
+      "term": "ラベルを付ける",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"label\" → JA=\"ラベルを付ける\" | conf=high"
+    },
+    {
+      "text": "メニューからラベルを付けるを選択",
+      "term": "ラベルを付ける",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"label\" → JA=\"ラベルを付ける\" | conf=high"
+    },
+    {
+      "text": "勘定科目表を使用してください",
+      "term": "勘定科目表",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"chart of accounts\" → JA=\"勘定科目表\" | conf=high"
+    },
+    {
+      "text": "勘定科目表ダウンロードが完了しました",
+      "term": "勘定科目表",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"chart of accounts\" → JA=\"勘定科目表\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>勘定科目表が見つかりました",
+      "term": "勘定科目表",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"chart of accounts\" → JA=\"勘定科目表\" | conf=high"
+    },
+    {
+      "text": "勘定科目表と勘定科目表を選択します",
+      "term": "勘定科目表",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"chart of accounts\" → JA=\"勘定科目表\" | conf=high"
+    },
+    {
+      "text": "利用状況分析を使用してください",
+      "term": "勘定科目表",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"勘定科目表\""
+    },
+    {
+      "text": "利用状況分析を選択します",
+      "term": "利用状況分析",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"usage analysis\" → JA=\"利用状況分析\" | conf=high"
+    },
+    {
+      "text": "利用状況分析の詳細を確認する",
+      "term": "利用状況分析",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"usage analysis\" → JA=\"利用状況分析\" | conf=high"
+    },
+    {
+      "text": "一括暗号化キーの詳細を確認する",
+      "term": "一括暗号化キー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"bulk encryption key\" → JA=\"一括暗号化キー\" | conf=high"
+    },
+    {
+      "text": "一括暗号化キーを選択します",
+      "term": "一括暗号化キー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"bulk encryption key\" → JA=\"一括暗号化キー\" | conf=high"
+    },
+    {
+      "text": "一括暗号化キー{0}が完了しました",
+      "term": "一括暗号化キー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"bulk encryption key\" → JA=\"一括暗号化キー\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "一括暗号化キー",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"一括暗号化キー\""
+    },
+    {
+      "text": "半同期呼び出しを閉じてください",
+      "term": "半同期呼び出し",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"semisynchronous method call\" → JA=\"半同期呼び出し\" | conf=high"
+    },
+    {
+      "text": "半同期呼び出しを再起動してください",
+      "term": "半同期呼び出し",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"semisynchronous method call\" → JA=\"半同期呼び出し\" | conf=high"
+    },
+    {
+      "text": "ローカリティを使用してください",
+      "term": "半同期呼び出し",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"半同期呼び出し\""
+    },
+    {
+      "text": "ローカリティをインストールします",
+      "term": "ローカリティ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"locality\" → JA=\"ローカリティ\" | conf=high"
+    },
+    {
+      "text": "ローカリティが正常に動作します",
+      "term": "ローカリティ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"locality\" → JA=\"ローカリティ\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>ローカリティが見つかりました",
+      "term": "ローカリティ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"locality\" → JA=\"ローカリティ\" | conf=high"
+    },
+    {
+      "text": "オートフィルを閉じてください",
+      "term": "オートフィル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"AutoFill\" → JA=\"オートフィル\" | conf=high"
+    },
+    {
+      "text": "オートフィルを選択します",
+      "term": "オートフィル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"AutoFill\" → JA=\"オートフィル\" | conf=high"
+    },
+    {
+      "text": "シャープにするを再起動してください",
+      "term": "シャープにする",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"sharpen\" → JA=\"シャープにする\" | conf=high"
+    },
+    {
+      "text": "シャープにするを使用してください",
+      "term": "シャープにする",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"sharpen\" → JA=\"シャープにする\" | conf=high"
+    },
+    {
+      "text": "補間するを使用してください",
+      "term": "シャープにする",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"シャープにする\""
+    },
+    {
+      "text": "補間するを再起動してください",
+      "term": "補間する",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"interpolate\" → JA=\"補間する\" | conf=high"
+    },
+    {
+      "text": "補間するの詳細を確認する",
+      "term": "補間する",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"interpolate\" → JA=\"補間する\" | conf=high"
+    },
+    {
+      "text": "{0}の補間するを更新しました",
+      "term": "補間する",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"interpolate\" → JA=\"補間する\" | conf=high"
+    },
+    {
+      "text": "圧縮レベルの設定を確認する",
+      "term": "圧縮レベル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"compression level\" → JA=\"圧縮レベル\" | conf=high"
+    },
+    {
+      "text": "圧縮レベルダウンロードが完了しました",
+      "term": "圧縮レベル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"compression level\" → JA=\"圧縮レベル\" | conf=high"
+    },
+    {
+      "text": "<i>圧縮レベル</i>の設定を開く",
+      "term": "圧縮レベル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"compression level\" → JA=\"圧縮レベル\" | conf=high"
+    },
+    {
+      "text": "圧縮レベルと圧縮レベルを選択します",
+      "term": "圧縮レベル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"compression level\" → JA=\"圧縮レベル\" | conf=high"
+    },
+    {
+      "text": "サインイン済みダウンロードが完了しました",
+      "term": "サインイン済み",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"signed in\" → JA=\"サインイン済み\" | conf=high"
+    },
+    {
+      "text": "サインイン済みを使用してください",
+      "term": "サインイン済み",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"signed in\" → JA=\"サインイン済み\" | conf=high"
+    },
+    {
+      "text": "救済価格を使用してください",
+      "term": "サインイン済み",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"サインイン済み\""
+    },
+    {
+      "text": "システムは救済価格をサポートします",
+      "term": "救済価格",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"salvage value\" → JA=\"救済価格\" | conf=high"
+    },
+    {
+      "text": "設定で救済価格を有効にする",
+      "term": "救済価格",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"salvage value\" → JA=\"救済価格\" | conf=high"
+    },
+    {
+      "text": "メニューから機能制限モードを選択",
+      "term": "機能制限モード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Reduced Functionality Mode\" → JA=\"機能制限モード\" | conf=high"
+    },
+    {
+      "text": "機能制限モードを選択します",
+      "term": "機能制限モード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Reduced Functionality Mode\" → JA=\"機能制限モード\" | conf=high"
+    },
+    {
+      "text": "ポインターを選択します",
+      "term": "ポインター",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"pointer\" → JA=\"ポインター\" | conf=high"
+    },
+    {
+      "text": "ポインターダウンロードが完了しました",
+      "term": "ポインター",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"pointer\" → JA=\"ポインター\" | conf=high"
+    },
+    {
+      "text": "<b>ポインター</b>を使用してください",
+      "term": "ポインター",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"pointer\" → JA=\"ポインター\" | conf=high"
+    },
+    {
+      "text": "ポインター{0}が完了しました",
+      "term": "ポインター",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"pointer\" → JA=\"ポインター\" | conf=high"
+    },
+    {
+      "text": "A レコードを使用してください",
+      "term": "ポインター",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"ポインター\""
+    },
+    {
+      "text": "",
+      "term": "ポインター",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"ポインター\""
+    },
+    {
+      "text": "A レコードをインストールします",
+      "term": "A レコード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"A record\" → JA=\"A レコード\" | conf=high"
+    },
+    {
+      "text": "エラー: A レコードが見つかりません",
+      "term": "A レコード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"A record\" → JA=\"A レコード\" | conf=high"
+    },
+    {
+      "text": "設定でインフレを有効にする",
+      "term": "インフレ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"inflation\" → JA=\"インフレ\" | conf=high"
+    },
+    {
+      "text": "システムはインフレをサポートします",
+      "term": "インフレ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"inflation\" → JA=\"インフレ\" | conf=high"
+    },
+    {
+      "text": "基本言語を選択します",
+      "term": "基本言語",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"base language\" → JA=\"基本言語\" | conf=high"
+    },
+    {
+      "text": "基本言語の詳細を確認する",
+      "term": "基本言語",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"base language\" → JA=\"基本言語\" | conf=high"
+    },
+    {
+      "text": "ピンを外すを使用してください",
+      "term": "基本言語",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"基本言語\""
+    },
+    {
+      "text": "設定でピンを外すを有効にする",
+      "term": "ピンを外す",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"unpin\" → JA=\"ピンを外す\" | conf=high"
+    },
+    {
+      "text": "ピンを外すをインストールします",
+      "term": "ピンを外す",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"unpin\" → JA=\"ピンを外す\" | conf=high"
+    },
+    {
+      "text": "<b>ピンを外す</b>を使用してください",
+      "term": "ピンを外す",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"unpin\" → JA=\"ピンを外す\" | conf=high"
+    },
+    {
+      "text": "ピンを外すとピンを外すを選択します",
+      "term": "ピンを外す",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"unpin\" → JA=\"ピンを外す\" | conf=high"
+    },
+    {
+      "text": "システムはスキャン管理をサポートします",
+      "term": "スキャン管理",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Scan Management\" → JA=\"スキャン管理\" | conf=high"
+    },
+    {
+      "text": "スキャン管理の設定を確認する",
+      "term": "スキャン管理",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Scan Management\" → JA=\"スキャン管理\" | conf=high"
+    },
+    {
+      "text": "スキャン管理{0}が完了しました",
+      "term": "スキャン管理",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Scan Management\" → JA=\"スキャン管理\" | conf=high"
+    },
+    {
+      "text": "ラベル付き階層ダウンロードが完了しました",
+      "term": "ラベル付き階層",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Labeled Hierarchy\" → JA=\"ラベル付き階層\" | conf=high"
+    },
+    {
+      "text": "ラベル付き階層を閉じてください",
+      "term": "ラベル付き階層",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Labeled Hierarchy\" → JA=\"ラベル付き階層\" | conf=high"
+    },
+    {
+      "text": "リビジョン番号を使用してください",
+      "term": "ラベル付き階層",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"ラベル付き階層\""
+    },
+    {
+      "text": "リビジョン番号を使用してください",
+      "term": "リビジョン番号",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"revision number\" → JA=\"リビジョン番号\" | conf=high"
+    },
+    {
+      "text": "リビジョン番号の詳細を確認する",
+      "term": "リビジョン番号",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"revision number\" → JA=\"リビジョン番号\" | conf=high"
+    },
+    {
+      "text": "エラー: 全員に返信が見つかりません",
+      "term": "全員に返信",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Reply to All\" → JA=\"全員に返信\" | conf=high"
+    },
+    {
+      "text": "全員に返信の詳細を確認する",
+      "term": "全員に返信",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Reply to All\" → JA=\"全員に返信\" | conf=high"
+    },
+    {
+      "text": "<i>全員に返信</i>の設定を開く",
+      "term": "全員に返信",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Reply to All\" → JA=\"全員に返信\" | conf=high"
+    },
+    {
+      "text": "逆参照するの詳細を確認する",
+      "term": "逆参照する",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"dereference\" → JA=\"逆参照する\" | conf=high"
+    },
+    {
+      "text": "システムは逆参照するをサポートします",
+      "term": "逆参照する",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"dereference\" → JA=\"逆参照する\" | conf=high"
+    },
+    {
+      "text": "計算フィールドを使用してください",
+      "term": "逆参照する",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"逆参照する\""
+    },
+    {
+      "text": "計算フィールドの詳細を確認する",
+      "term": "計算フィールド",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"calculated field\" → JA=\"計算フィールド\" | conf=high"
+    },
+    {
+      "text": "計算フィールドを使用してください",
+      "term": "計算フィールド",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"calculated field\" → JA=\"計算フィールド\" | conf=high"
+    },
+    {
+      "text": "計算フィールド{0}が完了しました",
+      "term": "計算フィールド",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"calculated field\" → JA=\"計算フィールド\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "計算フィールド",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"計算フィールド\""
+    },
+    {
+      "text": "ペア設定するが正常に動作します",
+      "term": "ペア設定する",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"pair\" → JA=\"ペア設定する\" | conf=high"
+    },
+    {
+      "text": "ペア設定するを再起動してください",
+      "term": "ペア設定する",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"pair\" → JA=\"ペア設定する\" | conf=high"
+    },
+    {
+      "text": "エラー: ハイライトが見つかりません",
+      "term": "ハイライト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"highlight\" → JA=\"ハイライト\" | conf=high"
+    },
+    {
+      "text": "ハイライトを使用してください",
+      "term": "ハイライト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"highlight\" → JA=\"ハイライト\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>ハイライトが見つかりました",
+      "term": "ハイライト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"highlight\" → JA=\"ハイライト\" | conf=high"
+    },
+    {
+      "text": "ハイライトとハイライトを選択します",
+      "term": "ハイライト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"highlight\" → JA=\"ハイライト\" | conf=high"
+    },
+    {
+      "text": "最小化するを使用してください",
+      "term": "ハイライト",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"ハイライト\""
+    },
+    {
+      "text": "最小化するを使用してください",
+      "term": "最小化する",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"minimize\" → JA=\"最小化する\" | conf=high"
+    },
+    {
+      "text": "最小化するを選択します",
+      "term": "最小化する",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"minimize\" → JA=\"最小化する\" | conf=high"
+    },
+    {
+      "text": "拡張ステミングの詳細を確認する",
+      "term": "拡張ステミング",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"expansive stemming\" → JA=\"拡張ステミング\" | conf=high"
+    },
+    {
+      "text": "拡張ステミングを再起動してください",
+      "term": "拡張ステミング",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"expansive stemming\" → JA=\"拡張ステミング\" | conf=high"
+    },
+    {
+      "text": "システムは探索方法をサポートします",
+      "term": "探索方法",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"discovery method\" → JA=\"探索方法\" | conf=high"
+    },
+    {
+      "text": "探索方法を閉じてください",
+      "term": "探索方法",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"discovery method\" → JA=\"探索方法\" | conf=high"
+    },
+    {
+      "text": "{0}の探索方法を更新しました",
+      "term": "探索方法",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"discovery method\" → JA=\"探索方法\" | conf=high"
+    },
+    {
+      "text": "入力ソースを使用してください",
+      "term": "探索方法",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"探索方法\""
+    },
+    {
+      "text": "設定で入力ソースを有効にする",
+      "term": "入力ソース",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"input source\" → JA=\"入力ソース\" | conf=high"
+    },
+    {
+      "text": "入力ソースを開きます",
+      "term": "入力ソース",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"input source\" → JA=\"入力ソース\" | conf=high"
+    },
+    {
+      "text": "<i>入力ソース</i>の設定を開く",
+      "term": "入力ソース",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"input source\" → JA=\"入力ソース\" | conf=high"
+    },
+    {
+      "text": "利用状況データを使用してください",
+      "term": "利用状況データ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"usage data\" → JA=\"利用状況データ\" | conf=high"
+    },
+    {
+      "text": "利用状況データを選択します",
+      "term": "利用状況データ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"usage data\" → JA=\"利用状況データ\" | conf=high"
+    },
+    {
+      "text": "時間の範囲を使用してください",
+      "term": "時間の範囲",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"time range\" → JA=\"時間の範囲\" | conf=high"
+    },
+    {
+      "text": "時間の範囲の設定を確認する",
+      "term": "時間の範囲",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"time range\" → JA=\"時間の範囲\" | conf=high"
+    },
+    {
+      "text": "赤外線接続を使用してください",
+      "term": "時間の範囲",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"時間の範囲\""
+    },
+    {
+      "text": "システムは赤外線接続をサポートします",
+      "term": "赤外線接続",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"infrared connection\" → JA=\"赤外線接続\" | conf=high"
+    },
+    {
+      "text": "赤外線接続を再起動してください",
+      "term": "赤外線接続",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"infrared connection\" → JA=\"赤外線接続\" | conf=high"
+    },
+    {
+      "text": "ユーロテクノを閉じてください",
+      "term": "ユーロテクノ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Euro-Techno\" → JA=\"ユーロテクノ\" | conf=high"
+    },
+    {
+      "text": "ユーロテクノの詳細を確認する",
+      "term": "ユーロテクノ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Euro-Techno\" → JA=\"ユーロテクノ\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>ユーロテクノが見つかりました",
+      "term": "ユーロテクノ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Euro-Techno\" → JA=\"ユーロテクノ\" | conf=high"
+    },
+    {
+      "text": "{0}のユーロテクノを更新しました",
+      "term": "ユーロテクノ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Euro-Techno\" → JA=\"ユーロテクノ\" | conf=high"
+    },
+    {
+      "text": "ユーロテクノとユーロテクノを選択します",
+      "term": "ユーロテクノ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"Euro-Techno\" → JA=\"ユーロテクノ\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "ユーロテクノ",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"ユーロテクノ\""
+    },
+    {
+      "text": "設定でツールボックスを有効にする",
+      "term": "ツールボックス",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"toolbox\" → JA=\"ツールボックス\" | conf=high"
+    },
+    {
+      "text": "ツールボックスを使用してください",
+      "term": "ツールボックス",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"toolbox\" → JA=\"ツールボックス\" | conf=high"
+    },
+    {
+      "text": "バッチ処理を使用してください",
+      "term": "ツールボックス",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"ツールボックス\""
+    },
+    {
+      "text": "バッチ処理が正常に動作します",
+      "term": "バッチ処理",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"batch processing\" → JA=\"バッチ処理\" | conf=high"
+    },
+    {
+      "text": "バッチ処理ダウンロードが完了しました",
+      "term": "バッチ処理",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"batch processing\" → JA=\"バッチ処理\" | conf=high"
+    },
+    {
+      "text": "システムは焦点距離をサポートします",
+      "term": "焦点距離",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"focal length\" → JA=\"焦点距離\" | conf=high"
+    },
+    {
+      "text": "エラー: 焦点距離が見つかりません",
+      "term": "焦点距離",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"focal length\" → JA=\"焦点距離\" | conf=high"
+    },
+    {
+      "text": "印刷スキーマの詳細を確認する",
+      "term": "印刷スキーマ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Print Schema\" → JA=\"印刷スキーマ\" | conf=high"
+    },
+    {
+      "text": "印刷スキーマダウンロードが完了しました",
+      "term": "印刷スキーマ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Print Schema\" → JA=\"印刷スキーマ\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>印刷スキーマが見つかりました",
+      "term": "印刷スキーマ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Print Schema\" → JA=\"印刷スキーマ\" | conf=high"
+    },
+    {
+      "text": "保護レベルを使用してください",
+      "term": "印刷スキーマ",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"印刷スキーマ\""
+    },
+    {
+      "text": "システムは保護レベルをサポートします",
+      "term": "保護レベル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"protection level\" → JA=\"保護レベル\" | conf=high"
+    },
+    {
+      "text": "設定で保護レベルを有効にする",
+      "term": "保護レベル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"protection level\" → JA=\"保護レベル\" | conf=high"
+    },
+    {
+      "text": "保護レベル{0}が完了しました",
+      "term": "保護レベル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"protection level\" → JA=\"保護レベル\" | conf=high"
+    },
+    {
+      "text": "ゲート リンクが正常に動作します",
+      "term": "ゲート リンク",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"gated link\" → JA=\"ゲート リンク\" | conf=high"
+    },
+    {
+      "text": "ゲート リンクを使用してください",
+      "term": "ゲート リンク",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"gated link\" → JA=\"ゲート リンク\" | conf=high"
+    },
+    {
+      "text": "加入済みを閉じてください",
+      "term": "加入済み",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"subscribed\" → JA=\"加入済み\" | conf=high"
+    },
+    {
+      "text": "エラー: 加入済みが見つかりません",
+      "term": "加入済み",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"subscribed\" → JA=\"加入済み\" | conf=high"
+    },
+    {
+      "text": "クラウドを使用してください",
+      "term": "加入済み",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"加入済み\""
+    },
+    {
+      "text": "クラウドを選択します",
+      "term": "クラウド",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Internet\" → JA=\"クラウド\" | conf=high"
+    },
+    {
+      "text": "クラウドを閉じてください",
+      "term": "クラウド",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Internet\" → JA=\"クラウド\" | conf=high"
+    },
+    {
+      "text": "<b>クラウド</b>を使用してください",
+      "term": "クラウド",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Internet\" → JA=\"クラウド\" | conf=high"
+    },
+    {
+      "text": "クラウドとクラウドを選択します",
+      "term": "クラウド",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"Internet\" → JA=\"クラウド\" | conf=high"
+    },
+    {
+      "text": "テーマ パックを閉じてください",
+      "term": "テーマ パック",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"theme pack\" → JA=\"テーマ パック\" | conf=high"
+    },
+    {
+      "text": "テーマ パックの詳細を確認する",
+      "term": "テーマ パック",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"theme pack\" → JA=\"テーマ パック\" | conf=high"
+    },
+    {
+      "text": "レコード管理を使用してください",
+      "term": "レコード管理",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"records management\" → JA=\"レコード管理\" | conf=high"
+    },
+    {
+      "text": "レコード管理を再起動してください",
+      "term": "レコード管理",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"records management\" → JA=\"レコード管理\" | conf=high"
+    },
+    {
+      "text": "レコード管理{0}が完了しました",
+      "term": "レコード管理",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"records management\" → JA=\"レコード管理\" | conf=high"
+    },
+    {
+      "text": "筆圧感知を使用してください",
+      "term": "レコード管理",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"レコード管理\""
+    },
+    {
+      "text": "",
+      "term": "レコード管理",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"レコード管理\""
+    },
+    {
+      "text": "筆圧感知が正常に動作します",
+      "term": "筆圧感知",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"pressure sensitivity\" → JA=\"筆圧感知\" | conf=high"
+    },
+    {
+      "text": "筆圧感知を選択します",
+      "term": "筆圧感知",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"pressure sensitivity\" → JA=\"筆圧感知\" | conf=high"
+    },
+    {
+      "text": "セッション 0を使用してください",
+      "term": "セッション 0",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Session 0\" → JA=\"セッション 0\" | conf=high"
+    },
+    {
+      "text": "セッション 0を再起動してください",
+      "term": "セッション 0",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Session 0\" → JA=\"セッション 0\" | conf=high"
+    },
+    {
+      "text": "<i>セッション 0</i>の設定を開く",
+      "term": "セッション 0",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Session 0\" → JA=\"セッション 0\" | conf=high"
+    },
+    {
+      "text": "リレー ホストの詳細を確認する",
+      "term": "リレー ホスト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"smart host\" → JA=\"リレー ホスト\" | conf=high"
+    },
+    {
+      "text": "リレー ホストを使用してください",
+      "term": "リレー ホスト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"smart host\" → JA=\"リレー ホスト\" | conf=high"
+    },
+    {
+      "text": "横方向階層を使用してください",
+      "term": "リレー ホスト",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"リレー ホスト\""
+    },
+    {
+      "text": "横方向階層が正常に動作します",
+      "term": "横方向階層",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Horizontal Hierarchy\" → JA=\"横方向階層\" | conf=high"
+    },
+    {
+      "text": "横方向階層を選択します",
+      "term": "横方向階層",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Horizontal Hierarchy\" → JA=\"横方向階層\" | conf=high"
+    },
+    {
+      "text": "超小型英大文字を選択します",
+      "term": "超小型英大文字",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"petite caps\" → JA=\"超小型英大文字\" | conf=high"
+    },
+    {
+      "text": "超小型英大文字の詳細を確認する",
+      "term": "超小型英大文字",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"petite caps\" → JA=\"超小型英大文字\" | conf=high"
+    },
+    {
+      "text": "超小型英大文字{0}が完了しました",
+      "term": "超小型英大文字",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"petite caps\" → JA=\"超小型英大文字\" | conf=high"
+    },
+    {
+      "text": "システムは画像検索をサポートします",
+      "term": "画像検索",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"visual search\" → JA=\"画像検索\" | conf=high"
+    },
+    {
+      "text": "画像検索を選択します",
+      "term": "画像検索",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"visual search\" → JA=\"画像検索\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>画像検索が見つかりました",
+      "term": "画像検索",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"visual search\" → JA=\"画像検索\" | conf=high"
+    },
+    {
+      "text": "画像検索と画像検索を選択します",
+      "term": "画像検索",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"visual search\" → JA=\"画像検索\" | conf=high"
+    },
+    {
+      "text": "共同作成者を使用してください",
+      "term": "画像検索",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"画像検索\""
+    },
+    {
+      "text": "設定で共同作成者を有効にする",
+      "term": "共同作成者",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"contributor\" → JA=\"共同作成者\" | conf=high"
+    },
+    {
+      "text": "共同作成者が正常に動作します",
+      "term": "共同作成者",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"contributor\" → JA=\"共同作成者\" | conf=high"
+    },
+    {
+      "text": "シェブロンの設定を確認する",
+      "term": "シェブロン",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"chevron\" → JA=\"シェブロン\" | conf=high"
+    },
+    {
+      "text": "シェブロンを再起動してください",
+      "term": "シェブロン",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"chevron\" → JA=\"シェブロン\" | conf=high"
+    },
+    {
+      "text": "状態非依存の更新が利用可能です",
+      "term": "状態非依存",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"stateless\" → JA=\"状態非依存\" | conf=high"
+    },
+    {
+      "text": "状態非依存が正常に動作します",
+      "term": "状態非依存",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"stateless\" → JA=\"状態非依存\" | conf=high"
+    },
+    {
+      "text": "パノラマを使用してください",
+      "term": "状態非依存",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"状態非依存\""
+    },
+    {
+      "text": "パノラマを選択します",
+      "term": "パノラマ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"panoramic photo\" → JA=\"パノラマ\" | conf=high"
+    },
+    {
+      "text": "パノラマを閉じてください",
+      "term": "パノラマ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"panoramic photo\" → JA=\"パノラマ\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>パノラマが見つかりました",
+      "term": "パノラマ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"panoramic photo\" → JA=\"パノラマ\" | conf=high"
+    },
+    {
+      "text": "{0}のパノラマを更新しました",
+      "term": "パノラマ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"panoramic photo\" → JA=\"パノラマ\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "パノラマ",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"パノラマ\""
+    },
+    {
+      "text": "環境光センサーが正常に動作します",
+      "term": "環境光センサー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"ambient light sensor\" → JA=\"環境光センサー\" | conf=high"
+    },
+    {
+      "text": "環境光センサーを閉じてください",
+      "term": "環境光センサー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"ambient light sensor\" → JA=\"環境光センサー\" | conf=high"
+    },
+    {
+      "text": "バージョン制限を使用してください",
+      "term": "バージョン制限",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"version limit\" → JA=\"バージョン制限\" | conf=high"
+    },
+    {
+      "text": "システムはバージョン制限をサポートします",
+      "term": "バージョン制限",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"version limit\" → JA=\"バージョン制限\" | conf=high"
+    },
+    {
+      "text": "電源効率の診断を使用してください",
+      "term": "バージョン制限",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"バージョン制限\""
+    },
+    {
+      "text": "電源効率の診断を選択します",
+      "term": "電源効率の診断",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Power Efficiency Diagnostic\" → JA=\"電源効率の診断\" | conf=high"
+    },
+    {
+      "text": "電源効率の診断をインストールします",
+      "term": "電源効率の診断",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Power Efficiency Diagnostic\" → JA=\"電源効率の診断\" | conf=high"
+    },
+    {
+      "text": "X ヘッダーが正常に動作します",
+      "term": "X ヘッダー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"X-header\" → JA=\"X ヘッダー\" | conf=high"
+    },
+    {
+      "text": "X ヘッダーを選択します",
+      "term": "X ヘッダー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"X-header\" → JA=\"X ヘッダー\" | conf=high"
+    },
+    {
+      "text": "<b>X ヘッダー</b>を使用してください",
+      "term": "X ヘッダー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"X-header\" → JA=\"X ヘッダー\" | conf=high"
+    },
+    {
+      "text": "X ヘッダーとX ヘッダーを選択します",
+      "term": "X ヘッダー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"X-header\" → JA=\"X ヘッダー\" | conf=high"
+    },
+    {
+      "text": "システムは推論攻撃をサポートします",
+      "term": "推論攻撃",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"inference attack\" → JA=\"推論攻撃\" | conf=high"
+    },
+    {
+      "text": "推論攻撃を選択します",
+      "term": "推論攻撃",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"inference attack\" → JA=\"推論攻撃\" | conf=high"
+    },
+    {
+      "text": "{0}の推論攻撃を更新しました",
+      "term": "推論攻撃",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"inference attack\" → JA=\"推論攻撃\" | conf=high"
+    },
+    {
+      "text": "PIN コードを使用してください",
+      "term": "推論攻撃",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"推論攻撃\""
+    },
+    {
+      "text": "設定でPIN コードを有効にする",
+      "term": "PIN コード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"SIM PIN\" → JA=\"PIN コード\" | conf=high"
+    },
+    {
+      "text": "システムはPIN コードをサポートします",
+      "term": "PIN コード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"SIM PIN\" → JA=\"PIN コード\" | conf=high"
+    },
+    {
+      "text": "GPS 受信機をインストールします",
+      "term": "GPS 受信機",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"GPS receiver\" → JA=\"GPS 受信機\" | conf=high"
+    },
+    {
+      "text": "システムはGPS 受信機をサポートします",
+      "term": "GPS 受信機",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"GPS receiver\" → JA=\"GPS 受信機\" | conf=high"
+    },
+    {
+      "text": "全画面モードを開きます",
+      "term": "全画面モード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Full-screen mode\" → JA=\"全画面モード\" | conf=high"
+    },
+    {
+      "text": "エラー: 全画面モードが見つかりません",
+      "term": "全画面モード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Full-screen mode\" → JA=\"全画面モード\" | conf=high"
+    },
+    {
+      "text": "<i>全画面モード</i>の設定を開く",
+      "term": "全画面モード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Full-screen mode\" → JA=\"全画面モード\" | conf=high"
+    },
+    {
+      "text": "奇数パリティを使用してください",
+      "term": "全画面モード",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"全画面モード\""
+    },
+    {
+      "text": "奇数パリティの更新が利用可能です",
+      "term": "奇数パリティ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"odd parity\" → JA=\"奇数パリティ\" | conf=high"
+    },
+    {
+      "text": "奇数パリティを閉じてください",
+      "term": "奇数パリティ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"odd parity\" → JA=\"奇数パリティ\" | conf=high"
+    },
+    {
+      "text": "設定で状態機械を有効にする",
+      "term": "状態機械",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"state machine\" → JA=\"状態機械\" | conf=high"
+    },
+    {
+      "text": "状態機械をインストールします",
+      "term": "状態機械",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"state machine\" → JA=\"状態機械\" | conf=high"
+    },
+    {
+      "text": "%sの状態機械を確認",
+      "term": "状態機械",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"state machine\" → JA=\"状態機械\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "状態機械",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"状態機械\""
+    },
+    {
+      "text": "流通証券を選択します",
+      "term": "流通証券",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"negotiable instrument\" → JA=\"流通証券\" | conf=high"
+    },
+    {
+      "text": "流通証券をインストールします",
+      "term": "流通証券",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"negotiable instrument\" → JA=\"流通証券\" | conf=high"
+    },
+    {
+      "text": "キャッシュ行を使用してください",
+      "term": "流通証券",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"流通証券\""
+    },
+    {
+      "text": "キャッシュ行が正常に動作します",
+      "term": "キャッシュ行",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"cache block\" → JA=\"キャッシュ行\" | conf=high"
+    },
+    {
+      "text": "キャッシュ行ダウンロードが完了しました",
+      "term": "キャッシュ行",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"cache block\" → JA=\"キャッシュ行\" | conf=high"
+    },
+    {
+      "text": "<i>キャッシュ行</i>の設定を開く",
+      "term": "キャッシュ行",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"cache block\" → JA=\"キャッシュ行\" | conf=high"
+    },
+    {
+      "text": "キャッシュ行とキャッシュ行を選択します",
+      "term": "キャッシュ行",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"cache block\" → JA=\"キャッシュ行\" | conf=high"
+    },
+    {
+      "text": "エラー: スクラブが見つかりません",
+      "term": "スクラブ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"scrub\" → JA=\"スクラブ\" | conf=high"
+    },
+    {
+      "text": "スクラブを再起動してください",
+      "term": "スクラブ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"scrub\" → JA=\"スクラブ\" | conf=high"
+    },
+    {
+      "text": "論理エラーを選択します",
+      "term": "論理エラー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"logic error\" → JA=\"論理エラー\" | conf=high"
+    },
+    {
+      "text": "システムは論理エラーをサポートします",
+      "term": "論理エラー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"logic error\" → JA=\"論理エラー\" | conf=high"
+    },
+    {
+      "text": "セグメント化を使用してください",
+      "term": "論理エラー",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"論理エラー\""
+    },
+    {
+      "text": "セグメント化ダウンロードが完了しました",
+      "term": "セグメント化",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"segmentation\" → JA=\"セグメント化\" | conf=high"
+    },
+    {
+      "text": "セグメント化を再起動してください",
+      "term": "セグメント化",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"segmentation\" → JA=\"セグメント化\" | conf=high"
+    },
+    {
+      "text": "%sのセグメント化を確認",
+      "term": "セグメント化",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"segmentation\" → JA=\"セグメント化\" | conf=high"
+    },
+    {
+      "text": "メニューからドメインの移行を選択",
+      "term": "ドメインの移行",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"domain transfer\" → JA=\"ドメインの移行\" | conf=high"
+    },
+    {
+      "text": "ドメインの移行を開きます",
+      "term": "ドメインの移行",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"domain transfer\" → JA=\"ドメインの移行\" | conf=high"
+    },
+    {
+      "text": "<i>ドメインの移行</i>の設定を開く",
+      "term": "ドメインの移行",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"domain transfer\" → JA=\"ドメインの移行\" | conf=high"
+    },
+    {
+      "text": "テンプレートを使用してください",
+      "term": "テンプレート",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"template\" → JA=\"テンプレート\" | conf=high"
+    },
+    {
+      "text": "エラー: テンプレートが見つかりません",
+      "term": "テンプレート",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"template\" → JA=\"テンプレート\" | conf=high"
+    },
+    {
+      "text": "円錐グラフを使用してください",
+      "term": "テンプレート",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"テンプレート\""
+    },
+    {
+      "text": "円錐グラフを使用してください",
+      "term": "円錐グラフ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"cone chart\" → JA=\"円錐グラフ\" | conf=high"
+    },
+    {
+      "text": "円錐グラフをインストールします",
+      "term": "円錐グラフ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"cone chart\" → JA=\"円錐グラフ\" | conf=high"
+    },
+    {
+      "text": "不透明度マスクをインストールします",
+      "term": "不透明度マスク",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"alpha mask\" → JA=\"不透明度マスク\" | conf=high"
+    },
+    {
+      "text": "不透明度マスクを選択します",
+      "term": "不透明度マスク",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"alpha mask\" → JA=\"不透明度マスク\" | conf=high"
+    },
+    {
+      "text": "仮想ハード ディスクの編集ウィザードダウンロードが完了しました",
+      "term": "仮想ハード ディスクの編集ウィザード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Edit Virtual Hard Disk Wizard\" → JA=\"仮想ハード ディスクの編集ウィザード\" | conf=high"
+    },
+    {
+      "text": "設定で仮想ハード ディスクの編集ウィザードを有効にする",
+      "term": "仮想ハード ディスクの編集ウィザード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Edit Virtual Hard Disk Wizard\" → JA=\"仮想ハード ディスクの編集ウィザード\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>仮想ハード ディスクの編集ウィザードが見つかりました",
+      "term": "仮想ハード ディスクの編集ウィザード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Edit Virtual Hard Disk Wizard\" → JA=\"仮想ハード ディスクの編集ウィザード\" | conf=high"
+    },
+    {
+      "text": "{0}の仮想ハード ディスクの編集ウィザードを更新しました",
+      "term": "仮想ハード ディスクの編集ウィザード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Edit Virtual Hard Disk Wizard\" → JA=\"仮想ハード ディスクの編集ウィザード\" | conf=high"
+    },
+    {
+      "text": "仮想ハード ディスクの編集ウィザードと仮想ハード ディスクの編集ウィザードを選択します",
+      "term": "仮想ハード ディスクの編集ウィザード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"Edit Virtual Hard Disk Wizard\" → JA=\"仮想ハード ディスクの編集ウィザード\" | conf=high"
+    },
+    {
+      "text": "平均オピニオン値を使用してください",
+      "term": "仮想ハード ディスクの編集ウィザード",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"仮想ハード ディスクの編集ウィザード\""
+    },
+    {
+      "text": "",
+      "term": "仮想ハード ディスクの編集ウィザード",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"仮想ハード ディスクの編集ウィザード\""
+    },
+    {
+      "text": "平均オピニオン値が正常に動作します",
+      "term": "平均オピニオン値",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"mean opinion score\" → JA=\"平均オピニオン値\" | conf=high"
+    },
+    {
+      "text": "平均オピニオン値の更新が利用可能です",
+      "term": "平均オピニオン値",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"mean opinion score\" → JA=\"平均オピニオン値\" | conf=high"
+    },
+    {
+      "text": "Windows プレインストール環境の設定を確認する",
+      "term": "Windows プレインストール環境",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows Preinstallation Environment\" → JA=\"Windows プレインストール環境\" | conf=high"
+    },
+    {
+      "text": "メニューからWindows プレインストール環境を選択",
+      "term": "Windows プレインストール環境",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Windows Preinstallation Environment\" → JA=\"Windows プレインストール環境\" | conf=high"
+    },
+    {
+      "text": "ボックス モデルダウンロードが完了しました",
+      "term": "ボックス モデル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"box model\" → JA=\"ボックス モデル\" | conf=high"
+    },
+    {
+      "text": "ボックス モデルをインストールします",
+      "term": "ボックス モデル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"box model\" → JA=\"ボックス モデル\" | conf=high"
+    },
+    {
+      "text": "配置後スクリプトを使用してください",
+      "term": "ボックス モデル",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"ボックス モデル\""
+    },
+    {
+      "text": "配置後スクリプトを使用してください",
+      "term": "配置後スクリプト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"post-deployment script\" → JA=\"配置後スクリプト\" | conf=high"
+    },
+    {
+      "text": "配置後スクリプトを開きます",
+      "term": "配置後スクリプト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"post-deployment script\" → JA=\"配置後スクリプト\" | conf=high"
+    },
+    {
+      "text": "<i>配置後スクリプト</i>の設定を開く",
+      "term": "配置後スクリプト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"post-deployment script\" → JA=\"配置後スクリプト\" | conf=high"
+    },
+    {
+      "text": "アプリケーション ウインドウを使用してください",
+      "term": "アプリケーション ウインドウ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"application window\" → JA=\"アプリケーション ウインドウ\" | conf=high"
+    },
+    {
+      "text": "アプリケーション ウインドウを閉じてください",
+      "term": "アプリケーション ウインドウ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"application window\" → JA=\"アプリケーション ウインドウ\" | conf=high"
+    },
+    {
+      "text": "%sのアプリケーション ウインドウを確認",
+      "term": "アプリケーション ウインドウ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"application window\" → JA=\"アプリケーション ウインドウ\" | conf=high"
+    },
+    {
+      "text": "クリーン システムが正常に動作します",
+      "term": "クリーン システム",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"clean system\" → JA=\"クリーン システム\" | conf=high"
+    },
+    {
+      "text": "クリーン システムの設定を確認する",
+      "term": "クリーン システム",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"clean system\" → JA=\"クリーン システム\" | conf=high"
+    },
+    {
+      "text": "インデックスを付けるを使用してください",
+      "term": "クリーン システム",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"クリーン システム\""
+    },
+    {
+      "text": "インデックスを付けるを選択します",
+      "term": "インデックスを付ける",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"index\" → JA=\"インデックスを付ける\" | conf=high"
+    },
+    {
+      "text": "インデックスを付けるの設定を確認する",
+      "term": "インデックスを付ける",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"index\" → JA=\"インデックスを付ける\" | conf=high"
+    },
+    {
+      "text": "アニメーションによる血液を再起動してください",
+      "term": "アニメーションによる血液",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Animated Blood\" → JA=\"アニメーションによる血液\" | conf=high"
+    },
+    {
+      "text": "システムはアニメーションによる血液をサポートします",
+      "term": "アニメーションによる血液",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Animated Blood\" → JA=\"アニメーションによる血液\" | conf=high"
+    },
+    {
+      "text": "<i>アニメーションによる血液</i>の設定を開く",
+      "term": "アニメーションによる血液",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Animated Blood\" → JA=\"アニメーションによる血液\" | conf=high"
+    },
+    {
+      "text": "アニメーションによる血液とアニメーションによる血液を選択します",
+      "term": "アニメーションによる血液",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"Animated Blood\" → JA=\"アニメーションによる血液\" | conf=high"
+    },
+    {
+      "text": "ファイル共有プログラムダウンロードが完了しました",
+      "term": "ファイル共有プログラム",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"file sharing program\" → JA=\"ファイル共有プログラム\" | conf=high"
+    },
+    {
+      "text": "エラー: ファイル共有プログラムが見つかりません",
+      "term": "ファイル共有プログラム",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"file sharing program\" → JA=\"ファイル共有プログラム\" | conf=high"
+    },
+    {
+      "text": "管理された既定フォルダーを使用してください",
+      "term": "ファイル共有プログラム",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"ファイル共有プログラム\""
+    },
+    {
+      "text": "管理された既定フォルダーをインストールします",
+      "term": "管理された既定フォルダー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"managed default folder\" → JA=\"管理された既定フォルダー\" | conf=high"
+    },
+    {
+      "text": "管理された既定フォルダーの詳細を確認する",
+      "term": "管理された既定フォルダー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"managed default folder\" → JA=\"管理された既定フォルダー\" | conf=high"
+    },
+    {
+      "text": "{0}の管理された既定フォルダーを更新しました",
+      "term": "管理された既定フォルダー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"managed default folder\" → JA=\"管理された既定フォルダー\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "管理された既定フォルダー",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"管理された既定フォルダー\""
+    },
+    {
+      "text": "パフォーマンス分析の更新が利用可能です",
+      "term": "パフォーマンス分析",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"performance analysis\" → JA=\"パフォーマンス分析\" | conf=high"
+    },
+    {
+      "text": "エラー: パフォーマンス分析が見つかりません",
+      "term": "パフォーマンス分析",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"performance analysis\" → JA=\"パフォーマンス分析\" | conf=high"
+    },
+    {
+      "text": "承認アシスタントをインストールします",
+      "term": "承認アシスタント",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Approval Assistant\" → JA=\"承認アシスタント\" | conf=high"
+    },
+    {
+      "text": "承認アシスタントを再起動してください",
+      "term": "承認アシスタント",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Approval Assistant\" → JA=\"承認アシスタント\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>承認アシスタントが見つかりました",
+      "term": "承認アシスタント",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Approval Assistant\" → JA=\"承認アシスタント\" | conf=high"
+    },
+    {
+      "text": "許可されているユーザーを使用してください",
+      "term": "承認アシスタント",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"承認アシスタント\""
+    },
+    {
+      "text": "システムは許可されているユーザーをサポートします",
+      "term": "許可されているユーザー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"authorized user\" → JA=\"許可されているユーザー\" | conf=high"
+    },
+    {
+      "text": "許可されているユーザーを開きます",
+      "term": "許可されているユーザー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"authorized user\" → JA=\"許可されているユーザー\" | conf=high"
+    },
+    {
+      "text": "基になるオブジェクトの詳細を確認する",
+      "term": "基になるオブジェクト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"origin object\" → JA=\"基になるオブジェクト\" | conf=high"
+    },
+    {
+      "text": "基になるオブジェクトを使用してください",
+      "term": "基になるオブジェクト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"origin object\" → JA=\"基になるオブジェクト\" | conf=high"
+    },
+    {
+      "text": "パスワード設定オブジェクトを使用してください",
+      "term": "パスワード設定オブジェクト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Password Settings object\" → JA=\"パスワード設定オブジェクト\" | conf=high"
+    },
+    {
+      "text": "システムはパスワード設定オブジェクトをサポートします",
+      "term": "パスワード設定オブジェクト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Password Settings object\" → JA=\"パスワード設定オブジェクト\" | conf=high"
+    },
+    {
+      "text": "{0}のパスワード設定オブジェクトを更新しました",
+      "term": "パスワード設定オブジェクト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Password Settings object\" → JA=\"パスワード設定オブジェクト\" | conf=high"
+    },
+    {
+      "text": "固定資産グループを使用してください",
+      "term": "パスワード設定オブジェクト",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"パスワード設定オブジェクト\""
+    },
+    {
+      "text": "設定で固定資産グループを有効にする",
+      "term": "固定資産グループ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"fixed asset group\" → JA=\"固定資産グループ\" | conf=high"
+    },
+    {
+      "text": "固定資産グループが正常に動作します",
+      "term": "固定資産グループ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"fixed asset group\" → JA=\"固定資産グループ\" | conf=high"
+    },
+    {
+      "text": "<i>固定資産グループ</i>の設定を開く",
+      "term": "固定資産グループ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"fixed asset group\" → JA=\"固定資産グループ\" | conf=high"
+    },
+    {
+      "text": "固定資産グループと固定資産グループを選択します",
+      "term": "固定資産グループ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"fixed asset group\" → JA=\"固定資産グループ\" | conf=high"
+    },
+    {
+      "text": "仮想マシンの配置を閉じてください",
+      "term": "仮想マシンの配置",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"virtual machine placement\" → JA=\"仮想マシンの配置\" | conf=high"
+    },
+    {
+      "text": "メニューから仮想マシンの配置を選択",
+      "term": "仮想マシンの配置",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"virtual machine placement\" → JA=\"仮想マシンの配置\" | conf=high"
+    },
+    {
+      "text": "ホーム サーバーを選択します",
+      "term": "ホーム サーバー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"home server\" → JA=\"ホーム サーバー\" | conf=high"
+    },
+    {
+      "text": "ホーム サーバーダウンロードが完了しました",
+      "term": "ホーム サーバー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"home server\" → JA=\"ホーム サーバー\" | conf=high"
+    },
+    {
+      "text": "テキスト入力領域を使用してください",
+      "term": "ホーム サーバー",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"ホーム サーバー\""
+    },
+    {
+      "text": "テキスト入力領域を選択します",
+      "term": "テキスト入力領域",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"text box\" → JA=\"テキスト入力領域\" | conf=high"
+    },
+    {
+      "text": "テキスト入力領域を使用してください",
+      "term": "テキスト入力領域",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"text box\" → JA=\"テキスト入力領域\" | conf=high"
+    },
+    {
+      "text": "メニューからデスクトップの背景を選択",
+      "term": "デスクトップの背景",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"background\" → JA=\"デスクトップの背景\" | conf=high"
+    },
+    {
+      "text": "デスクトップの背景を使用してください",
+      "term": "デスクトップの背景",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"background\" → JA=\"デスクトップの背景\" | conf=high"
+    },
+    {
+      "text": "<i>デスクトップの背景</i>の設定を開く",
+      "term": "デスクトップの背景",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"background\" → JA=\"デスクトップの背景\" | conf=high"
+    },
+    {
+      "text": "{0}のデスクトップの背景を更新しました",
+      "term": "デスクトップの背景",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"background\" → JA=\"デスクトップの背景\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "デスクトップの背景",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"デスクトップの背景\""
+    },
+    {
+      "text": "メッセージ エンベロープを閉じてください",
+      "term": "メッセージ エンベロープ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"message envelope\" → JA=\"メッセージ エンベロープ\" | conf=high"
+    },
+    {
+      "text": "エラー: メッセージ エンベロープが見つかりません",
+      "term": "メッセージ エンベロープ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"message envelope\" → JA=\"メッセージ エンベロープ\" | conf=high"
+    },
+    {
+      "text": "クリエイティブ コンテンツを使用してください",
+      "term": "メッセージ エンベロープ",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"メッセージ エンベロープ\""
+    },
+    {
+      "text": "クリエイティブ コンテンツが正常に動作します",
+      "term": "クリエイティブ コンテンツ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"creative content\" → JA=\"クリエイティブ コンテンツ\" | conf=high"
+    },
+    {
+      "text": "クリエイティブ コンテンツの詳細を確認する",
+      "term": "クリエイティブ コンテンツ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"creative content\" → JA=\"クリエイティブ コンテンツ\" | conf=high"
+    },
+    {
+      "text": "エラー: サイレント モードが見つかりません",
+      "term": "サイレント モード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"silent mode\" → JA=\"サイレント モード\" | conf=high"
+    },
+    {
+      "text": "サイレント モードを閉じてください",
+      "term": "サイレント モード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"silent mode\" → JA=\"サイレント モード\" | conf=high"
+    },
+    {
+      "text": "システムはチェック リストをサポートします",
+      "term": "チェック リスト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"check list\" → JA=\"チェック リスト\" | conf=high"
+    },
+    {
+      "text": "チェック リストを閉じてください",
+      "term": "チェック リスト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"check list\" → JA=\"チェック リスト\" | conf=high"
+    },
+    {
+      "text": "<i>チェック リスト</i>の設定を開く",
+      "term": "チェック リスト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"check list\" → JA=\"チェック リスト\" | conf=high"
+    },
+    {
+      "text": "チェック リストとチェック リストを選択します",
+      "term": "チェック リスト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"check list\" → JA=\"チェック リスト\" | conf=high"
+    },
+    {
+      "text": "ブロック図 (透視図)を使用してください",
+      "term": "チェック リスト",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"チェック リスト\""
+    },
+    {
+      "text": "ブロック図 (透視図)ダウンロードが完了しました",
+      "term": "ブロック図 (透視図)",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"block diagram with perspective\" → JA=\"ブロック図 (透視図)\" | conf=high"
+    },
+    {
+      "text": "ブロック図 (透視図)が正常に動作します",
+      "term": "ブロック図 (透視図)",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"block diagram with perspective\" → JA=\"ブロック図 (透視図)\" | conf=high"
+    },
+    {
+      "text": "%sのブロック図 (透視図)を確認",
+      "term": "ブロック図 (透視図)",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"block diagram with perspective\" → JA=\"ブロック図 (透視図)\" | conf=high"
+    },
+    {
+      "text": "接続デバイス数によるライセンス モードを再起動してください",
+      "term": "接続デバイス数によるライセンス モード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Per Device licensing mode\" → JA=\"接続デバイス数によるライセンス モード\" | conf=high"
+    },
+    {
+      "text": "接続デバイス数によるライセンス モードを使用してください",
+      "term": "接続デバイス数によるライセンス モード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Per Device licensing mode\" → JA=\"接続デバイス数によるライセンス モード\" | conf=high"
+    },
+    {
+      "text": "拡張プログラム間通信機能を閉じてください",
+      "term": "拡張プログラム間通信機能",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Advanced Program-to-Program Communication\" → JA=\"拡張プログラム間通信機能\" | conf=high"
+    },
+    {
+      "text": "拡張プログラム間通信機能を開きます",
+      "term": "拡張プログラム間通信機能",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Advanced Program-to-Program Communication\" → JA=\"拡張プログラム間通信機能\" | conf=high"
+    },
+    {
+      "text": "Web パーツの接続を使用してください",
+      "term": "拡張プログラム間通信機能",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"拡張プログラム間通信機能\""
+    },
+    {
+      "text": "Web パーツの接続ダウンロードが完了しました",
+      "term": "Web パーツの接続",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Web Parts connection\" → JA=\"Web パーツの接続\" | conf=high"
+    },
+    {
+      "text": "Web パーツの接続をインストールします",
+      "term": "Web パーツの接続",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Web Parts connection\" → JA=\"Web パーツの接続\" | conf=high"
+    },
+    {
+      "text": "<i>Web パーツの接続</i>の設定を開く",
+      "term": "Web パーツの接続",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Web Parts connection\" → JA=\"Web パーツの接続\" | conf=high"
+    },
+    {
+      "text": "API サーバー カーソルを開きます",
+      "term": "API サーバー カーソル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"API server cursor\" → JA=\"API サーバー カーソル\" | conf=high"
+    },
+    {
+      "text": "設定でAPI サーバー カーソルを有効にする",
+      "term": "API サーバー カーソル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"API server cursor\" → JA=\"API サーバー カーソル\" | conf=high"
+    },
+    {
+      "text": "メニューからパッケージ定義ファイルを選択",
+      "term": "パッケージ定義ファイル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"package definition file\" → JA=\"パッケージ定義ファイル\" | conf=high"
+    },
+    {
+      "text": "パッケージ定義ファイルを選択します",
+      "term": "パッケージ定義ファイル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"package definition file\" → JA=\"パッケージ定義ファイル\" | conf=high"
+    },
+    {
+      "text": "{0}のパッケージ定義ファイルを更新しました",
+      "term": "パッケージ定義ファイル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"package definition file\" → JA=\"パッケージ定義ファイル\" | conf=high"
+    },
+    {
+      "text": "ソフトウェア ファクトリ プロダクトを使用してください",
+      "term": "パッケージ定義ファイル",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"パッケージ定義ファイル\""
+    },
+    {
+      "text": "",
+      "term": "パッケージ定義ファイル",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"パッケージ定義ファイル\""
+    },
+    {
+      "text": "ソフトウェア ファクトリ プロダクトダウンロードが完了しました",
+      "term": "ソフトウェア ファクトリ プロダクト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"software factory product\" → JA=\"ソフトウェア ファクトリ プロダクト\" | conf=high"
+    },
+    {
+      "text": "ソフトウェア ファクトリ プロダクトを閉じてください",
+      "term": "ソフトウェア ファクトリ プロダクト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"software factory product\" → JA=\"ソフトウェア ファクトリ プロダクト\" | conf=high"
+    },
+    {
+      "text": "設定でデータ ソース名を有効にする",
+      "term": "データ ソース名",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"data source name\" → JA=\"データ ソース名\" | conf=high"
+    },
+    {
+      "text": "データ ソース名ダウンロードが完了しました",
+      "term": "データ ソース名",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"data source name\" → JA=\"データ ソース名\" | conf=high"
+    },
+    {
+      "text": "<b>データ ソース名</b>を使用してください",
+      "term": "データ ソース名",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"data source name\" → JA=\"データ ソース名\" | conf=high"
+    },
+    {
+      "text": "データ ソース名とデータ ソース名を選択します",
+      "term": "データ ソース名",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"data source name\" → JA=\"データ ソース名\" | conf=high"
+    },
+    {
+      "text": "キャッシュ メモリを閉じてください",
+      "term": "キャッシュ メモリ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"CPU cache\" → JA=\"キャッシュ メモリ\" | conf=high"
+    },
+    {
+      "text": "キャッシュ メモリの詳細を確認する",
+      "term": "キャッシュ メモリ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"CPU cache\" → JA=\"キャッシュ メモリ\" | conf=high"
+    },
+    {
+      "text": "インポートされたテープを使用してください",
+      "term": "キャッシュ メモリ",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"キャッシュ メモリ\""
+    },
+    {
+      "text": "システムはインポートされたテープをサポートします",
+      "term": "インポートされたテープ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"imported tape\" → JA=\"インポートされたテープ\" | conf=high"
+    },
+    {
+      "text": "インポートされたテープを選択します",
+      "term": "インポートされたテープ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"imported tape\" → JA=\"インポートされたテープ\" | conf=high"
+    },
+    {
+      "text": "Gopher サーバーを使用してください",
+      "term": "Gopher サーバー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Gopher server\" → JA=\"Gopher サーバー\" | conf=high"
+    },
+    {
+      "text": "システムはGopher サーバーをサポートします",
+      "term": "Gopher サーバー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Gopher server\" → JA=\"Gopher サーバー\" | conf=high"
+    },
+    {
+      "text": "Gopher サーバー{0}が完了しました",
+      "term": "Gopher サーバー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Gopher server\" → JA=\"Gopher サーバー\" | conf=high"
+    },
+    {
+      "text": "OLE コントロールを閉じてください",
+      "term": "OLE コントロール",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"OLE control\" → JA=\"OLE コントロール\" | conf=high"
+    },
+    {
+      "text": "OLE コントロールダウンロードが完了しました",
+      "term": "OLE コントロール",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"OLE control\" → JA=\"OLE コントロール\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>OLE コントロールが見つかりました",
+      "term": "OLE コントロール",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"OLE control\" → JA=\"OLE コントロール\" | conf=high"
+    },
+    {
+      "text": "セキュア ビットを使用してください",
+      "term": "OLE コントロール",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"OLE コントロール\""
+    },
+    {
+      "text": "セキュア ビットをインストールします",
+      "term": "セキュア ビット",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"secure bit\" → JA=\"セキュア ビット\" | conf=high"
+    },
+    {
+      "text": "セキュア ビットを使用してください",
+      "term": "セキュア ビット",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"secure bit\" → JA=\"セキュア ビット\" | conf=high"
+    },
+    {
+      "text": "イベントを発生させるが正常に動作します",
+      "term": "イベントを発生させる",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"raise an event\" → JA=\"イベントを発生させる\" | conf=high"
+    },
+    {
+      "text": "イベントを発生させるを使用してください",
+      "term": "イベントを発生させる",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"raise an event\" → JA=\"イベントを発生させる\" | conf=high"
+    },
+    {
+      "text": "区切られた識別子を再起動してください",
+      "term": "区切られた識別子",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"delimited identifier\" → JA=\"区切られた識別子\" | conf=high"
+    },
+    {
+      "text": "区切られた識別子をインストールします",
+      "term": "区切られた識別子",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"delimited identifier\" → JA=\"区切られた識別子\" | conf=high"
+    },
+    {
+      "text": "共有アドレスの情報を使用してください",
+      "term": "区切られた識別子",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"区切られた識別子\""
+    },
+    {
+      "text": "共有アドレスの情報を使用してください",
+      "term": "共有アドレスの情報",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Shared Address Information\" → JA=\"共有アドレスの情報\" | conf=high"
+    },
+    {
+      "text": "共有アドレスの情報の設定を確認する",
+      "term": "共有アドレスの情報",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Shared Address Information\" → JA=\"共有アドレスの情報\" | conf=high"
+    },
+    {
+      "text": "<b>共有アドレスの情報</b>を使用してください",
+      "term": "共有アドレスの情報",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Shared Address Information\" → JA=\"共有アドレスの情報\" | conf=high"
+    },
+    {
+      "text": "{0}の共有アドレスの情報を更新しました",
+      "term": "共有アドレスの情報",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Shared Address Information\" → JA=\"共有アドレスの情報\" | conf=high"
+    },
+    {
+      "text": "共有アドレスの情報と共有アドレスの情報を選択します",
+      "term": "共有アドレスの情報",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"Shared Address Information\" → JA=\"共有アドレスの情報\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "共有アドレスの情報",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"共有アドレスの情報\""
+    },
+    {
+      "text": "マウス ショートカットをインストールします",
+      "term": "マウス ショートカット",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"mouse shortcut\" → JA=\"マウス ショートカット\" | conf=high"
+    },
+    {
+      "text": "マウス ショートカットを開きます",
+      "term": "マウス ショートカット",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"mouse shortcut\" → JA=\"マウス ショートカット\" | conf=high"
+    },
+    {
+      "text": "リアルタイム保護の詳細を確認する",
+      "term": "リアルタイム保護",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Real-time protection\" → JA=\"リアルタイム保護\" | conf=high"
+    },
+    {
+      "text": "システムはリアルタイム保護をサポートします",
+      "term": "リアルタイム保護",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Real-time protection\" → JA=\"リアルタイム保護\" | conf=high"
+    },
+    {
+      "text": "ロールオーバー ファイルを使用してください",
+      "term": "リアルタイム保護",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"リアルタイム保護\""
+    },
+    {
+      "text": "システムはロールオーバー ファイルをサポートします",
+      "term": "ロールオーバー ファイル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"rollover file\" → JA=\"ロールオーバー ファイル\" | conf=high"
+    },
+    {
+      "text": "ロールオーバー ファイルを選択します",
+      "term": "ロールオーバー ファイル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"rollover file\" → JA=\"ロールオーバー ファイル\" | conf=high"
+    },
+    {
+      "text": "メニューからアカウント ロックアウトを選択",
+      "term": "アカウント ロックアウト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"account lockout\" → JA=\"アカウント ロックアウト\" | conf=high"
+    },
+    {
+      "text": "アカウント ロックアウトの詳細を確認する",
+      "term": "アカウント ロックアウト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"account lockout\" → JA=\"アカウント ロックアウト\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>アカウント ロックアウトが見つかりました",
+      "term": "アカウント ロックアウト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"account lockout\" → JA=\"アカウント ロックアウト\" | conf=high"
+    },
+    {
+      "text": "SQL エージェント サービスを選択します",
+      "term": "SQL エージェント サービス",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"SQL Agent service\" → JA=\"SQL エージェント サービス\" | conf=high"
+    },
+    {
+      "text": "システムはSQL エージェント サービスをサポートします",
+      "term": "SQL エージェント サービス",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"SQL Agent service\" → JA=\"SQL エージェント サービス\" | conf=high"
+    },
+    {
+      "text": "SQL エージェント サービス{0}が完了しました",
+      "term": "SQL エージェント サービス",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"SQL Agent service\" → JA=\"SQL エージェント サービス\" | conf=high"
+    },
+    {
+      "text": "コンピューター セキュリティを使用してください",
+      "term": "SQL エージェント サービス",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"SQL エージェント サービス\""
+    },
+    {
+      "text": "コンピューター セキュリティを使用してください",
+      "term": "コンピューター セキュリティ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"computer security\" → JA=\"コンピューター セキュリティ\" | conf=high"
+    },
+    {
+      "text": "コンピューター セキュリティの設定を確認する",
+      "term": "コンピューター セキュリティ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"computer security\" → JA=\"コンピューター セキュリティ\" | conf=high"
+    },
+    {
+      "text": "システムは非キー インデックス列をサポートします",
+      "term": "非キー インデックス列",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Nonkey index column\" → JA=\"非キー インデックス列\" | conf=high"
+    },
+    {
+      "text": "非キー インデックス列が正常に動作します",
+      "term": "非キー インデックス列",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Nonkey index column\" → JA=\"非キー インデックス列\" | conf=high"
+    },
+    {
+      "text": "メニューから監視用ファイル共有を選択",
+      "term": "監視用ファイル共有",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"witness file share\" → JA=\"監視用ファイル共有\" | conf=high"
+    },
+    {
+      "text": "監視用ファイル共有の更新が利用可能です",
+      "term": "監視用ファイル共有",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"witness file share\" → JA=\"監視用ファイル共有\" | conf=high"
+    },
+    {
+      "text": "<i>監視用ファイル共有</i>の設定を開く",
+      "term": "監視用ファイル共有",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"witness file share\" → JA=\"監視用ファイル共有\" | conf=high"
+    },
+    {
+      "text": "監視用ファイル共有と監視用ファイル共有を選択します",
+      "term": "監視用ファイル共有",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"witness file share\" → JA=\"監視用ファイル共有\" | conf=high"
+    },
+    {
+      "text": "SCSI イニシエーターを使用してください",
+      "term": "監視用ファイル共有",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"監視用ファイル共有\""
+    },
+    {
+      "text": "SCSI イニシエーターを選択します",
+      "term": "SCSI イニシエーター",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"SCSI initiator\" → JA=\"SCSI イニシエーター\" | conf=high"
+    },
+    {
+      "text": "システムはSCSI イニシエーターをサポートします",
+      "term": "SCSI イニシエーター",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"SCSI initiator\" → JA=\"SCSI イニシエーター\" | conf=high"
+    },
+    {
+      "text": "プロジェクト ライフ サイクルが正常に動作します",
+      "term": "プロジェクト ライフ サイクル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"project life cycle\" → JA=\"プロジェクト ライフ サイクル\" | conf=high"
+    },
+    {
+      "text": "プロジェクト ライフ サイクルを再起動してください",
+      "term": "プロジェクト ライフ サイクル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"project life cycle\" → JA=\"プロジェクト ライフ サイクル\" | conf=high"
+    },
+    {
+      "text": "プロジェクト ライフ サイクル{0}が完了しました",
+      "term": "プロジェクト ライフ サイクル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"project life cycle\" → JA=\"プロジェクト ライフ サイクル\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "プロジェクト ライフ サイクル",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"プロジェクト ライフ サイクル\""
+    },
+    {
+      "text": "エラー: アクセス許可クラスが見つかりません",
+      "term": "アクセス許可クラス",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"permission class\" → JA=\"アクセス許可クラス\" | conf=high"
+    },
+    {
+      "text": "アクセス許可クラスを使用してください",
+      "term": "アクセス許可クラス",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"permission class\" → JA=\"アクセス許可クラス\" | conf=high"
+    },
+    {
+      "text": "Bluetooth トランシーバーを使用してください",
+      "term": "アクセス許可クラス",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"アクセス許可クラス\""
+    },
+    {
+      "text": "Bluetooth トランシーバーを使用してください",
+      "term": "Bluetooth トランシーバー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Bluetooth adapter\" → JA=\"Bluetooth トランシーバー\" | conf=high"
+    },
+    {
+      "text": "エラー: Bluetooth トランシーバーが見つかりません",
+      "term": "Bluetooth トランシーバー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Bluetooth adapter\" → JA=\"Bluetooth トランシーバー\" | conf=high"
+    },
+    {
+      "text": "<b>Bluetooth トランシーバー</b>を使用してください",
+      "term": "Bluetooth トランシーバー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Bluetooth adapter\" → JA=\"Bluetooth トランシーバー\" | conf=high"
+    },
+    {
+      "text": "ぶら下げインデントの更新が利用可能です",
+      "term": "ぶら下げインデント",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"hanging indent\" → JA=\"ぶら下げインデント\" | conf=high"
+    },
+    {
+      "text": "ぶら下げインデントが正常に動作します",
+      "term": "ぶら下げインデント",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"hanging indent\" → JA=\"ぶら下げインデント\" | conf=high"
+    },
+    {
+      "text": "プロテクティブ MBRを使用してください",
+      "term": "プロテクティブ MBR",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Protective MBR\" → JA=\"プロテクティブ MBR\" | conf=high"
+    },
+    {
+      "text": "プロテクティブ MBRを閉じてください",
+      "term": "プロテクティブ MBR",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Protective MBR\" → JA=\"プロテクティブ MBR\" | conf=high"
+    },
+    {
+      "text": "仮想マシンの有効期限を使用してください",
+      "term": "プロテクティブ MBR",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"プロテクティブ MBR\""
+    },
+    {
+      "text": "仮想マシンの有効期限を開きます",
+      "term": "仮想マシンの有効期限",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"virtual machine expiration\" → JA=\"仮想マシンの有効期限\" | conf=high"
+    },
+    {
+      "text": "システムは仮想マシンの有効期限をサポートします",
+      "term": "仮想マシンの有効期限",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"virtual machine expiration\" → JA=\"仮想マシンの有効期限\" | conf=high"
+    },
+    {
+      "text": "%sの仮想マシンの有効期限を確認",
+      "term": "仮想マシンの有効期限",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"virtual machine expiration\" → JA=\"仮想マシンの有効期限\" | conf=high"
+    },
+    {
+      "text": "設定でブレークポイントを有効にする",
+      "term": "ブレークポイント",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"breakpoint\" → JA=\"ブレークポイント\" | conf=high"
+    },
+    {
+      "text": "ブレークポイントの設定を確認する",
+      "term": "ブレークポイント",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"breakpoint\" → JA=\"ブレークポイント\" | conf=high"
+    },
+    {
+      "text": "<i>ブレークポイント</i>の設定を開く",
+      "term": "ブレークポイント",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"breakpoint\" → JA=\"ブレークポイント\" | conf=high"
+    },
+    {
+      "text": "ブレークポイントとブレークポイントを選択します",
+      "term": "ブレークポイント",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"breakpoint\" → JA=\"ブレークポイント\" | conf=high"
+    },
+    {
+      "text": "パフォーマンスとリソースの最適化が正常に動作します",
+      "term": "パフォーマンスとリソースの最適化",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Performance and Resource Optimization\" → JA=\"パフォーマンスとリソースの最適化\" | conf=high"
+    },
+    {
+      "text": "パフォーマンスとリソースの最適化を使用してください",
+      "term": "パフォーマンスとリソースの最適化",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Performance and Resource Optimization\" → JA=\"パフォーマンスとリソースの最適化\" | conf=high"
+    },
+    {
+      "text": "プリント プレビューを使用してください",
+      "term": "パフォーマンスとリソースの最適化",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"パフォーマンスとリソースの最適化\""
+    },
+    {
+      "text": "プリント プレビューを使用してください",
+      "term": "プリント プレビュー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"print preview\" → JA=\"プリント プレビュー\" | conf=high"
+    },
+    {
+      "text": "設定でプリント プレビューを有効にする",
+      "term": "プリント プレビュー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"print preview\" → JA=\"プリント プレビュー\" | conf=high"
+    },
+    {
+      "text": "プログラムによるセキュリティの設定を確認する",
+      "term": "プログラムによるセキュリティ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"programmatic security\" → JA=\"プログラムによるセキュリティ\" | conf=high"
+    },
+    {
+      "text": "プログラムによるセキュリティを開きます",
+      "term": "プログラムによるセキュリティ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"programmatic security\" → JA=\"プログラムによるセキュリティ\" | conf=high"
+    },
+    {
+      "text": "システムは資格情報プロンプトをサポートします",
+      "term": "資格情報プロンプト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"credential prompt\" → JA=\"資格情報プロンプト\" | conf=high"
+    },
+    {
+      "text": "資格情報プロンプトを閉じてください",
+      "term": "資格情報プロンプト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"credential prompt\" → JA=\"資格情報プロンプト\" | conf=high"
+    },
+    {
+      "text": "<i>資格情報プロンプト</i>の設定を開く",
+      "term": "資格情報プロンプト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"credential prompt\" → JA=\"資格情報プロンプト\" | conf=high"
+    },
+    {
+      "text": "%sの資格情報プロンプトを確認",
+      "term": "資格情報プロンプト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"credential prompt\" → JA=\"資格情報プロンプト\" | conf=high"
+    },
+    {
+      "text": "ダウンストリーム LUを使用してください",
+      "term": "資格情報プロンプト",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"資格情報プロンプト\""
+    },
+    {
+      "text": "",
+      "term": "資格情報プロンプト",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"資格情報プロンプト\""
+    },
+    {
+      "text": "ダウンストリーム LUを再起動してください",
+      "term": "ダウンストリーム LU",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"downstream LU\" → JA=\"ダウンストリーム LU\" | conf=high"
+    },
+    {
+      "text": "ダウンストリーム LUを開きます",
+      "term": "ダウンストリーム LU",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"downstream LU\" → JA=\"ダウンストリーム LU\" | conf=high"
+    },
+    {
+      "text": "エラー: マクロ ウィンドウが見つかりません",
+      "term": "マクロ ウィンドウ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Macro window\" → JA=\"マクロ ウィンドウ\" | conf=high"
+    },
+    {
+      "text": "設定でマクロ ウィンドウを有効にする",
+      "term": "マクロ ウィンドウ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Macro window\" → JA=\"マクロ ウィンドウ\" | conf=high"
+    },
+    {
+      "text": "添付ファイルのプレビューアーを使用してください",
+      "term": "添付ファイルのプレビューアー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Attachment Previewer\" → JA=\"添付ファイルのプレビューアー\" | conf=high"
+    },
+    {
+      "text": "添付ファイルのプレビューアーの設定を確認する",
+      "term": "添付ファイルのプレビューアー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Attachment Previewer\" → JA=\"添付ファイルのプレビューアー\" | conf=high"
+    },
+    {
+      "text": "旋盤オブジェクトを使用してください",
+      "term": "添付ファイルのプレビューアー",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"添付ファイルのプレビューアー\""
+    },
+    {
+      "text": "旋盤オブジェクトの設定を確認する",
+      "term": "旋盤オブジェクト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"lathe object\" → JA=\"旋盤オブジェクト\" | conf=high"
+    },
+    {
+      "text": "旋盤オブジェクトが正常に動作します",
+      "term": "旋盤オブジェクト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"lathe object\" → JA=\"旋盤オブジェクト\" | conf=high"
+    },
+    {
+      "text": "<b>旋盤オブジェクト</b>を使用してください",
+      "term": "旋盤オブジェクト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"lathe object\" → JA=\"旋盤オブジェクト\" | conf=high"
+    },
+    {
+      "text": "旋盤オブジェクトと旋盤オブジェクトを選択します",
+      "term": "旋盤オブジェクト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"lathe object\" → JA=\"旋盤オブジェクト\" | conf=high"
+    },
+    {
+      "text": "コンピューター アカウントを開きます",
+      "term": "コンピューター アカウント",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"computer object\" → JA=\"コンピューター アカウント\" | conf=high"
+    },
+    {
+      "text": "コンピューター アカウントの設定を確認する",
+      "term": "コンピューター アカウント",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"computer object\" → JA=\"コンピューター アカウント\" | conf=high"
+    },
+    {
+      "text": "%sのコンピューター アカウントを確認",
+      "term": "コンピューター アカウント",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"computer object\" → JA=\"コンピューター アカウント\" | conf=high"
+    },
+    {
+      "text": "キャッシュ プラグインの設定を確認する",
+      "term": "キャッシュ プラグイン",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"cache plug-in\" → JA=\"キャッシュ プラグイン\" | conf=high"
+    },
+    {
+      "text": "キャッシュ プラグインを使用してください",
+      "term": "キャッシュ プラグイン",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"cache plug-in\" → JA=\"キャッシュ プラグイン\" | conf=high"
+    },
+    {
+      "text": "リモート ストアド プロシージャを使用してください",
+      "term": "キャッシュ プラグイン",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"キャッシュ プラグイン\""
+    },
+    {
+      "text": "リモート ストアド プロシージャを開きます",
+      "term": "リモート ストアド プロシージャ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"remote stored procedure\" → JA=\"リモート ストアド プロシージャ\" | conf=high"
+    },
+    {
+      "text": "リモート ストアド プロシージャをインストールします",
+      "term": "リモート ストアド プロシージャ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"remote stored procedure\" → JA=\"リモート ストアド プロシージャ\" | conf=high"
+    },
+    {
+      "text": "接続フィルター エージェントの設定を確認する",
+      "term": "接続フィルター エージェント",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Connection Filter agent\" → JA=\"接続フィルター エージェント\" | conf=high"
+    },
+    {
+      "text": "設定で接続フィルター エージェントを有効にする",
+      "term": "接続フィルター エージェント",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Connection Filter agent\" → JA=\"接続フィルター エージェント\" | conf=high"
+    },
+    {
+      "text": "<i>接続フィルター エージェント</i>の設定を開く",
+      "term": "接続フィルター エージェント",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Connection Filter agent\" → JA=\"接続フィルター エージェント\" | conf=high"
+    },
+    {
+      "text": "システムはメッセージ フロー ビューをサポートします",
+      "term": "メッセージ フロー ビュー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Message Flow view\" → JA=\"メッセージ フロー ビュー\" | conf=high"
+    },
+    {
+      "text": "メッセージ フロー ビューが正常に動作します",
+      "term": "メッセージ フロー ビュー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Message Flow view\" → JA=\"メッセージ フロー ビュー\" | conf=high"
+    },
+    {
+      "text": "診断ポリシー サービスを使用してください",
+      "term": "メッセージ フロー ビュー",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"メッセージ フロー ビュー\""
+    },
+    {
+      "text": "診断ポリシー サービスを閉じてください",
+      "term": "診断ポリシー サービス",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Diagnostic Policy Service\" → JA=\"診断ポリシー サービス\" | conf=high"
+    },
+    {
+      "text": "診断ポリシー サービスを使用してください",
+      "term": "診断ポリシー サービス",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Diagnostic Policy Service\" → JA=\"診断ポリシー サービス\" | conf=high"
+    },
+    {
+      "text": "%sの診断ポリシー サービスを確認",
+      "term": "診断ポリシー サービス",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Diagnostic Policy Service\" → JA=\"診断ポリシー サービス\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "診断ポリシー サービス",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"診断ポリシー サービス\""
+    },
+    {
+      "text": "パートナー ポイントを使用してください",
+      "term": "パートナー ポイント",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Partner Point\" → JA=\"パートナー ポイント\" | conf=high"
+    },
+    {
+      "text": "エラー: パートナー ポイントが見つかりません",
+      "term": "パートナー ポイント",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Partner Point\" → JA=\"パートナー ポイント\" | conf=high"
+    },
+    {
+      "text": "設定でワーク ブレークダウン ストラクチャを有効にする",
+      "term": "ワーク ブレークダウン ストラクチャ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"work breakdown structure\" → JA=\"ワーク ブレークダウン ストラクチャ\" | conf=high"
+    },
+    {
+      "text": "ワーク ブレークダウン ストラクチャを使用してください",
+      "term": "ワーク ブレークダウン ストラクチャ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"work breakdown structure\" → JA=\"ワーク ブレークダウン ストラクチャ\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>ワーク ブレークダウン ストラクチャが見つかりました",
+      "term": "ワーク ブレークダウン ストラクチャ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"work breakdown structure\" → JA=\"ワーク ブレークダウン ストラクチャ\" | conf=high"
+    },
+    {
+      "text": "ワーク ブレークダウン ストラクチャとワーク ブレークダウン ストラクチャを選択します",
+      "term": "ワーク ブレークダウン ストラクチャ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"work breakdown structure\" → JA=\"ワーク ブレークダウン ストラクチャ\" | conf=high"
+    },
+    {
+      "text": "ファイルの終わりを使用してください",
+      "term": "ワーク ブレークダウン ストラクチャ",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"ワーク ブレークダウン ストラクチャ\""
+    },
+    {
+      "text": "ファイルの終わりを選択します",
+      "term": "ファイルの終わり",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"end-of-file\" → JA=\"ファイルの終わり\" | conf=high"
+    },
+    {
+      "text": "ファイルの終わりをインストールします",
+      "term": "ファイルの終わり",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"end-of-file\" → JA=\"ファイルの終わり\" | conf=high"
+    },
+    {
+      "text": "設定でオブジェクト タブを有効にする",
+      "term": "オブジェクト タブ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"object tab\" → JA=\"オブジェクト タブ\" | conf=high"
+    },
+    {
+      "text": "オブジェクト タブを使用してください",
+      "term": "オブジェクト タブ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"object tab\" → JA=\"オブジェクト タブ\" | conf=high"
+    },
+    {
+      "text": "メニューからモジュールレベル変数を選択",
+      "term": "モジュールレベル変数",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"module-level variable\" → JA=\"モジュールレベル変数\" | conf=high"
+    },
+    {
+      "text": "モジュールレベル変数を使用してください",
+      "term": "モジュールレベル変数",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"module-level variable\" → JA=\"モジュールレベル変数\" | conf=high"
+    },
+    {
+      "text": "{0}のモジュールレベル変数を更新しました",
+      "term": "モジュールレベル変数",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"module-level variable\" → JA=\"モジュールレベル変数\" | conf=high"
+    },
+    {
+      "text": "RSS プラットフォーム同期エンジンを使用してください",
+      "term": "モジュールレベル変数",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"モジュールレベル変数\""
+    },
+    {
+      "text": "システムはRSS プラットフォーム同期エンジンをサポートします",
+      "term": "RSS プラットフォーム同期エンジン",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"RSS Platform Sync Engine\" → JA=\"RSS プラットフォーム同期エンジン\" | conf=high"
+    },
+    {
+      "text": "RSS プラットフォーム同期エンジンの設定を確認する",
+      "term": "RSS プラットフォーム同期エンジン",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"RSS Platform Sync Engine\" → JA=\"RSS プラットフォーム同期エンジン\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>RSS プラットフォーム同期エンジンが見つかりました",
+      "term": "RSS プラットフォーム同期エンジン",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"RSS Platform Sync Engine\" → JA=\"RSS プラットフォーム同期エンジン\" | conf=high"
+    },
+    {
+      "text": "循環かんばんカードの設定を確認する",
+      "term": "循環かんばんカード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"circulating card\" → JA=\"循環かんばんカード\" | conf=high"
+    },
+    {
+      "text": "循環かんばんカードを使用してください",
+      "term": "循環かんばんカード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"circulating card\" → JA=\"循環かんばんカード\" | conf=high"
+    },
+    {
+      "text": "完全修飾ドメイン名を再起動してください",
+      "term": "完全修飾ドメイン名",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"FQDN\" → JA=\"完全修飾ドメイン名\" | conf=high"
+    },
+    {
+      "text": "完全修飾ドメイン名ダウンロードが完了しました",
+      "term": "完全修飾ドメイン名",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"FQDN\" → JA=\"完全修飾ドメイン名\" | conf=high"
+    },
+    {
+      "text": "ラーニング スナックを使用してください",
+      "term": "完全修飾ドメイン名",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"完全修飾ドメイン名\""
+    },
+    {
+      "text": "ラーニング スナックの更新が利用可能です",
+      "term": "ラーニング スナック",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Snack\" → JA=\"ラーニング スナック\" | conf=high"
+    },
+    {
+      "text": "ラーニング スナックの詳細を確認する",
+      "term": "ラーニング スナック",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Snack\" → JA=\"ラーニング スナック\" | conf=high"
+    },
+    {
+      "text": "アニメーション マネージャーを閉じてください",
+      "term": "アニメーション マネージャー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"animation manager\" → JA=\"アニメーション マネージャー\" | conf=high"
+    },
+    {
+      "text": "メニューからアニメーション マネージャーを選択",
+      "term": "アニメーション マネージャー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"animation manager\" → JA=\"アニメーション マネージャー\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>アニメーション マネージャーが見つかりました",
+      "term": "アニメーション マネージャー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"animation manager\" → JA=\"アニメーション マネージャー\" | conf=high"
+    },
+    {
+      "text": "{0}のアニメーション マネージャーを更新しました",
+      "term": "アニメーション マネージャー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"animation manager\" → JA=\"アニメーション マネージャー\" | conf=high"
+    },
+    {
+      "text": "アニメーション マネージャーとアニメーション マネージャーを選択します",
+      "term": "アニメーション マネージャー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"animation manager\" → JA=\"アニメーション マネージャー\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "アニメーション マネージャー",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"アニメーション マネージャー\""
+    },
+    {
+      "text": "Bing テレビ ゲームを選択します",
+      "term": "Bing テレビ ゲーム",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Bing Video Games\" → JA=\"Bing テレビ ゲーム\" | conf=high"
+    },
+    {
+      "text": "エラー: Bing テレビ ゲームが見つかりません",
+      "term": "Bing テレビ ゲーム",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Bing Video Games\" → JA=\"Bing テレビ ゲーム\" | conf=high"
+    },
+    {
+      "text": "データベース シャードを使用してください",
+      "term": "Bing テレビ ゲーム",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"Bing テレビ ゲーム\""
+    },
+    {
+      "text": "メニューからデータベース シャードを選択",
+      "term": "データベース シャード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"shard\" → JA=\"データベース シャード\" | conf=high"
+    },
+    {
+      "text": "データベース シャードが正常に動作します",
+      "term": "データベース シャード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"shard\" → JA=\"データベース シャード\" | conf=high"
+    },
+    {
+      "text": "コンピューティングの詳細を確認する",
+      "term": "コンピューティング",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"compute\" → JA=\"コンピューティング\" | conf=high"
+    },
+    {
+      "text": "コンピューティングを使用してください",
+      "term": "コンピューティング",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"compute\" → JA=\"コンピューティング\" | conf=high"
+    },
+    {
+      "text": "コンテンツ ゾーンを選択します",
+      "term": "コンテンツ ゾーン",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"content zone\" → JA=\"コンテンツ ゾーン\" | conf=high"
+    },
+    {
+      "text": "設定でコンテンツ ゾーンを有効にする",
+      "term": "コンテンツ ゾーン",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"content zone\" → JA=\"コンテンツ ゾーン\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>コンテンツ ゾーンが見つかりました",
+      "term": "コンテンツ ゾーン",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"content zone\" → JA=\"コンテンツ ゾーン\" | conf=high"
+    },
+    {
+      "text": "AD FS Web エージェントを使用してください",
+      "term": "コンテンツ ゾーン",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"コンテンツ ゾーン\""
+    },
+    {
+      "text": "設定でAD FS Web エージェントを有効にする",
+      "term": "AD FS Web エージェント",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"AD FS Web Agent\" → JA=\"AD FS Web エージェント\" | conf=high"
+    },
+    {
+      "text": "AD FS Web エージェントの詳細を確認する",
+      "term": "AD FS Web エージェント",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"AD FS Web Agent\" → JA=\"AD FS Web エージェント\" | conf=high"
+    },
+    {
+      "text": "{0}のAD FS Web エージェントを更新しました",
+      "term": "AD FS Web エージェント",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"AD FS Web Agent\" → JA=\"AD FS Web エージェント\" | conf=high"
+    },
+    {
+      "text": "Web アドレスの設定を確認する",
+      "term": "Web アドレス",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Uniform Resource Locator\" → JA=\"Web アドレス\" | conf=high"
+    },
+    {
+      "text": "システムはWeb アドレスをサポートします",
+      "term": "Web アドレス",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Uniform Resource Locator\" → JA=\"Web アドレス\" | conf=high"
+    },
+    {
+      "text": "長さ 0 の文字列ダウンロードが完了しました",
+      "term": "長さ 0 の文字列",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"zero-length string\" → JA=\"長さ 0 の文字列\" | conf=high"
+    },
+    {
+      "text": "長さ 0 の文字列を閉じてください",
+      "term": "長さ 0 の文字列",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"zero-length string\" → JA=\"長さ 0 の文字列\" | conf=high"
+    },
+    {
+      "text": "アンチエイリアシングを使用してください",
+      "term": "長さ 0 の文字列",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"長さ 0 の文字列\""
+    },
+    {
+      "text": "アンチエイリアシングの設定を確認する",
+      "term": "アンチエイリアシング",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"antialiasing\" → JA=\"アンチエイリアシング\" | conf=high"
+    },
+    {
+      "text": "アンチエイリアシングダウンロードが完了しました",
+      "term": "アンチエイリアシング",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"antialiasing\" → JA=\"アンチエイリアシング\" | conf=high"
+    },
+    {
+      "text": "<i>アンチエイリアシング</i>の設定を開く",
+      "term": "アンチエイリアシング",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"antialiasing\" → JA=\"アンチエイリアシング\" | conf=high"
+    },
+    {
+      "text": "アンチエイリアシングとアンチエイリアシングを選択します",
+      "term": "アンチエイリアシング",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"antialiasing\" → JA=\"アンチエイリアシング\" | conf=high"
+    },
+    {
+      "text": "関連付けエクスプローラーが正常に動作します",
+      "term": "関連付けエクスプローラー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Relationship Explorer\" → JA=\"関連付けエクスプローラー\" | conf=high"
+    },
+    {
+      "text": "関連付けエクスプローラーの詳細を確認する",
+      "term": "関連付けエクスプローラー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Relationship Explorer\" → JA=\"関連付けエクスプローラー\" | conf=high"
+    },
+    {
+      "text": "システムはコンテキスト IDをサポートします",
+      "term": "コンテキスト ID",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"context ID\" → JA=\"コンテキスト ID\" | conf=high"
+    },
+    {
+      "text": "コンテキスト IDが正常に動作します",
+      "term": "コンテキスト ID",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"context ID\" → JA=\"コンテキスト ID\" | conf=high"
+    },
+    {
+      "text": "{0}のコンテキスト IDを更新しました",
+      "term": "コンテキスト ID",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"context ID\" → JA=\"コンテキスト ID\" | conf=high"
+    },
+    {
+      "text": "2 バイト符号付き整数を使用してください",
+      "term": "コンテキスト ID",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"コンテキスト ID\""
+    },
+    {
+      "text": "",
+      "term": "コンテキスト ID",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"コンテキスト ID\""
+    },
+    {
+      "text": "2 バイト符号付き整数ダウンロードが完了しました",
+      "term": "2 バイト符号付き整数",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"2-byte signed Integer\" → JA=\"2 バイト符号付き整数\" | conf=high"
+    },
+    {
+      "text": "2 バイト符号付き整数が正常に動作します",
+      "term": "2 バイト符号付き整数",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"2-byte signed Integer\" → JA=\"2 バイト符号付き整数\" | conf=high"
+    },
+    {
+      "text": "システムは展開管理サーバーをサポートします",
+      "term": "展開管理サーバー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Deployment Administration Server\" → JA=\"展開管理サーバー\" | conf=high"
+    },
+    {
+      "text": "エラー: 展開管理サーバーが見つかりません",
+      "term": "展開管理サーバー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Deployment Administration Server\" → JA=\"展開管理サーバー\" | conf=high"
+    },
+    {
+      "text": "<b>展開管理サーバー</b>を使用してください",
+      "term": "展開管理サーバー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Deployment Administration Server\" → JA=\"展開管理サーバー\" | conf=high"
+    },
+    {
+      "text": "コントロール グループをインストールします",
+      "term": "コントロール グループ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"control group\" → JA=\"コントロール グループ\" | conf=high"
+    },
+    {
+      "text": "エラー: コントロール グループが見つかりません",
+      "term": "コントロール グループ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"control group\" → JA=\"コントロール グループ\" | conf=high"
+    },
+    {
+      "text": "クラスター順ディザーを使用してください",
+      "term": "コントロール グループ",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"コントロール グループ\""
+    },
+    {
+      "text": "クラスター順ディザーダウンロードが完了しました",
+      "term": "クラスター順ディザー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"cluster ordered dither\" → JA=\"クラスター順ディザー\" | conf=high"
+    },
+    {
+      "text": "エラー: クラスター順ディザーが見つかりません",
+      "term": "クラスター順ディザー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"cluster ordered dither\" → JA=\"クラスター順ディザー\" | conf=high"
+    },
+    {
+      "text": "コール マネージャーを選択します",
+      "term": "コール マネージャー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Call Manager\" → JA=\"コール マネージャー\" | conf=high"
+    },
+    {
+      "text": "コール マネージャーの設定を確認する",
+      "term": "コール マネージャー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Call Manager\" → JA=\"コール マネージャー\" | conf=high"
+    },
+    {
+      "text": "コール マネージャー{0}が完了しました",
+      "term": "コール マネージャー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Call Manager\" → JA=\"コール マネージャー\" | conf=high"
+    },
+    {
+      "text": "数値桁取り指定子が正常に動作します",
+      "term": "数値桁取り指定子",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"number scaling specifier\" → JA=\"数値桁取り指定子\" | conf=high"
+    },
+    {
+      "text": "システムは数値桁取り指定子をサポートします",
+      "term": "数値桁取り指定子",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"number scaling specifier\" → JA=\"数値桁取り指定子\" | conf=high"
+    },
+    {
+      "text": "<i>数値桁取り指定子</i>の設定を開く",
+      "term": "数値桁取り指定子",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"number scaling specifier\" → JA=\"数値桁取り指定子\" | conf=high"
+    },
+    {
+      "text": "数値桁取り指定子と数値桁取り指定子を選択します",
+      "term": "数値桁取り指定子",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"number scaling specifier\" → JA=\"数値桁取り指定子\" | conf=high"
+    },
+    {
+      "text": "オーディオ CDを使用してください",
+      "term": "数値桁取り指定子",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"数値桁取り指定子\""
+    },
+    {
+      "text": "メニューからオーディオ CDを選択",
+      "term": "オーディオ CD",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"audio CD\" → JA=\"オーディオ CD\" | conf=high"
+    },
+    {
+      "text": "オーディオ CDをインストールします",
+      "term": "オーディオ CD",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"audio CD\" → JA=\"オーディオ CD\" | conf=high"
+    },
+    {
+      "text": "会議出席依頼を返信を使用してください",
+      "term": "会議出席依頼を返信",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Reply with Meeting\" → JA=\"会議出席依頼を返信\" | conf=high"
+    },
+    {
+      "text": "会議出席依頼を返信ダウンロードが完了しました",
+      "term": "会議出席依頼を返信",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Reply with Meeting\" → JA=\"会議出席依頼を返信\" | conf=high"
+    },
+    {
+      "text": "DQS ナレッジ ベースの設定を確認する",
+      "term": "DQS ナレッジ ベース",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"DQS knowledge base\" → JA=\"DQS ナレッジ ベース\" | conf=high"
+    },
+    {
+      "text": "システムはDQS ナレッジ ベースをサポートします",
+      "term": "DQS ナレッジ ベース",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"DQS knowledge base\" → JA=\"DQS ナレッジ ベース\" | conf=high"
+    },
+    {
+      "text": "NOIDMIF ファイルを使用してください",
+      "term": "DQS ナレッジ ベース",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"DQS ナレッジ ベース\""
+    },
+    {
+      "text": "NOIDMIF ファイルを再起動してください",
+      "term": "NOIDMIF ファイル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"NOIDMIF file\" → JA=\"NOIDMIF ファイル\" | conf=high"
+    },
+    {
+      "text": "NOIDMIF ファイルの詳細を確認する",
+      "term": "NOIDMIF ファイル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"NOIDMIF file\" → JA=\"NOIDMIF ファイル\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>NOIDMIF ファイルが見つかりました",
+      "term": "NOIDMIF ファイル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"NOIDMIF file\" → JA=\"NOIDMIF ファイル\" | conf=high"
+    },
+    {
+      "text": "{0}のNOIDMIF ファイルを更新しました",
+      "term": "NOIDMIF ファイル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"NOIDMIF file\" → JA=\"NOIDMIF ファイル\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "NOIDMIF ファイル",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"NOIDMIF ファイル\""
+    },
+    {
+      "text": "ユーザー入力優先モードが正常に動作します",
+      "term": "ユーザー入力優先モード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"consume-first mode\" → JA=\"ユーザー入力優先モード\" | conf=high"
+    },
+    {
+      "text": "ユーザー入力優先モードを選択します",
+      "term": "ユーザー入力優先モード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"consume-first mode\" → JA=\"ユーザー入力優先モード\" | conf=high"
+    },
+    {
+      "text": "Web アプリケーションの設定を確認する",
+      "term": "Web アプリケーション",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"web application\" → JA=\"Web アプリケーション\" | conf=high"
+    },
+    {
+      "text": "Web アプリケーションを閉じてください",
+      "term": "Web アプリケーション",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"web application\" → JA=\"Web アプリケーション\" | conf=high"
+    },
+    {
+      "text": "見習いケーキ職人を使用してください",
+      "term": "Web アプリケーション",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"Web アプリケーション\""
+    },
+    {
+      "text": "見習いケーキ職人を再起動してください",
+      "term": "見習いケーキ職人",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Apprentice Baker\" → JA=\"見習いケーキ職人\" | conf=high"
+    },
+    {
+      "text": "見習いケーキ職人が正常に動作します",
+      "term": "見習いケーキ職人",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Apprentice Baker\" → JA=\"見習いケーキ職人\" | conf=high"
+    },
+    {
+      "text": "タスク ワークスペース ロケーター一覧を選択します",
+      "term": "タスク ワークスペース ロケーター一覧",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Task Workspace Locator List\" → JA=\"タスク ワークスペース ロケーター一覧\" | conf=high"
+    },
+    {
+      "text": "システムはタスク ワークスペース ロケーター一覧をサポートします",
+      "term": "タスク ワークスペース ロケーター一覧",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Task Workspace Locator List\" → JA=\"タスク ワークスペース ロケーター一覧\" | conf=high"
+    },
+    {
+      "text": "<b>タスク ワークスペース ロケーター一覧</b>を使用してください",
+      "term": "タスク ワークスペース ロケーター一覧",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Task Workspace Locator List\" → JA=\"タスク ワークスペース ロケーター一覧\" | conf=high"
+    },
+    {
+      "text": "タスク ワークスペース ロケーター一覧とタスク ワークスペース ロケーター一覧を選択します",
+      "term": "タスク ワークスペース ロケーター一覧",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"Task Workspace Locator List\" → JA=\"タスク ワークスペース ロケーター一覧\" | conf=high"
+    },
+    {
+      "text": "Tablet PC 入力パネルをインストールします",
+      "term": "Tablet PC 入力パネル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Tablet PC Input Panel\" → JA=\"Tablet PC 入力パネル\" | conf=high"
+    },
+    {
+      "text": "Tablet PC 入力パネルを使用してください",
+      "term": "Tablet PC 入力パネル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Tablet PC Input Panel\" → JA=\"Tablet PC 入力パネル\" | conf=high"
+    },
+    {
+      "text": "%sのTablet PC 入力パネルを確認",
+      "term": "Tablet PC 入力パネル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Tablet PC Input Panel\" → JA=\"Tablet PC 入力パネル\" | conf=high"
+    },
+    {
+      "text": "マニュアルオーダーセンターを使用してください",
+      "term": "Tablet PC 入力パネル",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"Tablet PC 入力パネル\""
+    },
+    {
+      "text": "マニュアルオーダーセンターを選択します",
+      "term": "マニュアルオーダーセンター",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Microsoft approved fulfillment source\" → JA=\"マニュアルオーダーセンター\" | conf=high"
+    },
+    {
+      "text": "マニュアルオーダーセンターを使用してください",
+      "term": "マニュアルオーダーセンター",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Microsoft approved fulfillment source\" → JA=\"マニュアルオーダーセンター\" | conf=high"
+    },
+    {
+      "text": "色合い-鮮やかさ-明るさを使用してください",
+      "term": "色合い-鮮やかさ-明るさ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"HLS\" → JA=\"色合い-鮮やかさ-明るさ\" | conf=high"
+    },
+    {
+      "text": "エラー: 色合い-鮮やかさ-明るさが見つかりません",
+      "term": "色合い-鮮やかさ-明るさ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"HLS\" → JA=\"色合い-鮮やかさ-明るさ\" | conf=high"
+    },
+    {
+      "text": "テスト アダプターを選択します",
+      "term": "テスト アダプター",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"test adapter\" → JA=\"テスト アダプター\" | conf=high"
+    },
+    {
+      "text": "テスト アダプターが正常に動作します",
+      "term": "テスト アダプター",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"test adapter\" → JA=\"テスト アダプター\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>テスト アダプターが見つかりました",
+      "term": "テスト アダプター",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"test adapter\" → JA=\"テスト アダプター\" | conf=high"
+    },
+    {
+      "text": "ローカル レポートを使用してください",
+      "term": "テスト アダプター",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"テスト アダプター\""
+    },
+    {
+      "text": "ローカル レポートをインストールします",
+      "term": "ローカル レポート",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"local report\" → JA=\"ローカル レポート\" | conf=high"
+    },
+    {
+      "text": "ローカル レポートを選択します",
+      "term": "ローカル レポート",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"local report\" → JA=\"ローカル レポート\" | conf=high"
+    },
+    {
+      "text": "システム統計情報を閉じてください",
+      "term": "システム統計情報",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"system statistics\" → JA=\"システム統計情報\" | conf=high"
+    },
+    {
+      "text": "システム統計情報の設定を確認する",
+      "term": "システム統計情報",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"system statistics\" → JA=\"システム統計情報\" | conf=high"
+    },
+    {
+      "text": "システム統計情報{0}が完了しました",
+      "term": "システム統計情報",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"system statistics\" → JA=\"システム統計情報\" | conf=high"
+    },
+    {
+      "text": "",
+      "term": "システム統計情報",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"システム統計情報\""
+    },
+    {
+      "text": "メニューからプロモーション コードを選択",
+      "term": "プロモーション コード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"promotion code\" → JA=\"プロモーション コード\" | conf=high"
+    },
+    {
+      "text": "プロモーション コードを閉じてください",
+      "term": "プロモーション コード",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"promotion code\" → JA=\"プロモーション コード\" | conf=high"
+    },
+    {
+      "text": "フォルダー ホーム ページを使用してください",
+      "term": "プロモーション コード",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"プロモーション コード\""
+    },
+    {
+      "text": "フォルダー ホーム ページを選択します",
+      "term": "フォルダー ホーム ページ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"folder home page\" → JA=\"フォルダー ホーム ページ\" | conf=high"
+    },
+    {
+      "text": "フォルダー ホーム ページの詳細を確認する",
+      "term": "フォルダー ホーム ページ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"folder home page\" → JA=\"フォルダー ホーム ページ\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>フォルダー ホーム ページが見つかりました",
+      "term": "フォルダー ホーム ページ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"folder home page\" → JA=\"フォルダー ホーム ページ\" | conf=high"
+    },
+    {
+      "text": "フォルダー ホーム ページとフォルダー ホーム ページを選択します",
+      "term": "フォルダー ホーム ページ",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"folder home page\" → JA=\"フォルダー ホーム ページ\" | conf=high"
+    },
+    {
+      "text": "アイ ドロッパーをインストールします",
+      "term": "アイ ドロッパー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"eyedropper\" → JA=\"アイ ドロッパー\" | conf=high"
+    },
+    {
+      "text": "メニューからアイ ドロッパーを選択",
+      "term": "アイ ドロッパー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"eyedropper\" → JA=\"アイ ドロッパー\" | conf=high"
+    },
+    {
+      "text": "ステータス フィルターの規則を再起動してください",
+      "term": "ステータス フィルターの規則",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"status filter rule\" → JA=\"ステータス フィルターの規則\" | conf=high"
+    },
+    {
+      "text": "設定でステータス フィルターの規則を有効にする",
+      "term": "ステータス フィルターの規則",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"status filter rule\" → JA=\"ステータス フィルターの規則\" | conf=high"
+    },
+    {
+      "text": "リモート正常性チェックを使用してください",
+      "term": "ステータス フィルターの規則",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"ステータス フィルターの規則\""
+    },
+    {
+      "text": "リモート正常性チェックを閉じてください",
+      "term": "リモート正常性チェック",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Remote Health Check\" → JA=\"リモート正常性チェック\" | conf=high"
+    },
+    {
+      "text": "リモート正常性チェックを選択します",
+      "term": "リモート正常性チェック",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Remote Health Check\" → JA=\"リモート正常性チェック\" | conf=high"
+    },
+    {
+      "text": "{0}のリモート正常性チェックを更新しました",
+      "term": "リモート正常性チェック",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"Remote Health Check\" → JA=\"リモート正常性チェック\" | conf=high"
+    },
+    {
+      "text": "メニューからヒーロー イメージの横幅を選択",
+      "term": "ヒーロー イメージの横幅",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"hero wide\" → JA=\"ヒーロー イメージの横幅\" | conf=high"
+    },
+    {
+      "text": "ヒーロー イメージの横幅が正常に動作します",
+      "term": "ヒーロー イメージの横幅",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"hero wide\" → JA=\"ヒーロー イメージの横幅\" | conf=high"
+    },
+    {
+      "text": "<i>ヒーロー イメージの横幅</i>の設定を開く",
+      "term": "ヒーロー イメージの横幅",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"hero wide\" → JA=\"ヒーロー イメージの横幅\" | conf=high"
+    },
+    {
+      "text": "携帯メール アドレスを再起動してください",
+      "term": "携帯メール アドレス",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"mobile address\" → JA=\"携帯メール アドレス\" | conf=high"
+    },
+    {
+      "text": "携帯メール アドレスをインストールします",
+      "term": "携帯メール アドレス",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"mobile address\" → JA=\"携帯メール アドレス\" | conf=high"
+    },
+    {
+      "text": "ビデオ通話切換えを使用してください",
+      "term": "携帯メール アドレス",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"携帯メール アドレス\""
+    },
+    {
+      "text": "ビデオ通話切換えを選択します",
+      "term": "ビデオ通話切換え",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"video upgrade\" → JA=\"ビデオ通話切換え\" | conf=high"
+    },
+    {
+      "text": "ビデオ通話切換えを使用してください",
+      "term": "ビデオ通話切換え",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"video upgrade\" → JA=\"ビデオ通話切換え\" | conf=high"
+    },
+    {
+      "text": "プライベート会議を選択します",
+      "term": "プライベート会議",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"private meeting\" → JA=\"プライベート会議\" | conf=high"
+    },
+    {
+      "text": "システムはプライベート会議をサポートします",
+      "term": "プライベート会議",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"private meeting\" → JA=\"プライベート会議\" | conf=high"
+    },
+    {
+      "text": "システムは分析コード派生ルールをサポートします",
+      "term": "分析コード派生ルール",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"dimension derivation rule\" → JA=\"分析コード派生ルール\" | conf=high"
+    },
+    {
+      "text": "分析コード派生ルールを選択します",
+      "term": "分析コード派生ルール",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"dimension derivation rule\" → JA=\"分析コード派生ルール\" | conf=high"
+    },
+    {
+      "text": "<b>分析コード派生ルール</b>を使用してください",
+      "term": "分析コード派生ルール",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"dimension derivation rule\" → JA=\"分析コード派生ルール\" | conf=high"
+    },
+    {
+      "text": "分析コード派生ルール{0}が完了しました",
+      "term": "分析コード派生ルール",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"dimension derivation rule\" → JA=\"分析コード派生ルール\" | conf=high"
+    },
+    {
+      "text": "分析コード派生ルールと分析コード派生ルールを選択します",
+      "term": "分析コード派生ルール",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"dimension derivation rule\" → JA=\"分析コード派生ルール\" | conf=high"
+    },
+    {
+      "text": "子のモデル サイトを使用してください",
+      "term": "分析コード派生ルール",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"分析コード派生ルール\""
+    },
+    {
+      "text": "",
+      "term": "分析コード派生ルール",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "empty text | JA=\"分析コード派生ルール\""
+    },
+    {
+      "text": "子のモデル サイトを再起動してください",
+      "term": "子のモデル サイト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"child model site\" → JA=\"子のモデル サイト\" | conf=high"
+    },
+    {
+      "text": "子のモデル サイトの更新が利用可能です",
+      "term": "子のモデル サイト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"child model site\" → JA=\"子のモデル サイト\" | conf=high"
+    },
+    {
+      "text": "システムはカスタム ユーザー ポリシーをサポートします",
+      "term": "カスタム ユーザー ポリシー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"custom user policy\" → JA=\"カスタム ユーザー ポリシー\" | conf=high"
+    },
+    {
+      "text": "カスタム ユーザー ポリシーの設定を確認する",
+      "term": "カスタム ユーザー ポリシー",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"custom user policy\" → JA=\"カスタム ユーザー ポリシー\" | conf=high"
+    },
+    {
+      "text": "更新プログラム ワークスペースが正常に動作します",
+      "term": "更新プログラム ワークスペース",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Updates workspace\" → JA=\"更新プログラム ワークスペース\" | conf=high"
+    },
+    {
+      "text": "設定で更新プログラム ワークスペースを有効にする",
+      "term": "更新プログラム ワークスペース",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Updates workspace\" → JA=\"更新プログラム ワークスペース\" | conf=high"
+    },
+    {
+      "text": "メンバーシップの規則を使用してください",
+      "term": "更新プログラム ワークスペース",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"更新プログラム ワークスペース\""
+    },
+    {
+      "text": "メンバーシップの規則を使用してください",
+      "term": "メンバーシップの規則",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"membership rule\" → JA=\"メンバーシップの規則\" | conf=high"
+    },
+    {
+      "text": "メンバーシップの規則の設定を確認する",
+      "term": "メンバーシップの規則",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"membership rule\" → JA=\"メンバーシップの規則\" | conf=high"
+    },
+    {
+      "text": "<i>メンバーシップの規則</i>の設定を開く",
+      "term": "メンバーシップの規則",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"membership rule\" → JA=\"メンバーシップの規則\" | conf=high"
+    },
+    {
+      "text": "ステートレス サービスを開きます",
+      "term": "ステートレス サービス",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"stateless service\" → JA=\"ステートレス サービス\" | conf=high"
+    },
+    {
+      "text": "ステートレス サービスを使用してください",
+      "term": "ステートレス サービス",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"stateless service\" → JA=\"ステートレス サービス\" | conf=high"
+    },
+    {
+      "text": "ステートレス サービス{0}が完了しました",
+      "term": "ステートレス サービス",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "placeholder stripped | EN=\"stateless service\" → JA=\"ステートレス サービス\" | conf=high"
+    },
+    {
+      "text": "Azure アプリ コンサルティングが正常に動作します",
+      "term": "Azure アプリ コンサルティング",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Azure App Consult\" → JA=\"Azure アプリ コンサルティング\" | conf=high"
+    },
+    {
+      "text": "Azure アプリ コンサルティングを再起動してください",
+      "term": "Azure アプリ コンサルティング",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Azure App Consult\" → JA=\"Azure アプリ コンサルティング\" | conf=high"
+    },
+    {
+      "text": "ビジュアル フィルターを使用してください",
+      "term": "Azure アプリ コンサルティング",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"Azure アプリ コンサルティング\""
+    },
+    {
+      "text": "システムはビジュアル フィルターをサポートします",
+      "term": "ビジュアル フィルター",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"visual filtering\" → JA=\"ビジュアル フィルター\" | conf=high"
+    },
+    {
+      "text": "メニューからビジュアル フィルターを選択",
+      "term": "ビジュアル フィルター",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"visual filtering\" → JA=\"ビジュアル フィルター\" | conf=high"
+    },
+    {
+      "text": "Bing Search バンドルダウンロードが完了しました",
+      "term": "Bing Search バンドル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Bing Search bundle\" → JA=\"Bing Search バンドル\" | conf=high"
+    },
+    {
+      "text": "Bing Search バンドルを選択します",
+      "term": "Bing Search バンドル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"Bing Search bundle\" → JA=\"Bing Search バンドル\" | conf=high"
+    },
+    {
+      "text": "<x id=\"1\"/>Bing Search バンドルが見つかりました",
+      "term": "Bing Search バンドル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "markup stripped | EN=\"Bing Search bundle\" → JA=\"Bing Search バンドル\" | conf=high"
+    },
+    {
+      "text": "Bing Search バンドルとBing Search バンドルを選択します",
+      "term": "Bing Search バンドル",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "multi-occurrence | EN=\"Bing Search bundle\" → JA=\"Bing Search バンドル\" | conf=high"
+    },
+    {
+      "text": "エラー: 1000 インプレッションあたりのコストが見つかりません",
+      "term": "1000 インプレッションあたりのコスト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"cost per thousand impressions\" → JA=\"1000 インプレッションあたりのコスト\" | conf=high"
+    },
+    {
+      "text": "設定で1000 インプレッションあたりのコストを有効にする",
+      "term": "1000 インプレッションあたりのコスト",
+      "caseSensitive": false,
+      "expectedFound": true,
+      "expectedConfidence": "high",
+      "note": "standalone | EN=\"cost per thousand impressions\" → JA=\"1000 インプレッションあたりのコスト\" | conf=high"
+    },
+    {
+      "text": "定義を使用してください",
+      "term": "1000 インプレッションあたりのコスト",
+      "caseSensitive": false,
+      "expectedFound": false,
+      "expectedConfidence": null,
+      "note": "term absent | JA=\"1000 インプレッションあたりのコスト\""
+    }
+  ]
+}
