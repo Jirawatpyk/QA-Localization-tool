@@ -16,6 +16,18 @@
 /playwright-report/
 e2e/fixtures/*.json
 
+# large test data (downloaded separately — see docs/test-data/README.md)
+docs/test-data/microsoft-terminology/
+docs/test-data/yaitron-en-th/
+docs/test-data/oasis-xliff-test-suite/
+docs/test-data/sap-xliff/
+docs/test-data/ocelot-test-files/
+docs/test-data/capstanlqc-xliff/
+docs/test-data/locize-xliff-fixtures/
+docs/test-data/pwa-install-i18n/
+docs/test-data/lingohub-examples/
+docs/test-data/tbx-official/
+
 # next.js
 /.next/
 /out/

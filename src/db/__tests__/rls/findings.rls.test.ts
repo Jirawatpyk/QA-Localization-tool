@@ -1,68 +1,18 @@
 /**
  * RLS Tests: findings table — cross-tenant isolation
  *
- * Requires: `npx supabase start` running locally
  * Run with: `npm run test:rls`
  */
-import { createClient } from '@supabase/supabase-js'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://127.0.0.1:54321'
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
+import { admin, type TestTenant, cleanupTestTenant, setupTestTenant, tenantClient } from './helpers'
 
-const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
-  auth: { persistSession: false },
-})
-
-let tenantA: {
-  id: string
-  userId: string
-  jwt: string
-  projectId: string
-  fileId: string
-  segmentId: string
-}
-let tenantB: { id: string; userId: string; jwt: string }
-
-async function setupTenant(email: string) {
-  const { data: authUser } = await admin.auth.admin.createUser({
-    email,
-    password: 'test-password-123!',
-    email_confirm: true,
-  })
-  const userId = authUser.user!.id
-
-  const { data: tenant } = await admin
-    .from('tenants')
-    .insert({ name: `Tenant ${email}`, status: 'active' })
-    .select('id')
-    .single()
-  const tenantId = tenant!.id
-
-  await admin.from('users').insert({ id: userId, tenant_id: tenantId, email, display_name: email })
-  await admin.from('user_roles').insert({ user_id: userId, tenant_id: tenantId, role: 'admin' })
-  await admin.auth.admin.updateUserById(userId, {
-    app_metadata: { tenant_id: tenantId, user_role: 'admin' },
-  })
-
-  const { data: session } = await admin.auth.signInWithPassword({
-    email,
-    password: 'test-password-123!',
-  })
-
-  return { id: tenantId, userId, jwt: session.session!.access_token }
-}
-
-function tenantClient(jwt: string) {
-  return createClient(SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '', {
-    global: { headers: { Authorization: `Bearer ${jwt}` } },
-    auth: { persistSession: false },
-  })
-}
+let tenantA: TestTenant & { projectId: string; fileId: string; segmentId: string }
+let tenantB: TestTenant
 
 beforeAll(async () => {
-  const a = await setupTenant('rls-findings-a@test.local')
-  const b = await setupTenant('rls-findings-b@test.local')
+  const a = await setupTestTenant('rls-findings-a@test.local')
+  const b = await setupTestTenant('rls-findings-b@test.local')
 
   // Create project → file → segment → finding for Tenant A
   const { data: project } = await admin
@@ -124,8 +74,8 @@ beforeAll(async () => {
 }, 30000)
 
 afterAll(async () => {
-  if (tenantA?.userId) await admin.auth.admin.deleteUser(tenantA.userId)
-  if (tenantB?.userId) await admin.auth.admin.deleteUser(tenantB.userId)
+  await cleanupTestTenant(tenantA)
+  await cleanupTestTenant(tenantB)
 })
 
 describe('findings RLS', () => {

@@ -1,66 +1,23 @@
 /**
  * RLS Tests: user_roles table — cross-tenant role isolation
  *
- * Requires: `npx supabase start` running locally
  * Run with: `npm run test:rls`
  */
-import { createClient } from '@supabase/supabase-js'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://127.0.0.1:54321'
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
+import { type TestTenant, cleanupTestTenant, setupTestTenant, tenantClient } from './helpers'
 
-const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
-  auth: { persistSession: false },
-})
-
-let tenantA: { id: string; userId: string; jwt: string }
-let tenantB: { id: string; userId: string; jwt: string }
-
-async function setupTenant(email: string) {
-  const { data: authUser } = await admin.auth.admin.createUser({
-    email,
-    password: 'test-password-123!',
-    email_confirm: true,
-  })
-  const userId = authUser.user!.id
-
-  const { data: tenant } = await admin
-    .from('tenants')
-    .insert({ name: `Tenant ${email}`, status: 'active' })
-    .select('id')
-    .single()
-  const tenantId = tenant!.id
-
-  await admin.from('users').insert({ id: userId, tenant_id: tenantId, email, display_name: email })
-  await admin.from('user_roles').insert({ user_id: userId, tenant_id: tenantId, role: 'admin' })
-  await admin.auth.admin.updateUserById(userId, {
-    app_metadata: { tenant_id: tenantId, user_role: 'admin' },
-  })
-
-  const { data: session } = await admin.auth.signInWithPassword({
-    email,
-    password: 'test-password-123!',
-  })
-
-  return { id: tenantId, userId, jwt: session.session!.access_token }
-}
-
-function tenantClient(jwt: string) {
-  return createClient(SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '', {
-    global: { headers: { Authorization: `Bearer ${jwt}` } },
-    auth: { persistSession: false },
-  })
-}
+let tenantA: TestTenant
+let tenantB: TestTenant
 
 beforeAll(async () => {
-  tenantA = await setupTenant('rls-roles-a@test.local')
-  tenantB = await setupTenant('rls-roles-b@test.local')
+  tenantA = await setupTestTenant('rls-roles-a@test.local')
+  tenantB = await setupTestTenant('rls-roles-b@test.local')
 }, 30000)
 
 afterAll(async () => {
-  if (tenantA?.userId) await admin.auth.admin.deleteUser(tenantA.userId)
-  if (tenantB?.userId) await admin.auth.admin.deleteUser(tenantB.userId)
+  await cleanupTestTenant(tenantA)
+  await cleanupTestTenant(tenantB)
 })
 
 describe('user_roles RLS', () => {

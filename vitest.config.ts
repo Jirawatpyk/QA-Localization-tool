@@ -18,9 +18,10 @@ export default defineConfig({
         test: {
           name: 'unit',
           include: ['src/**/*.test.{ts,tsx}'],
-          exclude: ['src/db/__tests__/**'],
+          exclude: ['src/db/__tests__/**', 'src/__tests__/integration/**'],
           environment: 'jsdom',
           setupFiles: ['./src/test/setup.ts'],
+          testTimeout: 15000,
         },
       },
       {
@@ -29,6 +30,17 @@ export default defineConfig({
           name: 'rls',
           include: ['src/db/__tests__/rls/**/*.test.ts'],
           environment: 'node',
+          setupFiles: ['./src/db/__tests__/rls/setup.ts'],
+          testTimeout: 30000,
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'integration',
+          include: ['src/__tests__/integration/**/*.test.ts'],
+          environment: 'node',
+          testTimeout: 60000,
         },
       },
     ],

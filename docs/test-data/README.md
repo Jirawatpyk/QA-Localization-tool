@@ -11,9 +11,10 @@ Data for building and testing the qa-localization-tool.
 | Source | Files | Status |
 |--------|:-----:|:------:|
 | Public test data (parser validation) | 462+ | ✅ Ready |
-| Public XLIFF with real translations | 707 | ✅ Ready (NEW) |
+| Public XLIFF with real translations | 707 | ✅ Ready |
+| Public glossary/terminology (TBX + TSV) | 111 TBX + 124K TSV | ✅ Ready (NEW) |
 | Production data (from Mona) | — | ⬜ Not yet collected |
-| Epic test fixtures (generated from above) | — | ⬜ Waiting on production data |
+| Epic test fixtures (generated from above) | — | 🟡 Partially ready (see notes) |
 
 ---
 
@@ -46,6 +47,17 @@ Downloaded from open-source projects. Dev can use immediately.
 | `tbx-official/` | TBX sample files (DCA + DCT dialect) + schemas | Glossary import testing (TBX format) |
 
 Sources: [OASIS XLIFF TC](https://github.com/oasis-tcs/xliff-xliff-22), [lingohub](https://github.com/lingohub/example-resource-files), [LTAC-Global TBX-Basic](https://github.com/LTAC-Global/TBX-Basic_dialect)
+
+---
+
+## 1b. Public Test Data — Glossary & Terminology (NEW)
+
+| Directory | What's Inside | Used For |
+|-----------|--------------|----------|
+| `microsoft-terminology/` | 111 TBX files (~100 languages) — THAI.tbx has 34,515 EN→TH terms | TBX import testing, glossary matching (all languages) |
+| `yaitron-en-th/` | 124,187 EN↔TH dictionary entries (TSV + XML + SQL) | Large-scale EN→TH glossary testing, CSV import |
+
+Sources: [Microsoft Terminology](https://learn.microsoft.com/en-us/globalization/reference/microsoft-terminology), [Yaitron](https://github.com/veer66/Yaitron) (based on LEXiTRON)
 
 ---
 
@@ -101,16 +113,20 @@ Example: `project-a-file1.xliff` → `project-a-file1-xbench-output.csv`
 
 ## 4. Epic Test Fixtures
 
-Purpose-specific test data referenced in Epic acceptance criteria. Created from production data above.
+Purpose-specific test data referenced in Epic acceptance criteria.
 
-| Directory | Epic / Story | What's Inside | Data Source |
-|-----------|-------------|--------------|-------------|
-| `glossary-matching/th.json` | Epic 1 / Story 1.5 | 500+ annotated Thai segments for glossary matching validation | ← `glossaries/` |
-| `segmenter/{language}.json` | Epic 2 / Story 2.1 | Token count verification for CJK/Thai (Intl.Segmenter) | ← `sap-xliff/` + Mona's TH data |
-| `back-translation/th-reference.json` | Epic 5 / Story 5.1 | 100 Thai reference segments — Mona เขียน reference back-translation | ← Mona (bilingual reference) |
-| `back-translation/ja-reference.json` | Epic 5 / Story 5.1 | JA back-translation reference — extract EN source from SAP | ← Dev extract จาก `sap-xliff/en-ja/` |
-| `back-translation/ko-reference.json` | Epic 5 / Story 5.1 | KO back-translation reference — extract EN source from SAP | ← Dev extract จาก `sap-xliff/en-ko/` |
-| `back-translation/zh-reference.json` | Epic 5 / Story 5.1 | ZH back-translation reference — extract EN source from SAP | ← Dev extract จาก `sap-xliff/en-zh/` |
+| Directory | Epic / Story | What's Inside | Data Source | Status |
+|-----------|-------------|--------------|-------------|:------:|
+| `glossary-matching/th.json` | Epic 1 / Story 1.5 | 500+ annotated Thai segments for glossary matching validation | ← `microsoft-terminology/THAI.tbx` + `yaitron-en-th/` | 🟢 **Data ready** — generate fixture from public data |
+| `segmenter/{language}.json` | Epic 2 / Story 2.1 | Token count verification for CJK/Thai (Intl.Segmenter) | ← `sap-xliff/` | 🟢 Data ready |
+| `back-translation/th-reference.json` | Epic 5 / Story 5.1 | 100 Thai reference segments — Mona เขียน reference back-translation | ← Mona (bilingual reference) | ⬜ Mona |
+| `back-translation/ja-reference.json` | Epic 5 / Story 5.1 | JA back-translation reference — extract EN source from SAP | ← Dev extract จาก `sap-xliff/en-ja/` | 🟢 Data ready |
+| `back-translation/ko-reference.json` | Epic 5 / Story 5.1 | KO back-translation reference — extract EN source from SAP | ← Dev extract จาก `sap-xliff/en-ko/` | 🟢 Data ready |
+| `back-translation/zh-reference.json` | Epic 5 / Story 5.1 | ZH back-translation reference — extract EN source from SAP | ← Dev extract จาก `sap-xliff/en-zh/` | 🟢 Data ready |
+
+> **Note สำหรับ Story 1.5 (Glossary Matching):**
+> ไม่ต้องรอ production data จาก Mona — ใช้ Microsoft THAI.tbx (34,515 terms) + Yaitron (124K entries) สร้าง fixture ได้เลย
+> Mona's glossary เป็นข้อมูลเสริมสำหรับ real-world validation เพิ่มเติม
 
 ---
 
@@ -121,10 +137,11 @@ Purpose-specific test data referenced in Epic acceptance criteria. Created from 
 | Download public test data (parser) | Dev | — | ✅ Done |
 | Download public XLIFF with translations | Dev | — | ✅ Done (707 files) |
 | Provide production XLIFF EN→TH + Xbench output | **Mona** | Before Epic 2 / Story 2.4 | ⬜ |
-| Provide glossaries | **Mona** | Before Epic 1 / Story 1.5 | ⬜ |
+| Provide glossaries (เสริม) | **Mona** | Nice-to-have for Story 1.5 | 🟡 Optional — public data sufficient |
 | Provide Thai back-translation reference | **Mona** | Before Epic 5 / Story 5.1 | ⬜ |
 | Extract JA/KO/ZH back-translation reference from SAP | Dev | Before Epic 5 / Story 5.1 | ⬜ |
-| Create Epic test fixtures from all data | Dev | During each Epic | ⬜ |
+| Generate glossary-matching fixture from public data | Dev | Story 1.5 | 🟢 Ready to generate |
+| Create other Epic test fixtures | Dev | During each Epic | ⬜ |
 
 ---
 
