@@ -1,6 +1,6 @@
 # Story 1.4: Glossary Import & Management
 
-Status: review
+Status: done
 
 <!-- Validated: Quality checklist passed — 5 critical fixes, 4 enhancements, 2 optimizations applied. -->
 
