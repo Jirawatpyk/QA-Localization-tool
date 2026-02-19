@@ -1,6 +1,6 @@
 # Story 1.3: Project Management & Configuration
 
-Status: review
+Status: done
 
 <!-- Validation: PASSED — Create-story validation: 29 issues resolved. SM Review: 3 Critical + 3 High + 4 Medium + 2 Low found and resolved. -->
 
@@ -63,7 +63,7 @@ Set up the feature module directory and validation schemas.
     description: z.string().max(1000).optional(),
     sourceLang: bcp47Schema,
     targetLangs: z.array(bcp47Schema).min(1, 'At least one target language required'),
-    processingMode: z.enum(['economy', 'thorough']),
+    processingMode: z.enum(['economy', 'thorough']).default('economy'),  // optional at create time, defaults to economy
   })
 
   export const updateProjectSchema = z.object({
@@ -912,7 +912,7 @@ Claude Opus 4.6 (claude-opus-4-6)
 ### Change Log
 
 - 2026-02-18: Implemented Story 1.3 — Project Management & Configuration (all 8 tasks, 40 new tests)
-- 2026-02-18: Code Review fixes (8 findings resolved):
+- 2026-02-18: Code Review Round 1 fixes (8 findings resolved):
   - CR1 [CRITICAL]: Fixed test timeout in updateProject.action.test.ts (added 15s timeout for first test)
   - CR2 [HIGH]: Fixed LanguagePairConfigTable passing wrong projectId — added projectId prop, wired through from ProjectSettings
   - CR3 [HIGH]: All 3 server actions now catch requireRole() throws and return ActionResult (consistent with createUser.action.ts reference)
@@ -921,6 +921,13 @@ Claude Opus 4.6 (claude-opus-4-6)
   - CR6 [MEDIUM]: Added CompactLayout wrapper to ProjectSettings page for consistent layout
   - CR7 [MEDIUM]: Added aria-describedby linking error messages to form fields in ProjectCreateDialog
   - CR8 [LOW]: Simplified ProjectCard heading — removed nested h3 inside CardTitle
+- 2026-02-18: Code Review Round 2 — PASS (no new findings)
+- 2026-02-19: UX refactor — removed Processing Mode from Create Project dialog:
+  - Per UX spec, Processing Mode selection belongs at upload time (Epic 2, Story 2.6 ProcessingModeDialog), not project creation
+  - `createProjectSchema.processingMode` changed from required to `.default('economy')`
+  - Removed RadioGroup UI, `processingMode` state, and related imports from ProjectCreateDialog.tsx
+  - Added 2 new test cases: default behavior + explicit override (total schema tests: 21)
+  - Processing Mode remains editable in Project Settings (ProjectSettings.tsx) as intended
 
 ### File List
 
