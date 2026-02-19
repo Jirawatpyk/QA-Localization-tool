@@ -1027,7 +1027,7 @@ claude-sonnet-4-6
 
 - Test data fix: `'บาน'` → `'บาล'` (correct substring of `'โรงพยาบาล'`). The tests in TDD red phase used `'บาน'` (น) which is NOT a substring of `'โรงพยาบาล'` (ล).
 - Test fix: `validateBoundary > should return low` — Thai ICU on this machine splits `'โรงพยาบาล'` as `'โรง|พยาบาล'`, making position 3 a real boundary. Changed test to use position 1 (`'รงพ'`) which is never a boundary.
-- Function signature change: `checkGlossaryCompliance` changed from `(targetText, terms[], targetLang, ctx)` to `(sourceLang, targetLang, targetText, ctx)` with internal `getCachedGlossaryTerms` call — to match TDD test expectations.
+- Function signature: initial TDD implementation temporarily used `(sourceLang, targetLang, targetText, ctx)` with internal `getCachedGlossaryTerms` call. Refactored (post-impl) to final design `(targetText, terms[], targetLang, ctx)` — caller (Rule Engine, Story 2.4) passes pre-filtered terms. Removed `sourceLang` (unused) and internal cache coupling. `GlossaryTerm = InferSelectModel<typeof glossaryTerms>` defined locally via Drizzle.
 - Logger mock fix: `{ default: mockLogger }` → `{ logger: mockLogger }` in test (named export, not default).
 - User request: Added `ja.json`, `zh.json`, `en-fr-de.json` fixtures per Mona's request for all-language coverage.
 
@@ -1035,7 +1035,7 @@ claude-sonnet-4-6
 
 - **Task 1**: Created `src/lib/language/segmenterCache.ts` (singleton cache) and `src/lib/language/markupStripper.ts` (equal-length space replacement). No npm deps — uses built-in `Intl.Segmenter`.
 - **Task 2**: Created `src/features/glossary/matching/matchingTypes.ts` with `BoundaryConfidence`, `GlossaryTermMatch`, `GlossaryCheckResult`, `SegmentContext` types.
-- **Task 3**: Created `src/features/glossary/matching/glossaryMatcher.ts` — hybrid matching engine: substring search (primary) + Intl.Segmenter boundary validation (secondary). Dual-logging (audit + pino) for boundary mismatches per AD 5.5. De-duplicates logging per `${segmentId}:${term}`.
+- **Task 3**: Created `src/features/glossary/matching/glossaryMatcher.ts` — hybrid matching engine: substring search (primary) + Intl.Segmenter boundary validation (secondary). Dual-logging (audit + pino) for boundary mismatches per AD 5.5. De-duplicates logging per `${segmentId}:${term}`. **Refactored (post-impl)**: removed internal `getCachedGlossaryTerms` call and unused `sourceLang` param. Final signature: `checkGlossaryCompliance(targetText, terms: GlossaryTerm[], targetLang, ctx)` — caller (Rule Engine) loads and filters terms before calling.
 - **Task 4**: Created `docs/test-data/glossary-matching/th.json` (15 cases). Added per user request: `ja.json` (15 cases), `zh.json` (15 cases), `en-fr-de.json` (15 cases).
 - **Task 5**: 57 new unit tests in 3 files — all pass. `type-check` 0 errors, `lint` 0 warnings, `build` successful. Pre-existing flaky tests (`setupNewUser`, `createTerm`) fail intermittently in parallel run but pass independently — not caused by Story 1.5.
 - **Integration test**: Created `src/__tests__/integration/glossary-matching-real-data.test.ts` per Mona's request ("สร้าง integration test เลยครับ"). Loads all 4 corpus fixtures (th/ja/zh/en-fr-de) and runs `findTermInText()` against each annotated case. 814/814 integration tests pass. FR43 thresholds validated: false-negative < 5%, false-positive < 10%. Confidence mismatch is soft warning (console.info) to handle ICU version differences across machines. Required inline `vi.mock('server-only', () => ({}))` + mocks for audit/logger/cache (integration vitest project has no setupFiles).
@@ -1067,3 +1067,6 @@ claude-sonnet-4-6
 **Modified files:**
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` (status: in-progress → review)
 - `_bmad-output/implementation-artifacts/1-5-glossary-matching-engine-no-space-languages.md` (tasks checked, status updated)
+- `src/features/glossary/matching/glossaryMatcher.ts` (refactor: `checkGlossaryCompliance` signature → caller-passes-terms, removed `getCachedGlossaryTerms` import, added `GlossaryTerm` local type)
+- `src/features/glossary/matching/glossaryMatcher.test.ts` (refactor: removed `mockGetCachedGlossaryTerms`, updated all 16 `checkGlossaryCompliance` call sites)
+- `docs/test-data/README.md` (updated Epic Test Fixtures table — all 4 fixtures ✅ Done with generator scripts)
