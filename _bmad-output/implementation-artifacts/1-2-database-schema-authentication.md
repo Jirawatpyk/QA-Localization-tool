@@ -1211,3 +1211,82 @@ The following 5 bugs were discovered during the first production signup test and
 | CR4 | 4 | 1 High, 2 Medium, 1 Low | 118 |
 | CR5 | 7 | 2 High, 3 Medium, 2 Low | 120 |
 | **Total** | **34** | **3 Critical, 11 High, 13 Medium, 7 Low** | **120 tests** |
+
+### E2E Tests & RLS Infrastructure — 2026-02-19
+
+**Context:** After 5 CR rounds, moved from code review to E2E validation. Supabase Cloud available with `mailer_autoconfirm: true`.
+
+#### E2E Auth-Tenant Tests (7 tests)
+
+Created `e2e/auth-tenant.spec.ts` — self-contained Playwright tests proving auth flow works end-to-end:
+
+| # | Test | Verifies |
+|---|------|----------|
+| 1 | Unauthenticated → /dashboard → redirect /login | Proxy redirect |
+| 2 | Unauthenticated → /admin → redirect /login | Protected route |
+| 3 | Signup → create account → redirect /dashboard | setupNewUser, tenant creation |
+| 4 | Login → redirect /dashboard | signInWithPassword |
+| 5 | Login invalid credentials → error toast | Error handling |
+| 6 | Authenticated → visit /login → redirect /dashboard | Proxy auth redirect |
+| 7 | Admin → visit /admin → see User Management | RBAC admin access |
+
+**Design:** `test.describe.serial()` for ordered flow, unique email per run (`e2e-${Date.now()}@test.local`), no globalSetup/storageState.
+
+#### RLS Test Infrastructure Fixes
+
+**3 bugs found and fixed in RLS tests:**
+
+| # | Bug | Root Cause | Fix |
+|---|-----|-----------|-----|
+| RLS-1 | `supabaseKey is required` — all RLS tests fail | `.env.local` not loaded by Vitest node environment | Created `src/db/__tests__/rls/setup.ts` with dotenv; added `setupFiles` to rls vitest project |
+| RLS-2 | `Cannot read properties of null (reading 'id')` — 3 test files crash in beforeAll | Hardcoded emails from previous runs still exist; `createUser` returns null for duplicates | Created shared `helpers.ts` with `cleanupStaleUser()` that deletes existing user+data before create |
+| RLS-3 | `new row violates row-level security policy for table "tenants"` — 2nd tenant creation fails | `admin.auth.signInWithPassword()` pollutes admin client session → subsequent service_role calls use user JWT → RLS blocks | Use separate anon client for sign-in; admin client stays on service_role |
+
+**New shared helper:** `src/db/__tests__/rls/helpers.ts`
+- `setupTestTenant(email)` — idempotent: cleanup stale → create user → tenant → role → JWT
+- `cleanupTestTenant(tenant)` — delete user_roles → users → auth user
+- `admin` / `tenantClient(jwt)` — shared client factories
+
+#### Cloud Migration Fixes
+
+**Audit of Supabase Cloud migration state revealed gaps:**
+
+| Migration | Expected | Actual | Action |
+|-----------|----------|--------|--------|
+| 00000 drizzle_schema | Applied | ✅ Applied | — |
+| 00001 rls_policies | Applied | ✅ Applied (RLS on 10 tables) | — |
+| 00002 audit_logs_immutability | Applied | ⚠️ Partial — function exists but RLS disabled + trigger not attached | Fixed: enabled RLS, created policies, attached trigger |
+| 00003–00007 | Applied | ✅ Applied | — |
+| 00008 fix_severity_configs_rls | Applied | ❌ Missing | Applied via postgres.js direct connection |
+| 00009 enable_realtime_user_roles | Applied | ❌ Missing | Applied via postgres.js direct connection |
+
+**Applied via script using postgres.js + `DATABASE_URL` (port 5432 session mode).**
+
+#### Vitest Config Updates
+
+- Added `testTimeout: 15000` to unit project (fixes dynamic import timeouts in full suite)
+- Added `setupFiles: ['./src/db/__tests__/rls/setup.ts']` + `testTimeout: 30000` to rls project
+
+#### Final Test Results
+
+| Suite | Tests | Status |
+|-------|:-----:|:------:|
+| Unit (Story 1.2) | 120 | ✅ All pass |
+| Unit (Story 1.3) | 21 | ✅ All pass |
+| Unit (Story 1.4 glossary) | 40 | ✅ All pass |
+| RLS (Cloud) | 18 | ✅ All pass |
+| **Total** | **199** | **✅ All pass** |
+| E2E (auth-tenant) | 7 | ✅ All pass (separate run) |
+
+#### Files Changed
+
+| File | Action | Description |
+|------|--------|-------------|
+| e2e/auth-tenant.spec.ts | Rewritten | 7 real E2E tests replacing stub |
+| src/db/__tests__/rls/helpers.ts | Created | Shared RLS test helpers (idempotent setup/teardown) |
+| src/db/__tests__/rls/setup.ts | Created | dotenv loader for RLS tests |
+| src/db/__tests__/rls/*.rls.test.ts (4 files) | Rewritten | Use shared helpers, proper error handling |
+| vitest.config.ts | Modified | testTimeout + rls setupFiles |
+| .env.example | Modified | Added E2E_TEST_PASSWORD |
+| .gitignore | Modified | Added test-results/, playwright-report/, e2e/fixtures/*.json |
+| supabase/config.toml | Created | supabase init (for CLI tooling) |

@@ -38,6 +38,11 @@ docs/test-data/tbx-official/
 # misc
 .DS_Store
 *.pem
+*.bak
+
+# local tool configs
+.claude/settings.local.json
+.playwright-mcp/
 
 # debug
 npm-debug.log*

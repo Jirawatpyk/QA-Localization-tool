@@ -2,7 +2,7 @@
 
 Status: ready-for-dev
 
-<!-- Validation: Pending — MUST run validate-create-story for quality check before dev-story (Step 6, do NOT skip) -->
+<!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
 ## Story
 

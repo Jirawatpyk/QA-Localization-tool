@@ -46,8 +46,8 @@ development_status:
   epic-1: in-progress
   1-1-project-initialization-design-system-setup: done
   1-2-database-schema-authentication: done
-  1-3-project-management-configuration: ready-for-dev
-  1-4-glossary-import-management: backlog
+  1-3-project-management-configuration: review
+  1-4-glossary-import-management: review
   1-5-glossary-matching-engine-no-space-languages: backlog
   1-6-taxonomy-mapping-editor: backlog
   1-7-dashboard-notifications-onboarding: backlog
