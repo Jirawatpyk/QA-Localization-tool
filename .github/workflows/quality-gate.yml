@@ -5,6 +5,7 @@ on:
     branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,6 +16,11 @@ jobs:
     name: Lint → Type Check → Test → Build
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
+    env:
+      # Public Supabase keys needed for Next.js build (embedded in client bundle)
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
     steps:
       - name: Checkout
@@ -42,7 +48,7 @@ jobs:
         run: npm run build
 
       - name: Upload coverage
-        if: github.event_name == 'pull_request'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
