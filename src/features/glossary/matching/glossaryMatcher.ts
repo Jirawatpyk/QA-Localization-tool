@@ -1,7 +1,9 @@
 import 'server-only'
 
+import type { InferSelectModel } from 'drizzle-orm'
+
+import type { glossaryTerms } from '@/db/schema/glossaryTerms'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
-import { getCachedGlossaryTerms } from '@/lib/cache/glossaryCache'
 import { chunkText, stripMarkup } from '@/lib/language/markupStripper'
 import { getSegmenter, isNoSpaceLanguage } from '@/lib/language/segmenterCache'
 import { logger } from '@/lib/logger'
@@ -12,6 +14,8 @@ import type {
   GlossaryTermMatch,
   SegmentContext,
 } from './matchingTypes'
+
+type GlossaryTerm = InferSelectModel<typeof glossaryTerms>
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SECTION 1: Pure helpers (no side effects — fully unit-testable without mocks)
@@ -175,26 +179,29 @@ async function logBoundaryMismatch(
  * Checks glossary term compliance for a single target segment.
  * Designed to be called by the L1 Rule Engine (Story 2.4) per segment.
  *
- * Loads all glossary terms for the project via getCachedGlossaryTerms, then for each term:
- *   - Searches for the TARGET term (not source) in the target segment text
+ * The Rule Engine is responsible for:
+ *   1. Loading terms: getCachedGlossaryTerms(projectId, tenantId)
+ *   2. Filtering to terms whose source appears in the source segment
+ *   3. Calling this function with the pre-filtered terms array
+ *
+ * For each term passed in:
+ *   - Searches for the TARGET term in targetText
  *   - Reports found matches with boundary confidence
  *   - Reports missing terms (expected target not found → potential violation)
- *   - Logs boundary mismatches (per AC2 dual-logging requirement)
+ *   - Logs boundary mismatches to audit + pino (AC2, Architecture Decision 5.5)
  *
- * @param sourceLang  — BCP-47 language code of source (reserved for future Rule Engine use)
- * @param targetLang  — BCP-47 language code of target (e.g., 'th', 'ja', 'zh-Hans')
  * @param targetText  — the segment's target text (from SDLXLIFF/XLIFF parsing)
- * @param ctx         — segment context for audit logging + term loading (projectId, tenantId)
+ * @param terms       — pre-filtered glossary terms from Rule Engine
+ * @param targetLang  — BCP-47 language code of target (e.g., 'th', 'ja', 'zh-Hans')
+ * @param ctx         — segment context for audit logging
  * @returns GlossaryCheckResult
  */
 export async function checkGlossaryCompliance(
-  sourceLang: string,
-  targetLang: string,
   targetText: string,
+  terms: GlossaryTerm[],
+  targetLang: string,
   ctx: SegmentContext,
 ): Promise<GlossaryCheckResult> {
-  const terms = await getCachedGlossaryTerms(ctx.projectId, ctx.tenantId)
-
   const matches: GlossaryTermMatch[] = []
   const missingTerms: string[] = []
   const lowConfidenceMatches: GlossaryTermMatch[] = []
