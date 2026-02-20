@@ -55,6 +55,7 @@ test.describe('Taxonomy Admin — Auth Gate', () => {
 
 test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
   test('[setup] signup as admin user', async ({ page }) => {
+    test.setTimeout(120000) // retry loop may take up to ~60s for replica sync
     // Sign up the test user.
     await page.goto('/signup')
     await page.getByLabel('Display Name').fill('Taxonomy Admin Tester')
@@ -316,7 +317,12 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     await page.goto('/admin/taxonomy')
     await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 10000 })
 
-    const capRow = page.getByRole('cell', { name: 'Capitalization', exact: true }).locator('..')
+    // NOTE: the "Capitalization" row has both internalName and parentCategory = "Capitalization"
+    // — use .first() to avoid strict mode violation (2 matching cells in the same row)
+    const capRow = page
+      .getByRole('cell', { name: 'Capitalization', exact: true })
+      .first()
+      .locator('..')
     await capRow.getByRole('button', { name: 'Delete' }).click()
 
     const alertDialog = page.getByRole('alertdialog')
@@ -327,6 +333,8 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
 
     // Then: Dialog closes, row still visible, no toast
     await expect(alertDialog).not.toBeVisible()
-    await expect(page.getByRole('cell', { name: 'Capitalization', exact: true })).toBeVisible()
+    await expect(
+      page.getByRole('cell', { name: 'Capitalization', exact: true }).first(),
+    ).toBeVisible()
   })
 })
