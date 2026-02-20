@@ -58,9 +58,12 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     await page.getByRole('button', { name: 'Create account' }).click()
     await page.waitForURL('**/dashboard', { timeout: 15000 })
 
+    // Login again to refresh JWT so it includes the admin role assigned during signup
+    await login(page)
+
     // When: Admin navigates to /admin
     await page.goto('/admin')
-    await expect(page.getByText('User Management')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByTestId('admin-tab-users')).toBeVisible({ timeout: 10000 })
 
     // Then: A "Taxonomy Mapping" tab is visible in the admin sub-navigation
     await expect(page.getByTestId('admin-tab-taxonomy')).toBeVisible()

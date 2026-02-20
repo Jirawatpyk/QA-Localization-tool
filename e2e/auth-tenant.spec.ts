@@ -83,7 +83,7 @@ test.describe.serial('Auth flow', () => {
 
     // Navigate to admin
     await page.goto('/admin')
-    await expect(page.getByText('User Management')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByTestId('admin-tab-users')).toBeVisible({ timeout: 10000 })
     // Should see at least the current user in the table
     await expect(page.getByText(TEST_EMAIL)).toBeVisible()
   })
