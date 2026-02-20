@@ -3,9 +3,6 @@ import { test, expect, type Page } from '@playwright/test'
 /**
  * Story 1.6 — Taxonomy Mapping Editor (E2E ATDD)
  *
- * TDD RED PHASE: All tests use test.skip() — UI not implemented yet.
- * Remove test.skip() after implementation to run GREEN phase verification.
- *
  * Coverage:
  *  AC1 — Pre-populated mapping table visible on page load
  *  AC2 — Inline edit: internal_name, MQM category, severity
@@ -58,13 +55,19 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     await page.getByRole('button', { name: 'Create account' }).click()
     await page.waitForURL('**/dashboard', { timeout: 15000 })
 
-    // Clear session and login again to get a JWT that includes the admin role
-    // (role is assigned post-signup; fresh login refreshes JWT claims)
-    await page.context().clearCookies()
-    await login(page)
+    // SignupForm calls refreshSession() before redirecting — JWT already has admin role.
+    // Navigate to /admin directly. If Supabase replica hasn't synced yet (rare), the admin page
+    // redirects → proxy sends authenticated user to /dashboard. Retry with fresh login.
+    await page.goto('/admin')
+    if (!page.url().includes('/admin')) {
+      // Replica lag: clear session, wait, re-login to force a fresh token via the hook
+      await page.context().clearCookies()
+      await page.waitForTimeout(3000)
+      await login(page)
+      await page.goto('/admin')
+    }
 
     // When: Admin navigates to /admin
-    await page.goto('/admin')
     await expect(page.getByTestId('admin-tab-users')).toBeVisible({ timeout: 10000 })
 
     // Then: A "Taxonomy Mapping" tab is visible in the admin sub-navigation
@@ -134,8 +137,10 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
       .locator('..')
     await missingTextRow.getByRole('button', { name: 'Edit' }).click()
 
-    // Then: The row becomes editable (internal_name field appears)
-    const internalNameInput = missingTextRow.getByRole('textbox', { name: /QA Cosmetic name/i })
+    // Then: The row becomes editable
+    // NOTE: After clicking Edit, the cell now contains <Input> instead of text —
+    // use page-level locator (aria-label on the input) to avoid stale cell locator
+    const internalNameInput = page.getByRole('textbox', { name: /QA Cosmetic name/i })
     await expect(internalNameInput).toBeVisible()
 
     // When: Admin changes the internal_name
@@ -143,7 +148,7 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     await internalNameInput.fill('Missing Translation (edited)')
 
     // And: Clicks Save
-    await missingTextRow.getByRole('button', { name: 'Save' }).click()
+    await page.getByRole('button', { name: 'Save' }).click()
 
     // Then: Success toast appears
     await expect(page.getByText('Mapping updated')).toBeVisible({ timeout: 10000 })
@@ -167,20 +172,21 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     await truncatedRow.getByRole('button', { name: 'Edit' }).click()
 
     // Then: Severity select becomes visible
-    const severitySelect = truncatedRow.getByRole('combobox', { name: /severity/i })
+    // NOTE: Use page-level locator — row locator may become stale after edit mode activates
+    const severitySelect = page.getByRole('combobox', { name: /severity/i })
     await expect(severitySelect).toBeVisible()
 
     // When: Admin changes severity to "major"
     await severitySelect.selectOption('major')
 
     // And: Clicks Save
-    await truncatedRow.getByRole('button', { name: 'Save' }).click()
+    await page.getByRole('button', { name: 'Save' }).click()
 
     // Then: Success toast appears
     await expect(page.getByText('Mapping updated')).toBeVisible({ timeout: 10000 })
 
     // And: Updated severity is visible
-    await expect(truncatedRow.getByRole('cell', { name: 'major', exact: true })).toBeVisible()
+    await expect(page.getByRole('cell', { name: 'major', exact: true }).first()).toBeVisible()
   })
 
   test('[P1] AC2 — should cancel inline edit without saving changes', async ({ page }) => {
@@ -193,9 +199,10 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     await row.getByRole('button', { name: 'Edit' }).click()
 
     // When: Admin modifies the field but clicks Cancel
-    const nameInput = row.getByRole('textbox', { name: /QA Cosmetic name/i })
+    // NOTE: Use page-level locator after edit mode activates
+    const nameInput = page.getByRole('textbox', { name: /QA Cosmetic name/i })
     await nameInput.fill('This should not be saved')
-    await row.getByRole('button', { name: 'Cancel' }).click()
+    await page.getByRole('button', { name: 'Cancel' }).click()
 
     // Then: Original value is restored, no toast
     await expect(page.getByRole('cell', { name: 'Punctuation', exact: true })).toBeVisible()
