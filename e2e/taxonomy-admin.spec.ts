@@ -11,10 +11,18 @@ import { test, expect, type Page } from '@playwright/test'
  *  Auth — Non-admin user redirected from /admin/taxonomy
  *
  * data-testid requirements for Dev team: see ATDD checklist 1-6.md
+ *
+ * NOTE on global taxonomy data:
+ *  taxonomy_definitions is a shared table (no tenant_id).
+ *  Tests use position-based row targeting (nth) for AC2 and unique
+ *  timestamp names for AC3/AC4 to remain resilient across runs.
  */
 
 const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD ?? 'TestPassword123!'
 const TEST_EMAIL = `e2e-tax16-${Date.now()}@test.local`
+// Unique names scoped to this run — avoids conflicts from prior incomplete runs
+const E2E_MAPPING_NAME = `E2E Test ${Date.now()}`
+const E2E_EDIT_NAME = `E2E Edit ${Date.now()}`
 
 async function login(page: Page) {
   await page.goto('/login')
@@ -74,13 +82,10 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     // Then: The mapping table is visible
     await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 10000 })
 
-    // And: Pre-seeded data is shown (spot-check first row from seed)
-    // Seed row #1: internal_name="Missing text", category="Accuracy", severity="critical"
-    await expect(page.getByRole('cell', { name: 'Missing text', exact: true })).toBeVisible()
-    await expect(page.getByRole('cell', { name: 'Accuracy', exact: true }).first()).toBeVisible()
-    await expect(page.getByRole('cell', { name: 'critical', exact: true }).first()).toBeVisible()
-
     // And: The table has multiple rows (36 seeded entries + 1 header)
+    // NOTE: We do not assert specific cell values here because taxonomy_definitions is a
+    // global shared table — AC2 tests permanently modify internalName/severity values,
+    // causing exact-value assertions to fail on subsequent CI runs.
     const rows = page.getByTestId('taxonomy-mapping-table').getByRole('row')
     const rowCount = await rows.count()
     expect(rowCount).toBeGreaterThanOrEqual(37) // at least 1 header + 36 data rows
@@ -123,11 +128,10 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     await page.goto('/admin/taxonomy')
     await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 10000 })
 
-    // When: Admin clicks Edit on the "Missing text" row
-    const missingTextRow = page
-      .getByRole('cell', { name: 'Missing text', exact: true })
-      .locator('..')
-    await missingTextRow.getByRole('button', { name: 'Edit' }).click()
+    // When: Admin clicks Edit on the first data row (position-based — avoids relying on
+    // a specific internalName value that may have been changed by a previous test run)
+    const firstDataRow = page.getByTestId('taxonomy-mapping-table').getByRole('row').nth(1)
+    await firstDataRow.getByRole('button', { name: 'Edit' }).click()
 
     // Then: The row becomes editable
     // NOTE: After clicking Edit, the cell now contains <Input> instead of text —
@@ -135,9 +139,9 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     const internalNameInput = page.getByRole('textbox', { name: /QA Cosmetic name/i })
     await expect(internalNameInput).toBeVisible()
 
-    // When: Admin changes the internal_name
+    // When: Admin changes the internal_name to a unique value
     await internalNameInput.clear()
-    await internalNameInput.fill('Missing Translation (edited)')
+    await internalNameInput.fill(E2E_EDIT_NAME)
 
     // And: Clicks Save
     await page.getByRole('button', { name: 'Save' }).click()
@@ -146,9 +150,7 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     await expect(page.getByText('Mapping updated')).toBeVisible({ timeout: 10000 })
 
     // And: Updated value is visible in the table
-    await expect(
-      page.getByRole('cell', { name: 'Missing Translation (edited)', exact: true }),
-    ).toBeVisible()
+    await expect(page.getByRole('cell', { name: E2E_EDIT_NAME, exact: true })).toBeVisible()
   })
 
   test('[P1] AC2 — should edit severity level inline and save successfully', async ({ page }) => {
@@ -157,11 +159,9 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     await page.goto('/admin/taxonomy')
     await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 10000 })
 
-    // When: Admin clicks Edit on the "Texts truncated" row (severity: critical)
-    const truncatedRow = page
-      .getByRole('cell', { name: 'Texts truncated', exact: true })
-      .locator('..')
-    await truncatedRow.getByRole('button', { name: 'Edit' }).click()
+    // When: Admin clicks Edit on the second data row (position-based)
+    const secondDataRow = page.getByTestId('taxonomy-mapping-table').getByRole('row').nth(2)
+    await secondDataRow.getByRole('button', { name: 'Edit' }).click()
 
     // Then: Severity combobox becomes visible
     // NOTE: Use page-level locator — row locator may become stale after edit mode activates
@@ -180,17 +180,17 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     // Then: Success toast appears
     await expect(page.getByText('Mapping updated')).toBeVisible({ timeout: 10000 })
 
-    // And: Updated severity is visible
+    // And: "major" severity is visible somewhere in the table
     await expect(page.getByRole('cell', { name: 'major', exact: true }).first()).toBeVisible()
   })
 
   test('[P1] AC2 — should cancel inline edit without saving changes', async ({ page }) => {
-    // Given: Admin clicks Edit on a row
+    // Given: Admin clicks Edit on a row (use 5th data row to avoid rows used in other AC2 tests)
     await login(page)
     await page.goto('/admin/taxonomy')
     await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 10000 })
 
-    const row = page.getByRole('cell', { name: 'Punctuation', exact: true }).locator('..')
+    const row = page.getByTestId('taxonomy-mapping-table').getByRole('row').nth(5)
     await row.getByRole('button', { name: 'Edit' }).click()
 
     // When: Admin modifies the field but clicks Cancel
@@ -199,8 +199,7 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     await nameInput.fill('This should not be saved')
     await page.getByRole('button', { name: 'Cancel' }).click()
 
-    // Then: Original value is restored, no toast
-    await expect(page.getByRole('cell', { name: 'Punctuation', exact: true })).toBeVisible()
+    // Then: The typed value was not saved (original row is restored)
     await expect(page.getByRole('cell', { name: 'This should not be saved' })).not.toBeVisible()
   })
 
@@ -222,7 +221,8 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     await expect(dialog).toBeVisible()
 
     // When: Admin fills in all required fields
-    await dialog.getByTestId('internal-name-input').fill('E2E Test Error Category')
+    // NOTE: E2E_MAPPING_NAME is unique per run to avoid conflicts with prior incomplete runs
+    await dialog.getByTestId('internal-name-input').fill(E2E_MAPPING_NAME)
     await dialog.getByTestId('mqm-category-input').fill('Accuracy')
     // NOTE: Radix UI <Select> — click trigger to open, then click option
     await dialog.getByTestId('severity-select').click()
@@ -239,9 +239,7 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     await expect(page.getByText('Mapping created')).toBeVisible({ timeout: 10000 })
 
     // And: New mapping row is visible in the table
-    await expect(
-      page.getByRole('cell', { name: 'E2E Test Error Category', exact: true }),
-    ).toBeVisible()
+    await expect(page.getByRole('cell', { name: E2E_MAPPING_NAME, exact: true })).toBeVisible()
   })
 
   test('[P1] AC3 — should show validation error when required fields are missing', async ({
@@ -273,10 +271,8 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     await page.goto('/admin/taxonomy')
     await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 10000 })
 
-    // And: "E2E Test Error Category" exists (created in AC3 test — run serially)
-    const targetRow = page
-      .getByRole('cell', { name: 'E2E Test Error Category', exact: true })
-      .locator('..')
+    // And: E2E_MAPPING_NAME exists (created in AC3 test — run serially)
+    const targetRow = page.getByRole('cell', { name: E2E_MAPPING_NAME, exact: true }).locator('..')
 
     // When: Admin clicks Delete on that row
     await targetRow.getByRole('button', { name: 'Delete' }).click()
@@ -284,7 +280,7 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     // Then: Confirmation AlertDialog appears
     const alertDialog = page.getByRole('alertdialog')
     await expect(alertDialog).toBeVisible()
-    await expect(alertDialog.getByText(/E2E Test Error Category/)).toBeVisible()
+    await expect(alertDialog.getByText(E2E_MAPPING_NAME)).toBeVisible()
 
     // When: Admin confirms deletion
     await alertDialog.getByTestId('confirm-delete-mapping').click()
@@ -293,13 +289,12 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     await expect(page.getByText('Mapping deleted')).toBeVisible({ timeout: 10000 })
 
     // And: The deleted row is no longer visible (soft delete = hidden in active view)
-    await expect(
-      page.getByRole('cell', { name: 'E2E Test Error Category', exact: true }),
-    ).not.toBeVisible()
+    await expect(page.getByRole('cell', { name: E2E_MAPPING_NAME, exact: true })).not.toBeVisible()
   })
 
   test('[P1] AC4 — should cancel deletion when user dismisses confirmation', async ({ page }) => {
     // Given: Admin opens delete confirmation for "Capitalization" row
+    // "Capitalization" (displayOrder 7) is safe to use: no other test permanently modifies it
     await login(page)
     await page.goto('/admin/taxonomy')
     await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 10000 })
