@@ -1,6 +1,6 @@
 # Story 1.5: Glossary Matching Engine for No-space Languages
 
-Status: review
+Status: done
 
 <!-- Validated: Quality checklist passed — 6 critical fixes, 4 enhancements, 2 optimizations applied. -->
 
@@ -1050,23 +1050,35 @@ claude-sonnet-4-6
 
 **New files:**
 - `src/lib/language/segmenterCache.ts`
-- `src/lib/language/segmenterCache.test.ts` (15 tests — pre-existing TDD red phase, verified passing)
+- `src/lib/language/segmenterCache.test.ts` (15 tests)
 - `src/lib/language/markupStripper.ts`
-- `src/lib/language/markupStripper.test.ts` (16 tests — pre-existing TDD red phase, verified passing)
+- `src/lib/language/markupStripper.test.ts` (16 tests)
 - `src/features/glossary/matching/matchingTypes.ts`
 - `src/features/glossary/matching/glossaryMatcher.ts`
-- `src/features/glossary/matching/glossaryMatcher.test.ts` (26 tests — fixed test data + logger mock)
-- `docs/test-data/glossary-matching/th.json` (15 annotated Thai cases)
-- `docs/test-data/glossary-matching/ja.json` (15 annotated Japanese cases)
-- `docs/test-data/glossary-matching/zh.json` (15 annotated Chinese Simplified cases)
-- `docs/test-data/glossary-matching/en-fr-de.json` (15 annotated EN/FR/DE cases)
+- `src/features/glossary/matching/glossaryMatcher.test.ts` (50 tests — CR1 added 24 direct tests for validateEuropeanBoundary + findTermInText)
+- `docs/test-data/glossary-matching/th.json` (759 annotated Thai cases — regenerated from THAI.tbx)
+- `docs/test-data/glossary-matching/ja.json` (759 annotated Japanese cases — regenerated from JAPANESE.tbx)
+- `docs/test-data/glossary-matching/zh.json` (759 annotated Chinese Simplified cases — regenerated from CHINESE.tbx)
+- `docs/test-data/glossary-matching/en-fr-de.json` (686 annotated EN/FR/DE cases — regenerated from FRENCH/GERMAN.tbx)
 - `src/__tests__/integration/glossary-matching-real-data.test.ts` (2,973 integration tests — all 4 language fixtures, FR43 threshold validation)
 - `scripts/generate-th-fixture.mjs` (generator — THAI.tbx → th.json, 759 cases)
 - `scripts/generate-multilang-fixtures.mjs` (generator — JA/ZH/FR/DE TBX → ja.json 759 + zh.json 759 + en-fr-de.json 686 cases)
+- `_bmad-output/test-artifacts/atdd-checklist-1-5.md` (ATDD acceptance checklist)
 
 **Modified files:**
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` (status: in-progress → review)
 - `_bmad-output/implementation-artifacts/1-5-glossary-matching-engine-no-space-languages.md` (tasks checked, status updated)
-- `src/features/glossary/matching/glossaryMatcher.ts` (refactor: `checkGlossaryCompliance` signature → caller-passes-terms, removed `getCachedGlossaryTerms` import, added `GlossaryTerm` local type)
-- `src/features/glossary/matching/glossaryMatcher.test.ts` (refactor: removed `mockGetCachedGlossaryTerms`, updated all 16 `checkGlossaryCompliance` call sites)
+- `src/features/glossary/matching/glossaryMatcher.ts` (refactor: `checkGlossaryCompliance` signature → caller-passes-terms; CR1: upgraded `validateEuropeanBoundary` to unicode-aware `\p{L}\p{N}` regex)
+- `src/features/glossary/matching/glossaryMatcher.test.ts` (refactor: removed `mockGetCachedGlossaryTerms`; CR1: added 24 direct unit tests)
 - `docs/test-data/README.md` (updated Epic Test Fixtures table — all 4 fixtures ✅ Done with generator scripts)
+
+### Change Log
+
+**CR1 (2026-02-19) — Code Review Round 1 Fixes (claude-opus-4-6)**
+- **M1 FIX:** `validateEuropeanBoundary` upgraded from `\W` to unicode-aware `/[^\p{L}\p{N}_]/u` — diacritics (é, ñ, ü) now correctly treated as word characters. Comment corrected. Added Turkish İ known-limitation note.
+- **M2 FIX:** Story File List updated — fixture case counts corrected to actual: th=759, ja=759, zh=759, en-fr-de=686. Added missing `atdd-checklist-1-5.md`.
+- **M3 FIX:** Added 24 direct unit tests: `describe('validateEuropeanBoundary')` 6 tests (incl. diacritics), `describe('findTermInText — Thai')` 10 tests, `describe('findTermInText — Japanese')` 3 tests, `describe('findTermInText — Chinese')` 2 tests, `describe('findTermInText — European')` 3 tests. Total: 50 unit tests (was 26).
+- **M4 FIX:** `console.info` → `console.warn` in integration test (lint compliance).
+- **L1 FIX:** `atdd-checklist-1-5.md` added to File List.
+- **L2 FIX:** Removed TDD RED PHASE comments from 3 committed test files.
+- **L3 FIX:** Turkish İ toLowerCase() position-shift documented as known limitation in validateEuropeanBoundary JSDoc.

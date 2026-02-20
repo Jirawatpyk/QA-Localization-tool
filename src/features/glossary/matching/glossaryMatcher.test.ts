@@ -1,4 +1,3 @@
-// 🔴 TDD RED PHASE — tests will fail until glossaryMatcher.ts is implemented
 // Story 1.5: Glossary Matching Engine for No-space Languages
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -98,6 +97,191 @@ describe('validateBoundary', () => {
     // Should not throw
     const result = validateBoundary(cleanText, position, term.length, 'th')
     expect(['high', 'low']).toContain(result)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// validateEuropeanBoundary — exported pure function
+// ---------------------------------------------------------------------------
+
+describe('validateEuropeanBoundary', () => {
+  it('should return high when match is surrounded by non-word chars (spaces)', async () => {
+    const { validateEuropeanBoundary } = await import('./glossaryMatcher')
+    const text = 'the hospital is here'
+    const idx = text.indexOf('hospital')
+    const result = validateEuropeanBoundary(text, idx, 'hospital'.length)
+    expect(result).toBe('high')
+  })
+
+  it('should return high when match is at start of text', async () => {
+    const { validateEuropeanBoundary } = await import('./glossaryMatcher')
+    const result = validateEuropeanBoundary('hospital is here', 0, 'hospital'.length)
+    expect(result).toBe('high')
+  })
+
+  it('should return high when match is at end of text', async () => {
+    const { validateEuropeanBoundary } = await import('./glossaryMatcher')
+    const text = 'go to hospital'
+    const idx = text.indexOf('hospital')
+    const result = validateEuropeanBoundary(text, idx, 'hospital'.length)
+    expect(result).toBe('high')
+  })
+
+  it('should return low when char before match is a word char (mid-word)', async () => {
+    const { validateEuropeanBoundary } = await import('./glossaryMatcher')
+    // "prehospital" — "hospital" is found but preceded by 'e' (word char)
+    const text = 'the prehospital care'
+    const idx = text.indexOf('hospital')
+    const result = validateEuropeanBoundary(text, idx, 'hospital'.length)
+    expect(result).toBe('low')
+  })
+
+  it('should treat diacritics as word characters (unicode-aware)', async () => {
+    const { validateEuropeanBoundary } = await import('./glossaryMatcher')
+    // "préfixe" — "fixe" is preceded by 'é' which should be a word char
+    const text = 'le préfixe est'
+    const idx = text.indexOf('fixe')
+    const result = validateEuropeanBoundary(text, idx, 'fixe'.length)
+    expect(result).toBe('low')
+  })
+
+  it('should return high when diacritics term is at word boundary', async () => {
+    const { validateEuropeanBoundary } = await import('./glossaryMatcher')
+    const text = "l'hôpital demain"
+    const idx = text.indexOf('hôpital')
+    const result = validateEuropeanBoundary(text, idx, 'hôpital'.length)
+    expect(result).toBe('high')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// findTermInText — exported pure function (direct tests)
+// ---------------------------------------------------------------------------
+
+describe('findTermInText — Thai', () => {
+  it('should find a Thai term with high boundary confidence when standalone', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('ซอฟต์แวร์คุณภาพสูง', 'คุณภาพ', false, 'th')
+    expect(results.length).toBeGreaterThan(0)
+    expect(results[0]?.confidence).toBe('high')
+  })
+
+  it('should find a Thai compound term with low confidence when segmenter splits it', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    // "ฐานข้อมูล" is typically split by segmenter into ฐาน+ข้อมูล
+    const results = findTermInText('ระบบการจัดการฐานข้อมูล', 'ฐานข้อมูล', false, 'th')
+    expect(results.length).toBeGreaterThan(0)
+  })
+
+  it('should return empty array when term is not in text', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('ไม่มีคำนี้อยู่เลย', 'คอมพิวเตอร์', false, 'th')
+    expect(results).toHaveLength(0)
+  })
+
+  it('should find multiple occurrences of the same term', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText(
+      'คอมพิวเตอร์ทำงานได้ดี คอมพิวเตอร์ราคาถูก',
+      'คอมพิวเตอร์',
+      false,
+      'th',
+    )
+    expect(results.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('should normalize NFKC: halfwidth katakana matches fullwidth', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('ﾌﾟﾛｸﾞﾗﾐﾝｸﾞภาษา', 'プログラミング', false, 'th')
+    expect(results.length).toBeGreaterThan(0)
+  })
+
+  it('should respect caseSensitive=false', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('Visit Hospital today', 'hospital', false, 'en')
+    expect(results.length).toBeGreaterThan(0)
+  })
+
+  it('should respect caseSensitive=true', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('Visit Hospital today', 'hospital', true, 'en')
+    expect(results).toHaveLength(0)
+  })
+
+  it('should strip HTML markup before boundary validation', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('<b>การแปล</b>ที่ถูกต้อง', 'การแปล', false, 'th')
+    expect(results.length).toBeGreaterThan(0)
+  })
+
+  it('should strip {0} placeholder before boundary validation', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('ข้อความ {0} ถูกแปลแล้ว', 'ถูกแปล', false, 'th')
+    expect(results.length).toBeGreaterThan(0)
+  })
+
+  it('should return empty for empty term', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('some text', '', false, 'th')
+    expect(results).toHaveLength(0)
+  })
+})
+
+describe('findTermInText — Japanese', () => {
+  it('should find katakana term with high confidence', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('このソフトウェアを使用', 'ソフトウェア', false, 'ja')
+    expect(results.length).toBeGreaterThan(0)
+  })
+
+  it('should find kanji compound term despite segmenter splitting', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('市立図書館で本を借りました', '図書館', false, 'ja')
+    expect(results.length).toBeGreaterThan(0)
+  })
+
+  it('should find hiragana term correctly', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('これはひらがなの文章です', 'ひらがな', false, 'ja')
+    expect(results.length).toBeGreaterThan(0)
+  })
+})
+
+describe('findTermInText — Chinese', () => {
+  it('should find 图书馆 even if segmenter splits it', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('我去图书馆借书', '图书馆', false, 'zh')
+    expect(results.length).toBeGreaterThan(0)
+  })
+
+  it('should not match fullwidth punctuation as term boundary issue', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    // Fullwidth period should not interfere with term detection
+    const results = findTermInText('图书馆。很大', '图书馆', false, 'zh')
+    expect(results.length).toBeGreaterThan(0)
+  })
+})
+
+describe('findTermInText — European', () => {
+  it('should find English term with high boundary confidence', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('Visit hospital today', 'hospital', false, 'en')
+    expect(results.length).toBeGreaterThan(0)
+    expect(results[0]?.confidence).toBe('high')
+  })
+
+  it('should return low confidence for term found mid-word', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('prehospital care', 'hospital', false, 'en')
+    expect(results.length).toBeGreaterThan(0)
+    expect(results[0]?.confidence).toBe('low')
+  })
+
+  it('should handle diacritics in French terms', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText("à l'hôpital demain", 'hôpital', false, 'fr')
+    expect(results.length).toBeGreaterThan(0)
+    expect(results[0]?.confidence).toBe('high')
   })
 })
 

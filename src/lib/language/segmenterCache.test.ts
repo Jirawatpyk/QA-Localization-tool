@@ -1,4 +1,3 @@
-// 🔴 TDD RED PHASE — tests will fail until segmenterCache.ts is implemented
 // Story 1.5: Glossary Matching Engine for No-space Languages
 
 import { beforeEach, describe, expect, it } from 'vitest'

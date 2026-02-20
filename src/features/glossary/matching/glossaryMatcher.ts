@@ -67,8 +67,11 @@ export function validateBoundary(
 
 /**
  * European language word boundary check (no Intl.Segmenter needed).
- * Checks: character before match is non-word (\W or start), character after is non-word (\W or end).
- * This correctly handles diacritics (á, ñ, ü) as word characters.
+ * Checks: character before match is non-word or start, character after is non-word or end.
+ * Uses Unicode-aware regex so diacritics (á, ñ, ü, é) are treated as word characters.
+ *
+ * Known limitation: Turkish İ → toLowerCase() produces 2-char 'i̇', which can shift
+ * positions in case-insensitive mode. Turkish is not in current scope.
  */
 export function validateEuropeanBoundary(
   text: string,
@@ -78,7 +81,8 @@ export function validateEuropeanBoundary(
   const before = matchIndex > 0 ? text.charAt(matchIndex - 1) : null
   const after = matchIndex + termLen < text.length ? text.charAt(matchIndex + termLen) : null
 
-  const nonWordRe = /\W/
+  // Unicode-aware: \p{L} = any letter (including diacritics), \p{N} = any number
+  const nonWordRe = /[^\p{L}\p{N}_]/u
 
   const startOk = before === null || nonWordRe.test(before)
   const endOk = after === null || nonWordRe.test(after)

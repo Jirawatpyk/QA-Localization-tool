@@ -133,7 +133,7 @@ describe.skipIf(!hasCorpus())('Glossary Matching Engine — Annotated Corpus', (
         // Log confidence for observability — not a hard assertion (ICU may vary)
         const actual = results[0]?.confidence
         if (actual !== tc.expectedConfidence) {
-          console.info(
+          console.warn(
             `[th] confidence mismatch for "${tc.term}": expected=${tc.expectedConfidence} actual=${actual} (ICU version difference) | ${tc.note}`,
           )
         }
