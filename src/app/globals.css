@@ -1,8 +1,9 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
-@import "../styles/tokens.css";
-@import "../styles/animations.css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+@import '../styles/tokens.css';
+@import '../styles/animations.css';
+@import '../styles/onboarding.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -128,9 +129,9 @@
 }
 
 /* Thai/CJK content areas need extra line-height to prevent diacritic clipping */
-[lang="th"],
-[lang="ja"],
-[lang="ko"],
-[lang="zh"] {
+[lang='th'],
+[lang='ja'],
+[lang='ko'],
+[lang='zh'] {
   line-height: 1.8;
 }

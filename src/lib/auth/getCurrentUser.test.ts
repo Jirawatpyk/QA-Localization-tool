@@ -13,9 +13,27 @@ vi.mock('@/lib/supabase/server', () => ({
   })),
 }))
 
+// Mock DB client for Drizzle query (users table)
+const mockLimit = vi.fn()
+const mockWhere = vi.fn(() => ({ limit: mockLimit }))
+const mockFrom = vi.fn(() => ({ where: mockWhere }))
+const mockSelect = vi.fn((..._args: unknown[]) => ({ from: mockFrom }))
+
+vi.mock('@/db/client', () => ({
+  db: {
+    select: (...args: unknown[]) => mockSelect(...args),
+  },
+}))
+
+vi.mock('@/db/schema/users', () => ({
+  users: { id: 'id', displayName: 'display_name', metadata: 'metadata' },
+}))
+
 describe('getCurrentUser', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Default: DB returns a user row
+    mockLimit.mockResolvedValue([{ displayName: 'Test User', metadata: null }])
   })
 
   it('should return null when not authenticated', async () => {
@@ -95,6 +113,8 @@ describe('getCurrentUser', () => {
       error: null,
     })
 
+    mockLimit.mockResolvedValue([{ displayName: 'Admin User', metadata: null }])
+
     const { getCurrentUser } = await import('./getCurrentUser')
     const result = await getCurrentUser()
 
@@ -103,6 +123,29 @@ describe('getCurrentUser', () => {
       email: 'admin@example.com',
       tenantId: 'tenant-1',
       role: 'admin',
+      displayName: 'Admin User',
+      metadata: null,
     })
+  })
+
+  it('should return null when user row not found in DB', async () => {
+    mockGetClaims.mockResolvedValue({
+      data: {
+        claims: {
+          sub: 'user-1',
+          email: 'admin@example.com',
+          tenant_id: 'tenant-1',
+          user_role: 'admin',
+        },
+      },
+      error: null,
+    })
+
+    mockLimit.mockResolvedValue([])
+
+    const { getCurrentUser } = await import('./getCurrentUser')
+    const result = await getCurrentUser()
+
+    expect(result).toBeNull()
   })
 })

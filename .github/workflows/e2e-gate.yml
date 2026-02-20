@@ -22,6 +22,10 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+      E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+      # Story 1.7 onboarding tour test personas (required for onboarding-tour.spec.ts)
+      E2E_FIRST_TIME_EMAIL: ${{ secrets.E2E_FIRST_TIME_EMAIL }}
+      E2E_RETURNING_EMAIL: ${{ secrets.E2E_RETURNING_EMAIL }}
       # Placeholders for env.ts Zod validation (not used in auth E2E tests)
       INNGEST_EVENT_KEY: ci-placeholder
       INNGEST_SIGNING_KEY: ci-placeholder

@@ -1,5 +1,7 @@
 import { pgTable, uuid, varchar, jsonb, timestamp } from 'drizzle-orm/pg-core'
 
+import type { UserMetadata } from '@/features/onboarding/types'
+
 import { tenants } from './tenants'
 
 export const users = pgTable('users', {
@@ -10,5 +12,6 @@ export const users = pgTable('users', {
   email: varchar('email', { length: 255 }).notNull(),
   displayName: varchar('display_name', { length: 255 }).notNull(),
   nativeLanguages: jsonb('native_languages').$type<string[]>(), // BCP-47 array
+  metadata: jsonb('metadata').$type<UserMetadata>(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })

@@ -1,0 +1,38 @@
+/* driver.js CSS overrides — uses design tokens from tokens.css */
+.driver-popover {
+  background: var(--surface, #fff);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1);
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.driver-popover-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.driver-popover-description {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.driver-popover-progress-text {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.driver-popover-next-btn {
+  background: oklch(var(--primary));
+  color: white;
+  border-radius: 6px;
+  padding: 8px 16px;
+}
+
+.driver-popover-prev-btn {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}

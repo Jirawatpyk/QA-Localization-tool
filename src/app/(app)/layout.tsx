@@ -5,8 +5,11 @@ import { AppSidebar } from '@/components/layout/app-sidebar'
 import { DetailPanel } from '@/components/layout/detail-panel'
 import { MobileBanner } from '@/components/layout/mobile-banner'
 import { AuthListener } from '@/features/admin/components/AuthListener'
+import { getCurrentUser } from '@/lib/auth/getCurrentUser'
 
-export default function AppLayout({ children }: { children: ReactNode }) {
+export default async function AppLayout({ children }: { children: ReactNode }) {
+  const user = await getCurrentUser()
+
   return (
     <div className="flex h-screen flex-col">
       <AuthListener />
@@ -23,7 +26,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
         {/* Main content area */}
         <div className="flex flex-1 flex-col overflow-hidden">
-          <AppHeader />
+          <AppHeader userId={user?.id} />
           <main className="flex-1 overflow-y-auto">
             <div className="mx-auto max-w-[var(--content-max-width)]">{children}</div>
           </main>

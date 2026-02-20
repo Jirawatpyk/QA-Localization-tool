@@ -1,17 +1,35 @@
+import { redirect } from 'next/navigation'
+import { Suspense } from 'react'
+
 import { CompactLayout } from '@/components/layout/compact-layout'
 import { PageHeader } from '@/components/layout/page-header'
+import { getDashboardData } from '@/features/dashboard/actions/getDashboardData.action'
+import { DashboardSkeleton } from '@/features/dashboard/components/DashboardSkeleton'
+import { DashboardView } from '@/features/dashboard/components/DashboardView'
+import { getCurrentUser } from '@/lib/auth/getCurrentUser'
 
-export default function DashboardPage() {
+export const dynamic = 'force-dynamic'
+
+export default async function DashboardPage() {
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
+
+  const result = await getDashboardData(user.tenantId, user.id)
+  const dashboardData = result.success
+    ? result.data
+    : { recentFiles: [], pendingReviewsCount: 0, teamActivityCount: 0 }
+
   return (
     <>
       <PageHeader title="Dashboard" />
       <CompactLayout>
-        <div className="rounded-lg border border-border bg-card p-6">
-          <h3 className="text-sm font-medium text-text-secondary">Welcome to QA Localization Tool</h3>
-          <p className="mt-1 text-sm text-text-muted">
-            Upload files and start QA review to see your dashboard here.
-          </p>
-        </div>
+        <Suspense fallback={<DashboardSkeleton />}>
+          <DashboardView
+            data={dashboardData}
+            userMetadata={user.metadata ?? null}
+            userId={user.id}
+          />
+        </Suspense>
       </CompactLayout>
     </>
   )

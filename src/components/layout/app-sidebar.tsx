@@ -10,10 +10,10 @@ import { useUIStore } from '@/stores/ui.store'
 const STORAGE_KEY = 'sidebar-collapsed'
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/projects', label: 'Projects', icon: FolderOpen },
-  { href: '/admin', label: 'Admin', icon: Shield },
-]
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, dataTour: undefined },
+  { href: '/projects', label: 'Projects', icon: FolderOpen, dataTour: 'create-project' },
+  { href: '/admin', label: 'Admin', icon: Shield, dataTour: undefined },
+] as const
 
 export function AppSidebar() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen)
@@ -41,9 +41,7 @@ export function AppSidebar() {
       aria-label="Main navigation"
     >
       <div className="flex h-12 items-center justify-between border-b border-border px-3">
-        {sidebarOpen && (
-          <span className="text-sm font-semibold text-text-primary">QA Tool</span>
-        )}
+        {sidebarOpen && <span className="text-sm font-semibold text-text-primary">QA Tool</span>}
         <button
           onClick={toggleSidebar}
           className="flex h-8 w-8 items-center justify-center rounded-md text-text-secondary hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
@@ -58,6 +56,7 @@ export function AppSidebar() {
           <Link
             key={item.href}
             href={item.href}
+            data-tour={item.dataTour}
             className={cn(
               'flex items-center gap-3 rounded-md px-3 py-2 text-sm text-text-secondary',
               'hover:bg-muted hover:text-text-primary',
