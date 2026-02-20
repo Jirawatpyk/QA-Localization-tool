@@ -11,7 +11,7 @@ import { createMappingSchema } from '@/features/taxonomy/validation/taxonomySche
 import { requireRole } from '@/lib/auth/requireRole'
 import type { ActionResult } from '@/types/actionResult'
 
-import type { TaxonomyMapping } from '../types'
+import type { Severity, TaxonomyMapping } from '../types'
 
 export async function createMapping(input: unknown): Promise<ActionResult<TaxonomyMapping>> {
   let currentUser
@@ -34,6 +34,7 @@ export async function createMapping(input: unknown): Promise<ActionResult<Taxono
       internalName: parsed.data.internalName,
       severity: parsed.data.severity,
       description: parsed.data.description,
+      isCustom: true, // admin-created entries are custom (seed data uses isCustom: false)
     })
     .returning()
 
@@ -65,7 +66,7 @@ export async function createMapping(input: unknown): Promise<ActionResult<Taxono
       category: created.category,
       parentCategory: created.parentCategory ?? null,
       internalName: created.internalName ?? null,
-      severity: created.severity ?? null,
+      severity: (created.severity ?? null) as Severity | null,
       description: created.description,
       isCustom: created.isCustom,
       isActive: created.isActive,

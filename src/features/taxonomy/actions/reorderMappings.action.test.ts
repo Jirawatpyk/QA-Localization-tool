@@ -36,6 +36,11 @@ vi.mock('next/cache', () => ({
   revalidateTag: (...args: unknown[]) => mockRevalidateTag(...args),
 }))
 
+const mockWriteAuditLog = vi.fn().mockResolvedValue(undefined)
+vi.mock('@/features/audit/actions/writeAuditLog', () => ({
+  writeAuditLog: (...args: unknown[]) => mockWriteAuditLog(...args),
+}))
+
 describe('reorderMappings', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -93,5 +98,29 @@ describe('reorderMappings', () => {
     await reorderMappings([{ id: UUID_A, displayOrder: 0 }])
 
     expect(mockRevalidateTag).toHaveBeenCalledWith('taxonomy', 'minutes')
+  })
+
+  it('should write audit log with taxonomy_definition.reordered action', async () => {
+    const { reorderMappings } = await import('./reorderMappings.action')
+    await reorderMappings([
+      { id: UUID_A, displayOrder: 0 },
+      { id: UUID_B, displayOrder: 1 },
+    ])
+
+    expect(mockWriteAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: TENANT_ID,
+        userId: USER_ID,
+        entityType: 'taxonomy_definition',
+        entityId: UUID_A,
+        action: 'taxonomy_definition.reordered',
+        newValue: {
+          order: [
+            { id: UUID_A, displayOrder: 0 },
+            { id: UUID_B, displayOrder: 1 },
+          ],
+        },
+      }),
+    )
   })
 })

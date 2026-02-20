@@ -143,4 +143,11 @@ describe('createMapping', () => {
 
     expect(result.success).toBe(true)
   })
+
+  it('should set isCustom: true for admin-created mappings', async () => {
+    const { createMapping } = await import('./createMapping.action')
+    await createMapping(validInput)
+
+    expect(mockValues).toHaveBeenCalledWith(expect.objectContaining({ isCustom: true }))
+  })
 })

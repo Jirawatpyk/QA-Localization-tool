@@ -45,17 +45,35 @@ export function TaxonomyManager({ initialMappings }: Props) {
     })
   }
 
-  function handleUpdate(id: string, field: string, value: string) {
+  function handleUpdate(
+    id: string,
+    fields: {
+      internalName: string
+      category: string
+      parentCategory: string
+      severity: string
+      description: string
+    },
+  ) {
     startTransition(() => {
-      toast.promise(updateMapping(id, { [field]: value || null }), {
-        loading: 'Saving...',
-        success: (result) => {
-          if (!result.success) throw new Error(result.error)
-          setMappings((prev) => prev.map((m) => (m.id === id ? result.data : m)))
-          return 'Mapping updated'
+      toast.promise(
+        updateMapping(id, {
+          internalName: fields.internalName || undefined,
+          category: fields.category,
+          parentCategory: fields.parentCategory || null,
+          severity: fields.severity as 'critical' | 'major' | 'minor',
+          description: fields.description || undefined,
+        }),
+        {
+          loading: 'Saving...',
+          success: (result) => {
+            if (!result.success) throw new Error(result.error)
+            setMappings((prev) => prev.map((m) => (m.id === id ? result.data : m)))
+            return 'Mapping updated'
+          },
+          error: (err: unknown) => (err instanceof Error ? err.message : 'Failed to save'),
         },
-        error: (err: unknown) => (err instanceof Error ? err.message : 'Failed to save'),
-      })
+      )
     })
   }
 

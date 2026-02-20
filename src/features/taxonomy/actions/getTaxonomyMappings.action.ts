@@ -2,14 +2,14 @@
 
 import 'server-only'
 
-import { and, eq, isNotNull } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 
 import { db } from '@/db/client'
 import { taxonomyDefinitions } from '@/db/schema/taxonomyDefinitions'
 import { requireRole } from '@/lib/auth/requireRole'
 import type { ActionResult } from '@/types/actionResult'
 
-import type { TaxonomyMapping } from '../types'
+import type { Severity, TaxonomyMapping } from '../types'
 
 export async function getTaxonomyMappings(): Promise<ActionResult<TaxonomyMapping[]>> {
   try {
@@ -18,10 +18,13 @@ export async function getTaxonomyMappings(): Promise<ActionResult<TaxonomyMappin
     return { success: false, code: 'FORBIDDEN', error: 'Admin access required' }
   }
 
+  // Admin action: show ALL active mappings (including entries without internalName)
+  // so admins can see and edit every entry. Compare: getCachedTaxonomyMappings filters
+  // isNotNull(internalName) for QA-engine use only.
   const rows = await db
     .select()
     .from(taxonomyDefinitions)
-    .where(and(eq(taxonomyDefinitions.isActive, true), isNotNull(taxonomyDefinitions.internalName)))
+    .where(eq(taxonomyDefinitions.isActive, true))
     .orderBy(taxonomyDefinitions.displayOrder)
 
   return {
@@ -31,7 +34,7 @@ export async function getTaxonomyMappings(): Promise<ActionResult<TaxonomyMappin
       category: r.category,
       parentCategory: r.parentCategory ?? null,
       internalName: r.internalName ?? null,
-      severity: r.severity ?? null,
+      severity: (r.severity ?? null) as Severity | null,
       description: r.description,
       isCustom: r.isCustom,
       isActive: r.isActive,

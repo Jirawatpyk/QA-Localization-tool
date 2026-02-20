@@ -33,9 +33,17 @@ import {
 import type { TaxonomyMapping } from '@/features/taxonomy/types'
 import { severityValues } from '@/features/taxonomy/validation/taxonomySchemas'
 
+type UpdateFields = {
+  internalName: string
+  category: string
+  parentCategory: string
+  severity: string
+  description: string
+}
+
 type Props = {
   mappings: TaxonomyMapping[]
-  onUpdate: (id: string, field: string, value: string) => void
+  onUpdate: (id: string, fields: UpdateFields) => void
   onDelete: (id: string) => void
   onAdd: () => void
 }
@@ -51,6 +59,7 @@ type EditDraft = {
   category: string
   parentCategory: string
   severity: string
+  description: string
 }
 
 export function TaxonomyMappingTable({ mappings, onUpdate, onDelete, onAdd }: Props) {
@@ -65,6 +74,7 @@ export function TaxonomyMappingTable({ mappings, onUpdate, onDelete, onAdd }: Pr
       category: mapping.category,
       parentCategory: mapping.parentCategory ?? '',
       severity: mapping.severity ?? 'minor',
+      description: mapping.description,
     })
   }
 
@@ -75,11 +85,14 @@ export function TaxonomyMappingTable({ mappings, onUpdate, onDelete, onAdd }: Pr
 
   function saveEdit(id: string) {
     if (!draft) return
-    // Emit individual field updates for changed fields
-    onUpdate(id, 'internalName', draft.internalName)
-    onUpdate(id, 'category', draft.category)
-    onUpdate(id, 'parentCategory', draft.parentCategory)
-    onUpdate(id, 'severity', draft.severity)
+    // Emit all changed fields in a single call → 1 API round-trip, 1 audit log entry
+    onUpdate(id, {
+      internalName: draft.internalName,
+      category: draft.category,
+      parentCategory: draft.parentCategory,
+      severity: draft.severity,
+      description: draft.description,
+    })
     setEditingId(null)
     setDraft(null)
   }
@@ -192,8 +205,19 @@ export function TaxonomyMappingTable({ mappings, onUpdate, onDelete, onAdd }: Pr
                   </TableCell>
 
                   {/* description */}
-                  <TableCell className="text-sm text-text-secondary max-w-[260px] truncate">
-                    {mapping.description}
+                  <TableCell className="max-w-[260px]">
+                    {isEditing && draft ? (
+                      <Input
+                        aria-label="Description"
+                        value={draft.description}
+                        onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+                        className="h-7 text-sm"
+                      />
+                    ) : (
+                      <span className="text-sm text-text-secondary truncate block">
+                        {mapping.description}
+                      </span>
+                    )}
                   </TableCell>
 
                   {/* actions */}

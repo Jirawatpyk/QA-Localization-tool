@@ -13,7 +13,7 @@ import { requireRole } from '@/lib/auth/requireRole'
 import { isUuid } from '@/lib/validation/uuid'
 import type { ActionResult } from '@/types/actionResult'
 
-import type { TaxonomyMapping } from '../types'
+import type { Severity, TaxonomyMapping } from '../types'
 
 export async function updateMapping(
   mappingId: string,
@@ -92,7 +92,7 @@ export async function updateMapping(
       category: updated.category,
       parentCategory: updated.parentCategory ?? null,
       internalName: updated.internalName ?? null,
-      severity: updated.severity ?? null,
+      severity: (updated.severity ?? null) as Severity | null,
       description: updated.description,
       isCustom: updated.isCustom,
       isActive: updated.isActive,

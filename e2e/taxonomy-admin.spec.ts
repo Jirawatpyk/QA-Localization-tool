@@ -19,7 +19,8 @@ import { test, expect, type Page } from '@playwright/test'
  */
 
 const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD ?? 'TestPassword123!'
-const TEST_EMAIL = `e2e-tax16-${Date.now()}@test.local`
+// Fixed email — reused across runs to avoid accumulating test users in the DB
+const TEST_EMAIL = process.env.E2E_TAX16_EMAIL ?? 'e2e-tax16@test.local'
 // Unique names scoped to this run — avoids conflicts from prior incomplete runs
 const E2E_MAPPING_NAME = `E2E Test ${Date.now()}`
 const E2E_EDIT_NAME = `E2E Edit ${Date.now()}`
@@ -54,15 +55,31 @@ test.describe('Taxonomy Admin — Auth Gate', () => {
 // ---------------------------------------------------------------------------
 
 test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
-  test('[setup] signup as admin user', async ({ page }) => {
+  test('[setup] signup or login as admin user', async ({ page }) => {
     test.setTimeout(120000) // retry loop may take up to ~60s for replica sync
-    // Sign up the test user.
-    await page.goto('/signup')
-    await page.getByLabel('Display Name').fill('Taxonomy Admin Tester')
+
+    // Login-first: reuse existing test user to avoid accumulating users per run.
+    // Falls back to signup if the user doesn't exist yet (first run only).
+    await page.goto('/login')
     await page.getByLabel('Email').fill(TEST_EMAIL)
     await page.getByLabel('Password').fill(TEST_PASSWORD)
-    await page.getByRole('button', { name: 'Create account' }).click()
-    await page.waitForURL('**/dashboard', { timeout: 15000 })
+    await page.getByRole('button', { name: 'Sign in' }).click()
+    const loginResult = await Promise.race([
+      page.waitForURL('**/dashboard', { timeout: 8000 }).then(() => 'ok'),
+      page
+        .waitForSelector('[data-testid="login-error"], [role="alert"]', { timeout: 8000 })
+        .then(() => 'fail'),
+    ]).catch(() => 'fail')
+
+    if (loginResult !== 'ok') {
+      // First run: user doesn't exist yet — sign up
+      await page.goto('/signup')
+      await page.getByLabel('Display Name').fill('Taxonomy Admin Tester')
+      await page.getByLabel('Email').fill(TEST_EMAIL)
+      await page.getByLabel('Password').fill(TEST_PASSWORD)
+      await page.getByRole('button', { name: 'Create account' }).click()
+      await page.waitForURL('**/dashboard', { timeout: 15000 })
+    }
 
     // Confirm admin access with retry loop.
     // Supabase custom_access_token_hook queries a read replica that may not yet have the
