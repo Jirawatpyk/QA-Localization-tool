@@ -9,8 +9,6 @@ import { projects } from '@/db/schema/projects'
 import { ProjectSettings } from '@/features/project/components/ProjectSettings'
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
 
-export const dynamic = 'force-dynamic'
-
 export default async function ProjectSettingsPage({
   params,
 }: {

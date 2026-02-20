@@ -10,8 +10,6 @@ import { projects } from '@/db/schema/projects'
 import { ProjectList } from '@/features/project/components/ProjectList'
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
 
-export const dynamic = 'force-dynamic'
-
 export const metadata = {
   title: 'Projects — QA Localization Tool',
 }

@@ -6,8 +6,6 @@ import { TaxonomyManager } from '@/features/taxonomy/components/TaxonomyManager'
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
 import { getCachedTaxonomyMappings } from '@/lib/cache/taxonomyCache'
 
-export const dynamic = 'force-dynamic'
-
 export const metadata = {
   title: 'Taxonomy Mapping — QA Localization Tool',
 }

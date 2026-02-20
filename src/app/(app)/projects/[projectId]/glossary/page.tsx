@@ -10,7 +10,6 @@ import { projects } from '@/db/schema/projects'
 import { GlossaryManager } from '@/features/glossary/components/GlossaryManager'
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
 
-export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Glossary — QA Localization Tool' }
 
 export default async function GlossaryPage({ params }: { params: Promise<{ projectId: string }> }) {

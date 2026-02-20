@@ -10,8 +10,6 @@ import { users } from '@/db/schema/users'
 import { UserManagement } from '@/features/admin/components/UserManagement'
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
 
-export const dynamic = 'force-dynamic'
-
 export const metadata = {
   title: 'User Management — QA Localization Tool',
 }
