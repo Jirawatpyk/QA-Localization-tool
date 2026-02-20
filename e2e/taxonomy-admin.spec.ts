@@ -58,7 +58,9 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     await page.getByRole('button', { name: 'Create account' }).click()
     await page.waitForURL('**/dashboard', { timeout: 15000 })
 
-    // Login again to refresh JWT so it includes the admin role assigned during signup
+    // Clear session and login again to get a JWT that includes the admin role
+    // (role is assigned post-signup; fresh login refreshes JWT claims)
+    await page.context().clearCookies()
     await login(page)
 
     // When: Admin navigates to /admin
