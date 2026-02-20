@@ -55,19 +55,13 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     await page.getByRole('button', { name: 'Create account' }).click()
     await page.waitForURL('**/dashboard', { timeout: 15000 })
 
-    // SignupForm calls refreshSession() before redirecting — JWT already has admin role.
-    // Navigate to /admin directly. If Supabase replica hasn't synced yet (rare), the admin page
-    // redirects → proxy sends authenticated user to /dashboard. Retry with fresh login.
-    await page.goto('/admin')
-    if (!page.url().includes('/admin')) {
-      // Replica lag: clear session, wait, re-login to force a fresh token via the hook
-      await page.context().clearCookies()
-      await page.waitForTimeout(3000)
-      await login(page)
-      await page.goto('/admin')
-    }
+    // Wait for Supabase read replica to sync user_roles before navigating to /admin.
+    // The custom_access_token_hook queries user_roles; without this wait, replica lag
+    // causes user_role:'none' which makes AuthListener's router.refresh() redirect to /dashboard.
+    await page.waitForTimeout(3000)
 
     // When: Admin navigates to /admin
+    await page.goto('/admin')
     await expect(page.getByTestId('admin-tab-users')).toBeVisible({ timeout: 10000 })
 
     // Then: A "Taxonomy Mapping" tab is visible in the admin sub-navigation
@@ -171,13 +165,16 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
       .locator('..')
     await truncatedRow.getByRole('button', { name: 'Edit' }).click()
 
-    // Then: Severity select becomes visible
+    // Then: Severity combobox becomes visible
     // NOTE: Use page-level locator — row locator may become stale after edit mode activates
-    const severitySelect = page.getByRole('combobox', { name: /severity/i })
-    await expect(severitySelect).toBeVisible()
+    // NOTE: Radix UI <Select> renders a <button role="combobox">, not a <select> element —
+    // must click to open dropdown then click the option (selectOption() does not work)
+    const severityTrigger = page.getByRole('combobox', { name: /severity/i })
+    await expect(severityTrigger).toBeVisible()
 
     // When: Admin changes severity to "major"
-    await severitySelect.selectOption('major')
+    await severityTrigger.click()
+    await page.getByRole('option', { name: 'major' }).click()
 
     // And: Clicks Save
     await page.getByRole('button', { name: 'Save' }).click()
@@ -229,7 +226,9 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     // When: Admin fills in all required fields
     await dialog.getByTestId('internal-name-input').fill('E2E Test Error Category')
     await dialog.getByTestId('mqm-category-input').fill('Accuracy')
-    await dialog.getByTestId('severity-select').selectOption('major')
+    // NOTE: Radix UI <Select> — click trigger to open, then click option
+    await dialog.getByTestId('severity-select').click()
+    await page.getByRole('option', { name: /major/i }).click()
     await dialog.getByTestId('description-input').fill('E2E test description for this category')
 
     // And: Clicks Submit
@@ -261,10 +260,8 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     // When: Admin submits without filling required fields
     await dialog.getByTestId('submit-add-mapping').click()
 
-    // Then: Validation errors appear (internal_name is required)
-    await expect(dialog.getByText(/QA Cosmetic name is required/i)).toBeVisible()
-
-    // And: Dialog stays open (not submitted)
+    // Then: Dialog stays open (HTML5 required attribute prevents form submission)
+    // Note: internalName uses required attribute — browser native validation, no DOM error text
     await expect(dialog).toBeVisible()
   })
 
