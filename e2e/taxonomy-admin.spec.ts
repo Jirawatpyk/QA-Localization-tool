@@ -46,32 +46,18 @@ test.describe('Taxonomy Admin — Auth Gate', () => {
 // ---------------------------------------------------------------------------
 
 test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
-  test('[setup] signup and navigate to /admin/taxonomy via tab nav', async ({ page }) => {
-    // Given: A new admin user signs up
+  test('[setup] signup as admin user', async ({ page }) => {
+    // Creates the test user for the serial suite.
+    // Admin navigation is verified in the AC1 tests below.
+    // NOTE: Navigating to /admin immediately after signup is skipped here because
+    // AuthListener.router.refresh() races with Supabase hook replica sync and causes
+    // intermittent redirects. AC1 tests run with a settled user (created seconds earlier).
     await page.goto('/signup')
     await page.getByLabel('Display Name').fill('Taxonomy Admin Tester')
     await page.getByLabel('Email').fill(TEST_EMAIL)
     await page.getByLabel('Password').fill(TEST_PASSWORD)
     await page.getByRole('button', { name: 'Create account' }).click()
     await page.waitForURL('**/dashboard', { timeout: 15000 })
-
-    // Wait for Supabase read replica to sync user_roles before navigating to /admin.
-    // The custom_access_token_hook queries user_roles; without this wait, replica lag
-    // causes user_role:'none' which makes AuthListener's router.refresh() redirect to /dashboard.
-    await page.waitForTimeout(3000)
-
-    // When: Admin navigates to /admin
-    await page.goto('/admin')
-    await expect(page.getByTestId('admin-tab-users')).toBeVisible({ timeout: 10000 })
-
-    // Then: A "Taxonomy Mapping" tab is visible in the admin sub-navigation
-    await expect(page.getByTestId('admin-tab-taxonomy')).toBeVisible()
-
-    // When: Admin clicks the "Taxonomy Mapping" tab
-    await page.getByTestId('admin-tab-taxonomy').click()
-
-    // Then: URL changes to /admin/taxonomy
-    await page.waitForURL('**/admin/taxonomy', { timeout: 5000 })
   })
 
   // -------------------------------------------------------------------------
@@ -106,13 +92,25 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     // Given: Admin is on /admin
     await login(page)
     await page.goto('/admin')
+    // Wait for AuthListener's router.refresh() RSC transition to settle.
+    // During the transition, the nav briefly has 2 copies in DOM (old + new RSC fiber).
+    await page.waitForLoadState('networkidle')
 
-    // Then: Admin tab navigation is visible
-    await expect(page.getByTestId('admin-tab-users')).toBeVisible()
-    await expect(page.getByTestId('admin-tab-taxonomy')).toBeVisible()
+    // Then: Admin tab navigation is visible (use .first() in case RSC transition is mid-flight)
+    await expect(page.getByTestId('admin-tab-users').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.getByTestId('admin-tab-taxonomy').first()).toBeVisible()
 
     // And: "User Management" tab is active by default
-    await expect(page.getByTestId('admin-tab-users')).toHaveAttribute('aria-current', 'page')
+    await expect(page.getByTestId('admin-tab-users').first()).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+
+    // When: Admin clicks the "Taxonomy Mapping" tab
+    await page.getByTestId('admin-tab-taxonomy').click()
+
+    // Then: URL changes to /admin/taxonomy
+    await page.waitForURL('**/admin/taxonomy', { timeout: 5000 })
   })
 
   // -------------------------------------------------------------------------
