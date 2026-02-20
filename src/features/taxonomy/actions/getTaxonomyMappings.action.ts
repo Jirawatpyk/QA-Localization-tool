@@ -11,6 +11,15 @@ import type { ActionResult } from '@/types/actionResult'
 
 import type { Severity, TaxonomyMapping } from '../types'
 
+/**
+ * Server Action for on-demand admin taxonomy data fetching.
+ *
+ * NOTE: The /admin/taxonomy page currently loads data via getCachedTaxonomyMappings()
+ * (RSC cache, 'minutes' TTL). This action is reserved for future use cases that
+ * require uncached, role-gated access — e.g., a revalidation trigger after bulk
+ * import, an API route that needs fresh data, or a client-side refetch pattern.
+ * It should NOT be called from Client Components that already have cached RSC data.
+ */
 export async function getTaxonomyMappings(): Promise<ActionResult<TaxonomyMapping[]>> {
   try {
     await requireRole('admin', 'read')

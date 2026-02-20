@@ -79,8 +79,9 @@ export async function updateMapping(
       parentCategory: existing.parentCategory,
       internalName: existing.internalName,
       severity: existing.severity,
+      description: existing.description,
     },
-    newValue: updateValues,
+    newValue: (({ updatedAt: _omit, ...rest }) => rest)(updateValues),
   })
 
   revalidateTag('taxonomy', 'minutes')

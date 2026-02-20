@@ -62,7 +62,7 @@ export function TaxonomyManager({ initialMappings }: Props) {
           category: fields.category,
           parentCategory: fields.parentCategory || null,
           severity: fields.severity as 'critical' | 'major' | 'minor',
-          description: fields.description || undefined,
+          description: fields.description, // send as-is; empty → schema min(1) → error toast
         }),
         {
           loading: 'Saving...',

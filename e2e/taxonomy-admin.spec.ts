@@ -64,14 +64,15 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     await page.getByLabel('Email').fill(TEST_EMAIL)
     await page.getByLabel('Password').fill(TEST_PASSWORD)
     await page.getByRole('button', { name: 'Sign in' }).click()
-    const loginResult = await Promise.race([
-      page.waitForURL('**/dashboard', { timeout: 8000 }).then(() => 'ok'),
-      page
-        .waitForSelector('[data-testid="login-error"], [role="alert"]', { timeout: 8000 })
-        .then(() => 'fail'),
-    ]).catch(() => 'fail')
 
-    if (loginResult !== 'ok') {
+    let loginSucceeded = true
+    try {
+      await page.waitForURL('**/dashboard', { timeout: 8000 })
+    } catch {
+      loginSucceeded = false
+    }
+
+    if (!loginSucceeded) {
       // First run: user doesn't exist yet — sign up
       await page.goto('/signup')
       await page.getByLabel('Display Name').fill('Taxonomy Admin Tester')
