@@ -1,6 +1,6 @@
 # Story 1.6: Taxonomy Mapping Editor
 
-Status: done
+Status: review
 
 ## Story
 
