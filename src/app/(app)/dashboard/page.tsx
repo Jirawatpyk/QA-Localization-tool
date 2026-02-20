@@ -8,8 +8,6 @@ import { DashboardSkeleton } from '@/features/dashboard/components/DashboardSkel
 import { DashboardView } from '@/features/dashboard/components/DashboardView'
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
 
-export const dynamic = 'force-dynamic'
-
 export default async function DashboardPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')

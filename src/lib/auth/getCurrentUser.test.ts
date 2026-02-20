@@ -128,7 +128,7 @@ describe('getCurrentUser', () => {
     })
   })
 
-  it('should return null when user row not found in DB', async () => {
+  it('should return user with fallback displayName when user row not found in DB', async () => {
     mockGetClaims.mockResolvedValue({
       data: {
         claims: {
@@ -146,6 +146,13 @@ describe('getCurrentUser', () => {
     const { getCurrentUser } = await import('./getCurrentUser')
     const result = await getCurrentUser()
 
-    expect(result).toBeNull()
+    expect(result).toEqual({
+      id: 'user-1',
+      email: 'admin@example.com',
+      tenantId: 'tenant-1',
+      role: 'admin',
+      displayName: 'admin@example.com',
+      metadata: null,
+    })
   })
 })

@@ -49,20 +49,32 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   if (!validRoles.includes(role as AppRole)) return null
 
   // Fetch displayName + metadata from users table (M3 pattern: JWT for role, DB for profile)
-  const userRow = await db
-    .select({ displayName: users.displayName, metadata: users.metadata })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1)
+  // Graceful fallback: if user row doesn't exist yet (race condition during signup),
+  // use email as displayName and null metadata — don't return null for authenticated users.
+  let displayName = email ?? ''
+  let metadata: UserMetadata | null = null
 
-  if (!userRow[0]) return null
+  try {
+    const userRow = await db
+      .select({ displayName: users.displayName, metadata: users.metadata })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+
+    if (userRow[0]) {
+      displayName = userRow[0].displayName
+      metadata = (userRow[0].metadata as UserMetadata | undefined) ?? null
+    }
+  } catch {
+    // DB query failed (e.g., column mismatch, connection error) — proceed with JWT-only data
+  }
 
   return {
     id: userId,
     email: email ?? '',
     tenantId,
     role: role as AppRole,
-    displayName: userRow[0].displayName,
-    metadata: (userRow[0].metadata as UserMetadata | undefined) ?? null,
+    displayName,
+    metadata,
   }
 }
