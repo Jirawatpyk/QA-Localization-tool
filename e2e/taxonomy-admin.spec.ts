@@ -131,7 +131,7 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     // When: Admin clicks Edit on the first data row (position-based — avoids relying on
     // a specific internalName value that may have been changed by a previous test run)
     const firstDataRow = page.getByTestId('taxonomy-mapping-table').getByRole('row').nth(1)
-    await firstDataRow.getByRole('button', { name: 'Edit' }).click()
+    await firstDataRow.getByRole('button', { name: 'Edit', exact: true }).click()
 
     // Then: The row becomes editable
     // NOTE: After clicking Edit, the cell now contains <Input> instead of text —
@@ -161,7 +161,7 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
 
     // When: Admin clicks Edit on the second data row (position-based)
     const secondDataRow = page.getByTestId('taxonomy-mapping-table').getByRole('row').nth(2)
-    await secondDataRow.getByRole('button', { name: 'Edit' }).click()
+    await secondDataRow.getByRole('button', { name: 'Edit', exact: true }).click()
 
     // Then: Severity combobox becomes visible
     // NOTE: Use page-level locator — row locator may become stale after edit mode activates
@@ -191,7 +191,7 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 10000 })
 
     const row = page.getByTestId('taxonomy-mapping-table').getByRole('row').nth(5)
-    await row.getByRole('button', { name: 'Edit' }).click()
+    await row.getByRole('button', { name: 'Edit', exact: true }).click()
 
     // When: Admin modifies the field but clicks Cancel
     // NOTE: Use page-level locator after edit mode activates
