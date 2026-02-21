@@ -5,6 +5,7 @@ import { eq, and } from 'drizzle-orm'
 
 import { db } from '@/db/client'
 import { notifications } from '@/db/schema/notifications'
+import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
 import type { ActionResult } from '@/types/actionResult'
 
@@ -33,6 +34,15 @@ export async function markNotificationRead(
       .set({ isRead: true })
       .where(and(eq(notifications.id, notificationId), eq(notifications.userId, currentUser.id)))
   }
+
+  await writeAuditLog({
+    tenantId: currentUser.tenantId,
+    userId: currentUser.id,
+    entityType: 'notification',
+    entityId: notificationId,
+    action: notificationId === 'all' ? 'notification.read_all' : 'notification.read',
+    newValue: { isRead: true },
+  })
 
   return { success: true, data: undefined }
 }

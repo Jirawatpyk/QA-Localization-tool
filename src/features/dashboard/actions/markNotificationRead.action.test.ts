@@ -17,6 +17,11 @@ vi.mock('@/db/client', () => ({
   },
 }))
 
+const mockWriteAuditLog = vi.fn().mockResolvedValue(undefined)
+vi.mock('@/features/audit/actions/writeAuditLog', () => ({
+  writeAuditLog: (...args: unknown[]) => mockWriteAuditLog(...args),
+}))
+
 vi.mock('@/db/schema/notifications', () => ({
   notifications: {
     id: 'id',

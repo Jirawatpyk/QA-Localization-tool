@@ -22,6 +22,11 @@ vi.mock('@/db/schema/users', () => ({
   users: { id: 'id', metadata: 'metadata' },
 }))
 
+const mockWriteAuditLog = vi.fn().mockResolvedValue(undefined)
+vi.mock('@/features/audit/actions/writeAuditLog', () => ({
+  writeAuditLog: (...args: unknown[]) => mockWriteAuditLog(...args),
+}))
+
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
 
 import { updateTourState } from './updateTourState.action'
@@ -140,5 +145,28 @@ describe('updateTourState', () => {
       | undefined
     expect(setArg?.metadata?.setup_tour_completed).toBeNull()
     expect(setArg?.metadata?.dismissed_at_step?.setup).toBeNull()
+  })
+
+  it('should write audit log on successful update', async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      id: 'usr-1',
+      email: 'test@test.com',
+      tenantId: 'ten-1',
+      role: 'qa_reviewer',
+      displayName: 'Test',
+      metadata: null,
+    })
+
+    await updateTourState({ action: 'complete', tourId: 'setup' })
+
+    expect(mockWriteAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'ten-1',
+        userId: 'usr-1',
+        entityType: 'user',
+        entityId: 'usr-1',
+        action: 'tour_state.complete',
+      }),
+    )
   })
 })

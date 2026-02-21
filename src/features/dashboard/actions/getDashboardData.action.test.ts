@@ -2,6 +2,10 @@ vi.mock('server-only', () => ({}))
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+vi.mock('@/lib/auth/getCurrentUser', () => ({
+  getCurrentUser: vi.fn(),
+}))
+
 // Build a chainable mock that supports any order of Drizzle method calls
 function createChainMock(resolvedValue: unknown) {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {}
@@ -59,19 +63,42 @@ vi.mock('@/db/schema/reviewActions', () => ({
   reviewActions: { tenantId: 'tenant_id', createdAt: 'created_at' },
 }))
 
+import { getCurrentUser } from '@/lib/auth/getCurrentUser'
+
 import { getDashboardData } from './getDashboardData.action'
+
+const MOCK_USER = {
+  id: 'usr-1',
+  email: 'test@test.com',
+  tenantId: 'ten-1',
+  role: 'qa_reviewer' as const,
+  displayName: 'Test',
+  metadata: null,
+}
 
 describe('getDashboardData', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     queryIndex = 0
     queryResults.length = 0
+    vi.mocked(getCurrentUser).mockResolvedValue(MOCK_USER)
+  })
+
+  it('should return UNAUTHORIZED when user not authenticated', async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue(null)
+
+    const result = await getDashboardData()
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('UNAUTHORIZED')
+    }
   })
 
   it('should return success with empty dashboard when no data', async () => {
     queryResults.push([], [{ count: 0 }], [{ count: 0 }])
 
-    const result = await getDashboardData('ten-1', 'usr-1')
+    const result = await getDashboardData()
 
     expect(result.success).toBe(true)
     if (result.success) {
@@ -99,7 +126,7 @@ describe('getDashboardData', () => {
       [{ count: 5 }],
     )
 
-    const result = await getDashboardData('ten-1', 'usr-1')
+    const result = await getDashboardData()
 
     expect(result.success).toBe(true)
     if (result.success) {
@@ -128,7 +155,7 @@ describe('getDashboardData', () => {
       [{ count: 0 }],
     )
 
-    const result = await getDashboardData('ten-1', 'usr-1')
+    const result = await getDashboardData()
 
     expect(result.success).toBe(true)
     if (result.success) {
@@ -148,7 +175,7 @@ describe('getDashboardData', () => {
     }))
     queryResults.push(files, [{ count: 0 }], [{ count: 0 }])
 
-    const result = await getDashboardData('ten-1', 'usr-1')
+    const result = await getDashboardData()
 
     expect(result.success).toBe(true)
     if (result.success) {

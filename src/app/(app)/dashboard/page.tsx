@@ -24,7 +24,7 @@ export default async function DashboardPage() {
     )
   }
 
-  const result = await getDashboardData(user.tenantId, user.id)
+  const result = await getDashboardData()
   const dashboardData = result.success
     ? result.data
     : { recentFiles: [], pendingReviewsCount: 0, teamActivityCount: 0 }

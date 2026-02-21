@@ -9,12 +9,16 @@ import { projects } from '@/db/schema/projects'
 import { reviewActions } from '@/db/schema/reviewActions'
 import { scores } from '@/db/schema/scores'
 import type { DashboardData, RecentFileRow } from '@/features/dashboard/types'
+import { getCurrentUser } from '@/lib/auth/getCurrentUser'
 import type { ActionResult } from '@/types/actionResult'
 
-export async function getDashboardData(
-  tenantId: string,
-  _userId: string,
-): Promise<ActionResult<DashboardData>> {
+export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
+  const currentUser = await getCurrentUser()
+  if (!currentUser) {
+    return { success: false, code: 'UNAUTHORIZED', error: 'Not authenticated' }
+  }
+
+  const tenantId = currentUser.tenantId
   // Recent files: LEFT JOIN files → scores → projects, filter by tenantId, ORDER BY created_at DESC, LIMIT 10
   const recentFilesRows = await db
     .select({

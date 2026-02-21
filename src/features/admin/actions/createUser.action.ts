@@ -1,5 +1,7 @@
 'use server'
 
+import 'server-only'
+
 import { db } from '@/db/client'
 import { auditLogs } from '@/db/schema/auditLogs'
 import { userRoles } from '@/db/schema/userRoles'
