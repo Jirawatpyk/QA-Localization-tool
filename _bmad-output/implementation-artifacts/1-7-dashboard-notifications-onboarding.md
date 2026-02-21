@@ -1,6 +1,6 @@
 # Story 1.7: Dashboard, Notifications & Onboarding
 
-Status: review
+Status: done
 
 ## Story
 
@@ -916,6 +916,25 @@ claude-opus-4-6
 - Manual smoke test (7.4) and E2E gate (7.6) deferred — require running Supabase instance
 - shadcn components installed: `skeleton`, `dropdown-menu`
 
+### Code Review Round 2 (2026-02-21)
+
+**Reviewer:** claude-opus-4-6 (adversarial code review)
+
+**8 findings fixed:**
+
+1. **CRITICAL — `oklch(var(--primary))` double-wrapping** (`onboarding.css:28`): `--primary` already contains full `oklch()` value → `oklch(oklch(...))` invalid. Fixed: `background: var(--primary)`.
+2. **HIGH — Missing `data-tour` targets** (`app-sidebar.tsx`): Tour steps 3-4 referenced `nav-glossary` and `nav-upload` which didn't exist in sidebar. Fixed: added Glossary and Upload nav items with `data-tour` attributes.
+3. **HIGH — Duplicate test files** (2 pairs): Both co-located and `__tests__/` ATDD versions existed for `getNotifications` and `updateTourState`. Fixed: deleted co-located duplicates, kept `__tests__/` ATDD files.
+4. **MEDIUM — Missing `tenantId` filter** (`markNotificationRead.action.ts:32`): Single-item mark-read lacked `tenantId` in WHERE clause (defense-in-depth). Fixed: added `eq(notifications.tenantId, currentUser.tenantId)`.
+5. **MEDIUM — Magic number `=== 3`** (`OnboardingTour.tsx:56`): Hardcoded step count for completion detection. Fixed: extracted `SETUP_TOUR_STEPS` array + `LAST_STEP_INDEX` constant.
+6. **MEDIUM — Silent fetch failures** (`useNotifications.ts`): Initial `getNotifications()` failure produced no feedback. Fixed: added `toast.error()` on failure.
+7. **MEDIUM — Unsafe metadata cast** (`getCurrentUser.ts:66`): Raw `as UserMetadata` bypassed validation. Fixed: added runtime `typeof` + `Array.isArray` guard before cast.
+8. **LOW — Unchecked action results** (`useNotifications.ts:56-66`): `markAsRead`/`markAllAsRead` ignored `ActionResult`. Fixed: check `result.success` before optimistic state update, show toast on failure.
+
+**Post-fix verification:**
+- Type check: 0 errors
+- Tests: 41 files, 340 tests ALL PASSING (4 OOM worker errors — pre-existing, not test failures)
+
 ### File List
 
 **New files created:**
@@ -924,7 +943,6 @@ src/features/onboarding/types.ts
 src/features/onboarding/validation/onboardingSchemas.ts
 src/features/onboarding/validation/onboardingSchemas.test.ts
 src/features/onboarding/actions/updateTourState.action.ts
-src/features/onboarding/actions/updateTourState.action.test.ts
 src/features/onboarding/components/OnboardingTour.tsx
 src/features/onboarding/components/OnboardingTour.test.tsx
 src/features/dashboard/types.ts

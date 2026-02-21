@@ -32,7 +32,13 @@ export async function markNotificationRead(
     await db
       .update(notifications)
       .set({ isRead: true })
-      .where(and(eq(notifications.id, notificationId), eq(notifications.userId, currentUser.id)))
+      .where(
+        and(
+          eq(notifications.id, notificationId),
+          eq(notifications.userId, currentUser.id),
+          eq(notifications.tenantId, currentUser.tenantId),
+        ),
+      )
   }
 
   await writeAuditLog({

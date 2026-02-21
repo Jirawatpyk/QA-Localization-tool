@@ -18,6 +18,8 @@ export function useNotifications(userId: string) {
       const result = await getNotifications()
       if (result.success) {
         setNotifications(result.data)
+      } else {
+        toast.error('Failed to load notifications')
       }
     }
     void fetchInitial()
@@ -54,15 +56,23 @@ export function useNotifications(userId: string) {
   const unreadCount = useMemo(() => notifications.filter((n) => !n.isRead).length, [notifications])
 
   const markAsRead = useCallback(async (notificationId: string) => {
-    await markNotificationReadAction(notificationId)
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n)),
-    )
+    const result = await markNotificationReadAction(notificationId)
+    if (result.success) {
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n)),
+      )
+    } else {
+      toast.error('Failed to mark notification as read')
+    }
   }, [])
 
   const markAllAsRead = useCallback(async () => {
-    await markNotificationReadAction('all')
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
+    const result = await markNotificationReadAction('all')
+    if (result.success) {
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
+    } else {
+      toast.error('Failed to mark notifications as read')
+    }
   }, [])
 
   return { notifications, unreadCount, markAsRead, markAllAsRead, setNotifications }

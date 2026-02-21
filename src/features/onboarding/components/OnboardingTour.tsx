@@ -16,6 +16,44 @@ interface OnboardingTourProps {
   userMetadata: UserMetadata | null
 }
 
+const SETUP_TOUR_STEPS = [
+  {
+    element: 'body',
+    popover: {
+      title: 'Welcome to QA Localization Tool',
+      description:
+        "Your AI-powered QA assistant — catches everything Xbench catches, plus semantic issues Xbench can't.",
+    },
+  },
+  {
+    element: '[data-tour="create-project"]',
+    popover: {
+      title: 'Create a Project',
+      description: 'Start by setting your language pair and QA mode.',
+      side: 'bottom' as const,
+    },
+  },
+  {
+    element: '[data-tour="nav-glossary"]',
+    popover: {
+      title: 'Import Your Glossary',
+      description:
+        'Import your existing glossary (CSV/XLSX/TBX) — terminology checks start immediately.',
+      side: 'right' as const,
+    },
+  },
+  {
+    element: '[data-tour="nav-upload"]',
+    popover: {
+      title: 'Upload Your First File',
+      description: "Try with a file you already QA'd in Xbench — compare results side-by-side.",
+      side: 'right' as const,
+    },
+  },
+] as const
+
+const LAST_STEP_INDEX = SETUP_TOUR_STEPS.length - 1
+
 export function OnboardingTour({ userId, userMetadata }: OnboardingTourProps) {
   const driverRef = useRef<DriverInstance | null>(null)
 
@@ -53,51 +91,14 @@ export function OnboardingTour({ userId, userMetadata }: OnboardingTourProps) {
         onDestroyed: () => {
           // Check if tour was completed (reached last step)
           const activeIndex = driverObj.getActiveIndex()
-          if (activeIndex === 3) {
-            // Last step (0-indexed) — mark as completed
+          if (activeIndex === LAST_STEP_INDEX) {
             void updateTourState({ action: 'complete', tourId: 'setup' })
           }
         },
       })
 
       driverRef.current = driverObj
-
-      driverObj.setSteps([
-        {
-          element: 'body',
-          popover: {
-            title: 'Welcome to QA Localization Tool',
-            description:
-              "Your AI-powered QA assistant — catches everything Xbench catches, plus semantic issues Xbench can't.",
-          },
-        },
-        {
-          element: '[data-tour="create-project"]',
-          popover: {
-            title: 'Create a Project',
-            description: 'Start by setting your language pair and QA mode.',
-            side: 'bottom' as const,
-          },
-        },
-        {
-          element: '[data-tour="nav-glossary"]',
-          popover: {
-            title: 'Import Your Glossary',
-            description:
-              'Import your existing glossary (CSV/XLSX/TBX) — terminology checks start immediately.',
-            side: 'right' as const,
-          },
-        },
-        {
-          element: '[data-tour="nav-upload"]',
-          popover: {
-            title: 'Upload Your First File',
-            description:
-              "Try with a file you already QA'd in Xbench — compare results side-by-side.",
-            side: 'right' as const,
-          },
-        },
-      ])
+      driverObj.setSteps([...SETUP_TOUR_STEPS])
 
       // Resume from dismissed step OR start from 0
       driverObj.drive(resumeStep)

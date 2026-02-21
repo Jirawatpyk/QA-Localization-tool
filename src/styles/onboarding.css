@@ -25,7 +25,7 @@
 }
 
 .driver-popover-next-btn {
-  background: oklch(var(--primary));
+  background: var(--primary);
   color: white;
   border-radius: 6px;
   padding: 8px 16px;
