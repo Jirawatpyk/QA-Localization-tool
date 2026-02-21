@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 
 import { CompactLayout } from '@/components/layout/compact-layout'
@@ -10,7 +9,20 @@ import { getCurrentUser } from '@/lib/auth/getCurrentUser'
 
 export default async function DashboardPage() {
   const user = await getCurrentUser()
-  if (!user) redirect('/login')
+
+  // Note: proxy.ts already handles unauthenticated redirect to /login.
+  // If user reaches here but getCurrentUser returns null, their account
+  // is still being set up (Supabase replica lag for user_role). Show skeleton.
+  if (!user) {
+    return (
+      <>
+        <PageHeader title="Dashboard" />
+        <CompactLayout>
+          <DashboardSkeleton />
+        </CompactLayout>
+      </>
+    )
+  }
 
   const result = await getDashboardData(user.tenantId, user.id)
   const dashboardData = result.success
