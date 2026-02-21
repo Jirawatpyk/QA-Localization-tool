@@ -41,11 +41,13 @@ export async function markNotificationRead(
       )
   }
 
+  // Use nil UUID for batch operations (entity_id is UUID column, "all" is invalid)
+  const NIL_UUID = '00000000-0000-0000-0000-000000000000'
   await writeAuditLog({
     tenantId: currentUser.tenantId,
     userId: currentUser.id,
     entityType: 'notification',
-    entityId: notificationId,
+    entityId: notificationId === 'all' ? NIL_UUID : notificationId,
     action: notificationId === 'all' ? 'notification.read_all' : 'notification.read',
     newValue: { isRead: true },
   })
