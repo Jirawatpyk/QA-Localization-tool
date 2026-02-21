@@ -45,10 +45,29 @@ export async function setupNewUser(): Promise<ActionResult<SetupResult>> {
         .where(eq(userRoles.userId, user.id))
         .limit(1)
 
-      return {
-        success: true,
-        data: { tenantId: role?.tenantId ?? '', role: role?.role ?? 'admin' },
+      if (role) {
+        return { success: true, data: { tenantId: role.tenantId, role: role.role } }
       }
+
+      // User row exists but user_roles row is missing (e.g. previous migration
+      // or partial failure left orphan record). Repair by creating the role.
+      const [userRow] = await db
+        .select({ tenantId: users.tenantId })
+        .from(users)
+        .where(eq(users.id, user.id))
+        .limit(1)
+
+      if (userRow) {
+        await db.insert(userRoles).values({
+          userId: user.id,
+          tenantId: userRow.tenantId,
+          role: 'admin',
+        })
+        logger.info({ userId: user.id }, 'setupNewUser: repaired missing user_roles row')
+        return { success: true, data: { tenantId: userRow.tenantId, role: 'admin' } }
+      }
+
+      return { success: false, code: 'INTERNAL_ERROR', error: 'User record is incomplete' }
     }
 
     // First-time setup: create tenant, user, and admin role

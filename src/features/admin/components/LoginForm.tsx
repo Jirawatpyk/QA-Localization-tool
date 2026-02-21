@@ -8,6 +8,7 @@ import { GoogleLogo } from '@/components/icons/GoogleLogo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { setupNewUser } from '@/features/admin/actions/setupNewUser.action'
 import { createBrowserClient } from '@/lib/supabase/client'
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -45,6 +46,13 @@ export function LoginForm() {
         toast.error(error.message)
         return
       }
+
+      // Ensure app data exists — handles edge case where a previous signup
+      // created the auth user but setupNewUser() failed (DB error / migration).
+      // Idempotent: returns early if user already has proper data.
+      await setupNewUser()
+      // Refresh session to get updated JWT claims (tenant_id + role from hook)
+      await supabase.auth.refreshSession()
 
       // Full page reload to pick up fresh JWT claims from custom_access_token_hook
       window.location.href = safeRedirect
