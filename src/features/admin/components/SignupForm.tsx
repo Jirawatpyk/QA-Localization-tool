@@ -45,18 +45,17 @@ export function SignupForm() {
         return
       }
 
-      // With PKCE flow (@supabase/ssr default), signUp may return user: null
-      // even when the user was created successfully. In that case, sign in
-      // with the credentials to establish a session before continuing.
-      if (!data.user) {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
-        if (signInError) {
-          toast.error(signInError.message)
-          return
-        }
+      // PKCE flow (@supabase/ssr default) may not persist session cookies even
+      // when the API returns an access_token. Always sign in with password after
+      // signup to guarantee the session is stored in cookies before calling the
+      // server action.
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+      if (signInError) {
+        toast.error(signInError.message)
+        return
       }
 
       const result = await setupNewUser()
