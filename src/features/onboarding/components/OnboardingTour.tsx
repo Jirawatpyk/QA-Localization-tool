@@ -29,25 +29,9 @@ const SETUP_TOUR_STEPS = [
     element: '[data-tour="create-project"]',
     popover: {
       title: 'Create a Project',
-      description: 'Start by setting your language pair and QA mode.',
-      side: 'bottom' as const,
-    },
-  },
-  {
-    element: '[data-tour="nav-glossary"]',
-    popover: {
-      title: 'Import Your Glossary',
       description:
-        'Import your existing glossary (CSV/XLSX/TBX) — terminology checks start immediately.',
-      side: 'right' as const,
-    },
-  },
-  {
-    element: '[data-tour="nav-upload"]',
-    popover: {
-      title: 'Upload Your First File',
-      description: "Try with a file you already QA'd in Xbench — compare results side-by-side.",
-      side: 'right' as const,
+        'Start by setting your language pair and QA mode. Glossary import and file upload are inside each project.',
+      side: 'bottom' as const,
     },
   },
 ] as const
@@ -56,21 +40,25 @@ const LAST_STEP_INDEX = SETUP_TOUR_STEPS.length - 1
 
 export function OnboardingTour({ userId, userMetadata }: OnboardingTourProps) {
   const driverRef = useRef<DriverInstance | null>(null)
+  const dismissedRef = useRef(false)
 
   useEffect(() => {
-    // Only trigger if setup_tour_completed is null/undefined
     if (userMetadata?.setup_tour_completed) return
-    // No mobile tours (viewport >= 768px)
+    if (dismissedRef.current) return
     if (typeof window !== 'undefined' && window.innerWidth < 768) return
 
-    // Calculate resume step (0-indexed) from dismissed_at_step (1-based)
-    const resumeStep = userMetadata?.dismissed_at_step?.setup
+    let cancelled = false
+
+    const rawResume = userMetadata?.dismissed_at_step?.setup
       ? userMetadata.dismissed_at_step.setup - 1
       : 0
+    const resumeStep = Math.min(rawResume, LAST_STEP_INDEX)
 
     async function initTour() {
-      // Dynamic JS import inside useEffect — avoids SSR window reference issues
       const { driver } = await import('driver.js')
+
+      // Effect was cleaned up during async import — don't create instance
+      if (cancelled) return
 
       const driverObj = driver({
         showProgress: true,
@@ -78,8 +66,8 @@ export function OnboardingTour({ userId, userMetadata }: OnboardingTourProps) {
         overlayOpacity: 0.4,
         stagePadding: 8,
         stageRadius: 6,
-        onDestroyStarted: () => {
-          // Esc/X dismissed — save step (getActiveIndex is 0-based; store as 1-based)
+        onCloseClick: () => {
+          dismissedRef.current = true
           const currentIndex = driverObj.getActiveIndex() ?? 0
           void updateTourState({
             action: 'dismiss',
@@ -89,7 +77,8 @@ export function OnboardingTour({ userId, userMetadata }: OnboardingTourProps) {
           driverObj.destroy()
         },
         onDestroyed: () => {
-          // Check if tour was completed (reached last step)
+          // Guard: skip if destroyed via X button (dismiss) or cleanup (unmount)
+          if (dismissedRef.current || cancelled) return
           const activeIndex = driverObj.getActiveIndex()
           if (activeIndex === LAST_STEP_INDEX) {
             void updateTourState({ action: 'complete', tourId: 'setup' })
@@ -99,19 +88,23 @@ export function OnboardingTour({ userId, userMetadata }: OnboardingTourProps) {
 
       driverRef.current = driverObj
       driverObj.setSteps([...SETUP_TOUR_STEPS])
-
-      // Resume from dismissed step OR start from 0
       driverObj.drive(resumeStep)
     }
 
     void initTour()
 
     return () => {
-      // Destroy driver on unmount (prevents memory leak)
+      cancelled = true
       driverRef.current?.destroy()
+      driverRef.current = null
+      // Force remove leftover driver.js DOM elements (driver.js v1.3-1.4 class names)
+      document.querySelectorAll('.driver-active-element').forEach((el) => {
+        el.classList.remove('driver-active-element')
+      })
+      document.body.classList.remove('driver-active', 'driver-fade', 'driver-simple')
+      document.querySelectorAll('.driver-overlay, .driver-popover').forEach((el) => el.remove())
     }
   }, [userId, userMetadata])
 
-  // Purely behavioral component — renders nothing
   return null
 }

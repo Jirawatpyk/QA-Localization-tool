@@ -1,14 +1,6 @@
 'use client'
 
-import {
-  BookOpen,
-  ChevronLeft,
-  ChevronRight,
-  FolderOpen,
-  LayoutDashboard,
-  Shield,
-  Upload,
-} from 'lucide-react'
+import { ChevronLeft, ChevronRight, FolderOpen, LayoutDashboard, Shield } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect } from 'react'
 
@@ -20,8 +12,6 @@ const STORAGE_KEY = 'sidebar-collapsed'
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, dataTour: undefined },
   { href: '/projects', label: 'Projects', icon: FolderOpen, dataTour: 'create-project' },
-  { href: '/glossary', label: 'Glossary', icon: BookOpen, dataTour: 'nav-glossary' },
-  { href: '/upload', label: 'Upload', icon: Upload, dataTour: 'nav-upload' },
   { href: '/admin', label: 'Admin', icon: Shield, dataTour: undefined },
 ] as const
 

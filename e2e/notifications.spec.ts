@@ -1,9 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 
-// ATDD RED PHASE — Story 1.7: Dashboard, Notifications & Onboarding
-// These tests are intentionally FAILING (test.skip) until feature is implemented.
-// Remove test.skip() after implementing NotificationDropdown component to run green phase.
-//
+// ATDD GREEN PHASE — Story 1.7: Dashboard, Notifications & Onboarding
 // AC Coverage: AC#2 (notification bell + dropdown + mark-read)
 
 const TEST_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'admin@test.local'
@@ -18,22 +15,16 @@ async function loginAs(page: Page, email: string, password: string) {
 }
 
 test.describe('Notifications — AC#2: Bell icon + dropdown', () => {
-  test.skip('[P1] should show bell icon (notification-bell) in header after login', async ({
-    page,
-  }) => {
-    // THIS TEST WILL FAIL — NotificationDropdown component not implemented yet
-    // AppHeader currently has a stub Bell button, not a real NotificationDropdown
+  test('[P1] should show bell icon (notification-bell) in header after login', async ({ page }) => {
     await loginAs(page, TEST_EMAIL, TEST_PASSWORD)
 
     const bellIcon = page.getByTestId('notification-bell')
     await expect(bellIcon).toBeVisible({ timeout: 10000 })
   })
 
-  test.skip('[P1] should show unread badge on bell icon when unread notifications exist', async ({
+  test('[P1] should show unread badge on bell icon when unread notifications exist', async ({
     page,
   }) => {
-    // THIS TEST WILL FAIL — NotificationDropdown with badge not implemented yet
-    // Requires: a notification record in DB with isRead=false for this user
     await loginAs(page, TEST_EMAIL, TEST_PASSWORD)
 
     // The badge appears when there are unread notifications
@@ -43,10 +34,7 @@ test.describe('Notifications — AC#2: Bell icon + dropdown', () => {
     await expect(badge).toBeVisible({ timeout: 10000 })
   })
 
-  test.skip('[P1] should open notification dropdown when bell icon is clicked', async ({
-    page,
-  }) => {
-    // THIS TEST WILL FAIL — NotificationDropdown component not implemented yet
+  test('[P1] should open notification dropdown when bell icon is clicked', async ({ page }) => {
     await loginAs(page, TEST_EMAIL, TEST_PASSWORD)
 
     await page.getByTestId('notification-bell').click()
@@ -55,8 +43,7 @@ test.describe('Notifications — AC#2: Bell icon + dropdown', () => {
     await expect(dropdown).toBeVisible({ timeout: 5000 })
   })
 
-  test.skip('[P2] should show notification title and body in the dropdown', async ({ page }) => {
-    // THIS TEST WILL FAIL — NotificationDropdown list rendering not implemented yet
+  test('[P2] should show notification title and body in the dropdown', async ({ page }) => {
     await loginAs(page, TEST_EMAIL, TEST_PASSWORD)
 
     await page.getByTestId('notification-bell').click()
@@ -74,8 +61,7 @@ test.describe('Notifications — AC#2: Bell icon + dropdown', () => {
     await expect(firstItem.locator('[data-testid="notification-body"]')).toBeVisible()
   })
 
-  test.skip('[P1] should remove unread badge after clicking "Mark all read"', async ({ page }) => {
-    // THIS TEST WILL FAIL — mark-all-read functionality not implemented yet
+  test('[P1] should remove unread badge after clicking "Mark all read"', async ({ page }) => {
     await loginAs(page, TEST_EMAIL, TEST_PASSWORD)
 
     // Open dropdown

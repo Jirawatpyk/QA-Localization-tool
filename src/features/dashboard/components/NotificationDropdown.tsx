@@ -39,7 +39,7 @@ export function NotificationDropdown({ userId }: NotificationDropdownProps) {
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-80">
+      <DropdownMenuContent align="end" className="w-80" data-testid="notification-dropdown">
         <div className="flex items-center justify-between px-3 py-2">
           <span className="text-sm font-medium">Notifications</span>
           {unreadCount > 0 && (
@@ -48,7 +48,7 @@ export function NotificationDropdown({ userId }: NotificationDropdownProps) {
               size="sm"
               className="h-auto px-2 py-1 text-xs"
               onClick={() => void markAllAsRead()}
-              data-testid="mark-all-read"
+              data-testid="notification-mark-all-read"
             >
               Mark all read
             </Button>
@@ -76,8 +76,16 @@ export function NotificationDropdown({ userId }: NotificationDropdownProps) {
                     <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
                   )}
                   <div className="flex-1">
-                    <p className="text-sm font-medium leading-tight">{notif.title}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
+                    <p
+                      className="text-sm font-medium leading-tight"
+                      data-testid="notification-title"
+                    >
+                      {notif.title}
+                    </p>
+                    <p
+                      className="mt-0.5 text-xs text-muted-foreground line-clamp-2"
+                      data-testid="notification-body"
+                    >
                       {notif.body}
                     </p>
                   </div>

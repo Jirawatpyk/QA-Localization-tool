@@ -23,15 +23,14 @@ so that I can quickly orient myself and stay informed.
 
 3. **Given** a first-time user logs in
    **When** they reach the dashboard and `user.metadata.setup_tour_completed` is null
-   **Then** a 4-step Setup Tour activates via `driver.js` overlay:
+   **Then** a 2-step Setup Tour activates via `driver.js` overlay:
      1. Welcome — tool positioning vs Xbench
-     2. Create Project — name + language pair
-     3. Import Glossary — CSV/XLSX/TBX
-     4. Upload First File — "Try with a file you already QA'd in Xbench"
+     2. Create Project — name + language pair (mentions glossary/upload are inside each project)
    **And** each step highlights the relevant UI area with a spotlight overlay
    **And** users can navigate: Next, Previous, Dismiss (pauses at current step), or Skip All (permanently completes)
    **And** on completion or Skip All, `user.metadata.setup_tour_completed` is set to current timestamp (ISO 8601)
    **And** on mobile (<768px), Setup Tour is suppressed — banner shown instead: "Switch to desktop for the best onboarding experience"
+   > **AC Revision (2026-02-21):** Original spec had 4 steps with Glossary/Upload as sidebar nav targets. Actual architecture puts glossary/upload as nested routes inside `/projects/[projectId]/...` — no top-level `/glossary` or `/upload` route exists. Reduced to 2 steps to match real UI. Glossary/Upload tour steps deferred to Epic 2 as a Project-level tour when those UIs are accessible.
 
 4. **Given** the notification system
    **When** events fire (glossary updated, analysis complete)
@@ -44,7 +43,7 @@ so that I can quickly orient myself and stay informed.
 
 6. **Given** a returning user who has previously dismissed the Setup Tour mid-way
    **When** they return to the dashboard
-   **Then** the tour resumes at the step they left (`user.metadata.dismissed_at_step.setup`)
+   **Then** the tour resumes at the step they left (`user.metadata.dismissed_at_step.setup`), clamped to `LAST_STEP_INDEX` to handle cases where step count was reduced
    **And** Help menu shows "Restart Tour" option to re-trigger the Setup Tour from step 1
 
 ## Tasks / Subtasks
@@ -734,8 +733,8 @@ Per Epic 1.7 AC:
 
 **ReviewView does not exist yet** (Epic 4 stories). This story:
 1. Installs the OnboardingTour infrastructure (driver.js, component, server action)
-2. Implements Setup Tour only (4 steps on dashboard)
-3. Stores `review_tour_completed` in `UserMetadata` type for future use
+2. Implements Setup Tour only (2 steps on dashboard — glossary/upload steps deferred to Project-level Tour in Epic 2 Story 2.8)
+3. Stores `review_tour_completed` and `project_tour_completed` in `UserMetadata` type for future use
 4. Does NOT implement Review Tour steps or trigger (deferred to Story 4-1 when ReviewView is built)
 
 #### shadcn/ui Components Used
@@ -934,6 +933,36 @@ claude-opus-4-6
 **Post-fix verification:**
 - Type check: 0 errors
 - Tests: 41 files, 340 tests ALL PASSING (4 OOM worker errors — pre-existing, not test failures)
+
+### Code Review Round 3 (2026-02-21)
+
+**Reviewer:** claude-opus-4-6 (adversarial code review) — focused on OnboardingTour post-bugfix
+
+**Root cause of issues:** CR Round 2 Finding #2 added `/glossary` and `/upload` nav items to sidebar as `data-tour` targets, but these are **nested routes** (`/projects/[projectId]/glossary`) — no top-level routes exist. This caused:
+- 404 errors when users clicked Glossary/Upload in sidebar
+- Tour steps 3-4 pointing to elements that shouldn't exist as top-level nav
+
+**Party Mode decision (Sally UX + Winston Arch + John PM):** Reduce Setup Tour from 4 → 2 steps, defer glossary/upload tour to Epic 2 as Project-level tour.
+
+**6 findings fixed:**
+
+1. **CRITICAL — Test references `onDestroyStarted` but implementation uses `onCloseClick`** (`OnboardingTour.test.tsx:103-124`): Callback API changed during bugfix but test not updated → test silently broken. Fixed: updated test to use `onCloseClick`.
+2. **HIGH — Double action fire on last-step X click** (`OnboardingTour.tsx:84-98`): `onCloseClick` fires dismiss → `destroy()` → `onDestroyed` fires complete. Fixed: guard `if (dismissedRef.current || cancelled) return` in `onDestroyed`.
+3. **HIGH — `onDestroyed` fires spuriously on cleanup unmount** (`OnboardingTour.tsx:94-98`): Cleanup `destroy()` triggers `onDestroyed` → spurious complete. Fixed: same guard checks `cancelled` flag.
+4. **HIGH — Sidebar `/glossary` and `/upload` routes don't exist** (`app-sidebar.tsx:23-24`): Removed non-existent routes, kept only Dashboard/Projects/Admin.
+5. **HIGH — Tour steps 3-4 target missing elements** (`OnboardingTour.tsx:37-52`): Reduced to 2 steps (Welcome + Create Project). Updated AC #3 with revision note.
+6. **MEDIUM — No clamp on resumeStep** (`OnboardingTour.tsx:52-54`): Users with `dismissed_at_step.setup = 3` from old 4-step tour would resume beyond array bounds. Fixed: `Math.min(rawResume, LAST_STEP_INDEX)`.
+
+**New tests added (5):**
+- `should clamp resumeStep to LAST_STEP_INDEX when dismissed_at_step exceeds step count`
+- `should NOT fire complete when X is clicked on last step (dismiss only)`
+- `should fire complete via onDestroyed when tour finishes naturally on last step`
+- `should not re-init tour after dismiss even if component re-renders`
+- `should NOT fire complete via onDestroyed on cleanup unmount`
+
+**Post-fix verification:**
+- 25 onboarding tests ALL PASSING (13 component + 8 validation + 4 action)
+- Type check: 0 errors
 
 ### File List
 

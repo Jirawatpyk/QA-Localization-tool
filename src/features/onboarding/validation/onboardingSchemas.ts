@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const tourIdSchema = z.enum(['setup', 'review'])
+export const tourIdSchema = z.enum(['setup', 'review', 'project'])
 
 export const updateTourStateSchema = z
   .object({

@@ -41,7 +41,7 @@ export function RecentFilesTable({ files }: RecentFilesTableProps) {
   }
 
   return (
-    <div className="rounded-lg border border-border" data-testid="recent-files-table">
+    <div className="rounded-lg border border-border" data-testid="dashboard-recent-files-table">
       <Table>
         <TableHeader>
           <TableRow>

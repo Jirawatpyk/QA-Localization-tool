@@ -1,6 +1,7 @@
 import { Bell, User } from 'lucide-react'
 
 import { NotificationDropdown } from '@/features/dashboard/components/NotificationDropdown'
+import { HelpMenu } from '@/features/onboarding/components/HelpMenu'
 
 interface AppHeaderProps {
   userId?: string | undefined
@@ -23,6 +24,7 @@ export function AppHeader({ userId }: AppHeaderProps) {
             <Bell size={16} />
           </button>
         )}
+        <HelpMenu />
         <button
           className="flex h-8 w-8 items-center justify-center rounded-md text-text-secondary hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
           aria-label="User menu"

@@ -19,7 +19,7 @@ export function DashboardView({ data, userMetadata, userId }: DashboardViewProps
       {/* Mobile banner */}
       <div
         className="block md:hidden rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
-        data-testid="mobile-review-banner"
+        data-testid="mobile-desktop-banner"
       >
         For the best review experience, use a desktop browser
       </div>
