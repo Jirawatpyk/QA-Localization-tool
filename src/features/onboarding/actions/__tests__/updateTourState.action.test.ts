@@ -24,10 +24,6 @@ vi.mock('@/db/schema/users', () => ({
   users: { id: 'id', metadata: 'metadata' },
 }))
 
-vi.mock('@/features/audit/actions/writeAuditLog', () => ({
-  writeAuditLog: vi.fn().mockResolvedValue(undefined),
-}))
-
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
 
 describe('updateTourState action', () => {

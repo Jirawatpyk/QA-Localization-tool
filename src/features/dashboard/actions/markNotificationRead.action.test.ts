@@ -84,4 +84,45 @@ describe('markNotificationRead', () => {
     expect(mockUpdate).toHaveBeenCalled()
     expect(mockSet).toHaveBeenCalledWith({ isRead: true })
   })
+
+  it('should use nil UUID for audit log entityId when marking all as read', async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      id: 'usr-1',
+      email: 'test@test.com',
+      tenantId: 'ten-1',
+      role: 'qa_reviewer',
+      displayName: 'Test',
+      metadata: null,
+    })
+
+    await markNotificationRead('all')
+
+    const NIL_UUID = '00000000-0000-0000-0000-000000000000'
+    expect(mockWriteAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityId: NIL_UUID,
+        action: 'notification.read_all',
+      }),
+    )
+  })
+
+  it('should use actual notificationId for audit log when marking single as read', async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      id: 'usr-1',
+      email: 'test@test.com',
+      tenantId: 'ten-1',
+      role: 'qa_reviewer',
+      displayName: 'Test',
+      metadata: null,
+    })
+
+    await markNotificationRead('notif-123')
+
+    expect(mockWriteAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityId: 'notif-123',
+        action: 'notification.read',
+      }),
+    )
+  })
 })

@@ -5,7 +5,6 @@ import { eq } from 'drizzle-orm'
 
 import { db } from '@/db/client'
 import { users } from '@/db/schema/users'
-import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import type { UserMetadata } from '@/features/onboarding/types'
 import { updateTourStateSchema } from '@/features/onboarding/validation/onboardingSchemas'
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
@@ -57,15 +56,7 @@ export async function updateTourState(input: unknown): Promise<ActionResult<{ su
 
   await db.update(users).set({ metadata: newMetadata }).where(eq(users.id, currentUser.id))
 
-  await writeAuditLog({
-    tenantId: currentUser.tenantId,
-    userId: currentUser.id,
-    entityType: 'user',
-    entityId: currentUser.id,
-    action: `tour_state.${parsed.data.action}`,
-    oldValue: { metadata: existingMetadata },
-    newValue: { metadata: newMetadata },
-  })
+  // No audit log — tour state is user preference, not business-critical (per story spec)
 
   return { success: true, data: { success: true } }
 }

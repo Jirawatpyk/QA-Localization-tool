@@ -94,7 +94,7 @@ so that I can quickly orient myself and stay informed.
   - [x] 7.3 Run type check (`npm run type-check`) — 0 errors
   - [ ] 7.4 Manual smoke test: login → verify dashboard loads, tour appears, bell icon functional [NOTE: requires Supabase running]
   - [x] 7.5 Remove `it.skip()` / `test.skip()` จากไฟล์ ATDD RED phase ทั้ง 3 unit test files แล้ว verify ผ่านทั้งหมด
-  - [ ] 7.6 Push to `main` และ verify **E2E Gate** (`e2e-gate.yml`) ผ่านใน GitHub Actions [NOTE: ต้องเพิ่ม secrets ก่อน push]
+  - [x] 7.6 Push to `main` และ verify **E2E Gate** (`e2e-gate.yml`) ผ่านใน GitHub Actions — 48/48 passed (run 22256600902)
 
 ## Dev Notes
 
@@ -964,6 +964,26 @@ claude-opus-4-6
 - 25 onboarding tests ALL PASSING (13 component + 8 validation + 4 action)
 - Type check: 0 errors
 
+### Code Review Round 4 (2026-02-21)
+
+**Reviewer:** claude-opus-4-6 (adversarial code review) — post E2E Gate pass
+
+**8 findings (1 High, 5 Medium, 2 Low) — 6 fixed, 1 withdrawn, 1 deferred:**
+
+1. **H1 — Unnecessary audit log in updateTourState** (`updateTourState.action.ts`): Story spec explicitly says "No audit log for tour state — user preference, not business-critical." Implementation was calling `writeAuditLog()`. **Fixed:** removed audit log import/call.
+2. **M1 — Story File List incomplete**: Missing `HelpMenu.tsx`, `HelpMenu.test.tsx`, E2E spec files, `supabase-admin.ts`. **Fixed:** added to File List.
+3. **M2 — HelpMenu component untested**: `HelpMenu.tsx` had no unit test. **Fixed:** created `HelpMenu.test.tsx` (3 tests — render, trigger button, rerender stability).
+4. **M3 — No regression test for nil UUID fix** (`markNotificationRead.action.ts`): The `entityId: "all"` → nil UUID fix had no test coverage. **Fixed:** added 2 tests verifying nil UUID for batch + actual ID for single mark-read.
+5. **M4 — Missing `export const dynamic = 'force-dynamic'` on dashboard page**: **Withdrawn.** `getCurrentUser()` → `createServerClient()` → `cookies()` from `next/headers` automatically makes the page dynamic. Explicit `force-dynamic` is unnecessary.
+6. **M5 — getDashboardData signature mismatch**: Story spec shows `getDashboardData(tenantId, userId)` but implementation uses `getCurrentUser()` internally (zero-arg). **Fixed:** added note to story file.
+7. **L1 — Minor: `DashboardSkeleton.tsx` not in File List**: Already listed. **No action.**
+8. **L2 — Task 7.6 unchecked**: E2E Gate passed (48/48, run 22256600902) but task not marked. **Fixed:** marked `[x]`.
+
+**Post-fix verification:**
+- Type check: 0 errors
+- Unit tests: 46 files, 373 tests ALL PASSING
+- E2E Gate: 48/48 passed (run 22256600902)
+
 ### File List
 
 **New files created:**
@@ -974,6 +994,8 @@ src/features/onboarding/validation/onboardingSchemas.test.ts
 src/features/onboarding/actions/updateTourState.action.ts
 src/features/onboarding/components/OnboardingTour.tsx
 src/features/onboarding/components/OnboardingTour.test.tsx
+src/features/onboarding/components/HelpMenu.tsx
+src/features/onboarding/components/HelpMenu.test.tsx
 src/features/dashboard/types.ts
 src/features/dashboard/actions/getDashboardData.action.ts
 src/features/dashboard/actions/getDashboardData.action.test.ts
@@ -1005,9 +1027,21 @@ src/app/globals.css (onboarding.css import)
 src/test/factories.ts (buildNotification, buildRecentFileRow, buildDashboardData)
 ```
 
+**E2E test files (Playwright):**
+```
+e2e/dashboard.spec.ts
+e2e/notifications.spec.ts
+e2e/onboarding-tour.spec.ts
+e2e/helpers/supabase-admin.ts
+```
+
 **ATDD test files unskipped (RED → GREEN):**
 ```
 src/features/dashboard/actions/__tests__/getNotifications.action.test.ts
 src/features/onboarding/actions/__tests__/updateTourState.action.test.ts
 src/features/dashboard/hooks/__tests__/useNotifications.test.ts
 ```
+
+### getDashboardData Signature Note
+
+Story spec shows `getDashboardData(tenantId, userId)` with explicit params, but implementation uses `getCurrentUser()` internally — no params needed. The page calls `getDashboardData()` (zero-arg). This is intentional: server action reads auth context internally for security (prevents tenant ID spoofing).
