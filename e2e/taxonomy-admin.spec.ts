@@ -86,7 +86,7 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     // Supabase custom_access_token_hook queries a read replica that may not yet have the
     // user_roles row → JWT minted with user_role='none' → /admin redirects to /dashboard.
     // Re-logging in mints a fresh JWT from the hook. Repeat until /admin is reachable.
-    for (let attempt = 0; attempt < 6; attempt++) {
+    for (let attempt = 0; attempt < 12; attempt++) {
       await page.goto('/admin')
       await page.waitForLoadState('networkidle')
       if (page.url().includes('/admin')) return // admin access confirmed
@@ -98,7 +98,7 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
       await page.getByLabel('Password').fill(TEST_PASSWORD)
       await page.getByRole('button', { name: 'Sign in' }).click()
       await page.waitForURL('**/dashboard', { timeout: 10000 })
-      await page.waitForTimeout(2000) // brief pause for replica to sync
+      await page.waitForTimeout(5000) // pause for read replica to sync
     }
     // Final check — fail explicitly if admin is still unreachable
     await page.goto('/admin')
