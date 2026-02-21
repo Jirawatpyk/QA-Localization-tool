@@ -34,7 +34,7 @@ test.describe.serial('Auth flow', () => {
 
     // Wait for redirect to dashboard (setupNewUser + refreshSession + redirect)
     await page.waitForURL('**/dashboard', { timeout: 15000 })
-    await expect(page.getByText('Welcome to QA Localization Tool')).toBeVisible()
+    await expect(page.getByText('Welcome to QA Localization Tool').first()).toBeVisible()
   })
 
   test('should login with created account', async ({ page }) => {
@@ -46,7 +46,7 @@ test.describe.serial('Auth flow', () => {
     await page.getByRole('button', { name: 'Sign in' }).click()
 
     await page.waitForURL('**/dashboard', { timeout: 10000 })
-    await expect(page.getByText('Welcome to QA Localization Tool')).toBeVisible()
+    await expect(page.getByText('Welcome to QA Localization Tool').first()).toBeVisible()
   })
 
   test('should show error toast for invalid credentials', async ({ page }) => {
