@@ -90,7 +90,9 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
       await page.goto('/admin')
       await page.waitForLoadState('networkidle')
       if (page.url().includes('/admin')) return // admin access confirmed
-      // Still redirected — re-login to get a fresh JWT
+      // Still redirected — clear session cookies first so proxy doesn't
+      // redirect /login → /dashboard, then re-login to mint a fresh JWT.
+      await page.context().clearCookies()
       await page.goto('/login')
       await page.getByLabel('Email').fill(TEST_EMAIL)
       await page.getByLabel('Password').fill(TEST_PASSWORD)
