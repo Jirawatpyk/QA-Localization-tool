@@ -8,7 +8,14 @@ import { env } from '@/lib/env'
 import * as schema from './schema'
 
 function createDb() {
-  const queryClient = postgres(env.DATABASE_URL)
+  // Supabase Transaction Pooler (port 6543) does not support prepared statements.
+  // Detect pooler port and disable prepared statements accordingly.
+  const isTransactionPooler = env.DATABASE_URL.includes(':6543')
+  const queryClient = postgres(env.DATABASE_URL, {
+    prepare: !isTransactionPooler,
+    connect_timeout: 10,
+    idle_timeout: 20,
+  })
   return drizzle(queryClient, { schema })
 }
 
