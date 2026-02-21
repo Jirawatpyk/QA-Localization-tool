@@ -25,6 +25,7 @@ test.describe.serial('Story 1.4 — Glossary Import & Management', () => {
   let glossaryUrl: string
 
   test('[setup] signup, create project, navigate to glossary', async ({ page }) => {
+    test.setTimeout(60000) // signup + project creation + on-demand module compilation
     // Sign up
     await page.goto('/signup')
     await page.getByLabel('Display Name').fill('Glossary Tester')
