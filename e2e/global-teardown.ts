@@ -3,9 +3,13 @@ import { createClient } from '@supabase/supabase-js'
 /**
  * Playwright global teardown — cleans up E2E test users from Supabase Auth.
  *
- * Deletes all users whose email matches `e2e-*@test.local` pattern.
- * Uses service_role key for admin.deleteUser() access.
- * Runs once after ALL test files complete.
+ * Only deletes EPHEMERAL users created per-run with timestamp emails like:
+ *   e2e-1740100000000@test.local, e2e-g14-1740100000000@test.local
+ *
+ * Preserves PERSISTENT users with fixed emails like:
+ *   admin@test.local, e2e-tax16@test.local, first-time@test.local
+ *
+ * Pattern: e2e-{optional-prefix}{13-digit-timestamp}@test.local
  */
 export default async function globalTeardown() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -33,7 +37,9 @@ export default async function globalTeardown() {
       break
     }
 
-    const e2eUsers = data.users.filter((u) => u.email?.match(/^e2e-.*@test\.local$/))
+    // Match only timestamp-based ephemeral emails (e.g. e2e-1740100000000@test.local)
+    // Exclude fixed emails like admin@test.local, e2e-tax16@test.local
+    const e2eUsers = data.users.filter((u) => u.email?.match(/^e2e-.*\d{13,}@test\.local$/))
 
     for (const user of e2eUsers) {
       const { error: delError } = await admin.auth.admin.deleteUser(user.id)
