@@ -43,11 +43,29 @@ describe('markNotificationRead', () => {
   it('should return UNAUTHORIZED when user not authenticated', async () => {
     vi.mocked(getCurrentUser).mockResolvedValue(null)
 
-    const result = await markNotificationRead('notif-1')
+    const result = await markNotificationRead('550e8400-e29b-41d4-a716-446655440001')
 
     expect(result.success).toBe(false)
     if (!result.success) {
       expect(result.code).toBe('UNAUTHORIZED')
+    }
+  })
+
+  it('should return VALIDATION_ERROR for invalid notification ID', async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      id: 'usr-1',
+      email: 'test@test.com',
+      tenantId: 'ten-1',
+      role: 'qa_reviewer',
+      displayName: 'Test',
+      metadata: null,
+    })
+
+    const result = await markNotificationRead('not-a-uuid')
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('VALIDATION_ERROR')
     }
   })
 
@@ -61,7 +79,7 @@ describe('markNotificationRead', () => {
       metadata: null,
     })
 
-    const result = await markNotificationRead('notif-1')
+    const result = await markNotificationRead('550e8400-e29b-41d4-a716-446655440001')
 
     expect(result.success).toBe(true)
     expect(mockUpdate).toHaveBeenCalled()
@@ -116,11 +134,11 @@ describe('markNotificationRead', () => {
       metadata: null,
     })
 
-    await markNotificationRead('notif-123')
+    await markNotificationRead('a1b2c3d4-e5f6-4789-abcd-ef0123456789')
 
     expect(mockWriteAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({
-        entityId: 'notif-123',
+        entityId: 'a1b2c3d4-e5f6-4789-abcd-ef0123456789',
         action: 'notification.read',
       }),
     )

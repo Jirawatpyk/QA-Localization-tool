@@ -4,18 +4,25 @@ import 'server-only'
 import { eq, and } from 'drizzle-orm'
 
 import { db } from '@/db/client'
+import { withTenant } from '@/db/helpers/withTenant'
 import { notifications } from '@/db/schema/notifications'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
+import { markNotificationReadSchema } from '@/features/dashboard/validation/notificationSchemas'
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
 import type { ActionResult } from '@/types/actionResult'
 
-export async function markNotificationRead(
-  notificationId: string | 'all',
-): Promise<ActionResult<void>> {
+export async function markNotificationRead(input: unknown): Promise<ActionResult<void>> {
   const currentUser = await getCurrentUser()
   if (!currentUser) {
     return { success: false, code: 'UNAUTHORIZED', error: 'Not authenticated' }
   }
+
+  const parsed = markNotificationReadSchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, code: 'VALIDATION_ERROR', error: parsed.error.message }
+  }
+
+  const notificationId = parsed.data
 
   if (notificationId === 'all') {
     await db
@@ -24,7 +31,7 @@ export async function markNotificationRead(
       .where(
         and(
           eq(notifications.userId, currentUser.id),
-          eq(notifications.tenantId, currentUser.tenantId),
+          withTenant(notifications.tenantId, currentUser.tenantId),
           eq(notifications.isRead, false),
         ),
       )
@@ -36,7 +43,7 @@ export async function markNotificationRead(
         and(
           eq(notifications.id, notificationId),
           eq(notifications.userId, currentUser.id),
-          eq(notifications.tenantId, currentUser.tenantId),
+          withTenant(notifications.tenantId, currentUser.tenantId),
         ),
       )
   }

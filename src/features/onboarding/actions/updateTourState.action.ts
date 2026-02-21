@@ -1,9 +1,10 @@
 'use server'
 import 'server-only'
 
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 
 import { db } from '@/db/client'
+import { withTenant } from '@/db/helpers/withTenant'
 import { users } from '@/db/schema/users'
 import type { UserMetadata } from '@/features/onboarding/types'
 import { updateTourStateSchema } from '@/features/onboarding/validation/onboardingSchemas'
@@ -54,7 +55,10 @@ export async function updateTourState(input: unknown): Promise<ActionResult<{ su
     }
   }
 
-  await db.update(users).set({ metadata: newMetadata }).where(eq(users.id, currentUser.id))
+  await db
+    .update(users)
+    .set({ metadata: newMetadata })
+    .where(and(eq(users.id, currentUser.id), withTenant(users.tenantId, currentUser.tenantId)))
 
   // No audit log — tour state is user preference, not business-critical (per story spec)
 

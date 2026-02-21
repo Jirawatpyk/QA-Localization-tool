@@ -158,6 +158,20 @@ describe('getNotifications action', () => {
     }
   })
 
+  it('[P1] should return UNAUTHORIZED when user is not authenticated', async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue(null)
+
+    const { getNotifications } =
+      await import('@/features/dashboard/actions/getNotifications.action')
+    const result = await getNotifications()
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('UNAUTHORIZED')
+      expect(result.error).toMatch(/not authenticated/i)
+    }
+  })
+
   it('[P2] should return empty array when user has no notifications', async () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'usr-no-notifs',

@@ -4,6 +4,7 @@ import 'server-only'
 import { desc, eq, and } from 'drizzle-orm'
 
 import { db } from '@/db/client'
+import { withTenant } from '@/db/helpers/withTenant'
 import { notifications } from '@/db/schema/notifications'
 import type { AppNotification } from '@/features/dashboard/types'
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
@@ -21,7 +22,7 @@ export async function getNotifications(): Promise<ActionResult<AppNotification[]
     .where(
       and(
         eq(notifications.userId, currentUser.id),
-        eq(notifications.tenantId, currentUser.tenantId),
+        withTenant(notifications.tenantId, currentUser.tenantId),
       ),
     )
     .orderBy(desc(notifications.createdAt))

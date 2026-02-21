@@ -14,10 +14,14 @@ import { useNotifications } from '@/features/dashboard/hooks/useNotifications'
 
 interface NotificationDropdownProps {
   userId: string
+  tenantId: string
 }
 
-export function NotificationDropdown({ userId }: NotificationDropdownProps) {
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(userId)
+export function NotificationDropdown({ userId, tenantId }: NotificationDropdownProps) {
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(
+    userId,
+    tenantId,
+  )
 
   return (
     <DropdownMenu>
@@ -30,7 +34,7 @@ export function NotificationDropdown({ userId }: NotificationDropdownProps) {
           <Bell size={16} />
           {unreadCount > 0 && (
             <span
-              className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-white"
+              className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-primary-foreground"
               data-testid="notification-badge"
             >
               {unreadCount > 9 ? '9+' : unreadCount}

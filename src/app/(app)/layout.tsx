@@ -26,7 +26,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
         {/* Main content area */}
         <div className="flex flex-1 flex-col overflow-hidden">
-          <AppHeader userId={user?.id} />
+          <AppHeader userId={user?.id} tenantId={user?.tenantId} />
           <main className="flex-1 overflow-y-auto">
             <div className="mx-auto max-w-[var(--content-max-width)]">{children}</div>
           </main>

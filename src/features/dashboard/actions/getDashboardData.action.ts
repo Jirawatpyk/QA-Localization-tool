@@ -4,6 +4,7 @@ import 'server-only'
 import { desc, eq, and, sql, isNull, gte } from 'drizzle-orm'
 
 import { db } from '@/db/client'
+import { withTenant } from '@/db/helpers/withTenant'
 import { files } from '@/db/schema/files'
 import { projects } from '@/db/schema/projects'
 import { reviewActions } from '@/db/schema/reviewActions'
@@ -31,9 +32,12 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
       mqmScore: scores.mqmScore,
     })
     .from(files)
-    .innerJoin(projects, eq(files.projectId, projects.id))
-    .leftJoin(scores, and(eq(scores.fileId, files.id), eq(scores.tenantId, tenantId)))
-    .where(eq(files.tenantId, tenantId))
+    .innerJoin(
+      projects,
+      and(eq(files.projectId, projects.id), withTenant(projects.tenantId, tenantId)),
+    )
+    .leftJoin(scores, and(eq(scores.fileId, files.id), withTenant(scores.tenantId, tenantId)))
+    .where(withTenant(files.tenantId, tenantId))
     .orderBy(desc(files.createdAt))
     .limit(10)
 
@@ -53,7 +57,7 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
     .select({ count: sql<number>`count(*)::int` })
     .from(files)
     .leftJoin(scores, eq(scores.fileId, files.id))
-    .where(and(eq(files.tenantId, tenantId), eq(files.status, 'parsed'), isNull(scores.id)))
+    .where(and(withTenant(files.tenantId, tenantId), eq(files.status, 'parsed'), isNull(scores.id)))
 
   const pendingReviewsCount = pendingResult[0]?.count ?? 0
 
@@ -64,7 +68,9 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
   const activityResult = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(reviewActions)
-    .where(and(eq(reviewActions.tenantId, tenantId), gte(reviewActions.createdAt, sevenDaysAgo)))
+    .where(
+      and(withTenant(reviewActions.tenantId, tenantId), gte(reviewActions.createdAt, sevenDaysAgo)),
+    )
 
   const teamActivityCount = activityResult[0]?.count ?? 0
 

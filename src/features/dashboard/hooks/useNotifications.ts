@@ -8,7 +8,35 @@ import { markNotificationRead as markNotificationReadAction } from '@/features/d
 import type { AppNotification } from '@/features/dashboard/types'
 import { createBrowserClient } from '@/lib/supabase/client'
 
-export function useNotifications(userId: string) {
+/** Raw Supabase Realtime payload uses snake_case DB column names */
+interface RawNotificationPayload {
+  id: string
+  tenant_id: string
+  user_id: string
+  type: string
+  title: string
+  body: string
+  is_read: boolean
+  metadata: Record<string, unknown> | null
+  created_at: string
+}
+
+/** Map snake_case Realtime payload to camelCase AppNotification */
+function mapRealtimePayload(raw: RawNotificationPayload): AppNotification {
+  return {
+    id: raw.id,
+    tenantId: raw.tenant_id,
+    userId: raw.user_id,
+    type: raw.type,
+    title: raw.title,
+    body: raw.body,
+    isRead: raw.is_read,
+    metadata: raw.metadata,
+    createdAt: raw.created_at,
+  }
+}
+
+export function useNotifications(userId: string, tenantId: string) {
   const [notifications, setNotifications] = useState<AppNotification[]>([])
   const [supabase] = useState(() => createBrowserClient())
 
@@ -38,7 +66,10 @@ export function useNotifications(userId: string) {
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          const newNotif = payload.new as AppNotification
+          const raw = payload.new as RawNotificationPayload
+          // Client-side tenant guard (defense-in-depth)
+          if (raw.tenant_id !== tenantId) return
+          const newNotif = mapRealtimePayload(raw)
           setNotifications((prev) => [newNotif, ...prev])
           toast.info(newNotif.title, {
             description: newNotif.body,
@@ -51,7 +82,7 @@ export function useNotifications(userId: string) {
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [userId, supabase])
+  }, [userId, tenantId, supabase])
 
   const unreadCount = useMemo(() => notifications.filter((n) => !n.isRead).length, [notifications])
 

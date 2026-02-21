@@ -62,7 +62,7 @@ export function OnboardingTour({ userId, userMetadata }: OnboardingTourProps) {
 
       const driverObj = driver({
         showProgress: true,
-        overlayColor: '#1e293b',
+        overlayColor: 'var(--color-overlay, #1e293b)',
         overlayOpacity: 0.4,
         stagePadding: 8,
         stageRadius: 6,

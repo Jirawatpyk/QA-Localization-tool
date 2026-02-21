@@ -21,7 +21,7 @@ vi.mock('@/db/client', () => ({
 }))
 
 vi.mock('@/db/schema/users', () => ({
-  users: { id: 'id', metadata: 'metadata' },
+  users: { id: 'id', tenantId: 'tenant_id', metadata: 'metadata' },
 }))
 
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
@@ -115,6 +115,37 @@ describe('updateTourState action', () => {
       | undefined
 
     expect(setCall?.metadata?.setup_tour_completed).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+    expect(setCall?.metadata?.dismissed_at_step?.setup ?? null).toBeNull()
+  })
+
+  it('[P1] should clear setup_tour_completed and dismissed_at_step when restart is called', async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      id: 'usr-test-001',
+      email: 'qa@tenant-a.test',
+      tenantId: 'ten-a-001',
+      role: 'qa_reviewer',
+      displayName: 'QA Reviewer',
+      metadata: {
+        setup_tour_completed: '2026-02-20T10:00:00.000Z',
+        dismissed_at_step: { setup: 2 },
+      },
+    })
+
+    const { updateTourState } = await import('@/features/onboarding/actions/updateTourState.action')
+    const result = await updateTourState({ action: 'restart', tourId: 'setup' })
+
+    expect(result.success).toBe(true)
+
+    const setCall = mockSet.mock.calls[0]?.[0] as
+      | {
+          metadata?: {
+            setup_tour_completed?: string | null
+            dismissed_at_step?: { setup?: number | null }
+          }
+        }
+      | undefined
+
+    expect(setCall?.metadata?.setup_tour_completed).toBeNull()
     expect(setCall?.metadata?.dismissed_at_step?.setup ?? null).toBeNull()
   })
 

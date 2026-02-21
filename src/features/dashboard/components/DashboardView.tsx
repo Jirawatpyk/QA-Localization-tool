@@ -18,7 +18,7 @@ export function DashboardView({ data, userMetadata, userId }: DashboardViewProps
     <div className="space-y-6" data-testid="dashboard-view">
       {/* Mobile banner */}
       <div
-        className="block md:hidden rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+        className="block md:hidden rounded-lg border border-warning-border bg-warning-light p-3 text-sm text-warning-foreground"
         data-testid="mobile-desktop-banner"
       >
         For the best review experience, use a desktop browser
