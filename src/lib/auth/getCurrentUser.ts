@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { eq } from 'drizzle-orm'
+import { cache } from 'react'
 
 import { db } from '@/db/client'
 import { users } from '@/db/schema/users'
@@ -25,7 +26,7 @@ export type CurrentUser = {
  * Then fetches displayName + metadata from users table via Drizzle (M3 pattern).
  * Returns null if not authenticated or claims are missing/stale.
  */
-export async function getCurrentUser(): Promise<CurrentUser | null> {
+export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const supabase = await createServerClient()
   const { data: claimsData, error } = await supabase.auth.getClaims()
 
@@ -63,7 +64,12 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
     if (userRow[0]) {
       displayName = userRow[0].displayName
-      metadata = (userRow[0].metadata as UserMetadata | undefined) ?? null
+      // Validate metadata is a plain object before casting — corrupted DB data falls back to null
+      const rawMeta = userRow[0].metadata
+      metadata =
+        rawMeta && typeof rawMeta === 'object' && !Array.isArray(rawMeta)
+          ? (rawMeta as UserMetadata)
+          : null
     }
   } catch {
     // DB query failed (e.g., column mismatch, connection error) — proceed with JWT-only data
@@ -77,4 +83,4 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     displayName,
     metadata,
   }
-}
+})
