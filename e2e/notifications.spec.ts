@@ -1,9 +1,11 @@
 import { test, expect, type Page } from '@playwright/test'
 
+import { createNotification, getUserInfo, signupOrLogin } from './helpers/supabase-admin'
+
 // ATDD GREEN PHASE — Story 1.7: Dashboard, Notifications & Onboarding
 // AC Coverage: AC#2 (notification bell + dropdown + mark-read)
 
-const TEST_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'admin@test.local'
+const TEST_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-notif17@test.local'
 const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD ?? 'TestPassword123!'
 
 async function loginAs(page: Page, email: string, password: string) {
@@ -14,7 +16,24 @@ async function loginAs(page: Page, email: string, password: string) {
   await page.waitForURL('**/dashboard', { timeout: 15000 })
 }
 
-test.describe('Notifications — AC#2: Bell icon + dropdown', () => {
+test.describe.serial('Notifications — AC#2: Bell icon + dropdown', () => {
+  test('[setup] signup user and seed notification data', async ({ page }) => {
+    test.setTimeout(60000)
+
+    await signupOrLogin(page, TEST_EMAIL, TEST_PASSWORD, 'Notification Tester')
+
+    // Insert test notification via PostgREST (service role key bypasses RLS)
+    const userInfo = await getUserInfo(TEST_EMAIL)
+    if (userInfo) {
+      await createNotification(
+        userInfo.id,
+        userInfo.tenantId,
+        'E2E Test Notification',
+        'This is a test notification for E2E testing.',
+      )
+    }
+  })
+
   test('[P1] should show bell icon (notification-bell) in header after login', async ({ page }) => {
     await loginAs(page, TEST_EMAIL, TEST_PASSWORD)
 
@@ -27,9 +46,6 @@ test.describe('Notifications — AC#2: Bell icon + dropdown', () => {
   }) => {
     await loginAs(page, TEST_EMAIL, TEST_PASSWORD)
 
-    // The badge appears when there are unread notifications
-    // NOTE: This test requires test data setup (a notification in the DB)
-    // In green phase, use a before-hook to insert a test notification via API
     const badge = page.getByTestId('notification-badge')
     await expect(badge).toBeVisible({ timeout: 10000 })
   })
@@ -50,8 +66,7 @@ test.describe('Notifications — AC#2: Bell icon + dropdown', () => {
     const dropdown = page.getByTestId('notification-dropdown')
     await expect(dropdown).toBeVisible({ timeout: 5000 })
 
-    // Each notification item should show title and relative time
-    // NOTE: Requires test notification data in DB
+    // Each notification item should show title and body
     const notificationItems = dropdown.locator('[data-testid^="notification-item-"]')
     const count = await notificationItems.count()
     expect(count).toBeGreaterThan(0)

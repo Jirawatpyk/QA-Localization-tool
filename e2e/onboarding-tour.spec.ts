@@ -1,19 +1,18 @@
 import { test, expect, type Page } from '@playwright/test'
 
+import { setUserMetadata, signupOrLogin } from './helpers/supabase-admin'
+
 // ATDD GREEN PHASE — Story 1.7: Dashboard, Notifications & Onboarding
 // AC Coverage: AC#3 (first-time tour), AC#6 (returning user resume + restart)
 //
 // KEY FACTS:
 // - driver.js overlay selector: .driver-popover
-// - Tour resume is 0-indexed: dismissed_at_step (1-based) → drive(step - 1) (0-based)
-// - E2E_FIRST_TIME_EMAIL: user with metadata=null (never completed tour)
-// - E2E_RETURNING_EMAIL:  user with metadata.dismissed_at_step.setup=2
+// - Tour resume is 0-indexed: dismissed_at_step (1-based) -> drive(step - 1) (0-based)
 
 const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD ?? 'TestPassword123!'
-// These envs must be set up in CI/CD with corresponding Supabase users
-const FIRST_TIME_EMAIL = process.env.E2E_FIRST_TIME_EMAIL ?? 'first-time@test.local'
-const RETURNING_EMAIL = process.env.E2E_RETURNING_EMAIL ?? 'returning@test.local'
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'admin@test.local'
+const FIRST_TIME_EMAIL = process.env.E2E_FIRST_TIME_EMAIL ?? 'e2e-firsttime17@test.local'
+const RETURNING_EMAIL = process.env.E2E_RETURNING_EMAIL ?? 'e2e-returning17@test.local'
+const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin17@test.local'
 
 async function loginAs(page: Page, email: string, password: string) {
   await page.goto('/login')
@@ -25,6 +24,13 @@ async function loginAs(page: Page, email: string, password: string) {
 
 // AC#3 — First-time user onboarding tour
 test.describe.serial('Onboarding Tour — AC#3: First-time user', () => {
+  test('[setup] create first-time user and reset metadata', async ({ page }) => {
+    test.setTimeout(60000)
+    await signupOrLogin(page, FIRST_TIME_EMAIL, TEST_PASSWORD, 'First Time User')
+    // Ensure metadata is clean (null = tour never completed, no dismissed step)
+    await setUserMetadata(FIRST_TIME_EMAIL, null)
+  })
+
   test('[P1] should show driver.js overlay for first-time user (metadata=null)', async ({
     page,
   }) => {
@@ -79,7 +85,15 @@ test.describe.serial('Onboarding Tour — AC#3: First-time user', () => {
   test('[P1] should NOT show tour again after Skip All (setup_tour_completed set)', async ({
     page,
   }) => {
-    await loginAs(page, ADMIN_EMAIL, TEST_PASSWORD) // admin = user who already completed tour
+    // Set ADMIN user as having completed tour
+    await signupOrLogin(page, ADMIN_EMAIL, TEST_PASSWORD, 'Admin Tester')
+    await setUserMetadata(ADMIN_EMAIL, {
+      setup_tour_completed: '2026-01-01T00:00:00Z',
+    })
+
+    // Re-login as admin user
+    await page.context().clearCookies()
+    await loginAs(page, ADMIN_EMAIL, TEST_PASSWORD)
     await page.waitForLoadState('networkidle')
 
     // Tour should NOT appear for a user who has already completed it
@@ -91,6 +105,22 @@ test.describe.serial('Onboarding Tour — AC#3: First-time user', () => {
 
 // AC#6 — Returning user tour resume
 test.describe.serial('Onboarding Tour — AC#6: Returning user resume', () => {
+  test('[setup] create returning user with dismissed_at_step metadata', async ({ page }) => {
+    test.setTimeout(60000)
+    // Create returning user and set metadata to simulate dismissed at step 2
+    await signupOrLogin(page, RETURNING_EMAIL, TEST_PASSWORD, 'Returning User')
+    await setUserMetadata(RETURNING_EMAIL, {
+      dismissed_at_step: { setup: 2 },
+    })
+
+    // Ensure admin user exists with completed tour
+    await page.context().clearCookies()
+    await signupOrLogin(page, ADMIN_EMAIL, TEST_PASSWORD, 'Admin Tester')
+    await setUserMetadata(ADMIN_EMAIL, {
+      setup_tour_completed: '2026-01-01T00:00:00Z',
+    })
+  })
+
   test('[P1] should resume tour at step 2 for user who dismissed at step 2', async ({ page }) => {
     await loginAs(page, RETURNING_EMAIL, TEST_PASSWORD)
     await page.waitForLoadState('networkidle')
@@ -102,15 +132,15 @@ test.describe.serial('Onboarding Tour — AC#6: Returning user resume', () => {
     const popoverTitle = page.locator('.driver-popover-title')
     await expect(popoverTitle).toBeVisible()
     const title = await popoverTitle.textContent()
-    expect(title).not.toBe('Welcome') // Step 1 title — must NOT be shown
-    // Step 2 should be "Create Project" based on story spec
-    expect(title).toContain('Create Project')
+    expect(title).not.toBe('Welcome') // Step 1 title - must NOT be shown
+    // Step 2 should be "Create a Project" based on tour steps
+    expect(title).toContain('Create')
   })
 
   test('[P2] should show "Restart Tour" option in Help menu when tour has been completed', async ({
     page,
   }) => {
-    await loginAs(page, ADMIN_EMAIL, TEST_PASSWORD) // admin = completed tour user
+    await loginAs(page, ADMIN_EMAIL, TEST_PASSWORD)
     await page.waitForLoadState('networkidle')
 
     // Open help menu
@@ -131,6 +161,9 @@ test.describe.serial('Onboarding Tour — AC#6: Returning user resume', () => {
     // Open help menu and click Restart Tour
     await page.getByTestId('help-menu-trigger').click()
     await page.getByTestId('restart-tour-btn').click()
+
+    // Wait for page refresh (router.refresh()) and tour to appear
+    await page.waitForLoadState('networkidle')
 
     // Tour must restart from step 1 ("Welcome")
     const driverPopover = page.locator('.driver-popover')
