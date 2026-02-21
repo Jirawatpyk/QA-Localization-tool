@@ -51,7 +51,7 @@ test.describe.serial('Story 1.4 — Glossary Import & Management', () => {
     await expect(page.getByText(PROJECT_NAME)).toBeVisible({ timeout: 10000 })
     await page.getByRole('link', { name: /Settings/ }).click()
     await page.waitForURL('**/settings')
-    await page.getByRole('link', { name: 'Glossary' }).click()
+    await page.getByLabel('Project navigation').getByRole('link', { name: 'Glossary' }).click()
     await page.waitForURL('**/glossary')
 
     glossaryUrl = page.url()
