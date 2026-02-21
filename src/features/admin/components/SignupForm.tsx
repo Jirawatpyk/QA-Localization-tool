@@ -45,18 +45,30 @@ export function SignupForm() {
         return
       }
 
-      if (data.user) {
-        const result = await setupNewUser()
-        if (!result.success) {
-          toast.error(result.error)
+      // With PKCE flow (@supabase/ssr default), signUp may return user: null
+      // even when the user was created successfully. In that case, sign in
+      // with the credentials to establish a session before continuing.
+      if (!data.user) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+        if (signInError) {
+          toast.error(signInError.message)
           return
         }
-
-        // Refresh session to get updated JWT claims (with tenant_id + role)
-        await supabase.auth.refreshSession()
-        toast.success('Account created! Redirecting...')
-        window.location.href = '/dashboard'
       }
+
+      const result = await setupNewUser()
+      if (!result.success) {
+        toast.error(result.error)
+        return
+      }
+
+      // Refresh session to get updated JWT claims (with tenant_id + role)
+      await supabase.auth.refreshSession()
+      toast.success('Account created! Redirecting...')
+      window.location.href = '/dashboard'
     })
   }
 
