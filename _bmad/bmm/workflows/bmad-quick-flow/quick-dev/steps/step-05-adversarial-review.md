@@ -55,7 +55,13 @@ Merge all changes into `{diff_output}`.
 
 ---
 
-### 2. Invoke Adversarial Review
+### 2. Incorporate Sub-agent Findings
+
+Sub-agent scans (anti-pattern, tenant-isolation, code-quality, testing-qa, and conditional scans) were already executed in Step 4. Incorporate those findings into the adversarial review below — they count toward the minimum findings requirement.
+
+---
+
+### 3. Invoke Adversarial Review
 
 With `{diff_output}` constructed, load and follow the review task. If possible, use information asymmetry: load this step, and only it, in a separate subagent or process with read access to the project, but no context except the `{diff_output}`.
 
@@ -69,7 +75,7 @@ The task should: review `{diff_output}` and return a list of findings.
 
 ---
 
-### 3. Process Findings
+### 4. Process Findings
 
 Capture the findings from the task output.
 **If zero findings:** HALT - this is suspicious. Re-analyze or request user guidance.

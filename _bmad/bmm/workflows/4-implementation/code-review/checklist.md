@@ -11,6 +11,10 @@
 - [ ] Acceptance Criteria cross-checked against implementation
 - [ ] File List reviewed and validated for completeness
 - [ ] Tests identified and mapped to ACs; gaps noted
+- [ ] code-quality-analyzer sub-agent scan completed on all changed files
+- [ ] testing-qa-expert sub-agent scan completed on all changed files
+- [ ] Sub-agent findings incorporated into review findings
+- [ ] Dev Agent Record checked for Pre-CR scan results (rls-policy, inngest-validator)
 - [ ] Code quality review performed on changed files
 - [ ] Security review performed on changed files and dependencies
 - [ ] Outcome decided (Approve/Changes Requested/Blocked)

@@ -316,11 +316,63 @@
       <goto step="5">Next task</goto>
     </action>
     <action if="no tasks remain">
-      <goto step="9">Completion</goto>
+      <goto step="9">Pre-CR quality scan</goto>
     </action>
   </step>
 
-  <step n="9" goal="Story completion and mark for review" tag="sprint-status">
+  <step n="9" goal="Pre-CR quality scan with sub-agents">
+    <critical>Run automated scans BEFORE marking story for review — catch issues the dev agent missed</critical>
+
+    <!-- Launch objective scans in parallel -->
+    <action>Launch TWO sub-agents IN PARALLEL using the Task tool to scan all files in the story File List:
+      1. anti-pattern-detector (subagent_type="anti-pattern-detector") — scan changed files for CLAUDE.md anti-pattern violations
+      2. tenant-isolation-checker (subagent_type="tenant-isolation-checker") — scan changed files for missing tenant isolation
+    </action>
+
+    <!-- Conditional scans — trigger when relevant files changed OR story belongs to DB/pipeline-heavy epic -->
+    <action>Determine if conditional scans should trigger by checking BOTH:
+      1. File List contains relevant paths (primary trigger)
+      2. Story belongs to a DB/pipeline-heavy epic (fallback trigger — prevents missed scans if File List is incomplete)
+    </action>
+
+    <action>RLS scan trigger: Check if File List contains schema/migration files (src/db/schema/*, src/db/migrations/*, supabase/migrations/*),
+      OR if story key starts with epic that involves database changes (e.g., epic-2 File Processing, epic-4 Scoring)</action>
+    <check if="RLS scan trigger is true">
+      <action>ALSO launch: rls-policy-reviewer (subagent_type="rls-policy-reviewer") — audit RLS policies against Drizzle schema</action>
+    </check>
+
+    <action>Inngest scan trigger: Check if File List contains Inngest/pipeline files (src/features/pipeline/*, src/lib/inngest/*, src/app/api/inngest/*, src/features/scoring/*),
+      OR if story key starts with epic that involves pipeline/orchestration (e.g., epic-3 Pipeline, epic-4 Scoring)</action>
+    <check if="Inngest scan trigger is true">
+      <action>ALSO launch: inngest-function-validator (subagent_type="inngest-function-validator") — validate Inngest function patterns</action>
+    </check>
+
+    <action>Collect findings from ALL sub-agents and categorize by severity (CRITICAL / HIGH / MEDIUM / LOW)</action>
+
+    <!-- Fix critical and high findings -->
+    <check if="CRITICAL or HIGH findings exist">
+      <action>Fix ALL critical and high severity findings immediately</action>
+      <action>Re-run lint + type-check + full test suite after fixes</action>
+      <action>Update File List with any newly changed files</action>
+      <action>Add fixed findings to Dev Agent Record → Completion Notes</action>
+    </check>
+
+    <!-- Re-scan if fixes were applied -->
+    <check if="fixes were applied">
+      <action>Re-run ALL triggered sub-agents to verify fixes and check for new findings</action>
+      <action>Repeat fix cycle until all scans return clean or LOW-only findings</action>
+    </check>
+
+    <!-- Gate: only proceed when clean -->
+    <check if="all scans return clean or LOW-only findings">
+      <action>Record scan results in Dev Agent Record: "Pre-CR scan: anti-pattern ✅, tenant-isolation ✅, rls-policy [ran/skipped: reason], inngest-validator [ran/skipped: reason]"</action>
+      <goto step="10">Story completion</goto>
+    </check>
+
+    <action if="unable to fix findings after 3 attempts">HALT: "Pre-CR scan findings could not be resolved — need user guidance"</action>
+  </step>
+
+  <step n="10" goal="Story completion and mark for review" tag="sprint-status">
     <action>Verify ALL tasks and subtasks are marked [x] (re-scan the story document now)</action>
     <action>Run the full regression suite (do not skip)</action>
     <action>Confirm File List includes every changed file</action>
@@ -370,7 +422,7 @@
     <action if="definition-of-done validation fails">HALT - Address DoD failures before completing</action>
   </step>
 
-  <step n="10" goal="Completion communication and user support">
+  <step n="11" goal="Completion communication and user support">
     <action>Execute the enhanced definition-of-done checklist using the validation framework</action>
     <action>Prepare a concise summary in Dev Agent Record → Completion Notes</action>
 

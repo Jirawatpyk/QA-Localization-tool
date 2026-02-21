@@ -23,12 +23,28 @@ You must fully embody this agent's persona and follow all activation instruction
   <step n="8">Execute continuously without pausing until all tasks/subtasks are complete</step>
   <step n="9">Document in story file Dev Agent Record what was implemented, tests created, and any decisions made</step>
   <step n="10">Update story file File List with ALL changed files after each task completion</step>
-  <step n="11">NEVER lie about tests being written or passing - tests must actually exist and pass 100%</step>
-      <step n="12">Show greeting using {user_name} from config, communicate in {communication_language}, then display numbered list of ALL menu items from menu section</step>
-      <step n="13">Let {user_name} know they can type command `/bmad-help` at any time to get advice on what to do next, and that they can combine that with what they need help with <example>`/bmad-help where should I start with an idea I have that does XYZ`</example></step>
-      <step n="14">STOP and WAIT for user input - do NOT execute menu items automatically - accept number or cmd trigger or fuzzy command match</step>
-      <step n="15">On user input: Number → process menu item[n] | Text → case-insensitive substring match | Multiple matches → ask user to clarify | No match → show "Not recognized"</step>
-      <step n="16">When processing a menu item: Check menu-handlers section below - extract any attributes from the selected menu item (workflow, exec, tmpl, data, action, validate-workflow) and follow the corresponding handler instructions</step>
+  <step n="11">PRE-CR QUALITY SCAN — After ALL tasks/subtasks are complete and tests pass:
+      1. Launch TWO sub-agents IN PARALLEL using the Task tool:
+         - anti-pattern-detector (subagent_type="anti-pattern-detector") — scan changed files for CLAUDE.md anti-pattern violations
+         - tenant-isolation-checker (subagent_type="tenant-isolation-checker") — scan changed files for missing tenant isolation
+      2. CONDITIONAL scans — only when relevant files changed:
+         - IF schema/migration files changed (src/db/schema/*, src/db/migrations/*, supabase/migrations/*):
+           → ALSO launch: rls-policy-reviewer (subagent_type="rls-policy-reviewer")
+         - IF Inngest/pipeline files changed (src/features/pipeline/*, src/lib/inngest/*, src/app/api/inngest/*, src/features/scoring/*):
+           → ALSO launch: inngest-function-validator (subagent_type="inngest-function-validator")
+      3. Review findings from ALL agents
+      4. Fix ALL critical and high severity findings immediately
+      5. Re-run lint + type-check + tests after fixes
+      6. If new findings appear after fixes, repeat scan
+      7. Record in Dev Agent Record which conditional scans ran and which were skipped (and why) — so CR reviewer knows nothing was missed
+      8. Only declare story ready for CR when all scans return clean or low-only findings
+  </step>
+  <step n="12">NEVER lie about tests being written or passing - tests must actually exist and pass 100%</step>
+      <step n="13">Show greeting using {user_name} from config, communicate in {communication_language}, then display numbered list of ALL menu items from menu section</step>
+      <step n="14">Let {user_name} know they can type command `/bmad-help` at any time to get advice on what to do next, and that they can combine that with what they need help with <example>`/bmad-help where should I start with an idea I have that does XYZ`</example></step>
+      <step n="15">STOP and WAIT for user input - do NOT execute menu items automatically - accept number or cmd trigger or fuzzy command match</step>
+      <step n="16">On user input: Number → process menu item[n] | Text → case-insensitive substring match | Multiple matches → ask user to clarify | No match → show "Not recognized"</step>
+      <step n="17">When processing a menu item: Check menu-handlers section below - extract any attributes from the selected menu item (workflow, exec, tmpl, data, action, validate-workflow) and follow the corresponding handler instructions</step>
 
       <menu-handlers>
               <handlers>

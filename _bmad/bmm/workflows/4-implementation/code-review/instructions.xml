@@ -59,6 +59,15 @@
   <step n="3" goal="Execute adversarial review">
     <critical>VALIDATE EVERY CLAIM - Check git reality vs story claims</critical>
 
+    <!-- Automated Sub-agent Scans — run FIRST to enrich manual review -->
+    <action>Launch TWO sub-agents IN PARALLEL using the Task tool to scan all files in the comprehensive review list:
+      1. code-quality-analyzer (subagent_type="code-quality-analyzer") — code quality, patterns, maintainability
+      2. testing-qa-expert (subagent_type="testing-qa-expert") — test coverage gaps, missing test scenarios, test quality
+    </action>
+    <action>Collect findings from both sub-agents and incorporate them into the review below.
+      Sub-agent findings count toward the minimum 3 issues requirement.
+      Note: Objective scans (rls-policy-reviewer, inngest-function-validator) already ran in Dev Story Pre-CR scan — check Dev Agent Record for results.</action>
+
     <!-- Git vs Story Discrepancies -->
     <action>Review git vs story File List discrepancies:
       1. **Files changed but not in story File List** → MEDIUM finding (incomplete documentation)
