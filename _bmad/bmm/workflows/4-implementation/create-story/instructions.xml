@@ -255,6 +255,16 @@
       - Performance optimization techniques
       - Migration considerations if upgrading
     </action>
+
+    <!-- Deep research sub-agents (opt-in, not mandatory) -->
+    <note>AVAILABLE RESEARCH SUB-AGENTS — use when story requires deep-dive context:
+      - For stories involving L1/L2/L3 QA pipeline, rule engine, or Inngest orchestration:
+        → Launch: rule-engine-pipeline-researcher (subagent_type="rule-engine-pipeline-researcher")
+      - For stories involving localization QA rules, MQM scoring, Xbench parity, or CJK/Thai text:
+        → Launch: localization-qa-researcher (subagent_type="localization-qa-researcher")
+      These provide deeper domain-specific research than general web search.
+      Use your judgment — not every story needs them.
+    </note>
   </step>
 
   <step n="5" goal="Create comprehensive story file">
