@@ -6,10 +6,9 @@ import { eq } from 'drizzle-orm'
 
 import { db } from '@/db/client'
 import { taxonomyDefinitions } from '@/db/schema/taxonomyDefinitions'
+import type { Severity, TaxonomyMapping } from '@/features/taxonomy/types'
 import { requireRole } from '@/lib/auth/requireRole'
 import type { ActionResult } from '@/types/actionResult'
-
-import type { Severity, TaxonomyMapping } from '../types'
 
 /**
  * Server Action for on-demand admin taxonomy data fetching.

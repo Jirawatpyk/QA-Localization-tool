@@ -5,6 +5,7 @@ import 'server-only'
 import { eq, and } from 'drizzle-orm'
 
 import { db } from '@/db/client'
+import { withTenant } from '@/db/helpers/withTenant'
 import { userRoles } from '@/db/schema/userRoles'
 import { updateRoleSchema } from '@/features/admin/validation/userSchemas'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
@@ -44,7 +45,7 @@ export async function updateUserRole(input: unknown): Promise<ActionResult<Updat
   const [current] = await db
     .select({ role: userRoles.role })
     .from(userRoles)
-    .where(and(eq(userRoles.userId, userId), eq(userRoles.tenantId, currentUser.tenantId)))
+    .where(and(eq(userRoles.userId, userId), withTenant(userRoles.tenantId, currentUser.tenantId)))
     .limit(1)
 
   if (!current) {
@@ -57,7 +58,7 @@ export async function updateUserRole(input: unknown): Promise<ActionResult<Updat
   await db
     .update(userRoles)
     .set({ role: newRole })
-    .where(and(eq(userRoles.userId, userId), eq(userRoles.tenantId, currentUser.tenantId)))
+    .where(and(eq(userRoles.userId, userId), withTenant(userRoles.tenantId, currentUser.tenantId)))
 
   // Update Supabase Auth app_metadata to trigger JWT claim refresh
   const adminClient = createAdminClient()
@@ -70,7 +71,9 @@ export async function updateUserRole(input: unknown): Promise<ActionResult<Updat
     await db
       .update(userRoles)
       .set({ role: previousRole })
-      .where(and(eq(userRoles.userId, userId), eq(userRoles.tenantId, currentUser.tenantId)))
+      .where(
+        and(eq(userRoles.userId, userId), withTenant(userRoles.tenantId, currentUser.tenantId)),
+      )
     // Audit the failed attempt + rollback for traceability
     await writeAuditLog({
       tenantId: currentUser.tenantId,

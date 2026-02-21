@@ -258,12 +258,12 @@ export function GlossaryImportDialog({ open, onOpenChange, projectId }: Glossary
         {step === 'result' && result && (
           <div className="space-y-4">
             <div className="space-y-2 text-sm">
-              <p className="text-green-600">Imported: {result.imported} terms</p>
+              <p className="text-success">Imported: {result.imported} terms</p>
               {result.duplicates > 0 && (
-                <p className="text-yellow-600">Duplicates: {result.duplicates} (skipped)</p>
+                <p className="text-warning">Duplicates: {result.duplicates} (skipped)</p>
               )}
               {result.errors.length > 0 && (
-                <p className="text-red-600">Errors: {result.errors.length} (failed to import)</p>
+                <p className="text-error">Errors: {result.errors.length} (failed to import)</p>
               )}
             </div>
 

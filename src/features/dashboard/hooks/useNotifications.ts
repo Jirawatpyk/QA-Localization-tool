@@ -56,14 +56,14 @@ export function useNotifications(userId: string, tenantId: string) {
   // Subscribe to Supabase Realtime for new notifications
   useEffect(() => {
     const channel = supabase
-      .channel(`notifications:${userId}`)
+      .channel(`notifications:${userId}:${tenantId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'notifications',
-          filter: `user_id=eq.${userId}`,
+          filter: `user_id=eq.${userId}&tenant_id=eq.${tenantId}`,
         },
         (payload) => {
           const raw = payload.new as RawNotificationPayload

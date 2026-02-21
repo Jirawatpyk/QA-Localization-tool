@@ -14,6 +14,7 @@ const eslintConfig = defineConfig([
     "_bmad-output/**",
     "docs/**",
     "e2e/**",
+    "scripts/**",
   ]),
   {
     rules: {
@@ -164,6 +165,13 @@ const eslintConfig = defineConfig([
             "TypeScript enums are forbidden. Use `as const` objects or union types instead.",
         },
       ],
+    },
+  },
+  // Allow console.log in seed/migration scripts (CLI output)
+  {
+    files: ["src/db/seeds/**"],
+    rules: {
+      "no-console": "off",
     },
   },
   // Allow direct createClient in Supabase factory files & RLS tests

@@ -34,7 +34,7 @@ export function SignupForm() {
     e.preventDefault()
     startTransition(async () => {
       const supabase = createBrowserClient()
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: { data: { display_name: displayName } },

@@ -7,11 +7,10 @@ import { revalidateTag } from 'next/cache'
 import { db } from '@/db/client'
 import { taxonomyDefinitions } from '@/db/schema/taxonomyDefinitions'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
+import type { Severity, TaxonomyMapping } from '@/features/taxonomy/types'
 import { createMappingSchema } from '@/features/taxonomy/validation/taxonomySchemas'
 import { requireRole } from '@/lib/auth/requireRole'
 import type { ActionResult } from '@/types/actionResult'
-
-import type { Severity, TaxonomyMapping } from '../types'
 
 export async function createMapping(input: unknown): Promise<ActionResult<TaxonomyMapping>> {
   let currentUser

@@ -8,12 +8,11 @@ import { revalidateTag } from 'next/cache'
 import { db } from '@/db/client'
 import { taxonomyDefinitions } from '@/db/schema/taxonomyDefinitions'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
+import type { Severity, TaxonomyMapping } from '@/features/taxonomy/types'
 import { updateMappingSchema } from '@/features/taxonomy/validation/taxonomySchemas'
 import { requireRole } from '@/lib/auth/requireRole'
 import { isUuid } from '@/lib/validation/uuid'
 import type { ActionResult } from '@/types/actionResult'
-
-import type { Severity, TaxonomyMapping } from '../types'
 
 export async function updateMapping(
   mappingId: string,

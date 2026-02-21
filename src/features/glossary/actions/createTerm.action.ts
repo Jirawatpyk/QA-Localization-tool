@@ -54,6 +54,7 @@ export async function createTerm(input: unknown): Promise<ActionResult<TermResul
   const normalizedSource = parsed.data.sourceTerm.trim().normalize('NFKC')
 
   // Check for duplicate source term (case-insensitive, SQL-level)
+  // glossaryTerms has no tenant_id — glossaryId tenant-verified via withTenant() above (line 45)
   const [existingDup] = await db
     .select({ id: glossaryTerms.id })
     .from(glossaryTerms)

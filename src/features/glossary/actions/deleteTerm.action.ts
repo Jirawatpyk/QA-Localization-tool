@@ -45,6 +45,7 @@ export async function deleteTerm(termId: string): Promise<ActionResult<{ id: str
     return { success: false, code: 'NOT_FOUND', error: 'Term not found' }
   }
 
+  // termId tenant-verified via glossaries JOIN + withTenant() above (line 42)
   await db.delete(glossaryTerms).where(eq(glossaryTerms.id, termId))
 
   await writeAuditLog({

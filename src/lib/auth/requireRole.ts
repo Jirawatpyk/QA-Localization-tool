@@ -3,6 +3,7 @@ import 'server-only'
 import { eq, and } from 'drizzle-orm'
 
 import { db } from '@/db/client'
+import { withTenant } from '@/db/helpers/withTenant'
 import { userRoles } from '@/db/schema/userRoles'
 import type { AppRole } from '@/lib/auth/getCurrentUser'
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
@@ -43,7 +44,7 @@ export async function requireRole(
   const [dbRole] = await db
     .select({ role: userRoles.role })
     .from(userRoles)
-    .where(and(eq(userRoles.userId, user.id), eq(userRoles.tenantId, user.tenantId)))
+    .where(and(eq(userRoles.userId, user.id), withTenant(userRoles.tenantId, user.tenantId)))
     .limit(1)
 
   if (!dbRole || !hasRequiredRole(dbRole.role as AppRole, requiredRole)) {
