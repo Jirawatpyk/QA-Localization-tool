@@ -5,8 +5,8 @@ import { signupOrLogin } from './helpers/supabase-admin'
 // ATDD GREEN PHASE — Story 1.7: Dashboard, Notifications & Onboarding
 // AC Coverage: AC#1 (dashboard display), AC#5 (mobile layout)
 
-const TEST_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-dash17@test.local'
-const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD ?? 'TestPassword123!'
+const TEST_EMAIL = process.env.E2E_ADMIN_EMAIL || 'e2e-dash17@test.local'
+const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD || 'TestPassword123!'
 
 async function loginAs(page: Page, email: string, password: string) {
   await page.goto('/login')

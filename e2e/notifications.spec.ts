@@ -5,8 +5,8 @@ import { createNotification, getUserInfo, signupOrLogin } from './helpers/supaba
 // ATDD GREEN PHASE — Story 1.7: Dashboard, Notifications & Onboarding
 // AC Coverage: AC#2 (notification bell + dropdown + mark-read)
 
-const TEST_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-notif17@test.local'
-const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD ?? 'TestPassword123!'
+const TEST_EMAIL = process.env.E2E_ADMIN_EMAIL || 'e2e-notif17@test.local'
+const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD || 'TestPassword123!'
 
 async function loginAs(page: Page, email: string, password: string) {
   await page.goto('/login')
