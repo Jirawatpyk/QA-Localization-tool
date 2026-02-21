@@ -58,15 +58,15 @@ test.describe.serial('Onboarding Tour — AC#3: First-time user', () => {
     const driverPopover = page.locator('.driver-popover')
     await expect(driverPopover).toBeVisible({ timeout: 10000 })
 
-    // Get current step title
-    const step1Title = await page.locator('.driver-popover-title').textContent()
+    // Capture step 1 title text
+    const popoverTitle = page.locator('.driver-popover-title')
+    const step1Title = await popoverTitle.textContent()
 
     // Click Next button
     await page.locator('.driver-popover-next-btn').click()
 
-    // Title must change (step 2 has different title)
-    const step2Title = await page.locator('.driver-popover-title').textContent()
-    expect(step2Title).not.toBe(step1Title)
+    // Use auto-waiting assertion — textContent() returns immediately without waiting
+    await expect(popoverTitle).not.toHaveText(step1Title!, { timeout: 5000 })
   })
 
   test('[P1] should close overlay when "Skip All" / close button is clicked', async ({ page }) => {

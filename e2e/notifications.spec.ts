@@ -86,7 +86,7 @@ test.describe.serial('Notifications — AC#2: Bell icon + dropdown', () => {
     // Click mark all read
     await page.getByTestId('notification-mark-all-read').click()
 
-    // Badge should disappear
-    await expect(page.getByTestId('notification-badge')).not.toBeVisible({ timeout: 5000 })
+    // Badge should disappear (markAllAsRead awaits server action before state update)
+    await expect(page.getByTestId('notification-badge')).not.toBeVisible({ timeout: 15000 })
   })
 })
