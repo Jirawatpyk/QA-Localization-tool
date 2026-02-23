@@ -57,7 +57,7 @@ development_status:
   # Epic 2: File Processing & Rule-based QA Engine (MVP)
   # ============================================================
   epic-2: in-progress
-  2-1-file-upload-storage-infrastructure: done
+  2-1-file-upload-storage-infrastructure: review
   2-2-sdlxliff-xliff-unified-parser: backlog
   2-3-excel-bilingual-parser: backlog
   2-4-rule-based-qa-engine-language-rules: backlog

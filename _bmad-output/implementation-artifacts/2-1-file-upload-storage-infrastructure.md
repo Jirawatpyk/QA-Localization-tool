@@ -1,6 +1,6 @@
 # Story 2.1: File Upload & Storage Infrastructure
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
