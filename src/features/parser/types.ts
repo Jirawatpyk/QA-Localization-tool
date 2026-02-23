@@ -31,7 +31,7 @@ export type XliffState =
 
 // A single parsed segment from the XLIFF/SDLXLIFF file
 export type ParsedSegment = {
-  segmentId: string // trans-unit id + mrk mid (e.g. "tu1_0")
+  segmentId: string // SDLXLIFF: mrk @mid value; XLIFF: trans-unit @id value
   segmentNumber: number // 1-based sequence within the file
   sourceText: string // plain text (tags removed)
   targetText: string // plain text (tags removed), empty string if untranslated

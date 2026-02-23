@@ -4,6 +4,7 @@ import {
   COMMENT_SEPARATOR,
   CONFIRMATION_STATES,
   MAX_PARSE_SIZE_BYTES,
+  SDL_NAMESPACE_URI,
   XLIFF_STATE_MAP,
 } from './constants'
 import { extractInlineTags } from './inlineTagExtractor'
@@ -70,7 +71,7 @@ function buildParser(): XMLParser {
  */
 export function parseXliff(
   xmlContent: string,
-  fileType: 'sdlxliff' | 'xliff' = 'xliff',
+  _fileType: 'sdlxliff' | 'xliff' = 'xliff', // content detection used for result; param reserved for future format divergence
   fileSizeBytes?: number,
 ): ParseOutcome {
   // 5.10 — 15MB size guard (defense-in-depth)
@@ -160,7 +161,7 @@ export function parseXliff(
         sourceLang,
         targetLang,
         segmentNumber,
-        fileType,
+        _fileType,
       )
 
       if (!tuSegments.success) return tuSegments
@@ -465,5 +466,5 @@ function isValidConfirmationState(value: string | undefined): value is Confirmat
 // Note: raw substring search is intentional — faster than re-parsing namespaces from the
 // already-parsed tree. The SDL namespace URI is unique enough to avoid false positives.
 function hasSdlNamespace(xmlContent: string): boolean {
-  return xmlContent.includes('http://sdl.com/FileTypes/SdlXliff/1.0')
+  return xmlContent.includes(SDL_NAMESPACE_URI)
 }

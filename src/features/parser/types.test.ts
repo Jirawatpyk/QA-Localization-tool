@@ -78,19 +78,20 @@ describe('Parser constants', () => {
       expect(XLIFF_STATE_MAP.final).toBe('ApprovedSignOff')
     })
 
-    it('should cover all XliffState keys', () => {
-      const allXliffStates: XliffState[] = [
-        'new',
-        'needs-translation',
-        'needs-l10n',
-        'needs-review-translation',
-        'needs-review-l10n',
-        'translated',
-        'signed-off',
-        'final',
-      ]
-      for (const state of allXliffStates) {
-        expect(XLIFF_STATE_MAP[state]).toBeDefined()
+    it('should cover all XliffState keys with correct ConfirmationState values (L5)', () => {
+      // Use toBe for each entry — toBeDefined() would pass even with wrong mapped values
+      const expectedMappings: Record<XliffState, string> = {
+        new: 'Draft',
+        'needs-translation': 'Draft',
+        'needs-l10n': 'Draft',
+        'needs-review-translation': 'Draft',
+        'needs-review-l10n': 'Draft',
+        translated: 'Translated',
+        'signed-off': 'ApprovedSignOff',
+        final: 'ApprovedSignOff',
+      }
+      for (const [state, expected] of Object.entries(expectedMappings)) {
+        expect(XLIFF_STATE_MAP[state as XliffState]).toBe(expected)
       }
     })
   })

@@ -52,5 +52,16 @@ ${transUnits}
 
     expect(result.data.segments).toHaveLength(segmentCount)
     expect(elapsed).toBeLessThan(3000) // AC #6: < 3 seconds
+
+    // L6: spot-check content to catch optimization regressions that corrupt segment data
+    const first = result.data.segments[0]!
+    expect(first.sourceText).toBe('Source text for segment number 1 with some words here.')
+    expect(first.confirmationState).toBe('Translated')
+    expect(first.matchPercentage).toBe(85)
+    expect(first.wordCount).toBeGreaterThan(0)
+
+    const last = result.data.segments[segmentCount - 1]!
+    expect(last.segmentNumber).toBe(segmentCount)
+    expect(last.sourceText).toContain(`number ${segmentCount}`)
   })
 })

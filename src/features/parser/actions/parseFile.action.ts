@@ -47,8 +47,7 @@ export async function parseFile(fileId: string): Promise<ActionResult<ParseFileR
     return { success: false, code: 'NOT_FOUND', error: 'File not found or access denied' }
   }
 
-  // Idempotency guard — prevent duplicate segments from concurrent parseFile() calls
-  // withTenant() already guarantees file belongs to tenant; this guard prevents re-parse
+  // Idempotency guard — fast-path: detect non-uploadable status from cached SELECT result
   if (file.status !== 'uploaded') {
     return {
       success: false,
@@ -57,11 +56,28 @@ export async function parseFile(fileId: string): Promise<ActionResult<ParseFileR
     }
   }
 
-  // 6.3 — Update file status to 'parsing'
-  await db
+  // 6.3 — Atomic CAS: transition file status from 'uploaded' to 'parsing'
+  // AND status='uploaded' in WHERE prevents TOCTOU race from concurrent parseFile() calls
+  const casResult = await db
     .update(files)
     .set({ status: 'parsing' })
-    .where(and(eq(files.id, fileId), withTenant(files.tenantId, currentUser.tenantId)))
+    .where(
+      and(
+        eq(files.id, fileId),
+        eq(files.status, 'uploaded'),
+        withTenant(files.tenantId, currentUser.tenantId),
+      ),
+    )
+    .returning({ id: files.id })
+
+  if (casResult.length === 0) {
+    // Race condition: another concurrent call won the CAS — file no longer in 'uploaded' state
+    return {
+      success: false,
+      code: 'CONFLICT',
+      error: `File cannot be re-parsed: current status is '${file.status}'`,
+    }
+  }
 
   // Audit log: file.parsing_started (must throw on failure per project-context rule)
   await writeAuditLog({
@@ -90,7 +106,19 @@ export async function parseFile(fileId: string): Promise<ActionResult<ParseFileR
     }
   }
 
-  const xmlContent = await blob.text()
+  let xmlContent: string
+  try {
+    xmlContent = await blob.text()
+  } catch (err) {
+    await markFileFailed(fileId, currentUser.tenantId, currentUser.id, file.fileName, {
+      reason: err instanceof Error ? err.message : 'Failed to read file content from blob',
+    })
+    return {
+      success: false,
+      code: 'STORAGE_ERROR',
+      error: 'Failed to read file content from storage blob',
+    }
+  }
 
   // Determine file type from extension
   const fileType = file.fileType === 'sdlxliff' ? 'sdlxliff' : 'xliff'
@@ -207,16 +235,20 @@ async function markFileFailed(
     .set({ status: 'failed' })
     .where(and(eq(files.id, fileId), withTenant(files.tenantId, tenantId)))
 
-  // Audit log for failed parsing (must throw on failure)
-  await writeAuditLog({
-    tenantId,
-    userId,
-    entityType: 'file',
-    entityId: fileId,
-    action: 'file.parse_failed',
-    newValue: {
-      fileName,
-      ...errorDetails,
-    },
-  })
+  // Audit log for failed parsing — non-fatal: audit failure must not mask the original error
+  try {
+    await writeAuditLog({
+      tenantId,
+      userId,
+      entityType: 'file',
+      entityId: fileId,
+      action: 'file.parse_failed',
+      newValue: {
+        fileName,
+        ...errorDetails,
+      },
+    })
+  } catch {
+    // Intentionally swallowed: writeAuditLog failure on an error path must not cascade
+  }
 }

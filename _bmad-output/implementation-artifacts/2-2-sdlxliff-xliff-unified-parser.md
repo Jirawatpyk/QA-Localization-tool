@@ -581,6 +581,35 @@ claude-sonnet-4-6
 - Final test count after CR Round 1: **629 unit tests** (507 from Story 2.1 + 122 new from Story 2.2: inlineTagExtractor 19, wordCounter 20, types 13, sdlxliffParser 49, perf 1, parseFile.action 20). Performance: 5,000 segments parsed in 211ms (< 3s ✅).
 - Post-CR edge case coverage analysis added 2 tests: XLIFF `"final"` → ApprovedSignOff state mapping; `file.parse_failed` audit log on PARSE_ERROR (was only tested on STORAGE_ERROR previously).
 
+### CR Round 2 — Fixes Applied (2026-02-23)
+
+**Scope:** Fix all HIGH + MEDIUM + LOW severity findings from combined manual (Amelia) + testing-qa-expert sub-agent review.
+
+**Source code fixes (6):**
+- `parseFile.action.ts` — H1: Wrapped `blob.text()` in try/catch → calls `markFileFailed()` + returns `STORAGE_ERROR` if blob decode fails (file no longer stuck in 'parsing' state)
+- `parseFile.action.ts` — H2: Atomic CAS — added `eq(files.status, 'uploaded')` to UPDATE WHERE + `.returning()` → prevents TOCTOU race from concurrent `parseFile()` calls (idempotency fast-path kept for obvious cases)
+- `parseFile.action.ts` — M1: Wrapped `writeAuditLog` in try/catch inside `markFileFailed()` → audit failure on error path no longer masks original error
+- `sdlxliffParser.ts` — M2: Renamed `fileType` parameter to `_fileType` in `parseXliff()` — clarifies that content detection (`hasSdlNamespace()`) governs result, not the parameter
+- `sdlxliffParser.ts` — L1: `hasSdlNamespace()` now uses `SDL_NAMESPACE_URI` constant instead of string literal
+- `types.ts` — L2: Fixed stale JSDoc on `ParsedSegment.segmentId` → "SDLXLIFF: mrk @mid value; XLIFF: trans-unit @id value"
+
+**Test additions (26 new tests — 122 → 148 Story 2.2 parser tests):**
+- `parseFile.action.test.ts` +9: tH1 blob.text() throw (2), tH2 FILE_TOO_LARGE E2E (2), tH3 xliff branch (2), tH5 withTenant isolation (2), H2 CAS race condition (1); modified: H4 reason assertions in 3 failure tests, L3 second batch tenantId/projectId, L7 CONFLICT error messages for 'parsed'/'failed'
+- `sdlxliffParser.test.ts` +13: H6 MAX_PARSE_SIZE_BYTES boundary × 2, M1 seg-source preferred over source, M4 matchPercentage clamping × 4 (-1, 150, abc, empty), M5 first-file-wins with different languages, M6 TAG_MISMATCH propagation × 2, M7 trans-unit no-source silently skipped, M8 trans-unit no-target → empty string, L4 file with missing body
+- `wordCounter.test.ts` +2: M9 bare 'th' locale (no region), L1 exact `toBe(1)` for numeral tokens
+- `inlineTagExtractor.test.ts` +3: M11 tag with no id → fallback to `String(tags.length)`, M12 3-level nested g tags × 2
+- `types.test.ts` rewrite: L5 exhaustiveness test uses `toBe(expected)` per state (not `toBeDefined()`)
+- `sdlxliffParser.perf.test.ts` added: L6 content validation (spot-checks segment[0] sourceText, confirmationState, matchPercentage, segmentNumber)
+
+**Project docs:**
+- `CLAUDE.md` — L3: Clarified NFKC rule: "before text comparison (NOT before Intl.Segmenter word counting)"
+
+**Intentional non-fixes:**
+- M3 (double stripMarkup in countWords): harmless redundancy — countWords designed to accept raw text; double-stripping is a no-op and not worth the API change
+- M10 (wordCounter.ts stripped.length===0 "dead code"): analysis was incorrect — this guard IS reachable for tag-only text (e.g. `"<g/>"` → stripMarkup → `" "` → trim → `""`)
+
+**Final test count:** 148 Story 2.2 parser tests (655 total unit tests across project: 507 Story 2.1 + 148 Story 2.2)
+
 ### CR Round 1 — Fixes Applied (2026-02-23)
 
 **Scope:** Fix all HIGH + MEDIUM + LOW severity findings from combined manual + sub-agent review.

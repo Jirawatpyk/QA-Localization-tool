@@ -188,6 +188,55 @@ describe('extractInlineTags', () => {
       expect(result.tags[0]).toMatchObject({ type: 'g', id: '1', position: 0 })
       expect(result.tags[1]).toMatchObject({ type: 'g', id: '2', position: 0 })
     })
+
+    it('should handle 3-level nested g tags when inner content is at deepest level (M12)', () => {
+      // <g id="1"><g id="2"><g id="3">deep</g></g></g>
+      const result = extractInlineTags([
+        tagNode('g', '1', [tagNode('g', '2', [tagNode('g', '3', [textNode('deep')])])]),
+      ])
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.plainText).toBe('deep')
+      expect(result.tags).toHaveLength(3)
+      expect(result.tags[0]).toMatchObject({ type: 'g', id: '1', position: 0 })
+      expect(result.tags[1]).toMatchObject({ type: 'g', id: '2', position: 0 })
+      expect(result.tags[2]).toMatchObject({ type: 'g', id: '3', position: 0 })
+    })
+
+    it('should handle mixed text and 3-level nested tags with correct positions (M12)', () => {
+      // "Before <g1><g2><g3>inner</g3></g2></g1> after"
+      // → plainText = "Before inner after"
+      // → g1 at position 7, g2 at 7, g3 at 7
+      const result = extractInlineTags([
+        textNode('Before '),
+        tagNode('g', 'A', [tagNode('g', 'B', [tagNode('g', 'C', [textNode('inner')])])]),
+        textNode(' after'),
+      ])
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.plainText).toBe('Before inner after')
+      expect(result.tags).toHaveLength(3)
+      expect(result.tags[0]).toMatchObject({ type: 'g', id: 'A', position: 7 })
+      expect(result.tags[1]).toMatchObject({ type: 'g', id: 'B', position: 7 })
+      expect(result.tags[2]).toMatchObject({ type: 'g', id: 'C', position: 7 })
+    })
+  })
+
+  describe('tag with no id attribute — fallback to tags.length (M11)', () => {
+    it('should use String(tags.length) as id when tag has no @_id attribute (M11)', () => {
+      // tag with no @_id, no @_mid → fallback to String(tags.length) at time of processing
+      const noIdTag = { x: [], ':@': { '@_ctype': 'image' } } // no @_id, no @_mid
+      const result = extractInlineTags([
+        textNode('prefix'),
+        noIdTag as Parameters<typeof extractInlineTags>[0][0],
+      ])
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      // tags.length was 0 before this tag → id should be '0'
+      expect(result.tags).toHaveLength(1)
+      expect(result.tags[0]?.id).toBe('0')
+      expect(result.tags[0]?.type).toBe('x')
+    })
   })
 
   describe('all 7 tag types in one segment', () => {

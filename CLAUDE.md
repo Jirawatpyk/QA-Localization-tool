@@ -177,7 +177,7 @@ This checklist was created from Epic 1 retrospective learnings. Top 5 red flags:
 
 ## CJK/Thai Language Rules
 
-- NFKC normalization before text comparison
+- NFKC normalization before **text comparison** (glossary matching, finding deduplication) — NOT before `Intl.Segmenter` word counting (Thai sara am U+0E33 decomposes under NFKC, breaking ICU tokenization)
 - Word counting via `Intl.Segmenter` with `isWordLike` — never space-split
 - Text chunking at 30,000 chars to prevent stack overflow
 - Strip inline markup before segmentation, maintain offset map

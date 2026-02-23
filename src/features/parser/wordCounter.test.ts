@@ -107,9 +107,9 @@ describe('countWords', () => {
     })
 
     it('should handle locale with region code for no-space language', () => {
-      // zh-TW uses same isWordLike segmenter as zh-CN
+      // zh-TW: ICU segments '你好世界' into 2 word-like tokens ('你好' + '世界')
       const result = countWords('你好世界', 'zh-TW')
-      expect(result).toBeGreaterThan(0)
+      expect(result).toBe(2)
     })
 
     it('should return 0 for placeholder-only text after markup stripping', () => {
@@ -119,10 +119,18 @@ describe('countWords', () => {
       expect(countWords('%s %d', 'en-US')).toBe(0)
     })
 
-    it('should count Arabic numerals as tokens in CJK/Thai context', () => {
-      // Intl.Segmenter marks numbers as isWordLike
-      expect(countWords('100', 'th-TH')).toBeGreaterThan(0)
-      expect(countWords('12345', 'zh-CN')).toBeGreaterThan(0)
+    it('should count Arabic numerals as exactly 1 token in CJK/Thai context (L1)', () => {
+      // Intl.Segmenter marks numbers as isWordLike; single numeric string = exactly 1 token
+      expect(countWords('100', 'th-TH')).toBe(1)
+      expect(countWords('12345', 'zh-CN')).toBe(1)
+    })
+
+    it('should count words using bare language code "th" without region (M9)', () => {
+      // getSegmenter('th') and getSegmenter('th-TH') are separate cache entries — both must work
+      const resultBare = countWords('สวัสดี', 'th')
+      const resultRegion = countWords('สวัสดี', 'th-TH')
+      expect(resultBare).toBeGreaterThan(0)
+      expect(resultBare).toBe(resultRegion) // same ICU segmentation result
     })
   })
 

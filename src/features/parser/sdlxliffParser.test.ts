@@ -428,6 +428,22 @@ describe('parseXliff', () => {
       if (result.success) return
       expect(result.error.details).toContain('bytes')
     })
+
+    it('should NOT trigger size guard when fileSizeBytes equals exactly MAX_PARSE_SIZE_BYTES (H6)', () => {
+      // Operator is > (strictly greater than), so exactly 15MB must NOT return FILE_TOO_LARGE
+      const result = parseXliff('a'.repeat(100), 'xliff', MAX_PARSE_SIZE_BYTES)
+      expect(result.success).toBe(false)
+      if (result.success) return
+      // File is at exactly the limit — must fail for content reasons, not size
+      expect(result.error.code).not.toBe('FILE_TOO_LARGE')
+    })
+
+    it('should NOT trigger size guard when fileSizeBytes is one byte below MAX_PARSE_SIZE_BYTES (H6)', () => {
+      const result = parseXliff('a'.repeat(100), 'xliff', MAX_PARSE_SIZE_BYTES - 1)
+      expect(result.success).toBe(false)
+      if (result.success) return
+      expect(result.error.code).not.toBe('FILE_TOO_LARGE')
+    })
   })
 
   describe('malformed/invalid XML (AC #7)', () => {
@@ -537,6 +553,210 @@ describe('parseXliff', () => {
       expect(result.data.segments[0]?.sourceText).toBe('Hello')
       expect(result.data.segments[1]?.sourceText).toBe('Goodbye')
       expect(result.data.segments[1]?.segmentNumber).toBe(2)
+    })
+  })
+
+  describe('seg-source preferred over source when both present (M1)', () => {
+    it('should use seg-source text when source and seg-source have different content (M1)', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:sdl="http://sdl.com/FileTypes/SdlXliff/1.0">
+  <file original="test.docx" source-language="en-US" target-language="de-DE" datatype="x-sdlxliff">
+    <body>
+      <trans-unit id="1">
+        <source>WRONG-SOURCE</source>
+        <seg-source><mrk mtype="seg" mid="1">CORRECT-SOURCE</mrk></seg-source>
+        <target><mrk mtype="seg" mid="1">Korrekt</mrk></target>
+        <sdl:seg-defs><sdl:seg id="1" conf="Translated" percent="100"/></sdl:seg-defs>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'sdlxliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments[0]?.sourceText).toBe('CORRECT-SOURCE')
+    })
+  })
+
+  describe('matchPercentage clamping defense-in-depth (M4)', () => {
+    function buildSdlxliffWithPercent(percent: string): string {
+      return `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:sdl="http://sdl.com/FileTypes/SdlXliff/1.0">
+  <file original="test.docx" source-language="en-US" target-language="de-DE" datatype="x-sdlxliff">
+    <body>
+      <trans-unit id="1">
+        <source>Hello</source>
+        <seg-source><mrk mtype="seg" mid="1">Hello</mrk></seg-source>
+        <target><mrk mtype="seg" mid="1">Hallo</mrk></target>
+        <sdl:seg-defs><sdl:seg id="1" conf="Translated" percent="${percent}"/></sdl:seg-defs>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>`
+    }
+
+    it('should clamp percent="-1" to 0 when percent is negative (M4)', () => {
+      const result = parseXliff(buildSdlxliffWithPercent('-1'), 'sdlxliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments[0]?.matchPercentage).toBe(0)
+    })
+
+    it('should clamp percent="150" to 100 when percent exceeds 100 (M4)', () => {
+      const result = parseXliff(buildSdlxliffWithPercent('150'), 'sdlxliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments[0]?.matchPercentage).toBe(100)
+    })
+
+    it('should return null when percent="abc" is non-numeric (M4)', () => {
+      const result = parseXliff(buildSdlxliffWithPercent('abc'), 'sdlxliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments[0]?.matchPercentage).toBeNull()
+    })
+
+    it('should return null when percent="" is empty string (M4)', () => {
+      const result = parseXliff(buildSdlxliffWithPercent(''), 'sdlxliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments[0]?.matchPercentage).toBeNull()
+    })
+  })
+
+  describe('TAG_MISMATCH propagation from extractInlineTags through parseXliff (M6)', () => {
+    it('should return TAG_MISMATCH when source has unmatched ex tag in SDLXLIFF (M6)', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:sdl="http://sdl.com/FileTypes/SdlXliff/1.0">
+  <file original="test.docx" source-language="en-US" target-language="de-DE" datatype="x-sdlxliff">
+    <body>
+      <trans-unit id="1">
+        <source>Start middle</source>
+        <seg-source><mrk mtype="seg" mid="1">Start<ex id="99"/>middle</mrk></seg-source>
+        <target><mrk mtype="seg" mid="1">Anfang</mrk></target>
+        <sdl:seg-defs><sdl:seg id="1" conf="Translated" percent="0"/></sdl:seg-defs>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'sdlxliff')
+      expect(result.success).toBe(false)
+      if (result.success) return
+      expect(result.error.code).toBe('TAG_MISMATCH')
+    })
+
+    it('should return TAG_MISMATCH when source has unmatched ept tag in XLIFF (M6)', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file original="test.docx" source-language="en-US" target-language="de-DE" datatype="plaintext">
+    <body>
+      <trans-unit id="1">
+        <source>Hello<ept id="99"/>world</source>
+        <target>Hallo</target>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'xliff')
+      expect(result.success).toBe(false)
+      if (result.success) return
+      expect(result.error.code).toBe('TAG_MISMATCH')
+    })
+  })
+
+  describe('trans-unit with missing source or target (M7, M8)', () => {
+    it('should silently skip trans-unit with no source element in XLIFF (M7)', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file original="test.docx" source-language="en-US" target-language="de-DE" datatype="plaintext">
+    <body>
+      <trans-unit id="1">
+        <source>First</source>
+        <target state="translated">Erste</target>
+      </trans-unit>
+      <trans-unit id="2">
+        <target state="translated">No source here</target>
+      </trans-unit>
+      <trans-unit id="3">
+        <source>Third</source>
+        <target state="translated">Dritte</target>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'xliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      // trans-unit id="2" has no <source> — silently skipped → 2 segments total
+      expect(result.data.segments).toHaveLength(2)
+      expect(result.data.segments[0]?.sourceText).toBe('First')
+      expect(result.data.segments[1]?.sourceText).toBe('Third')
+    })
+
+    it('should produce empty targetText when trans-unit has no target element in XLIFF (M8)', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file original="test.docx" source-language="en-US" target-language="de-DE" datatype="plaintext">
+    <body>
+      <trans-unit id="1">
+        <source>Source only</source>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'xliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments).toHaveLength(1)
+      expect(result.data.segments[0]?.targetText).toBe('')
+      expect(result.data.segments[0]?.confirmationState).toBeNull()
+    })
+  })
+
+  describe('multi-file first-file-wins language selection (M5)', () => {
+    it('should use first file language as globalSourceLang when files have different languages (M5)', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file original="doc1.docx" source-language="en-US" target-language="th-TH" datatype="plaintext">
+    <body>
+      <trans-unit id="1"><source>Hello</source><target state="translated">สวัสดี</target></trans-unit>
+    </body>
+  </file>
+  <file original="doc2.docx" source-language="fr-FR" target-language="de-DE" datatype="plaintext">
+    <body>
+      <trans-unit id="1"><source>Bonjour</source><target state="translated">Hallo</target></trans-unit>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'xliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      // First-file-wins: globalSourceLang = 'en-US' (not 'fr-FR')
+      expect(result.data.sourceLang).toBe('en-US')
+      // Per-file source lang still stored in segment
+      expect(result.data.segments[0]?.sourceLang).toBe('en-US')
+      expect(result.data.segments[1]?.sourceLang).toBe('fr-FR')
+    })
+  })
+
+  describe('file element with missing body silently skipped (L4)', () => {
+    it('should skip file element with no body and extract segments from remaining files (L4)', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file original="no-body.docx" source-language="en-US" target-language="de-DE" datatype="plaintext">
+  </file>
+  <file original="with-body.docx" source-language="en-US" target-language="de-DE" datatype="plaintext">
+    <body>
+      <trans-unit id="1"><source>Valid segment</source><target state="translated">Gültig</target></trans-unit>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'xliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      // first file (no body) is skipped silently — only 1 segment from second file
+      expect(result.data.segments).toHaveLength(1)
+      expect(result.data.segments[0]?.sourceText).toBe('Valid segment')
     })
   })
 
