@@ -29,6 +29,12 @@ describe('Parser constants', () => {
         expect(CONFIRMATION_STATES).toContain(state)
       }
     })
+
+    it('should NOT contain non-standard conf values (negative assertion, M7)', () => {
+      expect(CONFIRMATION_STATES).not.toContain('PendingTranslation')
+      expect(CONFIRMATION_STATES).not.toContain('Unknown')
+      expect(CONFIRMATION_STATES).not.toContain('')
+    })
   })
 
   describe('SKIP_QA_STATES', () => {

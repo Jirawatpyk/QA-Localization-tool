@@ -180,7 +180,7 @@ describe('parseFile action', () => {
       expect(result.data.segmentCount).toBe(1)
     })
 
-    it('should write file.parsing_started audit log entry', async () => {
+    it('should write file.parsing_started audit log entry with fileName and fileType (H8)', async () => {
       buildSelectChain([mockFile])
       buildUpdateChain()
       buildInsertChain()
@@ -193,7 +193,11 @@ describe('parseFile action', () => {
       await parseFile(FILE_ID)
 
       expect(mockWriteAuditLog).toHaveBeenCalledWith(
-        expect.objectContaining({ action: 'file.parsing_started', entityId: FILE_ID }),
+        expect.objectContaining({
+          action: 'file.parsing_started',
+          entityId: FILE_ID,
+          newValue: expect.objectContaining({ fileName: 'test.sdlxliff', fileType: 'sdlxliff' }),
+        }),
       )
     })
 
@@ -233,7 +237,7 @@ describe('parseFile action', () => {
       expect(updateChain.set).toHaveBeenCalledWith({ status: 'parsed' })
     })
 
-    it('should include tenantId in segment batch values (tenant isolation)', async () => {
+    it('should include all required fields in segment batch values (H6)', async () => {
       buildSelectChain([mockFile])
       buildUpdateChain()
       const insertChain = buildInsertChain()
@@ -251,6 +255,10 @@ describe('parseFile action', () => {
             tenantId: TENANT_ID,
             fileId: FILE_ID,
             projectId: PROJECT_ID,
+            sourceLang: 'en-US',
+            targetLang: 'th-TH',
+            segmentNumber: 1,
+            wordCount: expect.any(Number),
           }),
         ]),
       )
@@ -274,7 +282,7 @@ describe('parseFile action', () => {
       expect(result.code).toBe('STORAGE_ERROR')
     })
 
-    it('should write file.parse_failed audit log on storage error', async () => {
+    it('should write file.parse_failed audit log with fileName on storage error (H8)', async () => {
       buildSelectChain([mockFile])
       buildUpdateChain()
 
@@ -286,7 +294,10 @@ describe('parseFile action', () => {
       await parseFile(FILE_ID)
 
       expect(mockWriteAuditLog).toHaveBeenCalledWith(
-        expect.objectContaining({ action: 'file.parse_failed' }),
+        expect.objectContaining({
+          action: 'file.parse_failed',
+          newValue: expect.objectContaining({ fileName: 'test.sdlxliff' }),
+        }),
       )
     })
 
@@ -367,6 +378,114 @@ describe('parseFile action', () => {
       await parseFile(FILE_ID)
 
       expect(insertChain.values).toHaveBeenCalledTimes(1)
+    })
+
+    it('should call insert twice when segments exceed SEGMENT_BATCH_SIZE of 100 (H7)', async () => {
+      buildSelectChain([mockFile])
+      buildUpdateChain()
+      const insertChain = buildInsertChain()
+
+      // Generate XLIFF with 101 trans-units (crosses batch boundary at 100)
+      const units = Array.from(
+        { length: 101 },
+        (_, i) =>
+          `<trans-unit id="${i + 1}"><source>Segment ${i + 1}</source><target state="translated">Übersetzung ${i + 1}</target></trans-unit>`,
+      ).join('\n')
+      const largeXml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file original="large.docx" source-language="en-US" target-language="de-DE" datatype="plaintext">
+    <body>${units}</body>
+  </file>
+</xliff>`
+
+      mockDownload.mockResolvedValue({
+        data: new Blob([largeXml], { type: 'application/xml' }),
+        error: null,
+      })
+
+      const result = await parseFile(FILE_ID)
+
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segmentCount).toBe(101)
+      // SEGMENT_BATCH_SIZE=100 → first insert: segments 1-100, second insert: segment 101
+      expect(insertChain.values).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  describe('idempotency guard (H9)', () => {
+    it('should return CONFLICT when file status is already "parsing"', async () => {
+      buildSelectChain([{ ...mockFile, status: 'parsing' }])
+
+      const result = await parseFile(FILE_ID)
+
+      expect(result.success).toBe(false)
+      if (result.success) return
+      expect(result.code).toBe('CONFLICT')
+      expect(result.error).toContain('parsing')
+    })
+
+    it('should return CONFLICT when file status is "parsed"', async () => {
+      buildSelectChain([{ ...mockFile, status: 'parsed' }])
+
+      const result = await parseFile(FILE_ID)
+
+      expect(result.success).toBe(false)
+      if (result.success) return
+      expect(result.code).toBe('CONFLICT')
+    })
+
+    it('should return CONFLICT when file status is "failed"', async () => {
+      buildSelectChain([{ ...mockFile, status: 'failed' }])
+
+      const result = await parseFile(FILE_ID)
+
+      expect(result.success).toBe(false)
+      if (result.success) return
+      expect(result.code).toBe('CONFLICT')
+    })
+  })
+
+  describe('database failure (H6)', () => {
+    it('should return DB_ERROR when segment batch insert throws', async () => {
+      buildSelectChain([mockFile])
+      buildUpdateChain()
+      mockInsert.mockReturnValue({
+        values: vi.fn().mockRejectedValue(new Error('Connection refused')),
+      })
+
+      mockDownload.mockResolvedValue({
+        data: new Blob([MINIMAL_SDLXLIFF], { type: 'application/xml' }),
+        error: null,
+      })
+
+      const result = await parseFile(FILE_ID)
+
+      expect(result.success).toBe(false)
+      if (result.success) return
+      expect(result.code).toBe('DB_ERROR')
+    })
+
+    it('should mark file as failed and write audit log on DB insert error (H6, H8)', async () => {
+      buildSelectChain([mockFile])
+      buildUpdateChain()
+      mockInsert.mockReturnValue({
+        values: vi.fn().mockRejectedValue(new Error('Connection refused')),
+      })
+
+      mockDownload.mockResolvedValue({
+        data: new Blob([MINIMAL_SDLXLIFF], { type: 'application/xml' }),
+        error: null,
+      })
+
+      await parseFile(FILE_ID)
+
+      expect(mockWriteAuditLog).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'file.parse_failed',
+          newValue: expect.objectContaining({ fileName: 'test.sdlxliff' }),
+        }),
+      )
     })
   })
 })

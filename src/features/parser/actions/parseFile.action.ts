@@ -47,9 +47,14 @@ export async function parseFile(fileId: string): Promise<ActionResult<ParseFileR
     return { success: false, code: 'NOT_FOUND', error: 'File not found or access denied' }
   }
 
-  // Cross-tenant ownership verification (defense-in-depth)
-  if (file.tenantId !== currentUser.tenantId) {
-    return { success: false, code: 'FORBIDDEN', error: 'Cross-tenant access denied' }
+  // Idempotency guard — prevent duplicate segments from concurrent parseFile() calls
+  // withTenant() already guarantees file belongs to tenant; this guard prevents re-parse
+  if (file.status !== 'uploaded') {
+    return {
+      success: false,
+      code: 'CONFLICT',
+      error: `File cannot be re-parsed: current status is '${file.status}'`,
+    }
   }
 
   // 6.3 — Update file status to 'parsing'

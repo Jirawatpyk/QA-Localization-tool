@@ -11,7 +11,7 @@ function textNode(text: string) {
 function tagNode(
   name: string,
   id: string,
-  children: object[] = [],
+  children: Record<string, unknown>[] = [],
   extraAttrs: Record<string, string> = {},
 ) {
   return {
@@ -116,6 +116,29 @@ describe('extractInlineTags', () => {
       if (result.success) return
       expect(result.error.code).toBe('TAG_MISMATCH')
       expect(result.error.message).toContain('99')
+    })
+
+    it('should handle bpt with no text children — content field must be undefined (L4)', () => {
+      const result = extractInlineTags([
+        tagNode('bpt', '5', []),
+        textNode('text'),
+        selfClosingTag('ept', '5'),
+      ])
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.tags[0]).toMatchObject({ type: 'bpt', id: '5', position: 0 })
+      expect(result.tags[0]?.content).toBeUndefined()
+    })
+
+    it('should return TAG_MISMATCH for ept whose id does not match open bpt (L5)', () => {
+      // bpt opened with id="1", ept closes with id="2" — no matching bpt for "2"
+      const result = extractInlineTags([
+        tagNode('bpt', '1', [textNode('open')]),
+        selfClosingTag('ept', '2'),
+      ])
+      expect(result.success).toBe(false)
+      if (result.success) return
+      expect(result.error.code).toBe('TAG_MISMATCH')
     })
   })
 

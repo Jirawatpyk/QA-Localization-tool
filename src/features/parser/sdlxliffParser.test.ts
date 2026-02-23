@@ -1,7 +1,8 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-import { describe, expect, it } from 'vitest'
+import { XMLParser } from 'fast-xml-parser'
+import { describe, expect, it, vi } from 'vitest'
 
 import { MAX_PARSE_SIZE_BYTES } from './constants'
 import { parseXliff } from './sdlxliffParser'
@@ -185,6 +186,25 @@ describe('parseXliff', () => {
       if (!result.success) return
       expect(result.data.segments[4]?.confirmationState).toBe('ApprovedSignOff')
     })
+
+    it('should report g tag at correct character position in seg1 (H3)', () => {
+      const xml = readFixture(FIXTURES.withNamespaces)
+      const result = parseXliff(xml, 'sdlxliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      // seg1 source: "Please read the <g>important notice</g> before continuing."
+      // fast-xml-parser textNode = "Please read the" (15 chars, trailing space belongs to next context)
+      expect(result.data.segments[0]?.inlineTags?.[0]?.position).toBe(15)
+    })
+
+    it('should report x tag at correct character position in seg2 (H3)', () => {
+      const xml = readFixture(FIXTURES.withNamespaces)
+      const result = parseXliff(xml, 'sdlxliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      // seg2 source: "Line 1<x/>Line 2" — "Line 1" = 6 chars → x at position 6
+      expect(result.data.segments[1]?.inlineTags?.[0]?.position).toBe(6)
+    })
   })
 
   describe('standard.xliff — pure XLIFF 1.2 (AC #2)', () => {
@@ -245,6 +265,42 @@ describe('parseXliff', () => {
         expect(seg.matchPercentage).toBeNull()
       }
     })
+
+    it('should extract g tag with position for seg2 (H5)', () => {
+      const xml = readFixture(FIXTURES.standard)
+      const result = parseXliff(xml, 'xliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      const seg2 = result.data.segments[1]!
+      // seg2: "Please enter your <g id="1">email address</g>."
+      // fast-xml-parser textNode = "Please enter your" (17 chars, trailing space belongs to next context)
+      expect(seg2.inlineTags).not.toBeNull()
+      expect(seg2.inlineTags).toHaveLength(1)
+      expect(seg2.inlineTags![0]).toMatchObject({ type: 'g', id: '1', position: 17 })
+    })
+
+    it('should extract ph tag with position for seg3 (H5)', () => {
+      const xml = readFixture(FIXTURES.standard)
+      const result = parseXliff(xml, 'xliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      const seg3 = result.data.segments[2]!
+      // seg3: "Error: <ph id="1">{message}</ph>"
+      // fast-xml-parser textNode = "Error:" (6 chars, trailing space belongs to next context)
+      expect(seg3.inlineTags).not.toBeNull()
+      expect(seg3.inlineTags).toHaveLength(1)
+      expect(seg3.inlineTags![0]).toMatchObject({ type: 'ph', id: '1', position: 6 })
+    })
+
+    it('should use trans-unit @id as segmentId for XLIFF segments (H13)', () => {
+      const xml = readFixture(FIXTURES.standard)
+      const result = parseXliff(xml, 'xliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments[0]?.segmentId).toBe('1')
+      expect(result.data.segments[1]?.segmentId).toBe('2')
+      expect(result.data.segments[2]?.segmentId).toBe('3')
+    })
   })
 
   describe('XLIFF with notes — multiple <note> elements (AC #2)', () => {
@@ -272,6 +328,16 @@ describe('parseXliff', () => {
       if (!result.success) return
       expect(result.data.segments[1]?.translatorComment).toBeNull()
     })
+
+    it('should extract single note as translatorComment for seg1 (H11)', () => {
+      const xml = readFixture(FIXTURES.xliffWithNotes)
+      const result = parseXliff(xml, 'xliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments[0]?.translatorComment).toBe(
+        'Translator note: formal register required',
+      )
+    })
   })
 
   describe('empty-target.sdlxliff — AC #13 (empty target = "" not null)', () => {
@@ -290,6 +356,17 @@ describe('parseXliff', () => {
       expect(result.success).toBe(true)
       if (!result.success) return
       expect(result.data.segments[1]?.sourceText).toBe('World')
+    })
+
+    it('should store empty string for seg3 with self-closing <target/> (H10)', () => {
+      const xml = readFixture(FIXTURES.emptyTarget)
+      const result = parseXliff(xml, 'sdlxliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      // Segment 3 has <target/> (self-closing) — no mrk children, so targetMrkMap has no entry for mid="3"
+      const seg3 = result.data.segments[2]!
+      expect(seg3.targetText).toBe('')
+      expect(seg3.sourceText).toBe('Goodbye')
     })
   })
 
@@ -340,7 +417,9 @@ describe('parseXliff', () => {
       expect(result.success).toBe(false)
       if (result.success) return
       expect(result.error.code).toBe('FILE_TOO_LARGE')
-      expect(result.error.message).toContain('15MB')
+      expect(result.error.message).toBe(
+        'File too large for processing (max 15MB). Please split the file in your CAT tool',
+      )
     })
 
     it('should include file size details in error', () => {
@@ -367,7 +446,7 @@ describe('parseXliff', () => {
       expect(result.success).toBe(false)
       if (result.success) return
       expect(result.error.code).toBe('INVALID_STRUCTURE')
-      expect(result.error.message).toContain('<xliff>')
+      expect(result.error.message).toBe('Invalid file format — missing <xliff> root element')
     })
 
     it('should return INVALID_STRUCTURE when no file elements found', () => {
@@ -377,6 +456,111 @@ describe('parseXliff', () => {
       expect(result.success).toBe(false)
       if (result.success) return
       expect(result.error.code).toBe('INVALID_STRUCTURE')
+    })
+  })
+
+  describe('INVALID_XML — XMLParser.parse throws (AC #7, H4)', () => {
+    it('should return INVALID_XML with exact message when parser throws', () => {
+      const spy = vi.spyOn(XMLParser.prototype, 'parse').mockImplementationOnce(() => {
+        throw new Error('Unexpected character &#xFFFE;')
+      })
+      const result = parseXliff('<?xml version="1.0"?>', 'xliff')
+      spy.mockRestore()
+
+      expect(result.success).toBe(false)
+      if (result.success) return
+      expect(result.error.code).toBe('INVALID_XML')
+      expect(result.error.message).toBe('Invalid file format — could not parse XML structure')
+    })
+  })
+
+  describe('bx/ex inline tags in SDLXLIFF (AC #1, H1)', () => {
+    const bxExXml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:sdl="http://sdl.com/FileTypes/SdlXliff/1.0">
+  <file original="test.docx" source-language="en-US" target-language="de-DE" datatype="x-sdlxliff">
+    <body>
+      <group id="g1">
+        <trans-unit id="1">
+          <source>Start<bx id="1"/>middle<ex id="1"/>End</source>
+          <seg-source><mrk mtype="seg" mid="1">Start<bx id="1"/>middle<ex id="1"/>End</mrk></seg-source>
+          <target><mrk mtype="seg" mid="1">Anfang<bx id="1"/>mitte<ex id="1"/>Ende</mrk></target>
+          <sdl:seg-defs><sdl:seg id="1" conf="Draft" percent="0"/></sdl:seg-defs>
+        </trans-unit>
+      </group>
+    </body>
+  </file>
+</xliff>`
+
+    it('should extract bx and ex tags from SDLXLIFF source', () => {
+      const result = parseXliff(bxExXml, 'sdlxliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      const seg = result.data.segments[0]!
+      expect(seg.inlineTags).not.toBeNull()
+      const types = seg.inlineTags!.map((t) => t.type)
+      expect(types).toContain('bx')
+      expect(types).toContain('ex')
+    })
+
+    it('should record bx at position 5 and ex at position 11', () => {
+      const result = parseXliff(bxExXml, 'sdlxliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      const tags = result.data.segments[0]!.inlineTags!
+      const bxTag = tags.find((t) => t.type === 'bx')!
+      const exTag = tags.find((t) => t.type === 'ex')!
+      // "Start" = 5 chars → bx at 5; "middle" = 6 more chars → ex at 11
+      expect(bxTag.position).toBe(5)
+      expect(exTag.position).toBe(11)
+    })
+  })
+
+  describe('multi-file XLIFF — segments from all <file> elements (M5)', () => {
+    it('should extract segments from all file elements and assign sequential numbers', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file original="doc1.docx" source-language="en-US" target-language="th-TH" datatype="plaintext">
+    <body>
+      <trans-unit id="1"><source>Hello</source><target state="translated">สวัสดี</target></trans-unit>
+    </body>
+  </file>
+  <file original="doc2.docx" source-language="en-US" target-language="th-TH" datatype="plaintext">
+    <body>
+      <trans-unit id="1"><source>Goodbye</source><target state="translated">ลาก่อน</target></trans-unit>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'xliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments).toHaveLength(2)
+      expect(result.data.segments[0]?.sourceText).toBe('Hello')
+      expect(result.data.segments[1]?.sourceText).toBe('Goodbye')
+      expect(result.data.segments[1]?.segmentNumber).toBe(2)
+    })
+  })
+
+  describe('unrecognized sdl:seg conf attribute fallback (M7)', () => {
+    it('should set confirmationState to null for unknown conf values', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:sdl="http://sdl.com/FileTypes/SdlXliff/1.0">
+  <file original="test.docx" source-language="en-US" target-language="de-DE" datatype="x-sdlxliff">
+    <body>
+      <group id="g1">
+        <trans-unit id="1">
+          <source>Test</source>
+          <seg-source><mrk mtype="seg" mid="1">Test</mrk></seg-source>
+          <target><mrk mtype="seg" mid="1">Prüfung</mrk></target>
+          <sdl:seg-defs><sdl:seg id="1" conf="PendingTranslation" percent="50"/></sdl:seg-defs>
+        </trans-unit>
+      </group>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'sdlxliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments[0]?.confirmationState).toBeNull()
     })
   })
 })

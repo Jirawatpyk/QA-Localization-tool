@@ -92,6 +92,11 @@ export function parseXliff(
   try {
     root = parser.parse(xmlContent) as XmlNode[]
   } catch (err) {
+    // Note: fast-xml-parser is lenient and rarely throws on malformed XML — it returns
+    // an empty/partial parse tree instead. This catch handles encoding declaration errors
+    // or XMLParser configuration issues. Structural errors (missing <xliff> root) are
+    // caught below via INVALID_STRUCTURE. This branch can be reached by mocking
+    // XMLParser.parse() in tests to simulate rare parser failures.
     return {
       success: false,
       error: {
@@ -192,7 +197,7 @@ function extractTransUnitSegments(
   sourceLang: string,
   targetLang: string,
   startNumber: number,
-  _fileType: 'sdlxliff' | 'xliff',
+  _fileType: 'sdlxliff' | 'xliff', // reserved for future Excel/MemoQ format divergence
 ): TransUnitResult {
   const tuChildren = getChildren(tuEl, 'trans-unit')
   const result: ParsedSegment[] = []
@@ -275,8 +280,10 @@ function extractTransUnitSegments(
     // 5.8 — XLIFF <note> elements → translatorComment
     const translatorComment = extractXliffNotes(tuChildren)
 
+    // H13: Use trans-unit @_id as segmentId for XLIFF (mirrors SDLXLIFF mrk mid usage)
+    const tuAttrs = getAttrs(tuEl)
     const segment: ParsedSegment = {
-      segmentId: String(startNumber),
+      segmentId: tuAttrs['@_id'] ?? String(startNumber),
       segmentNumber: startNumber,
       sourceText: srcExtract.plainText,
       targetText: tgtExtract.plainText,
@@ -321,13 +328,19 @@ function extractSdlSegMeta(tuChildren: XmlNode[]): Map<string, SdlSegMeta> {
     const percentRaw = attrs['@_percent']
 
     const conf = isValidConfirmationState(confRaw) ? confRaw : null
-    const percent = percentRaw !== undefined ? parseInt(percentRaw, 10) : null
+
+    // M4: Clamp matchPercentage to valid 0-100 range (defense against malformed files)
+    const parsedPercent = percentRaw !== undefined ? parseInt(percentRaw, 10) : null
+    const percent =
+      parsedPercent !== null && !Number.isNaN(parsedPercent)
+        ? Math.min(100, Math.max(0, parsedPercent))
+        : null
 
     // Extract sdl:cmt comment
     const sdlSegChildren = getChildren(sdlSeg, 'sdl:seg')
     const comment = extractSdlComment(sdlSegChildren)
 
-    map.set(id, { conf, percent: Number.isNaN(percent ?? NaN) ? null : percent, comment })
+    map.set(id, { conf, percent, comment })
   }
 
   return map
@@ -449,6 +462,8 @@ function isValidConfirmationState(value: string | undefined): value is Confirmat
   return (CONFIRMATION_STATES as readonly string[]).includes(value)
 }
 
+// Note: raw substring search is intentional — faster than re-parsing namespaces from the
+// already-parsed tree. The SDL namespace URI is unique enough to avoid false positives.
 function hasSdlNamespace(xmlContent: string): boolean {
   return xmlContent.includes('http://sdl.com/FileTypes/SdlXliff/1.0')
 }

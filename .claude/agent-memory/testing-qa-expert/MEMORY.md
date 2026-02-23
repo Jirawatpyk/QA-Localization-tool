@@ -195,9 +195,24 @@ All Round 2 gaps were resolved. Current state and Round 3 new findings below.
 
 ### Common Operator Gotchas
 
-- LARGE_FILE_WARNING_BYTES boundary: route.ts uses `>=`, hook uses `>` — inconsistency
-  should be caught by exact-boundary tests (file at exactly 10 _ 1024 _ 1024 bytes)
+- LARGE*FILE_WARNING_BYTES boundary: route.ts uses `>=`, hook uses `>` — inconsistency
+  should be caught by exact-boundary tests (file at exactly 10 * 1024 \_ 1024 bytes)
 - Schema `z.string().length(N)` is exact-length, NOT max — test BOTH too-short AND too-long
+
+### Story 2.2 Test Review (2026-02-23) — See detail file
+
+Full findings in `story-2.2-test-review.md`. Summary:
+
+- 5 CRITICAL, 10 HIGH, 12 MEDIUM, 6 LOW across 101 tests in 6 files
+- C1/C2: AC#3 + AC#7 exact error messages not asserted (substring only)
+- C3: Inline tag POSITION never asserted in parser integration tests
+- C4: Source/target tag count parity (AC#1 "count matching") untested
+- C5: sourceLang/targetLang missing from action insert assertion
+- H1: AC#3 boundary value at exactly 15MB not tested (operator is `>` not `>=`)
+- H2: DB_ERROR path (batchInsert throws) completely untested
+- H3: Cross-tenant defense-in-depth check (line 51-53) untested
+- H5: Batch boundary (100 vs 101 segments, 2 insert calls) not tested
+- INVALID_XML code path is unreachable (fast-xml-parser never throws) — AC#7 only hits INVALID_STRUCTURE
 
 ### RLS Test Patterns That Work
 

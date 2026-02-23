@@ -98,9 +98,8 @@ describe('countWords', () => {
 
     it('should handle mixed Thai and inline tags', () => {
       // Thai text with inline tag — strip tag, count Thai words
-      const result = countWords('<g id="1">สวัสดี</g>ครับ', 'th-TH')
       // "สวัสดี" (1 word) + "ครับ" (1 word) = 2
-      expect(result).toBeGreaterThanOrEqual(1)
+      expect(countWords('<g id="1">สวัสดี</g>ครับ', 'th-TH')).toBe(2)
     })
 
     it('should handle very short single-word English', () => {

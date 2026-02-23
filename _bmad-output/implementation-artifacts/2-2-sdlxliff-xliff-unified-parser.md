@@ -1,6 +1,6 @@
 # Story 2.2: SDLXLIFF & XLIFF 1.2 Unified Parser
 
-Status: review
+Status: done
 
 <!-- Validated: 2026-02-23 — 2 critical fixes (C1: test corpus task, C2: audit log clarification) + 3 enhancements applied. -->
 
@@ -578,8 +578,37 @@ claude-sonnet-4-6
 - Test assertion messages now include `"<text>" → expected N` for faster debug on corpus failures.
 - InlineTag type duplicated in `src/db/schema/segments.ts` (cannot import from features — architectural boundary). Comment added to keep in sync.
 - Pre-CR quality scan (Step 9) found and fixed: relative imports → `@/features/parser/` alias; unsafe `attrs as Record<string, string>` cast → `Object.entries()` loop; hardcoded IDs in factories.ts → `faker.string.uuid()`.
-- Final test count: **608 unit tests** (507 from Story 2.1 + 101 new from Story 2.2: inlineTagExtractor 17, wordCounter 20, types 12, sdlxliffParser 37, perf 1, parseFile.action 14). Performance: 5,000 segments parsed in 211ms (< 3s ✅).
+- Final test count after CR Round 1: **629 unit tests** (507 from Story 2.1 + 122 new from Story 2.2: inlineTagExtractor 19, wordCounter 20, types 13, sdlxliffParser 49, perf 1, parseFile.action 20). Performance: 5,000 segments parsed in 211ms (< 3s ✅).
 - Post-CR edge case coverage analysis added 2 tests: XLIFF `"final"` → ApprovedSignOff state mapping; `file.parse_failed` audit log on PARSE_ERROR (was only tested on STORAGE_ERROR previously).
+
+### CR Round 1 — Fixes Applied (2026-02-23)
+
+**Scope:** Fix all HIGH + MEDIUM + LOW severity findings from combined manual + sub-agent review.
+
+**Production code fixes:**
+- `wordCounter.ts` — H12: NFKC intentionally NOT applied (Thai sara am U+0E33 decomposes under NFKC, breaking Intl.Segmenter tokenization). Added clear comment explaining the design decision.
+- `sdlxliffParser.ts` — H13: XLIFF segmentId now uses trans-unit `@_id` attribute (mirrors SDLXLIFF `mrk mid` usage)
+- `sdlxliffParser.ts` — M4: matchPercentage clamped to valid 0–100 range via `Math.min(100, Math.max(0, parsedPercent))`
+- `sdlxliffParser.ts` — H4: Added explanatory comment to INVALID_XML catch block (fast-xml-parser rarely throws; branch reachable via `vi.spyOn(XMLParser.prototype, 'parse')`)
+- `sdlxliffParser.ts` — L1: Added comment on `hasSdlNamespace()` raw substring search (intentional — faster than re-parsing namespaces)
+- `sdlxliffParser.ts` — L2: Added comment to `_fileType` parameter (reserved for future Excel/MemoQ format divergence)
+- `parseFile.action.ts` — H9: Added idempotency guard — returns `CONFLICT` if `file.status !== 'uploaded'`
+- `parseFile.action.ts` — M2: Removed unreachable dead code cross-tenant check (withTenant() already guarantees isolation)
+
+**Test additions (21 new tests — 608 → 629 total):**
+- `sdlxliffParser.test.ts` +12: H1 bx/ex inline tags, H2 exact AC#3 error messages, H3 inline tag position assertions, H4 INVALID_XML mock via vi.spyOn, H5 XLIFF inline tag types+positions, H10 empty-target seg3, H11 xliff-with-notes seg1 single note, H13 XLIFF segmentId, M5 multi-file XLIFF, M7 unrecognized conf fallback
+- `parseFile.action.test.ts` +6: H6 DB_ERROR path + expanded insert assertion (sourceLang/targetLang/segmentNumber/wordCount), H7 batch 101 segments (insert called twice), H8 audit log newValue field assertion, H9 idempotency (parsing/parsed/failed → CONFLICT)
+- `inlineTagExtractor.test.ts` +2: L4 bpt with no-children (content=undefined), L5 cross-id bpt/ept mismatch
+- `types.test.ts` +1: M7 negative assertion (unknown conf values not in CONFIRMATION_STATES)
+- `inlineTagExtractor.test.ts` — L6: helper `children` param type fixed from `object[]` → `Record<string, unknown>[]`
+- `wordCounter.test.ts` — M3: Thai inline tag assertion strengthened from `toBeGreaterThanOrEqual(1)` → `toBe(2)`
+
+**Corpus fix:**
+- `docs/test-data/segmenter/thai.json` — unchanged (NFKC reverted; original values remain correct)
+
+**Story document:**
+- M1: Added `scripts/compute-fixture-wordcount.mjs` to File List
+- Status: `review` → `done`
 
 ### File List
 
@@ -610,6 +639,7 @@ claude-sonnet-4-6
 - `docs/test-data/segmenter/korean.json`
 - `supabase/migrations/00013_story_2_2_segments_columns.sql`
 - `scripts/compute-corpus.mjs`
+- `scripts/compute-fixture-wordcount.mjs`
 - `scripts/generate-expected-fixtures.mjs`
 
 **Modified files:**
