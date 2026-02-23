@@ -2,6 +2,8 @@ import { faker } from '@faker-js/faker'
 
 import type { segments } from '@/db/schema/segments'
 import type { AppNotification, DashboardData, RecentFileRow } from '@/features/dashboard/types'
+import type { ExcelPreview } from '@/features/parser/actions/previewExcelColumns.action'
+import type { ExcelColumnMapping } from '@/features/parser/validation/excelMappingSchema'
 import type { BatchRecord, UploadFileResult } from '@/features/upload/types'
 import type { Finding } from '@/types/finding'
 import type { PipelineRun } from '@/types/pipeline'
@@ -96,12 +98,14 @@ export function buildFile(overrides?: Partial<UploadFileResult>): UploadFileResu
   const fileHash = faker.string.hexadecimal({ length: 64, casing: 'lower', prefix: '' })
   const tenantId = faker.string.uuid()
   const projectId = faker.string.uuid()
-  const fileName = `${faker.word.noun()}.sdlxliff`
+  const fileType = overrides?.fileType ?? 'sdlxliff'
+  const ext = fileType === 'xlsx' ? 'xlsx' : fileType === 'xliff' ? 'xlf' : 'sdlxliff'
+  const fileName = overrides?.fileName ?? `${faker.word.noun()}.${ext}`
   return {
     fileId: faker.string.uuid(),
     fileName,
     fileSizeBytes: faker.number.int({ min: 1024, max: 5 * 1024 * 1024 }),
-    fileType: 'sdlxliff',
+    fileType,
     fileHash,
     storagePath: `${tenantId}/${projectId}/${fileHash}/${fileName}`,
     status: 'uploaded',
@@ -117,6 +121,35 @@ export function buildUploadBatch(overrides?: Partial<BatchRecord>): BatchRecord 
     tenantId: faker.string.uuid(),
     fileCount: faker.number.int({ min: 1, max: 50 }),
     createdAt: new Date().toISOString(),
+    ...overrides,
+  }
+}
+
+export function buildExcelColumnMapping(
+  overrides?: Partial<ExcelColumnMapping>,
+): ExcelColumnMapping {
+  return {
+    sourceColumn: 'Source',
+    targetColumn: 'Target',
+    hasHeader: true,
+    segmentIdColumn: undefined,
+    contextColumn: undefined,
+    languageColumn: undefined,
+    ...overrides,
+  }
+}
+
+export function buildExcelPreview(overrides?: Partial<ExcelPreview>): ExcelPreview {
+  return {
+    headers: ['Source', 'Target', 'Segment ID', 'Notes'],
+    previewRows: [
+      ['Hello', 'สวัสดี', 'TU-001', 'Greeting'],
+      ['Goodbye', 'ลาก่อน', 'TU-002', 'Farewell'],
+    ],
+    suggestedSourceColumn: 'Source',
+    suggestedTargetColumn: 'Target',
+    totalRows: 10,
+    columnCount: 4,
     ...overrides,
   }
 }

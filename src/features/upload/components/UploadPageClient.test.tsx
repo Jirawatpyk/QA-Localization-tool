@@ -17,6 +17,28 @@ vi.mock('../hooks/useFileUpload', () => ({
   })),
 }))
 
+// Mock ColumnMappingDialog to avoid loading server action dependencies
+vi.mock('./ColumnMappingDialog', () => ({
+  ColumnMappingDialog: ({
+    open,
+    fileName,
+    onSuccess,
+    onCancel,
+  }: {
+    open: boolean
+    fileName: string
+    onSuccess: (n: number) => void
+    onCancel: () => void
+  }) =>
+    open ? (
+      <div data-testid="column-mapping-dialog">
+        <span>{fileName}</span>
+        <button onClick={() => onSuccess(5)}>Confirm</button>
+        <button onClick={onCancel}>Cancel</button>
+      </div>
+    ) : null,
+}))
+
 const mockCreateBatch = vi.fn()
 vi.mock('../actions/createBatch.action', () => ({
   createBatch: (...args: unknown[]) => mockCreateBatch(...args),
@@ -128,5 +150,66 @@ describe('UploadPageClient', () => {
 
     render(<UploadPageClient projectId={VALID_PROJECT_ID} />)
     expect(screen.getByRole('dialog')).not.toBeNull()
+  })
+
+  it('should show ColumnMappingDialog when an xlsx file upload completes (6.1)', async () => {
+    vi.mocked(useFileUpload).mockReturnValue({
+      progress: [],
+      largeFileWarnings: [],
+      isUploading: false,
+      pendingDuplicate: null,
+      uploadedFiles: [
+        {
+          fileId: 'xlsx-file-id',
+          fileName: 'data.xlsx',
+          fileSizeBytes: 1024,
+          fileType: 'xlsx',
+          fileHash: 'hash',
+          storagePath: 'path/data.xlsx',
+          status: 'uploaded',
+          batchId: null,
+        },
+      ],
+      startUpload: mockStartUpload,
+      confirmRerun: mockConfirmRerun,
+      cancelDuplicate: mockCancelDuplicate,
+      reset: vi.fn(),
+    })
+
+    render(<UploadPageClient projectId={VALID_PROJECT_ID} />)
+    await waitFor(() => {
+      expect(screen.getByTestId('column-mapping-dialog')).toBeTruthy()
+      expect(screen.getByText('data.xlsx')).toBeTruthy()
+    })
+  })
+
+  it('should NOT show ColumnMappingDialog for XLIFF/SDLXLIFF files (6.2)', async () => {
+    vi.mocked(useFileUpload).mockReturnValue({
+      progress: [],
+      largeFileWarnings: [],
+      isUploading: false,
+      pendingDuplicate: null,
+      uploadedFiles: [
+        {
+          fileId: 'xliff-file-id',
+          fileName: 'report.sdlxliff',
+          fileSizeBytes: 2048,
+          fileType: 'sdlxliff',
+          fileHash: 'hash',
+          storagePath: 'path/report.sdlxliff',
+          status: 'uploaded',
+          batchId: null,
+        },
+      ],
+      startUpload: mockStartUpload,
+      confirmRerun: mockConfirmRerun,
+      cancelDuplicate: mockCancelDuplicate,
+      reset: vi.fn(),
+    })
+
+    render(<UploadPageClient projectId={VALID_PROJECT_ID} />)
+    await waitFor(() => {
+      expect(screen.queryByTestId('column-mapping-dialog')).toBeNull()
+    })
   })
 })

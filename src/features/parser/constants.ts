@@ -47,3 +47,13 @@ export const SDL_NAMESPACE_URI = 'http://sdl.com/FileTypes/SdlXliff/1.0'
 
 // Separator when concatenating multiple comments
 export const COMMENT_SEPARATOR = ' | '
+
+// Number of rows to preview in the Excel column mapping dialog
+export const EXCEL_PREVIEW_ROWS = 5
+
+// Keywords used to auto-detect source/target columns in Excel files
+// Match is case-insensitive substring (e.g., "Source Text" matches keyword "source")
+export const EXCEL_AUTO_DETECT_KEYWORDS = {
+  source: ['source', 'original', 'src', 'english', 'ต้นฉบับ', 'ภาษาต้นทาง'],
+  target: ['target', 'translation', 'tgt', 'translated', 'คำแปล', 'ภาษาปลายทาง'],
+} as const

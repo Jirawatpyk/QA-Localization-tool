@@ -1,3 +1,6 @@
+import { readFileSync } from 'fs'
+import { join } from 'path'
+
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Must be first in server-side test files
@@ -47,6 +50,13 @@ vi.mock('@/lib/env', () => ({
 import { MAX_PARSE_SIZE_BYTES } from '@/features/parser/constants'
 
 import { parseFile } from './parseFile.action'
+
+// ─── Excel fixtures ────────────────────────────────────────────────────────
+function readFixtureAsBlob(name: string): Blob {
+  const buf = readFileSync(join(process.cwd(), 'src', 'test', 'fixtures', 'excel', name))
+  const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
+  return new Blob([ab])
+}
 
 // ============================================================
 // Test data
@@ -753,6 +763,184 @@ describe('parseFile action', () => {
           }),
         }),
       )
+    })
+  })
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Task 4.5: Excel branch tests
+  // ────────────────────────────────────────────────────────────────────────
+
+  const mockExcelFile = {
+    ...mockFile,
+    id: FILE_ID,
+    fileName: 'test.xlsx',
+    fileType: 'xlsx',
+    storagePath: `${TENANT_ID}/${PROJECT_ID}/test.xlsx`,
+  }
+
+  const mockProject = {
+    sourceLang: 'en-US',
+    targetLangs: ['th-TH', 'zh-CN'],
+  }
+
+  const excelMapping = {
+    sourceColumn: 'Source',
+    targetColumn: 'Target',
+    hasHeader: true,
+  }
+
+  function buildSelectChainMulti(results: unknown[][]) {
+    let callIndex = 0
+    mockSelect.mockImplementation(() => {
+      const result = results[callIndex++] ?? []
+      return {
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue(result),
+      }
+    })
+  }
+
+  describe('Excel branch (Task 4)', () => {
+    it('should return INVALID_INPUT when columnMapping is missing for xlsx file (4.2)', async () => {
+      buildSelectChain([mockExcelFile])
+      buildUpdateChain()
+      mockDownload.mockResolvedValue({
+        data: new Blob([''], { type: 'application/octet-stream' }),
+        error: null,
+      })
+
+      const result = await parseFile(FILE_ID) // no columnMapping
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.code).toBe('INVALID_INPUT')
+      }
+    })
+
+    it('should parse Excel file successfully with columnMapping (Excel happy path)', async () => {
+      buildSelectChainMulti([[mockExcelFile], [mockProject]])
+      buildUpdateChain()
+      buildInsertChain()
+
+      const excelBlob = readFixtureAsBlob('bilingual-with-headers.xlsx')
+      mockDownload.mockResolvedValue({ data: excelBlob, error: null })
+
+      const result = await parseFile(FILE_ID, excelMapping)
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.fileId).toBe(FILE_ID)
+        expect(result.data.segmentCount).toBe(10)
+      }
+    })
+
+    it('should use project.targetLangs[0] as default targetLang for Excel (C2)', async () => {
+      buildSelectChainMulti([[mockExcelFile], [mockProject]])
+      buildUpdateChain()
+      const insertChain = buildInsertChain()
+
+      const excelBlob = readFixtureAsBlob('bilingual-with-headers.xlsx')
+      mockDownload.mockResolvedValue({ data: excelBlob, error: null })
+
+      await parseFile(FILE_ID, excelMapping)
+      expect(insertChain.values).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            sourceLang: 'en-US',
+            targetLang: 'th-TH',
+          }),
+        ]),
+      )
+    })
+
+    it('should return STORAGE_ERROR when blob.arrayBuffer() fails (E7)', async () => {
+      buildSelectChain([mockExcelFile])
+      buildUpdateChain()
+      const faultyBlob = { arrayBuffer: vi.fn().mockRejectedValue(new Error('Buffer OOM')) }
+      mockDownload.mockResolvedValue({ data: faultyBlob, error: null })
+
+      const result = await parseFile(FILE_ID, excelMapping)
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.code).toBe('STORAGE_ERROR')
+      }
+    })
+
+    it('should call markFileFailed when blob.arrayBuffer() fails (E7)', async () => {
+      buildSelectChain([mockExcelFile])
+      buildUpdateChain()
+      const faultyBlob = { arrayBuffer: vi.fn().mockRejectedValue(new Error('Buffer OOM')) }
+      mockDownload.mockResolvedValue({ data: faultyBlob, error: null })
+
+      await parseFile(FILE_ID, excelMapping)
+      expect(mockWriteAuditLog).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'file.parse_failed' }),
+      )
+    })
+
+    it('should return CONFLICT for xlsx file when status is not uploaded (C8)', async () => {
+      buildSelectChain([{ ...mockExcelFile, status: 'parsing' }])
+
+      const result = await parseFile(FILE_ID, excelMapping)
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.code).toBe('CONFLICT')
+      }
+    })
+
+    it('should return CONFLICT when CAS fails for xlsx file (C8 — race condition)', async () => {
+      buildSelectChain([mockExcelFile])
+      buildUpdateChain([]) // CAS returns empty → race condition
+
+      const result = await parseFile(FILE_ID, excelMapping)
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.code).toBe('CONFLICT')
+      }
+    })
+
+    it('should return PARSE_ERROR for malformed Excel file', async () => {
+      buildSelectChainMulti([[mockExcelFile], [mockProject]])
+      buildUpdateChain()
+
+      const malformedBlob = readFixtureAsBlob('malformed.xlsx')
+      mockDownload.mockResolvedValue({ data: malformedBlob, error: null })
+
+      const result = await parseFile(FILE_ID, excelMapping)
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.code).toBe('PARSE_ERROR')
+      }
+    })
+
+    it('should leave XLIFF behavior unchanged when fileType is sdlxliff (4.4)', async () => {
+      buildSelectChain([mockFile]) // sdlxliff file
+      buildUpdateChain()
+      buildInsertChain()
+      mockDownload.mockResolvedValue({
+        data: new Blob([MINIMAL_SDLXLIFF], { type: 'application/xml' }),
+        error: null,
+      })
+
+      // columnMapping provided but should be ignored for XLIFF
+      const result = await parseFile(FILE_ID, excelMapping)
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.segmentCount).toBe(1)
+      }
+    })
+
+    it('should enforce tenant isolation on project lookup for Excel (tenant isolation)', async () => {
+      buildSelectChainMulti([[mockExcelFile], [mockProject]])
+      buildUpdateChain()
+      buildInsertChain()
+
+      const excelBlob = readFixtureAsBlob('bilingual-with-headers.xlsx')
+      mockDownload.mockResolvedValue({ data: excelBlob, error: null })
+
+      await parseFile(FILE_ID, excelMapping)
+      // withTenant should be called on both the file lookup AND the project lookup
+      expect(mockWithTenant.mock.calls.length).toBeGreaterThanOrEqual(2)
+      expect(mockWithTenant).toHaveBeenCalledWith(expect.anything(), TENANT_ID)
     })
   })
 })

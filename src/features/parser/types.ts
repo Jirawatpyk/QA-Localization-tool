@@ -49,13 +49,20 @@ export type ParseResult = {
   segments: ParsedSegment[]
   sourceLang: string
   targetLang: string
-  fileType: 'sdlxliff' | 'xliff'
+  fileType: 'sdlxliff' | 'xliff' | 'xlsx'
   segmentCount: number
 }
 
 // Structured parser error
 export type ParserError = {
-  code: 'FILE_TOO_LARGE' | 'INVALID_XML' | 'INVALID_STRUCTURE' | 'TAG_MISMATCH'
+  code:
+    | 'FILE_TOO_LARGE'
+    | 'INVALID_XML'
+    | 'INVALID_STRUCTURE'
+    | 'TAG_MISMATCH'
+    | 'INVALID_EXCEL'
+    | 'INVALID_COLUMNS'
+    | 'EMPTY_SHEET'
   message: string
   details?: string // additional context (tag id, position, etc.)
 }
