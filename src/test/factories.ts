@@ -1,17 +1,20 @@
 import { faker } from '@faker-js/faker'
 
+import type { segments } from '@/db/schema/segments'
 import type { AppNotification, DashboardData, RecentFileRow } from '@/features/dashboard/types'
 import type { BatchRecord, UploadFileResult } from '@/features/upload/types'
 import type { Finding } from '@/types/finding'
 import type { PipelineRun } from '@/types/pipeline'
 import type { ReviewSession } from '@/types/review'
 
+type SegmentRecord = typeof segments.$inferSelect
+
 export function buildFinding(overrides?: Partial<Finding>): Finding {
   return {
     id: faker.string.uuid(),
-    tenantId: 'test-tenant',
-    projectId: 'test-project',
-    sessionId: 'test-session',
+    tenantId: faker.string.uuid(),
+    projectId: faker.string.uuid(),
+    sessionId: faker.string.uuid(),
     segmentId: faker.string.uuid(),
     severity: 'major',
     category: 'accuracy',
@@ -27,8 +30,8 @@ export function buildFinding(overrides?: Partial<Finding>): Finding {
 export function buildReviewSession(overrides?: Partial<ReviewSession>): ReviewSession {
   return {
     id: faker.string.uuid(),
-    tenantId: 'test-tenant',
-    projectId: 'test-project',
+    tenantId: faker.string.uuid(),
+    projectId: faker.string.uuid(),
     status: 'active',
     reviewerId: faker.string.uuid(),
     createdAt: new Date().toISOString(),
@@ -40,9 +43,9 @@ export function buildReviewSession(overrides?: Partial<ReviewSession>): ReviewSe
 export function buildPipelineRun(overrides?: Partial<PipelineRun>): PipelineRun {
   return {
     id: faker.string.uuid(),
-    tenantId: 'test-tenant',
-    projectId: 'test-project',
-    sessionId: 'test-session',
+    tenantId: faker.string.uuid(),
+    projectId: faker.string.uuid(),
+    sessionId: faker.string.uuid(),
     mode: 'economy',
     status: 'queued',
     createdAt: new Date().toISOString(),
@@ -54,7 +57,7 @@ export function buildPipelineRun(overrides?: Partial<PipelineRun>): PipelineRun 
 export function buildNotification(overrides?: Partial<AppNotification>): AppNotification {
   return {
     id: faker.string.uuid(),
-    tenantId: 'test-tenant',
+    tenantId: faker.string.uuid(),
     userId: faker.string.uuid(),
     type: 'glossary_updated',
     title: faker.lorem.words(3),
@@ -114,6 +117,27 @@ export function buildUploadBatch(overrides?: Partial<BatchRecord>): BatchRecord 
     tenantId: faker.string.uuid(),
     fileCount: faker.number.int({ min: 1, max: 50 }),
     createdAt: new Date().toISOString(),
+    ...overrides,
+  }
+}
+
+export function buildSegment(overrides?: Partial<SegmentRecord>): SegmentRecord {
+  return {
+    id: faker.string.uuid(),
+    fileId: faker.string.uuid(),
+    projectId: faker.string.uuid(),
+    tenantId: faker.string.uuid(),
+    segmentNumber: faker.number.int({ min: 1, max: 1000 }),
+    sourceText: faker.lorem.sentence(),
+    targetText: faker.lorem.sentence(),
+    sourceLang: 'en-US',
+    targetLang: 'th-TH',
+    wordCount: faker.number.int({ min: 1, max: 50 }),
+    confirmationState: 'Translated',
+    matchPercentage: null,
+    translatorComment: null,
+    inlineTags: null,
+    createdAt: new Date(),
     ...overrides,
   }
 }

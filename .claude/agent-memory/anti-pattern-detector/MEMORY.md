@@ -79,6 +79,25 @@
   - `createBatch.action.ts` lines 11–12: same pattern
 - **All other checks CLEAN** — no `export default` in feature modules, no `any`, no raw SQL, no console.log, no enum, no service_role, no hardcoded tenantId, no inline Supabase client creation, no try-catch in step.run(), no snapshot tests, no process.env, no "use client" on page.tsx, withTenant() used correctly in WHERE + JOIN ON clauses, md: breakpoint is standard Tailwind
 
+## Story 2.2 Scan Summary (2026-02-23)
+
+- Files scanned: 8 (parser feature: types.ts, constants.ts, inlineTagExtractor.ts, wordCounter.ts, sdlxliffParser.ts, parseFile.action.ts, segments.ts, factories.ts)
+- **MEDIUM violations (3):**
+  - `factories.ts` lines 15–17, 33–34, 46–48, 60: `tenantId: 'test-tenant'`, `projectId: 'test-project'`, `sessionId: 'test-session'` — 4 factory functions with hardcoded non-UUID tenant/project/session IDs; use `faker.string.uuid()` instead
+  - `segments.ts` lines 8–14: local `InlineTag` type is exact duplicate of `types.ts` — import from `@/features/parser/types` instead (DRY violation)
+  - `parseFile.action.ts` lines 16–18: relative imports `from '../constants'`, `from '../sdlxliffParser'`, `from '../types'` — should use `@/features/parser/` alias
+- **LOW violations (2):**
+  - `parseFile.action.ts` line 190: `db.insert(segments).values(values)` has no WHERE clause (correct for INSERT) but no explicit `withTenant()` guard — tenantId comes directly from currentUser.tenantId so risk is low; comment explains rationale
+  - `inlineTagExtractor.ts` line 206: `return attrs as Record<string, string>` — unsafe cast; runtime guard exists but inner values may not be string; prefer `Record<string, unknown>`
+- **All other checks CLEAN** — no `export default`, no `any`, no `enum`, no raw SQL, no `console.log`, no `process.env`, no inline Supabase client, no `service_role`, no `step.run()`, no barrel exports, no snapshot tests, no "use client" on page, `withTenant()` used on all SELECT/UPDATE/DELETE correctly
+
+## Recurring Pattern: Hardcoded Test Identifiers in factories.ts
+
+- **Pattern**: `buildFinding`, `buildReviewSession`, `buildPipelineRun`, `buildNotification` all use string literals `'test-tenant'` / `'test-project'` / `'test-session'` as default values.
+- **Risk**: These fail Zod v4 UUID validation (per MEMORY.md note) and violate the "no hardcoded tenant_id" rule even in test fixtures.
+- **Fix**: Use `faker.string.uuid()` for all ID fields. Tests needing stable values can pass overrides.
+- **Appeared in**: Story 2.2 scan (factories.ts was present from earlier stories — pre-existing violation not caught in Story 2.1 scan scope).
+
 ## Edge Cases Noted
 
 - `logger-edge.ts` uses `console.log/warn/error` internally — this IS the logging solution for Edge runtime.

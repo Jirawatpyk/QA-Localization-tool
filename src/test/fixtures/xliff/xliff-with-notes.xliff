@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Pure XLIFF 1.2 fixture with <note> elements
+  Tests: <note> → translatorComment mapping (AC #2)
+  Both single note and multiple notes (concatenated with " | ") are tested
+-->
+<xliff version="1.2"
+       xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file original="notes-test.docx"
+        source-language="en-US"
+        target-language="fr-FR"
+        datatype="plaintext">
+    <body>
+
+      <!-- Single note -->
+      <trans-unit id="1">
+        <source>Please confirm your action.</source>
+        <target state="translated">Veuillez confirmer votre action.</target>
+        <note>Translator note: formal register required</note>
+      </trans-unit>
+
+      <!-- No note -->
+      <trans-unit id="2">
+        <source>Cancel</source>
+        <target state="signed-off">Annuler</target>
+      </trans-unit>
+
+      <!-- Multiple notes — should be concatenated with " | " -->
+      <trans-unit id="3">
+        <source>Save and close</source>
+        <target state="needs-review-translation">Enregistrer et fermer</target>
+        <note>First reviewer note</note>
+        <note>Second reviewer note</note>
+      </trans-unit>
+
+    </body>
+  </file>
+</xliff>

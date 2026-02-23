@@ -1,0 +1,16 @@
+{
+  "locale": "zh-CN",
+  "description": "Chinese (Simplified) word count corpus — Intl.Segmenter isWordLike on Node.js 18+ full ICU",
+  "segments": [
+    { "text": "你好世界", "expected_tokens": 2 },
+    { "text": "我是一个程序员", "expected_tokens": 4 },
+    { "text": "测试", "expected_tokens": 1 },
+    { "text": "这是一个简单的句子", "expected_tokens": 6 },
+    { "text": "错误：文件未找到", "expected_tokens": 4 },
+    { "text": "请在继续之前阅读此重要通知", "expected_tokens": 7 },
+    { "text": "共找到100个错误", "expected_tokens": 5 },
+    { "text": "翻译质量检查系统", "expected_tokens": 4 },
+    { "text": "请点击Save按钮保存文件", "expected_tokens": 7 },
+    { "text": "保存", "expected_tokens": 1 }
+  ]
+}

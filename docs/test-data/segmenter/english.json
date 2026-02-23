@@ -1,0 +1,16 @@
+{
+  "locale": "en-US",
+  "description": "English word count corpus — space-separated, no Intl.Segmenter required",
+  "segments": [
+    { "text": "Hello world", "expected_tokens": 2 },
+    { "text": "The quick brown fox jumps over the lazy dog", "expected_tokens": 9 },
+    { "text": "Single", "expected_tokens": 1 },
+    { "text": "One two three four five", "expected_tokens": 5 },
+    { "text": "Hello, world!", "expected_tokens": 2 },
+    { "text": "Error: file not found.", "expected_tokens": 4 },
+    { "text": "It's a well-known issue", "expected_tokens": 4 },
+    { "text": "Please click the Save button to continue.", "expected_tokens": 7 },
+    { "text": "An error occurred while processing your request.", "expected_tokens": 7 },
+    { "text": "Version 2.0 is now available", "expected_tokens": 5 }
+  ]
+}

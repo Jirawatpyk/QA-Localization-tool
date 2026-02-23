@@ -1,0 +1,46 @@
+{
+  "fileType": "xliff",
+  "sourceLang": "en-US",
+  "targetLang": "th-TH",
+  "segmentCount": 3,
+  "segments": [
+    {
+      "segmentId": "1",
+      "segmentNumber": 1,
+      "sourceText": "Good morning",
+      "targetText": "สวัสดีตอนเช้า",
+      "sourceLang": "en-US",
+      "targetLang": "th-TH",
+      "confirmationState": "Translated",
+      "matchPercentage": null,
+      "translatorComment": "Standard greeting",
+      "wordCount": 2
+    },
+    {
+      "segmentId": "2",
+      "segmentNumber": 2,
+      "sourceText": "Please enter your email address.",
+      "targetText": "กรุณากรอกที่อยู่อีเมลของคุณ",
+      "sourceLang": "en-US",
+      "targetLang": "th-TH",
+      "confirmationState": "Draft",
+      "matchPercentage": null,
+      "translatorComment": null,
+      "wordCount": 5,
+      "note": "has <g id='1'> inline tag — inlineTags field is non-null"
+    },
+    {
+      "segmentId": "3",
+      "segmentNumber": 3,
+      "sourceText": "Error: ",
+      "targetText": "ข้อผิดพลาด: ",
+      "sourceLang": "en-US",
+      "targetLang": "th-TH",
+      "confirmationState": "Draft",
+      "matchPercentage": null,
+      "translatorComment": null,
+      "wordCount": 1,
+      "note": "has <ph id='1'> inline tag — inlineTags field is non-null"
+    }
+  ]
+}

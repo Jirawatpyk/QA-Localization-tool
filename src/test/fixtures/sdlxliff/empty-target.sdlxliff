@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SDLXLIFF fixture: segments with empty <target> elements
+  Tests: empty target stored as "" (NOT null), untranslated segment handling
+-->
+<xliff version="1.2"
+       xmlns="urn:oasis:names:tc:xliff:document:1.2"
+       xmlns:sdl="http://sdl.com/FileTypes/SdlXliff/1.0">
+  <file original="empty-target.docx"
+        source-language="en-US"
+        target-language="de-DE"
+        datatype="x-sdlxliff">
+    <body>
+      <group id="g1">
+
+        <!-- Segment 1: has target text -->
+        <trans-unit id="1">
+          <source>Hello</source>
+          <seg-source>
+            <mrk mtype="seg" mid="1">Hello</mrk>
+          </seg-source>
+          <target>
+            <mrk mtype="seg" mid="1">Hallo</mrk>
+          </target>
+          <sdl:seg-defs>
+            <sdl:seg id="1" conf="Translated" percent="100" origin="tm"/>
+          </sdl:seg-defs>
+        </trans-unit>
+
+        <!-- Segment 2: empty target (untranslated) -->
+        <trans-unit id="2">
+          <source>World</source>
+          <seg-source>
+            <mrk mtype="seg" mid="2">World</mrk>
+          </seg-source>
+          <target>
+            <mrk mtype="seg" mid="2"/>
+          </target>
+          <sdl:seg-defs>
+            <sdl:seg id="2" conf="Draft" percent="0" origin="interactive"/>
+          </sdl:seg-defs>
+        </trans-unit>
+
+        <!-- Segment 3: self-closing target mrk (another form of empty) -->
+        <trans-unit id="3">
+          <source>Goodbye</source>
+          <seg-source>
+            <mrk mtype="seg" mid="3">Goodbye</mrk>
+          </seg-source>
+          <target/>
+          <sdl:seg-defs>
+            <sdl:seg id="3" conf="Draft" percent="0" origin="interactive"/>
+          </sdl:seg-defs>
+        </trans-unit>
+
+      </group>
+    </body>
+  </file>
+</xliff>

@@ -1,0 +1,47 @@
+{
+  "fileType": "sdlxliff",
+  "sourceLang": "en-US",
+  "targetLang": "th-TH",
+  "segmentCount": 3,
+  "segments": [
+    {
+      "segmentId": "1",
+      "segmentNumber": 1,
+      "sourceText": "Hello world",
+      "targetText": "สวัสดีโลก",
+      "sourceLang": "en-US",
+      "targetLang": "th-TH",
+      "confirmationState": "Draft",
+      "matchPercentage": 0,
+      "translatorComment": null,
+      "inlineTags": null,
+      "wordCount": 2
+    },
+    {
+      "segmentId": "2",
+      "segmentNumber": 2,
+      "sourceText": "Click here to continue.",
+      "targetText": "คลิกที่นี่เพื่อดำเนินการต่อ",
+      "sourceLang": "en-US",
+      "targetLang": "th-TH",
+      "confirmationState": "Translated",
+      "matchPercentage": 85,
+      "translatorComment": null,
+      "inlineTags": null,
+      "wordCount": 4
+    },
+    {
+      "segmentId": "3",
+      "segmentNumber": 3,
+      "sourceText": "Cancel",
+      "targetText": "ยกเลิก",
+      "sourceLang": "en-US",
+      "targetLang": "th-TH",
+      "confirmationState": "ApprovedSignOff",
+      "matchPercentage": 100,
+      "translatorComment": null,
+      "inlineTags": null,
+      "wordCount": 1
+    }
+  ]
+}

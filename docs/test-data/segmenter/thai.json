@@ -1,0 +1,18 @@
+{
+  "locale": "th-TH",
+  "description": "Thai word count corpus — Intl.Segmenter isWordLike on Node.js 18+ full ICU",
+  "segments": [
+    { "text": "สวัสดีครับ", "expected_tokens": 2 },
+    { "text": "ฉันชอบกินข้าวผัด", "expected_tokens": 5 },
+    { "text": "การแปลภาษาเป็นเรื่องที่ซับซ้อน", "expected_tokens": 8 },
+    { "text": "ประเทศไทย", "expected_tokens": 1 },
+    { "text": "กรุณาคลิกปุ่ม Save เพื่อบันทึก", "expected_tokens": 6 },
+    { "text": "ไฟล์ XLIFF สำหรับ localization", "expected_tokens": 4 },
+    { "text": "จำนวน 100 คำในเอกสาร", "expected_tokens": 5 },
+    { "text": "เกิดข้อผิดพลาด: ไม่พบไฟล์ที่ระบุ", "expected_tokens": 9 },
+    { "text": "โปรดอ่านข้อความสำคัญนี้ก่อนดำเนินการต่อ", "expected_tokens": 9 },
+    { "text": "ระบบตรวจสอบคุณภาพการแปลช่วยให้ผู้ตรวจสอบทำงานได้อย่างมีประสิทธิภาพ", "expected_tokens": 16 },
+    { "text": "บันทึก", "expected_tokens": 1 },
+    { "text": "ยกเลิก", "expected_tokens": 1 }
+  ]
+}

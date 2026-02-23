@@ -1,0 +1,16 @@
+{
+  "locale": "ja-JP",
+  "description": "Japanese word count corpus — Intl.Segmenter isWordLike on Node.js 18+ full ICU",
+  "segments": [
+    { "text": "日本語のテスト", "expected_tokens": 3 },
+    { "text": "私はプログラマーです", "expected_tokens": 4 },
+    { "text": "テスト", "expected_tokens": 1 },
+    { "text": "こんにちは世界", "expected_tokens": 2 },
+    { "text": "翻訳品質管理", "expected_tokens": 3 },
+    { "text": "ファイルをSaveしてください", "expected_tokens": 7 },
+    { "text": "100件のエラーが見つかりました", "expected_tokens": 11 },
+    { "text": "このファイルは正しい形式ではありません", "expected_tokens": 8 },
+    { "text": "エラー：ファイルが見つかりません", "expected_tokens": 9 },
+    { "text": "保存", "expected_tokens": 1 }
+  ]
+}

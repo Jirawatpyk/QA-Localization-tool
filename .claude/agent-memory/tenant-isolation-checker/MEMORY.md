@@ -74,6 +74,20 @@ New tables confirmed tenant-scoped: `upload_batches` (has tenant_id, RLS in 0001
 - `route.ts` L49+L135 — `batchId` taken from FormData (user-controlled), written to files.batch_id without verifying the batch belongs to currentUser.tenantId. RLS on upload_batches only blocks direct writes, NOT FK references from another table's INSERT. This is a cross-tenant batchId injection risk. Fix: SELECT upload_batches with withTenant() to verify ownership before use.
 - `route.ts` L52+L126 — `projectId` from FormData written to files.project_id without ownership check. Same pattern — no SELECT with withTenant() on projects table before INSERT. RLS on files INSERT only checks tenant_id on the new row, not that the projectId belongs to that tenant. Fix: verify projectId via withTenant() SELECT on projects before proceeding.
 
+### Story 2.2 Audit Results (SDLXLIFF/XLIFF Parser)
+
+**PASS (all checks):**
+
+- `parseFile.action.ts` — SELECT files uses withTenant(); UPDATE 'parsing' uses withTenant(); UPDATE 'parsed' uses withTenant(); markFileFailed() UPDATE uses withTenant(); batchInsertSegments() sets tenantId explicitly from session; defense-in-depth cross-tenant check (file.tenantId !== currentUser.tenantId) present; all 3 audit log writes carry tenantId from session. FULL PASS.
+- `sdlxliffParser.ts` — pure XML parser, zero DB access, zero Supabase calls confirmed. No tenant isolation concerns.
+
+**Confirmed schema facts:**
+
+- `segments` table has `tenant_id` column (uuid, notNull, FK to tenants). INSERT-level isolation enforced.
+- `files` table has `tenant_id` column confirmed. All UPDATE WHERE clauses use withTenant(files.tenantId, ...).
+
+**Pattern noted:** `batchInsertSegments()` does NOT use withTenant() helper on the INSERT (INSERT has no WHERE clause by design), but sets `tenantId` field explicitly in each row value object — this is the correct and only way to enforce tenant isolation on INSERTs. Consistent with createProject, createBatch patterns.
+
 ## Key Patterns to Watch
 
 - `glossary_terms` has NO tenant_id — always access via verified glossaryId from glossaries table
@@ -81,3 +95,4 @@ New tables confirmed tenant-scoped: `upload_batches` (has tenant_id, RLS in 0001
 - `taxonomy_definitions` is global — never add tenant filter (it would be wrong)
 - RSC pages that do inline Drizzle queries must use withTenant() — currently all do
 - Inngest route handler has NO functions registered yet — no Inngest tenant isolation to audit
+- INSERT isolation pattern: no WHERE clause on INSERT — instead set `tenantId` field explicitly in value object. withTenant() only applies to SELECT/UPDATE/DELETE WHERE clauses.

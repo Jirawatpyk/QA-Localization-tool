@@ -1,0 +1,58 @@
+{
+  "fileType": "sdlxliff",
+  "sourceLang": "en-US",
+  "targetLang": "th-TH",
+  "segmentCount": 5,
+  "segments": [
+    {
+      "segmentId": "1",
+      "segmentNumber": 1,
+      "sourceText": "Please read the important notice before continuing.",
+      "confirmationState": "Translated",
+      "matchPercentage": 72,
+      "translatorComment": null,
+      "wordCount": 7,
+      "note": "has <g id='1'> inline tag"
+    },
+    {
+      "segmentId": "2",
+      "segmentNumber": 2,
+      "sourceText": "Line 1Line 2",
+      "confirmationState": "Draft",
+      "matchPercentage": 0,
+      "translatorComment": null,
+      "wordCount": 3,
+      "note": "has <x id='1'/> inline tag at position 6"
+    },
+    {
+      "segmentId": "3",
+      "segmentNumber": 3,
+      "sourceText": "Welcome, !",
+      "confirmationState": "Translated",
+      "matchPercentage": 95,
+      "translatorComment": "Variable {username} must not be translated",
+      "wordCount": 2,
+      "note": "has <ph id='1'> inline tag; has sdl:cmt translator comment"
+    },
+    {
+      "segmentId": "4",
+      "segmentNumber": 4,
+      "sourceText": "Click here",
+      "confirmationState": "ApprovedTranslation",
+      "matchPercentage": 100,
+      "translatorComment": null,
+      "wordCount": 2,
+      "note": "has <bpt id='1'> and <ept id='1'> paired tags"
+    },
+    {
+      "segmentId": "5",
+      "segmentNumber": 5,
+      "sourceText": "Save",
+      "confirmationState": "ApprovedSignOff",
+      "matchPercentage": 100,
+      "translatorComment": null,
+      "inlineTags": null,
+      "wordCount": 1
+    }
+  ]
+}

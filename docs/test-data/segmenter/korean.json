@@ -1,0 +1,16 @@
+{
+  "locale": "ko-KR",
+  "description": "Korean word count corpus — Intl.Segmenter isWordLike on Node.js 18+ full ICU",
+  "segments": [
+    { "text": "안녕하세요", "expected_tokens": 1 },
+    { "text": "나는 프로그래머입니다", "expected_tokens": 2 },
+    { "text": "테스트", "expected_tokens": 1 },
+    { "text": "이것은 간단한 문장입니다", "expected_tokens": 3 },
+    { "text": "오류: 파일을 찾을 수 없습니다", "expected_tokens": 5 },
+    { "text": "계속하기 전에 이 중요한 알림을 읽어주세요", "expected_tokens": 6 },
+    { "text": "100개의 오류가 발견되었습니다", "expected_tokens": 4 },
+    { "text": "Save 버튼을 클릭하여 저장하세요", "expected_tokens": 4 },
+    { "text": "번역 품질 검사 시스템", "expected_tokens": 4 },
+    { "text": "저장", "expected_tokens": 1 }
+  ]
+}

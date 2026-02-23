@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SDLXLIFF fixture: multiple <mrk> segments per <trans-unit>
+  Tests: each mrk mid="N" = separate DB segment; sdl:seg metadata matched by id
+-->
+<xliff version="1.2"
+       xmlns="urn:oasis:names:tc:xliff:document:1.2"
+       xmlns:sdl="http://sdl.com/FileTypes/SdlXliff/1.0">
+  <file original="multi-seg.docx"
+        source-language="en-US"
+        target-language="th-TH"
+        datatype="x-sdlxliff">
+    <body>
+      <group id="g1">
+
+        <!-- Trans-unit with 3 sentence segments (mrk mid=1,2,3) -->
+        <trans-unit id="1">
+          <source>First sentence. Second sentence. Third sentence.</source>
+          <seg-source>
+            <mrk mtype="seg" mid="1">First sentence.</mrk>
+            <mrk mtype="seg" mid="2">Second sentence.</mrk>
+            <mrk mtype="seg" mid="3">Third sentence.</mrk>
+          </seg-source>
+          <target>
+            <mrk mtype="seg" mid="1">ประโยคแรก</mrk>
+            <mrk mtype="seg" mid="2">ประโยคที่สอง</mrk>
+            <mrk mtype="seg" mid="3">ประโยคที่สาม</mrk>
+          </target>
+          <sdl:seg-defs>
+            <sdl:seg id="1" conf="Translated" percent="100" origin="tm"/>
+            <sdl:seg id="2" conf="Draft" percent="0" origin="interactive"/>
+            <sdl:seg id="3" conf="ApprovedSignOff" percent="100" origin="tm"/>
+          </sdl:seg-defs>
+        </trans-unit>
+
+      </group>
+    </body>
+  </file>
+</xliff>
