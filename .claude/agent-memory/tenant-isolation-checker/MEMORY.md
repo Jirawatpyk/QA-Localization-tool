@@ -58,6 +58,22 @@ See `patterns.md` for detailed notes on architecture and violations.
 2. LOW — `createTerm.action.ts` L57-65: duplicate-check query on `glossary_terms` filters by `glossaryId` only (no explicit tenant guard). Safe because `glossaryId` was verified via withTenant() in the same request, but pattern is inconsistent.
 3. LOW — `updateTerm.action.ts` L79-93: same pattern — dup check on `glossaryTerms` by `glossaryId` only. Same risk level as above.
 
+### Story 2.1 Audit Results (Upload Infrastructure)
+
+New tables confirmed tenant-scoped: `upload_batches` (has tenant_id, RLS in 00010_upload_batches_rls.sql)
+
+**PASS:**
+
+- `checkDuplicate.action.ts` — withTenant() on files (WHERE) + withTenant() on scores (leftJoin ON clause); PASS
+- `createBatch.action.ts` — INSERT with tenantId from session + audit log; PASS
+- `getUploadedFiles.action.ts` — withTenant() on files; PASS
+- `route.ts` (upload) — files INSERT uses tenantId from session; admin client used ONLY for Storage (not DB); PASS
+
+**HIGH FINDING (unresolved):**
+
+- `route.ts` L49+L135 — `batchId` taken from FormData (user-controlled), written to files.batch_id without verifying the batch belongs to currentUser.tenantId. RLS on upload_batches only blocks direct writes, NOT FK references from another table's INSERT. This is a cross-tenant batchId injection risk. Fix: SELECT upload_batches with withTenant() to verify ownership before use.
+- `route.ts` L52+L126 — `projectId` from FormData written to files.project_id without ownership check. Same pattern — no SELECT with withTenant() on projects table before INSERT. RLS on files INSERT only checks tenant_id on the new row, not that the projectId belongs to that tenant. Fix: verify projectId via withTenant() SELECT on projects before proceeding.
+
 ## Key Patterns to Watch
 
 - `glossary_terms` has NO tenant_id — always access via verified glossaryId from glossaries table

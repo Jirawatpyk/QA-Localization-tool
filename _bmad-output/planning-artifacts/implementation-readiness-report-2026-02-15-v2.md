@@ -143,7 +143,7 @@ None found — all 102 FRs are traceable to specific epics and stories.
 | Economy/Thorough Mode | ProcessingModeDialog with cost estimates | FR14 | ✅ Aligned |
 | Back-translation Sidebar | LanguageBridge component in Detail Panel | FR35 | ✅ Aligned |
 | Dashboard | DashboardView with MetricCards, TrendCharts, RecentFiles | FR59 | ✅ Aligned |
-| Onboarding | Onboarding flow with 5-step walkthrough | FR62 | ✅ Aligned |
+| Onboarding | Setup Tour (2 steps, dashboard) + Project Tour (2 steps, Epic 2 Story 2.8) + Review Tour (5 steps) | FR62 | ✅ Aligned |
 | Bulk Operations | BulkActionBar with confirmation dialog > 5 items | FR27 | ✅ Aligned |
 | Keyboard Shortcuts | Hotkeys A/R/F/N/S/+, Ctrl+? cheat sheet | NFR26 | ✅ Aligned |
 

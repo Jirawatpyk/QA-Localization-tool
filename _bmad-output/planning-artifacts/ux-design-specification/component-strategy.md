@@ -369,17 +369,17 @@ The onboarding consists of **2 sequential tours** triggered at different moments
 
 | Tour | Trigger | Steps | Purpose |
 |------|---------|:---:|---------|
-| **Setup Tour** | First login (dashboard) | 4 | Guide user to create project, import glossary, upload first file |
+| **Setup Tour** | First login (dashboard) | 2 | Guide user to create project (glossary/upload are inside each project) |
 | **Review Tour** | First time entering ReviewView (per Epic 1.7 AC) | 5 | Teach review features: severity, actions, auto-pass, reports, shortcuts |
 
-#### Setup Tour — 4 Steps (First Login)
+#### Setup Tour — 2 Steps (First Login)
 
 | Step | Target Element | Title | Content | Position |
 |:---:|---|---|---|:---:|
 | 1 | App shell (full overlay) | Welcome to QA Localization Tool | "Your AI-powered QA assistant — catches everything Xbench catches, plus semantic issues Xbench can't." | center |
-| 2 | Project create button | Create a Project | "Start by setting your language pair and QA mode." | bottom |
-| 3 | Glossary nav item | Import Your Glossary | "Import your existing glossary (CSV/XLSX/TBX) — terminology checks start immediately." | right |
-| 4 | File upload area | Upload Your First File | "Try with a file you already QA'd in Xbench — compare results side-by-side to see what AI catches extra." | bottom |
+| 2 | Project create button | Create a Project | "Start by setting your language pair and QA mode. Glossary import and file upload are inside each project." | bottom |
+
+> **Architecture Revision (2026-02-21):** Original 4 steps had Glossary/Upload as sidebar nav targets. Actual architecture: glossary/upload are nested routes inside `/projects/[projectId]/...`. Steps 3-4 moved to Project-level Tour (Epic 2 Story 2.8).
 
 #### Review Tour — 5 Steps (First ReviewView Entry, per Epic 1.7 AC)
 

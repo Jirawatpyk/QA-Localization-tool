@@ -65,6 +65,20 @@
 - `muted-foreground` is a valid shadcn/ui token (defined via `--color-muted-foreground` in globals.css)
 - GoogleLogo.tsx hex colors in SVG `fill=` attrs are SVG attributes, not Tailwind classes — acceptable
 
+## Story 2.1 Scan Summary (2026-02-23, re-verified 2026-02-23)
+
+- Files scanned: 11 (upload feature core: route.ts, 3 actions, 1 hook, 5 components, page.tsx)
+- **MEDIUM violations (2):**
+  - `FileSizeWarning.tsx` line 13: `border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-300` — inline Tailwind palette colors; should use design tokens
+  - `UploadProgressList.tsx` line 59: `text-emerald-600` — inline Tailwind palette color; should use design token
+- **LOW violations (2):**
+  - `route.ts` line 99: `const results = []` — implicit `any[]`; should be typed as `UploadFileResult[]`
+  - `useFileUpload.ts` line 314: `export { createBatch }` re-exports server action from hook file — architectural smell (not a barrel index.ts violation but unusual coupling pattern)
+- **Relative imports (LOW-borderline):**
+  - `checkDuplicate.action.ts` lines 14–15: `from '../types'`, `from '../validation/uploadSchemas'` — one level up within feature module
+  - `createBatch.action.ts` lines 11–12: same pattern
+- **All other checks CLEAN** — no `export default` in feature modules, no `any`, no raw SQL, no console.log, no enum, no service_role, no hardcoded tenantId, no inline Supabase client creation, no try-catch in step.run(), no snapshot tests, no process.env, no "use client" on page.tsx, withTenant() used correctly in WHERE + JOIN ON clauses, md: breakpoint is standard Tailwind
+
 ## Edge Cases Noted
 
 - `logger-edge.ts` uses `console.log/warn/error` internally — this IS the logging solution for Edge runtime.
