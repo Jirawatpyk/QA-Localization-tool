@@ -41,4 +41,29 @@ describe('buildStoragePath', () => {
         '/data.xlsx',
     )
   })
+
+  it('should strip path traversal sequences from fileName', () => {
+    const path = buildStoragePath(tenantId, projectId, fileHash, '../../etc/passwd')
+    expect(path).not.toContain('..')
+    expect(path).not.toContain('etc/passwd')
+    // last segment should not escape to parent dirs
+    const segments = path.split('/')
+    expect(segments).toHaveLength(4)
+  })
+
+  it('should strip forward slashes from fileName', () => {
+    const path = buildStoragePath(tenantId, projectId, fileHash, 'sub/dir/report.sdlxliff')
+    expect(path.split('/')).toHaveLength(4)
+  })
+
+  it('should strip backslashes from fileName', () => {
+    const path = buildStoragePath(tenantId, projectId, fileHash, 'sub\\dir\\report.sdlxliff')
+    expect(path).not.toContain('\\')
+    expect(path.split('/')).toHaveLength(4)
+  })
+
+  it('should strip null bytes from fileName', () => {
+    const path = buildStoragePath(tenantId, projectId, fileHash, 'report\0.sdlxliff')
+    expect(path).not.toContain('\0')
+  })
 })

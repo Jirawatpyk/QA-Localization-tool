@@ -1,6 +1,7 @@
 'use client'
 
-import { type DragEvent, type ChangeEvent, useRef, useState } from 'react'
+import { Upload } from 'lucide-react'
+import { type ChangeEvent, type DragEvent, useRef, useState } from 'react'
 
 import { DEFAULT_BATCH_SIZE } from '@/lib/constants'
 import { cn } from '@/lib/utils'
@@ -11,9 +12,15 @@ type FileUploadZoneProps = {
   onFilesSelected: (files: File[]) => void
   isUploading: boolean
   className?: string
+  'data-tour'?: string
 }
 
-export function FileUploadZone({ onFilesSelected, isUploading, className }: FileUploadZoneProps) {
+export function FileUploadZone({
+  onFilesSelected,
+  isUploading,
+  className,
+  'data-tour': dataTour,
+}: FileUploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [dragError, setDragError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -81,7 +88,7 @@ export function FileUploadZone({ onFilesSelected, isUploading, className }: File
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') inputRef.current?.click()
         }}
-        data-tour="project-upload"
+        data-tour={dataTour}
       >
         <input
           ref={inputRef}
@@ -95,20 +102,7 @@ export function FileUploadZone({ onFilesSelected, isUploading, className }: File
         />
 
         <div className="flex flex-col items-center gap-3">
-          <svg
-            className="h-10 w-10 text-text-muted"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={1.5}
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
-            />
-          </svg>
+          <Upload className="h-10 w-10 text-text-muted" aria-hidden="true" />
 
           <div>
             <p className="text-sm font-medium text-text-primary">

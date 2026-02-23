@@ -27,6 +27,8 @@ function getFileType(fileName: string): 'sdlxliff' | 'xliff' | 'xlsx' | null {
   return null
 }
 
+const STORAGE_ALREADY_EXISTS_ERROR = 'The resource already exists'
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
   // 1. Auth check
   let currentUser
@@ -36,11 +38,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // 2. Check Content-Length BEFORE reading body (fast reject)
+  // 2. Check Content-Length BEFORE reading body (fast reject for unreasonably large requests)
+  // Allow up to DEFAULT_BATCH_SIZE files × (15MB + 64KB multipart overhead) each
   const contentLength = request.headers.get('content-length')
-  if (contentLength && parseInt(contentLength, 10) > MAX_FILE_SIZE_BYTES + 65536) {
+  if (
+    contentLength &&
+    parseInt(contentLength, 10) > DEFAULT_BATCH_SIZE * (MAX_FILE_SIZE_BYTES + 65536)
+  ) {
     return NextResponse.json(
-      { error: 'File exceeds maximum size of 15MB. Please split the file in your CAT tool' },
+      { error: 'Request exceeds maximum allowed size for a batch upload' },
       { status: 413 },
     )
   }
@@ -158,7 +164,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         upsert: false,
       })
 
-    if (storageError && storageError.message !== 'The resource already exists') {
+    if (storageError && storageError.message !== STORAGE_ALREADY_EXISTS_ERROR) {
       logger.error(
         {
           fileHash,

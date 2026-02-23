@@ -7,6 +7,13 @@ vi.mock('@/lib/constants', () => ({
   DEFAULT_BATCH_SIZE: 50,
 }))
 
+// Short retry delays (1/2/4ms) so the retry test completes quickly without fake timers
+vi.mock('../constants', () => ({
+  LARGE_FILE_WARNING_BYTES: 10 * 1024 * 1024,
+  UPLOAD_RETRY_COUNT: 3,
+  UPLOAD_RETRY_BACKOFF_MS: [1, 2, 4],
+}))
+
 const mockCheckDuplicate = vi.fn()
 vi.mock('../actions/checkDuplicate.action', () => ({
   checkDuplicate: (...args: unknown[]) => mockCheckDuplicate(...args),
@@ -17,7 +24,7 @@ vi.mock('../actions/createBatch.action', () => ({
   createBatch: (...args: unknown[]) => mockCreateBatch(...args),
 }))
 
-// Mock XMLHttpRequest for upload — must be a real class for `new XMLHttpRequest()` to work
+// Mock XMLHttpRequest — base class; subclasses override send() to auto-fire events
 let xhrInstances: MockXHR[] = []
 
 class MockXHR {
@@ -47,19 +54,58 @@ function makeFile(name: string, size = 1024): File {
   return file
 }
 
-// Setup global XMLHttpRequest mock — uses real class so `new XMLHttpRequest()` works
+/**
+ * Auto-resolving XHR mock: fires 'load' after a microtask when send() is called.
+ */
 function setupXhrMock(responseBody: unknown, status = 200) {
   xhrInstances = []
 
-  class FakeXHR extends MockXHR {
+  class AutoXHR extends MockXHR {
     override status = status
     override responseText = JSON.stringify(responseBody)
+
+    override send = vi.fn().mockImplementation(function (this: AutoXHR) {
+      void Promise.resolve().then(() => {
+        const loadHandler = (this.addEventListener.mock.calls as [string, () => void][]).find(
+          ([event]) => event === 'load',
+        )?.[1]
+        if (loadHandler) loadHandler()
+      })
+    })
   }
 
   Object.defineProperty(global, 'XMLHttpRequest', {
     writable: true,
     configurable: true,
-    value: FakeXHR,
+    value: AutoXHR,
+  })
+}
+
+/**
+ * Auto-erroring XHR mock: fires 'error' (status=0) after a microtask when send() is called.
+ * Used to test the retry/backoff logic.
+ */
+function setupXhrErrorMock() {
+  xhrInstances = []
+
+  class ErrorXHR extends MockXHR {
+    override status = 0
+    override responseText = ''
+
+    override send = vi.fn().mockImplementation(function (this: ErrorXHR) {
+      void Promise.resolve().then(() => {
+        const errorHandler = (this.addEventListener.mock.calls as [string, () => void][]).find(
+          ([event]) => event === 'error',
+        )?.[1]
+        if (errorHandler) errorHandler()
+      })
+    })
+  }
+
+  Object.defineProperty(global, 'XMLHttpRequest', {
+    writable: true,
+    configurable: true,
+    value: ErrorXHR,
   })
 }
 
@@ -125,14 +171,26 @@ describe('useFileUpload', () => {
   it('should mark file as large warning between 10-15MB', async () => {
     const { result } = renderHook(() => useFileUpload({ projectId: VALID_PROJECT_ID }))
 
-    // Fire-and-forget: don't await — largeFileWarnings is set synchronously before first await in processFiles.
-    // XHR will hang in the background (no mock needed) but test completes when state is updated.
+    // Fire-and-forget: largeFileWarnings is set synchronously before first await in processFiles
     act(() => {
       void result.current.startUpload([makeFile('medium.sdlxliff', 11 * 1024 * 1024)])
     })
 
     await waitFor(() => {
       expect(result.current.largeFileWarnings).toContain('medium.sdlxliff')
+    })
+  })
+
+  it('should accept a file exactly at 10MB boundary without large-file warning', async () => {
+    setupXhrMock({ success: true, data: { files: [] } })
+    const { result } = renderHook(() => useFileUpload({ projectId: VALID_PROJECT_ID }))
+
+    act(() => {
+      void result.current.startUpload([makeFile('exact.sdlxliff', 10 * 1024 * 1024)])
+    })
+
+    await waitFor(() => {
+      expect(result.current.largeFileWarnings).toHaveLength(0)
     })
   })
 
@@ -158,6 +216,145 @@ describe('useFileUpload', () => {
       expect(result.current.pendingDuplicate).not.toBeNull()
     })
     expect(result.current.pendingDuplicate?.duplicateInfo.isDuplicate).toBe(true)
+  })
+
+  it('should check duplicate for each file in batch — detect 2nd file as duplicate', async () => {
+    // File 1: not duplicate (uploads), File 2: duplicate (pauses queue)
+    mockCheckDuplicate
+      .mockResolvedValueOnce({ success: true, data: { isDuplicate: false } })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          isDuplicate: true,
+          existingFileId: 'existing-id',
+          originalUploadDate: '2025-01-01T00:00:00.000Z',
+          existingScore: null,
+        },
+      })
+
+    setupXhrMock({
+      success: true,
+      data: {
+        files: [
+          {
+            fileId: 'file-1',
+            fileName: 'report1.sdlxliff',
+            fileSizeBytes: 1024,
+            fileType: 'sdlxliff',
+            fileHash: 'a'.repeat(64),
+            storagePath: 'path/1',
+            status: 'uploaded',
+            batchId: null,
+          },
+        ],
+      },
+    })
+
+    const { result } = renderHook(() => useFileUpload({ projectId: VALID_PROJECT_ID }))
+
+    act(() => {
+      void result.current.startUpload([makeFile('report1.sdlxliff'), makeFile('report2.sdlxliff')])
+    })
+
+    await waitFor(() => {
+      expect(result.current.pendingDuplicate).not.toBeNull()
+    })
+    expect(result.current.pendingDuplicate?.file.name).toBe('report2.sdlxliff')
+    expect(mockCheckDuplicate).toHaveBeenCalledTimes(2)
+  })
+
+  it('should set BATCH_SIZE_EXCEEDED error for all files when > 50 files provided', async () => {
+    const { result } = renderHook(() => useFileUpload({ projectId: VALID_PROJECT_ID }))
+    const files = Array.from({ length: 51 }, (_, i) => makeFile(`file-${i}.sdlxliff`))
+
+    await act(async () => {
+      await result.current.startUpload(files)
+    })
+
+    expect(result.current.progress).toHaveLength(51)
+    expect(result.current.progress.every((f) => f.error === 'BATCH_SIZE_EXCEEDED')).toBe(true)
+    expect(result.current.isUploading).toBe(false)
+  })
+
+  it('should include batchId in XHR FormData when provided', async () => {
+    setupXhrMock({ success: true, data: { files: [] } })
+    const { result } = renderHook(() => useFileUpload({ projectId: VALID_PROJECT_ID }))
+
+    const appendSpy = vi.spyOn(FormData.prototype, 'append')
+
+    act(() => {
+      void result.current.startUpload([makeFile('report.sdlxliff')], 'test-batch-id')
+    })
+
+    await waitFor(() => {
+      expect(appendSpy).toHaveBeenCalledWith('batchId', 'test-batch-id')
+    })
+  })
+
+  it('should set NETWORK_ERROR status after exhausting all retries', async () => {
+    // UPLOAD_RETRY_BACKOFF_MS: [1, 2, 4] (mocked short delays)
+    // UPLOAD_RETRY_COUNT: 3 → 1 original + 3 retries = 4 total XHR calls
+    setupXhrErrorMock()
+    const { result } = renderHook(() => useFileUpload({ projectId: VALID_PROJECT_ID }))
+
+    act(() => {
+      void result.current.startUpload([makeFile('report.sdlxliff')])
+    })
+
+    await waitFor(
+      () => {
+        expect(result.current.progress[0]?.status).toBe('error')
+        expect(result.current.progress[0]?.error).toBe('NETWORK_ERROR')
+      },
+      { timeout: 5000 },
+    )
+
+    // 1 original + 3 retries (retryCount 0→1→2→3, stops when 3 < 3 is false)
+    expect(xhrInstances.length).toBe(4)
+  })
+
+  it('should complete confirmRerun and mark file as uploaded', async () => {
+    mockCheckDuplicate.mockResolvedValueOnce({
+      success: true,
+      data: {
+        isDuplicate: true,
+        existingFileId: 'existing-id',
+        originalUploadDate: '2025-01-01T00:00:00.000Z',
+        existingScore: null,
+      },
+    })
+
+    const fileResult = {
+      fileId: 'file-1',
+      fileName: 'report.sdlxliff',
+      fileSizeBytes: 1024,
+      fileType: 'sdlxliff',
+      fileHash: 'a'.repeat(64),
+      storagePath: 'path/1',
+      status: 'uploaded',
+      batchId: null,
+    }
+    setupXhrMock({ success: true, data: { files: [fileResult] } })
+
+    const { result } = renderHook(() => useFileUpload({ projectId: VALID_PROJECT_ID }))
+
+    await act(async () => {
+      await result.current.startUpload([makeFile('report.sdlxliff')])
+    })
+    expect(result.current.pendingDuplicate).not.toBeNull()
+
+    // Confirm re-run — XHR auto-resolves via microtask
+    act(() => {
+      result.current.confirmRerun()
+    })
+
+    await waitFor(
+      () => {
+        expect(result.current.uploadedFiles.length).toBeGreaterThan(0)
+        expect(result.current.pendingDuplicate).toBeNull()
+      },
+      { timeout: 5000 },
+    )
   })
 
   it('should reset state when reset() is called', async () => {

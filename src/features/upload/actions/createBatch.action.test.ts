@@ -4,9 +4,16 @@ const mockReturningFn = vi.fn()
 const mockValuesFn = vi.fn().mockReturnValue({ returning: mockReturningFn })
 const mockInsertFn = vi.fn().mockReturnValue({ values: mockValuesFn })
 
+// Chainable select mock for project ownership check
+const mockLimitFn = vi.fn().mockResolvedValue([{ id: 'some-id' }])
+const mockWhereFn = vi.fn().mockReturnValue({ limit: mockLimitFn })
+const mockFromFn = vi.fn().mockReturnValue({ where: mockWhereFn })
+const mockSelectFn = vi.fn().mockReturnValue({ from: mockFromFn })
+
 vi.mock('@/db/client', () => ({
   db: {
     insert: (...args: unknown[]) => mockInsertFn(...args),
+    select: (...args: unknown[]) => mockSelectFn(...args),
   },
 }))
 
@@ -19,6 +26,19 @@ vi.mock('@/db/schema/uploadBatches', () => ({
     createdBy: 'created_by',
     createdAt: 'created_at',
   },
+}))
+
+vi.mock('@/db/schema/projects', () => ({
+  projects: { id: 'id', tenantId: 'tenant_id' },
+}))
+
+vi.mock('@/db/helpers/withTenant', () => ({
+  withTenant: vi.fn().mockReturnValue({}),
+}))
+
+vi.mock('drizzle-orm', () => ({
+  and: vi.fn(),
+  eq: vi.fn(),
 }))
 
 const mockRequireRole = vi.fn()
@@ -55,6 +75,11 @@ beforeEach(() => {
   mockReturningFn.mockResolvedValue([MOCK_BATCH])
   mockValuesFn.mockReturnValue({ returning: mockReturningFn })
   mockInsertFn.mockReturnValue({ values: mockValuesFn })
+  // ownership check: project found by default
+  mockLimitFn.mockResolvedValue([{ id: VALID_UUID }])
+  mockWhereFn.mockReturnValue({ limit: mockLimitFn })
+  mockFromFn.mockReturnValue({ where: mockWhereFn })
+  mockSelectFn.mockReturnValue({ from: mockFromFn })
 })
 
 describe('createBatch', () => {
@@ -122,5 +147,15 @@ describe('createBatch', () => {
 
     expect(result.success).toBe(false)
     if (!result.success) expect(result.code).toBe('CREATE_FAILED')
+  })
+
+  it('should return PROJECT_NOT_FOUND when projectId does not belong to the tenant', async () => {
+    mockLimitFn.mockResolvedValueOnce([]) // project not found for this tenant
+    const { createBatch } = await import('./createBatch.action')
+
+    const result = await createBatch({ projectId: VALID_UUID, fileCount: 3 })
+
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.code).toBe('PROJECT_NOT_FOUND')
   })
 })

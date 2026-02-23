@@ -160,17 +160,19 @@ describe('POST /api/upload', () => {
     expect(response.status).toBe(401)
   })
 
-  it('should reject via Content-Length header exceeding 15MB with overhead', async () => {
+  it('should reject via Content-Length header exceeding batch max size', async () => {
+    // threshold = DEFAULT_BATCH_SIZE (50) × (MAX_FILE_SIZE_BYTES + 65536)
+    const batchMaxBytes = 50 * (15 * 1024 * 1024 + 65536)
     const { POST } = await import('./route')
     const formData = new FormData()
     formData.append('projectId', VALID_UUID)
     formData.append('files', makeFile('large.sdlxliff'))
 
-    const response = await POST(makeRequest(formData, 16 * 1024 * 1024))
+    const response = await POST(makeRequest(formData, batchMaxBytes + 1))
     const body = await response.json()
 
     expect(response.status).toBe(413)
-    expect(body.error).toContain('15MB')
+    expect(body.error).toContain('batch upload')
   })
 
   it('should reject files exceeding 15MB by actual size', async () => {
@@ -297,6 +299,36 @@ describe('POST /api/upload', () => {
 
     expect(response.status).toBe(404)
     expect(body.error).toContain('Project not found')
+  })
+
+  it('should return 500 when DB insert returns empty (fileRecord is undefined)', async () => {
+    mockReturningFn.mockResolvedValueOnce([]) // empty means no record returned
+    const { POST } = await import('./route')
+    const formData = new FormData()
+    formData.append('projectId', VALID_UUID)
+    formData.append('files', makeFile('report.sdlxliff'))
+
+    const response = await POST(makeRequest(formData))
+    const body = await response.json()
+
+    expect(response.status).toBe(500)
+    expect(body.error).toContain('Failed to record file')
+  })
+
+  it('should treat storage "already exists" as idempotent success', async () => {
+    mockUploadStorage.mockResolvedValueOnce({
+      error: { message: 'The resource already exists' },
+    })
+    const { POST } = await import('./route')
+    const formData = new FormData()
+    formData.append('projectId', VALID_UUID)
+    formData.append('files', makeFile('report.sdlxliff'))
+
+    const response = await POST(makeRequest(formData))
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.success).toBe(true)
   })
 
   it('should return 404 when batchId does not belong to the authenticated tenant', async () => {

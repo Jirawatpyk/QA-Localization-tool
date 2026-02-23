@@ -19,14 +19,13 @@ describe('FileUploadZone', () => {
 
   it('should render upload zone on desktop', () => {
     render(<FileUploadZone onFilesSelected={onFilesSelected} isUploading={false} />)
-    // the hidden input is present
     const input = document.querySelector('input[type="file"]')
-    expect(input).toBeTruthy()
+    expect(input).not.toBeNull()
   })
 
   it('should show mobile guard text', () => {
     render(<FileUploadZone onFilesSelected={onFilesSelected} isUploading={false} />)
-    expect(screen.getByText('Switch to desktop for file upload')).toBeTruthy()
+    expect(screen.getByText('Switch to desktop for file upload')).not.toBeNull()
   })
 
   it('should call onFilesSelected when valid files are dropped', () => {
@@ -51,7 +50,7 @@ describe('FileUploadZone', () => {
     })
 
     expect(onFilesSelected).not.toHaveBeenCalled()
-    expect(screen.getByRole('alert')).toBeTruthy()
+    expect(screen.getByRole('alert')).not.toBeNull()
     expect(screen.getByRole('alert').textContent).toContain('50')
   })
 
@@ -60,13 +59,12 @@ describe('FileUploadZone', () => {
     const dropzone = screen.getByRole('button')
 
     fireEvent.dragOver(dropzone)
-    // state change is internal, just verify no errors thrown
-    expect(dropzone).toBeTruthy()
+    expect(dropzone).not.toBeNull()
   })
 
   it('should show "Uploading…" text when isUploading is true', () => {
     render(<FileUploadZone onFilesSelected={onFilesSelected} isUploading={true} />)
-    expect(screen.getByText('Uploading…')).toBeTruthy()
+    expect(screen.getByText('Uploading…')).not.toBeNull()
   })
 
   it('should open file input on Enter key press', async () => {
@@ -77,5 +75,37 @@ describe('FileUploadZone', () => {
 
     await userEvent.type(dropzone, '{Enter}')
     expect(clickSpy).toHaveBeenCalled()
+  })
+
+  it('should open file input on Space key press', async () => {
+    render(<FileUploadZone onFilesSelected={onFilesSelected} isUploading={false} />)
+    const dropzone = screen.getByRole('button')
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    const clickSpy = vi.spyOn(input, 'click').mockImplementation(() => {})
+
+    await userEvent.type(dropzone, ' ')
+    expect(clickSpy).toHaveBeenCalled()
+  })
+
+  it('should call onFilesSelected when files selected via file input', () => {
+    render(<FileUploadZone onFilesSelected={onFilesSelected} isUploading={false} />)
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+
+    const file = makeFile('report.sdlxliff')
+    fireEvent.change(input, { target: { files: [file] } })
+
+    expect(onFilesSelected).toHaveBeenCalledWith([file])
+  })
+
+  it('should forward data-tour attribute to the desktop dropzone', () => {
+    render(
+      <FileUploadZone
+        onFilesSelected={onFilesSelected}
+        isUploading={false}
+        data-tour="project-upload"
+      />,
+    )
+    const dropzone = screen.getByRole('button')
+    expect(dropzone.getAttribute('data-tour')).toBe('project-upload')
   })
 })

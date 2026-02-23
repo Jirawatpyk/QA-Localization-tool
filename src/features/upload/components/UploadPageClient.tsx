@@ -35,8 +35,10 @@ export function UploadPageClient({ projectId }: UploadPageClientProps) {
           toast.error('Failed to create upload batch.')
           return
         }
+        await startUpload(files, batchResult.data.id)
+      } else {
+        await startUpload(files)
       }
-      await startUpload(files)
     },
     [projectId, startUpload],
   )
