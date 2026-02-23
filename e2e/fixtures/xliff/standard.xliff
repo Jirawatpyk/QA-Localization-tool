@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Standard XLIFF 1.2 fixture (no sdl: namespace)
+  Used by: e2e/helpers/fileUpload.ts FIXTURE_FILES.xliff12
+  Covers: pure XLIFF 1.2 parsing, <target state=""> for confirmation
+-->
+<xliff version="1.2"
+       xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file original="standard.docx"
+        source-language="en-US"
+        target-language="th-TH"
+        datatype="plaintext">
+    <body>
+
+      <trans-unit id="1">
+        <source>Good morning</source>
+        <target state="translated">สวัสดีตอนเช้า</target>
+        <note>Standard greeting</note>
+      </trans-unit>
+
+      <trans-unit id="2">
+        <source>Please enter your <g id="1">email address</g>.</source>
+        <target state="needs-review-translation">กรุณากรอก<g id="1">ที่อยู่อีเมล</g>ของคุณ</target>
+      </trans-unit>
+
+      <trans-unit id="3">
+        <source>Error: <ph id="1">{message}</ph></source>
+        <target state="new">ข้อผิดพลาด: <ph id="1">{message}</ph></target>
+      </trans-unit>
+
+    </body>
+  </file>
+</xliff>

@@ -118,19 +118,19 @@ Each feature module contains: `components/`, `actions/` (Server Actions), `hooks
 
 ## Naming Conventions
 
-| Element | Convention | Example |
-|---------|-----------|---------|
-| DB tables/columns | snake_case | `audit_logs`, `tenant_id` |
-| Components | PascalCase | `FindingCard.tsx` |
-| Server Actions | `{verb}.action.ts` | `updateFinding.action.ts` |
-| Stores | `{domain}.store.ts` | `review.store.ts` |
-| Inngest events | dot-notation | `finding.changed` |
-| Inngest function IDs | kebab-case | `recalculate-score` |
-| Types | PascalCase, no `I` prefix | `Finding`, `ReviewSession` |
-| Constants | UPPER_SNAKE_CASE | `MAX_FILE_SIZE_BYTES` |
-| Zod schemas | camelCase + Schema | `findingSchema` |
-| Git branches | `feature/{epic}-{story}-{desc}` | `feature/E2-S1-parser` |
-| Commits | Conventional Commits | `feat(review): add batch accept` |
+| Element              | Convention                      | Example                          |
+| -------------------- | ------------------------------- | -------------------------------- |
+| DB tables/columns    | snake_case                      | `audit_logs`, `tenant_id`        |
+| Components           | PascalCase                      | `FindingCard.tsx`                |
+| Server Actions       | `{verb}.action.ts`              | `updateFinding.action.ts`        |
+| Stores               | `{domain}.store.ts`             | `review.store.ts`                |
+| Inngest events       | dot-notation                    | `finding.changed`                |
+| Inngest function IDs | kebab-case                      | `recalculate-score`              |
+| Types                | PascalCase, no `I` prefix       | `Finding`, `ReviewSession`       |
+| Constants            | UPPER_SNAKE_CASE                | `MAX_FILE_SIZE_BYTES`            |
+| Zod schemas          | camelCase + Schema              | `findingSchema`                  |
+| Git branches         | `feature/{epic}-{story}-{desc}` | `feature/E2-S1-parser`           |
+| Commits              | Conventional Commits            | `feat(review): add batch accept` |
 
 ## Testing
 
@@ -141,24 +141,39 @@ Each feature module contains: `components/`, `actions/` (Server Actions), `hooks
 - **Naming:** `describe("{Unit}")` → `it("should {behavior} when {condition}")`
 - **CI gates:** quality-gate (every PR: lint→type-check→tests→build), e2e-gate (merge to main), chaos-test (weekly)
 
+## Pre-Story Checklist (MANDATORY — SM + Dev Lead)
+
+**Run BEFORE locking Acceptance Criteria on any story:**
+→ `_bmad-output/architecture-assumption-checklist.md` (8 sections, 22 checkboxes)
+
+This checklist was created from Epic 1 retrospective learnings. Top 5 red flags:
+
+| Red Flag                                                         | Section       |
+| ---------------------------------------------------------------- | ------------- |
+| Story references a `/route` that doesn't exist in `src/app/`     | S1: Routes    |
+| Story writes to DB but no migration task                         | S2: DB Schema |
+| Story uses Radix Select in E2E test (not native `<select>`)      | S3 + S5       |
+| Story assumes columns exist that haven't been added yet          | S2: DB Schema |
+| Story scope bleeds into future stories without explicit deferral | S8: Scope     |
+
 ## Key Planning Documents
 
-| Document | Path |
-|----------|------|
-| PRD (80 FRs + 42 NFRs) | `_bmad-output/planning-artifacts/prd.md` |
-| Architecture | `_bmad-output/planning-artifacts/architecture/index.md` |
-| UX Specification | `_bmad-output/planning-artifacts/ux-design-specification/index.md` |
-| Epics (11 epics, 99 FRs) | `_bmad-output/planning-artifacts/epics/index.md` |
-| Project Context (agent rules) | `_bmad-output/project-context.md` |
-| Original Product Plan | `docs/qa-localization-tool-plan.md` |
+| Document                      | Path                                                               |
+| ----------------------------- | ------------------------------------------------------------------ |
+| PRD (80 FRs + 42 NFRs)        | `_bmad-output/planning-artifacts/prd.md`                           |
+| Architecture                  | `_bmad-output/planning-artifacts/architecture/index.md`            |
+| UX Specification              | `_bmad-output/planning-artifacts/ux-design-specification/index.md` |
+| Epics (11 epics, 99 FRs)      | `_bmad-output/planning-artifacts/epics/index.md`                   |
+| Project Context (agent rules) | `_bmad-output/project-context.md`                                  |
+| Original Product Plan         | `docs/qa-localization-tool-plan.md`                                |
 
 ## Runtime Compatibility
 
-| Runtime | OK to import | DO NOT import |
-|---------|-------------|---------------|
-| Edge (middleware.ts) | `@upstash/ratelimit`, `@supabase/ssr` | `pino`, `drizzle-orm`, `fast-xml-parser`, `inngest` |
-| Node.js (Server Components, Actions, Inngest) | Everything server-side | — |
-| Browser (Client Components) | `zustand`, `sonner`, `@supabase/ssr` | `pino`, `drizzle-orm`, server-only modules |
+| Runtime                                       | OK to import                          | DO NOT import                                       |
+| --------------------------------------------- | ------------------------------------- | --------------------------------------------------- |
+| Edge (middleware.ts)                          | `@upstash/ratelimit`, `@supabase/ssr` | `pino`, `drizzle-orm`, `fast-xml-parser`, `inngest` |
+| Node.js (Server Components, Actions, Inngest) | Everything server-side                | —                                                   |
+| Browser (Client Components)                   | `zustand`, `sonner`, `@supabase/ssr`  | `pino`, `drizzle-orm`, server-only modules          |
 
 ## CJK/Thai Language Rules
 

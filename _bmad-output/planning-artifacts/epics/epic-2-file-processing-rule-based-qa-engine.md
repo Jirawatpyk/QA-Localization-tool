@@ -2,7 +2,7 @@
 
 **Goal:** Users can upload translation files (SDLXLIFF, XLIFF 1.2, Excel), see parsed results with full metadata, and get instant rule-based QA results achieving 100% Xbench parity — the foundation for replacing Xbench.
 
-**FRs covered:** FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, FR11, FR12, FR13, FR14, FR15, FR19, FR21, FR37
+**FRs covered:** FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, FR11, FR12, FR13, FR14, FR15, FR19, FR21, FR37, FR62 (project-level onboarding)
 **NFRs addressed:** NFR1 (parse < 3s), NFR2 (rules < 5s/5K segments), NFR7 (batch 10 files < 5min), NFR8 (reject > 15MB), NFR10 (no file content in logs), NFR16 (rule-based always available)
 **Architecture:** Unified SDLXLIFF/XLIFF parser (fast-xml-parser), 15MB file guard, Inngest pipeline L1, glossary cache integration
 
@@ -297,4 +297,41 @@ So that I can efficiently triage files and trust the tool's accuracy.
 **Then** only summary counts are shown (no individual file cards)
 
 ---
+
+### Story 2.8: Project-level Onboarding Tour
+
+> **Added (2026-02-21) — Deferred from Epic 1 Story 1.7 CR Round 3. Original Setup Tour had 4 steps but steps 3-4 (Glossary/Upload) target nested routes inside projects — not accessible from dashboard. Separated into Project-level tour.**
+
+As a QA Reviewer,
+I want a guided tour when I enter a project for the first time,
+So that I know where to import glossaries and upload files for QA.
+
+**Dependencies:** Story 2.1 (Upload UI must exist for tour to highlight)
+
+**Acceptance Criteria:**
+
+**Given** a QA Reviewer enters a project page (`/projects/[projectId]`)
+**When** `user.metadata.project_tour_completed` is null
+**Then** a 2-step Project Tour activates via `driver.js` overlay:
+  1. Import Glossary — highlights glossary tab, explains CSV/XLSX/TBX import
+  2. Upload First File — highlights upload area, "Try with a file you already QA'd in Xbench — compare results side-by-side"
+**And** each step highlights the relevant UI area with a spotlight overlay
+**And** users can navigate: Next, Previous, Dismiss (pauses at current step), or Skip All (permanently completes)
+**And** on completion or Skip All, `user.metadata.project_tour_completed` is set to current timestamp (ISO 8601)
+
+**Given** a returning user who dismissed the Project Tour mid-way
+**When** they return to any project page
+**Then** the tour resumes at the step they left (`user.metadata.dismissed_at_step.project`), clamped to `LAST_STEP_INDEX`
+
+**Given** the Project Tour on mobile (<768px)
+**When** the page loads
+**Then** the tour is suppressed (same as Setup Tour)
+
+**Implementation Notes:**
+- Reuses existing `driver.js` infrastructure from Story 1.7 (`OnboardingTour` pattern)
+- Reuses `updateTourState` server action (already supports any `TourId`)
+- Add `project_tour_completed` and `dismissed_at_step.project` to `UserMetadata` type
+- Add `data-tour="project-glossary"` and `data-tour="project-upload"` attributes to project page UI
+- Create `ProjectTour.tsx` client component following same pattern as `OnboardingTour.tsx`
+- Tour ID: `'project'` (add to `TourId` union type and `tourIdSchema`)
 

@@ -24,6 +24,7 @@ import { selfHealingConfig } from './selfHealingConfig'
 import { severityConfigs } from './severityConfigs'
 import { suppressionRules } from './suppressionRules'
 import { tenants } from './tenants'
+import { uploadBatches } from './uploadBatches'
 import { userRoles } from './userRoles'
 import { users } from './users'
 
@@ -72,6 +73,8 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
 export const filesRelations = relations(files, ({ one, many }) => ({
   project: one(projects, { fields: [files.projectId], references: [projects.id] }),
   tenant: one(tenants, { fields: [files.tenantId], references: [tenants.id] }),
+  uploadedByUser: one(users, { fields: [files.uploadedBy], references: [users.id] }),
+  batch: one(uploadBatches, { fields: [files.batchId], references: [uploadBatches.id] }),
   segments: many(segments),
   scores: many(scores),
   fileAssignments: many(fileAssignments),
@@ -337,4 +340,12 @@ export const selfHealingConfigRelations = relations(selfHealingConfig, ({ one })
     fields: [selfHealingConfig.projectId],
     references: [projects.id],
   }),
+}))
+
+// --- Upload Batches ---
+export const uploadBatchesRelations = relations(uploadBatches, ({ one, many }) => ({
+  project: one(projects, { fields: [uploadBatches.projectId], references: [projects.id] }),
+  tenant: one(tenants, { fields: [uploadBatches.tenantId], references: [tenants.id] }),
+  createdByUser: one(users, { fields: [uploadBatches.createdBy], references: [users.id] }),
+  files: many(files),
 }))

@@ -1,6 +1,7 @@
 import { faker } from '@faker-js/faker'
 
 import type { AppNotification, DashboardData, RecentFileRow } from '@/features/dashboard/types'
+import type { BatchRecord, UploadFileResult } from '@/features/upload/types'
 import type { Finding } from '@/types/finding'
 import type { PipelineRun } from '@/types/pipeline'
 import type { ReviewSession } from '@/types/review'
@@ -84,6 +85,35 @@ export function buildDashboardData(overrides?: Partial<DashboardData>): Dashboar
     recentFiles: Array.from({ length: 3 }, () => buildRecentFileRow()),
     pendingReviewsCount: faker.number.int({ min: 0, max: 10 }),
     teamActivityCount: faker.number.int({ min: 0, max: 100 }),
+    ...overrides,
+  }
+}
+
+export function buildFile(overrides?: Partial<UploadFileResult>): UploadFileResult {
+  const fileHash = faker.string.hexadecimal({ length: 64, casing: 'lower', prefix: '' })
+  const tenantId = faker.string.uuid()
+  const projectId = faker.string.uuid()
+  const fileName = `${faker.word.noun()}.sdlxliff`
+  return {
+    fileId: faker.string.uuid(),
+    fileName,
+    fileSizeBytes: faker.number.int({ min: 1024, max: 5 * 1024 * 1024 }),
+    fileType: 'sdlxliff',
+    fileHash,
+    storagePath: `${tenantId}/${projectId}/${fileHash}/${fileName}`,
+    status: 'uploaded',
+    batchId: faker.string.uuid(),
+    ...overrides,
+  }
+}
+
+export function buildUploadBatch(overrides?: Partial<BatchRecord>): BatchRecord {
+  return {
+    id: faker.string.uuid(),
+    projectId: faker.string.uuid(),
+    tenantId: faker.string.uuid(),
+    fileCount: faker.number.int({ min: 1, max: 50 }),
+    createdAt: new Date().toISOString(),
     ...overrides,
   }
 }

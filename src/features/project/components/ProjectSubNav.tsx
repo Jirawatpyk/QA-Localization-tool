@@ -10,6 +10,7 @@ type ProjectSubNavProps = {
 }
 
 const TABS = [
+  { label: 'Files', href: (id: string) => `/projects/${id}/upload` },
   { label: 'Settings', href: (id: string) => `/projects/${id}/settings` },
   { label: 'Glossary', href: (id: string) => `/projects/${id}/glossary` },
 ] as const

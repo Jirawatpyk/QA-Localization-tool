@@ -603,6 +603,7 @@ Use `bg-primary` NOT `bg-indigo-600` — enables future dark mode + theming.
 - NEVER implement features NOT in the current story — no scope creep
 - Every subtask must have tests before marking complete
 - Story done = **100% AC covered + all tests pass + code matches project context**
+- **AC was pre-validated** via Architecture Assumption Checklist before locking — if AC seems wrong for real architecture, flag to SM immediately: `_bmad-output/architecture-assumption-checklist.md`
 
 #### Git Branch Strategy
 - `main` — production, protected
@@ -802,4 +803,4 @@ npm run test:rls
 - PRD: `_bmad-output/planning-artifacts/prd.md`
 - UX Spec: `_bmad-output/planning-artifacts/ux-design-specification/`
 
-Last Updated: 2026-02-15
+Last Updated: 2026-02-23

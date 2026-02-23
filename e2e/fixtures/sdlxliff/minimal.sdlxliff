@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Minimal SDLXLIFF fixture — 3 segments, EN-US to TH-TH
+  Used by: e2e/helpers/fileUpload.ts FIXTURE_FILES.sdlxliffMinimal
+  Covers: basic segment extraction, confirmation states, match percentage
+-->
+<xliff version="1.2"
+       xmlns="urn:oasis:names:tc:xliff:document:1.2"
+       xmlns:sdl="http://sdl.com/FileTypes/SdlXliff/1.0">
+  <file original="minimal-test.docx"
+        source-language="en-US"
+        target-language="th-TH"
+        datatype="x-sdlxliff">
+    <header/>
+    <body>
+      <group id="g1">
+
+        <!-- Segment 1: Draft — should run QA checks -->
+        <trans-unit id="1">
+          <source>Hello world</source>
+          <seg-source>
+            <mrk mtype="seg" mid="1">Hello world</mrk>
+          </seg-source>
+          <target>
+            <mrk mtype="seg" mid="1">สวัสดีโลก</mrk>
+          </target>
+          <sdl:seg-defs>
+            <sdl:seg id="1" conf="Draft" percent="0" origin="interactive"/>
+          </sdl:seg-defs>
+        </trans-unit>
+
+        <!-- Segment 2: Translated, 85% TM match -->
+        <trans-unit id="2">
+          <source>Click here to continue.</source>
+          <seg-source>
+            <mrk mtype="seg" mid="2">Click here to continue.</mrk>
+          </seg-source>
+          <target>
+            <mrk mtype="seg" mid="2">คลิกที่นี่เพื่อดำเนินการต่อ</mrk>
+          </target>
+          <sdl:seg-defs>
+            <sdl:seg id="2" conf="Translated" percent="85" origin="tm"/>
+          </sdl:seg-defs>
+        </trans-unit>
+
+        <!-- Segment 3: ApprovedSignOff — should SKIP QA checks -->
+        <trans-unit id="3">
+          <source>Cancel</source>
+          <seg-source>
+            <mrk mtype="seg" mid="3">Cancel</mrk>
+          </seg-source>
+          <target>
+            <mrk mtype="seg" mid="3">ยกเลิก</mrk>
+          </target>
+          <sdl:seg-defs>
+            <sdl:seg id="3" conf="ApprovedSignOff" percent="100" origin="tm"/>
+          </sdl:seg-defs>
+        </trans-unit>
+
+      </group>
+    </body>
+  </file>
+</xliff>

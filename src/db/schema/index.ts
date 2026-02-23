@@ -6,6 +6,7 @@ export { users } from './users'
 export { userRoles } from './userRoles'
 export { projects } from './projects'
 export { files } from './files'
+export { uploadBatches } from './uploadBatches'
 export { segments } from './segments'
 export { findings } from './findings'
 export { scores } from './scores'
@@ -36,6 +37,7 @@ export {
   userRolesRelations,
   projectsRelations,
   filesRelations,
+  uploadBatchesRelations,
   segmentsRelations,
   findingsRelations,
   scoresRelations,

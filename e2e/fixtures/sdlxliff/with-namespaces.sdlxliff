@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Full SDLXLIFF fixture — tests all inline tags + sdl: namespace features
+  Used by: e2e/helpers/fileUpload.ts FIXTURE_FILES.sdlxliffWithNamespaces
+  Covers:
+    - All inline tag types: g, x, ph, bpt, ept
+    - sdl:cmt (translator comment)
+    - Mixed confirmation states
+    - Match percentages
+    - EN-US to TH-TH (Thai word count via Intl.Segmenter)
+-->
+<xliff version="1.2"
+       xmlns="urn:oasis:names:tc:xliff:document:1.2"
+       xmlns:sdl="http://sdl.com/FileTypes/SdlXliff/1.0">
+  <file original="with-namespaces.docx"
+        source-language="en-US"
+        target-language="th-TH"
+        datatype="x-sdlxliff">
+    <header/>
+    <body>
+      <group id="g1">
+
+        <!-- Inline tag: <g> span (bold) -->
+        <trans-unit id="1">
+          <source>Please read the <g id="1">important notice</g> before continuing.</source>
+          <seg-source>
+            <mrk mtype="seg" mid="1">Please read the <g id="1">important notice</g> before continuing.</mrk>
+          </seg-source>
+          <target>
+            <mrk mtype="seg" mid="1">กรุณาอ่าน<g id="1">ประกาศสำคัญ</g>ก่อนดำเนินการต่อ</mrk>
+          </target>
+          <sdl:seg-defs>
+            <sdl:seg id="1" conf="Translated" percent="72" origin="tm"/>
+          </sdl:seg-defs>
+        </trans-unit>
+
+        <!-- Inline tag: <x/> standalone placeholder -->
+        <trans-unit id="2">
+          <source>Line 1<x id="1"/>Line 2</source>
+          <seg-source>
+            <mrk mtype="seg" mid="2">Line 1<x id="1"/>Line 2</mrk>
+          </seg-source>
+          <target>
+            <mrk mtype="seg" mid="2">บรรทัดที่ 1<x id="1"/>บรรทัดที่ 2</mrk>
+          </target>
+          <sdl:seg-defs>
+            <sdl:seg id="2" conf="Draft" percent="0" origin="interactive"/>
+          </sdl:seg-defs>
+        </trans-unit>
+
+        <!-- Inline tag: <ph/> variable placeholder -->
+        <trans-unit id="3">
+          <source>Welcome, <ph id="1">{username}</ph>!</source>
+          <seg-source>
+            <mrk mtype="seg" mid="3">Welcome, <ph id="1">{username}</ph>!</mrk>
+          </seg-source>
+          <target>
+            <mrk mtype="seg" mid="3">ยินดีต้อนรับ <ph id="1">{username}</ph>!</mrk>
+          </target>
+          <sdl:seg-defs>
+            <sdl:seg id="3" conf="Translated" percent="95" origin="tm">
+              <sdl:cmt>Variable {username} must not be translated</sdl:cmt>
+            </sdl:seg>
+          </sdl:seg-defs>
+        </trans-unit>
+
+        <!-- Inline tags: <bpt> and <ept> translatable tags -->
+        <trans-unit id="4">
+          <source><bpt id="1">&lt;a href="#"&gt;</bpt>Click here<ept id="1">&lt;/a&gt;</ept></source>
+          <seg-source>
+            <mrk mtype="seg" mid="4"><bpt id="1">&lt;a href="#"&gt;</bpt>Click here<ept id="1">&lt;/a&gt;</ept></mrk>
+          </seg-source>
+          <target>
+            <mrk mtype="seg" mid="4"><bpt id="1">&lt;a href="#"&gt;</bpt>คลิกที่นี่<ept id="1">&lt;/a&gt;</ept></mrk>
+          </target>
+          <sdl:seg-defs>
+            <sdl:seg id="4" conf="ApprovedTranslation" percent="100" origin="tm"/>
+          </sdl:seg-defs>
+        </trans-unit>
+
+        <!-- ApprovedSignOff — parser must flag this for QA skip -->
+        <trans-unit id="5">
+          <source>Save</source>
+          <seg-source>
+            <mrk mtype="seg" mid="5">Save</mrk>
+          </seg-source>
+          <target>
+            <mrk mtype="seg" mid="5">บันทึก</mrk>
+          </target>
+          <sdl:seg-defs>
+            <sdl:seg id="5" conf="ApprovedSignOff" percent="100" origin="tm"/>
+          </sdl:seg-defs>
+        </trans-unit>
+
+      </group>
+    </body>
+  </file>
+</xliff>
