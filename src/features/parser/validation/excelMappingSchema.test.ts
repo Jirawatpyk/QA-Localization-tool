@@ -115,9 +115,45 @@ describe('excelColumnMappingSchema', () => {
       expect(result.data.languageColumn).toBeUndefined()
     }
   })
+
+  it('should reject when segmentIdColumn is the same as sourceColumn (M6 — optional conflict)', () => {
+    const result = excelColumnMappingSchema.safeParse({
+      sourceColumn: 'Source',
+      targetColumn: 'Target',
+      segmentIdColumn: 'Source', // same as sourceColumn — violates refine
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.message.includes('Optional columns'))).toBe(true)
+    }
+  })
+
+  it('should reject when contextColumn is the same as targetColumn (M6 — optional conflict)', () => {
+    const result = excelColumnMappingSchema.safeParse({
+      sourceColumn: 'Source',
+      targetColumn: 'Target',
+      contextColumn: 'Target', // same as targetColumn — violates refine
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.message.includes('Optional columns'))).toBe(true)
+    }
+  })
+
+  it('should allow optional columns that differ from source and target', () => {
+    const result = excelColumnMappingSchema.safeParse({
+      sourceColumn: 'Source',
+      targetColumn: 'Target',
+      segmentIdColumn: 'ID',
+      contextColumn: 'Notes',
+      languageColumn: 'Lang',
+    })
+    expect(result.success).toBe(true)
+  })
 })
 
 describe('EXCEL_PREVIEW_ROWS', () => {
+  // L4: guards against accidental constant changes that would silently affect UI preview height
   it('should be 5', () => {
     expect(EXCEL_PREVIEW_ROWS).toBe(5)
   })

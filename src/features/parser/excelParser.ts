@@ -1,8 +1,9 @@
 import 'server-only'
 
-import ExcelJS from 'exceljs'
+import type ExcelJS from 'exceljs'
 
 import { EXCEL_AUTO_DETECT_KEYWORDS, MAX_PARSE_SIZE_BYTES } from '@/features/parser/constants'
+import { loadExcelWorkbook } from '@/features/parser/excelLoader'
 import type { ParsedSegment, ParseOutcome } from '@/features/parser/types'
 import type { ExcelColumnMapping } from '@/features/parser/validation/excelMappingSchema'
 import { countWords } from '@/features/parser/wordCounter'
@@ -34,10 +35,9 @@ export async function parseExcelBilingual(
     }
   }
 
-  const workbook = new ExcelJS.Workbook()
+  let workbook: ExcelJS.Workbook
   try {
-    // @ts-expect-error — ExcelJS types expect legacy Buffer; Node.js 20+ returns Buffer<ArrayBufferLike>
-    await workbook.xlsx.load(Buffer.from(new Uint8Array(buffer)))
+    workbook = await loadExcelWorkbook(buffer)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     // Password-protected files have a specific error pattern

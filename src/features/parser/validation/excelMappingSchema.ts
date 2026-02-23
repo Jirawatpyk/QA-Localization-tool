@@ -13,5 +13,16 @@ export const excelColumnMappingSchema = z
     message: 'Source and Target columns must be different',
     path: ['targetColumn'],
   })
+  .refine(
+    (data) => {
+      const reserved = new Set([data.sourceColumn, data.targetColumn])
+      const optionals = [data.segmentIdColumn, data.contextColumn, data.languageColumn]
+      return optionals.every((col) => col === undefined || !reserved.has(col))
+    },
+    {
+      message: 'Optional columns must not be the same as Source or Target column',
+      path: ['segmentIdColumn'],
+    },
+  )
 
 export type ExcelColumnMapping = z.infer<typeof excelColumnMappingSchema>

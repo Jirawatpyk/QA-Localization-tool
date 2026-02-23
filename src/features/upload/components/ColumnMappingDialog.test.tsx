@@ -56,7 +56,7 @@ describe('ColumnMappingDialog', () => {
   it('should render dialog with file name in title', async () => {
     render(<ColumnMappingDialog {...defaultProps} />)
     await waitFor(() => {
-      expect(screen.getByText(/Column Mapping — test\.xlsx/)).toBeTruthy()
+      expect(screen.getByText(/Column Mapping — test\.xlsx/)).not.toBeNull()
     })
   })
 
@@ -64,15 +64,15 @@ describe('ColumnMappingDialog', () => {
     // Don't resolve yet — check loading state
     vi.mocked(previewExcelColumns).mockImplementation(() => new Promise(() => {}))
     render(<ColumnMappingDialog {...defaultProps} />)
-    expect(screen.getByLabelText('Loading preview')).toBeTruthy()
+    expect(screen.getByLabelText('Loading preview')).not.toBeNull()
   })
 
   it('should render preview table with column headers after loading', async () => {
     render(<ColumnMappingDialog {...defaultProps} />)
     await waitFor(() => {
       // Preview rows data should be visible in the table
-      expect(screen.getByText('Hello')).toBeTruthy()
-      expect(screen.getByText('สวัสดี')).toBeTruthy()
+      expect(screen.getByText('Hello')).not.toBeNull()
+      expect(screen.getByText('สวัสดี')).not.toBeNull()
     })
   })
 
@@ -96,7 +96,7 @@ describe('ColumnMappingDialog', () => {
   it('should show "Only the first sheet will be parsed" info text (E2)', async () => {
     render(<ColumnMappingDialog {...defaultProps} />)
     await waitFor(() => {
-      expect(screen.getByText(/Only the first sheet will be parsed/)).toBeTruthy()
+      expect(screen.getByText(/Only the first sheet will be parsed/)).not.toBeNull()
     })
   })
 
@@ -120,6 +120,10 @@ describe('ColumnMappingDialog', () => {
           sourceColumn: 'Source',
           targetColumn: 'Target',
           hasHeader: true,
+          // M4: optional columns must be undefined (not '__none__') when not set
+          segmentIdColumn: undefined,
+          contextColumn: undefined,
+          languageColumn: undefined,
         }),
       )
       expect(defaultProps.onSuccess).toHaveBeenCalledWith(10)
@@ -231,5 +235,39 @@ describe('ColumnMappingDialog', () => {
     // Clicking disabled button should not call onCancel
     await userEvent.click(cancelBtn)
     expect(onCancel).not.toHaveBeenCalled()
+  })
+
+  it('should not dismiss dialog on Escape key while parsing is in progress (M3)', async () => {
+    vi.mocked(parseFile).mockImplementation(() => new Promise(() => {}))
+    const onCancel = vi.fn()
+
+    render(<ColumnMappingDialog {...defaultProps} onCancel={onCancel} />)
+    await waitFor(() => screen.getByRole('button', { name: 'Confirm & Parse' }))
+
+    // Start parsing
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm & Parse' }))
+    await waitFor(() => screen.getByRole('button', { name: 'Parsing…' }))
+
+    // Pressing Escape should NOT dismiss the dialog (onCancel not called)
+    await userEvent.keyboard('{Escape}')
+    expect(onCancel).not.toHaveBeenCalled()
+  })
+
+  it('should show numeric column options when hasHeader is toggled to false (C2)', async () => {
+    render(<ColumnMappingDialog {...defaultProps} />)
+    // Wait for preview (4 columns: Source, Target, Segment ID, Notes)
+    await waitFor(() => screen.getByRole('checkbox', { name: /First row is header/ }))
+
+    // Toggle hasHeader off → column options switch from header names to numeric indices
+    const checkbox = screen.getByRole('checkbox', { name: /First row is header/ })
+    await userEvent.click(checkbox)
+
+    // Source Column trigger should no longer display header name text
+    const sourceTrigger = screen.getByRole('combobox', { name: 'Source Column' })
+    expect(sourceTrigger.textContent).not.toContain('Source')
+
+    // Confirm & Parse is disabled because selections were reset (no numeric column chosen)
+    const confirmBtn = screen.getByRole('button', { name: 'Confirm & Parse' })
+    expect(confirmBtn.hasAttribute('disabled')).toBe(true)
   })
 })

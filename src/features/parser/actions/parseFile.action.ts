@@ -15,8 +15,12 @@ import { SEGMENT_BATCH_SIZE } from '@/features/parser/constants'
 import { parseExcelBilingual } from '@/features/parser/excelParser'
 import { parseXliff } from '@/features/parser/sdlxliffParser'
 import type { ParsedSegment } from '@/features/parser/types'
-import type { ExcelColumnMapping } from '@/features/parser/validation/excelMappingSchema'
+import {
+  type ExcelColumnMapping,
+  excelColumnMappingSchema,
+} from '@/features/parser/validation/excelMappingSchema'
 import { requireRole } from '@/lib/auth/requireRole'
+import { logger } from '@/lib/logger'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { ActionResult } from '@/types/actionResult'
 
@@ -137,6 +141,22 @@ export async function parseFile(
         error: 'Column mapping is required for Excel files',
       }
     }
+
+    // C1: Validate columnMapping via Zod schema — Server Actions receive JSON; TypeScript
+    // types are not enforced at runtime. Reject semantically invalid mapping before CAS.
+    const mappingValidation = excelColumnMappingSchema.safeParse(columnMapping)
+    if (!mappingValidation.success) {
+      await markFileFailed(fileId, currentUser.tenantId, currentUser.id, file.fileName, {
+        reason: 'Invalid column mapping',
+        validationErrors: mappingValidation.error.flatten().fieldErrors,
+      })
+      return {
+        success: false,
+        code: 'INVALID_INPUT',
+        error: `Invalid column mapping: ${mappingValidation.error.issues[0]?.message ?? 'validation failed'}`,
+      }
+    }
+    columnMapping = mappingValidation.data
 
     // Read blob as ArrayBuffer (E7: wrap in try/catch)
     let buffer: ArrayBuffer
@@ -326,8 +346,9 @@ async function markFileFailed(
       .update(files)
       .set({ status: 'failed' })
       .where(and(eq(files.id, fileId), withTenant(files.tenantId, tenantId)))
-  } catch {
+  } catch (e) {
     // Intentionally swallowed: DB failure during error recovery must not cascade
+    logger.error({ err: e, fileId }, 'markFileFailed: DB update failed')
   }
 
   // Audit log for failed parsing — non-fatal: audit failure must not mask the original error
@@ -343,7 +364,8 @@ async function markFileFailed(
         ...errorDetails,
       },
     })
-  } catch {
+  } catch (e) {
     // Intentionally swallowed: writeAuditLog failure on an error path must not cascade
+    logger.error({ err: e, fileId }, 'markFileFailed: writeAuditLog failed')
   }
 }

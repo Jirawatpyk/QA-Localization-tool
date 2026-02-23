@@ -607,3 +607,4 @@ claude-sonnet-4-6
 |------|---------|-------------|--------|
 | 2026-02-23 | 1.0.0 | Initial implementation — Tasks 1-9 complete, 744 tests passing, 0 lint errors | claude-sonnet-4-6 |
 | 2026-02-23 | 1.1.0 | CR Round 1 — Fix All (C+H+M+L): C1 per-row targetLang bug, C2 EMPTY_SHEET test, C3 UUID validation, H1-H7, M1-M8, L1 L5 — 764 tests, 0 lint, 0 type errors | claude-sonnet-4-6 |
+| 2026-02-24 | 1.2.0 | CR Round 2 — Fix All (2C·3H·6M·5L): C1 Zod validation in Server Action, C2 hasHeader=false broken (numeric indices), H1 duplicate header crash, H2 CAS mock count, H3 errorCode audit assertion, M1–M6, L1–L5 — 772 tests, 0 lint, 0 type errors | claude-sonnet-4-6 |

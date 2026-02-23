@@ -3,13 +3,13 @@
 import 'server-only'
 
 import { and, eq } from 'drizzle-orm'
-import ExcelJS from 'exceljs'
 import { z } from 'zod'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { files } from '@/db/schema/files'
 import { EXCEL_PREVIEW_ROWS } from '@/features/parser/constants'
+import { loadExcelWorkbook } from '@/features/parser/excelLoader'
 import { autoDetectColumns, extractCellValue } from '@/features/parser/excelParser'
 import { requireRole } from '@/lib/auth/requireRole'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -61,6 +61,16 @@ export async function previewExcelColumns(fileId: string): Promise<ActionResult<
     }
   }
 
+  // M1: Guard against previewing files that are not in 'uploaded' state
+  // (e.g., already parsed, currently parsing, or failed) — prevents UX confusion
+  if (file.status !== 'uploaded') {
+    return {
+      success: false,
+      code: 'CONFLICT',
+      error: `File cannot be previewed: current status is '${file.status}'`,
+    }
+  }
+
   // Download file from Supabase Storage
   const admin = createAdminClient()
   const { data: blob, error: downloadError } = await admin.storage
@@ -87,10 +97,9 @@ export async function previewExcelColumns(fileId: string): Promise<ActionResult<
   }
 
   // Load Excel and read preview rows
-  const workbook = new ExcelJS.Workbook()
+  let workbook
   try {
-    // @ts-expect-error — ExcelJS types expect legacy Buffer; Node.js 20+ returns Buffer<ArrayBufferLike>
-    await workbook.xlsx.load(Buffer.from(new Uint8Array(buffer)))
+    workbook = await loadExcelWorkbook(buffer)
   } catch {
     return {
       success: false,

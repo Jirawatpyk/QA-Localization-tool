@@ -240,7 +240,8 @@ describe('parseExcelBilingual — valid parse with header row', () => {
       expect(seg.matchPercentage).toBeNull()
       expect(seg.inlineTags).toBeNull()
       expect(seg.segmentNumber).toBe(1)
-      expect(seg.wordCount).toBeGreaterThan(0)
+      // 'Hello' is a single English word — countWords must return exactly 1 (M5)
+      expect(seg.wordCount).toBe(1)
     }
   })
 

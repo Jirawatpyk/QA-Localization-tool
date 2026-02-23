@@ -82,12 +82,20 @@ export function ColumnMappingDialog({
     if (!open) return
 
     async function loadPreview() {
+      // L1: Reset all column selections when loading a new file — selections from a
+      // previous file are invalid for a different file's columns
+      setSourceColumn('')
+      setTargetColumn('')
+      setSegmentIdColumn(NONE_VALUE)
+      setContextColumn(NONE_VALUE)
+      setLanguageColumn(NONE_VALUE)
+      setPreview(null)
       setIsLoadingPreview(true)
       try {
         const result = await previewExcelColumns(fileId)
         if (result.success) {
           setPreview(result.data)
-          // Pre-select auto-detected columns
+          // Pre-select auto-detected columns (header-mode only)
           if (result.data.suggestedSourceColumn) {
             setSourceColumn(result.data.suggestedSourceColumn)
           }
@@ -105,7 +113,26 @@ export function ColumnMappingDialog({
     void loadPreview()
   }, [open, fileId])
 
-  const columnOptions = preview?.headers ?? []
+  // C2: column options depend on hasHeader mode
+  // hasHeader=true  → use header names (deduped to prevent React key + Radix value collision)
+  // hasHeader=false → use numeric indices ("1", "2", ...) — parser expects parseInt-able strings
+  const rawHeaders = preview?.headers ?? []
+  const columnOptions: Array<{ label: string; value: string }> = hasHeader
+    ? rawHeaders.map((h, i) => {
+        const label = h || `Column ${i + 1}`
+        // H1: append column number to duplicate header names to make values unique
+        const isDup =
+          h.trim().length > 0 &&
+          rawHeaders
+            .slice(0, i)
+            .some((prev) => prev.toLowerCase().trim() === h.toLowerCase().trim())
+        const value = isDup ? `${h} (col ${i + 1})` : label
+        return { label, value }
+      })
+    : Array.from({ length: preview?.columnCount ?? 0 }, (_, i) => ({
+        label: String(i + 1),
+        value: String(i + 1),
+      }))
   const canConfirm =
     sourceColumn.length > 0 && targetColumn.length > 0 && sourceColumn !== targetColumn
 
@@ -219,9 +246,9 @@ export function ColumnMappingDialog({
                     <SelectValue placeholder="Select column…" />
                   </SelectTrigger>
                   <SelectContent>
-                    {columnOptions.map((col) => (
-                      <SelectItem key={col} value={col}>
-                        {col}
+                    {columnOptions.map(({ label, value }) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -241,9 +268,9 @@ export function ColumnMappingDialog({
                     <SelectValue placeholder="Select column…" />
                   </SelectTrigger>
                   <SelectContent>
-                    {columnOptions.map((col) => (
-                      <SelectItem key={col} value={col}>
-                        {col}
+                    {columnOptions.map(({ label, value }) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -263,9 +290,9 @@ export function ColumnMappingDialog({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={NONE_VALUE}>— None —</SelectItem>
-                    {columnOptions.map((col) => (
-                      <SelectItem key={col} value={col}>
-                        {col}
+                    {columnOptions.map(({ label, value }) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -283,9 +310,9 @@ export function ColumnMappingDialog({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={NONE_VALUE}>— None —</SelectItem>
-                    {columnOptions.map((col) => (
-                      <SelectItem key={col} value={col}>
-                        {col}
+                    {columnOptions.map(({ label, value }) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -305,9 +332,9 @@ export function ColumnMappingDialog({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={NONE_VALUE}>— None —</SelectItem>
-                    {columnOptions.map((col) => (
-                      <SelectItem key={col} value={col}>
-                        {col}
+                    {columnOptions.map(({ label, value }) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
                       </SelectItem>
                     ))}
                   </SelectContent>

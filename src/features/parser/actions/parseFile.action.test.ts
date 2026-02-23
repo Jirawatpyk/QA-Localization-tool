@@ -50,6 +50,10 @@ vi.mock('@/lib/env', () => ({
   },
 }))
 
+vi.mock('@/lib/logger', () => ({
+  logger: { error: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn() },
+}))
+
 import { MAX_PARSE_SIZE_BYTES } from '@/features/parser/constants'
 
 import { parseFile } from './parseFile.action'
@@ -544,6 +548,8 @@ describe('parseFile action', () => {
       expect(mockWriteAuditLog).not.toHaveBeenCalledWith(
         expect.objectContaining({ action: 'file.parse_failed' }),
       )
+      // H2: only the CAS UPDATE was called — markFileFailed must NOT add a second db.update() call
+      expect(mockUpdate).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -919,6 +925,54 @@ describe('parseFile action', () => {
       }
     })
 
+    it('should return INVALID_INPUT when columnMapping has empty sourceColumn (C1 — Zod validation)', async () => {
+      buildSelectChain([mockExcelFile])
+      buildUpdateChain()
+
+      const result = await parseFile(FILE_ID, {
+        sourceColumn: '', // violates min(1)
+        targetColumn: 'Target',
+        hasHeader: true,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.code).toBe('INVALID_INPUT')
+        expect(result.error).toContain('Source column is required')
+      }
+    })
+
+    it('should return INVALID_INPUT when sourceColumn === targetColumn (C1 — Zod refine)', async () => {
+      buildSelectChain([mockExcelFile])
+      buildUpdateChain()
+
+      const result = await parseFile(FILE_ID, {
+        sourceColumn: 'Source',
+        targetColumn: 'Source', // same as source — violates refine
+        hasHeader: true,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.code).toBe('INVALID_INPUT')
+        expect(result.error).toContain('must be different')
+      }
+    })
+
+    it('should return INVALID_INPUT when optional column duplicates sourceColumn (C1 — M6 refine)', async () => {
+      buildSelectChain([mockExcelFile])
+      buildUpdateChain()
+
+      const result = await parseFile(FILE_ID, {
+        sourceColumn: 'Source',
+        targetColumn: 'Target',
+        hasHeader: true,
+        segmentIdColumn: 'Source', // same as sourceColumn — violates refine
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.code).toBe('INVALID_INPUT')
+      }
+    })
+
     it('should return CONFLICT when CAS fails for xlsx file (C8 — race condition)', async () => {
       buildSelectChain([mockExcelFile])
       buildUpdateChain([]) // CAS returns empty → race condition
@@ -942,6 +996,25 @@ describe('parseFile action', () => {
       if (!result.success) {
         expect(result.code).toBe('PARSE_ERROR')
       }
+    })
+
+    it('should write file.parse_failed audit log with errorCode INVALID_EXCEL for malformed Excel (H3)', async () => {
+      buildSelectChainMulti([[mockExcelFile], [mockProject]])
+      buildUpdateChain()
+
+      const malformedBlob = readFixtureAsBlob('malformed.xlsx')
+      mockDownload.mockResolvedValue({ data: malformedBlob, error: null })
+
+      await parseFile(FILE_ID, excelMapping)
+
+      expect(mockWriteAuditLog).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'file.parse_failed',
+          newValue: expect.objectContaining({
+            errorCode: 'INVALID_EXCEL',
+          }),
+        }),
+      )
     })
 
     it('should return NOT_FOUND when project does not exist for Excel file (H2)', async () => {
@@ -1038,8 +1111,8 @@ describe('parseFile action', () => {
       mockDownload.mockResolvedValue({ data: excelBlob, error: null })
 
       await parseFile(FILE_ID, excelMapping)
-      // withTenant should be called on both the file lookup AND the project lookup
-      expect(mockWithTenant.mock.calls.length).toBeGreaterThanOrEqual(2)
+      // withTenant must be called exactly 4 times: file select + CAS update + project select + parsed update
+      expect(mockWithTenant.mock.calls.length).toBe(4)
       expect(mockWithTenant).toHaveBeenCalledWith(expect.anything(), TENANT_ID)
     })
   })
