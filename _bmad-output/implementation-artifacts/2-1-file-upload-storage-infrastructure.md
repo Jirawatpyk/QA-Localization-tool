@@ -615,7 +615,9 @@ claude-sonnet-4-6
 6. **CR Round 1 (Amelia)** — 5 HIGH, 6 MEDIUM, 7 LOW findings — ทั้งหมดแก้ครบ (Task 10)
 7. **CR Round 1 Final: 57 test files / 471 tests ✅ | type-check ✅ | lint 0 errors ✅**
 8. **CR Round 2 (Amelia)** — 7 HIGH · 13 MEDIUM · 7 LOW findings — ทั้งหมดแก้ครบ (Task 10 CR Round 2)
-9. **Final: 59 test files / 495 tests ✅ | type-check ✅ | lint 0 errors ✅**
+9. **CR Round 2 Final: 59 test files / 495 tests ✅ | type-check ✅ | lint 0 errors ✅**
+10. **CR Round 3 (Amelia)** — 1 CRITICAL · 7 HIGH findings — ทั้งหมดแก้ครบ (Task 10 CR Round 3)
+11. **Final: 60 test files / 507 tests ✅ | type-check ✅ | lint 0 errors ✅**
 
 ### Code Review Round 1 (2026-02-23)
 
@@ -696,6 +698,32 @@ claude-sonnet-4-6
 - Lint: 0 errors, 0 warnings (`npm run lint`)
 - Tests: 59 test files · **495/495 PASSING** (`npm run test:unit`)
 
+### Code Review Round 3 (2026-02-23)
+
+**Reviewer:** claude-sonnet-4-6 (adversarial code review via bmad-agent-bmm-dev, parallel sub-agents: code-quality-analyzer + testing-qa-expert)
+
+**8 findings fixed (1 CRITICAL · 7 HIGH):**
+
+**CRITICAL**
+1. **C1 — `fileType.ts` no test file** (`utils/fileType.test.ts`): `getFileType()` was extracted in Round 2 (M1) but no test file was created — 9 branches completely untested (sdlxliff, xlf, xliff, xlsx, unsupported, no-extension, UPPERCASE, multi-dot, empty string). Fixed: created `fileType.test.ts` with 9 tests covering all branches.
+
+**HIGH — Logic Bugs**
+2. **H1 — `createBatch.action.ts` writeAuditLog unguarded**: `await writeAuditLog()` at line 58 was unguarded — if audit write threw (e.g. DB timeout), caller received a misleading error while the batch record had already been created (orphan batch). Fixed: wrapped in try/catch; failure is silently swallowed (non-fatal, batch was successfully created).
+3. **H2 — `confirmRerun` void .then() no .catch()** (`useFileUpload.ts:280`): `void uploadSingleFile(...).then(...)` had no `.catch()` — if `uploadSingleFile` rejected unexpectedly, `isUploading` was permanently stuck at `true`, locking the UI forever. Fixed: added `.catch(() => { setIsUploading(false) })`.
+4. **H3 — `onFilesSelected` unhandled rejection** (`FileUploadZone.tsx:37`): `handleFiles()` called `onFilesSelected(files)` in a sync function without void+catch — if the async callback threw, it became an unhandled promise rejection crashing the app. Fixed: `void Promise.resolve(onFilesSelected(files)).catch(() => {})` — safe even when mock/callers return `undefined`.
+5. **H4 — `formData.getAll('files') as File[]` type cast** (`route.ts:73`): A crafted request could include string-valued `files` entries that pass the cast — non-File entries would propagate to `file.name`, `file.size`, `file.arrayBuffer()` calls causing runtime errors. Fixed: replaced cast with `filter((e): e is File => e instanceof File)` type guard.
+
+**HIGH — Test Gaps**
+6. **H5 — `mockRemoveStorage` never asserted** (`route.test.ts`): The "DB insert returns empty" test confirmed HTTP 500 but never verified that `admin.storage.remove()` was called — leaving the storage orphan cleanup path unverified. Fixed: added `expect(mockRemoveStorage).toHaveBeenCalledWith([...])` assertion.
+7. **H6 — UUID validation 400 branches uncovered** (`route.test.ts`): H4 fix in Round 2 added `uuidSchema.safeParse()` validation for `projectId` and `batchId`, but no tests covered the rejection paths. Fixed: added two tests — invalid `projectId` UUID → 400, invalid `batchId` UUID → 400; both assert `mockSelectFn` is NOT called (no DB hit on bad input).
+8. **H7 — Mixed batch test missing** (`useFileUpload.test.ts`): No test verified that valid + invalid files in the same batch are each tracked independently. Fixed: added mixed batch test with unique UUID stub (incremental counter) to prevent `updateFileProgress` UUID collision from overwriting error entries of invalid files.
+
+**Post-fix verification:**
+- Type check: 0 errors (`npm run type-check`)
+- Lint: 0 errors, 0 warnings (`npm run lint`)
+- Tests: 60 test files · **507/507 PASSING** (`npm run test:unit`)
+- Commit: `291f107`
+
 ### File List
 
 **New files:**
@@ -728,6 +756,7 @@ claude-sonnet-4-6
 - `src/features/upload/components/UploadPageClient.tsx`
 - `src/features/upload/components/UploadPageClient.test.tsx` (CR Round 2 — H7)
 - `src/features/upload/utils/fileType.ts` (CR Round 2 — M1 extraction)
+- `src/features/upload/utils/fileType.test.ts` (CR Round 3 — C1)
 - `src/app/api/upload/route.ts`
 - `src/app/api/upload/route.test.ts`
 - `src/app/(app)/projects/[projectId]/upload/page.tsx`
