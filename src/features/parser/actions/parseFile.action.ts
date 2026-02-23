@@ -230,10 +230,17 @@ async function markFileFailed(
   fileName: string,
   errorDetails: Record<string, unknown>,
 ): Promise<void> {
-  await db
-    .update(files)
-    .set({ status: 'failed' })
-    .where(and(eq(files.id, fileId), withTenant(files.tenantId, tenantId)))
+  // DB update failure must not cascade — the original error must be returned to the caller.
+  // File may remain in 'parsing' state if the DB is also unavailable (double failure),
+  // but masking the original error is worse than a stuck status.
+  try {
+    await db
+      .update(files)
+      .set({ status: 'failed' })
+      .where(and(eq(files.id, fileId), withTenant(files.tenantId, tenantId)))
+  } catch {
+    // Intentionally swallowed: DB failure during error recovery must not cascade
+  }
 
   // Audit log for failed parsing — non-fatal: audit failure must not mask the original error
   try {

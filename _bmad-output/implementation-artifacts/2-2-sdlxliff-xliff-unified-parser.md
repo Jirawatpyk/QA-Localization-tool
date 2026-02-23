@@ -581,6 +581,25 @@ claude-sonnet-4-6
 - Final test count after CR Round 1: **629 unit tests** (507 from Story 2.1 + 122 new from Story 2.2: inlineTagExtractor 19, wordCounter 20, types 13, sdlxliffParser 49, perf 1, parseFile.action 20). Performance: 5,000 segments parsed in 211ms (< 3s ✅).
 - Post-CR edge case coverage analysis added 2 tests: XLIFF `"final"` → ApprovedSignOff state mapping; `file.parse_failed` audit log on PARSE_ERROR (was only tested on STORAGE_ERROR previously).
 
+### CR Round 3 — Fixes Applied (2026-02-23)
+
+**Scope:** Fix all MEDIUM + LOW severity findings from Amelia manual review. Focus on CAS change introduced in Round 2.
+
+**Source code fixes (2):**
+- `parseFile.action.ts` — M2: Wrapped `db.update()` inside `markFileFailed()` in try/catch → double failure (storage + DB) now returns `ActionResult` instead of throwing HTTP 500
+- `sdlxliffParser.ts` — L2: Removed dead `_fileType` parameter from `extractTransUnitSegments()` signature — format detection uses `hasSdlNamespace()` exclusively; parameter coupling was confusing dead code
+
+**Test additions (3 new tests — 148 → 150 Story 2.2 parser tests; 655 → 657 total):**
+- `parseFile.action.test.ts` +3:
+  - M1: CAS race test — added negative assertions: `not.toHaveBeenCalledWith({ status: 'failed' })` + `not.toHaveBeenCalledWith({ action: 'file.parse_failed' })` (concurrent winner is processing; file must NOT be marked failed)
+  - L1: CAS race test — added `expect(mockWriteAuditLog).not.toHaveBeenCalled()` (parsing_started must not be logged when CAS fails)
+  - M2: new test `should still return STORAGE_ERROR when markFileFailed db.update() throws (double failure)` — verifies `parseFile()` returns `ActionResult` (not throws) when both storage and DB fail simultaneously
+
+**Intentional non-fixes:**
+- L3 (tH3 XLIFF test matchPercentage): implemented as new test inside `XLIFF fileType branch` describe — `matchPercentage: null` + `confirmationState: 'Translated'` verified
+
+**Final test count:** 150 Story 2.2 parser tests (657 total unit tests across project)
+
 ### CR Round 2 — Fixes Applied (2026-02-23)
 
 **Scope:** Fix all HIGH + MEDIUM + LOW severity findings from combined manual (Amelia) + testing-qa-expert sub-agent review.

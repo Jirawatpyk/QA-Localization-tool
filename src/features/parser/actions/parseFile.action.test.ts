@@ -488,13 +488,20 @@ describe('parseFile action', () => {
 
     it('should return CONFLICT when CAS UPDATE returns empty rows (concurrent race condition) (H2)', async () => {
       buildSelectChain([mockFile])
-      buildUpdateChain([]) // CAS returns empty — another call won the race
+      const updateChain = buildUpdateChain([]) // CAS returns empty — another call won the race
 
       const result = await parseFile(FILE_ID)
 
       expect(result.success).toBe(false)
       if (result.success) return
       expect(result.code).toBe('CONFLICT')
+      // L1: audit log must NOT be written when CAS fails (return happens before writeAuditLog)
+      expect(mockWriteAuditLog).not.toHaveBeenCalled()
+      // M1: file must NOT be marked 'failed' — concurrent winner is processing it
+      expect(updateChain.set).not.toHaveBeenCalledWith({ status: 'failed' })
+      expect(mockWriteAuditLog).not.toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'file.parse_failed' }),
+      )
     })
   })
 
@@ -611,6 +618,29 @@ describe('parseFile action', () => {
         ]),
       )
     })
+
+    it('should insert XLIFF segments with null matchPercentage and state-derived confirmationState (L3)', async () => {
+      // XLIFF 1.2 has no TM percentage — matchPercentage must be null.
+      // confirmationState derives from <target state="translated"> → 'Translated', not sdl:seg conf.
+      buildSelectChain([{ ...mockFile, fileType: 'xliff', fileName: 'test.xliff' }])
+      buildUpdateChain()
+      const insertChain = buildInsertChain()
+      mockDownload.mockResolvedValue({
+        data: new Blob([MINIMAL_XLIFF], { type: 'application/xml' }),
+        error: null,
+      })
+
+      await parseFile(FILE_ID)
+
+      expect(insertChain.values).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            matchPercentage: null,
+            confirmationState: 'Translated', // XLIFF state="translated" → 'Translated'
+          }),
+        ]),
+      )
+    })
   })
 
   describe('tenant isolation via withTenant (tH5)', () => {
@@ -639,6 +669,44 @@ describe('parseFile action', () => {
       await parseFile(FILE_ID)
 
       expect(mockWithTenant).toHaveBeenCalledWith(expect.anything(), TENANT_ID)
+    })
+  })
+
+  describe('markFileFailed DB update failure (M2)', () => {
+    it('should still return STORAGE_ERROR when markFileFailed db.update() throws (double failure)', async () => {
+      // Simulate: storage download fails AND the recovery DB update also fails
+      // Correct behaviour: return ActionResult with STORAGE_ERROR (not throw HTTP 500)
+      buildSelectChain([mockFile])
+      // First mockUpdate call = CAS (returns rows) — second call = markFileFailed update (throws)
+      let callCount = 0
+      mockUpdate.mockImplementation(() => {
+        callCount++
+        if (callCount === 1) {
+          // CAS: return rows so CAS succeeds
+          return {
+            set: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            returning: vi.fn().mockResolvedValue([{ id: FILE_ID }]),
+          }
+        }
+        // markFileFailed db.update: throws
+        return {
+          set: vi.fn().mockReturnThis(),
+          where: vi.fn().mockRejectedValue(new Error('DB unavailable')),
+        }
+      })
+
+      mockDownload.mockResolvedValue({
+        data: null,
+        error: { message: 'Storage down' },
+      })
+
+      const result = await parseFile(FILE_ID)
+
+      // Must return ActionResult, NOT throw
+      expect(result.success).toBe(false)
+      if (result.success) return
+      expect(result.code).toBe('STORAGE_ERROR')
     })
   })
 

@@ -156,13 +156,7 @@ export function parseXliff(
 
     // 5.4 — Process each trans-unit
     for (const tuEl of transUnits) {
-      const tuSegments = extractTransUnitSegments(
-        tuEl,
-        sourceLang,
-        targetLang,
-        segmentNumber,
-        _fileType,
-      )
+      const tuSegments = extractTransUnitSegments(tuEl, sourceLang, targetLang, segmentNumber)
 
       if (!tuSegments.success) return tuSegments
 
@@ -198,7 +192,6 @@ function extractTransUnitSegments(
   sourceLang: string,
   targetLang: string,
   startNumber: number,
-  _fileType: 'sdlxliff' | 'xliff', // reserved for future Excel/MemoQ format divergence
 ): TransUnitResult {
   const tuChildren = getChildren(tuEl, 'trans-unit')
   const result: ParsedSegment[] = []
