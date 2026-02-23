@@ -448,6 +448,54 @@ describe('useFileUpload', () => {
     expect(result.current.progress[0]?.error).not.toBe('FILE_SIZE_EXCEEDED')
   })
 
+  // H7: mixed batch — valid + invalid files in same batch
+  it('should process valid files and mark invalid files with error in a mixed batch', async () => {
+    // Use unique UUIDs per call to prevent updateFileProgress from overwriting error entries
+    // (all having the same mock-uuid causes all entries to be updated when valid file progresses)
+    let uuidIndex = 0
+    vi.stubGlobal('crypto', {
+      randomUUID: vi.fn().mockImplementation(() => `test-uuid-${uuidIndex++}`),
+      subtle: { digest: vi.fn().mockResolvedValue(new Uint8Array(32).buffer) },
+    })
+
+    const validResult = {
+      fileId: 'file-valid',
+      fileName: 'valid.sdlxliff',
+      fileSizeBytes: 1024,
+      fileType: 'sdlxliff',
+      fileHash: 'a'.repeat(64),
+      storagePath: 'path/valid',
+      status: 'uploaded',
+      batchId: null,
+    }
+    setupXhrMock({ success: true, data: { files: [validResult] } })
+
+    const { result } = renderHook(() => useFileUpload({ projectId: VALID_PROJECT_ID }))
+
+    await act(async () => {
+      await result.current.startUpload([
+        makeFile('invalid.pdf'), // unsupported
+        makeFile('valid.sdlxliff'), // supported
+        makeFile('toolarge.sdlxliff', 16 * 1024 * 1024), // exceeds max size
+      ])
+    })
+
+    const progress = result.current.progress
+    expect(progress).toHaveLength(3)
+
+    const pdfEntry = progress.find((f) => f.fileName === 'invalid.pdf')
+    expect(pdfEntry?.status).toBe('error')
+    expect(pdfEntry?.error).toBe('UNSUPPORTED_FORMAT')
+
+    const largeEntry = progress.find((f) => f.fileName === 'toolarge.sdlxliff')
+    expect(largeEntry?.status).toBe('error')
+    expect(largeEntry?.error).toBe('FILE_SIZE_EXCEEDED')
+
+    // valid file should have been attempted (uploaded or in a terminal state — not pending)
+    const validEntry = progress.find((f) => f.fileName === 'valid.sdlxliff')
+    expect(validEntry?.status).not.toBe('pending')
+  })
+
   it('should cancel pending duplicate and clear queue', async () => {
     mockCheckDuplicate.mockResolvedValue({
       success: true,

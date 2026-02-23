@@ -69,8 +69,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Invalid batch ID format' }, { status: 400 })
   }
 
-  // 4. Collect files from FormData
-  const fileEntries = formData.getAll('files') as File[]
+  // 4. Collect files from FormData — filter to File instances only (H4: type guard)
+  const fileEntries = formData.getAll('files').filter((e): e is File => e instanceof File)
 
   // 5. Validate batch size
   if (fileEntries.length === 0) {

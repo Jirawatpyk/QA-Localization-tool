@@ -277,15 +277,20 @@ export function useFileUpload({ projectId }: UseFileUploadOptions): UseFileUploa
     setIsUploading(true)
     updateFileProgress(fileId, { status: 'uploading', error: null })
 
-    void uploadSingleFile(file, fileId, batchId).then((result) => {
-      if (result) setUploadedFiles((prev) => [...prev, result])
-      // continue with remaining queued files
-      if (queue.length > 0) {
-        void processFiles(queue, batchId, true)
-      } else {
+    void uploadSingleFile(file, fileId, batchId)
+      .then((result) => {
+        if (result) setUploadedFiles((prev) => [...prev, result])
+        // continue with remaining queued files
+        if (queue.length > 0) {
+          void processFiles(queue, batchId, true)
+        } else {
+          setIsUploading(false)
+        }
+      })
+      .catch(() => {
+        // H2: prevent isUploading stuck at true on unexpected rejection
         setIsUploading(false)
-      }
-    })
+      })
   }
 
   function cancelDuplicate() {

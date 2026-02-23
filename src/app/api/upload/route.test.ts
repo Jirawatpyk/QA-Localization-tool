@@ -321,6 +321,8 @@ describe('POST /api/upload', () => {
 
     expect(response.status).toBe(500)
     expect(body.error).toContain('Failed to record file')
+    // H5: storage orphan must be cleaned up when DB insert fails
+    expect(mockRemoveStorage).toHaveBeenCalledWith(['tenant/project/hash/file.sdlxliff'])
   })
 
   it('should treat storage "already exists" as idempotent success', async () => {
@@ -367,5 +369,37 @@ describe('POST /api/upload', () => {
 
     expect(response.status).toBe(404)
     expect(body.error).toContain('Batch not found')
+  })
+
+  // H6: UUID validation — invalid projectId / batchId must be rejected before DB queries
+  it('should return 400 when projectId is not a valid UUID', async () => {
+    const { POST } = await import('./route')
+    const formData = new FormData()
+    formData.append('projectId', 'not-a-uuid')
+    formData.append('files', makeFile('report.sdlxliff'))
+
+    const response = await POST(makeRequest(formData))
+    const body = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(body.error).toContain('Invalid project ID')
+    // DB must NOT be queried for an invalid UUID
+    expect(mockSelectFn).not.toHaveBeenCalled()
+  })
+
+  it('should return 400 when batchId is present but not a valid UUID', async () => {
+    const { POST } = await import('./route')
+    const formData = new FormData()
+    formData.append('projectId', VALID_UUID)
+    formData.append('batchId', 'bad-batch-id')
+    formData.append('files', makeFile('report.sdlxliff'))
+
+    const response = await POST(makeRequest(formData))
+    const body = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(body.error).toContain('Invalid batch ID')
+    // DB must NOT be queried for an invalid UUID
+    expect(mockSelectFn).not.toHaveBeenCalled()
   })
 })

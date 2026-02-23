@@ -55,14 +55,19 @@ export async function createBatch(input: unknown): Promise<ActionResult<BatchRec
     return { success: false, code: 'CREATE_FAILED', error: 'Failed to create upload batch' }
   }
 
-  await writeAuditLog({
-    tenantId: currentUser.tenantId,
-    userId: currentUser.id,
-    entityType: 'upload_batch',
-    entityId: batch.id,
-    action: 'upload_batch.created',
-    newValue: { projectId, fileCount },
-  })
+  // H1: non-fatal — do not abort batch creation if audit write fails
+  try {
+    await writeAuditLog({
+      tenantId: currentUser.tenantId,
+      userId: currentUser.id,
+      entityType: 'upload_batch',
+      entityId: batch.id,
+      action: 'upload_batch.created',
+      newValue: { projectId, fileCount },
+    })
+  } catch {
+    // audit failure is non-fatal; batch record was already created
+  }
 
   return {
     success: true,

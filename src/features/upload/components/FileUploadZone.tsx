@@ -34,7 +34,10 @@ export function FileUploadZone({
       )
       return
     }
-    onFilesSelected(files)
+    // H3: wrap in Promise.resolve so void+catch works even when mock/callers return undefined
+    void Promise.resolve(onFilesSelected(files)).catch(() => {
+      // error handling is the caller's responsibility
+    })
   }
 
   function handleDragOver(e: DragEvent<HTMLDivElement>) {
