@@ -3,6 +3,7 @@
 import 'server-only'
 
 import { and, eq } from 'drizzle-orm'
+import { z } from 'zod'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
@@ -36,6 +37,11 @@ export async function parseFile(
   fileId: string,
   columnMapping?: ExcelColumnMapping,
 ): Promise<ActionResult<ParseFileResult>> {
+  // C3: Validate fileId is a valid UUID before any DB/storage access
+  if (!z.string().uuid().safeParse(fileId).success) {
+    return { success: false, code: 'INVALID_INPUT', error: 'Invalid file ID format' }
+  }
+
   // 6.2 — Auth check (M3 pattern)
   let currentUser
   try {
@@ -232,14 +238,7 @@ export async function parseFile(
 
   // 6.4 — Batch insert segments (100 per INSERT for memory efficiency)
   try {
-    await batchInsertSegments(
-      parsedSegments,
-      file.id,
-      file.projectId,
-      currentUser.tenantId,
-      sourceLang,
-      targetLang,
-    )
+    await batchInsertSegments(parsedSegments, file.id, file.projectId, currentUser.tenantId)
   } catch (err) {
     await markFileFailed(fileId, currentUser.tenantId, currentUser.id, file.fileName, {
       reason: err instanceof Error ? err.message : 'Batch insert failed',
@@ -288,29 +287,30 @@ async function batchInsertSegments(
   fileId: string,
   projectId: string,
   tenantId: string,
-  sourceLang: string,
-  targetLang: string,
 ): Promise<void> {
-  for (let i = 0; i < parsedSegments.length; i += SEGMENT_BATCH_SIZE) {
-    const batch = parsedSegments.slice(i, i + SEGMENT_BATCH_SIZE)
-    const values = batch.map((seg) => ({
-      fileId,
-      projectId,
-      tenantId, // withTenant enforced via explicit value
-      segmentNumber: seg.segmentNumber,
-      sourceText: seg.sourceText,
-      targetText: seg.targetText,
-      sourceLang,
-      targetLang,
-      wordCount: seg.wordCount,
-      confirmationState: seg.confirmationState,
-      matchPercentage: seg.matchPercentage,
-      translatorComment: seg.translatorComment,
-      inlineTags: seg.inlineTags,
-    }))
+  // H7: Wrap all batch inserts in a single transaction — partial failure rolls back all batches
+  await db.transaction(async (tx) => {
+    for (let i = 0; i < parsedSegments.length; i += SEGMENT_BATCH_SIZE) {
+      const batch = parsedSegments.slice(i, i + SEGMENT_BATCH_SIZE)
+      const values = batch.map((seg) => ({
+        fileId,
+        projectId,
+        tenantId, // withTenant enforced via explicit value
+        segmentNumber: seg.segmentNumber,
+        sourceText: seg.sourceText,
+        targetText: seg.targetText,
+        sourceLang: seg.sourceLang,
+        targetLang: seg.targetLang,
+        wordCount: seg.wordCount,
+        confirmationState: seg.confirmationState,
+        matchPercentage: seg.matchPercentage,
+        translatorComment: seg.translatorComment,
+        inlineTags: seg.inlineTags,
+      }))
 
-    await db.insert(segments).values(values)
-  }
+      await tx.insert(segments).values(values)
+    }
+  })
 }
 
 async function markFileFailed(

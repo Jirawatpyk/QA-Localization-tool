@@ -4,6 +4,7 @@ import 'server-only'
 
 import { and, eq } from 'drizzle-orm'
 import ExcelJS from 'exceljs'
+import { z } from 'zod'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
@@ -28,6 +29,11 @@ export type ExcelPreview = {
  * → return preview data + auto-detect column suggestions.
  */
 export async function previewExcelColumns(fileId: string): Promise<ActionResult<ExcelPreview>> {
+  // C3: Validate fileId is a valid UUID before any DB/storage access
+  if (!z.string().uuid().safeParse(fileId).success) {
+    return { success: false, code: 'INVALID_INPUT', error: 'Invalid file ID format' }
+  }
+
   // Auth check (M3 pattern)
   let currentUser
   try {
@@ -83,7 +89,8 @@ export async function previewExcelColumns(fileId: string): Promise<ActionResult<
   // Load Excel and read preview rows
   const workbook = new ExcelJS.Workbook()
   try {
-    await workbook.xlsx.load(Buffer.from(new Uint8Array(buffer)) as never)
+    // @ts-expect-error — ExcelJS types expect legacy Buffer; Node.js 20+ returns Buffer<ArrayBufferLike>
+    await workbook.xlsx.load(Buffer.from(new Uint8Array(buffer)))
   } catch {
     return {
       success: false,

@@ -148,4 +148,88 @@ describe('ColumnMappingDialog', () => {
     const { container } = render(<ColumnMappingDialog {...defaultProps} open={false} />)
     expect(container.textContent).not.toContain('Column Mapping')
   })
+
+  it('should show error toast when preview load fails (H3)', async () => {
+    const { toast } = await import('sonner')
+    vi.mocked(previewExcelColumns).mockResolvedValue({
+      success: false,
+      code: 'STORAGE_ERROR',
+      error: 'Download failed',
+    })
+
+    render(<ColumnMappingDialog {...defaultProps} />)
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalled()
+    })
+  })
+
+  it('should keep Confirm & Parse disabled when auto-detected source and target are the same column (H4)', async () => {
+    vi.mocked(previewExcelColumns).mockResolvedValue({
+      success: true,
+      data: {
+        ...mockPreview,
+        suggestedSourceColumn: 'Source',
+        suggestedTargetColumn: 'Source', // same as source → canConfirm = false
+      },
+    })
+
+    render(<ColumnMappingDialog {...defaultProps} />)
+    await waitFor(() => {
+      const confirmBtn = screen.getByRole('button', { name: 'Confirm & Parse' })
+      expect(confirmBtn.hasAttribute('disabled')).toBe(true)
+    })
+  })
+
+  it('should disable Confirm & Parse button while parsing is in progress (M7)', async () => {
+    // parseFile never resolves — keeps isParsing=true
+    vi.mocked(parseFile).mockImplementation(() => new Promise(() => {}))
+
+    render(<ColumnMappingDialog {...defaultProps} />)
+    await waitFor(() => screen.getByRole('button', { name: 'Confirm & Parse' }))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm & Parse' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Parsing…' })).toBeDefined()
+      expect(screen.getByRole('button', { name: 'Parsing…' }).hasAttribute('disabled')).toBe(true)
+    })
+  })
+
+  it('should reset column selections when hasHeader is toggled (H6 / M8)', async () => {
+    render(<ColumnMappingDialog {...defaultProps} />)
+    // Wait for preview to load and auto-select columns
+    await waitFor(() => {
+      const sourceTrigger = screen.getByRole('combobox', { name: 'Source Column' })
+      expect(sourceTrigger.textContent).toContain('Source')
+    })
+
+    // Toggle hasHeader off
+    const checkbox = screen.getByRole('checkbox', { name: /First row is header/ })
+    await userEvent.click(checkbox)
+
+    // Source column should be reset (no longer shows 'Source')
+    await waitFor(() => {
+      const sourceTrigger = screen.getByRole('combobox', { name: 'Source Column' })
+      expect(sourceTrigger.textContent).not.toContain('Source')
+    })
+  })
+
+  it('should not call onCancel when Cancel is clicked while parsing (L1)', async () => {
+    vi.mocked(parseFile).mockImplementation(() => new Promise(() => {}))
+    const onCancel = vi.fn()
+
+    render(<ColumnMappingDialog {...defaultProps} onCancel={onCancel} />)
+    await waitFor(() => screen.getByRole('button', { name: 'Confirm & Parse' }))
+
+    // Start parsing
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm & Parse' }))
+    await waitFor(() => screen.getByRole('button', { name: 'Parsing…' }))
+
+    // Cancel button should be disabled during parsing
+    const cancelBtn = screen.getByRole('button', { name: 'Cancel' })
+    expect(cancelBtn.hasAttribute('disabled')).toBe(true)
+    // Clicking disabled button should not call onCancel
+    await userEvent.click(cancelBtn)
+    expect(onCancel).not.toHaveBeenCalled()
+  })
 })

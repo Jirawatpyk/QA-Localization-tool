@@ -36,7 +36,8 @@ export async function parseExcelBilingual(
 
   const workbook = new ExcelJS.Workbook()
   try {
-    await workbook.xlsx.load(Buffer.from(new Uint8Array(buffer)) as never)
+    // @ts-expect-error — ExcelJS types expect legacy Buffer; Node.js 20+ returns Buffer<ArrayBufferLike>
+    await workbook.xlsx.load(Buffer.from(new Uint8Array(buffer)))
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     // Password-protected files have a specific error pattern

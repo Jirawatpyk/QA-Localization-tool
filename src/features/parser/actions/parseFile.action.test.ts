@@ -8,20 +8,23 @@ vi.mock('server-only', () => ({}))
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 
 // Use vi.hoisted to hoist mock refs (fixes "Cannot access before initialization" error)
-const { mockSelect, mockUpdate, mockInsert, mockDownload, mockStorage } = vi.hoisted(() => {
-  const mockDownload = vi.fn()
-  const mockStorage = { from: vi.fn(() => ({ download: mockDownload })) }
-  const mockInsert = vi.fn()
-  const mockUpdate = vi.fn()
-  const mockSelect = vi.fn()
-  return { mockSelect, mockUpdate, mockInsert, mockDownload, mockStorage }
-})
+const { mockSelect, mockUpdate, mockInsert, mockTransaction, mockDownload, mockStorage } =
+  vi.hoisted(() => {
+    const mockDownload = vi.fn()
+    const mockStorage = { from: vi.fn(() => ({ download: mockDownload })) }
+    const mockInsert = vi.fn()
+    const mockUpdate = vi.fn()
+    const mockSelect = vi.fn()
+    const mockTransaction = vi.fn()
+    return { mockSelect, mockUpdate, mockInsert, mockTransaction, mockDownload, mockStorage }
+  })
 
 vi.mock('@/db/client', () => ({
   db: {
     select: mockSelect,
     update: mockUpdate,
     insert: mockInsert,
+    transaction: mockTransaction,
   },
 }))
 
@@ -154,6 +157,30 @@ function buildInsertChain() {
 // Tests
 // ============================================================
 
+describe('parseFile — UUID validation (C3)', () => {
+  it('should return INVALID_INPUT for non-UUID fileId', async () => {
+    const result = await parseFile('not-a-uuid')
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('INVALID_INPUT')
+      expect(result.error).toContain('Invalid file ID format')
+    }
+  })
+
+  it('should return INVALID_INPUT for empty string fileId', async () => {
+    const result = await parseFile('')
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('INVALID_INPUT')
+    }
+  })
+
+  it('should not call requireRole when fileId is invalid (no unnecessary auth)', async () => {
+    await parseFile('bad-id')
+    expect(mockRequireRole).not.toHaveBeenCalled()
+  })
+})
+
 describe('parseFile action', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -161,6 +188,11 @@ describe('parseFile action', () => {
     mockWriteAuditLog.mockResolvedValue(undefined)
     // Re-bind mockStorage.from each time since clearAllMocks resets it
     mockStorage.from.mockReturnValue({ download: mockDownload })
+    // H7: transaction mock — forward to callback with mockInsert as tx.insert
+    mockTransaction.mockImplementation(
+      async (fn: (tx: { insert: typeof mockInsert }) => Promise<void>) =>
+        fn({ insert: mockInsert }),
+    )
   })
 
   describe('authentication', () => {
@@ -910,6 +942,74 @@ describe('parseFile action', () => {
       if (!result.success) {
         expect(result.code).toBe('PARSE_ERROR')
       }
+    })
+
+    it('should return NOT_FOUND when project does not exist for Excel file (H2)', async () => {
+      buildSelectChainMulti([[mockExcelFile], []]) // file found, project NOT found
+      buildUpdateChain()
+      mockDownload.mockResolvedValue({
+        data: new Blob([''], { type: 'application/octet-stream' }),
+        error: null,
+      })
+
+      const result = await parseFile(FILE_ID, excelMapping)
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.code).toBe('NOT_FOUND')
+        expect(result.error).toContain('Project not found')
+      }
+    })
+
+    it('should call markFileFailed when project is NOT_FOUND for Excel (H2)', async () => {
+      buildSelectChainMulti([[mockExcelFile], []])
+      const updateChain = buildUpdateChain()
+      mockDownload.mockResolvedValue({
+        data: new Blob([''], { type: 'application/octet-stream' }),
+        error: null,
+      })
+
+      await parseFile(FILE_ID, excelMapping)
+      expect(updateChain.set).toHaveBeenCalledWith({ status: 'failed' })
+      expect(mockWriteAuditLog).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'file.parse_failed',
+          newValue: expect.objectContaining({
+            reason: 'Project not found for language resolution',
+          }),
+        }),
+      )
+    })
+
+    it('should use "und" as targetLang fallback when project.targetLangs is empty (L5)', async () => {
+      buildSelectChainMulti([[mockExcelFile], [{ sourceLang: 'en-US', targetLangs: [] }]])
+      buildUpdateChain()
+      const insertChain = buildInsertChain()
+
+      const excelBlob = readFixtureAsBlob('bilingual-with-headers.xlsx')
+      mockDownload.mockResolvedValue({ data: excelBlob, error: null })
+
+      await parseFile(FILE_ID, excelMapping)
+      expect(insertChain.values).toHaveBeenCalledWith(
+        expect.arrayContaining([expect.objectContaining({ targetLang: 'und' })]),
+      )
+    })
+
+    it('should persist per-row targetLang from languageColumn into segment insert (C1 — end-to-end)', async () => {
+      buildSelectChainMulti([[mockExcelFile], [mockProject]])
+      buildUpdateChain()
+      const insertChain = buildInsertChain()
+
+      const excelBlob = readFixtureAsBlob('bilingual-with-headers.xlsx')
+      mockDownload.mockResolvedValue({ data: excelBlob, error: null })
+
+      // Notes column used as languageColumn proxy — values like "Greeting", "Farewell", etc.
+      await parseFile(FILE_ID, { ...excelMapping, languageColumn: 'Notes' })
+
+      // First segment's targetLang should come from the Notes column ("Greeting"), not project default
+      const firstBatch = insertChain.values.mock.calls[0]?.[0] as
+        | Array<Record<string, unknown>>
+        | undefined
+      expect(firstBatch?.[0]?.targetLang).toBe('Greeting')
     })
 
     it('should leave XLIFF behavior unchanged when fileType is sdlxliff (4.4)', async () => {

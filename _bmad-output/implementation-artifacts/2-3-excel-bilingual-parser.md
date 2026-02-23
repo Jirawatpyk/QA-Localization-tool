@@ -1,6 +1,6 @@
 # Story 2.3: Excel Bilingual Parser
 
-Status: review
+Status: done
 
 <!-- Validated: 2026-02-23 — validate-create-story applied 18 improvements (8C + 7E + 3O) -->
 
@@ -64,32 +64,32 @@ so that I can QA translations delivered in spreadsheet format.
   - [x] 2.5 Row iteration: start from row 2 (if header) or row 1 (if no header). Skip BOTH-empty rows, include empty-target rows, extract optional segmentId/context, count words via `countWords()`, build `ParsedSegment` with XLIFF-specific fields = null
   - [x] 2.6 Handle Excel cell types: string, number, date, null/undefined, rich text objects
   - [x] 2.7 Error handling: corrupted → `INVALID_EXCEL`; no worksheet → `EMPTY_SHEET`; columns not found → `INVALID_COLUMNS`
-  - [x] 2.8 Unit tests — **39 tests ✅** (valid parse, column mapping by header/index, empty rows, cell types, error cases, 15MB guard, single row E5, Thai/CJK E4, password-protected E1, multi-sheet E2, merged cells E3, 5000-row performance E6 (<200ms ✅), C7 same-column rejection, C1 languageColumn override)
+  - [x] 2.8 Unit tests — **41 tests ✅** (valid parse, column mapping by header/index, empty rows, cell types, error cases, 15MB guard, single row E5, Thai/CJK E4, password-protected E1, multi-sheet E2, merged cells E3, 5000-row performance E6 (<200ms ✅), C7 same-column rejection, C1 languageColumn override, + C2 EMPTY_SHEET, M1/M4/M5 assertion quality fixes)
 
 - [x] Task 3: Excel Preview Server Action (AC: #1, #4)
   - [x] 3.1 Create `src/features/parser/actions/previewExcelColumns.action.ts`
   - [x] 3.2 Auth check (requireRole), tenant isolation (withTenant), file ownership verification
   - [x] 3.3 Auto-detect logic: scan header row for keywords matching `EXCEL_AUTO_DETECT_KEYWORDS`
   - [x] 3.4 Return type: `ActionResult<ExcelPreview>` where `ExcelPreview = { headers, previewRows, suggestedSourceColumn, suggestedTargetColumn, totalRows, columnCount }`
-  - [x] 3.5 Unit tests — **11 tests ✅** (auth failure, NOT_FOUND, INVALID_INPUT, STORAGE_ERROR download, STORAGE_ERROR arrayBuffer E7, preview with real fixture, auto-detect Source/Target, auto-detect Original/Translation, null suggestions, PARSE_ERROR malformed, tenant isolation)
+  - [x] 3.5 Unit tests — **15 tests ✅** (auth failure, NOT_FOUND, INVALID_INPUT, STORAGE_ERROR download, STORAGE_ERROR arrayBuffer E7, preview with real fixture, auto-detect Source/Target, auto-detect Original/Translation, null suggestions, PARSE_ERROR malformed, tenant isolation, + C3 UUID validation ×2, H1 no-worksheets, M2 exact previewRows count)
 
 - [x] Task 4: Update parseFile Action for Excel Routing (AC: #2, #5)
   - [x] 4.1 Update `src/features/parser/actions/parseFile.action.ts` — accept optional `columnMapping?: ExcelColumnMapping` parameter
   - [x] 4.2 Add Excel branch: xlsx → validate columnMapping exists → read ArrayBuffer → call `parseExcelBilingual()`
   - [x] 4.3 Language sourcing: fetch project record; use `project.sourceLang` + `project.targetLangs[0]` as default
   - [x] 4.4 Existing XLIFF path unchanged
-  - [x] 4.5 Unit tests — **10 new Excel tests ✅** (41 total: 31 original + 10 new — happy path, missing mapping, XLIFF unchanged, ArrayBuffer, error paths, CAS race C8, E7 arrayBuffer failure, C2 targetLangs array)
+  - [x] 4.5 Unit tests — **48 tests ✅** (31 original + 10 Excel branch + 7 CR fixes — C3 UUID validation ×3, H2 project NOT_FOUND ×2, M3 per-row targetLang insert, L5 empty targetLangs fallback)
 
 - [x] Task 5: Column Mapping Dialog Component (AC: #1, #4)
   - [x] 5.1 Create `src/features/upload/components/ColumnMappingDialog.tsx` — `"use client"` component using shadcn/ui Dialog + Select + Table + Checkbox
   - [x] 5.2–5.9 Preview table, required Source/Target selects, auto-detect pre-selection, "✓ auto" badge (O2), "Only the first sheet" info (E2), Confirm & Parse button, Cancel (no file delete)
-  - [x] 5.10 Component tests — **10 tests ✅**
+  - [x] 5.10 Component tests — **15 tests ✅** (10 original + 5 CR fixes — H3 preview failure, H4 same-column guard, M7 isParsing state, M8/H6 hasHeader toggle reset, L1 cancel during parse)
 
 - [x] Task 6: Upload Flow Integration (AC: #1)
   - [x] 6.1 Update `src/features/upload/components/UploadPageClient.tsx` — derive `pendingExcelFile` during render (React-recommended pattern, avoids setState-in-effect)
   - [x] 6.2 XLIFF/SDLXLIFF behavior unchanged
   - [x] 6.3 State: `dismissedFileIds` Set tracks confirmed/cancelled dialogs; `pendingExcelFile` derived via `uploadedFiles.find()`
-  - [x] 6.4 Component tests — **2 new tests ✅** (xlsx shows dialog 6.1, sdlxliff does not 6.2)
+  - [x] 6.4 Component tests — **8 tests ✅** (xlsx shows dialog 6.1, sdlxliff does not 6.2 + H5 dismissal after confirm/cancel ×2, M6 toast.success verification, + 3 original batch tests)
 
 - [x] Task 7: Excel Test Fixtures (AC: all)
   - [x] 7.1–7.12 All 12 fixture files generated in `src/test/fixtures/excel/` and `e2e/fixtures/excel/`
@@ -101,11 +101,11 @@ so that I can QA translations delivered in spreadsheet format.
   - [x] 8.3 `buildExcelPreview()` with explicit `ExcelPreview` return type
 
 - [x] Task 9: Integration Testing & Regression Check
-  - [x] 9.1 744 tests passed (0 regressions — was 655+, added ~89 new)
+  - [x] 9.1 764 tests passed (0 regressions — CR Round 1 adds 20 new tests: C1-C3, H1-H7, M1-M8, L1, L5)
   - [x] 9.2 `npm run type-check` — 0 errors
-  - [x] 9.3 `npm run lint` — 0 errors, 0 warnings (fixed HIGH: @/ imports, MEDIUM: return types, unused imports)
+  - [x] 9.3 `npm run lint` — 0 errors, 0 warnings
   - [x] 9.4 `fileType.test.ts` already exists with 9 tests covering all required cases ✅
-  - [x] 9.5 **89 new tests total** (within target 80-95) ✅
+  - [x] 9.5 **109 new tests total** (89 original + 20 CR Round 1 fixes) ✅
 
 ## Dev Notes
 
@@ -587,15 +587,23 @@ claude-sonnet-4-6
 **Modified files:**
 - `src/features/parser/types.ts` — added 'xlsx' + 3 Excel error codes
 - `src/features/parser/constants.ts` — added EXCEL_PREVIEW_ROWS, EXCEL_AUTO_DETECT_KEYWORDS
-- `src/features/parser/actions/parseFile.action.ts` — Excel branch + columnMapping param
-- `src/features/parser/actions/parseFile.action.test.ts` — 10 new Excel tests
+- `src/features/parser/actions/parseFile.action.ts` — Excel branch + columnMapping param + C1 fix (seg.targetLang) + C3 UUID validation + H7 transaction
+- `src/features/parser/actions/parseFile.action.test.ts` — 48 tests (CR R1: +7)
+- `src/features/parser/actions/previewExcelColumns.action.ts` — C3 UUID validation
+- `src/features/parser/actions/previewExcelColumns.action.test.ts` — 15 tests (CR R1: +4)
+- `src/features/parser/excelParser.test.ts` — 41 tests (CR R1: +2 C2 + M1/M4/M5 fixes)
+- `src/features/upload/components/ColumnMappingDialog.tsx` — H6 hasHeader reset fix
+- `src/features/upload/components/ColumnMappingDialog.test.tsx` — 15 tests (CR R1: +5)
 - `src/features/upload/components/UploadPageClient.tsx` — derived-state dialog integration
-- `src/features/upload/components/UploadPageClient.test.tsx` — 2 new Excel dialog tests
+- `src/features/upload/components/UploadPageClient.test.tsx` — 8 tests (CR R1: +2)
 - `src/test/factories.ts` — buildExcelColumnMapping(), buildExcelPreview(), buildFile() xlsx support
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — 2-3 → review
+- `src/test/fixtures/excel/empty-sheet.xlsx` — new fixture for C2/EMPTY_SHEET test
+- `src/test/fixtures/excel/no-worksheets.xlsx` — new fixture for H1 test
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — 2-3 → done
 
 ### Change Log
 
 | Date | Version | Description | Author |
 |------|---------|-------------|--------|
 | 2026-02-23 | 1.0.0 | Initial implementation — Tasks 1-9 complete, 744 tests passing, 0 lint errors | claude-sonnet-4-6 |
+| 2026-02-23 | 1.1.0 | CR Round 1 — Fix All (C+H+M+L): C1 per-row targetLang bug, C2 EMPTY_SHEET test, C3 UUID validation, H1-H7, M1-M8, L1 L5 — 764 tests, 0 lint, 0 type errors | claude-sonnet-4-6 |

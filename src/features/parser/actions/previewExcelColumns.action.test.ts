@@ -81,6 +81,22 @@ const mockFile = {
 
 import { previewExcelColumns } from './previewExcelColumns.action'
 
+describe('previewExcelColumns — UUID validation (C3)', () => {
+  it('should return INVALID_INPUT for non-UUID fileId', async () => {
+    const result = await previewExcelColumns('not-a-uuid')
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('INVALID_INPUT')
+      expect(result.error).toContain('Invalid file ID format')
+    }
+  })
+
+  it('should not call requireRole when fileId is invalid', async () => {
+    await previewExcelColumns('bad-id')
+    expect(mockRequireRole).not.toHaveBeenCalled()
+  })
+})
+
 describe('previewExcelColumns', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -93,7 +109,7 @@ describe('previewExcelColumns', () => {
       code: 'FORBIDDEN',
       error: 'Insufficient permissions',
     })
-    const result = await previewExcelColumns('some-file-id')
+    const result = await previewExcelColumns(mockFile.id)
     expect(result.success).toBe(false)
     if (!result.success) {
       expect(result.code).toBe('FORBIDDEN')
@@ -103,7 +119,8 @@ describe('previewExcelColumns', () => {
   it('should return NOT_FOUND when file does not exist', async () => {
     const chain = makeChain([]) // empty = not found
     mockSelect.mockReturnValue(chain)
-    const result = await previewExcelColumns('nonexistent-id')
+    // Must use valid UUID for C3 validation to pass
+    const result = await previewExcelColumns('e5f6a1b2-c3d4-4e1f-af50-7c8d9e0f1a2b')
     expect(result.success).toBe(false)
     if (!result.success) {
       expect(result.code).toBe('NOT_FOUND')
@@ -157,7 +174,7 @@ describe('previewExcelColumns', () => {
     if (result.success) {
       expect(result.data.headers).toContain('Source')
       expect(result.data.headers).toContain('Target')
-      expect(result.data.previewRows.length).toBeLessThanOrEqual(5)
+      expect(result.data.previewRows.length).toBeGreaterThan(0)
       expect(result.data.totalRows).toBe(10)
       expect(result.data.columnCount).toBeGreaterThan(0)
     }
@@ -215,6 +232,33 @@ describe('previewExcelColumns', () => {
     expect(result.success).toBe(false)
     if (!result.success) {
       expect(result.code).toBe('PARSE_ERROR')
+    }
+  })
+
+  it('should return PARSE_ERROR when Excel file has no worksheets (H1)', async () => {
+    const chain = makeChain([mockFile])
+    mockSelect.mockReturnValue(chain)
+    const noSheetsBlob = readFixtureAsBlob('no-worksheets.xlsx')
+    mockDownload.mockResolvedValue({ data: noSheetsBlob, error: null })
+
+    const result = await previewExcelColumns(mockFile.id)
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('PARSE_ERROR')
+      expect(result.error).toContain('no worksheets')
+    }
+  })
+
+  it('should return exactly EXCEL_PREVIEW_ROWS (5) preview rows for fixture with 10 rows (M2)', async () => {
+    const chain = makeChain([mockFile])
+    mockSelect.mockReturnValue(chain)
+    const blob = readFixtureAsBlob('bilingual-with-headers.xlsx')
+    mockDownload.mockResolvedValue({ data: blob, error: null })
+
+    const result = await previewExcelColumns(mockFile.id)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.previewRows.length).toBe(5)
     }
   })
 

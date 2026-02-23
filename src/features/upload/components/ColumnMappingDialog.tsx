@@ -66,7 +66,18 @@ export function ColumnMappingDialog({
   const [contextColumn, setContextColumn] = useState<string>(NONE_VALUE)
   const [languageColumn, setLanguageColumn] = useState<string>(NONE_VALUE)
 
-  // Load preview when dialog opens or hasHeader toggles
+  function handleHasHeaderChange(checked: boolean) {
+    setHasHeader(checked)
+    // Reset all column selections when toggling header mode — previously selected names
+    // are invalid in the new mode (header names vs numeric indices are incompatible)
+    setSourceColumn('')
+    setTargetColumn('')
+    setSegmentIdColumn(NONE_VALUE)
+    setContextColumn(NONE_VALUE)
+    setLanguageColumn(NONE_VALUE)
+  }
+
+  // Load preview once when dialog opens (or fileId changes)
   useEffect(() => {
     if (!open) return
 
@@ -149,7 +160,7 @@ export function ColumnMappingDialog({
             <Checkbox
               id="has-header"
               checked={hasHeader}
-              onCheckedChange={(checked) => setHasHeader(checked === true)}
+              onCheckedChange={(checked) => handleHasHeaderChange(checked === true)}
               disabled={isParsing}
             />
             <label htmlFor="has-header" className="text-sm font-medium">

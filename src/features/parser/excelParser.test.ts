@@ -94,15 +94,11 @@ describe('autoDetectColumns', () => {
     expect(result.suggestedTargetColumn).toBeNull()
   })
 
-  it('should return null for ambiguous same-column match', () => {
-    // A single column header that contains both source and target keywords
+  it('should return null for both when same column matches both source and target keywords', () => {
+    // 'source-target' substring-matches both 'source' and 'target' → same column → ambiguous → null
     const result = autoDetectColumns(['source-target'])
-    // Both would match the same column — return null for both
-    const { suggestedSourceColumn, suggestedTargetColumn } = result
-    // Either both null or different columns
-    if (suggestedSourceColumn !== null && suggestedTargetColumn !== null) {
-      expect(suggestedSourceColumn).not.toBe(suggestedTargetColumn)
-    }
+    expect(result.suggestedSourceColumn).toBeNull()
+    expect(result.suggestedTargetColumn).toBeNull()
   })
 
   it('should prefer exact match over substring match', () => {
@@ -157,6 +153,18 @@ describe('parseExcelBilingual — size guard', () => {
 })
 
 // ─── parseExcelBilingual — error handling ─────────────────────────────────
+describe('parseExcelBilingual — empty sheet (EMPTY_SHEET, C2)', () => {
+  it('should return EMPTY_SHEET when worksheet has no rows (rowCount === 0)', async () => {
+    const buffer = readFixture('empty-sheet.xlsx')
+    const mapping = { sourceColumn: 'Source', targetColumn: 'Target', hasHeader: true }
+    const result = await parseExcelBilingual(buffer, mapping, 100, 'en-US', 'th-TH')
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.code).toBe('EMPTY_SHEET')
+    }
+  })
+})
+
 describe('parseExcelBilingual — error handling', () => {
   it('should return INVALID_EXCEL for corrupted file (AC #6)', async () => {
     const buffer = readFixture('malformed.xlsx')
@@ -331,14 +339,23 @@ describe('parseExcelBilingual — multi-sheet handling (E2)', () => {
 })
 
 describe('parseExcelBilingual — merged cells handling (E3)', () => {
-  it('should treat merged cells as empty for non-top-left cells', async () => {
+  it('should parse successfully and not throw on merged cells', async () => {
+    const buffer = readFixture('merged-cells.xlsx')
+    const mapping = { sourceColumn: 'Source', targetColumn: 'Target', hasHeader: true }
+    const result = await parseExcelBilingual(buffer, mapping, 1000, 'en-US', 'th-TH')
+    expect(result.success).toBe(true)
+  })
+
+  it('should include non-empty rows and skip fully empty rows from merged-cell fixture (E3)', async () => {
     const buffer = readFixture('merged-cells.xlsx')
     const mapping = { sourceColumn: 'Source', targetColumn: 'Target', hasHeader: true }
     const result = await parseExcelBilingual(buffer, mapping, 1000, 'en-US', 'th-TH')
     expect(result.success).toBe(true)
     if (result.success) {
-      // Should have at least some segments from the non-merged rows
-      expect(result.data.segments.length).toBeGreaterThanOrEqual(1)
+      // All returned segments must have non-empty source
+      result.data.segments.forEach((seg) => {
+        expect(seg.sourceText.trim().length).toBeGreaterThan(0)
+      })
     }
   })
 })
@@ -356,15 +373,15 @@ describe('parseExcelBilingual — CJK/Thai word counting (AC #5)', () => {
     }
   })
 
-  it('should count CJK words via Intl.Segmenter', async () => {
+  it('should count CJK words via Intl.Segmenter (wordCount > 0)', async () => {
     const buffer = readFixture('cjk-thai-content.xlsx')
     const mapping = { sourceColumn: 'Target', targetColumn: 'Source', hasHeader: true }
     const result = await parseExcelBilingual(buffer, mapping, 1000, 'zh-CN', 'en-US')
     expect(result.success).toBe(true)
     if (result.success) {
-      // CJK text should have wordCount > 0
+      // CJK source text must yield wordCount > 0 (not just >= 0)
       result.data.segments.forEach((seg) => {
-        expect(seg.wordCount).toBeGreaterThanOrEqual(0)
+        expect(seg.wordCount).toBeGreaterThan(0)
       })
     }
   })

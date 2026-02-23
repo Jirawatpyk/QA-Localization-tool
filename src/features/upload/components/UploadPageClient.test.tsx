@@ -183,6 +183,84 @@ describe('UploadPageClient', () => {
     })
   })
 
+  it('should dismiss ColumnMappingDialog and show toast.success after Confirm (H5 + M6)', async () => {
+    vi.mocked(useFileUpload).mockReturnValue({
+      progress: [],
+      largeFileWarnings: [],
+      isUploading: false,
+      pendingDuplicate: null,
+      uploadedFiles: [
+        {
+          fileId: 'xlsx-file-id',
+          fileName: 'data.xlsx',
+          fileSizeBytes: 1024,
+          fileType: 'xlsx',
+          fileHash: 'hash',
+          storagePath: 'path/data.xlsx',
+          status: 'uploaded',
+          batchId: null,
+        },
+      ],
+      startUpload: mockStartUpload,
+      confirmRerun: mockConfirmRerun,
+      cancelDuplicate: mockCancelDuplicate,
+      reset: vi.fn(),
+    })
+
+    const { toast } = await import('sonner')
+    render(<UploadPageClient projectId={VALID_PROJECT_ID} />)
+
+    // Dialog is visible
+    expect(screen.getByTestId('column-mapping-dialog')).toBeTruthy()
+
+    // Click Confirm (mock returns segmentCount=5)
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+
+    await waitFor(() => {
+      // Dialog should be dismissed
+      expect(screen.queryByTestId('column-mapping-dialog')).toBeNull()
+      // toast.success called with segment count
+      expect(toast.success).toHaveBeenCalledWith('Parsed 5 segments successfully.')
+    })
+  })
+
+  it('should dismiss ColumnMappingDialog after Cancel without toast (H5)', async () => {
+    vi.mocked(useFileUpload).mockReturnValue({
+      progress: [],
+      largeFileWarnings: [],
+      isUploading: false,
+      pendingDuplicate: null,
+      uploadedFiles: [
+        {
+          fileId: 'xlsx-file-id',
+          fileName: 'data.xlsx',
+          fileSizeBytes: 1024,
+          fileType: 'xlsx',
+          fileHash: 'hash',
+          storagePath: 'path/data.xlsx',
+          status: 'uploaded',
+          batchId: null,
+        },
+      ],
+      startUpload: mockStartUpload,
+      confirmRerun: mockConfirmRerun,
+      cancelDuplicate: mockCancelDuplicate,
+      reset: vi.fn(),
+    })
+
+    const { toast } = await import('sonner')
+    render(<UploadPageClient projectId={VALID_PROJECT_ID} />)
+
+    expect(screen.getByTestId('column-mapping-dialog')).toBeTruthy()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('column-mapping-dialog')).toBeNull()
+      expect(toast.success).not.toHaveBeenCalled()
+    })
+  })
+
   it('should NOT show ColumnMappingDialog for XLIFF/SDLXLIFF files (6.2)', async () => {
     vi.mocked(useFileUpload).mockReturnValue({
       progress: [],
