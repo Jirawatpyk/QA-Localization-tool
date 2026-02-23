@@ -7,6 +7,7 @@ import { MAX_FILE_SIZE_BYTES, DEFAULT_BATCH_SIZE } from '@/lib/constants'
 import { checkDuplicate } from '../actions/checkDuplicate.action'
 import { LARGE_FILE_WARNING_BYTES, UPLOAD_RETRY_COUNT, UPLOAD_RETRY_BACKOFF_MS } from '../constants'
 import type { DuplicateInfo, UploadErrorCode, UploadFileResult, UploadProgress } from '../types'
+import { getFileType } from '../utils/fileType'
 
 type PendingDuplicate = {
   file: File
@@ -35,14 +36,6 @@ async function computeHash(file: File): Promise<string> {
   const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
-}
-
-function getFileType(fileName: string): string | null {
-  const lower = fileName.toLowerCase()
-  if (lower.endsWith('.sdlxliff')) return 'sdlxliff'
-  if (lower.endsWith('.xlf') || lower.endsWith('.xliff')) return 'xliff'
-  if (lower.endsWith('.xlsx')) return 'xlsx'
-  return null
 }
 
 async function sleep(ms: number): Promise<void> {
@@ -78,6 +71,11 @@ function uploadWithProgress(
     })
 
     xhr.addEventListener('error', () => {
+      resolve({ ok: false, status: 0, data: null })
+    })
+
+    // L2: treat abort as a network error so retry logic applies
+    xhr.addEventListener('abort', () => {
       resolve({ ok: false, status: 0, data: null })
     })
 
@@ -141,7 +139,7 @@ export function useFileUpload({ projectId }: UseFileUploadOptions): UseFileUploa
     return null
   }
 
-  async function processFiles(files: File[], batchId?: string) {
+  async function processFiles(files: File[], batchId?: string, append = false) {
     setIsUploading(true)
 
     // client-side validation
@@ -202,8 +200,14 @@ export function useFileUpload({ projectId }: UseFileUploadOptions): UseFileUploa
       validFiles.push({ file, fileId })
     }
 
-    setProgress(initialProgress)
-    setLargeFileWarnings(warnings)
+    // M3: append mode for confirmRerun continuation — preserve prior progress entries
+    if (append) {
+      setProgress((prev) => [...prev, ...initialProgress])
+      setLargeFileWarnings((prev) => [...prev, ...warnings])
+    } else {
+      setProgress(initialProgress)
+      setLargeFileWarnings(warnings)
+    }
 
     if (validFiles.length === 0) {
       setIsUploading(false)
@@ -277,7 +281,7 @@ export function useFileUpload({ projectId }: UseFileUploadOptions): UseFileUploa
       if (result) setUploadedFiles((prev) => [...prev, result])
       // continue with remaining queued files
       if (queue.length > 0) {
-        void processFiles(queue, batchId)
+        void processFiles(queue, batchId, true)
       } else {
         setIsUploading(false)
       }
@@ -286,6 +290,8 @@ export function useFileUpload({ projectId }: UseFileUploadOptions): UseFileUploa
 
   function cancelDuplicate() {
     if (!pendingDuplicate) return
+    // H3: remove queued 'pending' files from progress so UI is not misleading
+    setProgress((prev) => prev.filter((f) => f.status !== 'pending'))
     setPendingDuplicate(null)
     setPendingQueue([])
     setIsUploading(false)

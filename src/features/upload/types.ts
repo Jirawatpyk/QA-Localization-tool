@@ -36,11 +36,11 @@ export type UploadFileResult = {
   fileId: string
   fileName: string
   fileSizeBytes: number
-  fileType: string
+  fileType: 'sdlxliff' | 'xliff' | 'xlsx'
   fileHash: string
   storagePath: string
-  status: string
-  batchId: string
+  status: 'uploaded' | 'parsing' | 'parsed' | 'failed'
+  batchId: string | null
 }
 
 export type BatchRecord = {

@@ -30,5 +30,7 @@ export function buildStoragePath(
   fileName: string,
 ): string {
   const safe = sanitizeFileName(fileName)
-  return `${tenantId}/${projectId}/${fileHash}/${safe}`
+  // L3: fallback to fileHash as filename if sanitization produces empty string
+  const safeName = safe.length > 0 ? safe : fileHash
+  return `${tenantId}/${projectId}/${fileHash}/${safeName}`
 }

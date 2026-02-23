@@ -1,7 +1,10 @@
 vi.mock('server-only', () => ({}))
 
 const mockUploadStorage = vi.fn().mockResolvedValue({ error: null })
-const mockStorageFrom = vi.fn().mockReturnValue({ upload: mockUploadStorage })
+const mockRemoveStorage = vi.fn().mockResolvedValue({ error: null })
+const mockStorageFrom = vi
+  .fn()
+  .mockReturnValue({ upload: mockUploadStorage, remove: mockRemoveStorage })
 vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: () => ({ storage: { from: mockStorageFrom } }),
 }))
@@ -122,7 +125,8 @@ beforeEach(() => {
   mockValuesFn.mockReturnValue({ returning: mockReturningFn })
   mockInsertFn.mockReturnValue({ values: mockValuesFn })
   mockUploadStorage.mockResolvedValue({ error: null })
-  mockStorageFrom.mockReturnValue({ upload: mockUploadStorage })
+  mockRemoveStorage.mockResolvedValue({ error: null })
+  mockStorageFrom.mockReturnValue({ upload: mockUploadStorage, remove: mockRemoveStorage })
   // Ownership check: project found by default
   mockLimitFn.mockResolvedValue([{ id: VALID_UUID }])
   mockWhereFn.mockReturnValue({ limit: mockLimitFn })
@@ -259,11 +263,15 @@ describe('POST /api/upload', () => {
 
     await POST(makeRequest(formData))
 
+    // M9: assert all required audit log fields (action, entityType, entityId, tenantId, userId)
     expect(mockWriteAuditLog).toHaveBeenCalledTimes(2)
     expect(mockWriteAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'file.uploaded',
         entityType: 'file',
+        entityId: MOCK_FILE_RECORD.id,
+        tenantId: MOCK_USER.tenantId,
+        userId: MOCK_USER.id,
       }),
     )
   })
@@ -329,6 +337,18 @@ describe('POST /api/upload', () => {
 
     expect(response.status).toBe(200)
     expect(body.success).toBe(true)
+  })
+
+  // L6: file exactly at MAX_FILE_SIZE_BYTES (15MB) should succeed — boundary is exclusive
+  it('should accept a file exactly at 15MB without rejecting', async () => {
+    const { POST } = await import('./route')
+    const formData = new FormData()
+    formData.append('projectId', VALID_UUID)
+    formData.append('files', makeFile('exact.sdlxliff', 'x', 15 * 1024 * 1024))
+
+    const response = await POST(makeRequest(formData))
+
+    expect(response.status).toBe(200)
   })
 
   it('should return 404 when batchId does not belong to the authenticated tenant', async () => {

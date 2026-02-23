@@ -375,6 +375,79 @@ describe('useFileUpload', () => {
     expect(result.current.largeFileWarnings).toHaveLength(0)
   })
 
+  // H5: confirmRerun resumes processing of remaining queued files
+  it('should process remaining queued files after confirmRerun', async () => {
+    // File 1: not duplicate → uploads. File 2: duplicate → pauses. File 3: queued.
+    mockCheckDuplicate
+      .mockResolvedValueOnce({ success: true, data: { isDuplicate: false } }) // f1
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          isDuplicate: true,
+          existingFileId: 'existing-id',
+          originalUploadDate: '2025-01-01T00:00:00.000Z',
+          existingScore: null,
+        },
+      }) // f2 (duplicate)
+      .mockResolvedValueOnce({ success: true, data: { isDuplicate: false } }) // f3 (from queue)
+
+    const fileResult = {
+      fileId: 'uploaded-id',
+      fileName: 'report.sdlxliff',
+      fileSizeBytes: 1024,
+      fileType: 'sdlxliff',
+      fileHash: 'a'.repeat(64),
+      storagePath: 'path/1',
+      status: 'uploaded',
+      batchId: null,
+    }
+    setupXhrMock({ success: true, data: { files: [fileResult] } })
+
+    const { result } = renderHook(() => useFileUpload({ projectId: VALID_PROJECT_ID }))
+
+    act(() => {
+      void result.current.startUpload([
+        makeFile('f1.sdlxliff'),
+        makeFile('f2.sdlxliff'),
+        makeFile('f3.sdlxliff'),
+      ])
+    })
+
+    // Wait for f2 to be detected as duplicate
+    await waitFor(() => {
+      expect(result.current.pendingDuplicate?.file.name).toBe('f2.sdlxliff')
+    })
+
+    // Confirm re-run — f2 uploads, then f3 processes from the queue
+    act(() => {
+      result.current.confirmRerun()
+    })
+
+    await waitFor(
+      () => {
+        // Queue fully drained: no more pending duplicate, uploading finished
+        expect(result.current.pendingDuplicate).toBeNull()
+        expect(result.current.isUploading).toBe(false)
+        // checkDuplicate called for f1, f2, and f3 (queue continuation)
+        expect(mockCheckDuplicate).toHaveBeenCalledTimes(3)
+      },
+      { timeout: 5000 },
+    )
+  })
+
+  // L6: file exactly at MAX_FILE_SIZE_BYTES boundary should NOT be rejected
+  it('should accept a file exactly at MAX_FILE_SIZE_BYTES boundary', async () => {
+    setupXhrMock({ success: true, data: { files: [] } })
+    const { result } = renderHook(() => useFileUpload({ projectId: VALID_PROJECT_ID }))
+
+    await act(async () => {
+      await result.current.startUpload([makeFile('exact.sdlxliff', 15 * 1024 * 1024)])
+    })
+
+    // Boundary is exclusive (> not >=), so 15MB exactly should not be FILE_SIZE_EXCEEDED
+    expect(result.current.progress[0]?.error).not.toBe('FILE_SIZE_EXCEEDED')
+  })
+
   it('should cancel pending duplicate and clear queue', async () => {
     mockCheckDuplicate.mockResolvedValue({
       success: true,

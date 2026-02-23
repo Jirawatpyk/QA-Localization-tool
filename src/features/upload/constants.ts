@@ -11,6 +11,4 @@ export const UPLOAD_RETRY_COUNT = 3
 
 export const UPLOAD_RETRY_BACKOFF_MS = [1000, 2000, 4000] as const
 
-export const UPLOAD_PROGRESS_INTERVAL_MS = 100
-
 export const UPLOAD_STORAGE_BUCKET = 'project-files'

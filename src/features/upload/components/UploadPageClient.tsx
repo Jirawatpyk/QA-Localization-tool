@@ -21,7 +21,6 @@ export function UploadPageClient({ projectId }: UploadPageClientProps) {
     largeFileWarnings,
     isUploading,
     pendingDuplicate,
-    uploadedFiles,
     startUpload,
     confirmRerun,
     cancelDuplicate,
@@ -60,10 +59,7 @@ export function UploadPageClient({ projectId }: UploadPageClientProps) {
 
       <FileSizeWarning fileNames={largeFileWarnings} />
 
-      <UploadProgressList
-        files={progress}
-        batchTotal={uploadedFiles.length + progress.filter((f) => f.status !== 'uploaded').length}
-      />
+      <UploadProgressList files={progress} batchTotal={progress.length} />
 
       {pendingDuplicate && (
         <DuplicateDetectionDialog

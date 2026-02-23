@@ -158,4 +158,44 @@ describe('createBatch', () => {
     expect(result.success).toBe(false)
     if (!result.success) expect(result.code).toBe('PROJECT_NOT_FOUND')
   })
+
+  // M12: fileCount boundary tests
+  it('should accept fileCount=1 (minimum valid)', async () => {
+    mockReturningFn.mockResolvedValueOnce([{ ...MOCK_BATCH, fileCount: 1 }])
+    const { createBatch } = await import('./createBatch.action')
+
+    const result = await createBatch({ projectId: VALID_UUID, fileCount: 1 })
+
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.fileCount).toBe(1)
+  })
+
+  it('should accept fileCount=50 (maximum valid)', async () => {
+    mockReturningFn.mockResolvedValueOnce([{ ...MOCK_BATCH, fileCount: 50 }])
+    const { createBatch } = await import('./createBatch.action')
+
+    const result = await createBatch({ projectId: VALID_UUID, fileCount: 50 })
+
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.fileCount).toBe(50)
+  })
+
+  it('should return VALIDATION_ERROR for non-integer fileCount', async () => {
+    const { createBatch } = await import('./createBatch.action')
+
+    const result = await createBatch({ projectId: VALID_UUID, fileCount: 1.5 })
+
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.code).toBe('VALIDATION_ERROR')
+  })
+
+  // L7: withTenant called with authenticated tenantId
+  it('should call withTenant with the authenticated tenantId', async () => {
+    const { withTenant } = await import('@/db/helpers/withTenant')
+    const { createBatch } = await import('./createBatch.action')
+
+    await createBatch({ projectId: VALID_UUID, fileCount: 3 })
+
+    expect(vi.mocked(withTenant)).toHaveBeenCalledWith(expect.anything(), MOCK_USER.tenantId)
+  })
 })

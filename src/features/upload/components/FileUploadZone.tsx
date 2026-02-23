@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 import { ALLOWED_EXTENSIONS } from '../constants'
 
 type FileUploadZoneProps = {
-  onFilesSelected: (files: File[]) => void
+  onFilesSelected: (files: File[]) => Promise<void>
   isUploading: boolean
   className?: string
   'data-tour'?: string

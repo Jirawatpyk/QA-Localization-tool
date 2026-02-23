@@ -66,4 +66,51 @@ describe('UploadProgressList', () => {
     )
     expect(screen.getByText('~45s remaining')).toBeTruthy()
   })
+
+  // M10: all remaining error codes
+  it('should show error message for FILE_SIZE_EXCEEDED', () => {
+    render(
+      <UploadProgressList
+        files={[makeProgress({ status: 'error', error: 'FILE_SIZE_EXCEEDED' })]}
+      />,
+    )
+    expect(screen.getByRole('alert').textContent).toContain('15MB')
+  })
+
+  it('should show error message for UNSUPPORTED_FORMAT', () => {
+    render(
+      <UploadProgressList
+        files={[makeProgress({ status: 'error', error: 'UNSUPPORTED_FORMAT' })]}
+      />,
+    )
+    expect(screen.getByRole('alert').textContent).toContain('Unsupported')
+  })
+
+  it('should show error message for STORAGE_ERROR', () => {
+    render(
+      <UploadProgressList files={[makeProgress({ status: 'error', error: 'STORAGE_ERROR' })]} />,
+    )
+    expect(screen.getByRole('alert').textContent).toContain('Storage error')
+  })
+
+  it('should show error message for BATCH_SIZE_EXCEEDED', () => {
+    render(
+      <UploadProgressList
+        files={[makeProgress({ status: 'error', error: 'BATCH_SIZE_EXCEEDED' })]}
+      />,
+    )
+    expect(screen.getByRole('alert').textContent).toContain('Batch limit')
+  })
+
+  it('should show error message for DUPLICATE_FILE', () => {
+    render(
+      <UploadProgressList files={[makeProgress({ status: 'error', error: 'DUPLICATE_FILE' })]} />,
+    )
+    expect(screen.getByRole('alert').textContent).toContain('Duplicate')
+  })
+
+  it('should show fallback "Upload failed" when error is null', () => {
+    render(<UploadProgressList files={[makeProgress({ status: 'error', error: null })]} />)
+    expect(screen.getByRole('alert').textContent).toContain('Upload failed')
+  })
 })

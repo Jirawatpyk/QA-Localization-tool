@@ -119,4 +119,22 @@ describe('getUploadedFiles', () => {
     expect(result.success).toBe(false)
     if (!result.success) expect(result.code).toBe('VALIDATION_ERROR')
   })
+
+  // M13: DB exception propagates rather than silently returning success
+  it('should propagate DB exception rather than swallowing it as empty success', async () => {
+    mockOrderByFn.mockRejectedValue(new Error('DB connection failed'))
+    const { getUploadedFiles } = await import('./getUploadedFiles.action')
+
+    await expect(getUploadedFiles({ projectId: VALID_UUID })).rejects.toThrow()
+  })
+
+  // L7: withTenant called with authenticated tenantId
+  it('should call withTenant with the authenticated tenantId', async () => {
+    const { withTenant } = await import('@/db/helpers/withTenant')
+    const { getUploadedFiles } = await import('./getUploadedFiles.action')
+
+    await getUploadedFiles({ projectId: VALID_UUID })
+
+    expect(vi.mocked(withTenant)).toHaveBeenCalledWith(expect.anything(), MOCK_USER.tenantId)
+  })
 })

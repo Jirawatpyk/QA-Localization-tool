@@ -1,5 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
@@ -13,21 +14,15 @@ import {
   UPLOAD_STORAGE_BUCKET,
 } from '@/features/upload/constants'
 import { computeFileHash } from '@/features/upload/utils/fileHash.server'
+import { getFileType } from '@/features/upload/utils/fileType'
 import { buildStoragePath } from '@/features/upload/utils/storagePath'
 import { requireRole } from '@/lib/auth/requireRole'
 import { DEFAULT_BATCH_SIZE, MAX_FILE_SIZE_BYTES } from '@/lib/constants'
 import { logger } from '@/lib/logger'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-function getFileType(fileName: string): 'sdlxliff' | 'xliff' | 'xlsx' | null {
-  const ext = fileName.split('.').pop()?.toLowerCase()
-  if (ext === 'sdlxliff') return 'sdlxliff'
-  if (ext === 'xlf' || ext === 'xliff') return 'xliff'
-  if (ext === 'xlsx') return 'xlsx'
-  return null
-}
-
 const STORAGE_ALREADY_EXISTS_ERROR = 'The resource already exists'
+const uuidSchema = z.string().uuid()
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   // 1. Auth check
@@ -64,6 +59,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   if (!projectId) {
     return NextResponse.json({ error: 'projectId is required' }, { status: 400 })
+  }
+
+  // H4: validate projectId and batchId as UUIDs before DB queries
+  if (!uuidSchema.safeParse(projectId).success) {
+    return NextResponse.json({ error: 'Invalid project ID format' }, { status: 400 })
+  }
+  if (batchId && !uuidSchema.safeParse(batchId).success) {
+    return NextResponse.json({ error: 'Invalid batch ID format' }, { status: 400 })
   }
 
   // 4. Collect files from FormData
@@ -120,7 +123,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     fileHash: string
     storagePath: string
     status: string
-    batchId: string | null | undefined
+    batchId: string | null
   }> = []
   const warnings: string[] = []
 
@@ -201,6 +204,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       .returning()
 
     if (!fileRecord) {
+      // H1: cleanup storage to prevent orphan when DB insert fails
+      await admin.storage.from(UPLOAD_STORAGE_BUCKET).remove([storagePath])
       return NextResponse.json(
         { error: 'Failed to record file in database', fileName: file.name },
         { status: 500 },
@@ -208,22 +213,27 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // 5f. Write audit log — metadata only, NEVER file content (NFR10)
-    await writeAuditLog({
-      tenantId: currentUser.tenantId,
-      userId: currentUser.id,
-      entityType: 'file',
-      entityId: fileRecord.id,
-      action: 'file.uploaded',
-      newValue: {
-        fileId: fileRecord.id,
-        fileName: file.name,
-        fileSizeBytes: file.size,
-        fileType,
-        fileHash,
-        projectId,
-        batchId: batchId ?? null,
-      },
-    })
+    // H2: non-fatal — do not abort batch if audit write fails
+    try {
+      await writeAuditLog({
+        tenantId: currentUser.tenantId,
+        userId: currentUser.id,
+        entityType: 'file',
+        entityId: fileRecord.id,
+        action: 'file.uploaded',
+        newValue: {
+          fileId: fileRecord.id,
+          fileName: file.name,
+          fileSizeBytes: file.size,
+          fileType,
+          fileHash,
+          projectId,
+          batchId: batchId ?? null,
+        },
+      })
+    } catch (auditError) {
+      logger.error({ auditError, fileId: fileRecord.id }, 'Audit log write failed — non-fatal')
+    }
 
     logger.info(
       {

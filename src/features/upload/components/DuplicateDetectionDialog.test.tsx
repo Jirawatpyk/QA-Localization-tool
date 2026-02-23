@@ -101,4 +101,19 @@ describe('DuplicateDetectionDialog', () => {
     )
     expect(container.textContent).not.toContain('Duplicate File Detected')
   })
+
+  // M11: Radix onOpenChange — Escape key triggers onCancel via Dialog.onOpenChange
+  it('should call onCancel when Escape key closes the dialog', async () => {
+    render(
+      <DuplicateDetectionDialog
+        open={true}
+        fileName="report.sdlxliff"
+        duplicateInfo={DUPLICATE_INFO}
+        onRerun={onRerun}
+        onCancel={onCancel}
+      />,
+    )
+    await userEvent.keyboard('{Escape}')
+    expect(onCancel).toHaveBeenCalledOnce()
+  })
 })

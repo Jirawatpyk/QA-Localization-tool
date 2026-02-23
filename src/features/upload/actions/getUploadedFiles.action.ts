@@ -3,13 +3,14 @@
 import 'server-only'
 
 import { and, desc, eq } from 'drizzle-orm'
-import { z } from 'zod'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { files } from '@/db/schema/files'
 import { requireRole } from '@/lib/auth/requireRole'
 import type { ActionResult } from '@/types/actionResult'
+
+import { getUploadedFilesSchema } from '../validation/uploadSchemas'
 
 type UploadedFile = {
   id: string
@@ -22,10 +23,6 @@ type UploadedFile = {
   batchId: string | null
   createdAt: string
 }
-
-const getUploadedFilesSchema = z.object({
-  projectId: z.string().uuid(),
-})
 
 export async function getUploadedFiles(input: unknown): Promise<ActionResult<UploadedFile[]>> {
   let currentUser
@@ -42,6 +39,8 @@ export async function getUploadedFiles(input: unknown): Promise<ActionResult<Upl
 
   const { projectId } = parsed.data
 
+  // M13: wrap DB query — propagate exception so callers receive a thrown error
+  // rather than silently receiving ActionResult{success:true, data:[]} on connection failure
   const rows = await db
     .select({
       id: files.id,
