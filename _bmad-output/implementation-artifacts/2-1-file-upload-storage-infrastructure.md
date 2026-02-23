@@ -41,65 +41,65 @@ so that I can start the quality analysis workflow.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: DB Schema Migration — `files` table alterations + `upload_batches` table (AC: #4, #5)
-  - [ ] 1.1 Update `src/db/schema/files.ts` — add `fileHash`, `uploadedBy` columns
-  - [ ] 1.2 Create `src/db/schema/uploadBatches.ts` — new batch tracking table
-  - [ ] 1.3 Update `src/db/schema/index.ts` + `src/db/schema/relations.ts` — register new table + relations
-  - [ ] 1.4 Run `npm run db:generate` → generates migration SQL
-  - [ ] 1.5 Add RLS policies for `upload_batches` table in `supabase/migrations/`
-  - [ ] 1.6 Run `npm run test:rls` — verify files + upload_batches RLS
+- [x] Task 1: DB Schema Migration — `files` table alterations + `upload_batches` table (AC: #4, #5)
+  - [x] 1.1 Update `src/db/schema/files.ts` — add `fileHash`, `uploadedBy` columns
+  - [x] 1.2 Create `src/db/schema/uploadBatches.ts` — new batch tracking table
+  - [x] 1.3 Update `src/db/schema/index.ts` + `src/db/schema/relations.ts` — register new table + relations
+  - [x] 1.4 Run `npm run db:generate` → generates migration SQL (`0003_melted_tarot.sql`)
+  - [x] 1.5 Add RLS policies for `upload_batches` table in `supabase/migrations/` (`00011_upload_batches_rls.sql`)
+  - [x] 1.6 Run `npm run test:rls` — verify files + upload_batches RLS — **28/28 ✅**
 
-- [ ] Task 2: Upload Feature Module — Types, Validation & Constants (AC: #1, #2)
-  - [ ] 2.1 Create `src/features/upload/types.ts` — `UploadFileResult`, `UploadProgress`, `DuplicateInfo`, `BatchRecord`, `UploadErrorCode` (union type: `'FILE_SIZE_EXCEEDED' | 'UNSUPPORTED_FORMAT' | 'BATCH_SIZE_EXCEEDED' | 'DUPLICATE_FILE' | 'STORAGE_ERROR' | 'NETWORK_ERROR'`)
-  - [ ] 2.2 Create `src/features/upload/validation/uploadSchemas.ts` — Zod schemas for file validation
-  - [ ] 2.3 Create `src/features/upload/constants.ts` — upload-specific constants ONLY: `LARGE_FILE_WARNING_BYTES`, `ALLOWED_FILE_TYPES`, `ALLOWED_EXTENSIONS`. REUSE `MAX_FILE_SIZE_BYTES` and `DEFAULT_BATCH_SIZE` from `@/lib/constants` (ALREADY EXIST — do NOT duplicate)
-  - [ ] 2.4 Unit tests for validation schemas + constants
+- [x] Task 2: Upload Feature Module — Types, Validation & Constants (AC: #1, #2)
+  - [x] 2.1 Create `src/features/upload/types.ts`
+  - [x] 2.2 Create `src/features/upload/validation/uploadSchemas.ts`
+  - [x] 2.3 Create `src/features/upload/constants.ts`
+  - [x] 2.4 Unit tests for validation schemas + constants
 
-- [ ] Task 3: File Hash Utility + Storage Path Builder (AC: #1, #3)
-  - [ ] 3.1 Create `src/features/upload/utils/fileHash.server.ts` — server-side SHA-256 via Node.js `crypto.createHash('sha256')` (used in Route Handler). Client-side hash uses Web Crypto in `useFileUpload` hook (for duplicate pre-check before upload)
-  - [ ] 3.2 Create `src/features/upload/utils/storagePath.ts` — build tenant-scoped path `{tenantId}/{projectId}/{fileHash}/{fileName}`
-  - [ ] 3.3 Unit tests for hash + path utilities
+- [x] Task 3: File Hash Utility + Storage Path Builder (AC: #1, #3)
+  - [x] 3.1 Create `src/features/upload/utils/fileHash.server.ts`
+  - [x] 3.2 Create `src/features/upload/utils/storagePath.ts`
+  - [x] 3.3 Unit tests for hash + path utilities
 
-- [ ] Task 4: Route Handler — File Upload Endpoint (AC: #1, #2, #4)
-  - [ ] 4.1 Create `src/app/api/upload/route.ts` — `POST` handler with multipart/form-data
-  - [ ] 4.2 Implement 15MB guard BEFORE reading file body (check `Content-Length` header first, then stream size)
-  - [ ] 4.3 Compute SHA-256 hash of uploaded file bytes
-  - [ ] 4.4 Upload to Supabase Storage at tenant-scoped path via `createAdminClient()` from `@/lib/supabase/admin` (NOT server client — admin client bypasses RLS for server-side storage operations)
-  - [ ] 4.5 Insert `files` record via Drizzle with `withTenant()` filter
-  - [ ] 4.6 Write audit log entry (`file.uploaded`)
-  - [ ] 4.7 Unit tests for route handler (mock Supabase Storage + DB)
+- [x] Task 4: Route Handler — File Upload Endpoint (AC: #1, #2, #4)
+  - [x] 4.1 Create `src/app/api/upload/route.ts`
+  - [x] 4.2 15MB guard via Content-Length header + per-file size check
+  - [x] 4.3 SHA-256 hash via Node.js `crypto.createHash`
+  - [x] 4.4 Upload to Supabase Storage via `createAdminClient()`
+  - [x] 4.5 Insert `files` record via Drizzle with `withTenant()` + cross-tenant FK guard on `projectId` + `batchId`
+  - [x] 4.6 Write audit log entry (`file.uploaded`)
+  - [x] 4.7 Unit tests — **14 tests ✅**
 
-- [ ] Task 5: Duplicate Detection Server Action (AC: #3)
-  - [ ] 5.1 Create `src/features/upload/actions/checkDuplicate.action.ts` — query by `file_hash` + `project_id`
-  - [ ] 5.2 Return duplicate info: original upload date, existing score (LEFT JOIN scores)
-  - [ ] 5.3 Unit tests for duplicate check action
+- [x] Task 5: Duplicate Detection Server Action (AC: #3)
+  - [x] 5.1 Create `src/features/upload/actions/checkDuplicate.action.ts`
+  - [x] 5.2 Return `isDuplicate`, `existingFileId`, `originalUploadDate`, `existingScore`
+  - [x] 5.3 Unit tests ✅
 
-- [ ] Task 6: Batch Tracking Server Action (AC: #5)
-  - [ ] 6.1 Create `src/features/upload/actions/createBatch.action.ts` — create `upload_batches` record
-  - [ ] 6.2 Create `src/features/upload/actions/getUploadedFiles.action.ts` — list files for project
-  - [ ] 6.3 Unit tests for batch + file list actions
+- [x] Task 6: Batch Tracking Server Action (AC: #5)
+  - [x] 6.1 Create `src/features/upload/actions/createBatch.action.ts`
+  - [x] 6.2 Create `src/features/upload/actions/getUploadedFiles.action.ts`
+  - [x] 6.3 Unit tests ✅
 
-- [ ] Task 7: Upload UI Components (AC: #1, #2, #3, #5)
-  - [ ] 7.1 Install shadcn Progress component: `npx shadcn@latest add progress` (required for upload progress bars)
-  - [ ] 7.2 Create `src/features/upload/components/FileUploadZone.tsx` — drag-and-drop + browse (client component)
-  - [ ] 7.3 Create `src/features/upload/components/UploadProgressList.tsx` — per-file progress bars with ETA
-  - [ ] 7.4 Create `src/features/upload/components/DuplicateDetectionDialog.tsx` — "re-run or cancel" dialog
-  - [ ] 7.5 Create `src/features/upload/components/FileSizeWarning.tsx` — 10-15MB warning banner
-  - [ ] 7.6 Create `src/features/upload/hooks/useFileUpload.ts` — orchestration hook (client-side validation → batch size check (50 max) → hash via Web Crypto → duplicate check → upload via XHR → progress tracking → auto-retry 3x on network failure with exponential backoff 1s/2s/4s)
-  - [ ] 7.7 Unit tests for hook + component tests for interactive components
+- [x] Task 7: Upload UI Components (AC: #1, #2, #3, #5)
+  - [x] 7.1 Install shadcn Progress component
+  - [x] 7.2 Create `FileUploadZone.tsx` — drag-and-drop + browse + mobile guard
+  - [x] 7.3 Create `UploadProgressList.tsx` — per-file progress bars with ETA
+  - [x] 7.4 Create `DuplicateDetectionDialog.tsx`
+  - [x] 7.5 Create `FileSizeWarning.tsx` (uses design tokens — no inline palette colors)
+  - [x] 7.6 Create `useFileUpload.ts` hook — XHR progress, retry backoff 1s/2s/4s, duplicate detection
+  - [x] 7.7 Unit tests — **7 tests ✅** (XHR mock via real class extension pattern)
 
-- [ ] Task 8: Project Page Integration + Navigation (AC: #1)
-  - [ ] 8.1 Update `src/features/project/components/ProjectSubNav.tsx` — add "Files" tab with href `/projects/${id}/upload` (CRITICAL: currently only Settings + Glossary tabs exist — users cannot navigate to upload page without this)
-  - [ ] 8.2 Create `src/app/(app)/projects/[projectId]/upload/page.tsx` — RSC wrapper page
-  - [ ] 8.3 Wire `FileUploadZone` into project page layout
-  - [ ] 8.4 Add `data-tour="project-upload"` attribute for Epic 2 Story 2.8 onboarding tour
-  - [ ] 8.5 Add mobile guard: on viewport <768px, show "Switch to desktop for file upload" banner and hide upload zone (UX spec: mobile = Dashboard only)
+- [x] Task 8: Project Page Integration + Navigation (AC: #1)
+  - [x] 8.1 Update `ProjectSubNav.tsx` — add "Files" tab (first position)
+  - [x] 8.2 Create `src/app/(app)/projects/[projectId]/upload/page.tsx` — RSC wrapper
+  - [x] 8.3 Create `UploadPageClient.tsx` — wires all upload components
+  - [x] 8.4 `data-tour="project-upload"` attribute added to FileUploadZone
+  - [x] 8.5 Mobile guard via `hidden md:block` pattern
 
-- [ ] Task 9: Integration & Testing
-  - [ ] 9.1 Add factory functions: `buildFile()`, `buildUploadBatch()` to `src/test/factories.ts`
-  - [ ] 9.2 Run full test suite — verify 0 regressions
-  - [ ] 9.3 Run type check (`npm run type-check`) — 0 errors
-  - [ ] 9.4 Run lint (`npm run lint`) — 0 errors
+- [x] Task 9: Integration & Testing
+  - [x] 9.1 Add `buildFile()`, `buildUploadBatch()` factories to `src/test/factories.ts`
+  - [x] 9.2 Full test suite — **57 files / 462 tests ✅** (0 regressions)
+  - [x] 9.3 Type check — **0 errors ✅**
+  - [x] 9.4 Lint — **0 errors, 0 warnings ✅**
 
 ## Dev Notes
 
@@ -578,10 +578,71 @@ npm run dev
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+claude-sonnet-4-6
 
 ### Debug Log References
 
+1. **XHR mock `is not a constructor`** — `vi.fn(() => mockXhr)` ไม่สามารถใช้เป็น constructor ได้ใน jsdom แก้โดยเปลี่ยนเป็น real class `class FakeXHR extends MockXHR` ใน `setupXhrMock()`
+2. **`should mark file as large warning` test timeout** — deadlock เพราะ `await startUpload(...)` รอ XHR ที่ยังไม่ถูก trigger แก้ด้วย fire-and-forget: `act(() => { void result.current.startUpload(...) })` + `await waitFor(...)`
+3. **Drizzle migration `DATABASE_URL: undefined`** — `drizzle-kit` ไม่อ่าน `.env.local` อัตโนมัติ แก้ด้วย `npx dotenv-cli -e .env.local -- npm run db:migrate`
+4. **`supabase start` port conflict** — port 54322 ถูกใช้โดย project `zyncdata` แก้ด้วย `npx supabase stop --project-id zyncdata` ก่อน
+5. **`supabase start` migration error** — `00010_upload_batches_rls.sql` ทำงานก่อน CREATE TABLE แก้โดย split เป็น `00010_story_2_1_schema.sql` (DDL) + `00011_upload_batches_rls.sql` (RLS)
+6. **Tenant isolation HIGH findings** — Tenant Isolation Checker พบ `projectId` + `batchId` จาก FormData ไม่ถูก verify ownership เพิ่ม `withTenant()` + `eq()` SELECT queries ก่อน processing loop
+
 ### Completion Notes List
 
+1. Anti-pattern scan: 0 CRITICAL, 0 HIGH — MEDIUM/LOW ทั้งหมดแก้ก่อน review (inline Tailwind colors → design tokens, explicit array type, remove re-export proxy)
+2. Tenant isolation scan: PASS — ทุก action ใช้ `withTenant()` ถูกต้อง, route handler มี FK ownership guard ทั้ง projectId + batchId
+3. Cloud DB: Drizzle migration applied ✅, RLS policies applied ✅ (upload_batches: 4 policies)
+4. Local Supabase: ทำงานได้ปกติหลัง fix migration ordering, RLS tests 28/28 ✅
+5. `@testing-library/user-event` ถูก install เพิ่มเป็น dev dependency
+
 ### File List
+
+**New files:**
+- `src/db/schema/uploadBatches.ts`
+- `src/db/migrations/0003_melted_tarot.sql`
+- `src/features/upload/types.ts`
+- `src/features/upload/constants.ts`
+- `src/features/upload/validation/uploadSchemas.ts`
+- `src/features/upload/validation/uploadSchemas.test.ts`
+- `src/features/upload/utils/fileHash.server.ts`
+- `src/features/upload/utils/fileHash.server.test.ts`
+- `src/features/upload/utils/storagePath.ts`
+- `src/features/upload/utils/storagePath.test.ts`
+- `src/features/upload/actions/checkDuplicate.action.ts`
+- `src/features/upload/actions/checkDuplicate.action.test.ts`
+- `src/features/upload/actions/createBatch.action.ts`
+- `src/features/upload/actions/createBatch.action.test.ts`
+- `src/features/upload/actions/getUploadedFiles.action.ts`
+- `src/features/upload/actions/getUploadedFiles.action.test.ts`
+- `src/features/upload/hooks/useFileUpload.ts`
+- `src/features/upload/hooks/useFileUpload.test.ts`
+- `src/features/upload/components/FileUploadZone.tsx`
+- `src/features/upload/components/FileUploadZone.test.tsx`
+- `src/features/upload/components/UploadProgressList.tsx`
+- `src/features/upload/components/UploadProgressList.test.tsx`
+- `src/features/upload/components/DuplicateDetectionDialog.tsx`
+- `src/features/upload/components/DuplicateDetectionDialog.test.tsx`
+- `src/features/upload/components/FileSizeWarning.tsx`
+- `src/features/upload/components/UploadPageClient.tsx`
+- `src/app/api/upload/route.ts`
+- `src/app/api/upload/route.test.ts`
+- `src/app/(app)/projects/[projectId]/upload/page.tsx`
+- `src/components/ui/progress.tsx`
+- `src/db/__tests__/rls/files.rls.test.ts`
+- `src/db/__tests__/rls/upload-batches.rls.test.ts`
+- `supabase/migrations/00010_story_2_1_schema.sql`
+- `supabase/migrations/00011_upload_batches_rls.sql`
+- `e2e/helpers/fileUpload.ts`
+- `e2e/fixtures/sdlxliff/minimal.sdlxliff`
+- `e2e/fixtures/sdlxliff/with-namespaces.sdlxliff`
+- `e2e/fixtures/xliff/standard.xliff`
+
+**Modified files:**
+- `src/db/schema/files.ts` — add `fileHash`, `uploadedBy`, `batchId` columns
+- `src/db/schema/index.ts` — export `uploadBatches`
+- `src/db/schema/relations.ts` — add `uploadBatches` relations
+- `src/features/project/components/ProjectSubNav.tsx` — add "Files" tab
+- `src/test/factories.ts` — add `buildFile()`, `buildUploadBatch()`
+- `package.json` / `package-lock.json` — add `@testing-library/user-event`
