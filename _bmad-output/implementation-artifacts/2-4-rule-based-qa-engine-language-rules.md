@@ -1,6 +1,6 @@
 # Story 2.4: Rule-based QA Engine & Language Rules
 
-Status: in-review
+Status: done
 
 <!-- Validated: 2026-02-24 — validate-create-story applied 23 improvements (8C + 7E + 4O + 4L) -->
 
@@ -214,7 +214,7 @@ so that I can trust this tool to replace Xbench with 100% parity.
 ## Dev Agent Record
 
 ### Implementation Summary
-- **Status:** in-review
+- **Status:** done
 - **Tests:** 308 passed across 15 test files (14 new + 1 modified) — 243 pre-CR + 9 CR R1 + 40 CR R2 + 16 CR R3
 - **Quality Gates:** type-check ✅ | lint ✅ | regression ✅ | performance ✅
 - **Pre-CR Scans:** anti-pattern-detector (0 CRITICAL/HIGH) ✅ | tenant-isolation-checker (2 issues found & fixed) ✅
