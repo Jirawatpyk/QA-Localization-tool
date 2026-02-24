@@ -277,3 +277,53 @@ export function buildScoringFinding(overrides?: Partial<ContributingFinding>): C
     ...overrides,
   }
 }
+
+/**
+ * Builds a pipeline.process-file event data object for testing Inngest handlers.
+ */
+export function buildPipelineEvent(
+  overrides?: Partial<{
+    fileId: string
+    projectId: string
+    tenantId: string
+    userId: string
+    mode: 'economy' | 'thorough'
+    uploadBatchId: string
+  }>,
+) {
+  return {
+    fileId: faker.string.uuid(),
+    projectId: faker.string.uuid(),
+    tenantId: faker.string.uuid(),
+    userId: faker.string.uuid(),
+    mode: 'economy' as const,
+    uploadBatchId: faker.string.uuid(),
+    ...overrides,
+  }
+}
+
+/**
+ * Builds a pipeline.batch-started event data object for testing Inngest batch handlers.
+ */
+export function buildPipelineBatchEvent(
+  overrides?: Partial<{
+    batchId: string
+    fileIds: string[]
+    projectId: string
+    tenantId: string
+    userId: string
+    mode: 'economy' | 'thorough'
+    uploadBatchId: string
+  }>,
+) {
+  return {
+    batchId: faker.string.uuid(),
+    fileIds: [faker.string.uuid(), faker.string.uuid()],
+    projectId: faker.string.uuid(),
+    tenantId: faker.string.uuid(),
+    userId: faker.string.uuid(),
+    mode: 'economy' as const,
+    uploadBatchId: faker.string.uuid(),
+    ...overrides,
+  }
+}

@@ -1,0 +1,87 @@
+import { describe, expect, it } from 'vitest'
+
+const VALID_FILE_ID_1 = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
+const VALID_FILE_ID_2 = 'b2c3d4e5-f6a7-4b2c-8d3e-4f5a6b7c8d9e'
+const VALID_PROJECT_ID = 'c3d4e5f6-a7b8-4c9d-8e1f-2a3b4c5d6e7f'
+
+describe('startProcessingSchema', () => {
+  it('should accept valid input with fileIds, projectId, mode', async () => {
+    const { startProcessingSchema } = await import('./pipelineSchema')
+
+    const result = startProcessingSchema.safeParse({
+      fileIds: [VALID_FILE_ID_1, VALID_FILE_ID_2],
+      projectId: VALID_PROJECT_ID,
+      mode: 'economy',
+    })
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.fileIds).toHaveLength(2)
+    expect(result.data.projectId).toBe(VALID_PROJECT_ID)
+    expect(result.data.mode).toBe('economy')
+  })
+
+  it('should reject empty fileIds array', async () => {
+    const { startProcessingSchema } = await import('./pipelineSchema')
+
+    const result = startProcessingSchema.safeParse({
+      fileIds: [],
+      projectId: VALID_PROJECT_ID,
+      mode: 'economy',
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('should reject invalid UUID in fileIds', async () => {
+    const { startProcessingSchema } = await import('./pipelineSchema')
+
+    const result = startProcessingSchema.safeParse({
+      fileIds: ['not-a-valid-uuid'],
+      projectId: VALID_PROJECT_ID,
+      mode: 'economy',
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('should reject invalid mode value', async () => {
+    const { startProcessingSchema } = await import('./pipelineSchema')
+
+    const result = startProcessingSchema.safeParse({
+      fileIds: [VALID_FILE_ID_1],
+      projectId: VALID_PROJECT_ID,
+      mode: 'turbo',
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('should accept economy mode', async () => {
+    const { startProcessingSchema } = await import('./pipelineSchema')
+
+    const result = startProcessingSchema.safeParse({
+      fileIds: [VALID_FILE_ID_1],
+      projectId: VALID_PROJECT_ID,
+      mode: 'economy',
+    })
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.mode).toBe('economy')
+  })
+
+  it('should accept thorough mode', async () => {
+    const { startProcessingSchema } = await import('./pipelineSchema')
+
+    const result = startProcessingSchema.safeParse({
+      fileIds: [VALID_FILE_ID_1],
+      projectId: VALID_PROJECT_ID,
+      mode: 'thorough',
+    })
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.mode).toBe('thorough')
+  })
+})

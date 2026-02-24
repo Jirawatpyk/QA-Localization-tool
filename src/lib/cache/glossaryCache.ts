@@ -5,6 +5,7 @@ import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { glossaries } from '@/db/schema/glossaries'
 import { glossaryTerms } from '@/db/schema/glossaryTerms'
+import type { GlossaryTermRecord } from '@/features/pipeline/engine/types'
 
 /**
  * Load all glossary terms for a project's glossaries.
@@ -31,6 +32,29 @@ export async function getCachedGlossaryTerms(projectId: string, tenantId: string
     .where(inArray(glossaryTerms.glossaryId, glossaryIds))
 
   return terms
+}
+
+/**
+ * Load glossary terms for a project using a single JOIN query.
+ * Non-cached version — safe for Inngest runtime (no "use cache" RSC directive).
+ * Used by runL1ForFile() and other server-side helpers outside RSC.
+ */
+export async function getGlossaryTerms(
+  projectId: string,
+  tenantId: string,
+): Promise<GlossaryTermRecord[]> {
+  return await db
+    .select({
+      id: glossaryTerms.id,
+      glossaryId: glossaryTerms.glossaryId,
+      sourceTerm: glossaryTerms.sourceTerm,
+      targetTerm: glossaryTerms.targetTerm,
+      caseSensitive: glossaryTerms.caseSensitive,
+      createdAt: glossaryTerms.createdAt,
+    })
+    .from(glossaryTerms)
+    .innerJoin(glossaries, eq(glossaryTerms.glossaryId, glossaries.id))
+    .where(and(eq(glossaries.projectId, projectId), withTenant(glossaries.tenantId, tenantId)))
 }
 
 /**

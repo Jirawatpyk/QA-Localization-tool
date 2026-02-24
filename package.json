@@ -58,6 +58,7 @@
   },
   "devDependencies": {
     "@faker-js/faker": "10.3.0",
+    "@inngest/test": "^0.1.9",
     "@playwright/test": "1.58.2",
     "@tailwindcss/postcss": "4.1.18",
     "@testing-library/react": "16.3.2",

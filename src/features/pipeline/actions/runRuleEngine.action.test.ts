@@ -1,35 +1,33 @@
+import { NonRetriableError } from 'inngest'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 // Mock server-only (throws in jsdom)
 vi.mock('server-only', () => ({}))
-
-// ── Hoisted mocks (available in vi.mock factories) ──
-const { mockRequireRole, mockWriteAuditLog, mockGetCachedGlossaryTerms, mockProcessFile, dbState } =
-  vi.hoisted(() => {
-    const state = { callIndex: 0, returnValues: [] as unknown[] }
-    return {
-      mockRequireRole: vi.fn(),
-      mockWriteAuditLog: vi.fn((..._args: unknown[]) => Promise.resolve()),
-      mockGetCachedGlossaryTerms: vi.fn((..._args: unknown[]) => Promise.resolve([])),
-      mockProcessFile: vi.fn((..._args: unknown[]) => Promise.resolve([] as unknown[])),
-      dbState: state,
+vi.mock('inngest', () => ({
+  NonRetriableError: class NonRetriableError extends Error {
+    constructor(msg: string) {
+      super(msg)
+      this.name = 'NonRetriableError'
     }
-  })
+  },
+}))
+
+// ── Hoisted mocks ──
+const { mockRequireRole, mockRunL1ForFile, dbState } = vi.hoisted(() => {
+  const state = { callIndex: 0, returnValues: [] as unknown[] }
+  return {
+    mockRequireRole: vi.fn(),
+    mockRunL1ForFile: vi.fn(),
+    dbState: state,
+  }
+})
 
 vi.mock('@/lib/auth/requireRole', () => ({
   requireRole: (...args: unknown[]) => mockRequireRole(...args),
 }))
 
-vi.mock('@/features/audit/actions/writeAuditLog', () => ({
-  writeAuditLog: (...args: unknown[]) => mockWriteAuditLog(...args),
-}))
-
-vi.mock('@/lib/cache/glossaryCache', () => ({
-  getCachedGlossaryTerms: (...args: unknown[]) => mockGetCachedGlossaryTerms(...args),
-}))
-
-vi.mock('@/features/pipeline/engine/ruleEngine', () => ({
-  processFile: (...args: unknown[]) => mockProcessFile(...args),
+vi.mock('@/features/pipeline/helpers/runL1ForFile', () => ({
+  runL1ForFile: (...args: unknown[]) => mockRunL1ForFile(...args),
 }))
 
 vi.mock('@/lib/logger', () => ({
@@ -39,27 +37,12 @@ vi.mock('@/lib/logger', () => ({
 vi.mock('@/db/client', () => {
   const handler: ProxyHandler<Record<string, unknown>> = {
     get: (_target, prop) => {
-      // Terminal methods that return native Promises (consume from returnValues)
-      if (prop === 'returning' || prop === 'orderBy') {
-        return vi.fn(() => {
-          const value = dbState.returnValues[dbState.callIndex] ?? []
-          dbState.callIndex++
-          return Promise.resolve(value)
-        })
-      }
-      // Thenable: when `await` is used on a Proxy (no explicit terminal method)
       if (prop === 'then') {
         return (resolve?: (v: unknown) => void) => {
           const value = dbState.returnValues[dbState.callIndex] ?? []
           dbState.callIndex++
           resolve?.(value)
         }
-      }
-      if (prop === 'values') {
-        return vi.fn(() => Promise.resolve())
-      }
-      if (prop === 'transaction') {
-        return vi.fn((fn: (tx: unknown) => Promise<void>) => fn(new Proxy({}, handler)))
       }
       return vi.fn(() => new Proxy({}, handler))
     },
@@ -77,43 +60,19 @@ vi.mock('drizzle-orm', () => ({
 }))
 
 vi.mock('@/db/schema/files', () => ({
-  files: { id: 'id', tenantId: 'tenant_id', status: 'status', projectId: 'project_id' },
-}))
-vi.mock('@/db/schema/segments', () => ({
-  segments: { tenantId: 'tenant_id', fileId: 'file_id', segmentNumber: 'segment_number' },
-}))
-vi.mock('@/db/schema/findings', () => ({
-  findings: {
-    tenantId: 'tenant_id',
-    fileId: 'file_id',
-    detectedByLayer: 'detected_by_layer',
-  },
-}))
-vi.mock('@/db/schema/suppressionRules', () => ({
-  suppressionRules: {
-    tenantId: 'tenant_id',
-    isActive: 'is_active',
-    projectId: 'project_id',
-    category: 'category',
-  },
+  files: { id: 'id', tenantId: 'tenant_id', projectId: 'project_id' },
 }))
 
 import { runRuleEngine } from './runRuleEngine.action'
 
 const VALID_UUID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
 
+const mockFileRecord = { projectId: 'project-123' }
 const mockUser = {
   id: 'user-123',
   tenantId: 'tenant-123',
   role: 'qa_reviewer',
   email: 'test@test.com',
-}
-
-const mockFile = {
-  id: VALID_UUID,
-  projectId: 'project-123',
-  tenantId: 'tenant-123',
-  status: 'l1_processing',
 }
 
 describe('runRuleEngine', () => {
@@ -122,9 +81,7 @@ describe('runRuleEngine', () => {
     dbState.callIndex = 0
     dbState.returnValues = []
     mockRequireRole.mockResolvedValue(mockUser)
-    mockProcessFile.mockResolvedValue([])
-    mockGetCachedGlossaryTerms.mockResolvedValue([])
-    mockWriteAuditLog.mockResolvedValue(undefined)
+    mockRunL1ForFile.mockResolvedValue({ findingCount: 0, duration: 50 })
   })
 
   it('should return INVALID_INPUT for invalid fileId', async () => {
@@ -142,146 +99,66 @@ describe('runRuleEngine', () => {
     expect(result.code).toBe('FORBIDDEN')
   })
 
-  it('should return CONFLICT when CAS guard fails', async () => {
-    dbState.returnValues = [[]] // CAS returning() → empty
+  it('should call requireRole with qa_reviewer and write', async () => {
+    dbState.returnValues = [[]] // no file → early return
+    await runRuleEngine({ fileId: VALID_UUID })
+    expect(mockRequireRole).toHaveBeenCalledWith('qa_reviewer', 'write')
+  })
+
+  it('should return NOT_FOUND when file does not exist', async () => {
+    dbState.returnValues = [[]] // select projectId returns empty
+    const result = await runRuleEngine({ fileId: VALID_UUID })
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('NOT_FOUND')
+  })
+
+  it('should call runL1ForFile with fileId, projectId, tenantId', async () => {
+    dbState.returnValues = [[mockFileRecord]]
+    await runRuleEngine({ fileId: VALID_UUID })
+    expect(mockRunL1ForFile).toHaveBeenCalledWith({
+      fileId: VALID_UUID,
+      projectId: 'project-123',
+      tenantId: 'tenant-123',
+    })
+  })
+
+  it('should return CONFLICT when runL1ForFile throws NonRetriableError', async () => {
+    dbState.returnValues = [[mockFileRecord]]
+    mockRunL1ForFile.mockRejectedValue(new NonRetriableError('File not in parsed state'))
     const result = await runRuleEngine({ fileId: VALID_UUID })
     expect(result.success).toBe(false)
     if (result.success) return
     expect(result.code).toBe('CONFLICT')
   })
 
-  it('should call requireRole with qa_reviewer and write', async () => {
-    dbState.returnValues = [[]] // CAS fails → early return
-    await runRuleEngine({ fileId: VALID_UUID })
-    expect(mockRequireRole).toHaveBeenCalledWith('qa_reviewer', 'write')
-  })
-
-  it('should call processFile when CAS guard succeeds', async () => {
-    // 0: CAS returning() → [file], 1: segments orderBy() → [],
-    // 2: suppression rules .then() → [], 3: final status update .then() → []
-    dbState.returnValues = [[mockFile], [], [], []]
-    await runRuleEngine({ fileId: VALID_UUID })
-    expect(mockProcessFile).toHaveBeenCalled()
-  })
-
-  it('should return findingCount in success result', async () => {
-    dbState.returnValues = [[mockFile], [], [], []]
-    mockProcessFile.mockResolvedValue([
-      {
-        segmentId: 'seg-1',
-        category: 'completeness',
-        severity: 'critical',
-        description: 'test',
-        suggestedFix: null,
-        sourceExcerpt: 'a',
-        targetExcerpt: 'b',
-      },
-    ])
-
+  it('should return findingCount and duration in success result', async () => {
+    dbState.returnValues = [[mockFileRecord]]
+    mockRunL1ForFile.mockResolvedValue({ findingCount: 3, duration: 120 })
     const result = await runRuleEngine({ fileId: VALID_UUID })
     expect(result.success).toBe(true)
     if (!result.success) return
-    expect(result.data.findingCount).toBe(1)
+    expect(result.data.findingCount).toBe(3)
     expect(result.data.fileId).toBe(VALID_UUID)
-    expect(typeof result.data.duration).toBe('number')
-  })
-
-  it('should write audit log on success', async () => {
-    dbState.returnValues = [[mockFile], [], [], []]
-    mockProcessFile.mockResolvedValue([
-      {
-        segmentId: 'seg-1',
-        category: 'completeness',
-        severity: 'critical',
-        description: 'test',
-        suggestedFix: null,
-        sourceExcerpt: 'a',
-        targetExcerpt: 'b',
-      },
-    ])
-
-    await runRuleEngine({ fileId: VALID_UUID })
-    expect(mockWriteAuditLog).toHaveBeenCalledWith(
-      expect.objectContaining({
-        tenantId: 'tenant-123',
-        userId: 'user-123',
-        entityType: 'file',
-        action: 'file.l1_completed',
-      }),
-    )
+    expect(result.data.duration).toBe(120)
   })
 
   it('should return findingCount=0 for clean file', async () => {
-    dbState.returnValues = [[mockFile], [], [], []]
-    mockProcessFile.mockResolvedValue([])
-
+    dbState.returnValues = [[mockFileRecord]]
+    mockRunL1ForFile.mockResolvedValue({ findingCount: 0, duration: 50 })
     const result = await runRuleEngine({ fileId: VALID_UUID })
     expect(result.success).toBe(true)
     if (!result.success) return
     expect(result.data.findingCount).toBe(0)
   })
 
-  // ── C2: INTERNAL_ERROR catch-path tests ──
-
-  it('should return INTERNAL_ERROR when processFile throws', async () => {
-    // 0: CAS returning() → [file], 1: segments orderBy() → []
-    dbState.returnValues = [[mockFile], []]
-    mockProcessFile.mockRejectedValue(new Error('engine crash'))
-
+  it('should return INTERNAL_ERROR when runL1ForFile throws a non-retriable error', async () => {
+    dbState.returnValues = [[mockFileRecord]]
+    mockRunL1ForFile.mockRejectedValue(new Error('engine crash'))
     const result = await runRuleEngine({ fileId: VALID_UUID })
     expect(result.success).toBe(false)
     if (result.success) return
     expect(result.code).toBe('INTERNAL_ERROR')
     expect(result.error).toBe('Rule engine processing failed')
-  })
-
-  it('should NOT call audit log when processFile throws', async () => {
-    dbState.returnValues = [[mockFile], []]
-    mockProcessFile.mockRejectedValue(new Error('engine crash'))
-
-    await runRuleEngine({ fileId: VALID_UUID })
-    expect(mockWriteAuditLog).not.toHaveBeenCalled()
-  })
-
-  // ── R3-M4: Old L1 findings deleted before insert (idempotent re-run) ──
-
-  it('should delete old L1 findings within the same transaction as insert', async () => {
-    dbState.returnValues = [[mockFile], [], [], []]
-    const finding = {
-      segmentId: 'seg-1',
-      category: 'completeness',
-      severity: 'critical',
-      description: 'test',
-      suggestedFix: null,
-      sourceExcerpt: 'a',
-      targetExcerpt: 'b',
-    }
-    mockProcessFile.mockResolvedValue([finding])
-
-    const result = await runRuleEngine({ fileId: VALID_UUID })
-    expect(result.success).toBe(true)
-    // The transaction handler receives a proxy — the delete+insert both run within it
-    // If this test passes, the transaction wraps both delete and insert
-  })
-
-  // ── H4: Batch insert >100 findings ──
-
-  it('should handle >100 findings (batch insert)', async () => {
-    dbState.returnValues = [[mockFile], [], [], []]
-    const manyFindings = Array.from({ length: 150 }, (_, i) => ({
-      segmentId: `seg-${i}`,
-      category: 'completeness',
-      severity: 'critical',
-      description: `finding ${i}`,
-      suggestedFix: null,
-      sourceExcerpt: 'a',
-      targetExcerpt: 'b',
-    }))
-    mockProcessFile.mockResolvedValue(manyFindings)
-
-    const result = await runRuleEngine({ fileId: VALID_UUID })
-    expect(result.success).toBe(true)
-    if (!result.success) return
-    expect(result.data.findingCount).toBe(150)
   })
 })
