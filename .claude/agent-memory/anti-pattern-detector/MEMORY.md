@@ -161,6 +161,33 @@
 - **Risk**: Low because fileId is validated upstream, but violates the "every query must use withTenant()" rule.
 - **Fix pattern**: Wrap final UPDATE .where() with `and(withTenant(table.tenantId, user.tenantId), eq(table.id, id))`.
 
+## Story 2.5 Scan Summary (2026-02-24)
+
+- Files scanned: 7 (scoring feature: types.ts, constants.ts, validation/scoreSchema.ts, mqmCalculator.ts, penaltyWeightLoader.ts, autoPassChecker.ts, actions/calculateScore.action.ts)
+- **MEDIUM violations (2):**
+  - `penaltyWeightLoader.ts` line 30: `eq(severityConfigs.tenantId, tenantId)` — uses raw `eq()` instead of `withTenant()`. This is intentional (query fetches BOTH tenant rows AND system-default rows where tenantId IS NULL), so `withTenant()` cannot be used here — but the pattern is still worth flagging for review.
+  - `calculateScore.action.ts` line 118: `findingRows as import('../types').ContributingFinding[]` — inline dynamic `import()` type expression inside a type cast; should import `ContributingFinding` at the top of the file with a regular named import instead.
+- **LOW violations (5):**
+  - `calculateScore.action.ts` lines 19–23: 5 relative imports (`from '../autoPassChecker'`, `from '../constants'`, `from '../mqmCalculator'`, `from '../penaltyWeightLoader'`, `from '../validation/scoreSchema'`) — one level up within feature module; same pattern as Story 2.1–2.4. Flagged LOW per established precedent.
+  - `constants.ts` line 1: `from './types'` — same-directory relative import; technically fine (no `..`), but inconsistent with `@/` alias mandate.
+  - `mqmCalculator.ts` lines 1–2: `from './constants'`, `from './types'` — same-directory relative imports, same observation.
+  - `autoPassChecker.ts` line 10: `from './constants'`, `from './types'` — same-directory relative imports.
+- **All other checks CLEAN** — no `export default`, no `any`, no `enum`, no raw SQL, no `console.log`, no `process.env`, no `service_role`, no hardcoded tenantId UUIDs, no inline Supabase client creation, no snapshot tests, no "use client", `withTenant()` used correctly on all queries in autoPassChecker.ts and calculateScore.action.ts, `sql\`` template is Drizzle-native (NOT raw SQL), Zod schema named correctly (`calculateScoreSchema`), constants follow `UPPER_SNAKE_CASE`.
+- **Notable clean patterns**: audit log write is correctly wrapped in non-fatal try-catch, graduation notification is non-fatal, transaction uses delete+insert for idempotency — all correct per Story 2.4 CR learnings.
+
+## Recurring Pattern: Inline Dynamic Import() in Type Cast (MEDIUM)
+
+- **Pattern**: `findingRows as import('../types').ContributingFinding[]` — using inline dynamic import expression to reference a type inside a cast, instead of adding a top-level `import type` statement.
+- **Found in Story 2.5**: `calculateScore.action.ts:118`
+- **Risk**: Obscures the dependency, harder to trace/refactor, and bypasses import organization rules.
+- **Fix**: Add `import type { ContributingFinding } from '../types'` at top of file and use `findingRows as ContributingFinding[]`.
+
+## Recurring Pattern: penaltyWeightLoader withTenant() Exception
+
+- **Pattern**: `penaltyWeightLoader.ts` uses `eq(severityConfigs.tenantId, tenantId)` inside `or(eq(...), isNull(...))` — cannot use `withTenant()` because the query intentionally fetches rows WHERE tenantId IS NULL (system defaults). This is a documented architectural exception.
+- **Rule**: CLAUDE.md says "every query must use withTenant()". The OR condition here logically extends beyond what withTenant() supports.
+- **Decision**: Flag MEDIUM but note as documented exception. The correct fix would be to add a code comment explaining why withTenant() cannot be used here.
+
 ## Edge Cases Noted
 
 - `logger-edge.ts` uses `console.log/warn/error` internally — this IS the logging solution for Edge runtime.
@@ -170,3 +197,4 @@
 - `glossary/parsers/index.ts` is a dispatcher function (not a re-export barrel) — clean.
 - `sql\`` template literals in Drizzle ORM (`count(\*)::int`, `lower()`) are NOT raw SQL violations — they are Drizzle's type-safe SQL helper.
 - JOIN ON clause `eq(table.tenantId, tenantId)` vs WHERE clause — debatable whether withTenant() required in ON conditions.
+- `or(eq(table.tenantId, x), isNull(table.tenantId))` pattern in penaltyWeightLoader — architectural exception; withTenant() cannot wrap an OR condition that includes IS NULL.

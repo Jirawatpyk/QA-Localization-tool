@@ -717,6 +717,9 @@ npm run test:rls
 - EVERY state-changing Server Action MUST write to audit log
 - Audit write goes INSIDE try-catch, BEFORE the return
 - If audit write fails → entire action MUST fail (throw)
+  - **Exception (Story 2.4 CR R1 decision):** Score calculation audit is non-fatal — the pipeline
+    must not block on audit failure. Pattern: `try { await writeAuditLog(...) } catch (e) { logger.error() }`.
+    Only applies to `calculateScore.action.ts` and future pipeline step actions.
 - NEVER skip audit for "minor" changes — every state change is logged
 
 ### Critical Don't-Miss Rules

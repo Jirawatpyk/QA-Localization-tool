@@ -3,6 +3,7 @@
 ## Index of Topic Files
 
 - `story-2-4-findings.md` — Story 2.4 Rule Engine CR Round 1 + Round 2 + Round 3 findings
+- `story-2-5-findings.md` — Story 2.5 MQM Score Calculation CR Round 1 findings
 
 ## Recurring Patterns Found
 
@@ -21,6 +22,8 @@
 - Story 2.2: markFileFailed — NOT wrapped
 - Story 2.3: markFileFailed — FIXED
 - Story 2.4: runRuleEngine — FIXED (both happy + error path)
+- Story 2.5: calculateScore — FIXED (audit log wrapped correctly)
+- Story 2.5: graduation notification — NOT wrapped at caller level (C1)
 
 ### Supabase Realtime Payload Mismatch
 
@@ -29,6 +32,7 @@
 ### Type Safety: Bare `string` types
 
 - RecentFileRow.status, AppNotification.type, UploadFileResult.status/fileType — all bare strings
+- Story 2.5: ContributingFinding.status, ScoreResult.status — bare strings (H2, H6)
 - Should be union types for compile-time safety
 
 ### Test Pattern: Chainable Drizzle Mock
@@ -41,6 +45,7 @@
 - No unique constraint on `segments(file_id, segment_number)` — allows duplicates
 - No composite indexes on files table for (tenant_id, project_id)
 - idx_findings_file_layer in Supabase migration but NOT in Drizzle schema
+- Story 2.5: No UNIQUE constraint on `scores(file_id, tenant_id)` — concurrent DELETE+INSERT can create duplicates (C2)
 
 ### segmentId NOT persisted to DB
 
@@ -103,6 +108,16 @@
 - Unhandled promises in hooks: `void promise.then()` without `.catch()`
 - NFKC: NOT before Intl.Segmenter (Thai sara am U+0E33 decomposes)
 - NFKC: YES before text comparison (glossary, consistency)
+
+## Story 2.5 MQM Score Calculation — Key Patterns
+
+- Pure calculator at `src/features/scoring/mqmCalculator.ts` — NO server deps, importable from Inngest
+- 3-level penalty weight fallback: tenant DB → system DB (NULL tenant) → hardcoded constant
+- penaltyWeightLoader: INTENTIONAL exception to withTenant() — documented with comment
+- Auto-pass: 3-path logic (lang pair config → new pair <=50 files → new pair >50 files + project threshold)
+- Graduation notification: file 51 for new pair, JSONB dedup, per-admin insert
+- DELETE+INSERT idempotent pattern (no UNIQUE constraint yet — C2)
+- fileId unused in AutoPassInput type (H4) — MEMORY says removed but still present
 
 ## Project Structure Notes
 

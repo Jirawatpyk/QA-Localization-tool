@@ -1,10 +1,14 @@
 import { faker } from '@faker-js/faker'
 
 import type { findings } from '@/db/schema/findings'
+import type { languagePairConfigs } from '@/db/schema/languagePairConfigs'
+import type { scores } from '@/db/schema/scores'
 import type { segments } from '@/db/schema/segments'
+import type { severityConfigs } from '@/db/schema/severityConfigs'
 import type { AppNotification, DashboardData, RecentFileRow } from '@/features/dashboard/types'
 import type { ExcelPreview } from '@/features/parser/actions/previewExcelColumns.action'
 import type { ExcelColumnMapping } from '@/features/parser/validation/excelMappingSchema'
+import type { ContributingFinding } from '@/features/scoring/types'
 import type { BatchRecord, UploadFileResult } from '@/features/upload/types'
 import type { Finding } from '@/types/finding'
 import type { PipelineRun } from '@/types/pipeline'
@@ -199,6 +203,76 @@ export function buildDbFinding(overrides?: Partial<DbFindingInsert>): DbFindingI
     sourceTextExcerpt: null,
     targetTextExcerpt: null,
     reviewSessionId: null,
+    segmentCount: 1,
+    ...overrides,
+  }
+}
+
+type ScoreRecord = typeof scores.$inferSelect
+type SeverityConfigRecord = typeof severityConfigs.$inferSelect
+type LanguagePairConfigRecord = typeof languagePairConfigs.$inferSelect
+
+export function buildScoreRecord(overrides?: Partial<ScoreRecord>): ScoreRecord {
+  return {
+    id: faker.string.uuid(),
+    fileId: faker.string.uuid(),
+    projectId: faker.string.uuid(),
+    tenantId: faker.string.uuid(),
+    mqmScore: faker.number.float({ min: 0, max: 100, fractionDigits: 2 }),
+    totalWords: faker.number.int({ min: 1, max: 5000 }),
+    criticalCount: faker.number.int({ min: 0, max: 5 }),
+    majorCount: faker.number.int({ min: 0, max: 10 }),
+    minorCount: faker.number.int({ min: 0, max: 20 }),
+    npt: faker.number.float({ min: 0, max: 100, fractionDigits: 2 }),
+    layerCompleted: 'L1',
+    status: 'calculated',
+    autoPassRationale: null,
+    calculatedAt: new Date(),
+    createdAt: new Date(),
+    ...overrides,
+  }
+}
+
+export function buildSeverityConfigRecord(
+  overrides?: Partial<SeverityConfigRecord>,
+): SeverityConfigRecord {
+  return {
+    id: faker.string.uuid(),
+    tenantId: faker.string.uuid(),
+    severity: 'major',
+    penaltyWeight: 5,
+    createdAt: new Date(),
+    ...overrides,
+  }
+}
+
+export function buildLanguagePairConfigRecord(
+  overrides?: Partial<LanguagePairConfigRecord>,
+): LanguagePairConfigRecord {
+  return {
+    id: faker.string.uuid(),
+    tenantId: faker.string.uuid(),
+    sourceLang: 'en-US',
+    targetLang: 'th-TH',
+    autoPassThreshold: 95,
+    l2ConfidenceMin: 70,
+    l3ConfidenceMin: 80,
+    mutedCategories: null,
+    wordSegmenter: 'intl',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  }
+}
+
+/**
+ * Factory for scoring-relevant findings (ContributingFinding shape).
+ * Composes with buildDbFinding() for full DB insert type when needed.
+ */
+export function buildScoringFinding(overrides?: Partial<ContributingFinding>): ContributingFinding {
+  return {
+    severity: 'major',
+    status: 'pending',
     segmentCount: 1,
     ...overrides,
   }

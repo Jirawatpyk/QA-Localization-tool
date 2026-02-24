@@ -126,6 +126,27 @@ New tables confirmed tenant-scoped: `upload_batches` (has tenant_id, RLS in 0001
 - `findings` table — tenant_id column (uuid, notNull, FK to tenants). Confirmed.
 - `suppression_rules` — tenant_id column (uuid, notNull, FK to tenants). Confirmed.
 
+### Story 2.5 Audit Results (MQM Score Calculation)
+
+**PASS (all checks):**
+
+- `autoPassChecker.ts` — languagePairConfigs SELECT: withTenant() present; scores+segments JOIN: withTenant() on BOTH sides (L57+L58, defense-in-depth confirmed); projects SELECT (fallback branch): withTenant() present. FULL PASS.
+- `calculateScore.action.ts` — segments SELECT: withTenant() present; findings SELECT: withTenant() present; scores SELECT inside transaction: withTenant() present; scores DELETE inside transaction: withTenant() present; scores INSERT: tenantId set explicitly from session in value object (correct INSERT pattern); notifications SELECT (dedup guard): withTenant() present; userRoles SELECT (admin list): withTenant() present; notifications INSERT: tenantId from session in value object. FULL PASS.
+- `penaltyWeightLoader.ts` — severity_configs SELECT uses `or(eq(tenantId), isNull(tenantId))` which is the correct and intentional pattern for this table (nullable tenant_id = system defaults). withTenant() helper is intentionally NOT used here because the query must include NULL rows. The application-level resolution (L42-56) correctly prioritizes tenant rows over system rows. PASS (by design, documented in code comment).
+
+**Schema confirmations (Story 2.5):**
+
+- `scores` table — tenant_id column (uuid, notNull, FK to tenants). Confirmed.
+- `notifications` table — tenant_id column (uuid, notNull, FK to tenants). Confirmed.
+- `severity_configs` — nullable tenant_id (null = system default). Intentional design; withTenant() would be wrong here.
+- `languagePairConfigs`, `segments`, `findings`, `userRoles` — all previously confirmed as tenant-scoped.
+
+**Pattern noted — severity_configs fallback query:**
+`loadPenaltyWeights()` intentionally omits withTenant() in favor of `or(eq(tenantId), isNull(tenantId))` because system default rows have tenant_id IS NULL. This is the documented exception. It does NOT leak cross-tenant data because the query only returns rows for the calling tenant OR NULL-tenant rows, and the resolution logic at L42 always prefers tenant-specific rows first.
+
+**Pattern noted — inner JOIN defense-in-depth (autoPassChecker.ts L51-59):**
+The scores+segments JOIN applies withTenant() to BOTH tables in the same AND clause. This is the gold standard pattern for multi-table queries. Record as a positive example for future code reviews.
+
 ## Key Patterns to Watch
 
 - `glossary_terms` has NO tenant_id — always access via verified glossaryId from glossaries table
