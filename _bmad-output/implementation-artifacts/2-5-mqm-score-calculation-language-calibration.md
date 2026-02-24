@@ -536,6 +536,37 @@ claude-sonnet-4-6 (2026-02-24)
 
 ---
 
+### Senior Developer Review (AI) — CR Round 2 (2026-02-24)
+
+**Reviewer:** Amelia (Dev Agent) + code-quality-analyzer + testing-qa-expert sub-agents
+**Result:** APPROVED after fixes applied
+
+**Findings fixed (12 total — 2H · 6M · 4L):**
+
+| ID | Sev | Issue | Fix |
+|----|-----|-------|-----|
+| H1 | HIGH | Off-by-one: `fileCount <= 50` disables 51 files — AC #6 says "first 50 files disabled" | Changed `<=` → `<` in `autoPassChecker.ts`; notification condition `=== 51` → `=== 50`; updated all related tests |
+| H2 | HIGH | `na` status + `autoPassRationale` inconsistency: eligible=true but status='na' → non-null rationale stored | Changed `autoPassRationale` condition from `eligible ?` to `status === 'auto_passed' ?` |
+| M1 | MED | `findings` query missing `projectId` filter (CR R1 fixed segments, missed findings) | Added `eq(findings.projectId, projectId)` + `projectId: 'project_id'` to findings mock |
+| M2 | MED | `CONTRIBUTING_STATUSES: ReadonlySet<string>` not updated after CR R1 added `FindingStatus` | Changed to `ReadonlySet<FindingStatus>` with explicit `Set<FindingStatus>()` constructor |
+| M3 | MED | AC #7 fields not asserted in test: `scoreId`, `npt`, `totalWords`, `criticalCount`, `majorCount`, `minorCount`, `autoPassRationale` | Added `toMatchObject` test covering all 10 AC #7 fields |
+| M4 | MED | `autoPassRationale` null/non-null paths not tested | Added 2 tests: null when calculated, string when auto_passed |
+| M5 | MED | Graduation notification non-fatal: no test verifying scoring succeeds when notification has no admins | Added `admins.length=0` non-fatal test |
+| M6 | MED | `createGraduationNotification` call inside outer try — non-fatal intent not structurally enforced | Added explicit try/catch at call site wrapping `createGraduationNotification` |
+| L1 | LOW | Test naming: "file 51"/"not yet file 51" semantically wrong (fileCount=N means file N+1 processing) | Updated test descriptions to be accurate about file number vs fileCount |
+| L2 | LOW | `mqmCalculator` + zero weights not tested | Added test: weights={0,0,0} → score=100, status='calculated', counts still tracked |
+| L3 | LOW | `admins.length=0` graduation path not tested | Added test verifying scoring succeeds with empty admin list |
+| L4 | LOW | `mqmScore` 2dp rounding not tested (npt was, score wasn't) | Added test: 1 minor in 300 words → mqmScore=96.67 (2dp) |
+
+**Test count after CR R2:** 88 scoring tests (was 80, +8 new) · 1169 total (was 1161)
+
+**Scans during CR:**
+- `code-quality-analyzer`: found C1/H1 (off-by-one), H2 (CONTRIBUTING_STATUSES type), H3 (fileCount off-by-one), H4 (graduation notification placement)
+- `testing-qa-expert`: found C1 (off-by-one), H1-H3 (AC#7 fields, autoPassRationale, zero weights), M1-M5 gaps
+- All findings merged, de-duplicated, and fixed
+
+---
+
 ### File List
 
 **New files:**

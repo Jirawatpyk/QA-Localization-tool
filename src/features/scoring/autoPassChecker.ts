@@ -63,7 +63,10 @@ export async function checkAutoPass(input: AutoPassInput): Promise<AutoPassResul
 
   if (isNewPair) {
     // New language pair: mandatory manual review for first 50 files (AC #6)
-    if (fileCount <= NEW_PAIR_FILE_THRESHOLD) {
+    // fileCount = already-scored files BEFORE this file is inserted.
+    // fileCount < 50  → files 1-50 are blocked (correct: "first 50 files disabled")
+    // fileCount >= 50 → file 51+ is eligible
+    if (fileCount < NEW_PAIR_FILE_THRESHOLD) {
       return {
         eligible: false,
         rationale: `New language pair: mandatory manual review (file ${fileCount}/${NEW_PAIR_FILE_THRESHOLD})`,

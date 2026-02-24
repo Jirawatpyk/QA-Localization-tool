@@ -99,6 +99,7 @@ vi.mock('@/db/schema/segments', () => ({
 vi.mock('@/db/schema/findings', () => ({
   findings: {
     fileId: 'file_id',
+    projectId: 'project_id', // M1: added for defense-in-depth projectId filter
     tenantId: 'tenant_id',
     detectedByLayer: 'detected_by_layer',
     severity: 'severity',
@@ -357,13 +358,14 @@ describe('calculateScore', () => {
     expect(result.data.status).toBe('calculated')
   })
 
-  // ── Task 6 notification: file 51 creates notification ──
-  it('should execute graduation notification DB path when isNewPair and fileCount=51', async () => {
+  // ── Task 6 notification: file 51 (fileCount=50) creates notification ──
+  it('should execute graduation notification DB path when isNewPair and fileCount=50 (file 51)', async () => {
+    // fileCount=50 means 50 files already scored → this file is #51 = first eligible (H1 fix)
     mockCheckAutoPass.mockResolvedValue({
       eligible: true,
       rationale: 'Graduated',
       isNewPair: true,
-      fileCount: 51,
+      fileCount: 50,
     })
     const autoScore = { ...mockNewScore, status: 'auto_passed' }
     // 0: segments, 1: findings, 2: prev score in tx, 3: delete in tx, 4: insert.returning
@@ -384,30 +386,50 @@ describe('calculateScore', () => {
     expect(dbState.callIndex).toBe(8)
   })
 
-  it('should NOT create notification when fileCount=50 (not yet file 51)', async () => {
+  it('should NOT create notification when fileCount=49 (file 50 = still blocked)', async () => {
+    // fileCount=49 = file 50, still in mandatory review window, no notification
     mockCheckAutoPass.mockResolvedValue({
       eligible: false,
-      rationale: 'New language pair: mandatory manual review (file 50/50)',
+      rationale: 'New language pair: mandatory manual review (file 49/50)',
       isNewPair: true,
-      fileCount: 50,
+      fileCount: 49,
     })
     dbState.returnValues = [mockSegments, [], [undefined], [], [mockNewScore]]
     const result = await calculateScore({ fileId: VALID_FILE_ID, projectId: VALID_PROJECT_ID })
-    // Should succeed without hitting notification path (fileCount=50, not 51)
+    // Only 5 DB calls — notification path NOT triggered
     expect(result.success).toBe(true)
+    expect(dbState.callIndex).toBe(5)
   })
 
-  it('should NOT create notification when isNewPair=false even if fileCount=51', async () => {
+  it('should NOT create notification when isNewPair=false even if fileCount=50', async () => {
     mockCheckAutoPass.mockResolvedValue({
       eligible: true,
       rationale: 'eligible',
-      isNewPair: false, // NOT a new pair
-      fileCount: 51,
+      isNewPair: false, // NOT a new pair — lang pair config exists
+      fileCount: 50,
     })
     const autoScore = { ...mockNewScore, status: 'auto_passed' }
     dbState.returnValues = [mockSegments, [], [undefined], [], [autoScore]]
     const result = await calculateScore({ fileId: VALID_FILE_ID, projectId: VALID_PROJECT_ID })
     expect(result.success).toBe(true)
+    expect(dbState.callIndex).toBe(5) // no notification DB calls
+  })
+
+  // ── M5: graduation notification non-fatal (scoring succeeds even if notification throws) ──
+  it('should succeed when graduation notification path has no admins', async () => {
+    mockCheckAutoPass.mockResolvedValue({
+      eligible: true,
+      rationale: 'Graduated',
+      isNewPair: true,
+      fileCount: 50,
+    })
+    const autoScore = { ...mockNewScore, status: 'auto_passed' }
+    // dedup: no existing, admins: empty [] → early return, no insert
+    dbState.returnValues = [mockSegments, [], [undefined], [], [autoScore], [], []]
+    const result = await calculateScore({ fileId: VALID_FILE_ID, projectId: VALID_PROJECT_ID })
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.status).toBe('auto_passed')
   })
 
   // ── Tenant isolation ──
@@ -435,11 +457,12 @@ describe('calculateScore', () => {
 
   // ── Dedup guard: file-51 notification not duplicated on re-run (AC #6 / L3) ──
   it('should skip graduation notification when graduation record already exists (dedup guard)', async () => {
+    // fileCount=50 triggers notification check; dedup returns existing → skip insert
     mockCheckAutoPass.mockResolvedValue({
       eligible: true,
       rationale: 'Graduated',
       isNewPair: true,
-      fileCount: 51,
+      fileCount: 50,
     })
     const autoScore = { ...mockNewScore, status: 'auto_passed' }
     // 0-4: base path, 5: dedup check returns EXISTING notification → skip insert
@@ -465,6 +488,75 @@ describe('calculateScore', () => {
     const eqMock = eq as ReturnType<typeof vi.fn>
     const projectIdCalls = eqMock.mock.calls.filter((call) => call[1] === VALID_PROJECT_ID)
     expect(projectIdCalls.length).toBeGreaterThanOrEqual(1)
+  })
+
+  // ── M3: AC #7 — all required fields present in ScoreResult ──
+  it('should return all AC #7 required fields in result.data', async () => {
+    dbState.returnValues = [mockSegments, [], [undefined], [], [mockNewScore]]
+    const result = await calculateScore({ fileId: VALID_FILE_ID, projectId: VALID_PROJECT_ID })
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data).toMatchObject({
+      scoreId: 'score-uuid',
+      fileId: VALID_FILE_ID,
+      mqmScore: 85,
+      npt: 15,
+      totalWords: 1000,
+      criticalCount: 0,
+      majorCount: 3,
+      minorCount: 0,
+      status: 'calculated',
+      autoPassRationale: null,
+    })
+  })
+
+  // ── M4: autoPassRationale null when not auto-passed ──
+  it('should return autoPassRationale=null when status is calculated (not auto-passed)', async () => {
+    dbState.returnValues = [mockSegments, [], [undefined], [], [mockNewScore]]
+    const result = await calculateScore({ fileId: VALID_FILE_ID, projectId: VALID_PROJECT_ID })
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.autoPassRationale).toBeNull()
+  })
+
+  it('should return autoPassRationale string when status is auto_passed', async () => {
+    mockCheckAutoPass.mockResolvedValue(mockAutoPassEligible)
+    const rationale = mockAutoPassEligible.rationale
+    const autoPassedScore = {
+      ...mockNewScore,
+      status: 'auto_passed',
+      autoPassRationale: rationale,
+    }
+    dbState.returnValues = [mockSegments, [], [undefined], [], [autoPassedScore]]
+    const result = await calculateScore({ fileId: VALID_FILE_ID, projectId: VALID_PROJECT_ID })
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.autoPassRationale).toBe(rationale)
+    expect(result.data.autoPassRationale).not.toBeNull()
+  })
+
+  // ── H2: na status → autoPassRationale must be null even if checkAutoPass returns eligible ──
+  it('should persist autoPassRationale=null when status is na (totalWords=0)', async () => {
+    mockCalculateMqmScore.mockReturnValue({
+      ...mockScoreResult,
+      status: 'na' as const,
+      mqmScore: 0,
+    })
+    // Even if checkAutoPass were somehow eligible (e.g. threshold=0), na status must win
+    mockCheckAutoPass.mockResolvedValue(mockAutoPassEligible)
+    const naScore = { ...mockNewScore, status: 'na', autoPassRationale: null }
+    dbState.returnValues = [
+      [{ wordCount: 0, sourceLang: 'en-US', targetLang: 'th-TH' }],
+      [],
+      [undefined],
+      [],
+      [naScore],
+    ]
+    const result = await calculateScore({ fileId: VALID_FILE_ID, projectId: VALID_PROJECT_ID })
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.status).toBe('na')
+    expect(result.data.autoPassRationale).toBeNull()
   })
 
   // ── INTERNAL_ERROR ──

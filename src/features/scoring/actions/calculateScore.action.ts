@@ -111,6 +111,7 @@ export async function calculateScore(input: {
       .where(
         and(
           eq(findings.fileId, fileId),
+          eq(findings.projectId, projectId), // defense-in-depth: M1 parity with segments query
           eq(findings.detectedByLayer, 'L1'),
           withTenant(findings.tenantId, tenantId),
         ),
@@ -171,7 +172,9 @@ export async function calculateScore(input: {
           npt: scoreResult.npt,
           layerCompleted: 'L1',
           status,
-          autoPassRationale: autoPassResult.eligible ? autoPassResult.rationale : null,
+          // Only store rationale when the file actually auto-passed (H2: prevents
+          // non-null rationale being persisted when status='na' overrides auto-pass)
+          autoPassRationale: status === 'auto_passed' ? autoPassResult.rationale : null,
           calculatedAt: new Date(),
         })
         .returning()
@@ -198,14 +201,22 @@ export async function calculateScore(input: {
     }
 
     // Task 6: Language pair graduation notification (file 51 for new pair)
-    // Non-fatal — scoring must succeed regardless of notification outcome
-    if (autoPassResult.isNewPair && autoPassResult.fileCount === NEW_PAIR_FILE_THRESHOLD + 1) {
-      await createGraduationNotification({
-        tenantId,
-        projectId,
-        sourceLang,
-        targetLang,
-      })
+    // Fires when fileCount === 50 (50 already scored = this is file 51, first eligible)
+    // Non-fatal: wrap at call site so outer try never catches notification errors
+    if (autoPassResult.isNewPair && autoPassResult.fileCount === NEW_PAIR_FILE_THRESHOLD) {
+      try {
+        await createGraduationNotification({
+          tenantId,
+          projectId,
+          sourceLang,
+          targetLang,
+        })
+      } catch (notifErr) {
+        logger.warn(
+          { err: notifErr, tenantId, sourceLang, targetLang },
+          'Graduation notification call failed',
+        )
+      }
     }
 
     return {

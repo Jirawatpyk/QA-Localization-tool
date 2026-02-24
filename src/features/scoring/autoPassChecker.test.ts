@@ -138,11 +138,22 @@ describe('checkAutoPass', () => {
     expect(result.isNewPair).toBe(true)
   })
 
-  it('should disable auto-pass for new pair when fileCount = 50 (threshold boundary)', async () => {
-    dbState.returnValues = [[], [{ count: NEW_PAIR_FILE_THRESHOLD }]]
+  it('should disable auto-pass for new pair when fileCount = 49 (file 50 = last blocked)', async () => {
+    // fileCount=49 means 49 already scored → this is file 50 (still in first-50 block)
+    dbState.returnValues = [[], [{ count: NEW_PAIR_FILE_THRESHOLD - 1 }]]
     const result = await checkAutoPass({ ...BASE_INPUT, mqmScore: 100 })
     expect(result.eligible).toBe(false)
-    expect(result.rationale).toContain(`${NEW_PAIR_FILE_THRESHOLD}/${NEW_PAIR_FILE_THRESHOLD}`)
+    expect(result.rationale).toContain(`${NEW_PAIR_FILE_THRESHOLD - 1}/${NEW_PAIR_FILE_THRESHOLD}`)
+  })
+
+  it('should be eligible for new pair when fileCount = 50 (file 51 = first eligible)', async () => {
+    // fileCount=50 means 50 already scored → this is file 51 (first auto-pass candidate per AC #6)
+    // Uses < threshold (not <=) so fileCount=50 falls through to project threshold check
+    dbState.returnValues = [[], [{ count: NEW_PAIR_FILE_THRESHOLD }], [{ autoPassThreshold: 95 }]]
+    const result = await checkAutoPass({ ...BASE_INPUT, mqmScore: 97 })
+    expect(result.eligible).toBe(true)
+    expect(result.isNewPair).toBe(true)
+    expect(result.fileCount).toBe(NEW_PAIR_FILE_THRESHOLD)
   })
 
   it('should include file number in rationale for new pair', async () => {
@@ -151,8 +162,9 @@ describe('checkAutoPass', () => {
     expect(result.rationale).toContain('25/50')
   })
 
-  // ── New pair established (fileCount > 50) → fall back to project threshold ──
-  it('should be eligible for new pair at file 51 if score meets project threshold', async () => {
+  // ── New pair established (fileCount >= 50) → fall back to project threshold ──
+  it('should be eligible for new pair at file 52 (fileCount=51) if score meets project threshold', async () => {
+    // fileCount=51 means 51 already scored → this is file 52, also eligible
     // 0: langConfig → [], 1: fileCount → [{count: 51}], 2: project → [{autoPassThreshold: 95}]
     dbState.returnValues = [[], [{ count: 51 }], [{ autoPassThreshold: 95 }]]
     const result = await checkAutoPass({ ...BASE_INPUT, mqmScore: 97 })

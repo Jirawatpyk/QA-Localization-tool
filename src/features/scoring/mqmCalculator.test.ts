@@ -231,6 +231,34 @@ describe('calculateMqmScore', () => {
     expect(Number.isFinite(result.npt)).toBe(true)
   })
 
+  // ── Custom weights: zero penalty (L2) ──
+  it('should return score 100 with status calculated when all penalty weights are zero', () => {
+    const zeroWeights = { critical: 0, major: 0, minor: 0 }
+    const findings = [
+      mkFinding('critical', 'pending'),
+      mkFinding('major', 'pending'),
+      mkFinding('minor', 'pending'),
+    ]
+    const result = calculateMqmScore(findings, 1000, zeroWeights)
+    // Zero weights → no penalty regardless of finding count
+    expect(result.mqmScore).toBe(100)
+    expect(result.npt).toBe(0)
+    expect(result.status).toBe('calculated') // NOT 'na' — totalWords > 0
+    // Counts still tracked even with zero weights
+    expect(result.criticalCount).toBe(1)
+    expect(result.majorCount).toBe(1)
+    expect(result.minorCount).toBe(1)
+  })
+
+  // ── mqmScore 2dp rounding (L4) ──
+  it('should round mqmScore to at most 2 decimal places', () => {
+    // 1 minor in 300 words: NPT = (1/300)*1000 = 3.333...; score = 100 - 3.33 = 96.67
+    const result = calculateMqmScore([mkFinding('minor')], 300)
+    const decimals = (result.mqmScore.toString().split('.')[1] ?? '').length
+    expect(decimals).toBeLessThanOrEqual(2)
+    expect(result.mqmScore).toBe(96.67)
+  })
+
   // ── Performance sanity ──
   it('should handle 5000 findings in under 100ms', () => {
     const findings = Array.from({ length: 5000 }, (_, i) => {
