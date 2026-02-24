@@ -209,13 +209,13 @@ so that I can trust this tool to replace Xbench with 100% parity.
     - [ ] ~~13.7c Tier 2 — NCR TH~~
     - [ ] ~~13.7d Tier 3 — NCR Multi-lang~~
     - [ ] ~~13.7e Parity Report Generator~~
-  - [x] 13.8 **Actual: 292 new tests across 15 test files** (14 new + 1 modified sdlxliffParser.test.ts) ✅ — 243 pre-CR + 9 CR R1 + 40 CR R2
+  - [x] 13.8 **Actual: 308 new tests across 15 test files** (14 new + 1 modified sdlxliffParser.test.ts) ✅ — 243 pre-CR + 9 CR R1 + 40 CR R2 + 16 CR R3
 
 ## Dev Agent Record
 
 ### Implementation Summary
 - **Status:** in-review
-- **Tests:** 292 passed across 15 test files (14 new + 1 modified) — 243 pre-CR + 9 CR R1 + 40 CR R2
+- **Tests:** 308 passed across 15 test files (14 new + 1 modified) — 243 pre-CR + 9 CR R1 + 40 CR R2 + 16 CR R3
 - **Quality Gates:** type-check ✅ | lint ✅ | regression ✅ | performance ✅
 - **Pre-CR Scans:** anti-pattern-detector (0 CRITICAL/HIGH) ✅ | tenant-isolation-checker (2 issues found & fixed) ✅
 
@@ -304,6 +304,37 @@ so that I can trust this tool to replace Xbench with 100% parity.
 | L2 | Low | zh-CN/ko-KR language context | +2 tests: zh-CN + ko-KR number consistency |
 
 **Final verification:** type-check ✅ | lint ✅ | 1065 tests ✅ (0 new failures)
+
+### CR Round 3 Fixes Applied (10 findings: 2H · 5M · 3L → all resolved)
+
+**Source code fixes (5):**
+| # | Sev | Finding | Fix |
+|---|-----|---------|-----|
+| H1 | High | `NUMBER_REGEX` captures hyphen in ranges ("1-10" → "-10") as negative number | Added negative lookbehind `(?<!\d)` to both regex branches: multi-digit + single-digit |
+| H2 | High | `checkSameSourceDiffTarget` flags empty targets → overlapping findings with `checkUntranslated` | Added `if (normalized.length === 0) continue` to skip empty targets |
+| M1 | Medium | `isBuddhistYearEquivalent` accepts float pairs (2026.5↔2569.5) | Added `Number.isInteger()` guard for both parameters |
+| M4 | Medium | L1 findings not cleaned before re-insert → duplicates on re-run | Added DELETE within same transaction before INSERT (idempotent re-run safety) |
+| M5 | Medium | Story File List empty | Populated with all 41 files |
+
+**Documentation fixes (2):**
+| # | Sev | Finding | Fix |
+|---|-----|---------|-----|
+| M2 | Medium | UPPERCASE substring match limitation undocumented | Added NOTE comment in `capitalizationChecks.ts` documenting "APIFY" suppresses "API" |
+| M3 | Medium | ReDoS length-only mitigation undocumented | Added NOTE comment in `customRuleChecks.ts` documenting mitigations |
+
+**Test fixes (16 tests added):**
+| # | Sev | Finding | Tests Added |
+|---|-----|---------|-------------|
+| H1 | High | Number range hyphen capture | +3 tests: range "1-10", phone "555-1234", standalone negative "-5" |
+| H2 | High | Empty target consistency | +2 tests: one empty target, all empty targets |
+| M1 | Medium | Float Buddhist year | +3 tests: float pair, source float, target float |
+| M2 | Medium | Substring match limitation | +1 test: "APIFY" suppresses "API" finding |
+| M4 | Medium | Idempotent re-run | +1 test: delete+insert within same transaction |
+| L1 | Low | Interleaved bracket early-break | +1 test: "a) (b" → 1 finding (early-break documented) |
+| L2 | Low | Missing segmentId assertions | +6 tests: segmentId in contentChecks, numberChecks, placeholderChecks, formattingChecks, consistencyChecks, glossaryChecks |
+| L3 | Low | Array position hardcoding | Fixed types.test.ts: `PLACEHOLDER_PATTERNS.find()` instead of `[0]!.source` |
+
+**Final verification:** type-check ✅ | lint ✅ | 1077 tests ✅ (0 new failures, 4 pre-existing: OnboardingTour ×3, route.test ×1)
 
 ### Anti-Pattern Scan — Accepted Deviations
 - **MEDIUM #1:** `thaiRules.ts`/`cjkRules.ts` at `src/features/pipeline/engine/language/` instead of `src/lib/language/` — per story spec, engine-internal only, will refactor when cross-feature use materializes
@@ -811,3 +842,48 @@ npx vitest run src/features/pipeline/__tests__/parity/tier1.parity.test.ts
 ### Completion Notes List
 
 ### File List
+
+**New files (31):**
+- `src/features/pipeline/engine/types.ts` — RuleCheckResult, SegmentCheckContext, type guards
+- `src/features/pipeline/engine/types.test.ts` — Type guard + constants tests (11)
+- `src/features/pipeline/engine/constants.ts` — RULE_CATEGORIES, PLACEHOLDER_PATTERNS, thresholds
+- `src/features/pipeline/engine/ruleEngine.ts` — Main orchestrator: processFile()
+- `src/features/pipeline/engine/ruleEngine.test.ts` — Orchestrator tests (24)
+- `src/features/pipeline/engine/checks/contentChecks.ts` — checkUntranslated, checkTargetIdenticalToSource
+- `src/features/pipeline/engine/checks/contentChecks.test.ts` — Content check tests (25)
+- `src/features/pipeline/engine/checks/tagChecks.ts` — checkTagIntegrity
+- `src/features/pipeline/engine/checks/tagChecks.test.ts` — Tag integrity tests (20)
+- `src/features/pipeline/engine/checks/numberChecks.ts` — checkNumberConsistency
+- `src/features/pipeline/engine/checks/numberChecks.test.ts` — Number consistency tests (24)
+- `src/features/pipeline/engine/checks/placeholderChecks.ts` — checkPlaceholderConsistency
+- `src/features/pipeline/engine/checks/placeholderChecks.test.ts` — Placeholder tests (22)
+- `src/features/pipeline/engine/checks/formattingChecks.ts` — spacing, brackets, URLs, end punct
+- `src/features/pipeline/engine/checks/formattingChecks.test.ts` — Formatting tests (47)
+- `src/features/pipeline/engine/checks/consistencyChecks.ts` — S→T, T→S, key terms (file-level)
+- `src/features/pipeline/engine/checks/consistencyChecks.test.ts` — Consistency tests (30)
+- `src/features/pipeline/engine/checks/glossaryChecks.ts` — Glossary compliance wrapper
+- `src/features/pipeline/engine/checks/glossaryChecks.test.ts` — Glossary check tests (9)
+- `src/features/pipeline/engine/checks/customRuleChecks.ts` — Regex-based custom rules
+- `src/features/pipeline/engine/checks/customRuleChecks.test.ts` — Custom rule tests (12)
+- `src/features/pipeline/engine/checks/capitalizationChecks.ts` — UPPERCASE + CamelCase
+- `src/features/pipeline/engine/checks/capitalizationChecks.test.ts` — Capitalization tests (18)
+- `src/features/pipeline/engine/language/thaiRules.ts` — Thai numerals, particles, Buddhist year
+- `src/features/pipeline/engine/language/thaiRules.test.ts` — Thai rules tests (35)
+- `src/features/pipeline/engine/language/cjkRules.ts` — Fullwidth punct, NFKC normalization
+- `src/features/pipeline/engine/language/cjkRules.test.ts` — CJK rules tests (19)
+- `src/features/pipeline/actions/runRuleEngine.action.ts` — Server Action entry point
+- `src/features/pipeline/actions/runRuleEngine.action.test.ts` — Server Action tests (12)
+- `src/db/migrations/0005_past_speed_demon.sql` — Drizzle-generated migration
+- `supabase/migrations/00014_story_2_4_findings_columns.sql` — Supabase DDL migration
+
+**Modified files (10):**
+- `src/db/schema/findings.ts` — +3 columns: fileId, sourceTextExcerpt, targetTextExcerpt
+- `src/db/schema/files.ts` — Status comment updated (l1_processing, l1_completed)
+- `src/db/schema/segments.ts` — InlineTagsData type restructured to `{ source, target }`
+- `src/db/schema/relations.ts` — Updated for new findings columns
+- `src/db/migrations/meta/_journal.json` — Migration journal entry
+- `src/db/migrations/meta/0005_snapshot.json` — Migration snapshot
+- `src/features/parser/types.ts` — InlineTagsData restructured
+- `src/features/parser/sdlxliffParser.ts` — Updated for InlineTagsData structure
+- `src/features/parser/sdlxliffParser.test.ts` — Updated for InlineTagsData structure
+- `src/test/factories.ts` — Added buildSegment() overloads for pipeline testing

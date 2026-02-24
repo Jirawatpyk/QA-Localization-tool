@@ -34,7 +34,9 @@ export function stripThaiParticles(text: string): string {
 /**
  * Check if two numbers are Buddhist year equivalents.
  * Thai year = Gregorian year + 543 (bidirectional: EN→TH or TH→EN).
+ * Only applies to integers — decimal/float values are not years.
  */
 export function isBuddhistYearEquivalent(sourceNum: number, targetNum: number): boolean {
+  if (!Number.isInteger(sourceNum) || !Number.isInteger(targetNum)) return false
   return Math.abs(targetNum - sourceNum) === BUDDHIST_YEAR_OFFSET
 }

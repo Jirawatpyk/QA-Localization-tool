@@ -89,6 +89,18 @@ describe('checkUppercaseWords', () => {
     const results = checkUppercaseWords(segment, ctx)
     expect(results[0]!.segmentId).toBe('test-id')
   })
+
+  // ── R3-M2: Substring match known limitation — "APIFY" suppresses "API" finding ──
+
+  it('should NOT flag "API" when target contains "APIFY" (known substring limitation)', () => {
+    // includes("API") finds "API" within "APIFY" → no finding
+    // This is by design: word-boundary matching doesn't work for CJK/Thai scripts
+    const segment = buildSegment({
+      sourceText: 'Use the API',
+      targetText: 'ใช้ APIFY ได้',
+    })
+    expect(checkUppercaseWords(segment, ctx)).toEqual([])
+  })
 })
 
 // ═══════════════════════════════════════════════

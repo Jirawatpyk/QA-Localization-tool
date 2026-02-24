@@ -4,7 +4,9 @@ import type { RuleCheckResult, SegmentCheckContext, SegmentRecord } from '../typ
 
 // Number extraction regex: integers, decimals, thousands separators, percentages, negative
 // Supports both comma-dot (1,000.50) and dot-comma (1.000,50) locale formats
-const NUMBER_REGEX = /[-+]?\d[\d.,]*\d|\d/g
+// Lookbehind (?<!\d) prevents capturing hyphen in ranges (e.g., "1-10") as negative sign
+// Both branches need lookbehind+sign: branch 1 for multi-digit, branch 2 for single-digit (e.g., "-5")
+const NUMBER_REGEX = /(?<!\d)[-+]?\d[\d.,]*\d|(?<!\d)[-+]?\d/g
 
 /**
  * Check number consistency between source and target.

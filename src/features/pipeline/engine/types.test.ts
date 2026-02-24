@@ -88,10 +88,11 @@ describe('Constants', () => {
     // Test that patterns can match expected formats
     expect(PLACEHOLDER_PATTERNS.length).toBeGreaterThanOrEqual(5)
 
-    // Verify {0} pattern matches
+    // Verify at least one pattern matches {0} format (find by testing, not by array position)
     const text = 'Hello {0} world {1}'
-    const pattern0 = new RegExp(PLACEHOLDER_PATTERNS[0]!.source, 'g')
-    const matches = text.match(pattern0)
+    const curlyBracePattern = PLACEHOLDER_PATTERNS.find((p) => p.test('{0}'))
+    expect(curlyBracePattern).toBeDefined()
+    const matches = text.match(new RegExp(curlyBracePattern!.source, 'g'))
     expect(matches).toEqual(['{0}', '{1}'])
   })
 })

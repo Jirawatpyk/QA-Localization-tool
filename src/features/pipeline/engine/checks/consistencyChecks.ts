@@ -30,6 +30,8 @@ export function checkSameSourceDiffTarget(ctx: FileCheckContext): RuleCheckResul
     const uniqueTargets = new Map<string, SegmentRecord>()
     for (const seg of segs) {
       let normalized = applyCjkNfkcNormalization(seg.targetText.trim())
+      // Skip empty targets — already caught by checkUntranslated
+      if (normalized.length === 0) continue
       if (isThai) normalized = stripThaiParticles(normalized)
       if (!uniqueTargets.has(normalized)) {
         uniqueTargets.set(normalized, seg)

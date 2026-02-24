@@ -25,6 +25,9 @@ export function checkUppercaseWords(
   // Skip if target has zero Latin characters (purely CJK/Thai without any Latin terms)
   if (!HAS_LATIN_REGEX.test(segment.targetText)) return results
 
+  // NOTE: substring match (includes) is intentionally liberal — word-boundary
+  // matching (\b) doesn't work for CJK/Thai scripts. Known limitation: "APIFY"
+  // in target suppresses finding for "API" since "API" is a substring.
   for (const word of sourceWords) {
     if (!segment.targetText.includes(word)) {
       results.push({

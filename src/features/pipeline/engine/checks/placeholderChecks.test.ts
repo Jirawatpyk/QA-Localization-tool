@@ -154,6 +154,16 @@ describe('checkPlaceholderConsistency', () => {
     expect(result!.suggestedFix).toContain('Add')
   })
 
+  it('should include segmentId in result', () => {
+    const segment = buildSegment({
+      id: 'test-seg-id',
+      sourceText: 'Hello {0}',
+      targetText: 'สวัสดี',
+    })
+    const result = checkPlaceholderConsistency(segment, ctx)
+    expect(result!.segmentId).toBe('test-seg-id')
+  })
+
   // ── H1: %% literal escape behavior ──
 
   it('should NOT flag when source and target both have %% (escaped percent)', () => {

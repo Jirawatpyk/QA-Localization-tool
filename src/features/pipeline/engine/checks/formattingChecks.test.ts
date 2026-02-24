@@ -41,6 +41,12 @@ describe('checkDoubleSpaces', () => {
     const segment = buildSegment({ targetText: 'a b c d' })
     expect(checkDoubleSpaces(segment, ctx)).toBeNull()
   })
+
+  it('should include segmentId in result', () => {
+    const segment = buildSegment({ id: 'test-seg-id', targetText: 'Hello  world' })
+    const result = checkDoubleSpaces(segment, ctx)
+    expect(result!.segmentId).toBe('test-seg-id')
+  })
 })
 
 // ═══════════════════════════════════════════════
@@ -182,6 +188,18 @@ describe('checkUnpairedBrackets', () => {
   it('should return empty for balanced single quotes', () => {
     const segment = buildSegment({ targetText: "'Hello'" })
     expect(checkUnpairedBrackets(segment, ctx)).toEqual([])
+  })
+
+  // ── R3-L1: Early-break behavior for interleaved mismatch ──
+
+  it('should flag interleaved "a) (b" as 1 finding (early-break at first excess closer)', () => {
+    // depth goes: ) → -1 → break. Reports 1 finding about missing opener.
+    // The unclosed ( after the break is not separately reported.
+    // This is acceptable: the user is alerted to the bracket issue.
+    const segment = buildSegment({ targetText: 'a) (b' })
+    const results = checkUnpairedBrackets(segment, ctx)
+    expect(results).toHaveLength(1)
+    expect(results[0]!.suggestedFix).toContain('opening')
   })
 })
 

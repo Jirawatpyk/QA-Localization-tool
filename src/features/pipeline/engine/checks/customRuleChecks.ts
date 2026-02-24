@@ -24,7 +24,10 @@ export function checkCustomRules(
   const results: RuleCheckResult[] = []
 
   for (const rule of customRules) {
-    // ReDoS prevention: reject oversized patterns
+    // ReDoS prevention: reject oversized patterns.
+    // NOTE: Length check alone doesn't prevent all catastrophic patterns (e.g., "(a+)+b" = 7 chars).
+    // Mitigated by: (1) admin-only input, (2) V8 backtracking limits, (3) short segment text.
+    // Consider adding regex complexity analysis or execution timeout if user-facing input is added.
     if (rule.pattern.length > MAX_CUSTOM_REGEX_LENGTH) {
       logger.warn(
         { patternLength: rule.pattern.length, ruleId: rule.id },

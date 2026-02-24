@@ -50,6 +50,12 @@ describe('checkUntranslated', () => {
     expect(result!.targetExcerpt).toBe('')
   })
 
+  it('should include segmentId in result', () => {
+    const segment = buildSegment({ id: 'test-seg-id', sourceText: 'Hello', targetText: '' })
+    const result = checkUntranslated(segment, ctx)
+    expect(result!.segmentId).toBe('test-seg-id')
+  })
+
   // ── H2: Empty source should NOT be flagged as untranslated ──
 
   it('should NOT flag when both source and target are empty', () => {

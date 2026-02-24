@@ -65,7 +65,11 @@ describe('checkGlossaryComplianceRule', () => {
   })
 
   it('should create finding for each missing term', async () => {
-    const segment = buildSegment({ sourceText: 'Use the database', targetText: 'ใช้ดาต้าเบส' })
+    const segment = buildSegment({
+      id: 'test-seg-id',
+      sourceText: 'Use the database',
+      targetText: 'ใช้ดาต้าเบส',
+    })
     const terms = [makeGlossaryTerm(TERM_UUID_1, 'database', 'ฐานข้อมูล')]
     const checkFn = mockCheckFn({
       matches: [],
@@ -74,6 +78,7 @@ describe('checkGlossaryComplianceRule', () => {
     })
     const results = await checkGlossaryComplianceRule(segment, terms, ctx, checkFn)
     expect(results).toHaveLength(1)
+    expect(results[0]!.segmentId).toBe('test-seg-id')
     expect(results[0]!.category).toBe('glossary_compliance')
     expect(results[0]!.severity).toBe('major')
     expect(results[0]!.description).toContain('database')

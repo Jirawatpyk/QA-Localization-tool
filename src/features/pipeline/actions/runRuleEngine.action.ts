@@ -126,15 +126,24 @@ export async function runRuleEngine(input: {
       segmentCount: 1,
     }))
 
-    // Batch-insert findings in transaction
-    if (findingInserts.length > 0) {
-      await db.transaction(async (tx) => {
-        for (let i = 0; i < findingInserts.length; i += FINDING_BATCH_SIZE) {
-          const batch = findingInserts.slice(i, i + FINDING_BATCH_SIZE)
-          await tx.insert(findings).values(batch)
-        }
-      })
-    }
+    // Delete any existing L1 findings for this file (idempotent re-run safety)
+    // Then batch-insert new findings — all within a single transaction
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(findings)
+        .where(
+          and(
+            withTenant(findings.tenantId, currentUser.tenantId),
+            eq(findings.fileId, input.fileId),
+            eq(findings.detectedByLayer, 'L1'),
+          ),
+        )
+
+      for (let i = 0; i < findingInserts.length; i += FINDING_BATCH_SIZE) {
+        const batch = findingInserts.slice(i, i + FINDING_BATCH_SIZE)
+        await tx.insert(findings).values(batch)
+      }
+    })
 
     // Severity counts for audit
     const criticalCount = results.filter((r) => r.severity === 'critical').length

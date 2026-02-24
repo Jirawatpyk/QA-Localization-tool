@@ -50,6 +50,15 @@ describe('checkSameSourceDiffTarget', () => {
     expect(results[0]!.severity).toBe('minor')
   })
 
+  it('should include segmentId from the variant segment in result', () => {
+    const segments = [
+      buildSegment({ id: 'seg-first', sourceText: 'Hello', targetText: 'สวัสดี' }),
+      buildSegment({ id: 'seg-variant', sourceText: 'Hello', targetText: 'หวัดดี' }),
+    ]
+    const results = checkSameSourceDiffTarget(buildCtx(segments))
+    expect(results[0]!.segmentId).toBe('seg-variant')
+  })
+
   it('should flag 2 variants when source maps to 3 different targets', () => {
     const segments = [
       buildSegment({ sourceText: 'OK', targetText: 'ตกลง' }),
@@ -112,6 +121,26 @@ describe('checkSameSourceDiffTarget', () => {
 
   it('should handle single occurrence (no duplicate) with no finding', () => {
     const segments = [buildSegment({ sourceText: 'Unique text', targetText: 'ข้อความเดียว' })]
+    expect(checkSameSourceDiffTarget(buildCtx(segments))).toEqual([])
+  })
+
+  // ── R3-H2: Empty targets must be skipped (already caught by checkUntranslated) ──
+
+  it('should NOT flag consistency when one target is empty (untranslated)', () => {
+    const segments = [
+      buildSegment({ sourceText: 'Hello', targetText: 'สวัสดี' }),
+      buildSegment({ sourceText: 'Hello', targetText: '' }),
+    ]
+    // Empty target skipped → only "สวัสดี" in group → no inconsistency finding
+    expect(checkSameSourceDiffTarget(buildCtx(segments))).toEqual([])
+  })
+
+  it('should NOT flag when all targets for same source are empty', () => {
+    const segments = [
+      buildSegment({ sourceText: 'Hello', targetText: '' }),
+      buildSegment({ sourceText: 'Hello', targetText: '   ' }),
+    ]
+    // All empty targets skipped → no variants → no finding
     expect(checkSameSourceDiffTarget(buildCtx(segments))).toEqual([])
   })
 })

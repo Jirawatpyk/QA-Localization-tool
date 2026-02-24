@@ -54,6 +54,12 @@ describe('checkNumberConsistency', () => {
     expect(result!.description).toContain('100')
   })
 
+  it('should include segmentId in result', () => {
+    const segment = buildSegment({ id: 'test-seg-id', sourceText: 'Page 42', targetText: 'หน้า' })
+    const result = checkNumberConsistency(segment, ctx)
+    expect(result!.segmentId).toBe('test-seg-id')
+  })
+
   // ── Locale formats ──
 
   it('should match US format 1,000.50 with European 1.000,50', () => {
@@ -205,5 +211,34 @@ describe('checkNumberConsistency', () => {
     })
     const result = checkNumberConsistency(segment, ctxThaiSource)
     expect(result).not.toBeNull()
+  })
+
+  // ── R3-H1: Hyphen in number ranges must NOT be captured as negative sign ──
+
+  it('should NOT flag range "1-10" where target translates with words', () => {
+    // "1-10" is a range, not "1" and "-10"
+    const segment = buildSegment({
+      sourceText: 'Items 1-10 of 100',
+      targetText: 'รายการ 1 ถึง 10 จาก 100',
+    })
+    expect(checkNumberConsistency(segment, ctx)).toBeNull()
+  })
+
+  it('should NOT flag phone-like ranges "555-1234"', () => {
+    const segment = buildSegment({
+      sourceText: 'Call 555-1234',
+      targetText: 'โทร 555-1234',
+    })
+    expect(checkNumberConsistency(segment, ctx)).toBeNull()
+  })
+
+  it('should still flag standalone negative numbers', () => {
+    const segment = buildSegment({
+      sourceText: 'Adjust by -5',
+      targetText: 'ปรับ 5',
+    })
+    const result = checkNumberConsistency(segment, ctx)
+    expect(result).not.toBeNull()
+    expect(result!.description).toContain('-5')
   })
 })

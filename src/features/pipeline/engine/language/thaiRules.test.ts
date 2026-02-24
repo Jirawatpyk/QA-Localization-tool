@@ -117,4 +117,19 @@ describe('isBuddhistYearEquivalent', () => {
   it('should return true for historical years', () => {
     expect(isBuddhistYearEquivalent(1990, 2533)).toBe(true)
   })
+
+  // ── R3-M1: Float inputs must NOT be treated as Buddhist year ──
+
+  it('should return false for float pairs even with delta=543', () => {
+    // "FY2026.5" → "ปี 2569.5" — not a valid Buddhist year offset
+    expect(isBuddhistYearEquivalent(2026.5, 2569.5)).toBe(false)
+  })
+
+  it('should return false when only source is float', () => {
+    expect(isBuddhistYearEquivalent(2026.5, 2570)).toBe(false)
+  })
+
+  it('should return false when only target is float', () => {
+    expect(isBuddhistYearEquivalent(2026, 2569.5)).toBe(false)
+  })
 })
