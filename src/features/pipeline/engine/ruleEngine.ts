@@ -18,6 +18,7 @@ import {
 import { checkGlossaryComplianceRule } from './checks/glossaryChecks'
 import { checkNumberConsistency } from './checks/numberChecks'
 import { checkPlaceholderConsistency } from './checks/placeholderChecks'
+import { checkRepeatedWords } from './checks/repeatedWordChecks'
 import { checkTagIntegrity } from './checks/tagChecks'
 import { MAX_EXCERPT_LENGTH, SKIP_QA_STATES } from './constants'
 import type {
@@ -107,6 +108,10 @@ export async function processFile(
 
     const camelResults = checkCamelCaseWords(seg, segCtx)
     allResults.push(...camelResults)
+
+    // Repeated words
+    const repeatedWord = checkRepeatedWords(seg, segCtx)
+    if (repeatedWord) allResults.push(repeatedWord)
   }
 
   // 4. Per-segment async glossary compliance (batched)

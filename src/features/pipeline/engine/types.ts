@@ -18,6 +18,7 @@ export type RuleCategory =
   | 'glossary_compliance'
   | 'custom_rule'
   | 'capitalization'
+  | 'repeated_word'
   | 'spelling' // L3 only — included for findings table compatibility
 
 export type SegmentRecord = InferSelectModel<typeof segments>
@@ -62,6 +63,7 @@ const VALID_CATEGORIES: ReadonlySet<string> = new Set([
   'glossary_compliance',
   'custom_rule',
   'capitalization',
+  'repeated_word',
   'spelling',
 ])
 
