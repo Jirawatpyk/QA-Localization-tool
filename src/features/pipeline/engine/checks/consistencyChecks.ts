@@ -126,10 +126,14 @@ export function checkKeyTermConsistency(ctx: FileCheckContext): RuleCheckResult[
   // For each glossary term, find segments containing it in source
   for (const term of ctx.glossaryTerms) {
     const sourceTerm = term.sourceTerm
+    const isCaseSensitive = term.caseSensitive
     const matchingSegments: SegmentRecord[] = []
 
     for (const seg of ctx.segments) {
-      if (seg.sourceText.toLowerCase().includes(sourceTerm.toLowerCase())) {
+      const sourceMatch = isCaseSensitive
+        ? seg.sourceText.includes(sourceTerm)
+        : seg.sourceText.toLowerCase().includes(sourceTerm.toLowerCase())
+      if (sourceMatch) {
         matchingSegments.push(seg)
       }
     }
@@ -142,7 +146,10 @@ export function checkKeyTermConsistency(ctx: FileCheckContext): RuleCheckResult[
     const segsWithoutTerm: SegmentRecord[] = []
 
     for (const seg of matchingSegments) {
-      if (seg.targetText.toLowerCase().includes(targetTerm.toLowerCase())) {
+      const targetMatch = isCaseSensitive
+        ? seg.targetText.includes(targetTerm)
+        : seg.targetText.toLowerCase().includes(targetTerm.toLowerCase())
+      if (targetMatch) {
         segsWithTerm.push(seg)
       } else {
         segsWithoutTerm.push(seg)

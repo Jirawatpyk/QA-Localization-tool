@@ -1,5 +1,6 @@
 import { logger } from '@/lib/logger'
 
+import { MAX_CUSTOM_REGEX_LENGTH } from '../constants'
 import type {
   RuleCheckResult,
   SegmentCheckContext,
@@ -13,7 +14,7 @@ import type {
  * Custom rules are stored in suppressionRules with category='custom_rule'.
  * - pattern: regex to match against target text
  * - reason: finding description
- * - Invalid regex patterns are logged and skipped (no crash)
+ * - Invalid or oversized regex patterns are logged and skipped (no crash)
  */
 export function checkCustomRules(
   segment: SegmentRecord,
@@ -23,6 +24,15 @@ export function checkCustomRules(
   const results: RuleCheckResult[] = []
 
   for (const rule of customRules) {
+    // ReDoS prevention: reject oversized patterns
+    if (rule.pattern.length > MAX_CUSTOM_REGEX_LENGTH) {
+      logger.warn(
+        { patternLength: rule.pattern.length, ruleId: rule.id },
+        `Custom rule regex exceeds ${MAX_CUSTOM_REGEX_LENGTH} chars — skipped`,
+      )
+      continue
+    }
+
     let regex: RegExp
     try {
       regex = new RegExp(rule.pattern, 'gi')

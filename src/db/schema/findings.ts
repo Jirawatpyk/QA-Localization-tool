@@ -18,6 +18,8 @@ export const findings = pgTable('findings', {
     .notNull()
     .references(() => tenants.id, { onDelete: 'restrict' }),
   // Denormalized from segment's file for query performance (nullable for existing rows)
+  // NOTE: Composite index idx_findings_file_layer(file_id, detected_by_layer) exists in
+  // Supabase migration 00014 but not in Drizzle schema — Drizzle does not manage this index.
   fileId: uuid('file_id').references(() => files.id, { onDelete: 'cascade' }),
   reviewSessionId: uuid('review_session_id').references(() => reviewSessions.id, {
     onDelete: 'set null',

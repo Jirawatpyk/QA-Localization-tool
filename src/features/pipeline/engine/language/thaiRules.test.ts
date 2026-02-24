@@ -3,44 +3,19 @@ import { describe, expect, it } from 'vitest'
 import { isBuddhistYearEquivalent, normalizeThaiNumerals, stripThaiParticles } from './thaiRules'
 
 describe('normalizeThaiNumerals', () => {
-  it('should convert Thai ๐ to Arabic 0', () => {
-    expect(normalizeThaiNumerals('๐')).toBe('0')
-  })
-
-  it('should convert Thai ๑ to Arabic 1', () => {
-    expect(normalizeThaiNumerals('๑')).toBe('1')
-  })
-
-  it('should convert Thai ๒ to Arabic 2', () => {
-    expect(normalizeThaiNumerals('๒')).toBe('2')
-  })
-
-  it('should convert Thai ๓ to Arabic 3', () => {
-    expect(normalizeThaiNumerals('๓')).toBe('3')
-  })
-
-  it('should convert Thai ๔ to Arabic 4', () => {
-    expect(normalizeThaiNumerals('๔')).toBe('4')
-  })
-
-  it('should convert Thai ๕ to Arabic 5', () => {
-    expect(normalizeThaiNumerals('๕')).toBe('5')
-  })
-
-  it('should convert Thai ๖ to Arabic 6', () => {
-    expect(normalizeThaiNumerals('๖')).toBe('6')
-  })
-
-  it('should convert Thai ๗ to Arabic 7', () => {
-    expect(normalizeThaiNumerals('๗')).toBe('7')
-  })
-
-  it('should convert Thai ๘ to Arabic 8', () => {
-    expect(normalizeThaiNumerals('๘')).toBe('8')
-  })
-
-  it('should convert Thai ๙ to Arabic 9', () => {
-    expect(normalizeThaiNumerals('๙')).toBe('9')
+  it.each([
+    ['๐', '0'],
+    ['๑', '1'],
+    ['๒', '2'],
+    ['๓', '3'],
+    ['๔', '4'],
+    ['๕', '5'],
+    ['๖', '6'],
+    ['๗', '7'],
+    ['๘', '8'],
+    ['๙', '9'],
+  ])('should convert Thai %s to Arabic %s', (thai, arabic) => {
+    expect(normalizeThaiNumerals(thai)).toBe(arabic)
   })
 
   it('should convert mixed text with Thai numerals', () => {

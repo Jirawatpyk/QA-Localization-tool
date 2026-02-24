@@ -44,10 +44,10 @@ export const CHECK_SEVERITY_DEFAULTS: Readonly<Record<string, Severity>> = {
 } as const
 
 // Placeholder patterns commonly found in localization files
+// NOTE: %% (literal percent escape) is intentionally excluded — not a placeholder
 export const PLACEHOLDER_PATTERNS: readonly RegExp[] = [
   /\{(\d+)\}/g, // {0}, {1}
   /%[sd@f]/g, // %s, %d, %f, %@
-  /%%/g, // literal percent (skip)
   /%\d+\$[sd]/g, // %1$s, %2$d (positional)
   /\{\{[\w.]+\}\}/g, // {{varName}}, {{var.name}}
   /\$\{[\w.]+\}/g, // ${name}, ${var.name}
@@ -123,3 +123,6 @@ export const BRACKET_PAIRS: readonly [string, string][] = [
 
 // Quote characters to check for balanced pairs
 export const QUOTE_CHARS: readonly string[] = ['"', "'"] as const
+
+// Maximum length for custom rule regex patterns (ReDoS prevention)
+export const MAX_CUSTOM_REGEX_LENGTH = 500

@@ -214,4 +214,47 @@ describe('runRuleEngine', () => {
     if (!result.success) return
     expect(result.data.findingCount).toBe(0)
   })
+
+  // ── C2: INTERNAL_ERROR catch-path tests ──
+
+  it('should return INTERNAL_ERROR when processFile throws', async () => {
+    // 0: CAS returning() → [file], 1: segments orderBy() → []
+    dbState.returnValues = [[mockFile], []]
+    mockProcessFile.mockRejectedValue(new Error('engine crash'))
+
+    const result = await runRuleEngine({ fileId: VALID_UUID })
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INTERNAL_ERROR')
+    expect(result.error).toBe('Rule engine processing failed')
+  })
+
+  it('should NOT call audit log when processFile throws', async () => {
+    dbState.returnValues = [[mockFile], []]
+    mockProcessFile.mockRejectedValue(new Error('engine crash'))
+
+    await runRuleEngine({ fileId: VALID_UUID })
+    expect(mockWriteAuditLog).not.toHaveBeenCalled()
+  })
+
+  // ── H4: Batch insert >100 findings ──
+
+  it('should handle >100 findings (batch insert)', async () => {
+    dbState.returnValues = [[mockFile], [], [], []]
+    const manyFindings = Array.from({ length: 150 }, (_, i) => ({
+      segmentId: `seg-${i}`,
+      category: 'completeness',
+      severity: 'critical',
+      description: `finding ${i}`,
+      suggestedFix: null,
+      sourceExcerpt: 'a',
+      targetExcerpt: 'b',
+    }))
+    mockProcessFile.mockResolvedValue(manyFindings)
+
+    const result = await runRuleEngine({ fileId: VALID_UUID })
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.findingCount).toBe(150)
+  })
 })

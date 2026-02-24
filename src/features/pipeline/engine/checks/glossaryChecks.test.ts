@@ -10,10 +10,14 @@ import type { GlossaryCheckFn } from './glossaryChecks'
 
 const ctx: SegmentCheckContext = { sourceLang: 'en-US', targetLang: 'th-TH' }
 
+const GLOSSARY_UUID = 'e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a5b'
+const TERM_UUID_1 = 'f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c'
+const TERM_UUID_2 = 'a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d'
+
 function makeGlossaryTerm(id: string, sourceTerm: string, targetTerm: string): GlossaryTermRecord {
   return {
     id,
-    glossaryId: 'glossary-1',
+    glossaryId: GLOSSARY_UUID,
     sourceTerm,
     targetTerm,
     caseSensitive: false,
@@ -28,7 +32,7 @@ function mockCheckFn(result: GlossaryCheckResult): GlossaryCheckFn {
 describe('checkGlossaryComplianceRule', () => {
   it('should return empty when no glossary terms match source', async () => {
     const segment = buildSegment({ sourceText: 'Hello world', targetText: 'สวัสดีโลก' })
-    const terms = [makeGlossaryTerm('t1', 'database', 'ฐานข้อมูล')]
+    const terms = [makeGlossaryTerm(TERM_UUID_1, 'database', 'ฐานข้อมูล')]
     const checkFn = mockCheckFn({ matches: [], missingTerms: [], lowConfidenceMatches: [] })
     const results = await checkGlossaryComplianceRule(segment, terms, ctx, checkFn)
     expect(results).toEqual([])
@@ -39,8 +43,8 @@ describe('checkGlossaryComplianceRule', () => {
   it('should call checkFn with pre-filtered terms', async () => {
     const segment = buildSegment({ sourceText: 'Use the database', targetText: 'ใช้ฐานข้อมูล' })
     const terms = [
-      makeGlossaryTerm('t1', 'database', 'ฐานข้อมูล'),
-      makeGlossaryTerm('t2', 'server', 'เซิร์ฟเวอร์'),
+      makeGlossaryTerm(TERM_UUID_1, 'database', 'ฐานข้อมูล'),
+      makeGlossaryTerm(TERM_UUID_2, 'server', 'เซิร์ฟเวอร์'),
     ]
     const checkFn = mockCheckFn({ matches: [], missingTerms: [], lowConfidenceMatches: [] })
     await checkGlossaryComplianceRule(segment, terms, ctx, checkFn)
@@ -54,7 +58,7 @@ describe('checkGlossaryComplianceRule', () => {
 
   it('should return empty when all terms are found (no missingTerms)', async () => {
     const segment = buildSegment({ sourceText: 'Use the database', targetText: 'ใช้ฐานข้อมูล' })
-    const terms = [makeGlossaryTerm('t1', 'database', 'ฐานข้อมูล')]
+    const terms = [makeGlossaryTerm(TERM_UUID_1, 'database', 'ฐานข้อมูล')]
     const checkFn = mockCheckFn({ matches: [], missingTerms: [], lowConfidenceMatches: [] })
     const results = await checkGlossaryComplianceRule(segment, terms, ctx, checkFn)
     expect(results).toEqual([])
@@ -62,8 +66,12 @@ describe('checkGlossaryComplianceRule', () => {
 
   it('should create finding for each missing term', async () => {
     const segment = buildSegment({ sourceText: 'Use the database', targetText: 'ใช้ดาต้าเบส' })
-    const terms = [makeGlossaryTerm('t1', 'database', 'ฐานข้อมูล')]
-    const checkFn = mockCheckFn({ matches: [], missingTerms: ['t1'], lowConfidenceMatches: [] })
+    const terms = [makeGlossaryTerm(TERM_UUID_1, 'database', 'ฐานข้อมูล')]
+    const checkFn = mockCheckFn({
+      matches: [],
+      missingTerms: [TERM_UUID_1],
+      lowConfidenceMatches: [],
+    })
     const results = await checkGlossaryComplianceRule(segment, terms, ctx, checkFn)
     expect(results).toHaveLength(1)
     expect(results[0]!.category).toBe('glossary_compliance')
@@ -79,12 +87,12 @@ describe('checkGlossaryComplianceRule', () => {
       targetText: 'ตรวจสอบดาต้าเบสและเซิร์ฟ',
     })
     const terms = [
-      makeGlossaryTerm('t1', 'database', 'ฐานข้อมูล'),
-      makeGlossaryTerm('t2', 'server', 'เซิร์ฟเวอร์'),
+      makeGlossaryTerm(TERM_UUID_1, 'database', 'ฐานข้อมูล'),
+      makeGlossaryTerm(TERM_UUID_2, 'server', 'เซิร์ฟเวอร์'),
     ]
     const checkFn = mockCheckFn({
       matches: [],
-      missingTerms: ['t1', 't2'],
+      missingTerms: [TERM_UUID_1, TERM_UUID_2],
       lowConfidenceMatches: [],
     })
     const results = await checkGlossaryComplianceRule(segment, terms, ctx, checkFn)
@@ -93,13 +101,13 @@ describe('checkGlossaryComplianceRule', () => {
 
   it('should NOT create findings for lowConfidenceMatches', async () => {
     const segment = buildSegment({ sourceText: 'Use the database', targetText: 'ใช้ฐานข้อมูล' })
-    const terms = [makeGlossaryTerm('t1', 'database', 'ฐานข้อมูล')]
+    const terms = [makeGlossaryTerm(TERM_UUID_1, 'database', 'ฐานข้อมูล')]
     const checkFn = mockCheckFn({
       matches: [],
       missingTerms: [],
       lowConfidenceMatches: [
         {
-          termId: 't1',
+          termId: TERM_UUID_1,
           sourceTerm: 'database',
           expectedTarget: 'ฐานข้อมูล',
           foundText: 'ฐานข้อมูล',
@@ -120,8 +128,12 @@ describe('checkGlossaryComplianceRule', () => {
       sourceText: 'Check database',
       targetText: 'ตรวจสอบ',
     })
-    const terms = [makeGlossaryTerm('t1', 'database', 'ฐานข้อมูล')]
-    const checkFn = mockCheckFn({ matches: [], missingTerms: ['t1'], lowConfidenceMatches: [] })
+    const terms = [makeGlossaryTerm(TERM_UUID_1, 'database', 'ฐานข้อมูล')]
+    const checkFn = mockCheckFn({
+      matches: [],
+      missingTerms: [TERM_UUID_1],
+      lowConfidenceMatches: [],
+    })
     await checkGlossaryComplianceRule(segment, terms, ctx, checkFn)
     const calledCtx = (checkFn as ReturnType<typeof vi.fn>).mock.calls[0]?.[3]
     expect(calledCtx).toEqual({
@@ -136,7 +148,7 @@ describe('checkGlossaryComplianceRule', () => {
       sourceText: 'The DATABASE is ready',
       targetText: 'ฐานข้อมูลพร้อม',
     })
-    const terms = [makeGlossaryTerm('t1', 'database', 'ฐานข้อมูล')]
+    const terms = [makeGlossaryTerm(TERM_UUID_1, 'database', 'ฐานข้อมูล')]
     const checkFn = mockCheckFn({ matches: [], missingTerms: [], lowConfidenceMatches: [] })
     await checkGlossaryComplianceRule(segment, terms, ctx, checkFn)
     expect(checkFn).toHaveBeenCalledTimes(1) // term passed through pre-filter

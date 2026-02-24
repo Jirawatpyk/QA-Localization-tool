@@ -197,7 +197,7 @@ so that I can trust this tool to replace Xbench with 100% parity.
   - [ ] 12.13 Unit tests — **20 tests** (auth failure, file NOT_FOUND, CAS CONFLICT on concurrent run, tenant isolation, successful run with findings, empty findings, batch insert within transaction, audit log with tenantId+userId, performance measurement, error handling with status rollback)
 
 - [x] Task 13: Integration Testing, Parity Verification & Regression Check (AC: all, #8)
-  - [x] 13.1 Verify all existing tests still pass — 0 regressions ✅ (1014/1016 passed, 2 pre-existing OnboardingTour failures)
+  - [x] 13.1 Verify all existing tests still pass — 0 regressions ✅ (1013/1016 passed, 3 pre-existing timeout failures: OnboardingTour ×2, importGlossary ×1)
   - [x] 13.2 `npm run type-check` — 0 errors ✅
   - [x] 13.3 `npm run lint` — 0 errors, 0 warnings ✅
   - [x] 13.4 RLS tests — N/A (new findings columns added to existing schema, no new RLS policies required for L1 engine)
@@ -209,20 +209,20 @@ so that I can trust this tool to replace Xbench with 100% parity.
     - [ ] ~~13.7c Tier 2 — NCR TH~~
     - [ ] ~~13.7d Tier 3 — NCR Multi-lang~~
     - [ ] ~~13.7e Parity Report Generator~~
-  - [x] 13.8 **Actual: 274 new tests** (exceeded 250 target) ✅
+  - [x] 13.8 **Actual: 252 new tests across 15 test files** (14 new + 1 modified sdlxliffParser.test.ts) ✅ — 243 pre-CR + 9 added in CR Round 1
 
 ## Dev Agent Record
 
 ### Implementation Summary
 - **Status:** in-review
-- **Tests:** 274 passed across 16 test files (target: ~250)
+- **Tests:** 252 passed across 15 test files (14 new + 1 modified) — 243 pre-CR + 9 added in CR Round 1
 - **Quality Gates:** type-check ✅ | lint ✅ | regression ✅ | performance ✅
 - **Pre-CR Scans:** anti-pattern-detector (0 CRITICAL/HIGH) ✅ | tenant-isolation-checker (2 issues found & fixed) ✅
 
 ### AC Coverage
 | AC | Status | Notes |
 |---|---|---|
-| #1 (17 check types) | ✅ Done | All 12 MVP + 5 Bonus checks implemented with 274 tests |
+| #1 (17 check types) | ✅ Done | All 12 MVP + 5 Bonus checks implemented with 252 tests |
 | #2 (Thai rules) | ✅ Done | Numeral mapping, particle stripping, Buddhist year offset |
 | #3 (Chinese rules) | ✅ Done | Fullwidth punctuation, NFKC normalization |
 | #4 (Japanese rules) | ✅ Done | Mixed scripts, NFKC, Intl.Segmenter |
@@ -239,11 +239,44 @@ so that I can trust this tool to replace Xbench with 100% parity.
 2. **New test-time dependency** — needs `exceljs` or `xlsx` npm package to read Xbench .xlsx reports
 3. **Large scope** — 695 SDLXLIFF files across 3 tiers + xlsx report parser + parity report generator
 4. **Story 2.7 already scoped for parity tools** — natural home for this work
-5. **No quality risk** — all 17 check types have comprehensive unit tests (274 total); Story 2.5/2.6 will exercise engine with real data as early warning
+5. **No quality risk** — all 17 check types have comprehensive unit tests (243 total); Story 2.5/2.6 will exercise engine with real data as early warning
 
 ### Tenant Isolation Fixes Applied
 - `runRuleEngine.action.ts` L169: Added `withTenant()` to `l1_completed` status UPDATE
 - `runRuleEngine.action.ts` L186: Added `withTenant()` to `failed` status rollback UPDATE
+
+### CR Round 1 Fixes Applied (18 findings: 2C · 5H · 6M · 5L → all resolved)
+
+**Source code fixes (7):**
+| # | Sev | Finding | Fix |
+|---|-----|---------|-----|
+| H1 | High | Audit log failure corrupts file status | Moved `writeAuditLog()` AFTER status update + wrapped in try-catch (non-fatal) |
+| H2 | High | Error-path rollback throws unhandled | Wrapped rollback `db.update()` in try-catch |
+| H3 | High | ReDoS risk in custom rule regex | Added `MAX_CUSTOM_REGEX_LENGTH=500` check before `new RegExp()` |
+| H5 | High | `caseSensitive` flag ignored in key term check | Added `caseSensitive` flag support in `checkKeyTermConsistency` |
+| M1 | Medium | `isRuleCategory` creates Set every call | Moved to module-level `VALID_CATEGORIES` constant |
+| M6 | Medium | Dead `%%` entry in PLACEHOLDER_PATTERNS | Removed from array + removed skip logic in `extractPlaceholders` |
+| C1+L3 | Critical+Low | Dev Agent Record test count wrong | Fixed 274→243 (pre-CR), regression count 2→3 |
+
+**Documentation fixes (2):**
+| # | Sev | Finding | Fix |
+|---|-----|---------|-----|
+| M2 | Medium | Index drift Drizzle↔Supabase undocumented | Added NOTE comment in `findings.ts` about composite index |
+| M3 | Medium | Mixed-language limitation undocumented | Added NOTE comment in `ruleEngine.ts` about first-segment language |
+
+**Test fixes (9 tests added, multiple strengthened):**
+| # | Sev | Finding | Fix |
+|---|-----|---------|-----|
+| C2 | Critical | No INTERNAL_ERROR catch-path test | +3 tests: processFile throws, audit NOT called, INTERNAL_ERROR returned |
+| H4 | High | No batch >100 findings test | +1 test: 150 findings batch insert |
+| M4 | Medium | No single-quote `'` bracket test | +2 tests: unpaired + balanced single quotes |
+| M5 | Medium | No fullwidth `：；` tests | +4 tests: normalize + equivalence for colon/semicolon |
+| L1 | Low | Vacuous `Array.isArray` assertion | Changed to `expect(results).toEqual([])` with matching end punctuation |
+| L2 | Low | Non-UUID test IDs `'t1'`/`'glossary-1'` | Replaced with valid v4 UUIDs |
+| L4 | Low | Weak `.toBeGreaterThan(0)` assertions | Strengthened to `.toHaveLength(1)` (3 occurrences) |
+| L5 | Low | Verbose Thai digit tests (10 individual) | Refactored to `it.each` table |
+
+**Final verification:** type-check ✅ | lint ✅ | 1025 tests ✅ (0 new failures)
 
 ### Anti-Pattern Scan — Accepted Deviations
 - **MEDIUM #1:** `thaiRules.ts`/`cjkRules.ts` at `src/features/pipeline/engine/language/` instead of `src/lib/language/` — per story spec, engine-internal only, will refactor when cross-feature use materializes

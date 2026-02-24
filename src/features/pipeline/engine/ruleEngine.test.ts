@@ -218,14 +218,14 @@ describe('processFile', () => {
   it('should process single segment without errors', async () => {
     const segments = [
       buildSegment({
-        sourceText: 'Hello world',
-        targetText: 'สวัสดีโลก',
+        sourceText: 'Hello world.',
+        targetText: 'สวัสดีโลก.',
         confirmationState: 'Translated',
       }),
     ]
     const results = await processFile(segments, emptyGlossary, noSuppression, noCustomRules)
-    // No errors for clean translation — may have minor findings like end punctuation
-    expect(Array.isArray(results)).toBe(true)
+    // Clean translation with matching end punctuation — should produce no findings
+    expect(results).toEqual([])
   })
 
   it('should handle null inlineTags without errors', async () => {

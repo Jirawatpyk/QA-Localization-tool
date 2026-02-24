@@ -46,7 +46,10 @@ export async function processFile(
 ): Promise<RuleCheckResult[]> {
   if (segments.length === 0) return []
 
-  // Derive language context from first segment
+  // Derive language context from first segment.
+  // NOTE: Mixed-language Excel files (per-row targetLang) will use first segment's language
+  // for all checks. Per-segment language routing is deferred to Story 2.7 when multi-language
+  // file support is implemented.
   const sourceLang = segments[0]?.sourceLang ?? 'und'
   const targetLang = segments[0]?.targetLang ?? 'und'
 

@@ -50,21 +50,22 @@ export function isSeverity(value: string): value is Severity {
   return value === 'critical' || value === 'major' || value === 'minor'
 }
 
+const VALID_CATEGORIES: ReadonlySet<string> = new Set([
+  'completeness',
+  'tag_integrity',
+  'number_format',
+  'placeholder_integrity',
+  'spacing',
+  'punctuation',
+  'url_integrity',
+  'consistency',
+  'glossary_compliance',
+  'custom_rule',
+  'capitalization',
+  'spelling',
+])
+
 // Type guard: validate a string is a valid RuleCategory
 export function isRuleCategory(value: string): value is RuleCategory {
-  const validCategories: ReadonlySet<string> = new Set([
-    'completeness',
-    'tag_integrity',
-    'number_format',
-    'placeholder_integrity',
-    'spacing',
-    'punctuation',
-    'url_integrity',
-    'consistency',
-    'glossary_compliance',
-    'custom_rule',
-    'capitalization',
-    'spelling',
-  ])
-  return validCategories.has(value)
+  return VALID_CATEGORIES.has(value)
 }

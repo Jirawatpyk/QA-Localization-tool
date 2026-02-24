@@ -115,7 +115,7 @@ describe('checkUnpairedBrackets', () => {
 
   it('should flag unpaired square bracket', () => {
     const segment = buildSegment({ targetText: 'See [note' })
-    expect(checkUnpairedBrackets(segment, ctx).length).toBeGreaterThan(0)
+    expect(checkUnpairedBrackets(segment, ctx)).toHaveLength(1)
   })
 
   it('should return empty for balanced curly braces', () => {
@@ -125,7 +125,7 @@ describe('checkUnpairedBrackets', () => {
 
   it('should flag unpaired curly brace', () => {
     const segment = buildSegment({ targetText: '{value' })
-    expect(checkUnpairedBrackets(segment, ctx).length).toBeGreaterThan(0)
+    expect(checkUnpairedBrackets(segment, ctx)).toHaveLength(1)
   })
 
   it('should return empty for balanced 「」', () => {
@@ -135,7 +135,7 @@ describe('checkUnpairedBrackets', () => {
 
   it('should flag unpaired 「', () => {
     const segment = buildSegment({ targetText: '「テスト' })
-    expect(checkUnpairedBrackets(segment, ctx).length).toBeGreaterThan(0)
+    expect(checkUnpairedBrackets(segment, ctx)).toHaveLength(1)
   })
 
   it('should return empty for balanced 【】', () => {
@@ -151,6 +151,18 @@ describe('checkUnpairedBrackets', () => {
 
   it('should return empty for balanced double quotes', () => {
     const segment = buildSegment({ targetText: '"Hello"' })
+    expect(checkUnpairedBrackets(segment, ctx)).toEqual([])
+  })
+
+  // M4: Single-quote coverage
+  it('should flag unpaired single quote', () => {
+    const segment = buildSegment({ targetText: "it's here" })
+    const results = checkUnpairedBrackets(segment, ctx)
+    expect(results.some((r) => r.description.includes("'"))).toBe(true)
+  })
+
+  it('should return empty for balanced single quotes', () => {
+    const segment = buildSegment({ targetText: "'Hello'" })
     expect(checkUnpairedBrackets(segment, ctx)).toEqual([])
   })
 })

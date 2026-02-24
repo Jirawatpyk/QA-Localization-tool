@@ -141,27 +141,32 @@ export async function runRuleEngine(input: {
     const majorCount = results.filter((r) => r.severity === 'major').length
     const minorCount = results.filter((r) => r.severity === 'minor').length
 
-    // Write audit log
-    await writeAuditLog({
-      tenantId: currentUser.tenantId,
-      userId: currentUser.id,
-      entityType: 'file',
-      entityId: input.fileId,
-      action: 'file.l1_completed',
-      newValue: {
-        findingCount: results.length,
-        criticalCount,
-        majorCount,
-        minorCount,
-        duration,
-      },
-    })
-
-    // Update file status to l1_completed
+    // Update file status to l1_completed BEFORE audit log
+    // (audit log failure must NOT revert already-committed findings)
     await db
       .update(files)
       .set({ status: 'l1_completed' })
       .where(and(withTenant(files.tenantId, currentUser.tenantId), eq(files.id, input.fileId)))
+
+    // Write audit log (non-fatal — findings + status already committed)
+    try {
+      await writeAuditLog({
+        tenantId: currentUser.tenantId,
+        userId: currentUser.id,
+        entityType: 'file',
+        entityId: input.fileId,
+        action: 'file.l1_completed',
+        newValue: {
+          findingCount: results.length,
+          criticalCount,
+          majorCount,
+          minorCount,
+          duration,
+        },
+      })
+    } catch (auditErr) {
+      logger.error({ err: auditErr, fileId: input.fileId }, 'Audit log write failed (non-fatal)')
+    }
 
     return {
       success: true,
@@ -174,11 +179,18 @@ export async function runRuleEngine(input: {
   } catch (err) {
     logger.error({ err, fileId: input.fileId }, 'Rule engine failed')
 
-    // Roll back to 'failed' status
-    await db
-      .update(files)
-      .set({ status: 'failed' })
-      .where(and(withTenant(files.tenantId, currentUser.tenantId), eq(files.id, input.fileId)))
+    // Roll back to 'failed' status (non-fatal — original error is more important)
+    try {
+      await db
+        .update(files)
+        .set({ status: 'failed' })
+        .where(and(withTenant(files.tenantId, currentUser.tenantId), eq(files.id, input.fileId)))
+    } catch (rollbackErr) {
+      logger.error(
+        { err: rollbackErr, fileId: input.fileId },
+        'Failed to roll back file status to failed',
+      )
+    }
 
     return {
       success: false,

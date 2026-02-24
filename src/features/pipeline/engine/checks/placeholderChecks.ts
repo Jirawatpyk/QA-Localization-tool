@@ -68,9 +68,6 @@ function extractPlaceholders(text: string): Set<string> {
   const result = new Set<string>()
 
   for (const pattern of PLACEHOLDER_PATTERNS) {
-    // Skip the %% pattern — it's a literal percent, not a placeholder
-    if (pattern.source === '%%') continue
-
     // Reset regex lastIndex for global patterns
     const re = new RegExp(pattern.source, pattern.flags)
     let match: RegExpExecArray | null

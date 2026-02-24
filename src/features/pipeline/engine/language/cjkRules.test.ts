@@ -23,6 +23,14 @@ describe('normalizeFullwidthPunctuation', () => {
     expect(normalizeFullwidthPunctuation('，')).toBe(',')
   })
 
+  it('should map ： to :', () => {
+    expect(normalizeFullwidthPunctuation('：')).toBe(':')
+  })
+
+  it('should map ； to ;', () => {
+    expect(normalizeFullwidthPunctuation('；')).toBe(';')
+  })
+
   it('should return unchanged for non-mapped characters', () => {
     expect(normalizeFullwidthPunctuation('A')).toBe('A')
     expect(normalizeFullwidthPunctuation('.')).toBe('.')
@@ -45,6 +53,16 @@ describe('isFullwidthEquivalent', () => {
 
   it('should return true for ？ vs ?', () => {
     expect(isFullwidthEquivalent('？', '?')).toBe(true)
+  })
+
+  it('should return true for ： vs :', () => {
+    expect(isFullwidthEquivalent('：', ':')).toBe(true)
+    expect(isFullwidthEquivalent(':', '：')).toBe(true)
+  })
+
+  it('should return true for ； vs ;', () => {
+    expect(isFullwidthEquivalent('；', ';')).toBe(true)
+    expect(isFullwidthEquivalent(';', '；')).toBe(true)
   })
 
   it('should return false for different characters', () => {
