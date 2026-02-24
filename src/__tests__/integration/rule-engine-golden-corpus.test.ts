@@ -318,6 +318,12 @@ describe.skipIf(!hasGoldenCorpus())('Golden Corpus — Real Data Smoke Test', ()
 
     expect(xbenchTagCount).toBeGreaterThan(0)
     // Our engine should also find tag issues in these files
+    // KNOWN GAP (G2): Engine finds ~6–10 vs Xbench's ~27.
+    // Root cause: Xbench reads <trans-unit>/<source> (full XML with TM metadata),
+    // our parser reads <seg-source>/<mrk> (tokenized segments). For ~20/27 findings,
+    // text content differs (e.g., Xbench shows "[year]" template vs actual "2024").
+    // Diagnosis: ENGINE_MISSED = 0 — checkTagIntegrity logic is CORRECT.
+    // Gap is data-source difference, not a logic bug. Accepted for L1.
     expect(engineTagFindings.length).toBeGreaterThan(0)
   })
 
