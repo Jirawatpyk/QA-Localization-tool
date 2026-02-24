@@ -241,4 +241,125 @@ describe('checkNumberConsistency', () => {
     expect(result).not.toBeNull()
     expect(result!.description).toContain('-5')
   })
+
+  // ── English number words (Option A: flag missing, pass word→digit conversion) ──
+
+  it('should flag when English number word is absent from target (no digit equivalent)', () => {
+    // "four" in source, no "4" and no "four" in target → quantity lost
+    const segment = buildSegment({
+      sourceText: 'Follow the four steps of the Teaching Model',
+      targetText: 'ปฏิบัติตามขั้นตอนของรูปแบบการสอน',
+    })
+    const result = checkNumberConsistency(segment, ctx)
+    expect(result).not.toBeNull()
+    expect(result!.category).toBe('number_format')
+    expect(result!.description).toContain('four')
+  })
+
+  it('should flag multiple missing number words', () => {
+    const segment = buildSegment({
+      sourceText: 'At least one trainer for every two new baristas',
+      targetText: 'ผู้ฝึกอบรมสำหรับบาริสตาใหม่',
+    })
+    const result = checkNumberConsistency(segment, ctx)
+    expect(result).not.toBeNull()
+    expect(result!.description).toContain('one')
+    expect(result!.description).toContain('two')
+  })
+
+  it('should return null when number word is correctly converted to digit in target', () => {
+    // "four" → "4" is acceptable localization practice — PASS, not an error
+    const segment = buildSegment({
+      sourceText: 'Follow the four steps of the Teaching Model',
+      targetText: 'ปฏิบัติตาม 4 ขั้นตอนของรูปแบบการสอน',
+    })
+    expect(checkNumberConsistency(segment, ctx)).toBeNull()
+  })
+
+  it('should return null when "one" maps to "1" in target', () => {
+    const segment = buildSegment({
+      sourceText: 'At least one Barista Trainer per shift',
+      targetText: 'บาริสตาเทรนเนอร์อย่างน้อย 1 คนต่อกะ',
+    })
+    expect(checkNumberConsistency(segment, ctx)).toBeNull()
+  })
+
+  it('should return null when "two" maps to "2" in target', () => {
+    const segment = buildSegment({
+      sourceText: 'minimum of two Barista Trainers',
+      targetText: 'ผู้ฝึกอบรมบาริสตาอย่างน้อย 2 คน',
+    })
+    expect(checkNumberConsistency(segment, ctx)).toBeNull()
+  })
+
+  it('should be case-insensitive for number words', () => {
+    const segment = buildSegment({
+      sourceText: 'Follow FOUR steps and THREE guidelines',
+      targetText: 'ทำตามขั้นตอน',
+    })
+    const result = checkNumberConsistency(segment, ctx)
+    expect(result).not.toBeNull()
+    expect(result!.description).toMatch(/FOUR|four/i)
+  })
+
+  it('should NOT flag number words when source language is not English', () => {
+    // Thai source with the text "four" (as a loanword or similar) — should not trigger
+    const ctxThTh: SegmentCheckContext = { sourceLang: 'th-TH', targetLang: 'en-US' }
+    const segment = buildSegment({
+      sourceText: 'four ขั้นตอน',
+      targetText: 'procedures',
+    })
+    // Thai source: EN_NUMBER_WORD_REGEX not applied → no "four" extracted → null
+    expect(checkNumberConsistency(segment, ctxThTh)).toBeNull()
+  })
+
+  // ── False positive guards ──
+
+  it('should NOT flag "one" inside "someone" (substring, not word boundary)', () => {
+    const segment = buildSegment({
+      sourceText: 'someone will help you',
+      targetText: 'มีคนจะช่วยคุณ',
+    })
+    expect(checkNumberConsistency(segment, ctx)).toBeNull()
+  })
+
+  it('should NOT flag when source has no numbers or number words', () => {
+    const segment = buildSegment({
+      sourceText: 'Please review the document carefully',
+      targetText: 'กรุณาตรวจสอบเอกสารอย่างละเอียด',
+    })
+    expect(checkNumberConsistency(segment, ctx)).toBeNull()
+  })
+
+  it('should NOT double-flag when source has both word and digit for same number', () => {
+    // "four 4" → source has both "four" (word) and "4" (digit)
+    // target has "4" — digit check passes, word check skips (digit already in sourceDigits)
+    const segment = buildSegment({
+      sourceText: 'four (4) training modules',
+      targetText: 'โมดูลการฝึกอบรม 4 รายการ',
+    })
+    expect(checkNumberConsistency(segment, ctx)).toBeNull()
+  })
+
+  // ── Real Xbench golden corpus cases (Option A design verification) ──
+
+  it('should PASS real Xbench case: "four steps" → "4 ขั้นตอน" (word-to-digit is valid)', () => {
+    // Xbench flags this; our engine correctly passes it (quantity preserved, format changed)
+    const segment = buildSegment({
+      sourceText: 'When teaching a new skill, follow the four steps of the Teaching Model.',
+      targetText: 'เมื่อสอนทักษะใหม่ ให้ปฏิบัติตาม 4 ขั้นตอนของรูปแบบการสอน',
+    })
+    expect(checkNumberConsistency(segment, ctx)).toBeNull()
+  })
+
+  it('should FLAG when number word is lost entirely from target', () => {
+    // Genuine error: "three learning styles" → no "3" or "three" in Thai target
+    const segment = buildSegment({
+      sourceText: 'There are three major learning styles to consider',
+      targetText: 'มีรูปแบบการเรียนรู้หลักที่ต้องพิจารณา',
+    })
+    const result = checkNumberConsistency(segment, ctx)
+    expect(result).not.toBeNull()
+    expect(result!.description).toContain('three')
+  })
 })
