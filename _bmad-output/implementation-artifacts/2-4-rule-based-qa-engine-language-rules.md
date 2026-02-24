@@ -231,6 +231,24 @@ so that I can trust this tool to replace Xbench with 100% parity.
 
 19. **Reference:** `docs/test-data/golden-corpus/manifest.yaml` — complete file→report mapping, tiered strategy, glossary file listing, and dev quick-start guide.
 
+20. **Testing strategy — Pragmatic TDD (3 levels):**
+    **"Red = test ต้อง FAIL ด้วยเหตุผลที่ถูกต้อง"** — function not found หรือ assertion failed เพราะ logic ยังไม่มี ไม่ใช่ fail เพราะ syntax error หรือ import ผิด
+    - **Level 1 — TDD (write tests BEFORE code):** Tasks 3, 5, 10, 7, 8-glossary — pure functions with complex language logic or type conversion. Well-defined inputs/outputs + critical negative test cases. Write failing tests first (Red), implement to pass (Green), then refactor.
+      - Task 3: Content Checks (20 tests) — start here, simple, builds TDD rhythm
+      - Task 5: Number + Placeholder (30 tests) — Thai numerals, Buddhist year offset
+      - Task 10: Language Rules (25 tests) — Thai particle stripping, CJK NFKC — **do before Task 7** (Task 7 depends on `stripThaiParticles()`)
+      - Task 7: Consistency Checks (30 tests) — negative tests critical (particle-only diff must NOT flag)
+      - Task 8 glossary part (12 tests) — GlossaryCheckResult→RuleCheckResult[] type conversion is P0 risk; `lowConfidenceMatches` must NOT generate findings (negative test)
+    - **Level 2 — Code + Test alongside:** Tasks 4, 6, 8-custom-rules, 9 — straightforward checks, write code and tests in parallel.
+      - Task 4: Tag Checks (20 tests) — need to understand inlineTags JSONB structure first
+      - Task 6: Formatting (35 tests) — many small functions, test as you go
+      - Task 8 custom rules part (8 tests) — simple regex matching, low risk
+      - Task 9: Capitalization (15 tests) — simple regex + Latin-presence check
+    - **Level 3 — Test after code:** Tasks 11, 12, 13 — integration code that depends on all checks being implemented first.
+      - Task 11: Orchestrator (25 tests) — needs all check functions to exist
+      - Task 12: Server Action (20 tests) — integration with DB, auth, audit
+      - Task 13: Parity Testing — golden corpus comparison (integration, not unit)
+
 ### Key Gotchas — Read Before Starting
 
 1. **Rule engine is PURE FUNCTIONS, NOT a Route Handler**: The engine at `src/features/pipeline/engine/` is a collection of pure functions. The Server Action (`runRuleEngine.action.ts`) is the entry point with `'use server'` + `import 'server-only'`. Story 2.6 (Inngest) will call the pure `processFile()` function directly — NOT through the Server Action. Design the engine to be framework-agnostic.
