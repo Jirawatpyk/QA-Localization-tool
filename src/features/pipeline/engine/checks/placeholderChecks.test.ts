@@ -153,4 +153,69 @@ describe('checkPlaceholderConsistency', () => {
     const result = checkPlaceholderConsistency(segment, ctx)
     expect(result!.suggestedFix).toContain('Add')
   })
+
+  // ── H1: %% literal escape behavior ──
+
+  it('should NOT flag when source and target both have %% (escaped percent)', () => {
+    const segment = buildSegment({
+      sourceText: 'Progress: 100%%',
+      targetText: 'ความคืบหน้า: 100%%',
+    })
+    // %% does not match /%[sd@f]/g so both sides have no placeholders → no finding
+    expect(checkPlaceholderConsistency(segment, ctx)).toBeNull()
+  })
+
+  it('should NOT flag when source has %% and target preserves it', () => {
+    // %%s: the regex /%[sd@f]/g matches only the LAST "%s" substring of "%%s"
+    // if source has "%%s" it extracts "%s"; if target also has "%%s" it also extracts "%s"
+    // → they match → no finding
+    const segment = buildSegment({
+      sourceText: 'Use %%s for literal',
+      targetText: 'ใช้ %%s สำหรับ',
+    })
+    expect(checkPlaceholderConsistency(segment, ctx)).toBeNull()
+  })
+
+  it('should flag when target drops %% but source has it (mismatched escaping)', () => {
+    // source has "%%s" → extracts "%s"; target has no placeholder at all → missing
+    const segment = buildSegment({
+      sourceText: 'Value: %%s',
+      targetText: 'ค่า:',
+    })
+    const result = checkPlaceholderConsistency(segment, ctx)
+    // %s was extracted from %%s in source, not present in target → finding
+    expect(result).not.toBeNull()
+    expect(result!.description).toContain('missing')
+  })
+
+  // ── C1: Duplicate placeholder counting ──
+
+  it('should flag when source has {0} twice but target has it once', () => {
+    const segment = buildSegment({
+      sourceText: '{0} and {0}',
+      targetText: '{0} และ',
+    })
+    const result = checkPlaceholderConsistency(segment, ctx)
+    expect(result).not.toBeNull()
+    expect(result!.description).toContain('missing')
+    expect(result!.description).toContain('{0}')
+  })
+
+  it('should return null when duplicate placeholders match in count', () => {
+    const segment = buildSegment({
+      sourceText: '{0} and {0}',
+      targetText: '{0} และ {0}',
+    })
+    expect(checkPlaceholderConsistency(segment, ctx)).toBeNull()
+  })
+
+  it('should flag extra when target has more duplicates than source', () => {
+    const segment = buildSegment({
+      sourceText: '{0} text',
+      targetText: '{0} {0} ข้อความ',
+    })
+    const result = checkPlaceholderConsistency(segment, ctx)
+    expect(result).not.toBeNull()
+    expect(result!.description).toContain('extra')
+  })
 })

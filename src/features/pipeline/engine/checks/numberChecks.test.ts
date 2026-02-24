@@ -145,4 +145,65 @@ describe('checkNumberConsistency', () => {
     })
     expect(checkNumberConsistency(segment, ctx)).toBeNull()
   })
+
+  // ── M1: Negative number flag (source negative, target positive) ──
+
+  it('should flag when source has negative number but target has only positive', () => {
+    const segment = buildSegment({
+      sourceText: 'Balance: -10',
+      targetText: 'ยอดเงิน: 10',
+    })
+    const result = checkNumberConsistency(segment, ctx)
+    expect(result).not.toBeNull()
+    expect(result!.description).toContain('-10')
+  })
+
+  // ── C1: Buddhist year offset fires for coincidental delta=543 pairs ──
+
+  it('should NOT flag when source=500 and target=1043 (delta=543 — Buddhist offset applies)', () => {
+    // Known limitation: isBuddhistYearEquivalent only checks |delta|===543, not year range.
+    // A non-year number like 500 would be exempt if target contains 1043.
+    // This test DOCUMENTS the current behavior to catch regressions if year-range
+    // validation is added in the future.
+    const segment = buildSegment({
+      sourceText: 'Error code 500',
+      targetText: 'รหัสข้อผิดพลาด 1043',
+    })
+    // |1043 - 500| === 543 → Buddhist offset exemption fires → no finding
+    const result = checkNumberConsistency(segment, ctx)
+    expect(result).toBeNull()
+  })
+
+  it('should flag when source=500 and target=1044 (delta=544 — NOT Buddhist offset)', () => {
+    const segment = buildSegment({
+      sourceText: 'Error code 500',
+      targetText: 'รหัสข้อผิดพลาด 1044',
+    })
+    // |1044 - 500| === 544 ≠ 543 → not exempt → flagged
+    const result = checkNumberConsistency(segment, ctx)
+    expect(result).not.toBeNull()
+    expect(result!.description).toContain('500')
+  })
+
+  // ── H1: Thai numeral normalization in source text ──
+
+  it('should match when Thai source has Thai numerals and target has Arabic', () => {
+    const ctxThaiSource: SegmentCheckContext = { sourceLang: 'th-TH', targetLang: 'en-US' }
+    const segment = buildSegment({
+      sourceText: 'หน้า ๔๒',
+      targetText: 'Page 42',
+    })
+    // Thai source numerals ๔๒ should normalize to 42 → match
+    expect(checkNumberConsistency(segment, ctxThaiSource)).toBeNull()
+  })
+
+  it('should flag when Thai source has Thai numerals not found in target', () => {
+    const ctxThaiSource: SegmentCheckContext = { sourceLang: 'th-TH', targetLang: 'en-US' }
+    const segment = buildSegment({
+      sourceText: 'หน้า ๔๒',
+      targetText: 'Page 99',
+    })
+    const result = checkNumberConsistency(segment, ctxThaiSource)
+    expect(result).not.toBeNull()
+  })
 })

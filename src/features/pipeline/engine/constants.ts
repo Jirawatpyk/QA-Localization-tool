@@ -109,6 +109,9 @@ export const FULLWIDTH_PUNCTUATION_MAP: Readonly<Record<string, string>> = {
 // Buddhist calendar year offset (Thai year = Gregorian + 543)
 export const BUDDHIST_YEAR_OFFSET = 543
 
+// Thai language code prefixes for Thai-specific handling
+export const THAI_LANG_PREFIXES: readonly string[] = ['th'] as const
+
 // Confirmation states where QA checks should be skipped
 export const SKIP_QA_STATES: ReadonlySet<string> = new Set(['ApprovedSignOff'])
 

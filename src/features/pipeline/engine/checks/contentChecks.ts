@@ -15,6 +15,9 @@ export function checkUntranslated(
   _ctx: SegmentCheckContext,
 ): RuleCheckResult | null {
   if (segment.targetText.trim().length === 0) {
+    // Skip if source is also empty — nothing to translate
+    if (segment.sourceText.trim().length === 0) return null
+
     return {
       segmentId: segment.id,
       category: 'completeness',

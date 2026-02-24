@@ -208,6 +208,34 @@ describe('checkTagIntegrity', () => {
     expect(types.some((d) => d.includes('ex'))).toBe(true)
   })
 
+  // ── M3: missing target key (only source key present) ──
+
+  it('should treat undefined target as empty array when only source key is present', () => {
+    // Realistic schema edge: Excel parser sets inlineTags = { source: [...] } without target key
+    const segment = buildSegment({
+      inlineTags: { source: [{ type: 'ph', id: '1', position: 0 }] } as ReturnType<
+        typeof buildSegment
+      >['inlineTags'],
+    })
+    const results = checkTagIntegrity(segment, ctx)
+    // target coalesces to [] → source has 1 tag → Missing tag finding
+    expect(results).toHaveLength(1)
+    expect(results[0]!.description).toContain('Missing')
+    expect(results[0]!.description).toContain('ph')
+  })
+
+  it('should treat undefined source as empty array when only target key is present', () => {
+    const segment = buildSegment({
+      inlineTags: { target: [{ type: 'g', id: '1', position: 0 }] } as ReturnType<
+        typeof buildSegment
+      >['inlineTags'],
+    })
+    const results = checkTagIntegrity(segment, ctx)
+    // source coalesces to [] → target has 1 tag → Extra tag finding
+    expect(results).toHaveLength(1)
+    expect(results[0]!.description).toContain('Extra')
+  })
+
   // ── Edge cases ──
 
   it('should include segmentId in result', () => {
@@ -244,7 +272,7 @@ describe('checkTagIntegrity', () => {
     expect(results[0]!.suggestedFix).toContain('Remove')
   })
 
-  it('should truncate excerpts to 100 chars', () => {
+  it('should pass full text as excerpts (ruleEngine handles truncation centrally)', () => {
     const longText = 'A'.repeat(200)
     const segment = buildSegment({
       sourceText: longText,
@@ -255,7 +283,8 @@ describe('checkTagIntegrity', () => {
       },
     })
     const results = checkTagIntegrity(segment, ctx)
-    expect(results[0]!.sourceExcerpt.length).toBe(100)
-    expect(results[0]!.targetExcerpt.length).toBe(100)
+    // Per-check truncation removed — ruleEngine.processFile truncates at MAX_EXCERPT_LENGTH
+    expect(results[0]!.sourceExcerpt.length).toBe(200)
+    expect(results[0]!.targetExcerpt.length).toBe(200)
   })
 })

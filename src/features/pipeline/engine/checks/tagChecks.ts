@@ -42,15 +42,15 @@ export function checkTagIntegrity(
     const targetCount = targetMap.get(key) ?? 0
     if (targetCount < sourceCount) {
       const missing = sourceCount - targetCount
-      const [type, id] = key.split(':')
+      const { type, id } = splitTagKey(key)
       results.push({
         segmentId: segment.id,
         category: 'tag_integrity',
         severity: 'critical',
         description: `Missing tag in target: <${type} id="${id}"> (${missing} missing)`,
         suggestedFix: `Add the missing <${type} id="${id}"> tag to the target`,
-        sourceExcerpt: segment.sourceText.slice(0, 100),
-        targetExcerpt: segment.targetText.slice(0, 100),
+        sourceExcerpt: segment.sourceText,
+        targetExcerpt: segment.targetText,
       })
     }
   }
@@ -60,15 +60,15 @@ export function checkTagIntegrity(
     const sourceCount = sourceMap.get(key) ?? 0
     if (targetCount > sourceCount) {
       const extra = targetCount - sourceCount
-      const [type, id] = key.split(':')
+      const { type, id } = splitTagKey(key)
       results.push({
         segmentId: segment.id,
         category: 'tag_integrity',
         severity: 'critical',
         description: `Extra tag in target: <${type} id="${id}"> (${extra} extra)`,
         suggestedFix: `Remove the extra <${type} id="${id}"> tag from the target`,
-        sourceExcerpt: segment.sourceText.slice(0, 100),
-        targetExcerpt: segment.targetText.slice(0, 100),
+        sourceExcerpt: segment.sourceText,
+        targetExcerpt: segment.targetText,
       })
     }
   }
@@ -76,8 +76,8 @@ export function checkTagIntegrity(
   // Check for reordered tags (same set but different order)
   // Only check if counts match (no missing/extra) — reorder is a minor issue
   if (results.length === 0 && sourceTags.length > 1) {
-    const sourceOrder = sourceTags.map((t) => `${t.type}:${t.id}`)
-    const targetOrder = targetTags.map((t) => `${t.type}:${t.id}`)
+    const sourceOrder = sourceTags.map((t) => `${t.type}${TAG_KEY_SEP}${t.id}`)
+    const targetOrder = targetTags.map((t) => `${t.type}${TAG_KEY_SEP}${t.id}`)
 
     if (
       sourceOrder.length === targetOrder.length &&
@@ -89,8 +89,8 @@ export function checkTagIntegrity(
         severity: 'minor',
         description: `Tag order differs between source and target`,
         suggestedFix: `Verify tag order matches the source`,
-        sourceExcerpt: segment.sourceText.slice(0, 100),
-        targetExcerpt: segment.targetText.slice(0, 100),
+        sourceExcerpt: segment.sourceText,
+        targetExcerpt: segment.targetText,
       })
     }
   }
@@ -98,11 +98,19 @@ export function checkTagIntegrity(
   return results
 }
 
+// Tag key separator — use null byte to avoid collision if id contains ':'
+const TAG_KEY_SEP = '\0'
+
 function buildTagMap(tags: InlineTag[]): Map<TagKey, number> {
   const map = new Map<TagKey, number>()
   for (const tag of tags) {
-    const key = `${tag.type}:${tag.id}`
+    const key = `${tag.type}${TAG_KEY_SEP}${tag.id}`
     map.set(key, (map.get(key) ?? 0) + 1)
   }
   return map
+}
+
+function splitTagKey(key: TagKey): { type: string; id: string } {
+  const sepIdx = key.indexOf(TAG_KEY_SEP)
+  return { type: key.slice(0, sepIdx), id: key.slice(sepIdx + 1) }
 }

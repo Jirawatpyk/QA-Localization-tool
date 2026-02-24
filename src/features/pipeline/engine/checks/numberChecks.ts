@@ -1,12 +1,10 @@
+import { THAI_LANG_PREFIXES } from '../constants'
 import { isBuddhistYearEquivalent, normalizeThaiNumerals } from '../language/thaiRules'
 import type { RuleCheckResult, SegmentCheckContext, SegmentRecord } from '../types'
 
 // Number extraction regex: integers, decimals, thousands separators, percentages, negative
 // Supports both comma-dot (1,000.50) and dot-comma (1.000,50) locale formats
 const NUMBER_REGEX = /[-+]?\d[\d.,]*\d|\d/g
-
-// Thai language codes for Thai-specific number handling
-const THAI_LANG_PREFIXES = ['th']
 
 /**
  * Check number consistency between source and target.
@@ -19,9 +17,11 @@ export function checkNumberConsistency(
   ctx: SegmentCheckContext,
 ): RuleCheckResult | null {
   const isThaiTarget = THAI_LANG_PREFIXES.some((p) => ctx.targetLang.toLowerCase().startsWith(p))
+  const isThaiSource = THAI_LANG_PREFIXES.some((p) => ctx.sourceLang.toLowerCase().startsWith(p))
 
-  // Extract numbers from source (always use Arabic digits)
-  const sourceNumbers = extractNumbers(segment.sourceText)
+  // Extract numbers from source, normalizing Thai numerals if source is Thai
+  const sourceText = isThaiSource ? normalizeThaiNumerals(segment.sourceText) : segment.sourceText
+  const sourceNumbers = extractNumbers(sourceText)
   if (sourceNumbers.length === 0) return null
 
   // Extract numbers from target, normalizing Thai numerals if target is Thai
@@ -56,8 +56,8 @@ export function checkNumberConsistency(
     severity: 'major',
     description: `Number mismatch: source contains ${missing.join(', ')} not found in target`,
     suggestedFix: `Verify numbers ${missing.join(', ')} are correctly translated in the target`,
-    sourceExcerpt: segment.sourceText.slice(0, 100),
-    targetExcerpt: segment.targetText.slice(0, 100),
+    sourceExcerpt: segment.sourceText,
+    targetExcerpt: segment.targetText,
   }
 }
 

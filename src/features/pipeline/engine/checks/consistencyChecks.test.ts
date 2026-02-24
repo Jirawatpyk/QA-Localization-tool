@@ -266,4 +266,61 @@ describe('checkKeyTermConsistency', () => {
     const segments = [buildSegment({ sourceText: 'Hello world', targetText: 'สวัสดีโลก' })]
     expect(checkKeyTermConsistency(buildCtx(segments, [term]))).toEqual([])
   })
+
+  // ── H4: caseSensitive: true path ──
+
+  it('should match source term with exact case when caseSensitive is true', () => {
+    const term: GlossaryTermRecord = {
+      id: 'term-cs-1',
+      glossaryId: 'glossary-1',
+      sourceTerm: 'Database',
+      targetTerm: 'ฐานข้อมูล',
+      caseSensitive: true,
+      createdAt: new Date(),
+    }
+    const segments = [
+      buildSegment({ sourceText: 'The Database is ready', targetText: 'ฐานข้อมูลพร้อม' }),
+      buildSegment({ sourceText: 'Check the Database', targetText: 'ตรวจสอบดาต้าเบส' }),
+    ]
+    // Both segments contain "Database" (exact case) → term found in both
+    // Seg 1 target has "ฐานข้อมูล", seg 2 does not → 1 finding
+    const results = checkKeyTermConsistency(buildCtx(segments, [term]))
+    expect(results).toHaveLength(1)
+    expect(results[0]!.category).toBe('consistency')
+  })
+
+  it('should NOT match source when case differs and caseSensitive is true', () => {
+    const term: GlossaryTermRecord = {
+      id: 'term-cs-2',
+      glossaryId: 'glossary-1',
+      sourceTerm: 'Database',
+      targetTerm: 'ฐานข้อมูล',
+      caseSensitive: true,
+      createdAt: new Date(),
+    }
+    const segments = [
+      // "database" (lowercase d) — does NOT match caseSensitive "Database"
+      buildSegment({ sourceText: 'The database is ready', targetText: 'ฐานข้อมูลพร้อม' }),
+      buildSegment({ sourceText: 'Check the database', targetText: 'ตรวจสอบดาต้าเบส' }),
+    ]
+    // Neither segment matches "Database" (exact case) → matchingSegments < 2 → no findings
+    expect(checkKeyTermConsistency(buildCtx(segments, [term]))).toEqual([])
+  })
+
+  it('should apply caseSensitive target match when caseSensitive is true', () => {
+    const term: GlossaryTermRecord = {
+      id: 'term-cs-3',
+      glossaryId: 'glossary-1',
+      sourceTerm: 'API',
+      targetTerm: 'เอพีไอ',
+      caseSensitive: true,
+      createdAt: new Date(),
+    }
+    const segments = [
+      buildSegment({ sourceText: 'The API is ready', targetText: 'เอพีไอพร้อม' }),
+      buildSegment({ sourceText: 'Use the API', targetText: 'ใช้เอพีไอ' }),
+    ]
+    // Both use correct target term consistently
+    expect(checkKeyTermConsistency(buildCtx(segments, [term]))).toEqual([])
+  })
 })

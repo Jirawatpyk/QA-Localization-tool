@@ -16,8 +16,8 @@ export function checkDoubleSpaces(
       severity: 'minor',
       description: 'Double spaces detected in target text',
       suggestedFix: 'Replace multiple consecutive spaces with a single space',
-      sourceExcerpt: segment.sourceText.slice(0, 100),
-      targetExcerpt: segment.targetText.slice(0, 100),
+      sourceExcerpt: segment.sourceText,
+      targetExcerpt: segment.targetText,
     }
   }
   return null
@@ -46,8 +46,8 @@ export function checkLeadingTrailingSpaces(
       suggestedFix: sourceLeading
         ? 'Add leading whitespace to match source'
         : 'Remove leading whitespace from target',
-      sourceExcerpt: segment.sourceText.slice(0, 100),
-      targetExcerpt: segment.targetText.slice(0, 100),
+      sourceExcerpt: segment.sourceText,
+      targetExcerpt: segment.targetText,
     })
   }
 
@@ -60,8 +60,8 @@ export function checkLeadingTrailingSpaces(
       suggestedFix: sourceTrailing
         ? 'Add trailing whitespace to match source'
         : 'Remove trailing whitespace from target',
-      sourceExcerpt: segment.sourceText.slice(0, 100),
-      targetExcerpt: segment.targetText.slice(0, 100),
+      sourceExcerpt: segment.sourceText,
+      targetExcerpt: segment.targetText,
     })
   }
 
@@ -95,8 +95,8 @@ export function checkUnpairedBrackets(
         severity: 'minor',
         description: `Unpaired bracket in target: ${open}${close}`,
         suggestedFix: `Check for missing ${depth > 0 ? 'closing' : 'opening'} ${depth > 0 ? close : open}`,
-        sourceExcerpt: segment.sourceText.slice(0, 100),
-        targetExcerpt: segment.targetText.slice(0, 100),
+        sourceExcerpt: segment.sourceText,
+        targetExcerpt: segment.targetText,
       })
     }
   }
@@ -114,8 +114,8 @@ export function checkUnpairedBrackets(
         severity: 'minor',
         description: `Unpaired quote in target: ${quote}`,
         suggestedFix: `Check for missing ${quote} in target`,
-        sourceExcerpt: segment.sourceText.slice(0, 100),
-        targetExcerpt: segment.targetText.slice(0, 100),
+        sourceExcerpt: segment.sourceText,
+        targetExcerpt: segment.targetText,
       })
     }
   }
@@ -146,8 +146,8 @@ export function checkUrlMismatches(
     severity: 'major',
     description: `URL mismatch: ${missing.join(', ')} missing or modified in target`,
     suggestedFix: 'Ensure URLs from source are preserved exactly in target',
-    sourceExcerpt: segment.sourceText.slice(0, 100),
-    targetExcerpt: segment.targetText.slice(0, 100),
+    sourceExcerpt: segment.sourceText,
+    targetExcerpt: segment.targetText,
   }
 }
 
@@ -178,8 +178,8 @@ export function checkEndPunctuation(
     severity: 'minor',
     description: `End punctuation mismatch: source ends with "${sourceEnd}", target ends with "${targetEnd}"`,
     suggestedFix: `Match the ending punctuation with the source`,
-    sourceExcerpt: segment.sourceText.slice(0, 100),
-    targetExcerpt: segment.targetText.slice(0, 100),
+    sourceExcerpt: segment.sourceText,
+    targetExcerpt: segment.targetText,
   }
 }
 
@@ -191,5 +191,7 @@ function extractUrls(text: string): string[] {
 function getLastNonWhitespace(text: string): string | null {
   const trimmed = text.trimEnd()
   if (trimmed.length === 0) return null
-  return trimmed[trimmed.length - 1]!
+  // Use Array.from to iterate code points correctly (handles surrogate pairs/emoji)
+  const chars = Array.from(trimmed)
+  return chars[chars.length - 1] ?? null
 }

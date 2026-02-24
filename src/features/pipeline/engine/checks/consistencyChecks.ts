@@ -1,8 +1,7 @@
+import { THAI_LANG_PREFIXES } from '../constants'
 import { applyCjkNfkcNormalization } from '../language/cjkRules'
 import { stripThaiParticles } from '../language/thaiRules'
 import type { FileCheckContext, RuleCheckResult, SegmentRecord } from '../types'
-
-const THAI_LANG_PREFIXES = ['th']
 
 /**
  * Cross-segment: identical source text with different translations.
@@ -49,8 +48,8 @@ export function checkSameSourceDiffTarget(ctx: FileCheckContext): RuleCheckResul
         severity: 'minor',
         description: `Inconsistent translation: same source text "${seg.sourceText.slice(0, 50)}" has different translations`,
         suggestedFix: `Check if the translation should match other occurrences`,
-        sourceExcerpt: seg.sourceText.slice(0, 100),
-        targetExcerpt: seg.targetText.slice(0, 100),
+        sourceExcerpt: seg.sourceText,
+        targetExcerpt: seg.targetText,
       })
     }
   }
@@ -104,8 +103,8 @@ export function checkSameTargetDiffSource(ctx: FileCheckContext): RuleCheckResul
         severity: 'minor',
         description: `Same translation used for different sources: "${seg.targetText.slice(0, 50)}"`,
         suggestedFix: `Verify if the same translation is appropriate for different source texts`,
-        sourceExcerpt: seg.sourceText.slice(0, 100),
-        targetExcerpt: seg.targetText.slice(0, 100),
+        sourceExcerpt: seg.sourceText,
+        targetExcerpt: seg.targetText,
       })
     }
   }
@@ -165,8 +164,8 @@ export function checkKeyTermConsistency(ctx: FileCheckContext): RuleCheckResult[
           severity: 'major',
           description: `Key term inconsistency: "${sourceTerm}" translated inconsistently — expected "${targetTerm}"`,
           suggestedFix: `Use "${targetTerm}" consistently for "${sourceTerm}"`,
-          sourceExcerpt: seg.sourceText.slice(0, 100),
-          targetExcerpt: seg.targetText.slice(0, 100),
+          sourceExcerpt: seg.sourceText,
+          targetExcerpt: seg.targetText,
         })
       }
     }

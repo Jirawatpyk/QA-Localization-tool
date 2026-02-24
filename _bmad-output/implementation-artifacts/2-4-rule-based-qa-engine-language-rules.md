@@ -209,13 +209,13 @@ so that I can trust this tool to replace Xbench with 100% parity.
     - [ ] ~~13.7c Tier 2 — NCR TH~~
     - [ ] ~~13.7d Tier 3 — NCR Multi-lang~~
     - [ ] ~~13.7e Parity Report Generator~~
-  - [x] 13.8 **Actual: 252 new tests across 15 test files** (14 new + 1 modified sdlxliffParser.test.ts) ✅ — 243 pre-CR + 9 added in CR Round 1
+  - [x] 13.8 **Actual: 292 new tests across 15 test files** (14 new + 1 modified sdlxliffParser.test.ts) ✅ — 243 pre-CR + 9 CR R1 + 40 CR R2
 
 ## Dev Agent Record
 
 ### Implementation Summary
 - **Status:** in-review
-- **Tests:** 252 passed across 15 test files (14 new + 1 modified) — 243 pre-CR + 9 added in CR Round 1
+- **Tests:** 292 passed across 15 test files (14 new + 1 modified) — 243 pre-CR + 9 CR R1 + 40 CR R2
 - **Quality Gates:** type-check ✅ | lint ✅ | regression ✅ | performance ✅
 - **Pre-CR Scans:** anti-pattern-detector (0 CRITICAL/HIGH) ✅ | tenant-isolation-checker (2 issues found & fixed) ✅
 
@@ -277,6 +277,33 @@ so that I can trust this tool to replace Xbench with 100% parity.
 | L5 | Low | Verbose Thai digit tests (10 individual) | Refactored to `it.each` table |
 
 **Final verification:** type-check ✅ | lint ✅ | 1025 tests ✅ (0 new failures)
+
+### CR Round 2 Fixes Applied (11 findings: 2C · 3H · 3M · 3L → all resolved, M2 false positive)
+
+**Source code fixes (9):**
+| # | Sev | Finding | Fix |
+|---|-----|---------|-----|
+| C1 | Critical | `extractPlaceholders()` uses Set → loses duplicate placeholder count (false negatives) | Changed from `Set<string>` to `Map<string, number>` counting occurrences; comparison now tracks per-placeholder counts |
+| C2 | Critical | `getLastNonWhitespace()` uses code unit index → breaks on emoji/surrogate pairs | Changed to `Array.from(trimmed)` for code point iteration |
+| H1 | High | `extractNumbers()` doesn't normalize Thai numerals in source text when `sourceLang` is Thai | Added `isThaiSource` check + `normalizeThaiNumerals(segment.sourceText)` |
+| H2 | High | `checkUntranslated()` flags empty target even when source is also empty | Added early return: `if (segment.sourceText.trim().length === 0) return null` |
+| H3 | High | `THAI_LANG_PREFIXES` duplicated in `consistencyChecks.ts` + `numberChecks.ts` | Centralized to `constants.ts`, imported in both files |
+| M1 | Medium | Per-check excerpt truncation at 100 chars inconsistent with ruleEngine's 500 | Removed `.slice(0, 100)` from all 9 check files; ruleEngine centrally truncates at `MAX_EXCERPT_LENGTH=500` |
+| M2 | — | `checkEndPunctuation()` CJK period handling | **False positive** — `isFullwidthEquivalent()` already handles `。↔.` correctly |
+| M3 | Medium | `%%` escape handling in placeholder extraction | **Known limitation**, documented in tests — `%%s` extracts `%s` consistently on both sides |
+| L3 | Low | `buildTagMap` key `type:id` — colon collision if id contains `:` | Changed separator to `\0` (null byte) + added `splitTagKey()` helper |
+
+**Test fixes (12 tests added):**
+| # | Sev | Finding | Tests Added |
+|---|-----|---------|-------------|
+| C1 | Critical | Duplicate placeholder counting | +3 tests: duplicate match, duplicate mismatch, extra duplicates |
+| C2 | Critical | Emoji handling in end punctuation | +2 tests: emoji end, matching emoji end |
+| H1 | High | Thai source numeral normalization | +2 tests: Thai source→Arabic match, Thai source→mismatch flag |
+| H2 | High | Empty source check | +2 tests: both empty, both whitespace-only |
+| L1 | Low | caseSensitive=true glossary pre-filter | +1 test: caseSensitive term passes through pre-filter |
+| L2 | Low | zh-CN/ko-KR language context | +2 tests: zh-CN + ko-KR number consistency |
+
+**Final verification:** type-check ✅ | lint ✅ | 1065 tests ✅ (0 new failures)
 
 ### Anti-Pattern Scan — Accepted Deviations
 - **MEDIUM #1:** `thaiRules.ts`/`cjkRules.ts` at `src/features/pipeline/engine/language/` instead of `src/lib/language/` — per story spec, engine-internal only, will refactor when cross-feature use materializes

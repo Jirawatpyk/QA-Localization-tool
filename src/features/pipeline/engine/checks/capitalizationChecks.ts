@@ -33,8 +33,8 @@ export function checkUppercaseWords(
         severity: 'minor',
         description: `UPPERCASE word "${word}" from source not found in target`,
         suggestedFix: `Ensure "${word}" appears in the target text with correct case`,
-        sourceExcerpt: segment.sourceText.slice(0, 100),
-        targetExcerpt: segment.targetText.slice(0, 100),
+        sourceExcerpt: segment.sourceText,
+        targetExcerpt: segment.targetText,
       })
     }
   }
@@ -65,8 +65,8 @@ export function checkCamelCaseWords(
         severity: 'minor',
         description: `CamelCase word "${word}" from source not found in target`,
         suggestedFix: `Ensure "${word}" appears in the target text`,
-        sourceExcerpt: segment.sourceText.slice(0, 100),
-        targetExcerpt: segment.targetText.slice(0, 100),
+        sourceExcerpt: segment.sourceText,
+        targetExcerpt: segment.targetText,
       })
     }
   }

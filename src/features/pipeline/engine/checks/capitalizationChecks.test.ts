@@ -143,4 +143,27 @@ describe('checkCamelCaseWords', () => {
     })
     expect(checkCamelCaseWords(segment, ctx)).toEqual([])
   })
+
+  // ── M6: lowercase-first product names (iPhone, iPad, macOS) — by design NOT flagged ──
+
+  it('should NOT flag iPhone-style lowercase-first names (CAMELCASE_REGEX requires uppercase first)', () => {
+    // CAMELCASE_REGEX = /\b[A-Z][a-z]+(?:[A-Z][a-z]+)+\b/g
+    // "iPhone" starts with lowercase "i" → regex does not match → no finding
+    const segment = buildSegment({
+      sourceText: 'Use iPhone or iPad',
+      targetText: 'ใช้ iphone หรือ ipad',
+    })
+    // Neither "iPhone" nor "iPad" start with uppercase → not detected by CAMELCASE_REGEX
+    expect(checkCamelCaseWords(segment, ctx)).toEqual([])
+  })
+
+  it('should NOT flag macOS or iOS names (lowercase-first)', () => {
+    const segment = buildSegment({
+      sourceText: 'Compatible with macOS and iOS',
+      targetText: 'ใช้ได้กับ macos และ ios',
+    })
+    // macOS → starts with 'm' (lowercase), iOS → starts with 'i' (lowercase)
+    // CAMELCASE_REGEX requires uppercase first char → no matches → no findings
+    expect(checkCamelCaseWords(segment, ctx)).toEqual([])
+  })
 })

@@ -260,6 +260,112 @@ describe('processFile', () => {
     expect(duration).toBeLessThan(5000)
   })
 
+  // ── H5: language context derivation from first segment ──
+
+  it('should use first segment language for all checks (ja-JP)', async () => {
+    const segments = [
+      buildSegment({
+        sourceLang: 'en-US',
+        targetLang: 'ja-JP',
+        sourceText: 'Page 42',
+        targetText: 'ページ 42',
+        confirmationState: 'Translated',
+      }),
+      buildSegment({
+        sourceLang: 'en-US',
+        targetLang: 'ja-JP',
+        sourceText: 'Item 100',
+        targetText: 'アイテム 100',
+        confirmationState: 'Translated',
+      }),
+    ]
+    // Numbers match for both segments → no number_format findings
+    const results = await processFile(segments, emptyGlossary, noSuppression, noCustomRules)
+    expect(results.some((r) => r.category === 'number_format')).toBe(false)
+  })
+
+  it('should derive language context from first segment (zh-CN)', async () => {
+    const segments = [
+      buildSegment({
+        sourceLang: 'en-US',
+        targetLang: 'zh-CN',
+        sourceText: 'Page 42',
+        targetText: '页面 42',
+        confirmationState: 'Translated',
+      }),
+    ]
+    const results = await processFile(segments, emptyGlossary, noSuppression, noCustomRules)
+    expect(results.some((r) => r.category === 'number_format')).toBe(false)
+  })
+
+  it('should derive language context from first segment (ko-KR)', async () => {
+    const segments = [
+      buildSegment({
+        sourceLang: 'en-US',
+        targetLang: 'ko-KR',
+        sourceText: 'Page 42',
+        targetText: '페이지 42',
+        confirmationState: 'Translated',
+      }),
+    ]
+    const results = await processFile(segments, emptyGlossary, noSuppression, noCustomRules)
+    expect(results.some((r) => r.category === 'number_format')).toBe(false)
+  })
+
+  it('should apply Thai particle exemption only for th-TH (not ja-JP)', async () => {
+    // Thai particles should NOT be stripped for Japanese targets
+    const segments = [
+      buildSegment({
+        sourceLang: 'en-US',
+        targetLang: 'ja-JP',
+        sourceText: 'Thank you',
+        targetText: 'ありがとうございます',
+        confirmationState: 'Translated',
+      }),
+      buildSegment({
+        sourceLang: 'en-US',
+        targetLang: 'ja-JP',
+        sourceText: 'Thank you',
+        targetText: 'ありがとう',
+        confirmationState: 'Translated',
+      }),
+    ]
+    // "ありがとうございます" vs "ありがとう" — different, NOT stripped → consistency finding
+    const results = await processFile(segments, emptyGlossary, noSuppression, noCustomRules)
+    expect(results.some((r) => r.category === 'consistency')).toBe(true)
+  })
+
+  // ── M7: glossary checkFn rejection propagates from Promise.all ──
+
+  it('should throw when glossary checkFn rejects (propagates from Promise.all)', async () => {
+    const { checkGlossaryCompliance } = await import('@/features/glossary/matching/glossaryMatcher')
+    vi.mocked(checkGlossaryCompliance).mockRejectedValueOnce(
+      new Error('glossary service unavailable'),
+    )
+
+    const glossaryTerms: GlossaryTermRecord[] = [
+      {
+        id: 'term-1',
+        glossaryId: 'g-1',
+        sourceTerm: 'database',
+        targetTerm: 'ฐานข้อมูล',
+        caseSensitive: false,
+        createdAt: new Date(),
+      },
+    ]
+    const segments = [
+      buildSegment({
+        sourceText: 'Use the database',
+        targetText: 'ใช้ฐานข้อมูล',
+        confirmationState: 'Draft',
+      }),
+    ]
+
+    await expect(
+      processFile(segments, glossaryTerms, noSuppression, noCustomRules),
+    ).rejects.toThrow('glossary service unavailable')
+  })
+
   it('should return empty for all ApprovedSignOff segments', async () => {
     const segments = [
       buildSegment({ sourceText: 'A', targetText: '', confirmationState: 'ApprovedSignOff' }),

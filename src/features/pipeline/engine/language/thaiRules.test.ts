@@ -80,6 +80,21 @@ describe('stripThaiParticles', () => {
   it('should leave non-Thai text unchanged', () => {
     expect(stripThaiParticles('Hello World')).toBe('Hello World')
   })
+
+  // ── M8: whitespace between text and particle (trimEnd behavior) ──
+
+  it('should strip particle preceded by a space', () => {
+    // "ขอบคุณ ครับ" — space before ครับ
+    // slice(-3) removes "ครับ" → "ขอบคุณ " → trimEnd() → "ขอบคุณ"
+    expect(stripThaiParticles('ขอบคุณ ครับ')).toBe('ขอบคุณ')
+  })
+
+  it('should strip compound particles separated by whitespace', () => {
+    // "ขอบคุณ นะ ครับ"
+    // Pass 1: ends with "ครับ" → strip → "ขอบคุณ นะ " → trimEnd → "ขอบคุณ นะ"
+    // Pass 2: ends with "นะ" → strip → "ขอบคุณ " → trimEnd → "ขอบคุณ"
+    expect(stripThaiParticles('ขอบคุณ นะ ครับ')).toBe('ขอบคุณ')
+  })
 })
 
 describe('isBuddhistYearEquivalent', () => {

@@ -49,6 +49,18 @@ describe('checkUntranslated', () => {
     expect(result!.sourceExcerpt).toBe('Test source')
     expect(result!.targetExcerpt).toBe('')
   })
+
+  // ── H2: Empty source should NOT be flagged as untranslated ──
+
+  it('should NOT flag when both source and target are empty', () => {
+    const segment = buildSegment({ sourceText: '', targetText: '' })
+    expect(checkUntranslated(segment, ctx)).toBeNull()
+  })
+
+  it('should NOT flag when both source and target are whitespace-only', () => {
+    const segment = buildSegment({ sourceText: '   ', targetText: '  ' })
+    expect(checkUntranslated(segment, ctx)).toBeNull()
+  })
 })
 
 describe('checkTargetIdenticalToSource', () => {
@@ -144,6 +156,22 @@ describe('checkTargetIdenticalToSource', () => {
 
   it('should flag all-uppercase identical words (not proper noun pattern)', () => {
     const segment = buildSegment({ sourceText: 'HELLO', targetText: 'HELLO' })
+    const result = checkTargetIdenticalToSource(segment, ctx)
+    expect(result).not.toBeNull()
+  })
+
+  // ── M2: NUMBERS_ONLY_RE boundary cases (+ and - are NOT in the regex) ──
+
+  it('should flag identical text starting with + (not in NUMBERS_ONLY_RE)', () => {
+    // NUMBERS_ONLY_RE = /^[\d\s.,]+$/ — "+" not in character class → NOT exempt → flagged
+    const segment = buildSegment({ sourceText: '+100', targetText: '+100' })
+    const result = checkTargetIdenticalToSource(segment, ctx)
+    expect(result).not.toBeNull()
+  })
+
+  it('should flag identical negative number text (- not in NUMBERS_ONLY_RE)', () => {
+    // "-100" does NOT pass NUMBERS_ONLY_RE (/^[\d\s.,]+$/) → not exempt → flagged
+    const segment = buildSegment({ sourceText: '-100', targetText: '-100' })
     const result = checkTargetIdenticalToSource(segment, ctx)
     expect(result).not.toBeNull()
   })

@@ -64,8 +64,8 @@ export async function checkGlossaryComplianceRule(
       severity: 'major',
       description: `Glossary term '${term.sourceTerm}' not translated as '${term.targetTerm}'`,
       suggestedFix: term.targetTerm,
-      sourceExcerpt: segment.sourceText.slice(0, 100),
-      targetExcerpt: segment.targetText.slice(0, 100),
+      sourceExcerpt: segment.sourceText,
+      targetExcerpt: segment.targetText,
     })
   }
 

@@ -153,4 +153,26 @@ describe('checkGlossaryComplianceRule', () => {
     await checkGlossaryComplianceRule(segment, terms, ctx, checkFn)
     expect(checkFn).toHaveBeenCalledTimes(1) // term passed through pre-filter
   })
+
+  // ── L1: caseSensitive=true pre-filter behavior ──
+
+  it('should pass caseSensitive=true term through pre-filter (pre-filter is always case-insensitive)', async () => {
+    const segment = buildSegment({
+      sourceText: 'Use the Database tool',
+      targetText: 'ใช้เครื่องมือฐานข้อมูล',
+    })
+    const term: GlossaryTermRecord = {
+      id: TERM_UUID_1,
+      glossaryId: GLOSSARY_UUID,
+      sourceTerm: 'Database',
+      targetTerm: 'ฐานข้อมูล',
+      caseSensitive: true,
+      createdAt: new Date(),
+    }
+    const checkFn = mockCheckFn({ matches: [], missingTerms: [], lowConfidenceMatches: [] })
+    await checkGlossaryComplianceRule(segment, [term], ctx, checkFn)
+    // Pre-filter is case-insensitive → term passes through
+    // caseSensitive logic is delegated to checkFn (glossary matcher)
+    expect(checkFn).toHaveBeenCalledTimes(1)
+  })
 })

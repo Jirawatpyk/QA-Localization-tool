@@ -108,6 +108,24 @@ describe('checkUnpairedBrackets', () => {
     expect(results.some((r) => r.description.includes('()'))).toBe(true)
   })
 
+  // ── C2: suggestedFix direction tests (opening vs closing) ──
+
+  it('should suggest adding closing ) when unclosed ( is found', () => {
+    const segment = buildSegment({ targetText: 'Hello (world' })
+    const results = checkUnpairedBrackets(segment, ctx)
+    expect(results).toHaveLength(1)
+    expect(results[0]!.suggestedFix).toContain('closing')
+    expect(results[0]!.suggestedFix).toContain(')')
+  })
+
+  it('should suggest adding opening ( when extra ) is found', () => {
+    const segment = buildSegment({ targetText: 'Hello world)' })
+    const results = checkUnpairedBrackets(segment, ctx)
+    expect(results).toHaveLength(1)
+    expect(results[0]!.suggestedFix).toContain('opening')
+    expect(results[0]!.suggestedFix).toContain('(')
+  })
+
   it('should return empty for balanced square brackets', () => {
     const segment = buildSegment({ targetText: 'See [note]' })
     expect(checkUnpairedBrackets(segment, ctx)).toEqual([])
@@ -213,6 +231,26 @@ describe('checkUrlMismatches', () => {
     })
     expect(checkUrlMismatches(segment, ctx)).toBeNull()
   })
+
+  // ── M5: http:// coverage ──
+
+  it('should return null when http:// URLs match', () => {
+    const segment = buildSegment({
+      sourceText: 'Visit http://example.com',
+      targetText: 'เยี่ยมชม http://example.com',
+    })
+    expect(checkUrlMismatches(segment, ctx)).toBeNull()
+  })
+
+  it('should flag when http:// URL is missing in target', () => {
+    const segment = buildSegment({
+      sourceText: 'See http://example.com/docs',
+      targetText: 'ดู',
+    })
+    const result = checkUrlMismatches(segment, ctx)
+    expect(result).not.toBeNull()
+    expect(result!.description).toContain('http://example.com/docs')
+  })
 })
 
 // ═══════════════════════════════════════════════
@@ -263,6 +301,43 @@ describe('checkEndPunctuation', () => {
 
   it('should return null for empty target', () => {
     const segment = buildSegment({ sourceText: 'Hello.', targetText: '' })
+    expect(checkEndPunctuation(segment, ctx)).toBeNull()
+  })
+
+  // ── M4: mixed alphanumeric + punctuation end combinations ──
+
+  it('should flag when source ends with . but target ends with digit', () => {
+    // source ends with punct (not alphanumeric), target ends with digit → falls through to mismatch
+    const segment = buildSegment({ sourceText: 'Chapter 3.', targetText: 'บทที่ 3' })
+    const result = checkEndPunctuation(segment, ctx)
+    expect(result).not.toBeNull()
+    expect(result!.description).toContain('.')
+  })
+
+  it('should flag when source ends with digit but target ends with .', () => {
+    // skip condition: BOTH alphanumeric — source is digit (alphanumeric) but target ends with punct
+    // → skip condition false → falls through → flagged
+    const segment = buildSegment({ sourceText: 'Chapter 3', targetText: 'บทที่ 3.' })
+    const result = checkEndPunctuation(segment, ctx)
+    expect(result).not.toBeNull()
+    expect(result!.description).toContain('3')
+  })
+
+  // ── C2: Emoji/surrogate pair handling in getLastNonWhitespace ──
+
+  it('should handle source ending with emoji correctly', () => {
+    const segment = buildSegment({ sourceText: 'Good job!', targetText: 'ดีมาก\u{1F600}' })
+    // source ends with '!', target ends with emoji (not alphanumeric, not !) → mismatch
+    const result = checkEndPunctuation(segment, ctx)
+    expect(result).not.toBeNull()
+    expect(result!.description).toContain('!')
+  })
+
+  it('should return null when both end with same emoji', () => {
+    const segment = buildSegment({
+      sourceText: 'Hello \u{1F600}',
+      targetText: 'สวัสดี \u{1F600}',
+    })
     expect(checkEndPunctuation(segment, ctx)).toBeNull()
   })
 })

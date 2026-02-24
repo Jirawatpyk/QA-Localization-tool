@@ -100,4 +100,28 @@ describe('checkCustomRules', () => {
     const results = checkCustomRules(segment, rules, ctx)
     expect(results[0]!.segmentId).toBe('test-seg')
   })
+
+  // ── H2: MAX_CUSTOM_REGEX_LENGTH boundary tests ──
+
+  it('should allow pattern at exactly MAX_CUSTOM_REGEX_LENGTH (500 chars)', () => {
+    // Guard is `> MAX_CUSTOM_REGEX_LENGTH`, not `>=` — exactly 500 is allowed.
+    // Pattern: 'TODO' (4 chars) + '(?:)' * 124 (496 chars) = exactly 500 chars.
+    // '(?:)' is a non-capturing empty group — matches empty string (no-op suffix).
+    const segment = buildSegment({ targetText: 'Do not use TODO here' })
+    const pattern500 = 'TODO' + '(?:)'.repeat(124) // 4 + 496 = 500 chars
+    expect(pattern500.length).toBe(500) // guard: ensure we built it right
+    const rules = [makeCustomRule(pattern500, 'Exact boundary pattern')]
+    const results = checkCustomRules(segment, rules, ctx)
+    // 500 <= MAX (not >) → NOT skipped → compiled → matches "TODO" in target
+    expect(results).toHaveLength(1)
+  })
+
+  it('should skip pattern of 501 chars (exceeds MAX_CUSTOM_REGEX_LENGTH)', () => {
+    const segment = buildSegment({ targetText: 'aaa' })
+    const pattern501 = 'a'.repeat(501)
+    const rules = [makeCustomRule(pattern501, 'Over boundary — should be skipped')]
+    const results = checkCustomRules(segment, rules, ctx)
+    // 501 > 500 → skipped → no result
+    expect(results).toEqual([])
+  })
 })

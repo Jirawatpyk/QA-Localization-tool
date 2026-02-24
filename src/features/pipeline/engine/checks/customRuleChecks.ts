@@ -48,8 +48,8 @@ export function checkCustomRules(
         severity: 'major', // configurable severity could be added later
         description: rule.reason,
         suggestedFix: null,
-        sourceExcerpt: segment.sourceText.slice(0, 100),
-        targetExcerpt: segment.targetText.slice(0, 100),
+        sourceExcerpt: segment.sourceText,
+        targetExcerpt: segment.targetText,
       })
     }
   }
