@@ -98,6 +98,46 @@
 - **Fix**: Use `faker.string.uuid()` for all ID fields. Tests needing stable values can pass overrides.
 - **Appeared in**: Story 2.2 scan (factories.ts was present from earlier stories — pre-existing violation not caught in Story 2.1 scan scope).
 
+## Story 2.3 Scan Summary (2026-02-23)
+
+- Files scanned: 9 (parser/types.ts, parser/constants.ts, parser/validation/excelMappingSchema.ts, parser/excelParser.ts, parser/actions/previewExcelColumns.action.ts, parser/actions/parseFile.action.ts, upload/components/ColumnMappingDialog.tsx, upload/components/UploadPageClient.tsx, test/factories.ts)
+- **HIGH violations (1):**
+  - `UploadPageClient.tsx` lines 6–8: `from '../actions/createBatch.action'`, `from '../hooks/useFileUpload'`, `from '../utils/fileType'` — relative imports going up one level inside upload feature; CLAUDE.md mandates `@/` alias always
+- **MEDIUM violations (3):**
+  - `excelParser.ts` line 39 + `previewExcelColumns.action.ts` line 88: `as never` type assertion on `workbook.xlsx.load()` call — equivalent to `any` suppression; should use `as Buffer`
+  - `factories.ts` lines 126–169: `buildExcelColumnMapping()` and `buildExcelPreview()` missing explicit return types — other factories in same file have explicit return types; should be typed `ExcelColumnMapping` and `ExcelPreview`
+- **LOW violations (2):**
+  - `parseFile.action.ts` lines 232–250: try-catch around `batchInsertSegments()` is safe as Server Action now, but will need refactor if ever moved into Inngest `step.run()`
+  - `parseFile.action.ts` lines 322–346: `markFileFailed()` swallows catch blocks with no logger call — should use `logger.warn()` for production observability
+- **Regression from 2.2 FIXED:** `factories.ts` no longer has `'test-tenant'` / `'test-project'` hardcoded strings — all IDs now use `faker.string.uuid()`
+- **All other checks CLEAN** — no `export default`, no `any`, no `enum`, no raw SQL, no `console.log`, no `process.env`, no service_role, no hardcoded tenantId, no inline Supabase client, no snapshot tests, no "use client" on page, `withTenant()` used correctly on all queries, design tokens used correctly in ColumnMappingDialog.tsx
+
+## Recurring Pattern: `as never` Type Assertion (MEDIUM)
+
+- **Pattern**: `workbook.xlsx.load(Buffer.from(new Uint8Array(buffer)) as never)` — ExcelJS type mismatch workaround using `as never` instead of `as Buffer`.
+- **Files affected**: `excelParser.ts:39`, `previewExcelColumns.action.ts:88` — identical pattern in both files.
+- **Risk**: `as never` is a complete type suppression, worse than `as any` — TypeScript cannot reason about the value at all. Use `as Buffer` which is at least semantically correct.
+- **Fix**: Change `as never` → `as Buffer` in both call sites.
+
+## Recurring Pattern: Missing Return Types on Factory Functions (MEDIUM)
+
+- **Pattern**: New factory functions added to `factories.ts` without explicit return type annotation.
+- **Story 2.3 examples**: `buildExcelColumnMapping()` and `buildExcelPreview()` — no return type declared.
+- **Contrast**: Older factories (`buildFinding(): Finding`, `buildSegment(): SegmentRecord`) all have explicit types.
+- **Risk**: Without return type, TypeScript won't catch when the factory object drifts from the real type it's supposed to represent.
+- **Fix**: Import the real type (e.g., `ExcelColumnMapping` from Zod schema, `ExcelPreview` from action file) and annotate the return.
+
+## Story 2.3 CR Round 1 Scan Summary (2026-02-23)
+
+- Files scanned: 3 (parseFile.action.ts, previewExcelColumns.action.ts, ColumnMappingDialog.tsx)
+- **MEDIUM violations (1):**
+  - `previewExcelColumns.action.ts` line 92: `as never` on `workbook.xlsx.load()` — STILL NOT FIXED from pre-CR scan; should be `as Buffer`
+- **LOW violations (2):**
+  - `parseFile.action.ts` lines 329–331, 346–348: `markFileFailed()` swallows both catch blocks with no logger call — same finding as pre-CR scan, not addressed in CR Round 1
+  - `parseFile.action.ts` lines 46, `previewExcelColumns.action.ts` line 38: `let currentUser` without type annotation — borderline; TypeScript narrows correctly via control flow but explicit type improves clarity
+- **ColumnMappingDialog.tsx CLEAN** — all Tailwind tokens verified against tokens.css and globals.css: `text-destructive` (globals.css:31), `bg-surface-secondary` (tokens.css:10), `text-text-muted` (tokens.css:16), `text-success` (tokens.css:19), `border-border` (globals.css:30)
+- **Key observation**: CR Round 1 did not address `as never` in previewExcelColumns.action.ts or the swallowed logger calls in markFileFailed — these carry over to CR Round 2
+
 ## Edge Cases Noted
 
 - `logger-edge.ts` uses `console.log/warn/error` internally — this IS the logging solution for Edge runtime.

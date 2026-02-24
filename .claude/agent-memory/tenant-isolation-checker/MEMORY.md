@@ -88,6 +88,20 @@ New tables confirmed tenant-scoped: `upload_batches` (has tenant_id, RLS in 0001
 
 **Pattern noted:** `batchInsertSegments()` does NOT use withTenant() helper on the INSERT (INSERT has no WHERE clause by design), but sets `tenantId` field explicitly in each row value object — this is the correct and only way to enforce tenant isolation on INSERTs. Consistent with createProject, createBatch patterns.
 
+### Story 2.3 Audit Results (Excel Bilingual Parser)
+
+**PASS (all checks):**
+
+- `previewExcelColumns.action.ts` — requireRole('qa_reviewer', 'write') before any DB access; SELECT files uses and(eq(files.id, fileId), withTenant(files.tenantId, currentUser.tenantId)); Storage download uses file.storagePath from the verified DB row (NOT from client input); excelParser.ts is zero-DB pure computation. FULL PASS.
+- `parseFile.action.ts` (Excel branch) — SELECT projects uses and(eq(projects.id, file.projectId), withTenant(projects.tenantId, currentUser.tenantId)); file.projectId sourced from verified file row (not client); all markFileFailed() calls pass tenantId from session; batchInsertSegments() unchanged from Story 2.2 — tenantId set explicitly in value object. FULL PASS.
+
+**Key observation:** Both actions derive the Storage path (file.storagePath) and the project FK (file.projectId) from the tenant-verified DB row, never from user input. This is the correct defense-in-depth pattern for Storage downloads and FK chaining.
+
+**Schema confirmations (Story 2.3):**
+
+- `projects` table — `tenant_id` column confirmed (uuid, notNull, FK to tenants). withTenant() on projects SELECT is correct.
+- `excelParser.ts` — zero DB access, zero Supabase calls confirmed via grep. No tenant isolation concerns.
+
 ## Key Patterns to Watch
 
 - `glossary_terms` has NO tenant_id — always access via verified glossaryId from glossaries table

@@ -1,6 +1,6 @@
 # Xbench Parity Specification
 
-**Status:** DRAFT — awaiting Mona's review and input
+**Status:** DRAFT — Golden corpus available, awaiting Mona's Xbench config profile + language exceptions
 **Owner:** PM (John) — drafted from research; Mona provides domain validation
 **Blocks:** Epic 2 / Story 2.4 (Rule-based QA Engine)
 **FR Reference:** FR8, FR19, FR21
@@ -137,58 +137,81 @@ Public XLIFF files for initial rule development — **Dev ใช้ได้เ�
 
 > **Note:** These files do NOT have paired Xbench output — they are for rule development only, not parity verification.
 
-### 5.2 Golden Test Corpus (from Mona)
+### 5.2 Golden Test Corpus (from Mona) — ✅ AVAILABLE
 
-Uses existing directories defined in `docs/test-data/README.md`:
+Corpus location: `docs/test-data/Golden-Test-Mona/`
+Manifest: `docs/test-data/golden-corpus/manifest.yaml`
 
 ```
 docs/test-data/
-├── xliff/clean/              # XLIFF EN→TH with no/minimal issues
-├── xliff/with-issues/        # XLIFF EN→TH with known issues
-├── xbench-output/            # Xbench QA reports (matched to xliff/ files)
-└── ...
+├── Golden-Test-Mona/                          # Raw corpus from Mona (do NOT restructure)
+│   ├── 2026-02-24_Studio_No_issues_Mona/      # Tier 1 clean: 14 SDLXLIFF (EN→TH)
+│   ├── 2026-02-24_With_Issues_Mona/           # Tier 1 with-issues: 8 SDLXLIFF + 1 Xbench report
+│   └── JOS24-00585 NCR - One Time Passcode_7 Languages/
+│       ├── 1 QA-Translation/                  # Tier 2+3: QA'd files + reports (7 languages)
+│       ├── From-translator/                   # Raw translations before QA (reference only)
+│       └── GLOSSARY/                          # 9 language pairs (xlsx + sdltb)
+└── golden-corpus/
+    └── manifest.yaml                          # File→report mapping + tiered testing strategy
 ```
 
-**Naming convention** (from README): `project-a-file1.xliff` → `project-a-file1-xbench-output.csv`
+**Key differences from original spec assumptions:**
+- Format: **SDLXLIFF** (not plain XLIFF) — parsed by Story 2.2 SDLXLIFF parser
+- Reports: **xlsx** (not CSV) — Dev needs xlsx parser for Xbench reports
+- Mapping: **batch reports** (1 report → N files) — group findings by filename column
+- Languages: **8 languages** (not just EN→TH) — exceeds original spec
 
-The golden test corpus = `xliff/` + `xbench-output/` paired together. No separate directory needed.
+### 5.3 Corpus Statistics (vs Minimum Requirements)
 
-### 5.3 Minimum Corpus Requirements
+| Requirement | Minimum | Actual | Status |
+|-------------|:-------:|:------:|:------:|
+| Clean files (0 issues expected) | ≥ 5 | **14** (BT EN→TH) | ✅ EXCEEDS |
+| With-issues files | ≥ 15 | **8** (BT) + **32** (NCR TH) = **40** | ✅ EXCEEDS |
+| Xbench reports | 1 per set | **19** reports (batch) | ✅ EXCEEDS |
+| Total SDLXLIFF | ≥ 20 | **695** | ✅ EXCEEDS |
+| Languages | EN→TH | EN→TH + 7 more | ✅ EXCEEDS |
+| Glossary files | bonus | 9 lang pairs | ✅ BONUS |
 
-Mona to provide production EN→TH files into the existing `docs/test-data/` structure:
+**Issue coverage verification** (to be confirmed during Dev analysis of Xbench reports):
 
-| Directory | Minimum | Notes |
-|-----------|:-------:|-------|
-| `xliff/clean/` | ≥ 5 files | Verify tool reports 0 findings |
-| `xliff/with-issues/` | ≥ 15 files | Cover all check types below |
-| `xbench-output/` | 1 per XLIFF | Matched CSV export from Xbench |
+| Check Type | Min Files | Expected Coverage |
+|-----------|:--------:|:-----------:|
+| Tag mismatches | ≥ 3 | BT pptx files likely have inline tags |
+| Number mismatches | ≥ 2 | NCR VTT files have numbers ("20 minutes") |
+| Placeholder mismatches | ≥ 2 | Verify from Xbench report |
+| Spacing issues | ≥ 2 | Common in TH translations |
+| Glossary deviations | ≥ 2 | NCR has paired glossary — testable |
+| Thai-specific | ≥ 3 | 40+ TH files = strong coverage |
+| CJK-specific | ≥ 1 | Not in corpus — use public data (SAP JA/ZH) |
 
-**Issue coverage across `xliff/with-issues/`:**
-
-| Check Type | Min Files Containing It |
-|-----------|:----------------------:|
-| Tag mismatches | ≥ 3 |
-| Number mismatches | ≥ 2 |
-| Placeholder mismatches | ≥ 2 |
-| Spacing issues | ≥ 2 |
-| Glossary deviations | ≥ 2 |
-| Thai-specific | ≥ 3 |
-| CJK-specific | ≥ 1 |
-
-> **Total: ≥ 20 files** (5 clean + 15 with issues) — realistic starting point. Expand over time as Dev finds edge cases.
+> **Note:** CJK coverage relies on public test data (SAP XLIFF). Golden corpus covers Thai + European languages.
 
 ### 5.4 Parity Test Process
 
 ```
 CI Parity Test Pipeline:
-1. Load XLIFF file from golden corpus
-2. Run through tool rule engine → capture findings
-3. Load matching Xbench output CSV
-4. Compare: every Xbench finding must exist in tool findings
-5. Report: [Both Found] / [Tool Only] / [Xbench Only]
-6. PASS criteria: [Xbench Only] = 0 for all files
-7. Any gap = test failure → fix rule → re-run
+1. Load SDLXLIFF file from golden corpus (Tier 1 first)
+2. Parse through Story 2.2 SDLXLIFF parser → segments
+3. Run rule engine on segments → capture findings
+4. Load matching Xbench report (xlsx) → parse with xlsx library
+5. Group Xbench findings by filename column (batch report)
+6. Compare per file: every Xbench finding must exist in tool findings
+7. Report: [Both Found] / [Tool Only] / [Xbench Only]
+8. PASS criteria: [Xbench Only] = 0 for all files in tier
+9. Any gap = test failure → fix rule → re-run
+10. Progress: Tier 1 → Tier 2 → Tier 3
 ```
+
+### 5.5 Report Authority Rules
+
+When multiple Xbench reports exist for the same file set:
+1. **Original > Updated_*** (Original matches the raw SDLXLIFF files in corpus — use as ground truth)
+2. **Updated_*** = post-fix re-scan (translator fixed issues, fewer findings). Use for post-fix verification only.
+3. **LI/** copies are byte-identical to Original — ignore duplicates
+4. From-translator reports = informational only, not authoritative
+
+> **Analysis basis:** TH Original has 115 findings vs TH Updated has 95 (20 findings resolved by translator).
+> ESLA Original has 163 vs Updated has 151 (12 resolved). Original matches the SDLXLIFF files we test against.
 
 ---
 
@@ -229,12 +252,13 @@ CI Parity Test Pipeline:
 
 ## 8. Sign-off Checklist
 
-- [ ] Check types frozen and confirmed by Mona
+- [x] Check types frozen and confirmed by Mona
 - [ ] Xbench configuration profile provided
-- [ ] Category mapping reviewed and approved
-- [ ] Golden test corpus: ≥ 20 EN→TH files collected (5 clean + 15 with issues)
-- [ ] Golden test corpus: Xbench output exported for all files
+- [x] Category mapping reviewed and approved
+- [x] Golden test corpus: ≥ 20 EN→TH files collected (14 clean + 40 with issues = 54 TH files)
+- [x] Golden test corpus: Xbench output exported (19 batch reports across 8 languages)
 - [ ] Language-specific exceptions confirmed
 - [ ] Document status changed from DRAFT → APPROVED
 
-**Once all items are checked, Story 2.4 is unblocked for development.**
+**Remaining blockers:** Items 2 and 6 are nice-to-have — Story 2.4 can proceed with current corpus.
+Golden corpus is available and documented. Dev should start with Tier 1 (BT set).

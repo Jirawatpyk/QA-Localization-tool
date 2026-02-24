@@ -1,0 +1,260 @@
+# Golden Test Corpus Manifest
+# Generated: 2026-02-24
+# Source: Mona's production QA workflow files
+# Purpose: Xbench parity testing for Story 2.4 (Rule-based QA Engine)
+#
+# USAGE:
+#   Tier 1 = MVP parity testing (start here)
+#   Tier 2 = Extended TH regression
+#   Tier 3 = Multi-language regression
+#   All paths relative to docs/test-data/
+
+# ============================================================
+# TIER 1 — MVP Parity Testing (BT Barista Trainer EN→TH)
+# Story 2.4 starts here. Simple, clear 1-report-to-N-files mapping.
+# ============================================================
+tier1_mvp:
+  project: "BT — Barista Trainer 2024"
+  lang_pair: "en-US → th-TH"
+  content_type: "Training materials (PowerPoint + Excel bilingual)"
+
+  clean:
+    description: "No Xbench issues — verify tool reports 0 findings"
+    count: 14
+    source_types: ["pptx", "xlsx"]
+    files:
+      # PowerPoint-based (8 files — same names as with_issues, clean versions)
+      - Golden-Test-Mona/2026-02-24_Studio_No_issues_Mona/Activity Guide/AP BT Activity Guide.pptx.sdlxliff
+      - Golden-Test-Mona/2026-02-24_Studio_No_issues_Mona/Discussion Guide/AP BT DG Next Chapter.pptx.sdlxliff
+      - Golden-Test-Mona/2026-02-24_Studio_No_issues_Mona/Discussion Guide/AP BT DG Your Role.pptx.sdlxliff
+      - Golden-Test-Mona/2026-02-24_Studio_No_issues_Mona/Program Overview and Change Summary/AP BT Program Change Summary.pptx.sdlxliff
+      - Golden-Test-Mona/2026-02-24_Studio_No_issues_Mona/Program Overview and Change Summary/AP New Barista Trainer Program Overview.pptx.sdlxliff
+      - Golden-Test-Mona/2026-02-24_Studio_No_issues_Mona/Skill Check/AP BT Skill Check.pptx.sdlxliff
+      - Golden-Test-Mona/2026-02-24_Studio_No_issues_Mona/Traning Plan and SM Support Kit/AP BT SM Support Kit.pptx.sdlxliff
+      - Golden-Test-Mona/2026-02-24_Studio_No_issues_Mona/Traning Plan and SM Support Kit/AP BT Training Plan.pptx.sdlxliff
+      # Excel bilingual-based (6 files — THSB BT2024 training modules)
+      - Golden-Test-Mona/2026-02-24_Studio_No_issues_Mona/THSB_BT2024_for translation/20240806052701_BT_AP_Creating_the_Learning_Environment__th_TH__(104484).xlsx.sdlxliff
+      - Golden-Test-Mona/2026-02-24_Studio_No_issues_Mona/THSB_BT2024_for translation/20240806052727_BT_AP_Feedback_Models__th_TH__(104485).xlsx.sdlxliff
+      - Golden-Test-Mona/2026-02-24_Studio_No_issues_Mona/THSB_BT2024_for translation/20240806052749_BT_AP_Starbucks_Teaching_Model__th_TH__(104486).xlsx.sdlxliff
+      - Golden-Test-Mona/2026-02-24_Studio_No_issues_Mona/THSB_BT2024_for translation/20240806052819_BT_AP_Training_Adult_Learners__th_TH__(104487).xlsx.sdlxliff
+      - Golden-Test-Mona/2026-02-24_Studio_No_issues_Mona/THSB_BT2024_for translation/20240806052844_BT_AP_Training_New_Baristas__th_TH__(104488).xlsx.sdlxliff
+      - Golden-Test-Mona/2026-02-24_Studio_No_issues_Mona/THSB_BT2024_for translation/20240806052905_BT_AP_Your_Role_as_a_Barista_Trainer__th_TH__(104489).xlsx.sdlxliff
+
+  with_issues:
+    description: "Known QA issues — verify tool matches Xbench findings"
+    count: 8
+    source_types: ["pptx"]
+    files:
+      - Golden-Test-Mona/2026-02-24_With_Issues_Mona/Activity Guide/AP BT Activity Guide.pptx.sdlxliff
+      - Golden-Test-Mona/2026-02-24_With_Issues_Mona/Discussion Guide/AP BT DG Next Chapter.pptx.sdlxliff
+      - Golden-Test-Mona/2026-02-24_With_Issues_Mona/Discussion Guide/AP BT DG Your Role.pptx.sdlxliff
+      - Golden-Test-Mona/2026-02-24_With_Issues_Mona/Program Overview and Change Summary/AP BT Program Change Summary.pptx.sdlxliff
+      - Golden-Test-Mona/2026-02-24_With_Issues_Mona/Program Overview and Change Summary/AP New Barista Trainer Program Overview.pptx.sdlxliff
+      - Golden-Test-Mona/2026-02-24_With_Issues_Mona/Skill Check/AP BT Skill Check.pptx.sdlxliff
+      - Golden-Test-Mona/2026-02-24_With_Issues_Mona/Traning Plan and SM Support Kit/AP BT SM Support Kit.pptx.sdlxliff
+      - Golden-Test-Mona/2026-02-24_With_Issues_Mona/Traning Plan and SM Support Kit/AP BT Training Plan.pptx.sdlxliff
+
+  xbench_reports:
+    - path: Golden-Test-Mona/2026-02-24_With_Issues_Mona/Xbench_QA_Report.xlsx
+      format: xlsx
+      scope: batch  # Single report covering all 8 with_issues files
+      note: "Report contains file column — Dev must group findings by filename"
+
+# ============================================================
+# TIER 2 — Extended Thai Regression (NCR One Time Passcode EN→TH)
+# After Tier 1 passes, use this for deeper Thai validation.
+# ============================================================
+tier2_ncr_th:
+  project: "NCR — One Time Passcode (JOS24-00585)"
+  lang_pair: "en-US → th-TH"
+  content_type: "E-learning (VTT subtitles + Document)"
+
+  qa_translation:
+    description: "QA'd Thai files with paired Xbench reports"
+    base_path: Golden-Test-Mona/JOS24-00585 NCR - One Time Passcode_7 Languages/1 QA-Translation/2024-09-12_TH
+    sdlxliff_path: 1_Studio/
+    sdlxliff_count: 32
+    content_types:
+      - "VTT subtitle SDLXLIFF (~30 files)"
+      - "Document SDLXLIFF (One_Time_Passcode.docx.sdlxliff)"
+    xbench_reports:
+      # Use Original as ground truth — matches the SDLXLIFF files in corpus
+      - path: QA Report/xbenchqa_QA_Report.xlsx
+        scope: batch
+        authority: primary  # Original = matches raw SDLXLIFF files (115 findings)
+      - path: QA Report/Updated_xbenchqa_QA_Report.xlsx
+        scope: batch
+        authority: post_fix  # Post-fix re-scan (95 findings) — use for verification after fixes
+      - path: QA Report/LI/xbenchqa_QA_Report.xlsx
+        scope: batch
+        authority: duplicate  # Byte-identical copy of Original — ignore
+      - path: QA Report/LI/One_Time_Passcode.docx.2567-09-12-16.28.20_QA_Report.xlsx
+        scope: single_file  # Different tool output (not Xbench QA) — separate analysis
+        authority: informational
+
+  from_translator:
+    description: "Raw Thai files from translator (before QA)"
+    note: "Useful for comparing pre-QA vs post-QA state"
+    # No dedicated From-translator TH directory — TH was QA'd directly in 1_Studio
+
+# ============================================================
+# TIER 3 — Multi-language Regression (NCR all languages)
+# Validates rule engine works across Western European languages.
+# ============================================================
+tier3_multilang:
+  project: "NCR — One Time Passcode (JOS24-00585)"
+  content_type: "E-learning (VTT subtitles + Document)"
+
+  languages:
+    esla:
+      lang_pair: "en-US → es-LA"
+      qa_path: 1 QA-Translation/2024-09-13_ESLA
+      qa_sdlxliff_count: 32
+      qa_reports:
+        - QA Report/ESLA_QA_Report.xlsx  # primary (Original = ground truth)
+        - QA Report/Updated_ESLA_QA_Report.xlsx  # post_fix (fewer findings — translator fixed issues)
+      from_translator_path: From-translator/2024-09-13_ESLA
+      from_translator_count: 32
+      from_translator_v2_path: From-translator/2024-09-16_ESLA_V2
+      from_translator_v2_count: 32
+
+    fr:
+      lang_pair: "en-US → fr-FR"
+      qa_path: 1 QA-Translation/2024-09-16/1_Studio/FR
+      qa_sdlxliff_count: 32  # approx
+      qa_reports:
+        - 1 QA-Translation/2024-09-16/QA Report/FR_QA_Report.xlsx  # primary (Original = ground truth)
+        - 1 QA-Translation/2024-09-16/QA Report/LI Report/FR_QA_Report.xlsx  # duplicate (LI = byte-identical copy)
+      from_translator_path: From-translator/2024-09-16_PL, FR, PT/FR  # estimated
+
+    it:
+      lang_pair: "en-US → it-IT"
+      qa_path: 1 QA-Translation/2024-09-16/1_Studio/IT
+      qa_sdlxliff_count: 32  # approx
+      qa_reports:
+        - 1 QA-Translation/2024-09-16/QA Report/IT_QA_Report.xlsx  # primary (Original = ground truth)
+        - 1 QA-Translation/2024-09-16/QA Report/LI Report/IT_QA_Report.xlsx  # duplicate (LI = byte-identical copy)
+      from_translator_path: From-translator/2024-09-16_IT/IT/Translation
+      from_translator_count: 64
+
+    pl:
+      lang_pair: "en-US → pl-PL"
+      qa_path: 1 QA-Translation/2024-09-16/1_Studio/PL
+      qa_sdlxliff_count: 32  # approx
+      qa_reports:
+        - 1 QA-Translation/2024-09-16/QA Report/PL_QA_Report.xlsx  # primary (Original = ground truth)
+        - 1 QA-Translation/2024-09-16/QA Report/LI Report/PL-20240913-145312_QA_Report.xlsx  # duplicate (LI = byte-identical copy)
+      from_translator_path: From-translator/2024-09-16_PL, FR, PT/PL
+
+    pt_br:
+      lang_pair: "en-US → pt-BR"
+      qa_path: 1 QA-Translation/2024-09-16/1_Studio/pt_BR
+      qa_sdlxliff_count: 32  # approx
+      qa_reports:
+        - 1 QA-Translation/2024-09-16/QA Report/PTBR_QA_Report.xlsx  # primary (Original = ground truth)
+        - 1 QA-Translation/2024-09-16/QA Report/Updated_PTBR_QA_Report.xlsx  # post_fix (fewer findings — translator fixed issues)
+      from_translator_path: From-translator/2024-09-16_PL, FR, PT/pt_BR
+
+    de:
+      lang_pair: "en-US → de-DE"
+      qa_path: 1 QA-Translation/2024-09-17
+      qa_sdlxliff_count: 32
+      qa_reports:
+        - 1 QA-Translation/2024-09-17/QA Report/DE_QA_Report.xlsx  # primary (Original = ground truth)
+        - 1 QA-Translation/2024-09-17/QA Report/LI Report/Xbench report.xlsx  # duplicate (LI = byte-identical copy)
+      from_translator_path: From-translator/2024-09-17_DE/DE/DE/Translation
+      from_translator_count: 64
+
+    tr:
+      lang_pair: "en-US → tr-TR"
+      qa_path: 1 QA-Translation/2024-09-24_TR
+      qa_sdlxliff_count: 32
+      qa_reports:
+        - 1 QA-Translation/2024-09-24_TR/QA Report/xbenchqa-20240924-100541_QA_Report.xlsx
+      from_translator_path: From-translator/2024-09-24_TR
+      from_translator_count: 64
+
+  # 2024-09-20 — Single XML file (possibly a combined/master file)
+  misc:
+    path: 1 QA-Translation/2024-09-20
+    files:
+      - 1_Studio/EN.xml.sdlxliff  # Single XML-based file
+    reports:
+      - QA Report/LI/Xbench_QA_Report.xlsx
+      - QA Report/xbenchqa-20240920-165257_QA_Report.xlsx
+    note: "Unclear purpose — possibly a combined file or separate project. Dev: investigate."
+
+# ============================================================
+# GLOSSARIES — For Glossary Compliance Testing (Check #14)
+# ============================================================
+glossaries:
+  project: "NCR Security Awareness"
+  base_path: Golden-Test-Mona/JOS24-00585 NCR - One Time Passcode_7 Languages/GLOSSARY/NCR Security Awareness
+  description: "Bilingual glossary files in Excel + SDL Trados termbase format"
+  note: "Use for glossary compliance check testing (Xbench check #14)"
+
+  source_table:
+    path: "!source table/2025-09-16_NCR Security Menu check.xlsx"
+    description: "Master source terminology table"
+
+  language_pairs:
+    - file: Security Awareness_en-US_ar-AE
+      formats: [xlsx, sdltb]
+      lang_pair: "en-US → ar-AE"
+    - file: Security Awareness_en-US_de-DE
+      formats: [xlsx, sdltb]
+      lang_pair: "en-US → de-DE"
+    - file: Security Awareness_en-US_es-LA
+      formats: [xlsx, sdltb]
+      lang_pair: "en-US → es-LA"
+    - file: Security Awareness_en-US_fr-FR
+      formats: [xlsx, sdltb]
+      lang_pair: "en-US → fr-FR"
+    - file: Security Awareness_en-US_he-IL
+      formats: [xlsx, sdltb]
+      lang_pair: "en-US → he-IL"
+    - file: Security Awareness_en-US_it-IT
+      formats: [xlsx, sdltb]
+      lang_pair: "en-US → it-IT"
+    - file: Security Awareness_en-US_ja-JP
+      formats: [xlsx, sdltb]
+      lang_pair: "en-US → ja-JP"
+    - file: Security Awareness_en-US_nl-BE
+      formats: [xlsx, sdltb]
+      lang_pair: "en-US → nl-BE"
+    - file: Security Awareness_en-US_pt-BR
+      formats: [xlsx, sdltb]
+      lang_pair: "en-US → pt-BR"
+
+# ============================================================
+# REPORT AUTHORITY RULES
+# ============================================================
+# When multiple Xbench reports exist for the same file set:
+#   1. Original > "Updated_*" (Original matches the raw SDLXLIFF files in corpus)
+#   2. "Updated_*" = post-fix re-scan (translator already fixed some issues — fewer findings)
+#   3. "LI/" copies are byte-identical to Original — ignore duplicates
+#   4. From-translator reports = translator's own QA (informational, not authoritative)
+#
+# For automated parity testing: use the report marked "authority: primary"
+# Updated reports are useful for post-fix verification (confirm tool also shows fewer findings)
+
+# ============================================================
+# TOTALS
+# ============================================================
+totals:
+  sdlxliff_files: 695
+  xbench_reports: 19  # unique in 1 QA-Translation (excluding duplicates at top-level QA Report/)
+  glossary_files: 19  # 9 xlsx + 9 sdltb + 1 source table
+  languages: 8  # TH, ESLA, FR, IT, PL, PTBR, DE, TR
+  projects: 2  # BT Barista Trainer + NCR One Time Passcode
+
+# ============================================================
+# DEV QUICK START
+# ============================================================
+# 1. Start with Tier 1 (BT set): 14 clean + 8 with-issues + 1 report
+# 2. Parse SDLXLIFF files through Story 2.2 parser
+# 3. Run rule engine on parsed segments
+# 4. Parse Xbench report (xlsx) — extract: file, source, target, check_type, severity
+# 5. Compare: tool findings vs Xbench findings grouped by file
+# 6. Report: [Both Found] / [Tool Only] / [Xbench Only]
+# 7. After Tier 1 passes → Tier 2 (NCR TH) → Tier 3 (multi-lang)

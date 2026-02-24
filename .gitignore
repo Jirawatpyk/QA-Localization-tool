@@ -26,6 +26,7 @@ docs/test-data/capstanlqc-xliff/
 docs/test-data/locize-xliff-fixtures/
 docs/test-data/pwa-install-i18n/
 docs/test-data/lingohub-examples/
+docs/test-data/Golden-Test-Mona/
 
 # next.js
 /.next/

@@ -120,7 +120,8 @@
       "Bash(tail:*)",
       "Bash(cd /c/Users/Jiraw/OneDrive/Documents/qa-localization-tool && gh workflow run e2e-gate.yml --ref main 2>&1)",
       "Bash(cd /c/Users/Jiraw/OneDrive/Documents/qa-localization-tool && npx dotenv-cli -e .env.local -- npm run db:migrate 2>&1)",
-      "Bash(cd \"C:\\\\Users\\\\Jiraw\\\\OneDrive\\\\Documents\\\\qa-localization-tool\" && npx dotenv-cli -e .env.local -- npm run db:migrate 2>&1)"
+      "Bash(cd \"C:\\\\Users\\\\Jiraw\\\\OneDrive\\\\Documents\\\\qa-localization-tool\" && npx dotenv-cli -e .env.local -- npm run db:migrate 2>&1)",
+      "Bash(echo openpyxl not available:*)"
     ]
   }
 }
