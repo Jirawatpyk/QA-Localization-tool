@@ -253,6 +253,8 @@ So that I can balance speed/cost with analysis depth and start reviewing while A
 
 ### Story 2.7: Batch Summary, File History & Parity Tools
 
+> **Carry-over from Story 2.4 (AC #8):** Golden Corpus Parity Testing (Tasks 13.6-13.7) deferred here — includes xlsx report parser, Tier 1-3 parity comparison (695 SDLXLIFF + 19 Xbench reports), and parity report generator. See `2-4-rule-based-qa-engine-language-rules.md` Dev Agent Record for full rationale.
+
 As a QA Reviewer,
 I want to see batch processing results at a glance, track file history, and verify Xbench parity,
 So that I can efficiently triage files and trust the tool's accuracy.

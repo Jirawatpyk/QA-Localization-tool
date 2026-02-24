@@ -77,6 +77,7 @@ export const filesRelations = relations(files, ({ one, many }) => ({
   batch: one(uploadBatches, { fields: [files.batchId], references: [uploadBatches.id] }),
   segments: many(segments),
   scores: many(scores),
+  findings: many(findings),
   fileAssignments: many(fileAssignments),
   aiUsageLogs: many(aiUsageLogs),
   runMetadata: many(runMetadata),
@@ -95,6 +96,7 @@ export const findingsRelations = relations(findings, ({ one, many }) => ({
   segment: one(segments, { fields: [findings.segmentId], references: [segments.id] }),
   project: one(projects, { fields: [findings.projectId], references: [projects.id] }),
   tenant: one(tenants, { fields: [findings.tenantId], references: [tenants.id] }),
+  file: one(files, { fields: [findings.fileId], references: [files.id] }),
   reviewSession: one(reviewSessions, {
     fields: [findings.reviewSessionId],
     references: [reviewSessions.id],

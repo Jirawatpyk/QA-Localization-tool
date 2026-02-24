@@ -102,6 +102,30 @@ New tables confirmed tenant-scoped: `upload_batches` (has tenant_id, RLS in 0001
 - `projects` table — `tenant_id` column confirmed (uuid, notNull, FK to tenants). withTenant() on projects SELECT is correct.
 - `excelParser.ts` — zero DB access, zero Supabase calls confirmed via grep. No tenant isolation concerns.
 
+### Story 2.4 Audit Results (L1 Rule Engine)
+
+**CRITICAL FINDING (unresolved):**
+
+- `runRuleEngine.action.ts` L166-169 — final status UPDATE to `l1_completed` uses `eq(files.id, input.fileId)` with NO `withTenant()`. An attacker who knows another tenant's fileId (via GUID enumeration) can transition that file's status. Must add `withTenant(files.tenantId, currentUser.tenantId)` to the WHERE clause. Severity: CRITICAL.
+
+**HIGH FINDING (unresolved):**
+
+- `runRuleEngine.action.ts` L183-186 — rollback UPDATE to `failed` (inside catch block) uses `eq(files.id, input.fileId)` with NO `withTenant()`. Same cross-tenant status-tampering risk. Must add `withTenant(files.tenantId, currentUser.tenantId)`. Severity: HIGH (exploitable only when an exception occurs, but the fix is still mandatory).
+
+**PASS:**
+
+- CAS guard UPDATE (L54-64) — withTenant() correctly present alongside eq(files.id) and eq(files.status). Atomically scoped to tenant + fileId + status guard.
+- segments SELECT (L76-85) — withTenant() + eq(segments.fileId). Both dimensions present.
+- suppressionRules SELECT (L91-100) — withTenant() + eq(isActive) + eq(projectId). Three-way filter correct. projectId sourced from verified `file` object (not user input).
+- findings INSERT batch (L136-141) — tenantId set explicitly from currentUser.tenantId in each row value object. Correct INSERT pattern.
+- Audit log write (L150-163) — tenantId from currentUser.tenantId. PASS.
+- glossaryCache.ts (getCachedGlossaryTerms) — withTenant() on glossaries SELECT; glossary_terms accessed via inArray(glossaryIds) (safe, IDs came from tenant-scoped query). Pre-existing PASS confirmed again.
+
+**Schema confirmations (Story 2.4):**
+
+- `findings` table — tenant_id column (uuid, notNull, FK to tenants). Confirmed.
+- `suppression_rules` — tenant_id column (uuid, notNull, FK to tenants). Confirmed.
+
 ## Key Patterns to Watch
 
 - `glossary_terms` has NO tenant_id — always access via verified glossaryId from glossaries table

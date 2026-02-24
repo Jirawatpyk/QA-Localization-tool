@@ -138,6 +138,29 @@
 - **ColumnMappingDialog.tsx CLEAN** — all Tailwind tokens verified against tokens.css and globals.css: `text-destructive` (globals.css:31), `bg-surface-secondary` (tokens.css:10), `text-text-muted` (tokens.css:16), `text-success` (tokens.css:19), `border-border` (globals.css:30)
 - **Key observation**: CR Round 1 did not address `as never` in previewExcelColumns.action.ts or the swallowed logger calls in markFileFailed — these carry over to CR Round 2
 
+## Story 2.4 Scan Summary (2026-02-24)
+
+- Files scanned: 28 (15 source + 13 test)
+- **MEDIUM violations (4):**
+  - `thaiRules.ts` and `cjkRules.ts` placed at `src/features/pipeline/engine/language/` — CLAUDE.md specifies these belong in `src/lib/language/` for sharing across features
+  - `ruleEngine.test.ts` lines 163–166: hardcoded non-UUID IDs `'rule-1'`, `'p1'`, `'t1'`, `'u1'` in SuppressionRuleRecord fixture
+  - `customRuleChecks.test.ts` lines 17–28: `makeCustomRule()` helper uses non-UUID `'rule-1'`, `'project-1'`, `'tenant-1'`, `'user-1'`
+  - `glossaryChecks.test.ts` lines 119–135: `buildSegment()` called with non-UUID `'seg-123'`, `'proj-456'`, `'tenant-789'`
+- **LOW violations (5):**
+  - `numberChecks.ts` line 1, `formattingChecks.ts` line 2, `consistencyChecks.ts` lines 1–2: relative imports `../language/thaiRules` and `../language/cjkRules` — should use `@/lib/language/` after moving files
+  - `runRuleEngine.action.ts` lines 166–169: final status UPDATE to `l1_completed` missing `withTenant()` guard — risk is low (fileId validated by CAS), but rule requires it on all queries
+  - `tagChecks.ts` line 27: `as InlineTagsData` type cast without Zod validation — low risk because parser guarantees shape
+  - `glossaryChecks.test.ts` line 29: `as unknown as GlossaryCheckFn` double cast — acceptable in test files
+- **All other checks CLEAN** — no `export default`, no `any`, no enum, no raw SQL, no console.log, no process.env, no service_role, no "use client", no inline Supabase client, no step.run() with try-catch, no snapshot tests, no Tailwind (pure TypeScript engine), withTenant() correct on all 3 main queries in action
+
+## Recurring Pattern: withTenant() Missing on Final UPDATE in Action Files (LOW)
+
+- **Pattern**: CAS guard UPDATE has `withTenant()` correctly. But the second status-update UPDATE at end of success path sometimes omits `withTenant()`.
+- **Found in Story 2.4**: `runRuleEngine.action.ts` line 169 — `eq(files.id, input.fileId)` only, missing `withTenant()`.
+- **Previously found**: Story 2.3 `parseFile.action.ts` `markFileFailed()` had similar pattern.
+- **Risk**: Low because fileId is validated upstream, but violates the "every query must use withTenant()" rule.
+- **Fix pattern**: Wrap final UPDATE .where() with `and(withTenant(table.tenantId, user.tenantId), eq(table.id, id))`.
+
 ## Edge Cases Noted
 
 - `logger-edge.ts` uses `console.log/warn/error` internally — this IS the logging solution for Edge runtime.

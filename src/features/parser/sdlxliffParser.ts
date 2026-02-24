@@ -246,7 +246,10 @@ function extractTransUnitSegments(
         confirmationState,
         matchPercentage,
         translatorComment,
-        inlineTags: srcExtract.tags.length > 0 ? srcExtract.tags : null,
+        inlineTags:
+          srcExtract.tags.length > 0 || tgtExtract.tags.length > 0
+            ? { source: srcExtract.tags, target: tgtExtract.tags }
+            : null,
         wordCount: countWords(srcExtract.plainText, sourceLang),
       }
 
@@ -286,7 +289,10 @@ function extractTransUnitSegments(
       confirmationState,
       matchPercentage: null,
       translatorComment,
-      inlineTags: srcExtract.tags.length > 0 ? srcExtract.tags : null,
+      inlineTags:
+        srcExtract.tags.length > 0 || tgtExtract.tags.length > 0
+          ? { source: srcExtract.tags, target: tgtExtract.tags }
+          : null,
       wordCount: countWords(srcExtract.plainText, sourceLang),
     }
 

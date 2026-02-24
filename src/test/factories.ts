@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker'
 
+import type { findings } from '@/db/schema/findings'
 import type { segments } from '@/db/schema/segments'
 import type { AppNotification, DashboardData, RecentFileRow } from '@/features/dashboard/types'
 import type { ExcelPreview } from '@/features/parser/actions/previewExcelColumns.action'
@@ -10,6 +11,7 @@ import type { PipelineRun } from '@/types/pipeline'
 import type { ReviewSession } from '@/types/review'
 
 type SegmentRecord = typeof segments.$inferSelect
+type DbFindingInsert = typeof findings.$inferInsert
 
 export function buildFinding(overrides?: Partial<Finding>): Finding {
   return {
@@ -171,6 +173,33 @@ export function buildSegment(overrides?: Partial<SegmentRecord>): SegmentRecord 
     translatorComment: null,
     inlineTags: null,
     createdAt: new Date(),
+    ...overrides,
+  }
+}
+
+/**
+ * Factory for DB findings inserts (Drizzle schema type).
+ * Use this for rule engine tests that need the DB insert type.
+ * Do NOT modify buildFinding() above — it uses the Finding UI type (26+ existing tests).
+ */
+export function buildDbFinding(overrides?: Partial<DbFindingInsert>): DbFindingInsert {
+  return {
+    segmentId: faker.string.uuid(),
+    projectId: faker.string.uuid(),
+    tenantId: faker.string.uuid(),
+    fileId: faker.string.uuid(),
+    severity: 'major',
+    category: 'completeness',
+    description: faker.lorem.sentence(),
+    detectedByLayer: 'L1',
+    status: 'pending',
+    aiModel: null,
+    aiConfidence: null,
+    suggestedFix: null,
+    sourceTextExcerpt: null,
+    targetTextExcerpt: null,
+    reviewSessionId: null,
+    segmentCount: 1,
     ...overrides,
   }
 }

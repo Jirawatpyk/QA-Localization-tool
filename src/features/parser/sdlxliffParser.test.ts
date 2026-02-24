@@ -144,8 +144,8 @@ describe('parseXliff', () => {
       if (!result.success) return
       const seg1 = result.data.segments[0]!
       expect(seg1.inlineTags).not.toBeNull()
-      expect(seg1.inlineTags).toHaveLength(1)
-      expect(seg1.inlineTags![0]!.type).toBe('g')
+      expect(seg1.inlineTags!.source).toHaveLength(1)
+      expect(seg1.inlineTags!.source[0]!.type).toBe('g')
     })
 
     it('should extract x tag from segment 2 source text', () => {
@@ -155,7 +155,7 @@ describe('parseXliff', () => {
       if (!result.success) return
       const seg2 = result.data.segments[1]!
       expect(seg2.inlineTags).not.toBeNull()
-      expect(seg2.inlineTags![0]!.type).toBe('x')
+      expect(seg2.inlineTags!.source[0]!.type).toBe('x')
     })
 
     it('should extract ph tag from segment 3 source text', () => {
@@ -165,7 +165,7 @@ describe('parseXliff', () => {
       if (!result.success) return
       const seg3 = result.data.segments[2]!
       expect(seg3.inlineTags).not.toBeNull()
-      expect(seg3.inlineTags!.some((t) => t.type === 'ph')).toBe(true)
+      expect(seg3.inlineTags!.source.some((t) => t.type === 'ph')).toBe(true)
     })
 
     it('should extract bpt and ept tags from segment 4', () => {
@@ -174,7 +174,7 @@ describe('parseXliff', () => {
       expect(result.success).toBe(true)
       if (!result.success) return
       const seg4 = result.data.segments[3]!
-      const types = seg4.inlineTags?.map((t) => t.type) ?? []
+      const types = seg4.inlineTags?.source.map((t) => t.type) ?? []
       expect(types).toContain('bpt')
       expect(types).toContain('ept')
     })
@@ -194,7 +194,7 @@ describe('parseXliff', () => {
       if (!result.success) return
       // seg1 source: "Please read the <g>important notice</g> before continuing."
       // fast-xml-parser textNode = "Please read the" (15 chars, trailing space belongs to next context)
-      expect(result.data.segments[0]?.inlineTags?.[0]?.position).toBe(15)
+      expect(result.data.segments[0]?.inlineTags?.source[0]?.position).toBe(15)
     })
 
     it('should report x tag at correct character position in seg2 (H3)', () => {
@@ -203,7 +203,7 @@ describe('parseXliff', () => {
       expect(result.success).toBe(true)
       if (!result.success) return
       // seg2 source: "Line 1<x/>Line 2" — "Line 1" = 6 chars → x at position 6
-      expect(result.data.segments[1]?.inlineTags?.[0]?.position).toBe(6)
+      expect(result.data.segments[1]?.inlineTags?.source[0]?.position).toBe(6)
     })
   })
 
@@ -275,8 +275,8 @@ describe('parseXliff', () => {
       // seg2: "Please enter your <g id="1">email address</g>."
       // fast-xml-parser textNode = "Please enter your" (17 chars, trailing space belongs to next context)
       expect(seg2.inlineTags).not.toBeNull()
-      expect(seg2.inlineTags).toHaveLength(1)
-      expect(seg2.inlineTags![0]).toMatchObject({ type: 'g', id: '1', position: 17 })
+      expect(seg2.inlineTags!.source).toHaveLength(1)
+      expect(seg2.inlineTags!.source[0]).toMatchObject({ type: 'g', id: '1', position: 17 })
     })
 
     it('should extract ph tag with position for seg3 (H5)', () => {
@@ -288,8 +288,8 @@ describe('parseXliff', () => {
       // seg3: "Error: <ph id="1">{message}</ph>"
       // fast-xml-parser textNode = "Error:" (6 chars, trailing space belongs to next context)
       expect(seg3.inlineTags).not.toBeNull()
-      expect(seg3.inlineTags).toHaveLength(1)
-      expect(seg3.inlineTags![0]).toMatchObject({ type: 'ph', id: '1', position: 6 })
+      expect(seg3.inlineTags!.source).toHaveLength(1)
+      expect(seg3.inlineTags!.source[0]).toMatchObject({ type: 'ph', id: '1', position: 6 })
     })
 
     it('should use trans-unit @id as segmentId for XLIFF segments (H13)', () => {
@@ -513,7 +513,7 @@ describe('parseXliff', () => {
       if (!result.success) return
       const seg = result.data.segments[0]!
       expect(seg.inlineTags).not.toBeNull()
-      const types = seg.inlineTags!.map((t) => t.type)
+      const types = seg.inlineTags!.source.map((t) => t.type)
       expect(types).toContain('bx')
       expect(types).toContain('ex')
     })
@@ -522,7 +522,7 @@ describe('parseXliff', () => {
       const result = parseXliff(bxExXml, 'sdlxliff')
       expect(result.success).toBe(true)
       if (!result.success) return
-      const tags = result.data.segments[0]!.inlineTags!
+      const tags = result.data.segments[0]!.inlineTags!.source
       const bxTag = tags.find((t) => t.type === 'bx')!
       const exTag = tags.find((t) => t.type === 'ex')!
       // "Start" = 5 chars → bx at 5; "middle" = 6 more chars → ex at 11

@@ -5,7 +5,7 @@ import { projects } from './projects'
 import { tenants } from './tenants'
 
 // Inline tag extracted from XLIFF/SDLXLIFF source or target text.
-// NOTE: Keep in sync with InlineTag in @/features/parser/types.ts.
+// NOTE: Keep in sync with InlineTag + InlineTagsData in @/features/parser/types.ts.
 // Cannot import from features here — db schema must not depend on feature modules.
 type InlineTag = {
   type: 'g' | 'x' | 'ph' | 'bx' | 'ex' | 'bpt' | 'ept'
@@ -13,6 +13,12 @@ type InlineTag = {
   position: number
   attributes?: Record<string, string>
   content?: string
+}
+
+// Source and target tags stored separately for tag integrity comparison (Story 2.4)
+type InlineTagsData = {
+  source: InlineTag[]
+  target: InlineTag[]
 }
 
 export const segments = pgTable('segments', {
@@ -36,6 +42,6 @@ export const segments = pgTable('segments', {
   confirmationState: varchar('confirmation_state', { length: 30 }),
   matchPercentage: integer('match_percentage'),
   translatorComment: text('translator_comment'),
-  inlineTags: jsonb('inline_tags').$type<InlineTag[]>(),
+  inlineTags: jsonb('inline_tags').$type<InlineTagsData>(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })

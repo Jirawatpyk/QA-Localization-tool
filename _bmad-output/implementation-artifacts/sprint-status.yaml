@@ -60,7 +60,7 @@ development_status:
   2-1-file-upload-storage-infrastructure: done
   2-2-sdlxliff-xliff-unified-parser: done
   2-3-excel-bilingual-parser: done
-  2-4-rule-based-qa-engine-language-rules: ready-for-dev
+  2-4-rule-based-qa-engine-language-rules: review
   2-5-mqm-score-calculation-language-calibration: backlog
   2-6-inngest-pipeline-foundation-processing-modes: backlog
   2-7-batch-summary-file-history-parity-tools: backlog

@@ -29,6 +29,13 @@ export type XliffState =
   | 'signed-off'
   | 'final'
 
+// Structured inline tags data — source and target tags stored separately
+// for tag integrity comparison in the L1 rule engine (Story 2.4)
+export type InlineTagsData = {
+  source: InlineTag[]
+  target: InlineTag[]
+}
+
 // A single parsed segment from the XLIFF/SDLXLIFF file
 export type ParsedSegment = {
   segmentId: string // SDLXLIFF: mrk @mid value; XLIFF: trans-unit @id value
@@ -40,7 +47,7 @@ export type ParsedSegment = {
   confirmationState: ConfirmationState | null
   matchPercentage: number | null // 0-100 or null if not a TM match
   translatorComment: string | null
-  inlineTags: InlineTag[] | null // null when no inline tags
+  inlineTags: InlineTagsData | null // null when no inline tags in either source or target
   wordCount: number
 }
 

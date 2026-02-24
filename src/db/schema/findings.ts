@@ -1,5 +1,6 @@
 import { pgTable, uuid, varchar, text, real, integer, timestamp } from 'drizzle-orm/pg-core'
 
+import { files } from './files'
 import { projects } from './projects'
 import { reviewSessions } from './reviewSessions'
 import { segments } from './segments'
@@ -16,6 +17,8 @@ export const findings = pgTable('findings', {
   tenantId: uuid('tenant_id')
     .notNull()
     .references(() => tenants.id, { onDelete: 'restrict' }),
+  // Denormalized from segment's file for query performance (nullable for existing rows)
+  fileId: uuid('file_id').references(() => files.id, { onDelete: 'cascade' }),
   reviewSessionId: uuid('review_session_id').references(() => reviewSessions.id, {
     onDelete: 'set null',
   }),
@@ -28,6 +31,9 @@ export const findings = pgTable('findings', {
   aiModel: varchar('ai_model', { length: 100 }),
   aiConfidence: real('ai_confidence'), // 0-100
   suggestedFix: text('suggested_fix'),
+  // Truncated to 500 chars — for display in finding list without JOIN to segments
+  sourceTextExcerpt: text('source_text_excerpt'),
+  targetTextExcerpt: text('target_text_excerpt'),
   segmentCount: integer('segment_count').notNull().default(1), // multi-segment span tracking
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

@@ -18,7 +18,7 @@ export const files = pgTable('files', {
   fileSizeBytes: integer('file_size_bytes').notNull(),
   fileHash: varchar('file_hash', { length: 64 }), // SHA-256 hex, nullable for legacy rows
   storagePath: varchar('storage_path', { length: 1000 }).notNull(),
-  status: varchar('status', { length: 20 }).notNull().default('uploaded'), // 'uploaded' | 'parsing' | 'parsed' | 'failed'
+  status: varchar('status', { length: 20 }).notNull().default('uploaded'), // 'uploaded' | 'parsing' | 'parsed' | 'l1_processing' | 'l1_completed' | 'failed'
   uploadedBy: uuid('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
   batchId: uuid('batch_id').references(() => uploadBatches.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
