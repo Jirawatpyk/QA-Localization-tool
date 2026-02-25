@@ -64,6 +64,12 @@ development_status:
   2-5-mqm-score-calculation-language-calibration: done
   2-6-inngest-pipeline-foundation-processing-modes: review
   2-7-batch-summary-file-history-parity-tools: ready-for-dev
+  # Backlog: parseXbenchReport multi-format support (Strategy Pattern)
+  # - Current parser: standard tabular format only (production Xbench export)
+  # - Missing: sectioned format (golden corpus custom report)
+  # - Impact: LOW (production unaffected, integration tests use workaround)
+  # - When: After Epic 2 review complete, before or during Epic 3
+  2-8-xbench-report-multi-format-support: backlog
   epic-2-retrospective: optional
 
   # ============================================================

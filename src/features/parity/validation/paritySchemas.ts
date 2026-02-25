@@ -2,11 +2,19 @@ import { z } from 'zod'
 
 export const generateParityReportSchema = z.object({
   projectId: z.string().uuid(),
-  xbenchReportFile: z.string().min(1),
+  xbenchReportBuffer: z.instanceof(Uint8Array),
   fileId: z.string().uuid().optional(),
 })
 
 export type GenerateParityReportInput = z.infer<typeof generateParityReportSchema>
+
+export const compareWithXbenchSchema = z.object({
+  projectId: z.string().uuid(),
+  fileId: z.string().uuid().optional(),
+  xbenchReportBuffer: z.instanceof(Uint8Array),
+})
+
+export type CompareWithXbenchInput = z.infer<typeof compareWithXbenchSchema>
 
 export const reportMissingCheckSchema = z.object({
   projectId: z.string().uuid(),

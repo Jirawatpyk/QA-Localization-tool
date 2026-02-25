@@ -3,7 +3,6 @@
 import 'server-only'
 
 import { and, eq } from 'drizzle-orm'
-import { z } from 'zod'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
@@ -13,16 +12,11 @@ import { projects } from '@/db/schema/projects'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { compareFindings } from '@/features/parity/helpers/parityComparator'
 import { parseXbenchReport } from '@/features/parity/helpers/xbenchReportParser'
+import { generateParityReportSchema } from '@/features/parity/validation/paritySchemas'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { ActionResult } from '@/types/actionResult'
-
-const inputSchema = z.object({
-  projectId: z.string().uuid(),
-  xbenchReportBuffer: z.instanceof(Uint8Array),
-  fileId: z.string().uuid().optional(),
-})
 
 type ParityReportResult = {
   reportId: string
@@ -46,7 +40,7 @@ type ParityReportResult = {
 export async function generateParityReport(
   input: unknown,
 ): Promise<ActionResult<ParityReportResult>> {
-  const parsed = inputSchema.safeParse(input)
+  const parsed = generateParityReportSchema.safeParse(input)
   if (!parsed.success) {
     return { success: false, error: 'Invalid input', code: 'VALIDATION_ERROR' }
   }
@@ -92,10 +86,10 @@ export async function generateParityReport(
         targetTextExcerpt: f.targetTextExcerpt,
         category: f.category as string,
         severity: f.severity as string,
-        fileId: f.fileId as string,
-        segmentId: f.segmentId as string,
+        fileId: f.fileId ?? null,
+        segmentId: f.segmentId ?? null,
       })),
-      fileId ?? '',
+      fileId,
     )
 
     // Upload Xbench report to Supabase Storage for audit trail

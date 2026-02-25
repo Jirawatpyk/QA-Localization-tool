@@ -348,6 +348,43 @@ describe('getFileHistory', () => {
 
   // ── P2: Edge cases ──
 
+  it('[P2] should return VALIDATION_ERROR for invalid input', async () => {
+    const { getFileHistory } = await import('./getFileHistory.action')
+    const result = await getFileHistory({ projectId: 'not-a-uuid', filter: 'all' })
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('VALIDATION_ERROR')
+  })
+
+  it('[P2] should return INTERNAL_ERROR when DB query throws', async () => {
+    dbState.throwAtCallIndex = 0
+    const { getFileHistory } = await import('./getFileHistory.action')
+    const result = await getFileHistory({
+      projectId: VALID_PROJECT_ID,
+      filter: 'all',
+    })
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INTERNAL_ERROR')
+  })
+
+  it('[P2] should return page 2 items with correct totalCount', async () => {
+    const allFiles = Array.from({ length: 60 }, () => buildFileHistoryRow())
+    dbState.returnValues = [[{ autoPassThreshold: 95 }], allFiles]
+
+    const { getFileHistory } = await import('./getFileHistory.action')
+    const result = await getFileHistory({
+      projectId: VALID_PROJECT_ID,
+      filter: 'all',
+      page: 2,
+    })
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.files).toHaveLength(10)
+    expect(result.data.totalCount).toBe(60)
+  })
+
   it('[P2] should return graceful empty result for empty project', async () => {
     dbState.returnValues = [[{ autoPassThreshold: 95 }], []]
 

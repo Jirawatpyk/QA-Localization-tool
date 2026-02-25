@@ -2,30 +2,19 @@
 
 import 'server-only'
 
-import { and, eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { files } from '@/db/schema/files'
+import { findings } from '@/db/schema/findings'
 import { projects } from '@/db/schema/projects'
 import { scores } from '@/db/schema/scores'
+import type { CrossFileFindingSummary, FileInBatch } from '@/features/batch/types'
 import { getBatchSummarySchema } from '@/features/batch/validation/batchSchemas'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
-
-type FileInBatch = {
-  fileId: string
-  fileName: string
-  status: string
-  createdAt: Date
-  updatedAt: Date
-  mqmScore: number | null
-  scoreStatus: string | null
-  criticalCount: number | null
-  majorCount: number | null
-  minorCount: number | null
-}
 
 type BatchSummaryResult = {
   batchId: string
@@ -36,6 +25,7 @@ type BatchSummaryResult = {
   processingTimeMs: number | null
   recommendedPass: FileInBatch[]
   needsReview: FileInBatch[]
+  crossFileFindings: CrossFileFindingSummary[]
 }
 
 export async function getBatchSummary(input: unknown): Promise<ActionResult<BatchSummaryResult>> {
@@ -131,6 +121,35 @@ export async function getBatchSummary(input: unknown): Promise<ActionResult<Batc
       processingTimeMs = maxUpdated - minCreated
     }
 
+    // H1: Query cross-file findings for files in this batch (AC#7)
+    const fileIds = filesWithScores.map((f) => f.fileId)
+    const crossFileRows =
+      fileIds.length > 0
+        ? await db
+            .select({
+              id: findings.id,
+              description: findings.description,
+              sourceTextExcerpt: findings.sourceTextExcerpt,
+              relatedFileIds: findings.relatedFileIds,
+            })
+            .from(findings)
+            .where(
+              and(
+                withTenant(findings.tenantId, tenantId),
+                eq(findings.projectId, projectId),
+                eq(findings.scope, 'cross-file'),
+                inArray(findings.fileId, fileIds),
+              ),
+            )
+        : []
+
+    const crossFileFindings: CrossFileFindingSummary[] = crossFileRows.map((f) => ({
+      id: f.id,
+      description: f.description,
+      sourceTextExcerpt: f.sourceTextExcerpt,
+      relatedFileIds: (f.relatedFileIds as string[]) ?? [],
+    }))
+
     return {
       success: true,
       data: {
@@ -142,6 +161,7 @@ export async function getBatchSummary(input: unknown): Promise<ActionResult<Batc
         processingTimeMs,
         recommendedPass,
         needsReview,
+        crossFileFindings,
       },
     }
   } catch (err) {

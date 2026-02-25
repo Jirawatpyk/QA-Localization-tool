@@ -1,3 +1,13 @@
+/**
+ * Parses Xbench QA reports in STANDARD TABULAR format (header in row 1).
+ *
+ * Known limitation: Does NOT support sectioned/custom Xbench report format
+ * (category headers starting at row 12+, e.g. golden corpus report).
+ * See integration test `readGoldenCorpusXbench()` in
+ * `src/__tests__/integration/parity-helpers-real-data.test.ts` for sectioned format handling.
+ *
+ * Backlog: Support multiple formats via Strategy Pattern (format auto-detection + delegate).
+ */
 import ExcelJS from 'exceljs'
 
 import { logger } from '@/lib/logger'

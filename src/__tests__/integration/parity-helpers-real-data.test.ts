@@ -333,11 +333,11 @@ describe.skipIf(!hasGoldenCorpus())('Parity Helpers — Real Data', () => {
         const fileXbench = goldenFindings.filter((f) => f.fileName === fileName)
         totalXbench += fileXbench.length
 
-        // Map to compareFindings format (MQM category already mapped)
+        // Map to compareFindings format (raw Xbench category — comparator maps internally)
         const mappedXbench = fileXbench.map((f) => ({
           sourceText: f.sourceText,
           targetText: f.targetText,
-          category: f.mqmCategory,
+          category: f.category,
           severity: 'major',
           fileName: f.fileName,
           segmentNumber: f.segmentNumber,

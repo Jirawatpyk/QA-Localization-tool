@@ -9,12 +9,11 @@ import { withTenant } from '@/db/helpers/withTenant'
 import { files } from '@/db/schema/files'
 import { projects } from '@/db/schema/projects'
 import { scores } from '@/db/schema/scores'
+import { FILE_HISTORY_PAGE_SIZE } from '@/features/batch/types'
 import { getFileHistorySchema } from '@/features/batch/validation/batchSchemas'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
-
-const PAGE_SIZE = 50
 
 type FileHistoryEntry = {
   fileId: string
@@ -51,7 +50,8 @@ export async function getFileHistory(input: unknown): Promise<ActionResult<FileH
 
     const threshold = project?.autoPassThreshold ?? 95
 
-    // Query 2: Files with scores
+    // Query 2: Files with scores (hard cap to prevent unbounded memory on large projects)
+    const QUERY_HARD_CAP = 10_000
     const allFiles = await db
       .select({
         fileId: files.id,
@@ -72,6 +72,7 @@ export async function getFileHistory(input: unknown): Promise<ActionResult<FileH
       )
       .where(and(withTenant(files.tenantId, tenantId), eq(files.projectId, projectId)))
       .orderBy(desc(files.createdAt))
+      .limit(QUERY_HARD_CAP)
 
     // Application-side filtering
     const filtered = allFiles.filter((f) => {
@@ -96,8 +97,8 @@ export async function getFileHistory(input: unknown): Promise<ActionResult<FileH
 
     // Pagination
     const currentPage = page ?? 1
-    const offset = (currentPage - 1) * PAGE_SIZE
-    const paged = mappedFiles.slice(offset, offset + PAGE_SIZE)
+    const offset = (currentPage - 1) * FILE_HISTORY_PAGE_SIZE
+    const paged = mappedFiles.slice(offset, offset + FILE_HISTORY_PAGE_SIZE)
 
     return {
       success: true,

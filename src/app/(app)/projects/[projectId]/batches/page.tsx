@@ -47,7 +47,6 @@ export default async function BatchesPage({ params }: { params: Promise<{ projec
                   {batch.fileCount} files &middot; {new Date(batch.createdAt).toLocaleDateString()}
                 </p>
               </div>
-              <span className="text-sm text-muted-foreground">{batch.fileCount} files</span>
             </div>
           </Link>
         ))}

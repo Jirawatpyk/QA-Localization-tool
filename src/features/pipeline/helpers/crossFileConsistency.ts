@@ -147,8 +147,8 @@ export async function crossFileConsistency(
     return { findingCount: 0 }
   }
 
-  // 5. Delete existing cross-file L1 findings (idempotent re-run)
-  // CRITICAL: scope filter prevents deleting per-file findings from other pipeline layers
+  // 5. Delete existing cross-file L1 findings for THIS batch's files only (idempotent re-run)
+  // C3: Scoped to batch files — prevents destroying cross-file findings from other batches
   await db
     .delete(findings)
     .where(
@@ -157,6 +157,7 @@ export async function crossFileConsistency(
         eq(findings.projectId, projectId),
         eq(findings.scope, 'cross-file'),
         eq(findings.detectedByLayer, 'L1'),
+        inArray(findings.fileId, fileIds),
       ),
     )
 

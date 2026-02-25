@@ -223,10 +223,17 @@ describe('crossFileConsistency', () => {
     expect(insertedFindings.length).toBeGreaterThan(0)
     expect(insertedFindings[0]).toMatchObject(
       expect.objectContaining({
-        category: expect.stringContaining('consistency'),
+        category: 'consistency',
         detectedByLayer: 'L1',
+        scope: 'cross-file',
+        segmentId: null,
+        severity: 'minor',
       }),
     )
+    // relatedFileIds must contain both file IDs (not empty, not single file)
+    const relatedIds = (insertedFindings[0] as { relatedFileIds: string[] }).relatedFileIds
+    expect(relatedIds).toEqual(expect.arrayContaining([FILE_ID_1, FILE_ID_2]))
+    expect(relatedIds.length).toBeGreaterThanOrEqual(2)
   })
 
   it('[P0] should include withTenant on segments query and findings INSERT', async () => {

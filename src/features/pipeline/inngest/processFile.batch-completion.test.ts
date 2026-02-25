@@ -95,6 +95,7 @@ vi.mock('@/db/schema/files', () => ({
     tenantId: 'tenant_id',
     status: 'status',
     batchId: 'batch_id',
+    projectId: 'project_id',
   },
 }))
 

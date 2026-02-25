@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { reportMissingCheck } from '@/features/parity/actions/reportMissingCheck.action'
@@ -33,6 +33,18 @@ export function ReportMissingCheckDialog({
   const [showTypeOptions, setShowTypeOptions] = useState(false)
   const [errors, setErrors] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
+
+  const handleClose = useCallback(() => onOpenChange?.(false), [onOpenChange])
+
+  // M5: Close on Escape key
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose()
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [open, handleClose])
 
   if (!open) return null
 
@@ -72,9 +84,22 @@ export function ReportMissingCheckDialog({
   }
 
   return (
-    <div role="dialog" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="report-missing-check-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleClose()
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') handleClose()
+      }}
+    >
       <div className="w-full max-w-md rounded-lg bg-card p-6 shadow-lg">
-        <h2 className="mb-4 text-lg font-semibold">Report Missing Check</h2>
+        <h2 id="report-missing-check-title" className="mb-4 text-lg font-semibold">
+          Report Missing Check
+        </h2>
 
         {errors.length > 0 && <p className="mb-4 text-sm text-destructive">{errors.join('. ')}</p>}
 

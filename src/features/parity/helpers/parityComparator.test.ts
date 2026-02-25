@@ -8,6 +8,11 @@ vi.mock('@/lib/logger', () => ({
   logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }))
 
+// Mock xbenchCategoryMapper with identity function to isolate comparator logic
+vi.mock('@/features/parity/helpers/xbenchCategoryMapper', () => ({
+  mapXbenchToToolCategory: vi.fn((category: string) => category.toLowerCase().trim()),
+}))
+
 // Type: represents a parsed Xbench finding
 type XbenchFinding = {
   sourceText: string
@@ -24,8 +29,8 @@ type ToolFinding = {
   targetTextExcerpt: string | null
   category: string
   severity: string
-  fileId: string
-  segmentId: string
+  fileId: string | null
+  segmentId: string | null
 }
 
 // Helper: build an Xbench finding for parity testing

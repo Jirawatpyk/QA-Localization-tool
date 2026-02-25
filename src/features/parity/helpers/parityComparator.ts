@@ -1,3 +1,4 @@
+import { mapXbenchToToolCategory } from '@/features/parity/helpers/xbenchCategoryMapper'
 import { logger } from '@/lib/logger'
 
 type XbenchFinding = {
@@ -14,8 +15,8 @@ type ToolFinding = {
   targetTextExcerpt: string | null
   category: string
   severity: string
-  fileId: string
-  segmentId: string
+  fileId: string | null
+  segmentId: string | null
 }
 
 type MatchedFinding = {
@@ -53,19 +54,22 @@ function normalize(text: string | null): string {
 export function compareFindings(
   xbenchFindings: XbenchFinding[],
   toolFindings: ToolFinding[],
-  fileId: string,
+  fileId?: string,
 ): ComparisonResult {
-  // Filter tool findings to only those for the target fileId
-  const relevantToolFindings = toolFindings.filter((f) => f.fileId === fileId)
+  // C2: When fileId is provided and non-empty, filter to that file; otherwise use all findings
+  const relevantToolFindings = fileId
+    ? toolFindings.filter((f) => f.fileId === fileId)
+    : toolFindings
 
   const matched: MatchedFinding[] = []
   const matchedXbenchIndices = new Set<number>()
   const matchedToolIndices = new Set<number>()
 
-  // Match by category + NFKC-normalized source text with +-1 severity tolerance
+  // Match by mapped category + NFKC-normalized source text with +-1 severity tolerance
   for (let xi = 0; xi < xbenchFindings.length; xi++) {
     const xf = xbenchFindings[xi]!
-    const xCategory = xf.category.toLowerCase()
+    // C1: Map Xbench category to tool rule engine category before comparison
+    const xToolCategory = mapXbenchToToolCategory(xf.category)
     const xSource = normalize(xf.sourceText)
 
     for (let ti = 0; ti < relevantToolFindings.length; ti++) {
@@ -75,8 +79,8 @@ export function compareFindings(
       const tCategory = tf.category.toLowerCase()
       const tSource = normalize(tf.sourceTextExcerpt)
 
-      // Match criteria: same category + same segment (source text match) + severity within +-1
-      const categoryMatch = xCategory === tCategory
+      // Match criteria: mapped category match + same segment (source text match) + severity within +-1
+      const categoryMatch = xToolCategory === tCategory
       const sourceMatch =
         xSource === tSource ||
         (xSource.length > 0 &&

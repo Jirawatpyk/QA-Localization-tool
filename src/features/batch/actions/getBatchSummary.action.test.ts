@@ -71,6 +71,7 @@ vi.mock('drizzle-orm', () => ({
   desc: vi.fn((...args: unknown[]) => args),
   asc: vi.fn((...args: unknown[]) => args),
   isNull: vi.fn((...args: unknown[]) => args),
+  inArray: vi.fn((...args: unknown[]) => args),
   max: vi.fn((...args: unknown[]) => args),
   min: vi.fn((...args: unknown[]) => args),
 }))
@@ -111,6 +112,20 @@ vi.mock('@/db/schema/uploadBatches', () => ({
     id: 'id',
     tenantId: 'tenant_id',
     projectId: 'project_id',
+  },
+}))
+
+vi.mock('@/db/schema/findings', () => ({
+  findings: {
+    id: 'id',
+    tenantId: 'tenant_id',
+    projectId: 'project_id',
+    fileId: 'file_id',
+    description: 'description',
+    sourceTextExcerpt: 'source_text_excerpt',
+    relatedFileIds: 'related_file_ids',
+    scope: 'scope',
+    detectedByLayer: 'detected_by_layer',
   },
 }))
 
@@ -436,6 +451,42 @@ describe('getBatchSummary', () => {
     expect(result.data.recommendedPass).toHaveLength(0)
     expect(result.data.needsReview).toHaveLength(0)
     expect(result.data.totalFiles).toBe(0)
+  })
+
+  it('[P2] should return VALIDATION_ERROR for invalid input', async () => {
+    const { getBatchSummary } = await import('./getBatchSummary.action')
+    const result = await getBatchSummary({ batchId: 'not-a-uuid', projectId: VALID_PROJECT_ID })
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('VALIDATION_ERROR')
+  })
+
+  it('[P2] should return INTERNAL_ERROR when DB query throws', async () => {
+    dbState.throwAtCallIndex = 0
+    const { getBatchSummary } = await import('./getBatchSummary.action')
+    const result = await getBatchSummary({
+      batchId: VALID_BATCH_ID,
+      projectId: VALID_PROJECT_ID,
+    })
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INTERNAL_ERROR')
+  })
+
+  it('[P2] should return null processingTimeMs when batch is partially complete', async () => {
+    const completedFile = buildFileWithScore({ status: 'l1_completed', mqmScore: 97 })
+    const processingFile = buildFileWithScore({ status: 'l1_processing', mqmScore: null })
+    dbState.returnValues = [[{ autoPassThreshold: 95 }], [completedFile, processingFile]]
+
+    const { getBatchSummary } = await import('./getBatchSummary.action')
+    const result = await getBatchSummary({
+      batchId: VALID_BATCH_ID,
+      projectId: VALID_PROJECT_ID,
+    })
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.processingTimeMs).toBeNull()
   })
 
   it('[P2] should return null processing time when all files still processing', async () => {

@@ -19,7 +19,7 @@ export default async function BatchDetailPage({
     )
   }
 
-  const { recommendedPass, needsReview, processingTimeMs } = result.data
+  const { recommendedPass, needsReview, processingTimeMs, crossFileFindings } = result.data
 
   return (
     <div className="p-6">
@@ -44,6 +44,7 @@ export default async function BatchDetailPage({
           minorCount: f.minorCount ?? 0,
         }))}
         processingTimeMs={processingTimeMs}
+        crossFileFindings={crossFileFindings}
       />
     </div>
   )

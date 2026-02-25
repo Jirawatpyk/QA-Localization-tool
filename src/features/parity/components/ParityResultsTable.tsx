@@ -39,7 +39,7 @@ function ResultSection({
   colorClass: string
 }) {
   return (
-    <section className={colorClass}>
+    <section>
       <h3 className={`mb-2 text-lg font-semibold ${colorClass}`}>
         {title} ({findings.length})
       </h3>

@@ -40,7 +40,13 @@ const handlerFn = async ({
       const batchFiles = await db
         .select({ id: files.id, status: files.status })
         .from(files)
-        .where(and(withTenant(files.tenantId, tenantId), eq(files.batchId, uploadBatchId)))
+        .where(
+          and(
+            withTenant(files.tenantId, tenantId),
+            eq(files.projectId, projectId),
+            eq(files.batchId, uploadBatchId),
+          ),
+        )
 
       const allCompleted = batchFiles.every(
         (f) => f.status === 'l1_completed' || f.status === 'failed',
