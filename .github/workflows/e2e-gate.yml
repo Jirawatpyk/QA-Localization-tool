@@ -26,6 +26,9 @@ jobs:
       # Story 1.7 onboarding tour test personas (required for onboarding-tour.spec.ts)
       E2E_FIRST_TIME_EMAIL: ${{ secrets.E2E_FIRST_TIME_EMAIL }}
       E2E_RETURNING_EMAIL: ${{ secrets.E2E_RETURNING_EMAIL }}
+      # Story 2.8 project tour test personas (required for project-tour.spec.ts)
+      E2E_PROJECT_TOUR_EMAIL: ${{ secrets.E2E_PROJECT_TOUR_EMAIL }}
+      E2E_PROJECT_TOUR_RETURNING_EMAIL: ${{ secrets.E2E_PROJECT_TOUR_RETURNING_EMAIL }}
       # Placeholders for env.ts Zod validation (not used in auth E2E tests)
       INNGEST_EVENT_KEY: ci-placeholder
       INNGEST_SIGNING_KEY: ci-placeholder
