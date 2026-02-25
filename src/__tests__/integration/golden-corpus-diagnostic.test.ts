@@ -168,7 +168,7 @@ async function readXbenchReport(filePath: string): Promise<{
 }
 
 /** Count findings per category */
-function countByCategory(findings: { category: string }[]): Record<string, number> {
+function _countByCategory(findings: { category: string }[]): Record<string, number> {
   const counts: Record<string, number> = {}
   for (const f of findings) {
     counts[f.category] = (counts[f.category] ?? 0) + 1

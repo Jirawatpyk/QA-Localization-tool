@@ -100,7 +100,7 @@ function normalizeText(s: string): string {
 }
 
 /** Normalize Xbench source text: strip XML tags first, then normalize */
-function normalizeXbench(s: string): string {
+function _normalizeXbench(s: string): string {
   return normalizeText(stripXmlTags(s))
 }
 
