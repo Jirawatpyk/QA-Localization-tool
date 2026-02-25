@@ -82,6 +82,9 @@ export async function startProcessing(
     const batchId = randomUUID()
 
     // Dispatch batch event to Inngest (fan-out handled by processBatch function)
+    // NOTE: uploadBatchId reuses batchId (pipeline batch) as a proxy for upload batch tracking.
+    // Files can originate from multiple upload batches; deriving a single uploadBatchId from
+    // file records is deferred to Epic 3 when upload-to-pipeline traceability is required.
     await inngest.send({
       name: 'pipeline.batch-started',
       data: {

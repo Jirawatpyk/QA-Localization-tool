@@ -159,11 +159,11 @@ describe('processFilePipeline', () => {
     // step.run should be called at least twice: L1 rules + scoring
     expect(mockStep.run).toHaveBeenCalledTimes(2)
 
-    // Verify order: L1 first, then score
+    // Verify exact step IDs — changing IDs breaks in-flight Inngest pipeline resumes
     const firstCall = mockStep.run.mock.calls[0]
     const secondCall = mockStep.run.mock.calls[1]
-    expect(firstCall?.[0]).toContain('l1')
-    expect(secondCall?.[0]).toContain('score')
+    expect(firstCall?.[0]).toBe(`l1-rules-${eventData.fileId}`)
+    expect(secondCall?.[0]).toBe(`score-${eventData.fileId}`)
   })
 
   it('should use deterministic step IDs containing fileId', async () => {
@@ -323,8 +323,8 @@ describe('processFilePipeline', () => {
     dbState.returnValues = [[]]
 
     const { processFilePipeline } = await import('./processFile')
+    const { withTenant } = await import('@/db/helpers/withTenant')
 
-    // Access onFailure handler
     const onFailure = (processFilePipeline as { onFailure?: (...args: unknown[]) => unknown })
       .onFailure
     expect(onFailure).toBeDefined()
@@ -345,11 +345,13 @@ describe('processFilePipeline', () => {
       })
     }
 
-    // File status should be updated to 'failed'
-    expect(dbState.callIndex).toBeGreaterThan(0)
+    // Exactly 1 DB call: the db.update(files).set({ status: 'failed' })
+    expect(dbState.callIndex).toBe(1)
+    // withTenant must be called with the correct tenantId (tenant isolation in failure path)
+    expect(withTenant).toHaveBeenCalledWith(expect.anything(), VALID_TENANT_ID)
   })
 
-  it('onFailure should log error', async () => {
+  it('onFailure should log error with fileId context', async () => {
     const { logger } = await import('@/lib/logger')
     dbState.returnValues = [[]]
 
@@ -357,6 +359,7 @@ describe('processFilePipeline', () => {
     const onFailure = (processFilePipeline as { onFailure?: (...args: unknown[]) => unknown })
       .onFailure
 
+    const testError = new Error('step failed')
     if (onFailure) {
       await onFailure({
         event: {
@@ -369,17 +372,21 @@ describe('processFilePipeline', () => {
             },
           },
         },
-        error: new Error('step failed'),
+        error: testError,
       })
     }
 
-    expect(logger.error).toHaveBeenCalled()
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ err: testError, fileId: VALID_FILE_ID }),
+      expect.any(String),
+    )
   })
 
   it('onFailure should access original event data via v3 nested structure', async () => {
     dbState.returnValues = [[]]
 
     const { processFilePipeline } = await import('./processFile')
+    const { withTenant } = await import('@/db/helpers/withTenant')
     const onFailure = (processFilePipeline as { onFailure?: (...args: unknown[]) => unknown })
       .onFailure
 
@@ -403,8 +410,9 @@ describe('processFilePipeline', () => {
       await onFailure(nestedEvent)
     }
 
-    // Should successfully extract fileId from nested structure
-    expect(dbState.callIndex).toBeGreaterThan(0)
+    // withTenant must be called with the correct tenantId — verifies tenant-scoped WHERE clause
+    expect(withTenant).toHaveBeenCalledWith(expect.anything(), VALID_TENANT_ID)
+    expect(dbState.callIndex).toBe(1)
   })
 
   // ── P2: Function configuration ──

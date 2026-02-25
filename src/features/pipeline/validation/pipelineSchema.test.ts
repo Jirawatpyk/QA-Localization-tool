@@ -71,6 +71,21 @@ describe('startProcessingSchema', () => {
     expect(result.data.mode).toBe('economy')
   })
 
+  it('should reject fileIds array with more than 100 items', async () => {
+    const { startProcessingSchema } = await import('./pipelineSchema')
+    const { faker } = await import('@faker-js/faker')
+
+    const manyIds = Array.from({ length: 101 }, () => faker.string.uuid())
+
+    const result = startProcessingSchema.safeParse({
+      fileIds: manyIds,
+      projectId: VALID_PROJECT_ID,
+      mode: 'economy',
+    })
+
+    expect(result.success).toBe(false)
+  })
+
   it('should accept thorough mode', async () => {
     const { startProcessingSchema } = await import('./pipelineSchema')
 

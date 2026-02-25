@@ -129,11 +129,10 @@ describe('usePipelineStore', () => {
     usePipelineStore.getState().updateFileStatus(VALID_FILE_ID_1, 'completed')
 
     const state = usePipelineStore.getState()
-    // completedAt should be set when all files are completed
-    if (state.completedAt !== undefined) {
-      expect(typeof state.completedAt).toBe('number')
-      expect(state.completedAt).toBeGreaterThan(0)
-    }
+    // completedAt must be set when all files reach a terminal state
+    expect(state.completedAt).toBeDefined()
+    expect(typeof state.completedAt).toBe('number')
+    expect(state.completedAt).toBeGreaterThan(0)
   })
 
   it('should handle updating non-existent fileId gracefully', async () => {

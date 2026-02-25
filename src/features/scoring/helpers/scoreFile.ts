@@ -1,4 +1,5 @@
 import { and, eq, sql } from 'drizzle-orm'
+import { NonRetriableError } from 'inngest'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
@@ -64,6 +65,10 @@ export async function scoreFile({
         withTenant(segments.tenantId, tenantId),
       ),
     )
+
+  if (segmentRows.length === 0) {
+    throw new NonRetriableError(`No segments found for file ${fileId} — cannot calculate score`)
+  }
 
   const totalWords = segmentRows.reduce((sum, s) => sum + s.wordCount, 0)
   const sourceLang = segmentRows[0]!.sourceLang

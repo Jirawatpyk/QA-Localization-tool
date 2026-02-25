@@ -64,6 +64,9 @@ export const processFilePipeline = Object.assign(
       id: 'process-file-pipeline',
       retries: 3,
       concurrency: [{ key: 'event.data.projectId', limit: 1 }],
+      // onFailureFn registered here so Inngest runtime calls it after all retries exhausted.
+      // Also exposed via Object.assign below for direct unit testing.
+      onFailure: onFailureFn,
     },
     { event: 'pipeline.process-file' },
     handlerFn,

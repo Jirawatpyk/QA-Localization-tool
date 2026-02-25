@@ -117,7 +117,7 @@ describe('processBatch', () => {
 
   // ── P1: Step configuration ──
 
-  it('should use deterministic step ID for batch init', async () => {
+  it('should use deterministic sendEvent ID containing batchId', async () => {
     const mockStep = createMockStep()
     const eventData = buildPipelineBatchEvent({ batchId: VALID_BATCH_ID })
 
@@ -127,21 +127,15 @@ describe('processBatch', () => {
       step: mockStep,
     })
 
-    // Check if any step.run call contains batchId for determinism
-    const runCalls = mockStep.run.mock.calls
-    if (runCalls.length > 0) {
-      const hasInit = runCalls.some(
-        (call: unknown[]) =>
-          typeof call[0] === 'string' && (call[0] as string).includes(VALID_BATCH_ID),
-      )
-      expect(hasInit).toBe(true)
-    }
+    // processBatch uses step.sendEvent (not step.run) — sendEvent ID must contain batchId
+    expect(mockStep.sendEvent).toHaveBeenCalledTimes(1)
+    const [stepId] = mockStep.sendEvent.mock.calls[0] as [string, unknown[]]
+    expect(stepId).toContain(VALID_BATCH_ID)
   })
 
-  it('should use deterministic step ID for file dispatch', async () => {
+  it('should use exact deterministic sendEvent ID: dispatch-files-{batchId}', async () => {
     const mockStep = createMockStep()
-    const fileId = faker.string.uuid()
-    const eventData = buildPipelineBatchEvent({ fileIds: [fileId] })
+    const eventData = buildPipelineBatchEvent({ batchId: VALID_BATCH_ID })
 
     const { processBatch } = await import('./processBatch')
     await (processBatch as { handler: (...args: unknown[]) => unknown }).handler({
@@ -149,8 +143,8 @@ describe('processBatch', () => {
       step: mockStep,
     })
 
-    // sendEvent calls should have deterministic identifiers
-    expect(mockStep.sendEvent).toHaveBeenCalled()
+    const [stepId] = mockStep.sendEvent.mock.calls[0] as [string, unknown[]]
+    expect(stepId).toBe(`dispatch-files-${VALID_BATCH_ID}`)
   })
 
   it('should pass mode from batch event to individual events', async () => {

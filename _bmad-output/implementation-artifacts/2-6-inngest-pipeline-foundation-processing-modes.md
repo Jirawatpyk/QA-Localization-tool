@@ -119,6 +119,7 @@ so that I can balance speed/cost with analysis depth and start reviewing while A
   - [x] 8.8 Verified: `processFilePipeline` + `processBatch` registered in `route.ts` ✅
   - [x] 8.9 Verified: no try-catch inside `step.run()` ✅
   - [x] 8.10 Per-file concurrency limit:1 → sequential per project. L1 benchmarks TBD in production
+  - [x] 8.11 CR Round 1 (2026-02-25) — 1C · 4H · 11M · 6L fixed — all 22 findings resolved ✅
 
 ## Dev Notes
 
@@ -708,6 +709,27 @@ claude-sonnet-4-6 (Claude Code)
 8. **`getByText` regex gotcha:** `getByText(/L1 \+ L2/)` matches both "L1 + L2" AND "L1 + L2 + L3" — changed to exact string `'L1 + L2'` in ProcessingModeDialog test.
 
 9. **Pre-existing flaky tests:** `upload/route.test.ts` and `scoreFile.test.ts` fail intermittently when run alongside all tests but pass in isolation. Pre-existing issue from Stories 2.1/2.5 — not Story 2.6 regressions.
+
+10. **CR Round 1 (2026-02-25) — 1C · 4H · 11M · 6L — all 22 findings fixed:**
+    - CRIT-1: `onFailureFn` now registered in `inngest.createFunction()` config (was Object.assign-only → Inngest runtime never called it → files stuck in `l1_processing` permanently)
+    - H1: "Recommended" badge moved to Thorough card (was incorrectly on Economy)
+    - H2: `segmentRows[0]!` → `NonRetriableError` guard added in `scoreFile.ts` (empty segments crash)
+    - H3: onFailure tests strengthened — `callIndex === 1` exact + `withTenant` assertion + `logger.error` with `{err, fileId}`
+    - H4: `runL1ForFile` status transition test — `callIndex` exact + `withTenant` verified; `getGlossaryTerms` explicitly mocked (removed 1 DB slot from all `returnValues` arrays)
+    - M1-M3: `ProcessingModeDialog` rewritten with shadcn Dialog — correct costs ($0.15/$0.35), times (~30s/~2min), DialogTitle "Start Processing"
+    - M4: Ghost assertion removed from `processBatch.test.ts` — `step.run` never called; replaced with `step.sendEvent` exact ID assertions
+    - M5: CAS rollback design documented via comment in `runL1ForFile.ts` (retries:3 ineffective post-CAS)
+    - M6: `uploadBatchId` semantic documented via comment in `startProcessing.action.ts` (deferred to Epic 3)
+    - M7: Step ID assertions changed to exact `toBe()` in `processFile.test.ts`
+    - M8: `result.code.toMatch(/NOT_FOUND|INVALID_INPUT/)` → `.toBe('NOT_FOUND')` exact
+    - M9: `result.code.toMatch(/CONFLICT|INVALID_INPUT/)` → `.toBe('CONFLICT')`; `callIndex >= 2` → `callIndex === 2`
+    - M10: `getGlossaryTerms` mock added to `runL1ForFile.test.ts` — DB slot ordering now deterministic
+    - M11: `logger.error` assertion includes `{err: testError, fileId: VALID_FILE_ID}` context
+    - L1: DialogTitle "Start Processing" added to ProcessingModeDialog
+    - L3: `processBatch` sendEvent ID assertion changed to exact `dispatch-files-${batchId}`
+    - L4: `getByText('Start Processing')` → `getByRole('heading', ...)` in Dialog test (strict-mode fix); badge pinning test added (`within(thoroughCard).getByText('Recommended')`)
+    - L5: Optional `if (state.completedAt !== undefined)` guard removed — `expect(state.completedAt).toBeDefined()` asserts directly
+    - L6: `max(100)` boundary test added to `pipelineSchema.test.ts` (101 UUIDs → fail)
 
 ### File List
 

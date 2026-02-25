@@ -229,7 +229,7 @@ describe('startProcessing', () => {
 
     expect(result.success).toBe(false)
     if (result.success) return
-    expect(result.code).toMatch(/NOT_FOUND|INVALID_INPUT/)
+    expect(result.code).toBe('NOT_FOUND')
   })
 
   it('should reject if any file not in parsed status', async () => {
@@ -252,7 +252,7 @@ describe('startProcessing', () => {
 
     expect(result.success).toBe(false)
     if (result.success) return
-    expect(result.code).toMatch(/CONFLICT|INVALID_INPUT/)
+    expect(result.code).toBe('CONFLICT')
   })
 
   // ── P1: Validation ──
@@ -323,9 +323,10 @@ describe('startProcessing', () => {
       mode: 'thorough',
     })
 
-    // DB should be updated with processing_mode
-    // Verified by checking dbState consumed an update call
-    expect(dbState.callIndex).toBeGreaterThanOrEqual(2)
+    // DB should be updated with processing_mode:
+    //   slot 0 — file validation SELECT (.then terminal)
+    //   slot 1 — projects UPDATE for processingMode (.then terminal)
+    expect(dbState.callIndex).toBe(2)
   })
 
   it('should write audit log pipeline.started', async () => {

@@ -158,7 +158,12 @@ export async function runL1ForFile({ fileId, projectId, tenantId }: RunL1Input):
   } catch (err) {
     logger.error({ err, fileId }, 'Rule engine failed')
 
-    // Best-effort rollback to failed status
+    // Best-effort rollback to 'failed' status.
+    // NOTE: This makes Inngest retries ineffective for post-CAS failures:
+    //   after rollback, status='failed'; on retry, CAS guard checks status='parsed' →
+    //   NonRetriableError → Inngest stops retrying. The retries:3 config primarily
+    //   protects against transient errors before the CAS guard runs (e.g. DB connection).
+    //   onFailureFn handles the final failed state after all retries are exhausted.
     try {
       await db
         .update(files)

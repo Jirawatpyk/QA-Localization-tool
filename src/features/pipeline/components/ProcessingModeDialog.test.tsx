@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -43,7 +43,8 @@ describe('ProcessingModeDialog', () => {
   it('should render dialog when open is true', () => {
     render(<ProcessingModeDialog {...defaultProps} />)
 
-    expect(screen.getByText('Start Processing')).toBeTruthy()
+    // DialogTitle renders as h2 — avoids strict-mode clash with the "Start Processing" button
+    expect(screen.getByRole('heading', { name: 'Start Processing' })).toBeTruthy()
     // Should display file count info
     expect(screen.getByText(/3 files/i)).toBeTruthy()
   })
@@ -143,6 +144,16 @@ describe('ProcessingModeDialog', () => {
       })
       expect(onStartProcessing).toHaveBeenCalledOnce()
     })
+  })
+
+  it('should show Recommended badge on Thorough card only (AC#1)', () => {
+    render(<ProcessingModeDialog {...defaultProps} />)
+
+    const thoroughCard = screen.getByRole('radio', { name: /Thorough/i })
+    expect(within(thoroughCard).getByText('Recommended')).toBeTruthy()
+
+    const economyCard = screen.getByRole('radio', { name: /Economy/i })
+    expect(within(economyCard).queryByText('Recommended')).toBeNull()
   })
 
   it('should disable buttons and show loading state during submission', async () => {

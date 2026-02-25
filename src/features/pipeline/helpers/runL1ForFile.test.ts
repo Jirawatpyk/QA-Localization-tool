@@ -95,6 +95,13 @@ vi.mock('@/db/schema/glossaries', () => ({
 }))
 vi.mock('next/cache', () => ({ cacheLife: vi.fn(), cacheTag: vi.fn() }))
 
+// Explicit mock for getGlossaryTerms — prevents fragile index-based DB Proxy dependency
+// (the non-cached JOIN query would otherwise consume a dbState slot unpredictably)
+const mockGetGlossaryTerms = vi.fn((..._args: unknown[]) => Promise.resolve([] as unknown[]))
+vi.mock('@/lib/cache/glossaryCache', () => ({
+  getGlossaryTerms: (...args: unknown[]) => mockGetGlossaryTerms(...args),
+}))
+
 const VALID_FILE_ID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
 const VALID_PROJECT_ID = 'b1c2d3e4-f5a6-4b2c-9d3e-4f5a6b7c8d9e'
 const VALID_TENANT_ID = 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f'
@@ -113,6 +120,7 @@ describe('runL1ForFile', () => {
     dbState.returnValues = []
     mockProcessFile.mockResolvedValue([])
     mockWriteAuditLog.mockResolvedValue(undefined)
+    mockGetGlossaryTerms.mockResolvedValue([])
   })
 
   // ── P0: Core functionality ──
@@ -129,9 +137,9 @@ describe('runL1ForFile', () => {
     }
     mockProcessFile.mockResolvedValue([ruleResult])
 
-    // 0: CAS update returning, 1: segments query, 2: glossary terms, 3: suppression rules,
-    // 4: tx delete, 5: tx insert, 6: file status update, 7: audit log
-    dbState.returnValues = [[mockFile], [buildSegment()], [], [], [], [], [], []]
+    // 0: CAS update returning, 1: segments query, 2: suppression rules,
+    // 3: tx delete, 4: tx insert, 5: file status update (audit log mocked separately)
+    dbState.returnValues = [[mockFile], [buildSegment()], [], [], [], [], []]
 
     const { runL1ForFile } = await import('./runL1ForFile')
     const result = await runL1ForFile({
@@ -144,20 +152,22 @@ describe('runL1ForFile', () => {
   })
 
   it('should transition file status from parsed to l1_processing to l1_completed', async () => {
-    // 0: CAS guard returns file (parsed→l1_processing atomic)
-    // Final update sets l1_completed
-    dbState.returnValues = [[mockFile], [], [], [], [], []]
+    // 0: CAS (→l1_processing), 1: segments, 2: suppRules, 3: txDelete, 4: statusUpdate (→l1_completed)
+    dbState.returnValues = [[mockFile], [], [], [], []]
 
     const { runL1ForFile } = await import('./runL1ForFile')
+    const { withTenant } = await import('@/db/helpers/withTenant')
+
     await runL1ForFile({
       fileId: VALID_FILE_ID,
       projectId: VALID_PROJECT_ID,
       tenantId: VALID_TENANT_ID,
     })
 
-    // Verify CAS guard was called (first DB call)
-    // Verify final status update to l1_completed (last DB call before audit)
-    expect(dbState.callIndex).toBeGreaterThan(0)
+    // Exactly 5 DB calls: CAS + segments + suppRules + txDelete + statusUpdate
+    expect(dbState.callIndex).toBe(5)
+    // Both status updates (→l1_processing and →l1_completed) are tenant-scoped
+    expect(withTenant).toHaveBeenCalledWith(expect.anything(), VALID_TENANT_ID)
   })
 
   it('should throw NonRetriableError when file not in parsed state (CAS guard)', async () => {
@@ -187,7 +197,7 @@ describe('runL1ForFile', () => {
     }
     mockProcessFile.mockResolvedValue([ruleResult])
 
-    dbState.returnValues = [[mockFile], [buildSegment()], [], [], [], [], [], []]
+    dbState.returnValues = [[mockFile], [buildSegment()], [], [], [], [], []]
 
     const { runL1ForFile } = await import('./runL1ForFile')
     const result = await runL1ForFile({
@@ -220,7 +230,6 @@ describe('runL1ForFile', () => {
       [],
       [],
       [],
-      [],
     ]
 
     const { runL1ForFile } = await import('./runL1ForFile')
@@ -234,7 +243,7 @@ describe('runL1ForFile', () => {
   })
 
   it('should include withTenant() on all DB queries', async () => {
-    dbState.returnValues = [[mockFile], [], [], [], [], []]
+    dbState.returnValues = [[mockFile], [], [], [], []]
 
     const { runL1ForFile } = await import('./runL1ForFile')
     await runL1ForFile({
@@ -256,7 +265,7 @@ describe('runL1ForFile', () => {
       buildSegment({ fileId: VALID_FILE_ID, tenantId: VALID_TENANT_ID }),
       buildSegment({ fileId: VALID_FILE_ID, tenantId: VALID_TENANT_ID }),
     ]
-    dbState.returnValues = [[mockFile], segments, [], [], [], []]
+    dbState.returnValues = [[mockFile], segments, [], [], []]
 
     const { runL1ForFile } = await import('./runL1ForFile')
     await runL1ForFile({
@@ -275,7 +284,9 @@ describe('runL1ForFile', () => {
 
   it('should load glossary terms for project', async () => {
     const glossaryTerms = [{ id: faker.string.uuid(), term: 'API', translation: 'เอพีไอ' }]
-    dbState.returnValues = [[mockFile], [buildSegment()], glossaryTerms, [], [], [], [], []]
+    // Glossary is fetched via getGlossaryTerms (explicitly mocked) — not through DB Proxy
+    mockGetGlossaryTerms.mockResolvedValue(glossaryTerms)
+    dbState.returnValues = [[mockFile], [buildSegment()], [], [], []]
 
     const { runL1ForFile } = await import('./runL1ForFile')
     await runL1ForFile({
@@ -284,7 +295,7 @@ describe('runL1ForFile', () => {
       tenantId: VALID_TENANT_ID,
     })
 
-    // Glossary terms should be passed to processFile
+    // Glossary terms should be passed to processFile as 2nd argument
     expect(mockProcessFile).toHaveBeenCalledWith(
       expect.any(Array),
       glossaryTerms,
@@ -297,7 +308,7 @@ describe('runL1ForFile', () => {
     const suppressionRules = [
       { id: faker.string.uuid(), category: 'spacing', isActive: true, projectId: VALID_PROJECT_ID },
     ]
-    dbState.returnValues = [[mockFile], [buildSegment()], [], suppressionRules, [], [], [], []]
+    dbState.returnValues = [[mockFile], [buildSegment()], suppressionRules, [], []]
 
     const { runL1ForFile } = await import('./runL1ForFile')
     await runL1ForFile({
@@ -319,7 +330,7 @@ describe('runL1ForFile', () => {
     const suppressionRules = [
       { id: faker.string.uuid(), category: 'spacing', isActive: true, projectId: VALID_PROJECT_ID },
     ]
-    dbState.returnValues = [[mockFile], [buildSegment()], [], suppressionRules, [], [], [], []]
+    dbState.returnValues = [[mockFile], [buildSegment()], suppressionRules, [], []]
 
     const { runL1ForFile } = await import('./runL1ForFile')
     await runL1ForFile({
@@ -344,7 +355,7 @@ describe('runL1ForFile', () => {
       pattern: '\\bTODO\\b',
     }
     // suppression rules query returns custom_rule
-    dbState.returnValues = [[mockFile], [buildSegment()], [], [customRule], [], [], [], []]
+    dbState.returnValues = [[mockFile], [buildSegment()], [customRule], [], []]
 
     const { runL1ForFile } = await import('./runL1ForFile')
     await runL1ForFile({
@@ -390,11 +401,10 @@ describe('runL1ForFile', () => {
       },
     ]
     mockProcessFile.mockResolvedValue(results)
+    // 0: CAS, 1: segments(3), 2: suppRules, 3: txDelete, 4: txInsert(1 batch≤100), 5: statusUpdate
     dbState.returnValues = [
       [mockFile],
       [buildSegment(), buildSegment(), buildSegment()],
-      [],
-      [],
       [],
       [],
       [],
@@ -425,7 +435,7 @@ describe('runL1ForFile', () => {
 
   it('should not fail if audit log write fails (non-fatal)', async () => {
     mockWriteAuditLog.mockRejectedValue(new Error('audit DB down'))
-    dbState.returnValues = [[mockFile], [], [], [], [], []]
+    dbState.returnValues = [[mockFile], [], [], [], []]
 
     const { runL1ForFile } = await import('./runL1ForFile')
     // Should NOT throw even though audit log fails
@@ -477,7 +487,7 @@ describe('runL1ForFile', () => {
 
   it('should handle zero findings (empty processFile result)', async () => {
     mockProcessFile.mockResolvedValue([])
-    dbState.returnValues = [[mockFile], [buildSegment()], [], [], [], []]
+    dbState.returnValues = [[mockFile], [buildSegment()], [], [], []]
 
     const { runL1ForFile } = await import('./runL1ForFile')
     const result = await runL1ForFile({
@@ -501,10 +511,10 @@ describe('runL1ForFile', () => {
     }))
     mockProcessFile.mockResolvedValue(manyFindings)
 
+    // 150 findings = 2 insert batches: CAS, segments, suppRules, txDelete, txInsert×2, statusUpdate
     dbState.returnValues = [
       [mockFile],
       Array.from({ length: 150 }, () => buildSegment()),
-      [],
       [],
       [],
       [],
@@ -523,7 +533,7 @@ describe('runL1ForFile', () => {
   })
 
   it('should return duration in milliseconds', async () => {
-    dbState.returnValues = [[mockFile], [buildSegment()], [], [], [], []]
+    dbState.returnValues = [[mockFile], [buildSegment()], [], [], []]
 
     const { runL1ForFile } = await import('./runL1ForFile')
     const result = await runL1ForFile({
