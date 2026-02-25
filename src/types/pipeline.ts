@@ -21,6 +21,15 @@ export type PipelineBatchEventData = {
   uploadBatchId: string
   userId: string
 }
+// Batch completion event — emitted when all files in batch finish L1
+export type PipelineBatchCompletedEventData = {
+  batchId: string
+  projectId: string
+  tenantId: string
+  mode: ProcessingMode
+  userId: string
+}
+
 export type PipelineStatus = 'queued' | 'processing' | 'completed' | 'failed'
 
 export type PipelineRun = {
