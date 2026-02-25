@@ -405,3 +405,27 @@ Manual code inspection after R2 fixes found 1M additional finding:
 **Final ATDD Compliance:** P0 3/3 ✅ | P1 25/25 ✅ | P2 6/6 ✅ (L3 + L4 activated) | E2E: 10 active
 **Total tests:** 1495 unit | 10 E2E
 **CR R2 Exit Status:** 0C + 0H → **PASSED** ✅
+
+---
+
+### CR R3 (0C · 2H · 3M · 3L — 8 findings from code-quality-analyzer, all fixed)
+
+code-quality-analyzer resumed working and found additional findings after CR R2.
+
+**H (2 — fixed)**
+- H1: `void updateTourState(...)` without `.catch()` in `ProjectTour.tsx` (lines 79, 91) and `OnboardingTour.tsx` (lines 72, 84) — silent promise rejection on network errors. **Fix:** Changed to `updateTourState(...).catch(() => { /* non-critical */ })` in both files.
+- H2: `OnboardingTour.tsx` missing `dismissedRef` reset logic — restart setup tour via HelpMenu fails silently after user dismisses in same session. **Fix:** Added same reset pattern as `ProjectTour.tsx`: `if (dismissedRef.current && !userMetadata?.dismissed_at_step?.setup) { dismissedRef.current = false }`.
+
+**M (3 — fixed)**
+- M2: Weak isPending assertion in `HelpMenu.test.tsx` — `if (setupBtn)` guard causes silent pass when dropdown doesn't reopen. **Fix:** Changed `queryByTestId` + `if` to `getByTestId` (fails if element not found).
+- M3: `updateTourState.action.ts` DB update returns `{ success: true }` even when 0 rows updated (TOCTOU: user deleted after `getCurrentUser`). **Fix:** Added `.returning({ id: users.id })` and `if (rows.length === 0) return NOT_FOUND`. Updated mock chain + added NOT_FOUND test.
+- M1 (E2E): `process.env` in E2E test — added comment explaining Playwright runtime exception.
+
+**L (3 — fixed)**
+- L1: `ProjectTour.test.tsx` used `await import('./ProjectTour')` per-test (misleading; same cached module). **Fix:** Converted to top-level static import. `vi.mock()` hoisting already handles isolation.
+- L2: E2E `ac1ProjectId` setup dependency comment clarified for AC#3 describe block.
+- L3: Test naming already consistent per ATDD convention — no change required.
+
+**Final ATDD Compliance:** P0 3/3 ✅ | P1 25/25 ✅ | P2 6/6 ✅ | E2E: 10 active
+**Total tests:** 1496 unit (+1 NOT_FOUND test) | 10 E2E
+**CR R3 Exit Status:** 0C + 0H → **PASSED** ✅

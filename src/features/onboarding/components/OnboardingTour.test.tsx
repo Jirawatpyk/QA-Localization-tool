@@ -32,8 +32,8 @@ import { OnboardingTour } from './OnboardingTour'
 describe('OnboardingTour', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // Default: desktop viewport
-    Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true })
+    // Default: desktop viewport — configurable:true required to allow redefinition between tests/workers
+    Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true, configurable: true })
   })
 
   afterEach(() => {
@@ -55,7 +55,7 @@ describe('OnboardingTour', () => {
   })
 
   it('should not start tour on mobile viewport', async () => {
-    Object.defineProperty(window, 'innerWidth', { value: 600, writable: true })
+    Object.defineProperty(window, 'innerWidth', { value: 600, writable: true, configurable: true })
 
     render(<OnboardingTour userId="usr-1" userMetadata={null} />)
 
