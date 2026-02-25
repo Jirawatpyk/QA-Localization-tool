@@ -1,7 +1,5 @@
 import { ParityComparisonView } from '@/features/parity/components/ParityComparisonView'
 
-export const dynamic = 'force-dynamic'
-
 export default async function ParityPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params
 

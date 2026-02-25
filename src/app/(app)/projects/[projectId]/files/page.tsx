@@ -1,8 +1,6 @@
 import { getFileHistory } from '@/features/batch/actions/getFileHistory.action'
 import { FileHistoryPageClient } from '@/features/batch/components/FileHistoryPageClient'
 
-export const dynamic = 'force-dynamic'
-
 export default async function FileHistoryPage({
   params,
 }: {

@@ -1,8 +1,6 @@
 import { getBatchSummary } from '@/features/batch/actions/getBatchSummary.action'
 import { BatchSummaryView } from '@/features/batch/components/BatchSummaryView'
 
-export const dynamic = 'force-dynamic'
-
 export default async function BatchDetailPage({
   params,
 }: {

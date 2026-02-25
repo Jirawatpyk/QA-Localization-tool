@@ -6,8 +6,6 @@ import { withTenant } from '@/db/helpers/withTenant'
 import { uploadBatches } from '@/db/schema/uploadBatches'
 import { requireRole } from '@/lib/auth/requireRole'
 
-export const dynamic = 'force-dynamic'
-
 export default async function BatchesPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params
   const user = await requireRole('qa_reviewer')
