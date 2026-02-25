@@ -62,9 +62,12 @@ export async function crossFileConsistency(
     .innerJoin(glossaries, eq(glossaryTerms.glossaryId, glossaries.id))
     .where(withTenant(glossaries.tenantId, tenantId))
 
-  const glossarySourceTerms = glossary.map((g) =>
-    g.sourceTerm.normalize('NFKC').trim().toLowerCase(),
-  )
+  // Build glossary lookup: both source and target terms for exclusion (M3: spec requires both sides)
+  const glossaryTermSet = new Set<string>()
+  for (const g of glossary) {
+    glossaryTermSet.add(g.sourceTerm.normalize('NFKC').trim().toLowerCase())
+    glossaryTermSet.add(g.targetTerm.normalize('NFKC').trim().toLowerCase())
+  }
 
   // 3. Group segments by NFKC-normalized source text
   const sourceGroups = new Map<
@@ -82,9 +85,13 @@ export async function crossFileConsistency(
     // Skip short source texts (< 3 words)
     if (wordCount < MIN_WORD_COUNT) continue
 
-    // Skip segments whose source text contains a glossary term (substring match)
+    // M3: Skip segments whose source OR target text contains a glossary term (substring match on both sides)
     const sourceLower = sourceText.toLowerCase()
-    if (glossarySourceTerms.some((term) => sourceLower.includes(term))) continue
+    const targetLower = (seg.targetText as string).normalize('NFKC').trim().toLowerCase()
+    const matchesGlossary = [...glossaryTermSet].some(
+      (term) => sourceLower.includes(term) || targetLower.includes(term),
+    )
+    if (matchesGlossary) continue
 
     const key = sourceText.toLowerCase()
     const entry = sourceGroups.get(key) ?? []
@@ -147,21 +154,7 @@ export async function crossFileConsistency(
     return { findingCount: 0 }
   }
 
-  // 5. Delete existing cross-file L1 findings for THIS batch's files only (idempotent re-run)
-  // C3: Scoped to batch files — prevents destroying cross-file findings from other batches
-  await db
-    .delete(findings)
-    .where(
-      and(
-        withTenant(findings.tenantId, tenantId),
-        eq(findings.projectId, projectId),
-        eq(findings.scope, 'cross-file'),
-        eq(findings.detectedByLayer, 'L1'),
-        inArray(findings.fileId, fileIds),
-      ),
-    )
-
-  // 6. Batch insert new findings (H8: single INSERT instead of loop)
+  // 5+6. Atomic DELETE+INSERT in transaction (C1: prevents data loss if INSERT fails after DELETE)
   const findingValues = inconsistencies.map((inconsistency) => {
     const targetVariants = [...inconsistency.targets.keys()]
     const description = `Cross-file translation inconsistency: same source text has ${targetVariants.length} different translations across files`
@@ -184,7 +177,24 @@ export async function crossFileConsistency(
     }
   })
 
-  await db.insert(findings).values(findingValues)
+  await db.transaction(async (tx) => {
+    // Delete existing cross-file L1 findings for THIS batch's files only (idempotent re-run)
+    // C3: Scoped to batch files — prevents destroying cross-file findings from other batches
+    await tx
+      .delete(findings)
+      .where(
+        and(
+          withTenant(findings.tenantId, tenantId),
+          eq(findings.projectId, projectId),
+          eq(findings.scope, 'cross-file'),
+          eq(findings.detectedByLayer, 'L1'),
+          inArray(findings.fileId, fileIds),
+        ),
+      )
+
+    // Batch insert new findings (H8: single INSERT instead of loop)
+    await tx.insert(findings).values(findingValues)
+  })
 
   logger.info(
     { findingCount: inconsistencies.length, fileCount: fileIds.length },

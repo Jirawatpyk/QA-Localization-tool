@@ -84,8 +84,8 @@ export async function generateParityReport(
       toolFindings.map((f) => ({
         sourceTextExcerpt: f.sourceTextExcerpt,
         targetTextExcerpt: f.targetTextExcerpt,
-        category: f.category as string,
-        severity: f.severity as string,
+        category: f.category,
+        severity: f.severity,
         fileId: f.fileId ?? null,
         segmentId: f.segmentId ?? null,
       })),
@@ -112,6 +112,11 @@ export async function generateParityReport(
       logger.error({ err: storageErr, storagePath }, 'Non-fatal: storage upload exception')
     }
 
+    // H2: Count filtered findings (matching the fileId scope used by compareFindings)
+    const relevantToolFindingCount = fileId
+      ? toolFindings.filter((f) => f.fileId === fileId).length
+      : toolFindings.length
+
     // Persist report
     const [report] = await db
       .insert(parityReports)
@@ -121,7 +126,7 @@ export async function generateParityReport(
         fileId: fileId ?? null,
         comparisonData: comparisonResult,
         xbenchReportStoragePath: storagePath,
-        toolFindingCount: toolFindings.length,
+        toolFindingCount: relevantToolFindingCount,
         xbenchFindingCount: xbenchResult.findings.length,
         bothFoundCount: comparisonResult.matched.length,
         toolOnlyCount: comparisonResult.toolOnly.length,
@@ -153,7 +158,7 @@ export async function generateParityReport(
         bothFound: comparisonResult.matched,
         toolOnly: comparisonResult.toolOnly,
         xbenchOnly: comparisonResult.xbenchOnly,
-        toolFindingCount: toolFindings.length,
+        toolFindingCount: relevantToolFindingCount,
         xbenchFindingCount: xbenchResult.findings.length,
       },
     }

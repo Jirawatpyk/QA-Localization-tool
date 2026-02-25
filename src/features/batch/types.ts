@@ -1,19 +1,7 @@
-export type FileProcessingStatus =
-  | 'parsed'
-  | 'l1_processing'
-  | 'l1_completed'
-  | 'l2_processing'
-  | 'l2_completed'
-  | 'l3_processing'
-  | 'l3_completed'
-  | 'auto_passed'
-  | 'needs_review'
-  | 'failed'
-
 export type FileInBatch = {
   fileId: string
   fileName: string
-  status: FileProcessingStatus | string
+  status: string
   createdAt: Date
   updatedAt: Date
   mqmScore: number | null

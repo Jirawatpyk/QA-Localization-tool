@@ -194,6 +194,47 @@ describe('reportMissingCheck', () => {
     expect(result.data.trackingReference).toMatch(refPattern)
   })
 
+  // ── H5: NOT_FOUND and INSERT returning empty ──
+
+  it('[P1] should return NOT_FOUND when project does not belong to tenant', async () => {
+    dbState.returnValues = [
+      [], // project ownership SELECT → empty = not found
+    ]
+
+    const { reportMissingCheck } = await import('./reportMissingCheck.action')
+    const result = await reportMissingCheck({
+      projectId: VALID_PROJECT_ID,
+      fileReference: 'test.sdlxliff',
+      segmentNumber: 1,
+      expectedDescription: 'Missing tag check',
+      xbenchCheckType: 'tag',
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('NOT_FOUND')
+  })
+
+  it('[P1] should return INTERNAL_ERROR when INSERT returning is empty', async () => {
+    dbState.returnValues = [
+      [{ id: VALID_PROJECT_ID }], // project found
+      [], // INSERT returning empty → report = undefined
+    ]
+
+    const { reportMissingCheck } = await import('./reportMissingCheck.action')
+    const result = await reportMissingCheck({
+      projectId: VALID_PROJECT_ID,
+      fileReference: 'test.sdlxliff',
+      segmentNumber: 1,
+      expectedDescription: 'Missing number check',
+      xbenchCheckType: 'number',
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INTERNAL_ERROR')
+  })
+
   // ── P2: Validation ──
 
   it('[P2] should validate required fields and segmentNumber > 0 via Zod', async () => {

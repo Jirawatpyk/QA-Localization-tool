@@ -1,6 +1,8 @@
 import { ParityComparisonView } from '@/features/parity/components/ParityComparisonView'
+import { requireRole } from '@/lib/auth/requireRole'
 
 export default async function ParityPage({ params }: { params: Promise<{ projectId: string }> }) {
+  await requireRole('qa_reviewer')
   const { projectId } = await params
 
   return (

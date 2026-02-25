@@ -507,4 +507,60 @@ describe('getBatchSummary', () => {
     if (!result.success) return
     expect(result.data.processingTimeMs).toBeNull()
   })
+
+  // ── C2: Cross-file findings query ──
+
+  it('[P1] should return crossFileFindings from third DB query', async () => {
+    const fileId1 = faker.string.uuid()
+    const fileId2 = faker.string.uuid()
+    const findingId = faker.string.uuid()
+
+    const passFile = buildFileWithScore({ fileId: fileId1, mqmScore: 97, criticalCount: 0 })
+    const reviewFile = buildFileWithScore({ fileId: fileId2, mqmScore: 80, criticalCount: 0 })
+
+    dbState.returnValues = [
+      [{ autoPassThreshold: 95 }], // project query
+      [passFile, reviewFile], // files + scores JOIN
+      [
+        {
+          id: findingId,
+          description: 'Cross-file inconsistency detected',
+          sourceTextExcerpt: 'Test source',
+          relatedFileIds: [fileId1, fileId2],
+        },
+      ], // cross-file findings query
+    ]
+
+    const { getBatchSummary } = await import('./getBatchSummary.action')
+    const result = await getBatchSummary({
+      batchId: VALID_BATCH_ID,
+      projectId: VALID_PROJECT_ID,
+    })
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.crossFileFindings).toHaveLength(1)
+    expect(result.data.crossFileFindings[0]).toMatchObject({
+      id: findingId,
+      description: 'Cross-file inconsistency detected',
+      relatedFileIds: [fileId1, fileId2],
+    })
+  })
+
+  it('[P2] should return empty crossFileFindings when no files in batch', async () => {
+    dbState.returnValues = [
+      [{ autoPassThreshold: 95 }],
+      [], // no files — fileIds empty → skip cross-file query
+    ]
+
+    const { getBatchSummary } = await import('./getBatchSummary.action')
+    const result = await getBatchSummary({
+      batchId: VALID_BATCH_ID,
+      projectId: VALID_PROJECT_ID,
+    })
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.crossFileFindings).toEqual([])
+  })
 })

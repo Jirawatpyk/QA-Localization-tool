@@ -92,9 +92,6 @@ export function ReportMissingCheckDialog({
       onClick={(e) => {
         if (e.target === e.currentTarget) handleClose()
       }}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') handleClose()
-      }}
     >
       <div className="w-full max-w-md rounded-lg bg-card p-6 shadow-lg">
         <h2 id="report-missing-check-title" className="mb-4 text-lg font-semibold">

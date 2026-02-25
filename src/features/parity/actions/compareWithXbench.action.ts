@@ -71,23 +71,29 @@ export async function compareWithXbench(input: unknown): Promise<ActionResult<Co
       toolFindings.map((f) => ({
         sourceTextExcerpt: f.sourceTextExcerpt,
         targetTextExcerpt: f.targetTextExcerpt,
-        category: f.category as string,
-        severity: f.severity as string,
+        category: f.category,
+        severity: f.severity,
         fileId: f.fileId ?? null,
         segmentId: f.segmentId ?? null,
       })),
       fileId,
     )
 
+    // H1: MatchedFinding has xbenchCategory+toolCategory; XbenchFinding/ToolFinding have category
     const toFinding = (
-      item: { xbenchCategory?: string; toolCategory?: string; severity?: string },
+      item: {
+        xbenchCategory?: string
+        toolCategory?: string
+        category?: string
+        severity?: string
+      },
       idx: number,
     ): ComparisonFinding => ({
       id: `${idx}`,
-      description: item.xbenchCategory ?? item.toolCategory ?? 'Unknown',
+      description: item.xbenchCategory ?? item.toolCategory ?? item.category ?? 'Unknown',
       segmentNumber: 0,
       severity: item.severity ?? 'minor',
-      category: item.xbenchCategory ?? item.toolCategory ?? '',
+      category: item.xbenchCategory ?? item.toolCategory ?? item.category ?? '',
     })
 
     return {

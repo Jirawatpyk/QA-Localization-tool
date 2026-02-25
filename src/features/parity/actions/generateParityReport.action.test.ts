@@ -260,6 +260,50 @@ describe('generateParityReport', () => {
     expect(result.error).toContain('xlsx')
   })
 
+  // ── C3: Validation for non-Uint8Array xbenchReportBuffer ──
+
+  it('[P1] should return VALIDATION_ERROR when xbenchReportBuffer is not Uint8Array', async () => {
+    const { generateParityReport } = await import('./generateParityReport.action')
+    const result = await generateParityReport({
+      projectId: VALID_PROJECT_ID,
+      xbenchReportBuffer: 'not-a-buffer', // string instead of Uint8Array
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('VALIDATION_ERROR')
+  })
+
+  it('[P1] should return VALIDATION_ERROR when xbenchReportBuffer exceeds 10MB limit', async () => {
+    const { generateParityReport } = await import('./generateParityReport.action')
+    // Create buffer slightly over 10MB
+    const oversizedBuffer = new Uint8Array(10 * 1024 * 1024 + 1)
+    const result = await generateParityReport({
+      projectId: VALID_PROJECT_ID,
+      xbenchReportBuffer: oversizedBuffer,
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('VALIDATION_ERROR')
+  })
+
+  it('[P1] should return NOT_FOUND when project does not belong to tenant', async () => {
+    dbState.returnValues = [
+      [], // project ownership SELECT → empty = not found
+    ]
+
+    const { generateParityReport } = await import('./generateParityReport.action')
+    const result = await generateParityReport({
+      projectId: VALID_PROJECT_ID,
+      xbenchReportBuffer: new Uint8Array([1, 2, 3]),
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('NOT_FOUND')
+  })
+
   it('[P1] should store valid JSON in comparisonData that roundtrips correctly', async () => {
     const comparisonResult = {
       matched: [{ xbenchCategory: 'accuracy', toolCategory: 'accuracy', severity: 'major' }],

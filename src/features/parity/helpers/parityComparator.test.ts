@@ -140,6 +140,55 @@ describe('parityComparator', () => {
     expect(result.toolOnly).toHaveLength(0)
   })
 
+  // ── M5: Substring containment match ──
+
+  it('[P1] should match when xbench source is substring of tool source (containment match)', async () => {
+    const xbenchFindings = [
+      buildXbenchFinding({
+        sourceText: 'brown fox',
+        category: 'accuracy',
+        severity: 'major',
+      }),
+    ]
+    const toolFindings = [
+      buildToolFinding({
+        sourceTextExcerpt: 'The quick brown fox jumps over',
+        category: 'accuracy',
+        severity: 'major',
+      }),
+    ]
+
+    const { compareFindings } = await import('./parityComparator')
+    const result = compareFindings(xbenchFindings, toolFindings, 'test-file-id')
+
+    // Substring containment: "brown fox" is in "The quick brown fox jumps over" → match
+    expect(result.matched).toHaveLength(1)
+    expect(result.xbenchOnly).toHaveLength(0)
+    expect(result.toolOnly).toHaveLength(0)
+  })
+
+  it('[P1] should match when tool source is substring of xbench source (reverse containment)', async () => {
+    const xbenchFindings = [
+      buildXbenchFinding({
+        sourceText: 'The quick brown fox jumps over the lazy dog',
+        category: 'terminology',
+        severity: 'minor',
+      }),
+    ]
+    const toolFindings = [
+      buildToolFinding({
+        sourceTextExcerpt: 'brown fox jumps',
+        category: 'terminology',
+        severity: 'minor',
+      }),
+    ]
+
+    const { compareFindings } = await import('./parityComparator')
+    const result = compareFindings(xbenchFindings, toolFindings, 'test-file-id')
+
+    expect(result.matched).toHaveLength(1)
+  })
+
   // ── P2: Edge cases ──
 
   it('[P2] should return all as Xbench Only when tool findings empty', async () => {

@@ -224,6 +224,54 @@ describe('processFile - batch completion step', () => {
     )
   })
 
+  it('[P0] should skip batch completion entirely when uploadBatchId is undefined', async () => {
+    const mockStep = createMockStep()
+    // Non-batch upload: uploadBatchId undefined
+    const eventData = buildPipelineEvent({ uploadBatchId: undefined as unknown as string })
+    // Remove uploadBatchId to simulate non-batch (factory sets it by default)
+    delete (eventData as Record<string, unknown>).uploadBatchId
+
+    const { processFilePipeline } = await import('./processFile')
+    const result = await (
+      processFilePipeline as { handler: (...args: unknown[]) => Promise<unknown> }
+    ).handler({
+      event: { data: eventData },
+      step: mockStep,
+    })
+
+    // Should NOT call step.run for batch check, and NOT call step.sendEvent
+    expect(mockStep.sendEvent).not.toHaveBeenCalled()
+    // Should still return L1 result (L1 + score steps still run)
+    expect(result).toMatchObject({
+      fileId: expect.any(String),
+      findingCount: expect.any(Number),
+      mqmScore: expect.any(Number),
+      layerCompleted: 'L1',
+    })
+  })
+
+  it('[P0] should use deterministic step ID including uploadBatchId for batch-completed event', async () => {
+    const mockStep = createMockStep()
+    const eventData = buildPipelineEvent()
+
+    const siblingFiles = [
+      { id: VALID_FILE_ID, status: 'l1_completed', batchId: VALID_UPLOAD_BATCH_ID },
+    ]
+    dbState.returnValues = [siblingFiles]
+
+    const { processFilePipeline } = await import('./processFile')
+    await (processFilePipeline as { handler: (...args: unknown[]) => unknown }).handler({
+      event: { data: eventData },
+      step: mockStep,
+    })
+
+    // Step ID must include the uploadBatchId for deterministic replay
+    expect(mockStep.sendEvent).toHaveBeenCalledWith(
+      `batch-completed-${VALID_UPLOAD_BATCH_ID}`,
+      expect.anything(),
+    )
+  })
+
   it('[P0] should include withTenant filter on batch files query', async () => {
     const mockStep = createMockStep()
     const eventData = buildPipelineEvent()

@@ -1,8 +1,17 @@
 import { z } from 'zod'
 
+// M2: 10 MB limit for Xbench report uploads — prevents unbounded memory usage
+const MAX_XBENCH_REPORT_BYTES = 10 * 1024 * 1024
+
+const xbenchReportBuffer = z
+  .instanceof(Uint8Array)
+  .refine((buf) => buf.byteLength <= MAX_XBENCH_REPORT_BYTES, {
+    message: `Xbench report must be under ${MAX_XBENCH_REPORT_BYTES / 1024 / 1024} MB`,
+  })
+
 export const generateParityReportSchema = z.object({
   projectId: z.string().uuid(),
-  xbenchReportBuffer: z.instanceof(Uint8Array),
+  xbenchReportBuffer,
   fileId: z.string().uuid().optional(),
 })
 
@@ -11,7 +20,7 @@ export type GenerateParityReportInput = z.infer<typeof generateParityReportSchem
 export const compareWithXbenchSchema = z.object({
   projectId: z.string().uuid(),
   fileId: z.string().uuid().optional(),
-  xbenchReportBuffer: z.instanceof(Uint8Array),
+  xbenchReportBuffer,
 })
 
 export type CompareWithXbenchInput = z.infer<typeof compareWithXbenchSchema>
