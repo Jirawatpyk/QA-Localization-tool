@@ -225,6 +225,25 @@
     <critical>FOLLOW THE STORY FILE TASKS/SUBTASKS SEQUENCE EXACTLY AS WRITTEN - NO DEVIATION</critical>
 
     <action>Review the current task/subtask from the story file - this is your authoritative implementation guide</action>
+
+    <!-- LEVEL 1: Mandatory Query Plan — output BEFORE coding any task that touches DB/actions/helpers -->
+    <action>Classify the current task: does it create or modify files in src/db/*, src/features/*/actions/*, or src/features/*/helpers/*?</action>
+    <check if="task touches DB, actions, or helpers">
+      <critical>MANDATORY: Output a Query Plan BEFORE writing any code for this task</critical>
+      <action>Output the following Query Plan to Dev Agent Record → Implementation Plan:
+        ```
+        ## Query Plan — Task N.N: {task title}
+        | # | Query location (file:function) | Operation | withTenant? | Why / Why not |
+        |---|-------------------------------|-----------|-------------|---------------|
+        | 1 | {file}:{fn}                   | SELECT/INSERT/UPDATE/DELETE | ✓ / ✗ | {reason} |
+
+        DELETE+INSERT pairs needing transaction: {list or "none"}
+        Schema columns needed for test mocks: {list}
+        ```
+      </action>
+      <action>Review the Query Plan for completeness — every DB call in the task must be listed</action>
+    </check>
+
     <action>Plan implementation following red-green-refactor cycle</action>
 
     <!-- RED PHASE -->
@@ -239,6 +258,13 @@
     <!-- REFACTOR PHASE -->
     <action>Improve code structure while keeping tests green</action>
     <action>Ensure code follows architecture patterns and coding standards from Dev Notes</action>
+
+    <!-- LEVEL 2: Trigger-based post-task tenant-isolation scan -->
+    <check if="task created or modified files matching src/db/*, src/features/*/actions/*, src/features/*/helpers/*">
+      <action>Launch tenant-isolation-checker (subagent_type="tenant-isolation-checker") on ONLY the files changed in this task</action>
+      <action>If CRITICAL or HIGH findings: fix immediately — do NOT proceed to next task</action>
+      <action>Record scan result in Dev Agent Record: "Post-task scan (Task N.N): tenant-isolation ✅ / ✗ {details}"</action>
+    </check>
 
     <action>Document technical approach and decisions in Dev Agent Record → Implementation Plan</action>
 
