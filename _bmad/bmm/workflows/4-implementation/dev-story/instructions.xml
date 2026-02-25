@@ -324,9 +324,10 @@
     <critical>Run automated scans BEFORE marking story for review — catch issues the dev agent missed</critical>
 
     <!-- Launch objective scans in parallel -->
-    <action>Launch TWO sub-agents IN PARALLEL using the Task tool to scan all files in the story File List:
+    <action>Launch THREE sub-agents IN PARALLEL using the Task tool to scan all files in the story File List:
       1. anti-pattern-detector (subagent_type="anti-pattern-detector") — scan changed files for CLAUDE.md anti-pattern violations
       2. tenant-isolation-checker (subagent_type="tenant-isolation-checker") — scan changed files for missing tenant isolation
+      3. code-quality-analyzer (subagent_type="code-quality-analyzer") — scan changed files for code smells, perf issues, data quality, schema mock drift
     </action>
 
     <!-- Conditional scans — trigger when relevant files changed OR story belongs to DB/pipeline-heavy epic -->
@@ -365,7 +366,7 @@
 
     <!-- Gate: only proceed when clean -->
     <check if="all scans return clean or LOW-only findings">
-      <action>Record scan results in Dev Agent Record: "Pre-CR scan: anti-pattern ✅, tenant-isolation ✅, rls-policy [ran/skipped: reason], inngest-validator [ran/skipped: reason]"</action>
+      <action>Record scan results in Dev Agent Record: "Pre-CR scan: anti-pattern ✅, tenant-isolation ✅, code-quality ✅, rls-policy [ran/skipped: reason], inngest-validator [ran/skipped: reason]"</action>
       <goto step="10">Story completion</goto>
     </check>
 
