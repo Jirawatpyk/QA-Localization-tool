@@ -1,6 +1,8 @@
 import { faker } from '@faker-js/faker'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
+import type { ProcessingMode } from '@/types/pipeline'
+
 // ── Hoisted mocks ──
 vi.mock('@/lib/logger', () => ({
   logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -22,7 +24,7 @@ function buildPipelineBatchEvent(
     projectId: string
     tenantId: string
     userId: string
-    mode: 'economy' | 'thorough'
+    mode: ProcessingMode
     uploadBatchId: string
   }>,
 ) {

@@ -7,6 +7,7 @@ import { glossaryTerms } from '@/db/schema/glossaryTerms'
 import { projects } from '@/db/schema/projects'
 import { scores } from '@/db/schema/scores'
 import { userRoles } from '@/db/schema/userRoles'
+import { PROCESSING_MODES } from '@/types/pipeline'
 
 // BCP-47 language tag validation (simplified — covers en, en-US, zh-Hans-CN etc.)
 const bcp47Schema = z.string().regex(/^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})*$/, 'Invalid BCP-47 tag')
@@ -16,7 +17,7 @@ export const projectInsertSchema = createInsertSchema(projects, {
   name: (schema) => schema.min(1, 'Name is required').max(255),
   sourceLang: () => bcp47Schema,
   targetLangs: () => z.array(bcp47Schema).min(1, 'At least one target language required'),
-  processingMode: (schema) => schema.pipe(z.union([z.literal('economy'), z.literal('thorough')])),
+  processingMode: (schema) => schema.pipe(z.enum(PROCESSING_MODES)),
 })
 
 export const projectSelectSchema = createSelectSchema(projects)

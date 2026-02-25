@@ -11,7 +11,7 @@ import type { ExcelColumnMapping } from '@/features/parser/validation/excelMappi
 import type { ContributingFinding } from '@/features/scoring/types'
 import type { BatchRecord, UploadFileResult } from '@/features/upload/types'
 import type { Finding } from '@/types/finding'
-import type { PipelineRun } from '@/types/pipeline'
+import type { ProcessingMode, PipelineRun } from '@/types/pipeline'
 import type { ReviewSession } from '@/types/review'
 
 type SegmentRecord = typeof segments.$inferSelect
@@ -287,7 +287,7 @@ export function buildPipelineEvent(
     projectId: string
     tenantId: string
     userId: string
-    mode: 'economy' | 'thorough'
+    mode: ProcessingMode
     uploadBatchId: string
   }>,
 ) {
@@ -312,7 +312,7 @@ export function buildPipelineBatchEvent(
     projectId: string
     tenantId: string
     userId: string
-    mode: 'economy' | 'thorough'
+    mode: ProcessingMode
     uploadBatchId: string
   }>,
 ) {

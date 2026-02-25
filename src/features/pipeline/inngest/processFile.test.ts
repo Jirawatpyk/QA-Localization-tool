@@ -1,6 +1,8 @@
 import { faker } from '@faker-js/faker'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
+import type { ProcessingMode } from '@/types/pipeline'
+
 // ── Hoisted mocks ──
 const { mockRunL1ForFile, mockScoreFile, dbState } = vi.hoisted(() => {
   const state = {
@@ -105,7 +107,7 @@ function buildPipelineEvent(
     projectId: string
     tenantId: string
     userId: string
-    mode: 'economy' | 'thorough'
+    mode: ProcessingMode
   }>,
 ) {
   return {
