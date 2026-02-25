@@ -24,7 +24,8 @@ export async function parseExcel(
 
   const workbook = new ExcelJS.Workbook()
   try {
-    await workbook.xlsx.load(Buffer.from(new Uint8Array(buffer)) as never)
+    // @ts-expect-error ExcelJS declares its own Buffer interface that conflicts with Node.js Buffer generic
+    await workbook.xlsx.load(Buffer.from(new Uint8Array(buffer)))
   } catch {
     errors.push({
       line: 1,

@@ -11,6 +11,7 @@
 - **OPEN** — Not addressed, needs work
 - **ACCEPTED** — Known but accepted with mitigation
 - **DEFERRED** — Will address in a specific future story/epic
+- **RESOLVED** — Fixed in code
 
 ---
 
@@ -20,9 +21,9 @@
 - **Severity:** Medium
 - **Risk:** Re-parsing a file can create duplicate segment rows
 - **Mitigation:** Parser does DELETE+INSERT (idempotent), but constraint would enforce at DB level
-- **Fix:** Add migration: `ALTER TABLE segments ADD UNIQUE (file_id, segment_number)`
+- **Fix:** Added `unique('uq_segments_file_segment').on(table.fileId, table.segmentNumber)` to Drizzle schema
 - **Origin:** Story 2.2, flagged by code-quality-analyzer
-- **Status:** OPEN
+- **Status:** RESOLVED (2026-02-25 — Drizzle schema updated, run `db:generate` + `db:migrate` to apply)
 
 ### TD-DB-002: Missing composite index on files(tenant_id, project_id)
 - **Severity:** Low
@@ -35,9 +36,9 @@
 ### TD-DB-003: idx_findings_file_layer in migration but not in Drizzle schema
 - **Severity:** Low
 - **Risk:** Drizzle Kit `db:generate` won't know about this index; may drop it during future migrations
-- **Fix:** Add `.index()` to Drizzle schema `findings` table definition
+- **Fix:** Added `index('idx_findings_file_layer').on(table.fileId, table.detectedByLayer)` to Drizzle schema
 - **Origin:** Story 2.7, flagged by code-quality-analyzer
-- **Status:** OPEN
+- **Status:** RESOLVED (2026-02-25 — Drizzle schema updated, NOTE comment removed)
 
 ### TD-DB-004: segmentId not persisted to DB
 - **Severity:** Medium
@@ -54,16 +55,18 @@
 ### TD-CODE-001: Barrel export in pipeline/inngest/index.ts
 - **Severity:** Medium (violates CLAUDE.md)
 - **Risk:** CLAUDE.md explicitly forbids barrel exports in feature modules
-- **Fix:** Delete `index.ts`; update `route.ts` to import directly from individual files
+- **Fix:** N/A — barrel export `index.ts` does not exist; `route.ts` already imports directly
 - **Origin:** Story 2.6, flagged by anti-pattern-detector
-- **Status:** OPEN
+- **Status:** RESOLVED (2026-02-25 — verified: `src/features/pipeline/inngest/index.ts` does not exist)
 
-### TD-CODE-002: `as never` type assertion in ExcelJS calls
+### TD-CODE-002: ExcelJS type assertion for xlsx.load()
 - **Severity:** Low
-- **Files:** `excelParser.ts:39`, `previewExcelColumns.action.ts:88`, `xbenchReportParser.ts:23`
-- **Fix:** Change `as never` to `as Buffer`
+- **Files:** `excelParser.ts:27`, `xbenchReportParser.ts:34`
+- **Root cause:** ExcelJS declares `interface Buffer extends ArrayBuffer {}` which conflicts with Node.js `Buffer<ArrayBufferLike>` generic — no clean type-safe solution exists
+- **Fix:** Replaced `as never`/`as any` with `@ts-expect-error` + explanatory comment (self-documenting, auto-flags if ExcelJS fixes types)
+- **Note:** `previewExcelColumns.action.ts` does NOT have this assertion (tracker was incorrect)
 - **Origin:** Story 2.3, flagged by anti-pattern-detector
-- **Status:** OPEN
+- **Status:** RESOLVED (2026-02-25 — `@ts-expect-error` is the correct pattern for library type mismatches)
 
 ### TD-CODE-003: getFileHistory fetches ALL files + JS filter/paginate
 - **Severity:** Medium
@@ -77,12 +80,16 @@
 
 ## Category 3: Test Infrastructure
 
-### TD-TEST-001: Proxy-based Drizzle mock duplicated in 5+ test files
+### TD-TEST-001: Proxy-based Drizzle mock duplicated in 15 test files
 - **Severity:** Medium
 - **Impact:** Root cause of "schema mock drift" — when new columns are added, each mock must be updated independently. This caused ~20% of CR findings across Stories 2.6-2.7.
-- **Fix:** Extract shared `createDrizzleMock()` utility to `src/test/drizzleMock.ts`
+- **Fix:** Extracted shared `createDrizzleMock()` utility:
+  - `src/test/drizzleMock.ts` — canonical factory function with all features (returning, then, set, values, transaction, throwAtCallIndex)
+  - `src/test/globals.d.ts` — TypeScript type declaration for global `createDrizzleMock()`
+  - `src/test/setup.ts` — attaches factory to `globalThis` (setupFiles run before `vi.hoisted()`)
+  - All 15 Proxy-based test files migrated: `vi.mock('@/db/client', () => dbMockModule)` (1 line)
 - **Origin:** Story 2.4, flagged by code-quality-analyzer + testing-qa-expert
-- **Status:** OPEN
+- **Status:** RESOLVED (2026-02-25 — all 15 files migrated, 1457 tests pass)
 
 ### TD-TEST-002: Low-priority test gaps (carry-over)
 - **Severity:** Low
@@ -100,11 +107,10 @@
 
 ### TD-TENANT-001: Realtime channel missing tenant_id filter
 - **Severity:** Medium
-- **File:** `src/features/notifications/hooks/useNotifications.ts`
-- **Risk:** Filter is `user_id=eq.${userId}` only; relies entirely on RLS
-- **Fix:** Add compound filter `user_id=eq.${userId}&tenant_id=eq.${tenantId}`
+- **File:** `src/features/dashboard/hooks/useNotifications.ts` (NOT `src/features/notifications/hooks/` as originally tracked)
+- **Fix:** N/A — code already has compound filter `user_id=eq.${userId}&tenant_id=eq.${tenantId}` (line 66) + client-side guard `if (raw.tenant_id !== tenantId) return` (line 71)
 - **Origin:** Story 1.7, flagged by tenant-isolation-checker
-- **Status:** OPEN
+- **Status:** RESOLVED (2026-02-25 — verified: filter already includes tenant_id; tracker had wrong file path)
 
 ### TD-TENANT-002: glossary_terms duplicate-check by glossaryId only
 - **Severity:** Low
@@ -128,3 +134,9 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 | generateParityReport unverified FK | 2.7 | Project ownership SELECT added |
 | step.sendEvent wrong API | 2.6 | Corrected to `(stringId, events[])` batch form |
 | PROCESSING_MODES hardcoded | 2.6 | All sites import from `@/types/pipeline` |
+| TD-DB-001: segments UNIQUE | 2.2 | Added `.unique()` to Drizzle schema |
+| TD-DB-003: findings index | 2.7 | Added `.index()` to Drizzle schema |
+| TD-CODE-001: barrel export | 2.6 | Verified: index.ts does not exist |
+| TD-CODE-002: ExcelJS type assertion | 2.3 | `@ts-expect-error` replaces `as never`/`as any` |
+| TD-TEST-001: Drizzle mock DRY | 2.4 | `createDrizzleMock()` shared utility, 15 files migrated |
+| TD-TENANT-001: Realtime tenant filter | 1.7 | Already implemented at `useNotifications.ts:66` |

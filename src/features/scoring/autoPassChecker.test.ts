@@ -1,26 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 // ── Hoisted mocks ──
-const { dbState } = vi.hoisted(() => {
-  const state = { callIndex: 0, returnValues: [] as unknown[] }
-  return { dbState: state }
-})
+const { dbState, dbMockModule } = vi.hoisted(() => createDrizzleMock())
 
-vi.mock('@/db/client', () => {
-  const handler: ProxyHandler<Record<string, unknown>> = {
-    get: (_target, prop) => {
-      if (prop === 'then') {
-        return (resolve?: (v: unknown) => void) => {
-          const value = dbState.returnValues[dbState.callIndex] ?? []
-          dbState.callIndex++
-          resolve?.(value)
-        }
-      }
-      return vi.fn(() => new Proxy({}, handler))
-    },
-  }
-  return { db: new Proxy({}, handler) }
-})
+vi.mock('@/db/client', () => dbMockModule)
 
 vi.mock('@/db/helpers/withTenant', () => ({
   withTenant: vi.fn((..._args: unknown[]) => 'tenant-filter'),

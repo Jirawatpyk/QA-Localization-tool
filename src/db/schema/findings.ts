@@ -1,4 +1,14 @@
-import { jsonb, pgTable, uuid, varchar, text, real, integer, timestamp } from 'drizzle-orm/pg-core'
+import {
+  index,
+  jsonb,
+  pgTable,
+  uuid,
+  varchar,
+  text,
+  real,
+  integer,
+  timestamp,
+} from 'drizzle-orm/pg-core'
 
 import { files } from './files'
 import { projects } from './projects'
@@ -6,40 +16,42 @@ import { reviewSessions } from './reviewSessions'
 import { segments } from './segments'
 import { tenants } from './tenants'
 
-export const findings = pgTable('findings', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  // nullable: cross-file findings have no single segment
-  segmentId: uuid('segment_id').references(() => segments.id, { onDelete: 'cascade' }),
-  projectId: uuid('project_id')
-    .notNull()
-    .references(() => projects.id, { onDelete: 'cascade' }),
-  tenantId: uuid('tenant_id')
-    .notNull()
-    .references(() => tenants.id, { onDelete: 'restrict' }),
-  // Denormalized from segment's file for query performance (nullable for existing rows)
-  // NOTE: Composite index idx_findings_file_layer(file_id, detected_by_layer) exists in
-  // Supabase migration 00014 but not in Drizzle schema — Drizzle does not manage this index.
-  fileId: uuid('file_id').references(() => files.id, { onDelete: 'cascade' }),
-  reviewSessionId: uuid('review_session_id').references(() => reviewSessions.id, {
-    onDelete: 'set null',
-  }),
-  status: varchar('status', { length: 30 }).notNull().default('pending'),
-  // 'pending' | 'accepted' | 're_accepted' | 'rejected' | 'flagged' | 'noted' | 'source_issue' | 'manual'
-  severity: varchar('severity', { length: 20 }).notNull(), // 'critical' | 'major' | 'minor'
-  category: varchar('category', { length: 100 }).notNull(), // MQM category
-  description: text('description').notNull(),
-  detectedByLayer: varchar('detected_by_layer', { length: 10 }).notNull(), // 'L1' | 'L2' | 'L3'
-  aiModel: varchar('ai_model', { length: 100 }),
-  aiConfidence: real('ai_confidence'), // 0-100
-  suggestedFix: text('suggested_fix'),
-  // Truncated to 500 chars — for display in finding list without JOIN to segments
-  sourceTextExcerpt: text('source_text_excerpt'),
-  targetTextExcerpt: text('target_text_excerpt'),
-  // 'per-file' (default) | 'cross-file' (cross-file consistency findings)
-  scope: varchar('scope', { length: 30 }).notNull().default('per-file'),
-  // Array of fileIds for cross-file findings (nullable — only set for cross-file)
-  relatedFileIds: jsonb('related_file_ids').$type<string[]>(),
-  segmentCount: integer('segment_count').notNull().default(1), // multi-segment span tracking
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
+export const findings = pgTable(
+  'findings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // nullable: cross-file findings have no single segment
+    segmentId: uuid('segment_id').references(() => segments.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'restrict' }),
+    // Denormalized from segment's file for query performance (nullable for existing rows)
+    fileId: uuid('file_id').references(() => files.id, { onDelete: 'cascade' }),
+    reviewSessionId: uuid('review_session_id').references(() => reviewSessions.id, {
+      onDelete: 'set null',
+    }),
+    status: varchar('status', { length: 30 }).notNull().default('pending'),
+    // 'pending' | 'accepted' | 're_accepted' | 'rejected' | 'flagged' | 'noted' | 'source_issue' | 'manual'
+    severity: varchar('severity', { length: 20 }).notNull(), // 'critical' | 'major' | 'minor'
+    category: varchar('category', { length: 100 }).notNull(), // MQM category
+    description: text('description').notNull(),
+    detectedByLayer: varchar('detected_by_layer', { length: 10 }).notNull(), // 'L1' | 'L2' | 'L3'
+    aiModel: varchar('ai_model', { length: 100 }),
+    aiConfidence: real('ai_confidence'), // 0-100
+    suggestedFix: text('suggested_fix'),
+    // Truncated to 500 chars — for display in finding list without JOIN to segments
+    sourceTextExcerpt: text('source_text_excerpt'),
+    targetTextExcerpt: text('target_text_excerpt'),
+    // 'per-file' (default) | 'cross-file' (cross-file consistency findings)
+    scope: varchar('scope', { length: 30 }).notNull().default('per-file'),
+    // Array of fileIds for cross-file findings (nullable — only set for cross-file)
+    relatedFileIds: jsonb('related_file_ids').$type<string[]>(),
+    segmentCount: integer('segment_count').notNull().default(1), // multi-segment span tracking
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('idx_findings_file_layer').on(table.fileId, table.detectedByLayer)],
+)

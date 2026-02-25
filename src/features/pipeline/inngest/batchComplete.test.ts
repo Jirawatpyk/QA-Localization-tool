@@ -2,14 +2,12 @@
 import { faker } from '@faker-js/faker'
 
 // ── Hoisted mocks ──
-const { mockCrossFileConsistency, dbState } = vi.hoisted(() => {
-  const state = {
-    callIndex: 0,
-    returnValues: [] as unknown[],
-  }
+const { mockCrossFileConsistency, dbState, dbMockModule } = vi.hoisted(() => {
+  const { dbState, dbMockModule } = createDrizzleMock()
   return {
     mockCrossFileConsistency: vi.fn((..._args: unknown[]) => Promise.resolve({ findingCount: 3 })),
-    dbState: state,
+    dbState,
+    dbMockModule,
   }
 })
 
@@ -29,21 +27,7 @@ vi.mock('@/lib/inngest/client', () => ({
   },
 }))
 
-vi.mock('@/db/client', () => {
-  const handler: ProxyHandler<Record<string, unknown>> = {
-    get: (_target, prop) => {
-      if (prop === 'then') {
-        return (resolve?: (v: unknown) => void) => {
-          const value = dbState.returnValues[dbState.callIndex] ?? []
-          dbState.callIndex++
-          resolve?.(value)
-        }
-      }
-      return vi.fn(() => new Proxy({}, handler))
-    },
-  }
-  return { db: new Proxy({}, handler) }
-})
+vi.mock('@/db/client', () => dbMockModule)
 
 vi.mock('@/db/helpers/withTenant', () => ({
   withTenant: vi.fn((..._args: unknown[]) => 'tenant-filter'),

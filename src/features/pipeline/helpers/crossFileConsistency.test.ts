@@ -2,57 +2,16 @@
 import { faker } from '@faker-js/faker'
 
 // ── Hoisted mocks ──
-const { dbState } = vi.hoisted(() => {
-  const state = {
-    callIndex: 0,
-    returnValues: [] as unknown[],
-    valuesCaptures: [] as unknown[],
-    insertCaptures: [] as unknown[],
-    throwAtCallIndex: null as number | null,
-  }
-  return { dbState: state }
+const { dbState, dbMockModule } = vi.hoisted(() => {
+  const { dbState, dbMockModule } = createDrizzleMock()
+  return { dbState, dbMockModule }
 })
 
 vi.mock('@/lib/logger', () => ({
   logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }))
 
-vi.mock('@/db/client', () => {
-  const handler: ProxyHandler<Record<string, unknown>> = {
-    get: (_target, prop) => {
-      if (prop === 'returning') {
-        return vi.fn(() => {
-          const value = dbState.returnValues[dbState.callIndex] ?? []
-          dbState.callIndex++
-          return Promise.resolve(value)
-        })
-      }
-      if (prop === 'then') {
-        return (resolve?: (v: unknown) => void, reject?: (err: unknown) => void) => {
-          if (dbState.throwAtCallIndex !== null && dbState.callIndex === dbState.throwAtCallIndex) {
-            dbState.callIndex++
-            reject?.(new Error('DB query failed'))
-            return
-          }
-          const value = dbState.returnValues[dbState.callIndex] ?? []
-          dbState.callIndex++
-          resolve?.(value)
-        }
-      }
-      if (prop === 'values') {
-        return vi.fn((args: unknown) => {
-          dbState.valuesCaptures.push(args)
-          return new Proxy({}, handler)
-        })
-      }
-      if (prop === 'transaction') {
-        return vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn(new Proxy({}, handler)))
-      }
-      return vi.fn(() => new Proxy({}, handler))
-    },
-  }
-  return { db: new Proxy({}, handler) }
-})
+vi.mock('@/db/client', () => dbMockModule)
 
 vi.mock('@/db/helpers/withTenant', () => ({
   withTenant: vi.fn((..._args: unknown[]) => 'tenant-filter'),
@@ -151,7 +110,6 @@ describe('crossFileConsistency', () => {
     dbState.callIndex = 0
     dbState.returnValues = []
     dbState.valuesCaptures = []
-    dbState.insertCaptures = []
     dbState.throwAtCallIndex = null
   })
 

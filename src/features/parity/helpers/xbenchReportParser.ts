@@ -29,9 +29,8 @@ type XbenchParseResult = {
 
 export async function parseXbenchReport(buffer: Uint8Array): Promise<XbenchParseResult> {
   const workbook = new ExcelJS.Workbook()
-  // ExcelJS xlsx.load() accepts Buffer but Uint8Array type doesn't match
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await workbook.xlsx.load(buffer as any)
+  // @ts-expect-error ExcelJS declares its own Buffer interface that conflicts with Node.js Buffer generic
+  await workbook.xlsx.load(buffer)
 
   const worksheet = workbook.getWorksheet(1)
   if (!worksheet) {

@@ -5,16 +5,12 @@ import { faker } from '@faker-js/faker'
 vi.mock('server-only', () => ({}))
 
 // ── Hoisted mocks ──
-const { mockRequireRole, dbState } = vi.hoisted(() => {
-  const state = {
-    callIndex: 0,
-    returnValues: [] as unknown[],
-    setCaptures: [] as unknown[],
-    throwAtCallIndex: null as number | null,
-  }
+const { mockRequireRole, dbState, dbMockModule } = vi.hoisted(() => {
+  const { dbState, dbMockModule } = createDrizzleMock()
   return {
     mockRequireRole: vi.fn(),
-    dbState: state,
+    dbState,
+    dbMockModule,
   }
 })
 
@@ -26,39 +22,7 @@ vi.mock('@/lib/logger', () => ({
   logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }))
 
-vi.mock('@/db/client', () => {
-  const handler: ProxyHandler<Record<string, unknown>> = {
-    get: (_target, prop) => {
-      if (prop === 'returning') {
-        return vi.fn(() => {
-          const value = dbState.returnValues[dbState.callIndex] ?? []
-          dbState.callIndex++
-          return Promise.resolve(value)
-        })
-      }
-      if (prop === 'then') {
-        return (resolve?: (v: unknown) => void, reject?: (err: unknown) => void) => {
-          if (dbState.throwAtCallIndex !== null && dbState.callIndex === dbState.throwAtCallIndex) {
-            dbState.callIndex++
-            reject?.(new Error('DB query failed'))
-            return
-          }
-          const value = dbState.returnValues[dbState.callIndex] ?? []
-          dbState.callIndex++
-          resolve?.(value)
-        }
-      }
-      if (prop === 'set') {
-        return vi.fn((args: unknown) => {
-          dbState.setCaptures.push(args)
-          return new Proxy({}, handler)
-        })
-      }
-      return vi.fn(() => new Proxy({}, handler))
-    },
-  }
-  return { db: new Proxy({}, handler) }
-})
+vi.mock('@/db/client', () => dbMockModule)
 
 vi.mock('@/db/helpers/withTenant', () => ({
   withTenant: vi.fn((..._args: unknown[]) => 'tenant-filter'),

@@ -13,12 +13,13 @@ vi.mock('inngest', () => ({
 }))
 
 // ── Hoisted mocks ──
-const { mockRequireRole, mockRunL1ForFile, dbState } = vi.hoisted(() => {
-  const state = { callIndex: 0, returnValues: [] as unknown[] }
+const { mockRequireRole, mockRunL1ForFile, dbState, dbMockModule } = vi.hoisted(() => {
+  const { dbState, dbMockModule } = createDrizzleMock()
   return {
     mockRequireRole: vi.fn(),
     mockRunL1ForFile: vi.fn(),
-    dbState: state,
+    dbState,
+    dbMockModule,
   }
 })
 
@@ -34,21 +35,7 @@ vi.mock('@/lib/logger', () => ({
   logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }))
 
-vi.mock('@/db/client', () => {
-  const handler: ProxyHandler<Record<string, unknown>> = {
-    get: (_target, prop) => {
-      if (prop === 'then') {
-        return (resolve?: (v: unknown) => void) => {
-          const value = dbState.returnValues[dbState.callIndex] ?? []
-          dbState.callIndex++
-          resolve?.(value)
-        }
-      }
-      return vi.fn(() => new Proxy({}, handler))
-    },
-  }
-  return { db: new Proxy({}, handler) }
-})
+vi.mock('@/db/client', () => dbMockModule)
 
 vi.mock('@/db/helpers/withTenant', () => ({
   withTenant: vi.fn((..._args: unknown[]) => 'tenant-filter'),
