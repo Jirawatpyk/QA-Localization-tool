@@ -3,7 +3,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 // ── Hoisted mocks ──
 const { mockRunL1ForFile, mockScoreFile, dbState } = vi.hoisted(() => {
-  const state = { callIndex: 0, returnValues: [] as unknown[] }
+  const state = { callIndex: 0, returnValues: [] as unknown[], setCaptures: [] as unknown[] }
   return {
     mockRunL1ForFile: vi.fn((..._args: unknown[]) =>
       Promise.resolve({ findingCount: 5, duration: 120 }),
@@ -54,6 +54,12 @@ vi.mock('@/db/client', () => {
           dbState.callIndex++
           resolve?.(value)
         }
+      }
+      if (prop === 'set') {
+        return vi.fn((args: unknown) => {
+          dbState.setCaptures.push(args)
+          return new Proxy({}, handler)
+        })
       }
       return vi.fn(() => new Proxy({}, handler))
     },
@@ -120,6 +126,7 @@ describe('processFilePipeline', () => {
     vi.clearAllMocks()
     dbState.callIndex = 0
     dbState.returnValues = []
+    dbState.setCaptures = []
     mockRunL1ForFile.mockResolvedValue({ findingCount: 5, duration: 120 })
     mockScoreFile.mockResolvedValue({
       scoreId: faker.string.uuid(),
@@ -189,6 +196,7 @@ describe('processFilePipeline', () => {
       fileId: VALID_FILE_ID,
       projectId: VALID_PROJECT_ID,
       tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
     })
 
     const { processFilePipeline } = await import('./processFile')
@@ -202,6 +210,7 @@ describe('processFilePipeline', () => {
         fileId: VALID_FILE_ID,
         projectId: VALID_PROJECT_ID,
         tenantId: VALID_TENANT_ID,
+        userId: VALID_USER_ID,
       }),
     )
   })
@@ -349,6 +358,8 @@ describe('processFilePipeline', () => {
     expect(dbState.callIndex).toBe(1)
     // withTenant must be called with the correct tenantId (tenant isolation in failure path)
     expect(withTenant).toHaveBeenCalledWith(expect.anything(), VALID_TENANT_ID)
+    // Verify .set() was called with status: 'failed' (not some other status)
+    expect(dbState.setCaptures).toContainEqual({ status: 'failed' })
   })
 
   it('onFailure should log error with fileId context', async () => {

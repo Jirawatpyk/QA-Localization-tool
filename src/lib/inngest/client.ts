@@ -1,27 +1,11 @@
 import { EventSchemas, Inngest } from 'inngest'
 
+import type { PipelineBatchEventData, PipelineFileEventData } from '@/types/pipeline'
+
+// Event schemas — data types canonical in @/types/pipeline to avoid drift
 type Events = {
-  'pipeline.process-file': {
-    data: {
-      fileId: string
-      projectId: string
-      tenantId: string
-      mode: 'economy' | 'thorough'
-      uploadBatchId: string
-      userId: string
-    }
-  }
-  'pipeline.batch-started': {
-    data: {
-      batchId: string
-      projectId: string
-      tenantId: string
-      fileIds: string[]
-      mode: 'economy' | 'thorough'
-      uploadBatchId: string
-      userId: string
-    }
-  }
+  'pipeline.process-file': { data: PipelineFileEventData }
+  'pipeline.batch-started': { data: PipelineBatchEventData }
 }
 
 export const inngest = new Inngest({

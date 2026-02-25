@@ -42,10 +42,9 @@ const handlerFn = async ({
 }
 
 export const processBatch = Object.assign(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (inngest.createFunction as any)(
+  inngest.createFunction(
     { id: 'process-batch-pipeline' },
-    { event: 'pipeline.batch-started' },
+    { event: 'pipeline.batch-started' as const },
     handlerFn,
   ),
   {

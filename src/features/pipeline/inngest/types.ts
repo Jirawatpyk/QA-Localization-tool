@@ -1,22 +1,6 @@
-import type { ProcessingMode } from '@/types/pipeline'
-
-export type { ProcessingMode }
-
-export type PipelineFileEventData = {
-  fileId: string
-  projectId: string
-  tenantId: string
-  mode: ProcessingMode
-  uploadBatchId: string
-  userId: string
-}
-
-export type PipelineBatchEventData = {
-  batchId: string
-  projectId: string
-  tenantId: string
-  fileIds: string[]
-  mode: ProcessingMode
-  uploadBatchId: string
-  userId: string
-}
+// Re-export canonical pipeline types — defined in @/types/pipeline to avoid duplication with client.ts schemas
+export type {
+  PipelineBatchEventData,
+  PipelineFileEventData,
+  ProcessingMode,
+} from '@/types/pipeline'

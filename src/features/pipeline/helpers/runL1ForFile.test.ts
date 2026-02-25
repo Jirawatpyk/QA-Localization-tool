@@ -5,7 +5,7 @@ import { buildSegment } from '@/test/factories'
 
 // ── Hoisted mocks (available in vi.mock factories) ──
 const { mockProcessFile, mockWriteAuditLog, dbState } = vi.hoisted(() => {
-  const state = { callIndex: 0, returnValues: [] as unknown[] }
+  const state = { callIndex: 0, returnValues: [] as unknown[], setCaptures: [] as unknown[] }
   return {
     mockProcessFile: vi.fn((..._args: unknown[]) => Promise.resolve([] as unknown[])),
     mockWriteAuditLog: vi.fn((..._args: unknown[]) => Promise.resolve()),
@@ -44,6 +44,12 @@ vi.mock('@/db/client', () => {
       }
       if (prop === 'transaction') {
         return vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn(new Proxy({}, handler)))
+      }
+      if (prop === 'set') {
+        return vi.fn((args: unknown) => {
+          dbState.setCaptures.push(args)
+          return new Proxy({}, handler)
+        })
       }
       return vi.fn(() => new Proxy({}, handler))
     },
@@ -118,6 +124,7 @@ describe('runL1ForFile', () => {
     vi.clearAllMocks()
     dbState.callIndex = 0
     dbState.returnValues = []
+    dbState.setCaptures = []
     mockProcessFile.mockResolvedValue([])
     mockWriteAuditLog.mockResolvedValue(undefined)
     mockGetGlossaryTerms.mockResolvedValue([])
@@ -168,6 +175,10 @@ describe('runL1ForFile', () => {
     expect(dbState.callIndex).toBe(5)
     // Both status updates (→l1_processing and →l1_completed) are tenant-scoped
     expect(withTenant).toHaveBeenCalledWith(expect.anything(), VALID_TENANT_ID)
+    // Verify final .set() writes l1_completed (not some other status)
+    expect(dbState.setCaptures).toContainEqual({ status: 'l1_completed' })
+    // CAS update writes l1_processing first
+    expect(dbState.setCaptures).toContainEqual({ status: 'l1_processing' })
   })
 
   it('should throw NonRetriableError when file not in parsed state (CAS guard)', async () => {
@@ -530,6 +541,9 @@ describe('runL1ForFile', () => {
     })
 
     expect(result.findingCount).toBe(150)
+    // 7 DB calls: CAS + segments + suppRules + txDelete + txInsert×2 + statusUpdate
+    // If batch loop collapsed to 1 insert, callIndex would be 6 — catching the regression
+    expect(dbState.callIndex).toBe(7)
   })
 
   it('should return duration in milliseconds', async () => {

@@ -18,6 +18,7 @@ type RunL1Input = {
   fileId: string
   projectId: string
   tenantId: string
+  userId?: string
 }
 
 export type L1Result = {
@@ -35,7 +36,12 @@ export type L1Result = {
  * Throws NonRetriableError on CAS failure (file not in parsed state).
  * Throws on other errors (after best-effort rollback to failed status).
  */
-export async function runL1ForFile({ fileId, projectId, tenantId }: RunL1Input): Promise<L1Result> {
+export async function runL1ForFile({
+  fileId,
+  projectId,
+  tenantId,
+  userId,
+}: RunL1Input): Promise<L1Result> {
   // CAS guard: atomically set status parsed → l1_processing
   const [file] = await db
     .update(files)
@@ -136,6 +142,7 @@ export async function runL1ForFile({ fileId, projectId, tenantId }: RunL1Input):
     try {
       await writeAuditLog({
         tenantId,
+        ...(userId !== undefined ? { userId } : {}),
         entityType: 'file',
         entityId: fileId,
         action: 'file.l1_completed',

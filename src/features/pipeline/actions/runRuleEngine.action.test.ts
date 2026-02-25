@@ -113,13 +113,14 @@ describe('runRuleEngine', () => {
     expect(result.code).toBe('NOT_FOUND')
   })
 
-  it('should call runL1ForFile with fileId, projectId, tenantId', async () => {
+  it('should call runL1ForFile with fileId, projectId, tenantId, userId', async () => {
     dbState.returnValues = [[mockFileRecord]]
     await runRuleEngine({ fileId: VALID_UUID })
     expect(mockRunL1ForFile).toHaveBeenCalledWith({
       fileId: VALID_UUID,
       projectId: 'project-123',
       tenantId: 'tenant-123',
+      userId: 'user-123',
     })
   })
 

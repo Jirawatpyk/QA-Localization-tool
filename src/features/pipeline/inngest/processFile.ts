@@ -22,7 +22,7 @@ const handlerFn = async ({
 
   // Step 1: Run L1 rule engine (deterministic checks, Xbench parity)
   const l1Result = await step.run(`l1-rules-${fileId}`, () =>
-    runL1ForFile({ fileId, projectId, tenantId }),
+    runL1ForFile({ fileId, projectId, tenantId, userId }),
   )
 
   // Step 2: Calculate MQM score (L2/L3 deferred to future stories)
@@ -58,17 +58,18 @@ const onFailureFn = async ({
 }
 
 export const processFilePipeline = Object.assign(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (inngest.createFunction as any)(
+  inngest.createFunction(
     {
       id: 'process-file-pipeline',
       retries: 3,
       concurrency: [{ key: 'event.data.projectId', limit: 1 }],
       // onFailureFn registered here so Inngest runtime calls it after all retries exhausted.
       // Also exposed via Object.assign below for direct unit testing.
-      onFailure: onFailureFn,
+      // onFailureFn type doesn't match Inngest's FailureEventPayload<T> generic; scoped cast.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onFailure: onFailureFn as any,
     },
-    { event: 'pipeline.process-file' },
+    { event: 'pipeline.process-file' as const },
     handlerFn,
   ),
   {

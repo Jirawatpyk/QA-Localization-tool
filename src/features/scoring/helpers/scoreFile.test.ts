@@ -181,6 +181,21 @@ describe('scoreFile', () => {
 
   // ── P0: Core scoring flow ──
 
+  it('should throw NonRetriableError when file has no segments', async () => {
+    // Empty segments query — parser produced no segments for a valid file
+    dbState.returnValues = [[]]
+
+    const { scoreFile } = await import('./scoreFile')
+    await expect(
+      scoreFile({
+        fileId: VALID_FILE_ID,
+        projectId: VALID_PROJECT_ID,
+        tenantId: VALID_TENANT_ID,
+        userId: VALID_USER_ID,
+      }),
+    ).rejects.toThrow(/No segments found/)
+  })
+
   it('should calculate MQM score and persist', async () => {
     // 0: segments, 1: findings, 2: prev score in tx, 3: delete in tx, 4: insert.returning
     dbState.returnValues = [mockSegments, [], [undefined], [], [mockNewScore]]

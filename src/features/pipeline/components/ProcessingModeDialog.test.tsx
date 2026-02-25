@@ -93,11 +93,26 @@ describe('ProcessingModeDialog', () => {
   it('should display cost estimate based on file count and mode', () => {
     render(<ProcessingModeDialog {...defaultProps} />)
 
-    // Cost bar should show estimated cost for Economy mode (default)
-    // The exact cost format depends on implementation, but it should be visible
+    // AC#1: Cost bar shows Economy estimate for 3 files: 3 × $0.15 = $0.45
     const costSection = screen.getByTestId('cost-estimate')
     expect(costSection).toBeTruthy()
-    expect(costSection.textContent).toBeTruthy()
+    expect(costSection.textContent).toContain('0.45')
+    // AC#1: Economy time estimate
+    expect(costSection.textContent).toContain('~30s')
+  })
+
+  it('should display Thorough cost estimate when mode switched', async () => {
+    const user = userEvent.setup()
+    render(<ProcessingModeDialog {...defaultProps} />)
+
+    await user.click(screen.getByRole('radio', { name: /Thorough/i }))
+
+    // AC#1: Thorough estimate for 3 files: 3 × $0.35 = $1.05
+    await waitFor(() => {
+      const costSection = screen.getByTestId('cost-estimate')
+      expect(costSection.textContent).toContain('1.05')
+      expect(costSection.textContent).toContain('~2 min')
+    })
   })
 
   it('should update cost when mode changes', async () => {

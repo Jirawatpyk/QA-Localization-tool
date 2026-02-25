@@ -23,6 +23,7 @@ function buildPipelineBatchEvent(
     tenantId: string
     userId: string
     mode: 'economy' | 'thorough'
+    uploadBatchId: string
   }>,
 ) {
   return {
@@ -32,6 +33,7 @@ function buildPipelineBatchEvent(
     tenantId: faker.string.uuid(),
     userId: faker.string.uuid(),
     mode: 'economy' as const,
+    uploadBatchId: faker.string.uuid(),
     ...overrides,
   }
 }
@@ -82,6 +84,7 @@ describe('processBatch', () => {
   it('should include all event data fields in each dispatched event', async () => {
     const mockStep = createMockStep()
     const fileId = faker.string.uuid()
+    const VALID_UPLOAD_BATCH_ID = 'e5f6a1b2-c3d4-4e5f-9a1b-2c3d4e5f6a7b'
     const eventData = buildPipelineBatchEvent({
       batchId: VALID_BATCH_ID,
       fileIds: [fileId],
@@ -89,6 +92,7 @@ describe('processBatch', () => {
       tenantId: VALID_TENANT_ID,
       userId: VALID_USER_ID,
       mode: 'economy',
+      uploadBatchId: VALID_UPLOAD_BATCH_ID,
     })
 
     const { processBatch } = await import('./processBatch')
@@ -109,6 +113,7 @@ describe('processBatch', () => {
             tenantId: VALID_TENANT_ID,
             userId: VALID_USER_ID,
             mode: 'economy',
+            uploadBatchId: VALID_UPLOAD_BATCH_ID,
           }),
         }),
       ]),

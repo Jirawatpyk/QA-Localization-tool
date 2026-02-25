@@ -56,6 +56,7 @@ export async function runRuleEngine(input: {
       fileId: input.fileId,
       projectId: fileRecord.projectId,
       tenantId: currentUser.tenantId,
+      userId: currentUser.id,
     })
 
     return {

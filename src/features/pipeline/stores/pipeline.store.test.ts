@@ -135,6 +135,18 @@ describe('usePipelineStore', () => {
     expect(state.completedAt).toBeGreaterThan(0)
   })
 
+  it('should NOT set completedAt when only some files complete (partial completion)', async () => {
+    const { usePipelineStore } = await import('./pipeline.store')
+
+    usePipelineStore.getState().startProcessing([VALID_FILE_ID_1, VALID_FILE_ID_2])
+    // Only file 1 reaches terminal state — file 2 is still processing
+    usePipelineStore.getState().updateFileStatus(VALID_FILE_ID_1, 'completed')
+
+    const state = usePipelineStore.getState()
+    // completedAt must NOT be set yet — one file is still in progress
+    expect(state.completedAt).toBeUndefined()
+  })
+
   it('should handle updating non-existent fileId gracefully', async () => {
     const { usePipelineStore } = await import('./pipeline.store')
 

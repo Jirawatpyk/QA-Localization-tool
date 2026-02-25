@@ -6,7 +6,7 @@ vi.mock('server-only', () => ({}))
 
 // ── Hoisted mocks ──
 const { mockRequireRole, mockWriteAuditLog, mockInngestSend, dbState } = vi.hoisted(() => {
-  const state = { callIndex: 0, returnValues: [] as unknown[] }
+  const state = { callIndex: 0, returnValues: [] as unknown[], setCaptures: [] as unknown[] }
   return {
     mockRequireRole: vi.fn(),
     mockWriteAuditLog: vi.fn((..._args: unknown[]) => Promise.resolve()),
@@ -52,6 +52,12 @@ vi.mock('@/db/client', () => {
       }
       if (prop === 'transaction') {
         return vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn(new Proxy({}, handler)))
+      }
+      if (prop === 'set') {
+        return vi.fn((args: unknown) => {
+          dbState.setCaptures.push(args)
+          return new Proxy({}, handler)
+        })
       }
       return vi.fn(() => new Proxy({}, handler))
     },
@@ -102,6 +108,7 @@ describe('startProcessing', () => {
     vi.clearAllMocks()
     dbState.callIndex = 0
     dbState.returnValues = []
+    dbState.setCaptures = []
     mockRequireRole.mockResolvedValue(mockUser)
     mockWriteAuditLog.mockResolvedValue(undefined)
     mockInngestSend.mockResolvedValue(undefined)
@@ -327,6 +334,32 @@ describe('startProcessing', () => {
     //   slot 0 — file validation SELECT (.then terminal)
     //   slot 1 — projects UPDATE for processingMode (.then terminal)
     expect(dbState.callIndex).toBe(2)
+    // L3: Verify .set() was called with the correct processingMode value (not hardcoded)
+    expect(dbState.setCaptures).toContainEqual({ processingMode: 'thorough' })
+  })
+
+  it('should return INTERNAL_ERROR when inngest.send throws', async () => {
+    const validFiles = [
+      {
+        id: VALID_FILE_ID_1,
+        projectId: VALID_PROJECT_ID,
+        tenantId: mockUser.tenantId,
+        status: 'parsed',
+      },
+    ]
+    dbState.returnValues = [validFiles, []]
+    mockInngestSend.mockRejectedValue(new Error('Inngest service unavailable'))
+
+    const { startProcessing } = await import('./startProcessing.action')
+    const result = await startProcessing({
+      fileIds: [VALID_FILE_ID_1],
+      projectId: VALID_PROJECT_ID,
+      mode: 'economy',
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INTERNAL_ERROR')
   })
 
   it('should write audit log pipeline.started', async () => {

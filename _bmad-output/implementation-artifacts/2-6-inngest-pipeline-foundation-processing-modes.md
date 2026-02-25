@@ -1,6 +1,6 @@
 # Story 2.6: Inngest Pipeline Foundation & Processing Modes
 
-Status: review
+Status: done
 
 ## Story
 
@@ -120,6 +120,7 @@ so that I can balance speed/cost with analysis depth and start reviewing while A
   - [x] 8.9 Verified: no try-catch inside `step.run()` ✅
   - [x] 8.10 Per-file concurrency limit:1 → sequential per project. L1 benchmarks TBD in production
   - [x] 8.11 CR Round 1 (2026-02-25) — 1C · 4H · 11M · 6L fixed — all 22 findings resolved ✅
+  - [x] 8.12 CR Round 2 (2026-02-25) — 3H · 6M · 3L fixed — all 12 findings resolved ✅ (509 tests)
 
 ## Dev Notes
 
@@ -730,6 +731,20 @@ claude-sonnet-4-6 (Claude Code)
     - L4: `getByText('Start Processing')` → `getByRole('heading', ...)` in Dialog test (strict-mode fix); badge pinning test added (`within(thoroughCard).getByText('Recommended')`)
     - L5: Optional `if (state.completedAt !== undefined)` guard removed — `expect(state.completedAt).toBeDefined()` asserts directly
     - L6: `max(100)` boundary test added to `pipelineSchema.test.ts` (101 UUIDs → fail)
+
+11. **CR Round 2 (2026-02-25) — 3H · 6M · 3L — all 12 findings fixed (509 tests):**
+    - H1: `scoreFile.test.ts` — `NonRetriableError` test added for empty segments path
+    - H2: `runL1ForFile.test.ts` — `callIndex === 7` assertion added to 150-findings batch test
+    - H3: `processBatch.test.ts` — `uploadBatchId` added to `buildPipelineBatchEvent` + propagation asserted
+    - M1: `processFile.ts` + `processBatch.ts` — `as any` scoped from whole `createFunction` to `onFailure` property only; `processBatch.ts` fully removed `as any`
+    - M2: `PipelineFileEventData`/`PipelineBatchEventData` moved to `@/types/pipeline.ts` (canonical); `client.ts` imports from there; `inngest/types.ts` re-exports from `@/types/pipeline`
+    - M3: `userId?: string` added to `RunL1Input`; threaded to `writeAuditLog` (conditional spread for `exactOptionalPropertyTypes`); callers updated (`processFile.ts`, `runRuleEngine.action.ts`)
+    - M4: `ProcessingModeDialog.test.tsx` — `$0.45` and `~30s` (Economy) + `$1.05` and `~2 min` (Thorough) pinned as exact assertions
+    - M5: `startProcessing.action.test.ts` — `INTERNAL_ERROR` code path tested (inngest.send throws)
+    - M6: `pipeline.store.test.ts` — partial-completion negative test: `completedAt` NOT set when 1 of 2 files still processing
+    - L1: `processFile.test.ts` — `setCaptures` added to Proxy; onFailure asserts `{ status: 'failed' }` value
+    - L2: `runL1ForFile.test.ts` — `setCaptures` added to Proxy; status transition asserts both `{ status: 'l1_processing' }` and `{ status: 'l1_completed' }` values
+    - L3: `startProcessing.action.test.ts` — `setCaptures` added to Proxy; mode persistence asserts `{ processingMode: 'thorough' }` value
 
 ### File List
 
