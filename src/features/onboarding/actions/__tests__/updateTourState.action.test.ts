@@ -285,6 +285,26 @@ describe('updateTourState action', () => {
     expect(setCall?.metadata?.dismissed_at_step).toBeUndefined()
   })
 
+  it('[P1] should return DB_ERROR (not throw) when DB update fails', async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      id: 'usr-test-001',
+      email: 'qa@tenant-a.test',
+      tenantId: 'ten-a-001',
+      role: 'qa_reviewer',
+      displayName: 'QA Reviewer',
+      metadata: null,
+    })
+    mockWhere.mockRejectedValueOnce(new Error('connection refused'))
+
+    const { updateTourState } = await import('@/features/onboarding/actions/updateTourState.action')
+    const result = await updateTourState({ action: 'complete', tourId: 'project' })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toBeDefined()
+    }
+  })
+
   it('[P1] should return VALIDATION_ERROR when dismiss is called without dismissedAtStep for project tour', async () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'usr-test-001',

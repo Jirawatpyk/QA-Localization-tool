@@ -55,10 +55,14 @@ export async function updateTourState(input: unknown): Promise<ActionResult<{ su
     }
   }
 
-  await db
-    .update(users)
-    .set({ metadata: newMetadata })
-    .where(and(eq(users.id, currentUser.id), withTenant(users.tenantId, currentUser.tenantId)))
+  try {
+    await db
+      .update(users)
+      .set({ metadata: newMetadata })
+      .where(and(eq(users.id, currentUser.id), withTenant(users.tenantId, currentUser.tenantId)))
+  } catch {
+    return { success: false, code: 'DB_ERROR', error: 'Failed to update tour state' }
+  }
 
   // No audit log — tour state is user preference, not business-critical (per story spec)
 
