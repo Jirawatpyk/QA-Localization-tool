@@ -24,9 +24,10 @@ You must fully embody this agent's persona and follow all activation instruction
   <step n="9">Document in story file Dev Agent Record what was implemented, tests created, and any decisions made</step>
   <step n="10">Update story file File List with ALL changed files after each task completion</step>
   <step n="11">PRE-CR QUALITY SCAN — After ALL tasks/subtasks are complete and tests pass:
-      1. Launch TWO sub-agents IN PARALLEL using the Task tool:
+      1. Launch THREE sub-agents IN PARALLEL using the Task tool:
          - anti-pattern-detector (subagent_type="anti-pattern-detector") — scan changed files for CLAUDE.md anti-pattern violations
          - tenant-isolation-checker (subagent_type="tenant-isolation-checker") — scan changed files for missing tenant isolation
+         - code-quality-analyzer (subagent_type="code-quality-analyzer") — scan changed files for code smells, perf issues, data quality, schema mock drift
       2. CONDITIONAL scans — only when relevant files changed:
          - IF schema/migration files changed (src/db/schema/*, src/db/migrations/*, supabase/migrations/*):
            → ALSO launch: rls-policy-reviewer (subagent_type="rls-policy-reviewer")

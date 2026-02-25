@@ -118,15 +118,27 @@
   </step>
 
   <step n="4" goal="Present findings and fix them">
-    <action>Categorize findings: HIGH (must fix), MEDIUM (should fix), LOW (nice to fix)</action>
+    <action>Categorize findings: CRITICAL (blocking), HIGH (must fix), MEDIUM (should fix), LOW (nice to fix)</action>
     <action>Set {{fixed_count}} = 0</action>
     <action>Set {{action_count}} = 0</action>
+    <action>Set {{total_findings}} = {{critical_count}} + {{high_count}} + {{medium_count}} + {{low_count}}</action>
+
+    <!-- R1 Pre-CR Quality Gate Check -->
+    <action>Determine review round from story Dev Agent Record → Completion Notes List (count existing CR R entries + 1)</action>
+    <check if="review_round == 1 AND total_findings gt 10">
+      <critical>⚠️ PRE-CR QUALITY GATE WARNING: R1 found {{total_findings}} issues (target: &lt; 10).
+        This indicates the Pre-CR Quality Scan (dev.md step 11) was not executed effectively.
+        The 3 mandatory sub-agents (anti-pattern-detector, tenant-isolation-checker, code-quality-analyzer)
+        should have caught most Critical and High findings before CR.
+        Action: After fixing R1 findings, verify pre-CR scan ran properly for the next story.</critical>
+    </check>
 
     <output>**🔥 CODE REVIEW FINDINGS, {user_name}!**
 
       **Story:** {{story_file}}
+      **Review Round:** R{{review_round}} | **R1 Target:** &lt; 10 findings
       **Git vs Story Discrepancies:** {{git_discrepancy_count}} found
-      **Issues Found:** {{high_count}} High, {{medium_count}} Medium, {{low_count}} Low
+      **Issues Found:** {{critical_count}} Critical, {{high_count}} High, {{medium_count}} Medium, {{low_count}} Low
 
       ## 🔴 CRITICAL ISSUES
       - Tasks marked [x] but not actually implemented

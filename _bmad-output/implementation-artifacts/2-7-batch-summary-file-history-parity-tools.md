@@ -874,6 +874,26 @@ claude-opus-4-6
 ### Completion Notes List
 
 CR R1: 39 findings (6C·10H·15M·8L) — all fixed + tests green (1429 tests, 118 files)
+CR R2: 14 findings (3C·3H·5M·3L) — all fixed + tests green (1419 unit + 3007 integration, commit 5fe6b57)
+CR R3: 17 findings (3C·5H·6M·3L) — all fixed + 35 new tests (1454 unit + 3021 integration = 4475 total, commit 1b79287)
+  - C1: crossFileConsistency DELETE+INSERT wrapped in db.transaction()
+  - H1: compareWithXbench toFinding reads item.category (not xbenchCategory/toolCategory)
+  - H2: generateParityReport toolFindingCount scoped to fileId filter
+  - H3: batchComplete retries: 3 + onFailure handler added
+  - H4: batchComplete projectId defense-in-depth filter added
+  - M1: parity page requireRole('qa_reviewer') added
+  - M2: xbenchReportBuffer 10MB size limit via Zod .refine()
+  - M3: glossary exclusion checks both source AND target terms
+  - L1-L3: redundant Escape handler, dead type, redundant casts removed
+  - Tests: +2 crossFileFindings query, +3 Uint8Array validation, +2 NOT_FOUND paths, +2 substring match, +2 uploadBatchId=undefined
+CR R4: 14 findings (0C·5H·7M·2L) — all fixed + 3 new tests (1457 unit + 3021 integration = 4478 total, commit dc4e2f1)
+  - H1: crossFileConsistency glossary check for...of on Set (no O(n) array alloc per segment)
+  - H2: compareWithXbench toFinding passes through segmentNumber from Xbench
+  - H3-H5: batchComplete schema mock projectId, empty-batch test, step.run count assertion
+  - M1-M2: ReportMissingCheckDialog form reset on close + fileId pre-fill
+  - M3: getBatchSummary schema mocks add updatedAt/majorCount/minorCount/layerCompleted
+  - M4-M7: batchComplete onFailureFn test, callIndex guard, passedCount/needsReviewCount assertions, UUID fileIds
+  - L1-L2: fileId propagation test, createFunction retries:3 assertion
 
 ### File List
 
