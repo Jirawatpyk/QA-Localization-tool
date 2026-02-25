@@ -256,4 +256,52 @@ describe('updateTourState action', () => {
     expect(setCall?.metadata?.project_tour_completed).toBeNull()
     expect(setCall?.metadata?.dismissed_at_step?.project ?? null).toBeNull()
   })
+
+  it('[P1] should clear project_tour_completed when restart called without dismissed_at_step', async () => {
+    // Covers the false branch of `if (newMetadata.dismissed_at_step)` in restart action
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      id: 'usr-test-001',
+      email: 'qa@tenant-a.test',
+      tenantId: 'ten-a-001',
+      role: 'qa_reviewer',
+      displayName: 'QA Reviewer',
+      metadata: {
+        project_tour_completed: '2026-02-20T10:00:00.000Z',
+        // no dismissed_at_step
+      },
+    })
+
+    const { updateTourState } = await import('@/features/onboarding/actions/updateTourState.action')
+    const result = await updateTourState({ action: 'restart', tourId: 'project' })
+
+    expect(result.success).toBe(true)
+
+    const setCall = mockSet.mock.calls[0]?.[0] as
+      | { metadata?: { project_tour_completed?: string | null } }
+      | undefined
+
+    expect(setCall?.metadata?.project_tour_completed).toBeNull()
+  })
+
+  it('[P1] should return VALIDATION_ERROR when dismiss is called without dismissedAtStep for project tour', async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      id: 'usr-test-001',
+      email: 'qa@tenant-a.test',
+      tenantId: 'ten-a-001',
+      role: 'qa_reviewer',
+      displayName: 'QA Reviewer',
+      metadata: null,
+    })
+
+    const { updateTourState } = await import('@/features/onboarding/actions/updateTourState.action')
+    // Omit dismissedAtStep — Zod .refine() should reject this
+    const result = await updateTourState({ action: 'dismiss', tourId: 'project' })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toBeDefined()
+    }
+    // DB must NOT be called on validation failure
+    expect(mockUpdate).not.toHaveBeenCalled()
+  })
 })

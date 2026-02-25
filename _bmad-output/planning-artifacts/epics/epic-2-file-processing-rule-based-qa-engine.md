@@ -338,4 +338,36 @@ So that I know where to import glossaries and upload files for QA.
 - Add `data-tour="project-glossary"` and `data-tour="project-upload"` attributes to project page UI
 - Create `ProjectTour.tsx` client component following same pattern as `OnboardingTour.tsx`
 - Tour ID: `'project'` (add to `TourId` union type and `tourIdSchema`)
+
+---
+
+### Story 2.9: Xbench Report Multi-format Support
+
+> **Added (2026-02-25) — Renamed from 2.8 backlog item when Story 2.8 slot was taken by Project-level Onboarding Tour.**
+
+As a QA Reviewer,
+I want the tool to parse multiple Xbench report formats,
+So that parity comparison works with both standard tabular and sectioned custom report exports.
+
+**Status:** Backlog — schedule after Epic 2 review is complete
+
+**Background:**
+- Current parser (`parseXbenchReport`) supports standard tabular format only (production Xbench export)
+- Sectioned format used by golden corpus custom reports is not supported
+- Impact: LOW (production unaffected; integration tests use a workaround)
+
+**Acceptance Criteria:**
+
+**Given** a Xbench report in standard tabular format
+**When** the parser processes it
+**Then** findings are correctly extracted (existing behavior, no regression)
+
+**Given** a Xbench report in sectioned format (golden corpus custom report)
+**When** the parser processes it
+**Then** findings are correctly extracted with same output schema as tabular format
+
+**Implementation Notes:**
+- Use Strategy Pattern: `TabularXbenchParser` + `SectionedXbenchParser` behind a common interface
+- Auto-detect format by inspecting report structure (header row vs section markers)
+- Remove integration test workarounds once sectioned format is supported
 

@@ -1,7 +1,7 @@
 # ATDD Checklist — Story 2.8: Project-level Onboarding Tour
 
 Generated: 2026-02-25
-Phase: RED (failing tests — all `it.skip()`)
+Phase: GREEN (all tests active and passing — CR R1 fixes applied 2026-02-25)
 
 ## Test Summary
 

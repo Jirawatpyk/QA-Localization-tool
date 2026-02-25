@@ -108,7 +108,7 @@ describe('ProjectTour', () => {
     })
   })
 
-  it('[P1] should call updateTourState dismiss with tourId "project" when onCloseClick fires', async () => {
+  it('[P1] should call updateTourState dismiss with tourId "project" when onCloseClick fires (step 2)', async () => {
     const { ProjectTour } = await import('./ProjectTour')
     render(<ProjectTour userId="usr-1" userMetadata={null} />)
 
@@ -128,6 +128,27 @@ describe('ProjectTour', () => {
       dismissedAtStep: 2, // 0-based index 1 + 1 = 1-based step 2
     })
     expect(mockDestroy).toHaveBeenCalled()
+  })
+
+  it('[P1] should call updateTourState dismiss with dismissedAtStep: 1 when X clicked on first step', async () => {
+    const { ProjectTour } = await import('./ProjectTour')
+    render(<ProjectTour userId="usr-1" userMetadata={null} />)
+
+    await vi.waitFor(() => {
+      expect(mockDriverFn).toHaveBeenCalled()
+    })
+
+    const driverConfig = mockDriverFn.mock.calls[0]?.[0] as
+      | { onCloseClick?: () => void }
+      | undefined
+    mockGetActiveIndex.mockReturnValue(0) // first step (index 0)
+    driverConfig?.onCloseClick?.()
+
+    expect(updateTourState).toHaveBeenCalledWith({
+      action: 'dismiss',
+      tourId: 'project',
+      dismissedAtStep: 1, // 0-based index 0 + 1 = 1-based step 1
+    })
   })
 
   it('[P1] should fire complete via onDestroyed when tour finishes naturally on last step', async () => {
@@ -209,7 +230,7 @@ describe('ProjectTour', () => {
     })
   })
 
-  it('[P2] should not re-init tour after dismiss even if component re-renders', async () => {
+  it('[P2] should not re-init tour after dismiss when metadata still has dismissed_at_step set', async () => {
     const { ProjectTour } = await import('./ProjectTour')
     const { rerender } = render(<ProjectTour userId="usr-1" userMetadata={null} />)
 
@@ -226,12 +247,42 @@ describe('ProjectTour', () => {
     // Clear mocks to track new calls
     mockDriverFn.mockClear()
 
-    // Re-render with updated metadata (server action re-renders parent)
+    // Re-render with updated metadata where dismissed_at_step.project is set (truthy) —
+    // this represents a non-restart refresh where dismiss is preserved in DB.
     rerender(<ProjectTour userId="usr-1" userMetadata={{ dismissed_at_step: { project: 1 } }} />)
 
-    // Wait and verify driver was NOT re-initialized
+    // Tour must NOT re-initialize because dismissed_at_step.project is still set
     await vi.waitFor(() => {
       expect(mockDriverFn).not.toHaveBeenCalled()
+    })
+  })
+
+  it('[P1] should re-init tour after restart clears dismissed_at_step in same session', async () => {
+    const { ProjectTour } = await import('./ProjectTour')
+    const { rerender } = render(<ProjectTour userId="usr-1" userMetadata={null} />)
+
+    await vi.waitFor(() => {
+      expect(mockDriverFn).toHaveBeenCalledTimes(1)
+    })
+
+    // Simulate dismiss via X button on step 1
+    const driverConfig = mockDriverFn.mock.calls[0]?.[0] as
+      | { onCloseClick?: () => void }
+      | undefined
+    mockGetActiveIndex.mockReturnValue(0)
+    driverConfig?.onCloseClick?.()
+
+    // Clear mocks to track new calls
+    mockDriverFn.mockClear()
+
+    // Simulate restart: server action clears project_tour_completed and
+    // dismissed_at_step.project → router.refresh() flows cleared metadata back.
+    // dismissed_at_step.project is null (falsy) — restart signal.
+    rerender(<ProjectTour userId="usr-1" userMetadata={{ dismissed_at_step: { project: null } }} />)
+
+    // Tour MUST re-initialize after restart (dismissedRef was reset)
+    await vi.waitFor(() => {
+      expect(mockDriverFn).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -289,5 +340,24 @@ describe('ProjectTour', () => {
       action: 'complete',
       tourId: 'project',
     })
+  })
+
+  it('[L] should NOT fire complete via onDestroyed when getActiveIndex returns undefined', async () => {
+    const { ProjectTour } = await import('./ProjectTour')
+    render(<ProjectTour userId="usr-1" userMetadata={null} />)
+
+    await vi.waitFor(() => {
+      expect(mockDriverFn).toHaveBeenCalled()
+    })
+
+    const driverConfig = mockDriverFn.mock.calls[0]?.[0] as { onDestroyed?: () => void } | undefined
+
+    // Simulate driver destroyed with no active index (e.g. tour not fully started)
+    // driver.js getActiveIndex() may return undefined in edge cases
+    mockGetActiveIndex.mockReturnValue(undefined as unknown as number)
+    driverConfig?.onDestroyed?.()
+
+    // undefined !== LAST_STEP_INDEX (1) → complete must NOT fire
+    expect(updateTourState).not.toHaveBeenCalled()
   })
 })

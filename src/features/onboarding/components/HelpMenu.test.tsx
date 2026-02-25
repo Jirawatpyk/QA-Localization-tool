@@ -2,9 +2,10 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockUsePathname = vi.fn(() => '/dashboard')
+const mockRefresh = vi.fn()
 
 vi.mock('next/navigation', () => ({
-  useRouter: vi.fn(() => ({ refresh: vi.fn() })),
+  useRouter: vi.fn(() => ({ refresh: mockRefresh })),
   usePathname: () => mockUsePathname(),
 }))
 
@@ -98,6 +99,11 @@ describe('HelpMenu', () => {
     expect(mockUpdateTourState).toHaveBeenCalledWith({
       action: 'restart',
       tourId: 'project',
+    })
+
+    // router.refresh() must be called after updateTourState to propagate cleared metadata
+    await waitFor(() => {
+      expect(mockRefresh).toHaveBeenCalled()
     })
   })
 })

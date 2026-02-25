@@ -45,6 +45,12 @@ export function ProjectTour({ userId, userMetadata }: ProjectTourProps) {
 
   useEffect(() => {
     if (userMetadata?.project_tour_completed) return
+    // Reset dismissedRef when a restart has cleared dismissed_at_step.
+    // After router.refresh() from HelpMenu restart, userMetadata reflects the
+    // server-cleared state (dismissed_at_step.project = null/undefined).
+    if (dismissedRef.current && !userMetadata?.dismissed_at_step?.project) {
+      dismissedRef.current = false
+    }
     if (dismissedRef.current) return
     if (typeof window !== 'undefined' && window.innerWidth < 768) return
 
