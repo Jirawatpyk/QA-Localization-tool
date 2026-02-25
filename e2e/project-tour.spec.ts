@@ -1,5 +1,5 @@
-// ATDD RED PHASE — Story 2.8: Project-level Onboarding Tour (E2E)
-// Tests are skipped (test.skip) until ProjectTour.tsx + layout integration is implemented.
+// ATDD GREEN PHASE — Story 2.8: Project-level Onboarding Tour (E2E)
+// All tests activated — ProjectTour.tsx + layout integration implemented.
 //
 // AC Coverage:
 //   AC#1 — First-time project tour shows on project page
@@ -15,7 +15,12 @@
 
 import { test, expect, type Page } from '@playwright/test'
 
-import { setUserMetadata, signupOrLogin } from './helpers/supabase-admin'
+import {
+  createTestProject,
+  getUserInfo,
+  setUserMetadata,
+  signupOrLogin,
+} from './helpers/supabase-admin'
 
 const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD || 'TestPassword123!'
 const PROJECT_TOUR_EMAIL = process.env.E2E_PROJECT_TOUR_EMAIL || 'e2e-projtour28@test.local'
@@ -39,11 +44,16 @@ async function loginAndGoToProject(page: Page, email: string, password: string) 
 
 // AC#1 — First-time project tour activation
 test.describe.serial('Project Tour — AC#1: First-time user', () => {
-  test.skip(true, 'ATDD RED PHASE — Story 2.8 not yet implemented')
-
-  test('[setup] create project tour user and reset metadata', async ({ page }) => {
+  test('[setup] create project tour user, project, and reset metadata', async ({ page }) => {
     test.setTimeout(60000)
     await signupOrLogin(page, PROJECT_TOUR_EMAIL, TEST_PASSWORD, 'Project Tour User')
+
+    // Create a project so loginAndGoToProject can find it on the dashboard
+    const userInfo = await getUserInfo(PROJECT_TOUR_EMAIL)
+    if (userInfo) {
+      await createTestProject(userInfo.tenantId, 'E2E Project Tour Test')
+    }
+
     // Set setup_tour_completed so the setup tour doesn't interfere
     // but leave project_tour_completed as null (first time)
     await setUserMetadata(PROJECT_TOUR_EMAIL, {
@@ -125,13 +135,18 @@ test.describe.serial('Project Tour — AC#1: First-time user', () => {
 
 // AC#2 — Resume after dismiss
 test.describe.serial('Project Tour — AC#2: Returning user resume', () => {
-  test.skip(true, 'ATDD RED PHASE — Story 2.8 not yet implemented')
-
   test('[setup] create returning user with dismissed_at_step.project metadata', async ({
     page,
   }) => {
     test.setTimeout(60000)
     await signupOrLogin(page, PROJECT_TOUR_RETURNING_EMAIL, TEST_PASSWORD, 'Project Tour Returning')
+
+    // Create a project so loginAndGoToProject can find it on the dashboard
+    const userInfo = await getUserInfo(PROJECT_TOUR_RETURNING_EMAIL)
+    if (userInfo) {
+      await createTestProject(userInfo.tenantId, 'E2E Project Tour Return Test')
+    }
+
     // Set setup tour as completed + project tour dismissed at step 2
     await setUserMetadata(PROJECT_TOUR_RETURNING_EMAIL, {
       setup_tour_completed: '2026-01-01T00:00:00Z',
@@ -158,8 +173,6 @@ test.describe.serial('Project Tour — AC#2: Returning user resume', () => {
 
 // AC#3 — Mobile suppression
 test.describe('Project Tour — AC#3: Mobile suppression', () => {
-  test.skip(true, 'ATDD RED PHASE — Story 2.8 not yet implemented')
-
   test('[P1] should NOT show project tour on mobile viewport (< 768px)', async ({ page }) => {
     // Set viewport to mobile
     await page.setViewportSize({ width: 375, height: 667 })
@@ -190,8 +203,6 @@ test.describe('Project Tour — AC#3: Mobile suppression', () => {
 
 // Task 5 — HelpMenu "Restart Project Tour" on project routes
 test.describe('Project Tour — Task 5: Restart from Help menu', () => {
-  test.skip(true, 'ATDD RED PHASE — Story 2.8 not yet implemented')
-
   test('[P2] should show "Restart Project Tour" in Help menu when on project page', async ({
     page,
   }) => {

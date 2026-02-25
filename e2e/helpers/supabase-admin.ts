@@ -82,6 +82,34 @@ export async function setUserMetadata(
 }
 
 /**
+ * Create a test project for a user via PostgREST.
+ * Returns the project ID. Uses service_role to bypass RBAC.
+ */
+export async function createTestProject(
+  tenantId: string,
+  name: string = 'E2E Test Project',
+): Promise<string> {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/projects`, {
+    method: 'POST',
+    headers: { ...adminHeaders(), Prefer: 'return=representation' },
+    body: JSON.stringify({
+      tenant_id: tenantId,
+      name,
+      source_lang: 'en',
+      target_langs: ['th'],
+      processing_mode: 'economy',
+      status: 'draft',
+    }),
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Failed to create project: ${res.status} ${text}`)
+  }
+  const data = (await res.json()) as Array<{ id: string }>
+  return data[0].id
+}
+
+/**
  * Insert a notification record for a user via PostgREST.
  */
 export async function createNotification(
