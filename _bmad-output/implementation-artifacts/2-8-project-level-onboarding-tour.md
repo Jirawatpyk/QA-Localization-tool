@@ -389,3 +389,17 @@ These files exist in the working tree from a prior `db:generate` run (tech debt 
 | `src/features/onboarding/actions/__tests__/updateTourState.action.test.ts` | Modified | M4: added `dismissed_at_step` absent assertion to restart-without-dismissed_at_step test |
 | `src/features/onboarding/validation/onboardingSchemas.test.ts` | Modified | L1: added 3 tests for `tourId: 'project'` (complete/dismiss/restart) |
 | `e2e/project-tour.spec.ts` | Modified | H3: explicit throw guards after `getUserInfo` null in both `[setup]` blocks |
+
+### CR R2 Post-Verify (manual, code-quality-analyzer API unavailable)
+
+Manual code inspection after R2 fixes found 1M additional finding:
+
+**M (1 — fixed)**
+- M6: `updateTourState.action.ts` `await db.update(...)` not wrapped in try-catch — if DB unreachable, function throws instead of returning `ActionResult` (signature mismatch). HelpMenu's `result.success` check would never run on DB exception, causing unhandled promise rejection in `startTransition`. **Fix:** Wrapped in try-catch; returns `{ success: false, code: 'DB_ERROR', error: '...' }`. Added `[P1] should return DB_ERROR (not throw) when DB update fails`.
+
+**L (1 — accepted, tech debt)**
+- L4: Missing user feedback (toast) when restart fails (DB_ERROR or UNAUTHORIZED) — user clicks "Restart Project Tour", nothing happens (no tour, no error). Acceptable per tour-as-preference pattern; logged as tech debt for future sprint.
+
+**Final ATDD Compliance:** P0 3/3 ✅ | P1 25/25 ✅ (+1 DB error test) | P2 4/6 | E2E: 10 active
+**Total tests:** 1493 unit | 10 E2E
+**CR R2 Exit Status:** 0C + 0H → **PASSED** ✅
