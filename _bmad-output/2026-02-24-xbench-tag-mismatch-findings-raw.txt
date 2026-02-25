@@ -1,0 +1,154 @@
+========================================================================================================================================================================================================
+TAG MISMATCH FINDINGS FROM XBENCH QA REPORT
+========================================================================================================================================================================================================
+
+
+FILE: AP BT Activity Guide.pptx.sdlxliff
+STATUS: ✓ PARSED (under 15MB)
+FINDINGS: 7 Tag Mismatch(es)
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+[1] Segment 10
+SOURCE: <g id="10">Copyright: © </g><g id="11">[year]  </g><g id="24">Starbucks Corporation | (additional information such as business unit <g id="21">(US-CO, US-LS, CA-CO, CA-LS, international localize)</g> can be added as well .</g>
+TARGET: <g id="10">ลิขสิทธิ์: © </g><g id="11">[ปี] </g><g id="24">Starbucks Corporation | สามารถใส่ข้อมูลเพิ่มเติม (เช่น หน่วยธุรกิจ <g id="21">(US-CO, US-LS, CA-CO, CA-LS, การแปลภาษาต่างประเทศ)</g> ไ<g id="24">ด้เช่นกัน</g></g>
+
+[2] Segment 106
+SOURCE: Tell the Barista Trainer it’s important to create an environment where the new barista trusts them and feels comfortable learning new skills<g id="125">.</g>
+TARGET: บอกผู้ฝึกอบรมบาริสตาว่าการสร้างสภาพแวดล้อมที่ทำให้บาริสตาใหม่รู้สึกไว้วางใจและรู้สึกสบายใจที่จะเรียนรู้ทักษะใหม่ๆ นั้นเป็นเรื่องสำคัญ
+
+[3] Segment 144
+SOURCE: <g id="141">Assessing prior experience<g id="140">, </g></g><g id="142">Continued</g>
+TARGET: <g id="141">การประเมินประสบการณ์เดิม </g><g id="142">ต่อ</g>
+
+[4] Segment 150
+SOURCE: <g id="145">A</g>sk open-ended questions to determine the learner's level of understanding and ability
+TARGET: ถามคำถามปลายเปิด เพื่อประเมินระดับความเข้าใจ และความสามารถของผู้เรียน
+
+[5] Segment 160
+SOURCE: Have the <g id="156"><g id="153">Teaching Model – Quick Reference Guide and the Milk Steaming Routine – Quick Reference Guide</g>  </g>available to review with Barista Trainer.
+TARGET: เตรียม <g id="156"><g id="153">คู่มืออ้างอิงฉบับย่อ – <g id="153">รูปแบบการสอน </g>และ คู่มืออ้างอิงฉบับย่อ <g id="153">– </g>Milk Steaming Routine </g></g>ให้พร้อมสำหรับการทบทวนร่วมกับผู้ฝึกอบรมบาริสตา
+
+[6] Segment 172
+SOURCE: <g id="178">Step 2: </g>Review the <g id="181">Teaching Model – Quick Reference Guide </g>with the Barista Trainer.
+TARGET: <g id="178">ขั้นตอนที่ 2: </g>ทบทวน <g id="181">คู่มืออ้างอิงฉบับย่อ – <g id="181">รูปแบบการสอน</g> </g>ร่วมกับผู้ฝึกอบรมบาริสตา
+
+[7] Segment 173
+SOURCE: Tell the Barista Trainer it’s okay to refer to the <g id="190"><g id="186">Teaching Model – Quick Reference Guide</g> </g>during this activity
+TARGET: แจ้งผู้ฝึกอบรมบาริสตาว่าสามารถอ้างอิง <g id="190"><g id="186"><g id="181">คู่มืออ้างอิงฉบับย่อ – <g id="181">รูปแบบการสอน</g></g></g> </g>ในระหว่างการทำกิจกรรมนี้ได้
+
+
+FILE: AP BT DG Next Chapter.pptx.sdlxliff
+STATUS: ✓ PARSED (under 15MB)
+FINDINGS: 1 Tag Mismatch(es)
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+[8] Segment 10
+SOURCE: <g id="9">Copyright: © </g><g id="10">[year]  </g><g id="23">Starbucks Corporation | (additional information such as business unit <g id="20">(US-CO, US-LS, CA-CO, CA-LS, international localize)</g> can be added as well .</g>
+TARGET: ลิขสิทธิ์: © [ปี] Starbucks Corporation | สามารถใส่ข้อมูลเพิ่มเติม (เช่น หน่วยธุรกิจ (US-CO, US-LS, CA-CO, CA-LS, การแปลภาษาต่างประเทศ) ได้เช่นกัน
+
+
+FILE: AP BT DG Your Role.pptx.sdlxliff
+STATUS: ✗ NOT PARSED (>15MB)
+FINDINGS: 2 Tag Mismatch(es)
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+[9] Segment 10
+SOURCE: <g id="9">Copyright: © </g><g id="10">[year]  </g><g id="23">Starbucks Corporation | (additional information such as business unit <g id="20">(US-CO, US-LS, CA-CO, CA-LS, international localize)</g> can be added as well .</g>
+TARGET: ลิขสิทธิ์: © [ปี] Starbucks Corporation | สามารถใส่ข้อมูลเพิ่มเติม (เช่น หน่วยธุรกิจ (US-CO, US-LS, CA-CO, CA-LS, การแปลภาษาต่างประเทศ) ได้เช่นกัน
+
+[10] Segment 127
+SOURCE: Barista Trainer Program overview<g id="138">,</g> <g id="139">Continued</g>
+TARGET: ภาพรวมโปรแกรมการเรียนรู้สำหรับผู้ฝึกอบรมบาริสตา <g id="139">ต่อ</g>
+
+
+FILE: AP BT Program Change Summary.pptx.sdlxliff
+STATUS: ✓ PARSED (under 15MB)
+FINDINGS: 12 Tag Mismatch(es)
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+[11] Segment 13
+SOURCE: <g id="11">Blend </g><g id="12">of digital modules </g><g id="14">and discussion  guides</g>
+TARGET: <g id="14">โดยเป็นการผสมผสานกันระหว่างบทเรียนแบบดิจิทัลกับคำแนะนำในการอภิปรายต่างๆ</g>
+
+[12] Segment 22
+SOURCE: Global <g id="25">Barista </g>TRAINER Training
+TARGET: การฝึกอบรมสำหรับผู้ฝึกอบรมบาริสตาทั่วโลก
+
+[13] Segment 38
+SOURCE: <g id="43">Preparing ahead of time</g><g id="44">​</g>
+TARGET: <g id="43">การเตรียมความพร้อมล่วงหน้า </g>
+
+[14] Segment 39
+SOURCE: <g id="46">Building strong relationships</g><g id="47">​</g>
+TARGET: <g id="46">การสร้างความสัมพันธ์อันแน่นแฟ้น</g>
+
+[15] Segment 40
+SOURCE: <g id="53"><g id="49">Being empathetic to</g> <g id="52">partners with diverse backgrounds</g></g><g id="54">​</g>
+TARGET: การ<g id="53"><g id="49">เห็นอกเห็นใจ</g><g id="52">พาร์ทเนอร์ที่มีภูมิ<g id="53"><g id="52">หลังที่แตกต่างกัน</g></g></g></g>
+
+[16] Segment 41
+SOURCE: <g id="56">Motivating and inspiring new partners</g><g id="57">​</g>
+TARGET: <g id="56">การสร้างแรงจูงใจและแรงบันดาลใจให้กับพาร์ทเนอร์ใหม่</g>
+
+[17] Segment 53
+SOURCE: <g id="80">Learn about the t<g id="71">hree</g> <g id="75"> major learning styles:</g> <g id="79"> Visual, Auditory    and </g></g><g id="85"><g id="81">Kinesthetic</g>​</g>
+TARGET: การ<g id="80">เรียนรู้เกี่ยวกับ<g id="75">รูปแบบการเรียนรู้ที่สำคัญ 3 ประการ ได้แก่ </g><g id="79">การมองเห็น การได้ยิน และ</g></g><g id="85"><g id="81">การ</g>เคลื่อนไหว</g>
+
+[18] Segment 61
+SOURCE: <g id="93">Learn the steps of the Teaching Model: </g>Prepare, <g id="96">Present, </g>Practice and <g id="100">Follow up</g>
+TARGET: การ<g id="93">เรียนรู้ขั้นตอนต่างๆ ของรูปแบบการสอน ได้แก่ การเตรียมความพร้อม การนำเสนอ การฝึกปฏิบัติ และการติดตามผล</g>
+
+[19] Segment 62
+SOURCE: <g id="102">Complete Teaching Model Activity with store </g>m<g id="105">anager</g>
+TARGET: การ<g id="102">ทำกิจกรรมรูปแบบการสอนร่วมกับผู้จัดการให้เสร็จสิ้น</g>
+
+[20] Segment 65
+SOURCE: Global <g id="110">Barista </g>TRAINER Training
+TARGET: การฝึกอบรมสำหรับผู้ฝึกอบรมบาริสตาทั่วโลก
+
+[21] Segment 105
+SOURCE: Global <g id="145">Barista </g>TRAINER Training
+TARGET: การฝึกอบรมสำหรับผู้ฝึกอบรมบาริสตาทั่วโลก
+
+[22] Segment 130
+SOURCE: Global <g id="172">Barista </g>TRAINER Training
+TARGET: การฝึกอบรมสำหรับผู้ฝึกอบรมบาริสตาทั่วโลก
+
+
+FILE: AP BT SM Support Kit.pptx.sdlxliff
+STATUS: ✓ PARSED (under 15MB)
+FINDINGS: 7 Tag Mismatch(es)
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+[23] Segment 5
+SOURCE: <g id="4">Copyright: © </g><g id="5">[year]  </g><g id="18">Starbucks Corporation | (additional information such as business unit <g id="15">(US-CO, US-LS, CA-CO, CA-LS, international localize)</g> can be added as well .</g>
+TARGET: ลิขสิทธิ์: © [ปี] Starbucks Corporation | สามารถใส่ข้อมูลเพิ่มเติม (เช่น หน่วยธุรกิจ (US-CO, US-LS, CA-CO, CA-LS, การแปลภาษาต่างประเทศ) ได้เช่นกัน
+
+[24] Segment 60
+SOURCE: <g id="92">Barista </g><g id="93">Trainer Training Plan</g>
+TARGET: แผนการฝึกอบรมสำหรับผู้ฝึกอบรมบาริสตา
+
+[25] Segment 147
+SOURCE: The Barista Trainer Training Plan can be found <g id="155">on (add where the skill check is located here).</g>
+TARGET: <g id="155"><g id="155">คุณสามารถดูแผนการฝึกอบรมสำหรับผู้ฝึกอบรมบาริสตาได้ที่ <g id="155">(เพิ่มสถานที่จัดเก็บข้อมูลการตรวจสอบทักษะที่นี่)</g></g></g>
+
+[26] Segment 156
+SOURCE: You’ll find these discussion guides <g id="164">on (add where the skill check is located here).</g>
+TARGET: คุณสามารถดูคำแนะนำในการอภิปรายเหล่านี้ได้ที่<g id="164"> <g id="155"><g id="155">(เพิ่มสถานที่จัดเก็บข้อมูลการตรวจสอบทักษะที่นี่)</g></g></g>
+
+[27] Segment 159
+SOURCE: This skill check is located <g id="166">(add where the skill check is located here)</g>
+TARGET: ดูการตรวจสอบทักษะได้ที่ <g id="155"><g id="155">(เพิ่มสถานที่จัดเก็บข้อมูลการตรวจสอบทักษะที่นี่)</g></g>
+
+[28] Segment 163
+SOURCE: You will find the training plan <g id="170">on</g><g id="172"> (add where the skill check is located here)</g>
+TARGET: <g id="170">คุณสามารถดูแผนการฝึกอบรมได้ที่</g><g id="172"> <g id="155"><g id="155">(เพิ่มสถานที่จัดเก็บข้อมูลการตรวจสอบทักษะที่นี่)</g></g></g>
+
+[29] Segment 205
+SOURCE: <g id="282">Send the Barista Trainer a </g><g id="283">Green Apron card</g><g id="285"> </g><g id="287">and/or award a Barista Trainer pin </g><g id="289">to celebrate their achievement.</g>
+TARGET: <g id="282">มอบ</g> <g id="283">บัตรยกย่องชมเชย Green Apron </g><g id="287">และ/หรือมอบเข็มกลัดผู้ฝึกอบรมบาริสตา</g> <g id="289">เพื่อเป็นการเฉลิมฉลองความสำเร็จ<g id="289">ให้กับผู้ฝึกอบรมบาริสตา</g></g>
+
+========================================================================================================================================================================================================
+SUMMARY: 29 total Tag Mismatch finding(s)
+Files: 4 PARSED (under 15MB) + 1 NOT PARSED (>15MB)
+========================================================================================================================================================================================================

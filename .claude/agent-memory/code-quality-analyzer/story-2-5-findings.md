@@ -34,6 +34,30 @@
 6. `src/features/scoring/autoPassChecker.ts` (113 lines)
 7. `src/features/scoring/actions/calculateScore.action.ts` (291 lines)
 
+## CR Round 2 (1C, 3H, 4M, 2L)
+
+### Critical
+
+- **C1: Findings query missing projectId filter** — segments query has `eq(segments.projectId, projectId)` (H2 fix from R1) but findings query at line 111-117 does NOT have `eq(findings.projectId, projectId)`. Defense-in-depth violation — same pattern asymmetry as R1-H2.
+
+### High
+
+- **H1: Graduation notification caller missing try-catch** — R1-C1 reported this but fix was internal try-catch only. Caller at line 202-209 still inside outer try block — if function throws before internal try, outer catch returns INTERNAL_ERROR despite score committed.
+- **H2: CONTRIBUTING_STATUSES still `ReadonlySet<string>`** — R1-M3 added FindingStatus type but did NOT update constants.ts line 11 to use it. No compile-time safety against adding new statuses.
+- **H3: fileCount off-by-one** — checkAutoPass query runs BEFORE score INSERT. First-run: fileCount excludes current file. File 51 graduation triggered at file 52 instead.
+
+### Medium
+
+- **M1: Double cast `as unknown as ContributingFinding[]`** — R1-H1 noted but not fixed. Could use per-field cast instead.
+- **M2: Graduation dedup query missing projectId** — JSONB containment checks `{sourceLang, targetLang}` but not `projectId`. Multi-project tenants with same language pair: Project B graduation notification skipped.
+- **M3: Auto-pass JOIN multiplies rows** — `innerJoin(segments, ...)` with `count(distinct)` is correct but produces O(files\*segments) intermediate rows. Use EXISTS subquery for better performance.
+- **M4: Missing test for findings projectId filter** — Test exists for segments projectId (line 461) but not for findings.
+
+### Low
+
+- **L1: AutoPassResult identical union branches** — R1-L4 noted, still not fixed. Simpler as `eligible: boolean`.
+- **L2: Factory status default mismatch** — `buildScoreRecord` defaults `status: 'calculated'` but DB schema defaults to `'calculating'`.
+
 ## Positive Patterns Confirmed
 
 - Pure function isolation (mqmCalculator)

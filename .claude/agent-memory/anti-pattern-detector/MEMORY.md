@@ -188,6 +188,37 @@
 - **Rule**: CLAUDE.md says "every query must use withTenant()". The OR condition here logically extends beyond what withTenant() supports.
 - **Decision**: Flag MEDIUM but note as documented exception. The correct fix would be to add a code comment explaining why withTenant() cannot be used here.
 
+## Story 2.6 Scan Summary (2026-02-25)
+
+- Files scanned: 11 (pipeline/inngest/processFile.ts, processBatch.ts, index.ts, pipeline/helpers/runL1ForFile.ts, scoring/helpers/scoreFile.ts, pipeline/actions/startProcessing.action.ts, pipeline/validation/pipelineSchema.ts, pipeline/components/ProcessingModeDialog.tsx, ModeCard.tsx, pipeline/stores/pipeline.store.ts, app/api/inngest/route.ts)
+- **HIGH violations (3):**
+  - `processFile.ts:62` + `processBatch.ts:44`: `inngest.createFunction as any` — workaround for Inngest SDK type mismatch; both files have eslint-disable comment confirming intentional use
+  - `inngest/index.ts`: barrel export (`index.ts` re-exporting from 3 source files) — CLAUDE.md explicitly forbids barrel exports in feature modules
+  - `ProcessingModeDialog.tsx:8`: `from '../actions/startProcessing.action'` — relative import crossing directory boundary; should use `@/features/pipeline/actions/startProcessing.action`
+- **MEDIUM violations (4):**
+  - Duplicate `ProcessingMode` type: defined in both `inngest/types.ts:1` AND `src/types/pipeline.ts:2` — identical definition; canonical source should be `@/types/pipeline`
+  - `pipeline.store.ts` lines 6, 34: `status: string` overly broad — should use `PipelineStatus` union type from `@/types/pipeline`
+  - `processBatch.ts:19–33`: `step.sendEvent` wrapped in `Promise.all` — Inngest best practice is batch array form for fan-out to enable proper checkpointing
+  - `scoreFile.ts:208–262`: `createGraduationNotification` is 54-line private function — separation of concern; should be own helper
+- **LOW violations (3):**
+  - Same-directory relative imports `./types` in `processFile.ts:11` and `processBatch.ts:3` — no `..` involved, borderline
+  - `inngest/index.ts:3` re-exports `ProcessingMode` from wrong source (`./types` instead of canonical `@/types/pipeline`)
+  - `scoreFile.ts:208`: `createGraduationNotification` private function structural concern
+- **CLEAN:** `runL1ForFile.ts` (all withTenant() correct, NonRetriableError used correctly, try-catch OUTSIDE step.run context), `startProcessing.action.ts` (all @/ imports, withTenant() on every query), `pipelineSchema.ts` (correct naming), `route.ts` (correct Next.js named exports), `ModeCard.tsx`
+
+## Recurring Pattern: `inngest.createFunction as any` Workaround (HIGH)
+
+- **Pattern**: `(inngest.createFunction as any)(...)` with `eslint-disable-next-line @typescript-eslint/no-explicit-any` comment — used to bypass Inngest SDK TypeScript type mismatch when handler uses manual type annotation instead of SDK-inferred context type.
+- **Found in Story 2.6**: `processFile.ts:62`, `processBatch.ts:44`
+- **Root cause**: Handler functions (`handlerFn`) manually type the `{ event, step }` context instead of using Inngest SDK generic type inference. Inngest v3 strict generics reject hand-typed handlers.
+- **Fix**: Type `handlerFn` using `Parameters<ReturnType<typeof inngest.createFunction>>` or use `inngest.createFunction` directly without Object.assign wrapper. Alternative: use `createFunction` without typed SDK client if typing conflict cannot be resolved.
+
+## Recurring Pattern: Barrel Export in Feature Inngest Subdirectory (HIGH)
+
+- **Found in Story 2.6**: `src/features/pipeline/inngest/index.ts` — re-exports from `./processBatch`, `./processFile`, `./types`
+- **Status**: CLAUDE.md explicitly forbids barrel exports in feature modules. No architecture approval comment in the file (unlike `db/schema/index.ts`).
+- **Fix**: Delete `index.ts`; update `src/app/api/inngest/route.ts` to import directly from `@/features/pipeline/inngest/processFile` and `@/features/pipeline/inngest/processBatch`.
+
 ## Edge Cases Noted
 
 - `logger-edge.ts` uses `console.log/warn/error` internally — this IS the logging solution for Edge runtime.

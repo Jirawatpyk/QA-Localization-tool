@@ -254,6 +254,8 @@ So that I can balance speed/cost with analysis depth and start reviewing while A
 ### Story 2.7: Batch Summary, File History & Parity Tools
 
 > **Carry-over from Story 2.4 (AC #8):** Golden Corpus Parity Testing (Tasks 13.6-13.7) deferred here — includes xlsx report parser, Tier 1-3 parity comparison (695 SDLXLIFF + 19 Xbench reports), and parity report generator. See `2-4-rule-based-qa-engine-language-rules.md` Dev Agent Record for full rationale.
+>
+> **Carry-over from Story 2.6 (G3):** Cross-file consistency checking — L1 consistency checks in Story 2.6 operate per-file only. Story 2.7 should add a batch-level cross-file consistency pass after all files complete: compare terminology/translation choices across files in the same project + language pair. Requires batch completion event → cross-file analysis step → findings with `scope: 'cross-file'`. See `2-6-inngest-pipeline-foundation-processing-modes.md` Dev Notes G3 section.
 
 As a QA Reviewer,
 I want to see batch processing results at a glance, track file history, and verify Xbench parity,

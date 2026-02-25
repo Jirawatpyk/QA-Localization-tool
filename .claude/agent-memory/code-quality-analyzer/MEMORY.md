@@ -3,7 +3,8 @@
 ## Index of Topic Files
 
 - `story-2-4-findings.md` — Story 2.4 Rule Engine CR Round 1 + Round 2 + Round 3 findings
-- `story-2-5-findings.md` — Story 2.5 MQM Score Calculation CR Round 1 findings
+- `story-2-5-findings.md` — Story 2.5 MQM Score Calculation CR Round 1 + Round 2 findings
+- `story-2-6-findings.md` — Story 2.6 Inngest Pipeline Foundation CR Round 1 findings
 
 ## Recurring Patterns Found
 
@@ -24,6 +25,8 @@
 - Story 2.4: runRuleEngine — FIXED (both happy + error path)
 - Story 2.5: calculateScore — FIXED (audit log wrapped correctly)
 - Story 2.5: graduation notification — NOT wrapped at caller level (C1)
+- Story 2.6: runL1ForFile, scoreFile, startProcessing — ALL wrapped correctly
+- Story 2.6: runL1ForFile audit log missing userId (M1)
 
 ### Supabase Realtime Payload Mismatch
 
@@ -56,7 +59,20 @@
 ### CAS Guard Pattern (ESTABLISHED)
 
 - All status-transition actions MUST use atomic `UPDATE ... WHERE status='expected'` + `.returning()`
-- Confirmed working in: parseFile.action.ts, runRuleEngine.action.ts
+- Confirmed working in: parseFile.action.ts, runRuleEngine.action.ts, runL1ForFile.ts
+
+### Inngest onFailure Registration — CRITICAL Pattern
+
+- `onFailure` must be in config object (1st arg of `inngest.createFunction()`)
+- Object.assign testability pattern exposes handler for tests BUT does NOT register with Inngest
+- Story 2.6 C1: `processFile.ts` missing `onFailure` in config → files stuck in l1_processing
+- Always verify: config arg includes `onFailure: onFailureFn` when using Object.assign pattern
+
+### Non-null Assertion on Array[0] — RECURRING anti-pattern
+
+- Story 2.6 C2: `segmentRows[0]!.sourceLang` crashes on empty array
+- Always add guard: `if (rows.length === 0) throw new Error('...')` before array[0]!
+- Check in every query result that uses `[0]!`
 
 ## Story 2.4 Rule Engine — Key Patterns
 
@@ -117,7 +133,46 @@
 - Auto-pass: 3-path logic (lang pair config → new pair <=50 files → new pair >50 files + project threshold)
 - Graduation notification: file 51 for new pair, JSONB dedup, per-admin insert
 - DELETE+INSERT idempotent pattern (no UNIQUE constraint yet — C2)
-- fileId unused in AutoPassInput type (H4) — MEMORY says removed but still present
+- fileId unused in AutoPassInput type (H4) — removed in CR R1
+
+## Story 2.5 CR Round 2 — NEW Findings (see story-2-5-findings.md)
+
+- C1: Findings query missing projectId filter (asymmetric with segments query)
+- H1: Graduation notification caller still not wrapped in try-catch
+- H2: CONTRIBUTING_STATUSES still ReadonlySet<string> (FindingStatus added in R1 but not applied here)
+- H3: fileCount off-by-one (checkAutoPass runs before score INSERT)
+- M1: Double cast `as unknown as`, M2: Graduation dedup missing projectId
+- M3: JOIN performance, M4: Missing test for findings projectId
+
+### NEW Pattern: Defense-in-depth asymmetry
+
+- When adding projectId filter to one query, check ALL sibling queries in same function
+- Story 2.5 R1 H2 fixed segments but left findings unpatched — R2 C1 caught it
+- Always audit all queries when fixing one query's filters
+
+### NEW Pattern: Query ordering vs data dependency
+
+- checkAutoPass file count query runs BEFORE score INSERT → off-by-one
+- Functions that depend on COUNT of records should run AFTER the new record is committed
+- Or explicitly document the off-by-one behavior and adjust threshold accordingly
+
+## Story 2.6 Inngest Pipeline Foundation — Key Patterns
+
+- Shared helpers: `runL1ForFile.ts`, `scoreFile.ts` — NO 'use server', importable from Inngest
+- Object.assign testability pattern for Inngest functions (expose handler + onFailure for unit tests)
+- processBatch fan-out: `step.sendEvent(id, events[])` batch form (single checkpoint)
+- processFilePipeline: concurrency key on projectId limit 1 (serialize per project)
+- Non-cached glossary loader: `getGlossaryTerms()` at `src/lib/cache/glossaryCache.ts` (JOIN-based)
+- Server Actions are thin wrappers: auth + validation + ActionResult mapping only
+- Pipeline event types at `src/features/pipeline/inngest/types.ts`
+- Inngest client events at `src/lib/inngest/client.ts` — DUPLICATED (should reference types.ts)
+
+### NEW Pattern: Inngest function config vs Object.assign
+
+- `inngest.createFunction(config, trigger, handler)` — config object is what Inngest reads
+- Object.assign adds properties AFTER function creation — Inngest runtime does NOT see them
+- onFailure, cancelOn, etc. MUST be in config object (1st arg)
+- Object.assign is ONLY for test utilities (exposing handler, onFailure for direct unit testing)
 
 ## Project Structure Notes
 

@@ -147,11 +147,33 @@ New tables confirmed tenant-scoped: `upload_batches` (has tenant_id, RLS in 0001
 **Pattern noted — inner JOIN defense-in-depth (autoPassChecker.ts L51-59):**
 The scores+segments JOIN applies withTenant() to BOTH tables in the same AND clause. This is the gold standard pattern for multi-table queries. Record as a positive example for future code reviews.
 
+### Story 2.6 Audit Results (Inngest Pipeline Foundation)
+
+**PASS (all checks — FULL PASS across all three primary files and their full Inngest execution chain):**
+
+- `startProcessing.action.ts` — requireRole() before any DB access; files SELECT uses withTenant() + eq(projectId) + inArray(fileIds); projects UPDATE uses withTenant(); tenantId sourced exclusively from requireRole() session (never from client input); pipeline event payload includes tenantId from session; audit log carries tenantId from session. FULL PASS.
+- `runL1ForFile.ts` (helper, not server action) — tenantId received as function parameter from Inngest event payload (not from user input). CAS guard UPDATE uses withTenant(); segments SELECT uses withTenant() + eq(fileId); suppressionRules SELECT uses withTenant() + eq(isActive) + eq(projectId); getGlossaryTerms() uses withTenant() on glossaries JOIN (correct — glossaryTerms has no tenant_id); findings DELETE inside transaction uses withTenant(); findings INSERT batch: tenantId set explicitly in each value object; l1_completed UPDATE uses withTenant(); rollback UPDATE uses withTenant(). FULL PASS.
+- `scoreFile.ts` (helper, not server action) — tenantId received as function parameter from Inngest event payload. segments SELECT uses withTenant() + eq(fileId) + eq(projectId); findings SELECT uses withTenant() + eq(fileId) + eq(projectId); scores SELECT inside transaction uses withTenant(); scores DELETE inside transaction uses withTenant(); scores INSERT: tenantId set explicitly in value object; createGraduationNotification() — notifications dedup SELECT uses withTenant(); userRoles SELECT uses withTenant(); notifications INSERT: tenantId set explicitly in value object. FULL PASS.
+- `processBatch.ts` — no DB access; fan-out propagates tenantId from event.data through to each pipeline.process-file event payload. Tenant context never lost across steps. PASS.
+- `processFile.ts` — no direct DB queries in handler; delegates to runL1ForFile() + scoreFile() with tenantId from event.data; onFailure handler UPDATE files uses withTenant(). concurrency key is event.data.projectId (correct — project-scoped queue). FULL PASS.
+
+**Schema confirmations (Story 2.6):**
+
+- `glossaryTerms` — confirmed NO tenant_id column; access via glossaryId FK to glossaries (which has tenant_id). INNER JOIN approach in getGlossaryTerms() is the correct and only safe pattern.
+- `severityConfigs` — nullable tenant_id column confirmed. loadPenaltyWeights() exception (or(eq, isNull) instead of withTenant()) re-confirmed correct.
+
+**Pattern noted — tenantId in Inngest helpers:**
+Helper functions (runL1ForFile, scoreFile) receive tenantId as a typed function parameter. This is the correct pattern for Inngest runtime — there is no session to read from. The security boundary is the Server Action (startProcessing) which sources tenantId from requireRole() and injects it into the event payload. Inngest's event payload is server-controlled and cannot be tampered with by clients.
+
+**Note — Inngest route handler now has functions registered:**
+`processBatch` and `processFilePipeline` are active. Both correctly propagate tenant context. Update checklist: Inngest IS now in scope for future audits.
+
 ## Key Patterns to Watch
 
 - `glossary_terms` has NO tenant_id — always access via verified glossaryId from glossaries table
 - `severity_configs` has nullable tenant_id (system defaults have NULL) — query must handle this
 - `taxonomy_definitions` is global — never add tenant filter (it would be wrong)
 - RSC pages that do inline Drizzle queries must use withTenant() — currently all do
-- Inngest route handler has NO functions registered yet — no Inngest tenant isolation to audit
+- Inngest functions ARE NOW ACTIVE — `processBatch` + `processFilePipeline` both confirmed tenant-safe
 - INSERT isolation pattern: no WHERE clause on INSERT — instead set `tenantId` field explicitly in value object. withTenant() only applies to SELECT/UPDATE/DELETE WHERE clauses.
+- Inngest tenantId pattern: Server Action sources tenantId from requireRole() → injects into event payload → helper functions receive tenantId as typed parameter. This is the correct trust boundary for Inngest.

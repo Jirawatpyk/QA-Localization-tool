@@ -89,6 +89,29 @@ Key findings:
   stripMarkup replaces with spaces so length never 0. Should be `stripped.trim().length===0`
   but .trim() was already called. Investigate as possible source defect.
 
+### Story 2.6 Test Review — CR Round 1 Findings (2026-02-25)
+
+Full details in `story-2.6-cr-round1.md`. Summary: 3C · 4H · 5M · 1L. 13 findings.
+
+- C1: `getGlossaryTerms` from `@/lib/cache/glossaryCache` not mocked in runL1ForFile.test.ts —
+  accidental Proxy passthrough; `dbState` index allocation works today but is fragile
+- C2: `onFailure` assertions in processFile.test.ts are vacuous — `callIndex > 0` does NOT
+  verify `status: 'failed'` was written; withTenant isolation also unverified
+- C3: Status transition test in runL1ForFile.test.ts (line 146-161) asserts only
+  `callIndex > 0` — does not verify `parsed → l1_processing → l1_completed` transitions
+- H1: No test for empty `segmentRows` in scoreFile — `segmentRows[0]!.sourceLang` throws TypeError
+- H2: Step IDs in processFile verified with `toContain('l1')`/`toContain('score')` — too loose;
+  should be exact `toBe('l1-rules-${fileId}')` and `toBe('score-${fileId}')`
+- H3: `startProcessing` mode persistence assertion vacuous (`callIndex >= 2`)
+- H4: Error codes in startProcessing.action.test.ts use regex alternatives
+  (`/NOT_FOUND|INVALID_INPUT/`) — hides wrong error code returns
+- M1: `completedAt` assertion guarded by `if` — vacuous if set logic broken
+- M2: `uploadBatchId` missing from `buildPipelineBatchEvent` helper — propagation silently untested
+- M3: onFailure withTenant isolation not verified in processFile.test.ts
+- M4: Batch insert >100 findings: only `findingCount` verified, not that TWO insert calls happened
+- M5: `Recommended` badge not pinned to Economy card in ProcessingModeDialog tests
+- L1: `pipelineSchema` max(100) fileIds boundary not tested
+
 ### Confirmed Working Patterns
 
 - `vi.mock('server-only', () => ({}))` must be FIRST line in server action test files

@@ -339,6 +339,35 @@ so that I can trust this tool to replace Xbench with 100% parity.
 ### Anti-Pattern Scan — Accepted Deviations
 - **MEDIUM #1:** `thaiRules.ts`/`cjkRules.ts` at `src/features/pipeline/engine/language/` instead of `src/lib/language/` — per story spec, engine-internal only, will refactor when cross-feature use materializes
 
+### Post-CR Session (2026-02-24) — Golden Corpus Investigation
+
+**G1 Fix — English number word detection** (commit `af288d1`)
+- Root cause: Xbench "Numeric Mismatch" flags `number_format` when number words (one–ten) are absent from target. Engine was finding 0 vs Xbench's 12.
+- Fix: Added `EN_NUMBER_WORDS` map + `EN_NUMBER_WORD_REGEX` to `numberChecks.ts`. Word→digit conversion (four→4) = PASS; word absent from target = FLAG.
+- Tests: +13 unit tests in `numberChecks.test.ts` (36 total). All 1173 unit tests ✅.
+
+**G2 Investigation — Tag Integrity gap** (commit `a72542f`)
+- Engine finds 10 `tag_integrity` vs Xbench's 27 in parsed files.
+- Diagnostic: `src/__tests__/integration/tag-gap-diagnostic.test.ts`
+- Result: **ENGINE_MISSED = 0** — `checkTagIntegrity` logic is correct, no logic bug.
+- Root cause: Xbench reads `<trans-unit>/<source>` (may include TM metadata/templates like `[year]`), our parser reads `<seg-source>/<mrk>` (actual working source). Text differs for ~20/27 findings → data source difference, not an engine gap.
+- Decision: **No fix needed.** Gap is accepted for L1.
+
+**Repeated Word check — implemented as hotfix** (commit `3d3cb2e`)
+- Xbench "Repeated Word" = 1 finding in entire golden corpus (0.3%).
+- Decision (Mona, 2026-02-24): Implement now (logic simple, immediate Xbench parity).
+- Added `checkRepeatedWords()` in `src/features/pipeline/engine/checks/repeatedWordChecks.ts`
+  - Regex `\b(\w+)\s+\1\b` (case-insensitive) — Thai/CJK unaffected (\w+ excludes non-ASCII)
+  - Severity: minor, Category: `repeated_word` (new category added to `RuleCategory` + `VALID_CATEGORIES`)
+  - Wired into `ruleEngine.ts` per-segment loop
+- 17 unit tests in `repeatedWordChecks.test.ts` — all pass ✅
+- Pipeline tests: 337/337 ✅
+
+**Integration tests added** (commit `ffc9c94`)
+- `src/__tests__/integration/rule-engine-golden-corpus.test.ts` — 13 smoke tests on real SDLXLIFF data
+- `src/__tests__/integration/golden-corpus-diagnostic.test.ts` — detailed per-file findings report
+- `src/__tests__/integration/tag-gap-diagnostic.test.ts` — G2 tag gap root cause analysis
+
 ## Dev Notes
 
 ### Golden Corpus — Key Facts for Dev
