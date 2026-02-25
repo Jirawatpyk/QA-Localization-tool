@@ -7,7 +7,7 @@
 - Unit tests: co-located next to source (`*.test.ts` / `*.test.tsx`)
 - RLS tests: `src/db/__tests__/rls/` (require `npx supabase start`)
 - E2E tests: `e2e/`
-- Shared factories/mocks: `src/test/factories.ts`
+- Shared factories/mocks: `src/test/factories.ts`, `src/test/drizzleMock.ts` (canonical Drizzle mock factory)
 - RLS helpers: `src/db/__tests__/rls/helpers.ts`
 
 ### Story CR Review History (most recent first)
@@ -50,7 +50,7 @@ All H and M from R4 **FIXED** in final commit. Remaining carry-overs (LOW priori
 ### Confirmed Working Patterns
 
 - `vi.mock('server-only', () => ({}))` must be FIRST line in server action test files
-- Drizzle Proxy mock: `returnValues[callIndex]` for `.then` terminals; `valuesCaptures` for `.values()` args; `setCaptures` for `.set()` args; `throwAtCallIndex` for DB error injection
+- Drizzle mock: use `createDrizzleMock()` from `src/test/drizzleMock.ts` (shared via globalThis in setupFiles). Pattern: `const { dbState, dbMockModule } = vi.hoisted(() => createDrizzleMock())` then `vi.mock('@/db/client', () => dbMockModule)`. Features: `returnValues[callIndex]` for `.then` terminals; `valuesCaptures` for `.values()` args; `setCaptures` for `.set()` args; `throwAtCallIndex` for DB error injection; `transaction` support
 - `async import()` within test body for server actions (avoids top-level import before mocks)
 - `vi.fn((..._args: unknown[]) => ...)` for mocks whose `.calls` will be accessed (TS2493 fix)
 - Supabase Realtime: `mockChannel.on.mockReturnValue(mockChannel)` (not `mockReturnThis()`) in jsdom

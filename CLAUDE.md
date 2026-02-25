@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **qa-localization-tool** is an AI-powered localization QA web application that combines deterministic rule-based checks (Xbench parity) with AI semantic analysis. The core value is **Single-Pass Completion** — enabling QA reviewers to approve files without a proofreader loop.
 
-**Status:** Pre-implementation (planning complete). All planning artifacts are in `_bmad-output/planning-artifacts/`.
+**Status:** Epic 1 (Foundation) done, Epic 2 (File Processing & QA Engine) in-progress. Planning artifacts in `_bmad-output/planning-artifacts/`.
 
 **Target Users:** QA Reviewers (native + non-native language support), Project Managers.
 
@@ -92,7 +92,7 @@ src/
 │   ├── schema/             # One file per table (tenants, projects, findings, etc.)
 │   └── helpers/withTenant.ts  # Tenant filter helper (EVERY query must use)
 ├── stores/                 # Global Zustand stores (ui, keyboard)
-└── test/                   # Factories, mocks, fixtures
+└── test/                   # Factories, drizzleMock, fixtures
 ```
 
 Each feature module contains: `components/`, `actions/` (Server Actions), `hooks/`, `stores/`, `validation/`.
@@ -115,6 +115,24 @@ Each feature module contains: `components/`, `actions/` (Server Actions), `hooks
 - `service_role` key in client code, hardcoded `tenant_id`, inline Supabase client creation
 - try-catch inside Inngest `step.run()`, arbitrary Tailwind breakpoints, snapshot tests
 - `process.env` direct access, inline Tailwind colors (use tokens.css), `"use client"` on pages
+
+### Coding Guardrails (CR Lessons — check BEFORE writing every file)
+
+1. **withTenant() on EVERY query** — SELECT/UPDATE/DELETE WHERE must include `withTenant(table.tenantId, tenantId)`. Exception: INSERT (set tenantId in values), `severity_configs` (nullable tenant_id uses `or(eq, isNull)`)
+2. **Audit log non-fatal** — happy-path: let it throw (caller catches). Error/rollback path: wrap in `try { writeAuditLog(...) } catch { logger.error(...) }` — never let audit failure mask the real error
+3. **No bare `string` for status/severity** — always use union type (`type FileStatus = 'pending' | 'parsing' | ...`) or import from `@/types/`
+4. **Guard `rows[0]!`** — after `.returning()` or `SELECT`, always `if (rows.length === 0) throw` before accessing `rows[0]!`
+5. **`inArray(col, [])` = invalid SQL** — always `if (ids.length === 0) return` before `inArray()`
+6. **DELETE + INSERT = `db.transaction()`** — idempotent re-runs (re-parse, re-score) must be atomic
+7. **Zod array uniqueness** — `z.array(z.string().uuid())` does NOT deduplicate. Add `.refine(ids => new Set(ids).size === ids.length, 'Duplicate IDs')`
+8. **Optional filter: use `null`, not `''`** — `optionalId ?? ''` silently matches nothing. Use ternary: `fileId ? eq(col, fileId) : undefined`
+9. **No `[...set].some()` in hot loops** — cache `const arr = [...set]` once outside the loop, or use `for...of` on Set directly
+10. **Inngest function requirements** — config MUST have `retries` + `onFailure`. `Object.assign` MUST expose `handler` + `onFailure` for tests. Register in `route.ts` functions array
+11. **Dialog state reset** — custom dialogs must reset form state on re-open: `useEffect(() => { if (open) resetForm() }, [open])`
+12. **`useRef` not reset on prop change** — refs persist across re-renders. If behavior depends on props, reset ref in `useEffect` watching that prop
+13. **`void asyncFn()` swallows errors** — use `.catch(() => { /* non-critical */ })` or `await` with try-catch
+14. **Asymmetric query filters** — when one query gets `eq(projectId)`, audit ALL sibling queries in same function for consistency (defense-in-depth)
+15. **ExcelJS type mismatch** — use `// @ts-expect-error ExcelJS Buffer type conflict` (not `as never`, `as any`, or `as Buffer`)
 
 ## Naming Conventions
 
@@ -174,6 +192,14 @@ This checklist was created from Epic 1 retrospective learnings. Top 5 red flags:
 | Edge (middleware.ts)                          | `@upstash/ratelimit`, `@supabase/ssr` | `pino`, `drizzle-orm`, `fast-xml-parser`, `inngest` |
 | Node.js (Server Components, Actions, Inngest) | Everything server-side                | —                                                   |
 | Browser (Client Components)                   | `zustand`, `sonner`, `@supabase/ssr`  | `pino`, `drizzle-orm`, server-only modules          |
+
+## Framework Docs Rule
+
+Before writing code that uses **Inngest**, **Drizzle ORM**, or **Supabase** APIs — fetch latest docs via Context7 MCP first. Do NOT rely on training data for SDK method signatures, especially:
+
+- Inngest: `step.sendEvent()`, `step.run()`, `onFailure` type, `concurrency` config
+- Drizzle: `transaction()`, `returning()`, `inArray()`, JOIN syntax
+- Supabase: Realtime channel filters, Storage API, Auth helpers
 
 ## CJK/Thai Language Rules
 

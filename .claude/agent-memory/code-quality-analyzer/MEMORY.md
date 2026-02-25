@@ -6,6 +6,7 @@
 - `story-2-5-findings.md` — Story 2.5 MQM Score CR R1-R2
 - `story-2-6-findings.md` — Story 2.6 Inngest Pipeline CR R1-R3
 - `story-2-7-findings.md` — Story 2.7 Batch Summary & Parity CR R1-R4
+- `story-2-8-findings.md` — Story 2.8 Project Onboarding Tour CR R1
 
 ## Recurring Anti-Patterns (check EVERY review)
 
@@ -92,12 +93,12 @@
 - STILL OPEN after R4: getFileHistory fetch-all (tech debt, 10K cap mitigated)
 - → All security findings (Issues 1-7) verified RESOLVED on 2026-02-25
 
-## Missing DB Constraints (accumulated — verified 2026-02-25)
+## Missing DB Constraints (accumulated — last verified 2026-02-26)
 
-- ⚠️ OPEN: No UNIQUE on segments(file_id, segment_number) — re-parse can create duplicates
-- ⚠️ OPEN: No composite index on files(tenant_id, project_id) — perf only, low priority
+- ✅ RESOLVED: UNIQUE on segments(file_id, segment_number) — added to Drizzle schema + migration 0007 applied
+- ⚠️ OPEN: No composite index on files(tenant_id, project_id) — perf only, low priority (DEFERRED to Epic 3-4)
 - ℹ️ BY DESIGN: scores.fileId is nullable (project-level aggregates) — UNIQUE not appropriate
-- ⚠️ OPEN: idx_findings_file_layer in migration but NOT in Drizzle schema
+- ✅ RESOLVED: idx_findings_file_layer — added to Drizzle schema + migration 0007 applied
 - ⚠️ OPEN: segmentId NOT persisted to DB (Stories 2.2-2.3, design decision needed)
 - → Tracked in: `_bmad-output/implementation-artifacts/tech-debt-tracker.md`
 
@@ -106,9 +107,20 @@
 - Canonical: `@/types/pipeline` PROCESSING_MODES const
 - ✅ RESOLVED (2026-02-25): All sites now import from `@/types/pipeline` — projectSchemas.ts, pipelineSchema.ts, db/validation/index.ts
 
+### 13. useRef State Not Reset on Prop-Driven Re-render
+
+- `dismissedRef` in tour components stays `true` after dismiss — `router.refresh()` re-renders with new props but does NOT unmount, so ref persists
+- Affects: ProjectTour.tsx, OnboardingTour.tsx — restart from HelpMenu fails silently
+- Fix: reset ref when metadata indicates tour should re-trigger (e.g., `project_tour_completed` becomes null)
+
+### 14. void Promise Without .catch() — Silent Swallow
+
+- `void asyncFn()` discards both return value AND rejection — no error feedback
+- Use `.catch(() => { /* non-critical */ })` at minimum for diagnostics
+
 ## Test Patterns
 
-- Proxy-based chainable Drizzle mock: duplicated, should extract to shared utility
-- Drizzle mock `values` handler: push to captures then return new Proxy (chainable)
-- `throwAtCallIndex` in Proxy mock for DB error injection
+- ✅ RESOLVED: Drizzle mock extracted to shared `createDrizzleMock()` in `src/test/drizzleMock.ts` — 15 test files migrated (2026-02-26)
+- Usage: `const { dbState, dbMockModule } = vi.hoisted(() => createDrizzleMock())` then `vi.mock('@/db/client', () => dbMockModule)`
+- Features: `returnValues[callIndex]`, `valuesCaptures`, `setCaptures`, `throwAtCallIndex`, `transaction` support
 - `vi.fn((..._args: unknown[]) => ...)` for mocks whose .calls are accessed

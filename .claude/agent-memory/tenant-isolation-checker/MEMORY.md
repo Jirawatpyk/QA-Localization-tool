@@ -54,9 +54,9 @@ See `patterns.md` for detailed notes on architecture and violations.
 
 ### OPEN FINDINGS (unresolved from previous story audits)
 
-1. MEDIUM — `useNotifications.ts` Realtime channel: filter is `user_id=eq.${userId}` only, no tenant_id filter in Supabase channel subscription. Relies entirely on RLS.
-2. LOW — `createTerm.action.ts` L57-65: duplicate-check query on `glossary_terms` filters by `glossaryId` only (no explicit tenant guard). Safe because `glossaryId` was verified via withTenant() in the same request, but pattern is inconsistent.
-3. LOW — `updateTerm.action.ts` L79-93: same pattern — dup check on `glossaryTerms` by `glossaryId` only. Same risk level as above.
+1. ~~MEDIUM — `useNotifications.ts` Realtime channel~~ → ✅ RESOLVED (2026-02-26): Verified at `src/features/dashboard/hooks/useNotifications.ts:66` — already has compound filter `user_id=eq.${userId}&tenant_id=eq.${tenantId}` + client-side guard at line 71. Original tracker had wrong file path.
+2. LOW — `createTerm.action.ts` L57-65: duplicate-check query on `glossary_terms` filters by `glossaryId` only (no explicit tenant guard). Safe because `glossaryId` was verified via withTenant() in the same request, but pattern is inconsistent. ACCEPTED (safe via FK chain).
+3. LOW — `updateTerm.action.ts` L79-93: same pattern — dup check on `glossaryTerms` by `glossaryId` only. Same risk level as above. ACCEPTED (safe via FK chain).
 
 ### RESOLVED FINDINGS (verified 2026-02-25)
 

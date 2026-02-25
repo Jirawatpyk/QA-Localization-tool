@@ -50,6 +50,13 @@
       "when": 1772012159952,
       "tag": "0006_lazy_swordsman",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1772034096699,
+      "tag": "0007_wandering_slapstick",
+      "breakpoints": true
     }
   ]
 }

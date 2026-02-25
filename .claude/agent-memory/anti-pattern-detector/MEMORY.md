@@ -112,12 +112,11 @@
 - **Regression from 2.2 FIXED:** `factories.ts` no longer has `'test-tenant'` / `'test-project'` hardcoded strings — all IDs now use `faker.string.uuid()`
 - **All other checks CLEAN** — no `export default`, no `any`, no `enum`, no raw SQL, no `console.log`, no `process.env`, no service_role, no hardcoded tenantId, no inline Supabase client, no snapshot tests, no "use client" on page, `withTenant()` used correctly on all queries, design tokens used correctly in ColumnMappingDialog.tsx
 
-## Recurring Pattern: `as never` Type Assertion (MEDIUM)
+## Recurring Pattern: ExcelJS Type Assertion — ✅ RESOLVED (2026-02-26)
 
-- **Pattern**: `workbook.xlsx.load(Buffer.from(new Uint8Array(buffer)) as never)` — ExcelJS type mismatch workaround using `as never` instead of `as Buffer`.
-- **Files affected**: `excelParser.ts:39`, `previewExcelColumns.action.ts:88` — identical pattern in both files.
-- **Risk**: `as never` is a complete type suppression, worse than `as any` — TypeScript cannot reason about the value at all. Use `as Buffer` which is at least semantically correct.
-- **Fix**: Change `as never` → `as Buffer` in both call sites.
+- **Pattern**: ExcelJS `workbook.xlsx.load()` has a type mismatch — ExcelJS declares its own `Buffer` interface that conflicts with Node.js `Buffer<ArrayBufferLike>`.
+- **Files affected**: `excelParser.ts:39`, `xbenchReportParser.ts:34` (previewExcelColumns.action.ts does NOT have this — tracker was incorrect)
+- **Fix applied**: `@ts-expect-error` comment explaining the ExcelJS type mismatch — self-documenting, auto-flags if ExcelJS fixes types upstream. This is the correct pattern for library type mismatches (better than `as never`, `as any`, or `as Buffer` which all fail).
 
 ## Recurring Pattern: Missing Return Types on Factory Functions (MEDIUM)
 
@@ -193,7 +192,7 @@
 - Files scanned: 26 (batch feature: 10 + parity feature: 9 + pipeline: 2 + pages: 4 + nav: 1)
 - **CRITICAL violations (0)**
 - **HIGH violations (1):**
-  - `xbenchReportParser.ts:23`: `buffer as any` — ExcelJS type mismatch; same recurring pattern as Story 2.3; should use `buffer as Buffer`
+  - `xbenchReportParser.ts:23`: ✅ RESOLVED — `buffer as any` replaced with `@ts-expect-error` comment (2026-02-26)
 - **MEDIUM violations (5):**
   - `generateParityReport.action.ts:25-27`: `bothFound/toolOnly/xbenchOnly: unknown[]` — overly broad return type; should use `MatchedFinding[] / ToolFinding[] / XbenchFinding[]` imported from parityComparator
   - `reportMissingCheck.action.ts:52`: `withTenant(missingCheckReports.tenantId, user.tenantId)` called as standalone expression — return value discarded; does not guard the INSERT; tenantId passed directly into `.values({ tenantId: user.tenantId })` instead
@@ -205,6 +204,17 @@
   - `batchSchemas.ts`: Zod schema named `getBatchSummarySchema` — correct; `getFileHistorySchema` — correct. CLEAN.
   - `crossFileConsistency.ts:67-83`: `seg.sourceText as string`, `seg.wordCount as number`, `seg.fileId as string`, `seg.targetText as string`, `seg.id as string` — multiple `as string/number` casts; prefer Drizzle inferred types
 - **All other checks CLEAN** — no `export default` in feature modules, no TypeScript `enum`, no raw SQL, no console.log, no process.env, no service_role, no hardcoded tenantId UUIDs, no inline Supabase client creation, no try-catch inside step.run() in batchComplete.ts, no snapshot tests, no "use client" on page.tsx files (all 4 pages are Server Components), md: breakpoint in BatchSummaryView.tsx is standard Tailwind (not arbitrary), text-success/text-warning/text-info/text-destructive are valid tokens.css-derived utility classes in Tailwind v4
+
+## Story 2.8 Scan Summary (2026-02-25)
+
+- Files scanned: 8 (ProjectTour.tsx, HelpMenu.tsx, ProjectSubNav.tsx, layout.tsx, updateTourState.action.ts + 3 test files)
+- **MEDIUM violations (1):**
+  - `ProjectTour.tsx` line 66: `overlayColor: 'var(--color-overlay, #1e293b)'` — same borderline pattern as OnboardingTour.tsx (MEMORY line 22); `#1e293b` is a CSS fallback for `var(--color-overlay)` which IS defined in tokens.css:28. Flagged MEDIUM with note.
+- **LOW violations (2):**
+  - `e2e/project-tour.spec.ts` line 20: `process.env.E2E_TEST_PASSWORD` — direct `process.env` access in E2E spec file; however E2E files are Playwright configs, not app code. Borderline — flag LOW.
+  - `e2e/project-tour.spec.ts` lines 21-23: `process.env.E2E_PROJECT_TOUR_EMAIL` and `E2E_PROJECT_TOUR_RETURNING_EMAIL` — same pattern; E2E test files are not subject to `@/lib/env` rule (env.ts is server-only, Playwright runs in Node.js outside Next.js context). Borderline LOW.
+- **All other checks CLEAN** — no `export default` in feature modules (layout.tsx uses `export default` correctly per Next.js convention), no `any`, no `enum`, no raw SQL, no `console.log`, no TypeScript enum, no service_role, no hardcoded tenantId, no inline Supabase client, no snapshot tests (all behavioral assertions), no "use client" on layout.tsx (layout uses it correctly — layout.tsx is Server Component), withTenant() used correctly in updateTourState.action.ts line 61, Zod schemas named correctly (tourIdSchema, updateTourStateSchema), constants UPPER_SNAKE_CASE (PROJECT_TOUR_STEPS, LAST_STEP_INDEX, TABS), all design tokens verified against tokens.css/globals.css.
+- **CLEAN patterns noted**: UserMetadata interface (no `I` prefix), TourId/TourAction union types (not TypeScript enum), updateTourState.action.ts naming correct, test files use behavioral assertions (regex match, toEqual, toBe, toBeNull) — NO toMatchSnapshot().
 
 ## Story 2.7 Key Patterns
 
@@ -239,11 +249,10 @@
 - **Files**: `processFile.ts`, `processBatch.ts`, `batchComplete.ts`
 - **Accepted**: eslint-disable scoped, comment explains rationale. Full fix requires Inngest SDK generics improvement.
 
-## Recurring Pattern: Barrel Export in Feature Inngest Subdirectory (HIGH — ⚠️ STILL OPEN)
+## Recurring Pattern: Barrel Export in Feature Inngest Subdirectory — ✅ RESOLVED (2026-02-26)
 
-- **Found in Story 2.6**: `src/features/pipeline/inngest/index.ts` — re-exports from `./processBatch`, `./processFile`, `./types`
-- **Status**: CLAUDE.md explicitly forbids barrel exports in feature modules. No architecture approval comment.
-- **Fix**: Delete `index.ts`; update `route.ts` to import directly. → Tracked in tech-debt-tracker.md
+- **Originally flagged in Story 2.6**: `src/features/pipeline/inngest/index.ts`
+- **Status**: Verified file does NOT exist — `route.ts` already imports directly from `processBatch.ts` and `processFile.ts`. No barrel export was ever created.
 
 ## Edge Cases Noted
 

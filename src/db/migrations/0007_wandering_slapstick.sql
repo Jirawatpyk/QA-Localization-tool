@@ -1,0 +1,2 @@
+CREATE INDEX IF NOT EXISTS "idx_findings_file_layer" ON "findings" USING btree ("file_id","detected_by_layer");--> statement-breakpoint
+ALTER TABLE "segments" ADD CONSTRAINT "uq_segments_file_segment" UNIQUE("file_id","segment_number");
