@@ -60,6 +60,7 @@ vi.mock('@/db/schema/files', () => ({
     tenantId: 'tenant_id',
     batchId: 'batch_id',
     status: 'status',
+    projectId: 'project_id',
   },
 }))
 
@@ -155,10 +156,66 @@ describe('batchComplete', () => {
     expect(mockCrossFileConsistency).toHaveBeenCalledTimes(2)
   })
 
+  // H4: Empty batch early-return path
+  it('[P1] should return findingCount 0 when batch has no files', async () => {
+    const mockStep = createMockStep()
+
+    // resolve-batch-files returns empty array
+    dbState.returnValues = [[]]
+
+    const { batchComplete } = await import('./batchComplete')
+    const result = await (
+      batchComplete as {
+        handler: (...args: unknown[]) => Promise<{ status: string; findingCount: number }>
+      }
+    ).handler({
+      event: {
+        data: {
+          batchId: VALID_BATCH_ID,
+          projectId: VALID_PROJECT_ID,
+          tenantId: VALID_TENANT_ID,
+        },
+      },
+      step: mockStep,
+    })
+
+    expect(result).toEqual({ status: 'completed', findingCount: 0 })
+    // crossFileConsistency should NOT be called for empty batch
+    expect(mockCrossFileConsistency).not.toHaveBeenCalled()
+  })
+
+  // M4: onFailureFn test — verify error logging
+  it('[P1] should log error when onFailure is called after retries exhausted', async () => {
+    const { logger } = await import('@/lib/logger')
+    const { batchComplete } = await import('./batchComplete')
+
+    const testError = new Error('All retries failed')
+    await (batchComplete as { onFailure: (...args: unknown[]) => Promise<void> }).onFailure({
+      event: {
+        data: {
+          event: {
+            data: {
+              batchId: VALID_BATCH_ID,
+              projectId: VALID_PROJECT_ID,
+              tenantId: VALID_TENANT_ID,
+            },
+          },
+        },
+      },
+      error: testError,
+    })
+
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ err: testError, batchId: VALID_BATCH_ID }),
+      expect.stringContaining('failed after retries'),
+    )
+  })
+
   it('[P1] should be registered in Inngest serve function list', async () => {
     const { inngest } = await import('@/lib/inngest/client')
     const createFunctionMock = inngest.createFunction as ReturnType<typeof vi.fn>
 
+    // L2: resetModules to force re-evaluation of module-level createFunction call
     vi.resetModules()
     await import('./batchComplete')
 
@@ -166,6 +223,7 @@ describe('batchComplete', () => {
     expect(createFunctionMock).toHaveBeenCalledWith(
       expect.objectContaining({
         id: expect.stringContaining('batch-complete'),
+        retries: 3,
       }),
       expect.objectContaining({
         event: 'pipeline.batch-completed',

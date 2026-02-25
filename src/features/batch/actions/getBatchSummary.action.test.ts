@@ -85,6 +85,7 @@ vi.mock('@/db/schema/files', () => ({
     batchId: 'batch_id',
     fileName: 'file_name',
     createdAt: 'created_at',
+    updatedAt: 'updated_at',
   },
 }))
 
@@ -95,6 +96,9 @@ vi.mock('@/db/schema/scores', () => ({
     tenantId: 'tenant_id',
     mqmScore: 'mqm_score',
     criticalCount: 'critical_count',
+    majorCount: 'major_count',
+    minorCount: 'minor_count',
+    layerCompleted: 'layer_completed',
     status: 'status',
   },
 }))
@@ -195,6 +199,9 @@ describe('getBatchSummary', () => {
     expect(result.data).toHaveProperty('needsReview')
     expect(result.data.recommendedPass).toBeInstanceOf(Array)
     expect(result.data.needsReview).toBeInstanceOf(Array)
+    // M6: Assert passedCount/needsReviewCount match array lengths
+    expect(result.data.passedCount).toBe(result.data.recommendedPass.length)
+    expect(result.data.needsReviewCount).toBe(result.data.needsReview.length)
   })
 
   it('[P0] should partition ALL files into exactly 2 groups with no overlap', async () => {
@@ -241,6 +248,9 @@ describe('getBatchSummary', () => {
     if (!result.success) return
     expect(result.data.recommendedPass).toHaveLength(1)
     expect(result.data.needsReview).toHaveLength(0)
+    // M6: Verify counts match
+    expect(result.data.passedCount).toBe(1)
+    expect(result.data.needsReviewCount).toBe(0)
   })
 
   it('[P0] should classify file as Need Review when criticalCount > 0 even if score >= threshold', async () => {
@@ -562,5 +572,7 @@ describe('getBatchSummary', () => {
     expect(result.success).toBe(true)
     if (!result.success) return
     expect(result.data.crossFileFindings).toEqual([])
+    // M5: Verify cross-file query was skipped (only 2 DB calls: project + files)
+    expect(dbState.callIndex).toBe(2)
   })
 })

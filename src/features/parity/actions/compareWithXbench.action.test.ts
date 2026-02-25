@@ -243,6 +243,36 @@ describe('compareWithXbench', () => {
     expect(result.error).toContain('xlsx')
   })
 
+  // ── L1: fileId propagation ──
+
+  it('[P1] should pass fileId through to compareFindings when provided', async () => {
+    const fileId = faker.string.uuid()
+
+    dbState.returnValues = [
+      [{ id: VALID_PROJECT_ID }], // project found
+      [
+        {
+          sourceTextExcerpt: 'Test source',
+          targetTextExcerpt: 'Test target',
+          category: 'accuracy',
+          severity: 'major',
+          fileId,
+          segmentId: faker.string.uuid(),
+        },
+      ], // tool findings
+    ]
+
+    const { compareWithXbench } = await import('./compareWithXbench.action')
+    await compareWithXbench({
+      projectId: VALID_PROJECT_ID,
+      fileId,
+      xbenchReportBuffer: new Uint8Array([1, 2, 3]),
+    })
+
+    // compareFindings should receive the fileId as third argument
+    expect(mockCompareFindings).toHaveBeenCalledWith(expect.any(Array), expect.any(Array), fileId)
+  })
+
   // ── P2: Error handling ──
 
   it('[P2] should return INTERNAL_ERROR when requireRole throws (unauthorized)', async () => {

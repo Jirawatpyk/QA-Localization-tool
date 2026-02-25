@@ -26,7 +26,7 @@ export function ReportMissingCheckDialog({
   open,
   onOpenChange,
 }: ReportMissingCheckDialogProps) {
-  const [fileReference, setFileReference] = useState('')
+  const [fileReference, setFileReference] = useState(fileId ?? '')
   const [segmentNumber, setSegmentNumber] = useState('')
   const [description, setDescription] = useState('')
   const [checkType, setCheckType] = useState('')
@@ -45,6 +45,18 @@ export function ReportMissingCheckDialog({
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
   }, [open, handleClose])
+
+  // M1: Reset form state when dialog closes; M2: Pre-fill fileReference from fileId prop
+  useEffect(() => {
+    if (!open) {
+      setFileReference(fileId ?? '')
+      setSegmentNumber('')
+      setDescription('')
+      setCheckType('')
+      setShowTypeOptions(false)
+      setErrors([])
+    }
+  }, [open, fileId])
 
   if (!open) return null
 

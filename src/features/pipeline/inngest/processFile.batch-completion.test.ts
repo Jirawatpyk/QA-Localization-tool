@@ -241,6 +241,8 @@ describe('processFile - batch completion step', () => {
 
     // Should NOT call step.run for batch check, and NOT call step.sendEvent
     expect(mockStep.sendEvent).not.toHaveBeenCalled()
+    // H5: Only L1 + score steps run (2 calls), batch check step is skipped
+    expect(mockStep.run).toHaveBeenCalledTimes(2)
     // Should still return L1 result (L1 + score steps still run)
     expect(result).toMatchObject({
       fileId: expect.any(String),

@@ -80,18 +80,20 @@ export async function compareWithXbench(input: unknown): Promise<ActionResult<Co
     )
 
     // H1: MatchedFinding has xbenchCategory+toolCategory; XbenchFinding/ToolFinding have category
+    // H2: xbenchOnly items carry segmentNumber from Xbench report — pass through instead of hardcoding 0
     const toFinding = (
       item: {
         xbenchCategory?: string
         toolCategory?: string
         category?: string
         severity?: string
+        segmentNumber?: number
       },
       idx: number,
     ): ComparisonFinding => ({
       id: `${idx}`,
       description: item.xbenchCategory ?? item.toolCategory ?? item.category ?? 'Unknown',
-      segmentNumber: 0,
+      segmentNumber: item.segmentNumber ?? 0,
       severity: item.severity ?? 'minor',
       category: item.xbenchCategory ?? item.toolCategory ?? item.category ?? '',
     })

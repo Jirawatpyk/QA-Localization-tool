@@ -143,6 +143,8 @@ describe('parityComparator', () => {
   // ── M5: Substring containment match ──
 
   it('[P1] should match when xbench source is substring of tool source (containment match)', async () => {
+    // M7: Use consistent fileId between toolFinding and compareFindings call
+    const testFileId = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
     const xbenchFindings = [
       buildXbenchFinding({
         sourceText: 'brown fox',
@@ -155,11 +157,12 @@ describe('parityComparator', () => {
         sourceTextExcerpt: 'The quick brown fox jumps over',
         category: 'accuracy',
         severity: 'major',
+        fileId: testFileId,
       }),
     ]
 
     const { compareFindings } = await import('./parityComparator')
-    const result = compareFindings(xbenchFindings, toolFindings, 'test-file-id')
+    const result = compareFindings(xbenchFindings, toolFindings, testFileId)
 
     // Substring containment: "brown fox" is in "The quick brown fox jumps over" → match
     expect(result.matched).toHaveLength(1)
@@ -168,6 +171,7 @@ describe('parityComparator', () => {
   })
 
   it('[P1] should match when tool source is substring of xbench source (reverse containment)', async () => {
+    const testFileId = 'b2c3d4e5-f6a7-4b2c-8d3e-4f5a6b7c8d9e'
     const xbenchFindings = [
       buildXbenchFinding({
         sourceText: 'The quick brown fox jumps over the lazy dog',
@@ -180,11 +184,12 @@ describe('parityComparator', () => {
         sourceTextExcerpt: 'brown fox jumps',
         category: 'terminology',
         severity: 'minor',
+        fileId: testFileId,
       }),
     ]
 
     const { compareFindings } = await import('./parityComparator')
-    const result = compareFindings(xbenchFindings, toolFindings, 'test-file-id')
+    const result = compareFindings(xbenchFindings, toolFindings, testFileId)
 
     expect(result.matched).toHaveLength(1)
   })

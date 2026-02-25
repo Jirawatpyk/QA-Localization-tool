@@ -86,11 +86,16 @@ export async function crossFileConsistency(
     if (wordCount < MIN_WORD_COUNT) continue
 
     // M3: Skip segments whose source OR target text contains a glossary term (substring match on both sides)
+    // H1: Iterate Set directly — avoid O(n) array allocation per segment
     const sourceLower = sourceText.toLowerCase()
     const targetLower = (seg.targetText as string).normalize('NFKC').trim().toLowerCase()
-    const matchesGlossary = [...glossaryTermSet].some(
-      (term) => sourceLower.includes(term) || targetLower.includes(term),
-    )
+    let matchesGlossary = false
+    for (const term of glossaryTermSet) {
+      if (sourceLower.includes(term) || targetLower.includes(term)) {
+        matchesGlossary = true
+        break
+      }
+    }
     if (matchesGlossary) continue
 
     const key = sourceText.toLowerCase()
