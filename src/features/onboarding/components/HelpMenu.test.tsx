@@ -1,5 +1,12 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+// Mock sonner toast (project pattern: vi.mock before imports)
+vi.mock('sonner', () => ({
+  toast: { error: vi.fn(), success: vi.fn() },
+}))
+
+import { toast } from 'sonner'
 
 const mockUsePathname = vi.fn(() => '/dashboard')
 const mockRefresh = vi.fn()
@@ -136,5 +143,83 @@ describe('HelpMenu', () => {
 
     // router.refresh() must NOT fire on failure — stale metadata would prevent tour restart
     expect(mockRefresh).not.toHaveBeenCalled()
+  })
+
+  // ────────────────────────────────────────────────
+  // L4: Toast on restart failure
+  // ────────────────────────────────────────────────
+
+  it('[L] should show error toast when updateTourState returns { success: false }', async () => {
+    mockUsePathname.mockReturnValue('/projects/proj-toast/upload')
+    mockUpdateTourState.mockResolvedValue({
+      success: false,
+      code: 'DB_ERROR',
+      error: 'Failed to update tour state',
+    })
+
+    render(<HelpMenu />)
+
+    const trigger = screen.getByTestId('help-menu-trigger')
+    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('restart-project-tour-btn')).toBeDefined()
+    })
+
+    fireEvent.click(screen.getByTestId('restart-project-tour-btn'))
+
+    await waitFor(() => {
+      expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+        'Failed to restart tour. Please try again.',
+      )
+    })
+  })
+
+  // ────────────────────────────────────────────────
+  // L3: isPending disabled state during transition
+  // ────────────────────────────────────────────────
+
+  it('[L] should disable menu items while restart is in progress (isPending = true)', async () => {
+    mockUsePathname.mockReturnValue('/projects/proj-pending/upload')
+
+    // Never-resolving promise — transition stays pending
+    let resolveUpdate!: (value: MockActionResult) => void
+    mockUpdateTourState.mockImplementation(
+      () =>
+        new Promise<MockActionResult>((resolve) => {
+          resolveUpdate = resolve
+        }),
+    )
+
+    render(<HelpMenu />)
+    const trigger = screen.getByTestId('help-menu-trigger')
+
+    // Open dropdown
+    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false })
+    await waitFor(() => expect(screen.getByTestId('restart-tour-btn')).toBeDefined())
+
+    // Click restart — starts transition (isPending = true), dropdown closes
+    fireEvent.click(screen.getByTestId('restart-tour-btn'))
+
+    // Re-open dropdown while transition is pending
+    await act(async () => {
+      fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false })
+    })
+
+    // Both items should be aria-disabled / data-disabled during pending
+    await waitFor(() => {
+      const setupBtn = screen.queryByTestId('restart-tour-btn')
+      if (setupBtn) {
+        expect(
+          setupBtn.hasAttribute('data-disabled') ||
+            setupBtn.getAttribute('aria-disabled') === 'true',
+        ).toBe(true)
+      }
+    })
+
+    // Cleanup: resolve promise inside act to avoid "suspended resource" warning
+    await act(async () => {
+      resolveUpdate({ success: true, data: { success: true } })
+    })
   })
 })

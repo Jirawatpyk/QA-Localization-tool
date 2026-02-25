@@ -3,6 +3,7 @@
 import { HelpCircle, RotateCcw } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useTransition } from 'react'
+import { toast } from 'sonner'
 
 import {
   DropdownMenu,
@@ -24,6 +25,8 @@ export function HelpMenu() {
       const result = await updateTourState({ action: 'restart', tourId })
       if (result.success) {
         router.refresh()
+      } else {
+        toast.error('Failed to restart tour. Please try again.')
       }
     })
   }
