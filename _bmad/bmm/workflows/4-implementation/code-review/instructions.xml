@@ -48,11 +48,28 @@
     <action>Extract ALL Tasks/Subtasks with completion status ([x] vs [ ])</action>
     <action>From Dev Agent Record → File List, compile list of claimed changes</action>
 
+    <!-- ATDD Checklist Cross-Reference -->
+    <action>Extract {{story_id}} from {{story_key}} by taking the first two dash-separated segments (e.g., "2-7-batch-summary" → "2-7")</action>
+    <action>Search for ATDD checklist: _bmad-output/test-artifacts/atdd-checklist-{{story_id}}.md</action>
+    <check if="ATDD checklist exists">
+      <action>Read ATDD checklist and extract:
+        - P0 test count and test IDs
+        - P1 test count and test IDs
+        - AC-to-test scenario mapping
+        - Key failure modes and risks identified by TEA
+      </action>
+      <action>Store ATDD data for cross-referencing during review</action>
+    </check>
+    <check if="ATDD checklist does NOT exist">
+      <action>Flag as MEDIUM finding: "ATDD checklist missing — story was developed without pre-generated acceptance tests"</action>
+    </check>
+
     <action>Create review plan:
       1. **AC Validation**: Verify each AC is actually implemented
       2. **Task Audit**: Verify each [x] task is really done
-      3. **Code Quality**: Security, performance, maintainability
-      4. **Test Quality**: Real tests vs placeholder bullshit
+      3. **ATDD Compliance**: Verify P0+P1 ATDD tests all pass (no remaining `it.skip`)
+      4. **Code Quality**: Security, performance, maintainability
+      5. **Test Quality**: Real tests vs placeholder bullshit — cross-ref ATDD failure modes
     </action>
   </step>
 
@@ -93,6 +110,25 @@
       3. **CRITICAL**: If marked [x] but NOT DONE → CRITICAL finding
       4. Record specific proof (file:line)
     </action>
+
+    <!-- ATDD Compliance Audit -->
+    <check if="ATDD checklist was loaded in Step 2">
+      <action>For EACH ATDD P0 test scenario:
+        1. Find the corresponding test file and test case
+        2. Verify it is NOT `it.skip()` — must be active and passing
+        3. If still skipped → CRITICAL finding: "ATDD P0 test {{test_id}} still skipped"
+      </action>
+      <action>For EACH ATDD P1 test scenario:
+        1. Find the corresponding test file and test case
+        2. Verify it is NOT `it.skip()` — must be active and passing
+        3. If still skipped → HIGH finding: "ATDD P1 test {{test_id}} still skipped"
+      </action>
+      <action>Check ATDD failure modes (from FMA/Pre-mortem) against implementation:
+        - For each CRITICAL failure mode: verify the defensive code exists
+        - For each HIGH failure mode: verify test coverage exists
+      </action>
+      <action>Record ATDD compliance summary: "P0: {{p0_pass}}/{{p0_total}} | P1: {{p1_pass}}/{{p1_total}} | P2: {{p2_pass}}/{{p2_total}}"</action>
+    </check>
 
     <!-- Code Quality Deep Dive -->
     <action>For EACH file in comprehensive review list:

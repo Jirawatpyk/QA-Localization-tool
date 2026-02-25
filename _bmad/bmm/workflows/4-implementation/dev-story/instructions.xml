@@ -134,7 +134,7 @@
     <action if="incomplete task or subtask requirements ambiguous">ASK user to clarify or HALT</action>
   </step>
 
-  <step n="2" goal="Load project context and story information">
+  <step n="2" goal="Load project context, story information, and verify ATDD gate">
     <critical>Load all available context to inform implementation</critical>
 
     <action>Load {project_context} for coding standards and project-wide patterns (if exists)</action>
@@ -142,9 +142,65 @@
     <action>Load comprehensive context from story file's Dev Notes section</action>
     <action>Extract developer guidance from Dev Notes: architecture requirements, previous learnings, technical specifications</action>
     <action>Use enhanced story context to inform implementation decisions and approaches</action>
-    <output>✅ **Context Loaded**
-      Story and project context available for implementation
-    </output>
+
+    <!-- ATDD MANDATORY GATE — Quality-first: ATDD tests MUST exist before dev starts -->
+    <critical>🧪 ATDD GATE: Verify acceptance tests exist BEFORE implementation begins</critical>
+    <action>Extract {{story_id}} from story_key using dash format (e.g., story_key "2-7-batch-summary" → story_id "2-7")</action>
+    <action>Search for ATDD checklist file at: _bmad-output/test-artifacts/atdd-checklist-{{story_id}}.md</action>
+
+    <check if="ATDD checklist file does NOT exist">
+      <output>🚫 **ATDD GATE FAILED** — No acceptance tests found for Story {{story_id}}
+
+        **Required:** `_bmad-output/test-artifacts/atdd-checklist-{{story_id}}.md`
+
+        The ATDD workflow (Test Architect Murat) must be run BEFORE implementation to generate:
+        - Failing acceptance tests (TDD red phase) with `it.skip()` stubs
+        - AC-to-test scenario mapping with P0/P1/P2/P3 priorities
+        - Failure Mode Analysis + Pre-mortem findings
+
+        **Action Required:**
+        1. Run TEA ATDD workflow: `/bmad:tea:testarch-atdd`
+        2. Then re-run `dev-story` to start implementation
+
+        This gate ensures best quality and minimal CR rounds.
+      </output>
+      <action>HALT: "ATDD checklist missing — run TEA ATDD workflow first"</action>
+    </check>
+
+    <check if="ATDD checklist file EXISTS">
+      <action>Read ATDD checklist file and extract from "AC-to-Test Scenario Mapping" tables:
+        - For each test row: test ID (e.g., "1.1"), scenario description, level, and Priority column (P0/P1/P2/P3)
+        - Count totals: {{atdd_p0_count}}, {{atdd_p1_count}}, {{atdd_p2_count}}, {{atdd_p3_count}}, {{atdd_total_count}}
+        - AC coverage: which ACs have at least one P0 or P1 test
+        - Generated test file paths from "Generated Test Files" section
+        - Key risks from "Failure Mode Analysis" and "Pre-mortem Analysis" sections
+      </action>
+      <action>Store extracted data for use in Step 5 (RED phase) and Step 10 (compliance gate)</action>
+      <action>Verify ALL story ACs have at least one P0 or P1 test mapped</action>
+
+      <check if="any AC has ZERO tests mapped">
+        <output>⚠️ **ATDD COVERAGE GAP** — AC(s) without test coverage detected.
+          This may indicate an incomplete ATDD run. Consider re-running ATDD or proceeding with awareness.
+        </output>
+      </check>
+
+      <!-- Verify ATDD test stubs still compile after any schema/type changes since ATDD generation -->
+      <action>Run the test suite on ATDD-generated test files to verify they compile without errors.
+        Stubs with `it.skip()` will be skipped (0 fail expected). Already-activated tests should pass.
+        The goal is to catch import/type errors from schema changes since ATDD was generated.</action>
+      <check if="ATDD test files have compilation errors">
+        <output>⚠️ **ATDD STUBS OUTDATED** — Some ATDD test files have compilation errors.
+          This likely means types or schemas changed since ATDD was generated.
+          Fix the import/type errors in ATDD stubs before proceeding.</output>
+        <action>Fix compilation errors in ATDD test stubs (update imports/types only, do NOT change test logic)</action>
+      </check>
+
+      <output>✅ **Context + ATDD Loaded**
+        Story and project context available for implementation.
+        ATDD checklist: {{atdd_total_count}} tests ({{atdd_p0_count}} P0, {{atdd_p1_count}} P1)
+        Test files: {{atdd_test_files_count}} files with `it.skip()` stubs ready for green phase.
+      </output>
+    </check>
   </step>
 
   <step n="3" goal="Detect review continuation and extract review context">
@@ -244,14 +300,32 @@
       <action>Review the Query Plan for completeness — every DB call in the task must be listed</action>
     </check>
 
-    <action>Plan implementation following red-green-refactor cycle</action>
+    <action>Plan implementation following ATDD-guided red-green-refactor cycle</action>
 
-    <!-- RED PHASE -->
-    <action>Write FAILING tests first for the task/subtask functionality</action>
+    <!-- ATDD-AWARE RED PHASE -->
+    <action>Check ATDD checklist for tests mapped to the current task's AC(s) using the AC-to-Test Scenario Mapping tables</action>
+    <action>Identify which ATDD `it.skip()` test stubs correspond to this task by matching AC number and test IDs</action>
+    <check if="ATDD test stubs exist for this task AND stubs still contain `it.skip()`">
+      <action>Remove `it.skip()` / `.skip` from the relevant ATDD test stubs — these become the RED phase tests</action>
+      <action>If implementation details differ from ATDD assumptions, adapt stubs with these constraints:
+        - MAY update: mock setup, fixture data, import paths, type annotations
+        - MAY update: assertion values to match actual implementation (e.g., different field names)
+        - MUST PRESERVE: the test scenario intent (what is being tested and why)
+        - MUST PRESERVE: the assertion count (do not reduce number of expect() calls)
+        - MUST NOT: delete an ATDD test entirely — if a scenario is no longer applicable, convert to a different test for the same AC
+      </action>
+      <action>Write ADDITIONAL tests if the task requires coverage beyond what ATDD generated</action>
+    </check>
+    <check if="ATDD test stubs exist but `it.skip()` already removed (review continuation or previous task activated them)">
+      <action>Skip ATDD activation — stubs were already activated in a previous pass. Proceed with standard TDD for any remaining gaps.</action>
+    </check>
+    <check if="no ATDD test stubs for this task">
+      <action>Write FAILING tests first for the task/subtask functionality (standard TDD RED phase)</action>
+    </check>
     <action>Confirm tests fail before implementation - this validates test correctness</action>
 
     <!-- GREEN PHASE -->
-    <action>Implement MINIMAL code to make tests pass</action>
+    <action>Implement MINIMAL code to make tests pass (both ATDD and any additional tests)</action>
     <action>Run tests to confirm they now pass</action>
     <action>Handle error conditions and edge cases as specified in task/subtask</action>
 
@@ -278,11 +352,16 @@
     <critical>Do NOT propose to pause for review until Step 9 completion gates are satisfied</critical>
   </step>
 
-  <step n="6" goal="Author comprehensive tests">
-    <action>Create unit tests for business logic and core functionality introduced/changed by the task</action>
-    <action>Add integration tests for component interactions specified in story requirements</action>
-    <action>Include end-to-end tests for critical user flows when story requirements demand them</action>
-    <action>Cover edge cases and error handling scenarios identified in story Dev Notes</action>
+  <step n="6" goal="Verify test coverage and author supplementary tests">
+    <action>Review ATDD checklist coverage for the current task — which P0/P1/P2 tests were activated in Step 5?</action>
+    <action>Identify gaps: are there edge cases, error paths, or integration scenarios NOT covered by ATDD stubs?</action>
+    <action>Write SUPPLEMENTARY tests ONLY for gaps not already covered by activated ATDD tests:
+      - Unit tests for business logic edge cases beyond ATDD scenarios
+      - Integration tests for component interactions if ATDD did not generate them
+      - End-to-end tests for critical user flows when story requirements demand them
+      - Error handling scenarios identified in story Dev Notes or ATDD Failure Mode Analysis
+    </action>
+    <action>Do NOT duplicate tests already written via ATDD activation in Step 5</action>
   </step>
 
   <step n="7" goal="Run validations and tests">
@@ -404,7 +483,6 @@
     <action>Run the full regression suite (do not skip)</action>
     <action>Confirm File List includes every changed file</action>
     <action>Execute enhanced definition-of-done validation</action>
-    <action>Update the story Status to: "review"</action>
 
     <!-- Enhanced Definition of Done Validation -->
     <action>Validate definition-of-done checklist with essential requirements:
@@ -420,6 +498,43 @@
       - Change Log includes summary of changes
       - Only permitted story sections were modified
     </action>
+
+    <!-- ATDD Compliance Gate — verify BEFORE setting status to "review" -->
+    <critical>🧪 ATDD COMPLIANCE: All P0+P1 ATDD tests MUST pass before story completion</critical>
+    <action>Re-read the ATDD checklist at _bmad-output/test-artifacts/atdd-checklist-{{story_id}}.md</action>
+    <action>Cross-reference ATDD test coverage using this method:
+      1. From the ATDD checklist "AC-to-Test Scenario Mapping" tables, build a list of all test IDs with their Priority (P0/P1/P2/P3)
+         Example: test ID "1.1" = "getBatchSummary returns correct ActionResult shape" = P0
+      2. For each ATDD-generated test file (listed in "Generated Test Files" section):
+         a. Search the file for remaining `it.skip(` or `test.skip(` — each is an un-activated test
+         b. Match the test description string against the ATDD checklist scenario description
+         c. Determine the priority of each remaining skip by matching to checklist table
+      3. Count results:
+         - {{p0_skip}}: P0 tests still skipped or failing
+         - {{p1_skip}}: P1 tests still skipped or failing
+         - {{p2_skip}}: P2 tests still skipped (acceptable)
+         - {{p0_passing}}: P0 tests active and passing
+         - {{p1_passing}}: P1 tests active and passing
+    </action>
+
+    <check if="{{p0_skip}} > 0 (any P0 test is still `it.skip()` or FAILING)">
+      <action>HALT: "ATDD P0 tests incomplete — {{p0_skip}} P0 tests not passing. Fix before marking story complete."</action>
+    </check>
+
+    <check if="{{p1_skip}} > 0 (any P1 test is still `it.skip()` or FAILING)">
+      <action>HALT: "ATDD P1 tests incomplete — {{p1_skip}} P1 tests not passing. Fix before marking story complete."</action>
+    </check>
+
+    <check if="P2 tests remain as `it.skip()`">
+      <action>Record in Dev Agent Record: "ATDD P2 coverage: {{p2_passing}}/{{p2_total}} passing ({{p2_skip}} skipped — accepted as tech debt)"</action>
+    </check>
+
+    <action>Record in Dev Agent Record → Completion Notes:
+      "ATDD Compliance: P0 {{p0_passing}}/{{atdd_p0_count}} ✅ | P1 {{p1_passing}}/{{atdd_p1_count}} ✅ | P2 {{p2_passing}}/{{p2_total}} | P3 {{p3_status}}"
+    </action>
+
+    <!-- ONLY set status to "review" AFTER all gates pass (DoD + ATDD compliance) -->
+    <action>Update the story Status to: "review"</action>
 
     <!-- Mark story ready for review - sprint status conditional -->
     <check if="{sprint_status} file exists AND {{current_sprint_status}} != 'no-sprint-tracking'">

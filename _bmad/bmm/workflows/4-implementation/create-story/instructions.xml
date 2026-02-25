@@ -350,11 +350,14 @@
       - File: {{story_file}}
       - Status: ready-for-dev
 
-      **Next Steps:**
+      **Next Steps (MANDATORY ORDER):**
       1. Review the comprehensive story in {{story_file}}
-      2. Run dev agents `dev-story` for optimized implementation
-      3. Run `code-review` when complete (auto-marks done)
-      4. Optional: If Test Architect module installed, run `/bmad:tea:automate` after `dev-story` to generate guardrail tests
+      2. **🧪 Run TEA ATDD workflow** (`/bmad:tea:testarch-atdd`) — invokes Test Architect (Murat) to generate failing acceptance tests BEFORE implementation
+         → Output: `_bmad-output/test-artifacts/atdd-checklist-{{story_id}}.md` + test stubs with `it.skip()`
+         → Includes: Failure Mode Analysis, Pre-mortem, AC-to-test mapping with P0/P1/P2/P3 priorities
+         → This is MANDATORY — `dev-story` will HALT if ATDD checklist is missing
+      3. Run dev agents `dev-story` for optimized implementation (ATDD tests guide the dev)
+      4. Run `code-review` when complete (auto-marks done)
 
       **The developer now has everything needed for flawless implementation!**
     </output>
