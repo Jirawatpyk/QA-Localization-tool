@@ -1,6 +1,8 @@
 import { test, expect, type Page } from '@playwright/test'
 import path from 'node:path'
 
+import { setUserMetadata } from './helpers/supabase-admin'
+
 /**
  * Story 1.4 — Glossary Import & Management (E2E)
  *
@@ -33,6 +35,12 @@ test.describe.serial('Story 1.4 — Glossary Import & Management', () => {
     await page.getByLabel('Password').fill(TEST_PASSWORD)
     await page.getByRole('button', { name: 'Create account' }).click()
     await page.waitForURL('**/dashboard', { timeout: 15000 })
+
+    // Suppress both onboarding tours so driver.js popover doesn't conflict with dialogs
+    await setUserMetadata(TEST_EMAIL, {
+      setup_tour_completed: '2026-01-01T00:00:00Z',
+      project_tour_completed: '2026-01-01T00:00:00Z',
+    })
 
     // Create project (EN → TH)
     await page.goto('/projects')

@@ -27,19 +27,21 @@ const PROJECT_TOUR_EMAIL = process.env.E2E_PROJECT_TOUR_EMAIL || 'e2e-projtour28
 const PROJECT_TOUR_RETURNING_EMAIL =
   process.env.E2E_PROJECT_TOUR_RETURNING_EMAIL || 'e2e-projtour-return28@test.local'
 
-// Helper: login and navigate to a project page
-async function loginAndGoToProject(page: Page, email: string, password: string) {
+// Module-level project IDs set by [setup] tests, shared across serial describe blocks
+let ac1ProjectId: string
+let ac2ProjectId: string
+
+// Helper: login and navigate directly to a project page by ID
+async function loginAndGoToProject(page: Page, email: string, password: string, projectId: string) {
   await page.goto('/login')
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill(password)
   await page.getByRole('button', { name: 'Sign in' }).click()
   await page.waitForURL('**/dashboard', { timeout: 15000 })
 
-  // Navigate to first available project (or create one if needed)
-  // The user should have at least one project for this test
-  const projectLink = page.locator('a[href*="/projects/"]').first()
-  await projectLink.click()
-  await page.waitForURL('**/projects/**', { timeout: 10000 })
+  // Navigate directly to the project URL — avoids dashboard link flakiness
+  await page.goto(`/projects/${projectId}/upload`)
+  await page.waitForURL(`**/projects/${projectId}/**`, { timeout: 10000 })
 }
 
 // AC#1 — First-time project tour activation
@@ -48,10 +50,10 @@ test.describe.serial('Project Tour — AC#1: First-time user', () => {
     test.setTimeout(60000)
     await signupOrLogin(page, PROJECT_TOUR_EMAIL, TEST_PASSWORD, 'Project Tour User')
 
-    // Create a project so loginAndGoToProject can find it on the dashboard
+    // Create a project and store its ID for direct navigation
     const userInfo = await getUserInfo(PROJECT_TOUR_EMAIL)
     if (userInfo) {
-      await createTestProject(userInfo.tenantId, 'E2E Project Tour Test')
+      ac1ProjectId = await createTestProject(userInfo.tenantId, 'E2E Project Tour Test')
     }
 
     // Set setup_tour_completed so the setup tour doesn't interfere
@@ -64,7 +66,7 @@ test.describe.serial('Project Tour — AC#1: First-time user', () => {
   test('[P1] should show driver.js overlay when entering a project for the first time', async ({
     page,
   }) => {
-    await loginAndGoToProject(page, PROJECT_TOUR_EMAIL, TEST_PASSWORD)
+    await loginAndGoToProject(page, PROJECT_TOUR_EMAIL, TEST_PASSWORD, ac1ProjectId)
     await page.waitForLoadState('networkidle')
 
     // driver.js overlay must appear
@@ -73,7 +75,7 @@ test.describe.serial('Project Tour — AC#1: First-time user', () => {
   })
 
   test('[P1] should show "Import Glossary" as the first tour step title', async ({ page }) => {
-    await loginAndGoToProject(page, PROJECT_TOUR_EMAIL, TEST_PASSWORD)
+    await loginAndGoToProject(page, PROJECT_TOUR_EMAIL, TEST_PASSWORD, ac1ProjectId)
     await page.waitForLoadState('networkidle')
 
     const popoverTitle = page.locator('.driver-popover-title')
@@ -84,7 +86,7 @@ test.describe.serial('Project Tour — AC#1: First-time user', () => {
   test('[P2] should advance to step 2 ("Upload Files") when Next button is clicked', async ({
     page,
   }) => {
-    await loginAndGoToProject(page, PROJECT_TOUR_EMAIL, TEST_PASSWORD)
+    await loginAndGoToProject(page, PROJECT_TOUR_EMAIL, TEST_PASSWORD, ac1ProjectId)
     await page.waitForLoadState('networkidle')
 
     const driverPopover = page.locator('.driver-popover')
@@ -105,7 +107,7 @@ test.describe.serial('Project Tour — AC#1: First-time user', () => {
       project_tour_completed: '2026-01-01T00:00:00Z',
     })
 
-    await loginAndGoToProject(page, PROJECT_TOUR_EMAIL, TEST_PASSWORD)
+    await loginAndGoToProject(page, PROJECT_TOUR_EMAIL, TEST_PASSWORD, ac1ProjectId)
     await page.waitForLoadState('networkidle')
 
     // Give tour time to appear if it's broken
@@ -120,7 +122,7 @@ test.describe.serial('Project Tour — AC#1: First-time user', () => {
       setup_tour_completed: '2026-01-01T00:00:00Z',
     })
 
-    await loginAndGoToProject(page, PROJECT_TOUR_EMAIL, TEST_PASSWORD)
+    await loginAndGoToProject(page, PROJECT_TOUR_EMAIL, TEST_PASSWORD, ac1ProjectId)
     await page.waitForLoadState('networkidle')
 
     await expect(page.locator('.driver-popover')).toBeVisible({ timeout: 10000 })
@@ -141,10 +143,10 @@ test.describe.serial('Project Tour — AC#2: Returning user resume', () => {
     test.setTimeout(60000)
     await signupOrLogin(page, PROJECT_TOUR_RETURNING_EMAIL, TEST_PASSWORD, 'Project Tour Returning')
 
-    // Create a project so loginAndGoToProject can find it on the dashboard
+    // Create a project and store its ID for direct navigation
     const userInfo = await getUserInfo(PROJECT_TOUR_RETURNING_EMAIL)
     if (userInfo) {
-      await createTestProject(userInfo.tenantId, 'E2E Project Tour Return Test')
+      ac2ProjectId = await createTestProject(userInfo.tenantId, 'E2E Project Tour Return Test')
     }
 
     // Set setup tour as completed + project tour dismissed at step 2
@@ -155,7 +157,7 @@ test.describe.serial('Project Tour — AC#2: Returning user resume', () => {
   })
 
   test('[P1] should resume tour at step 2 for user who dismissed at step 2', async ({ page }) => {
-    await loginAndGoToProject(page, PROJECT_TOUR_RETURNING_EMAIL, TEST_PASSWORD)
+    await loginAndGoToProject(page, PROJECT_TOUR_RETURNING_EMAIL, TEST_PASSWORD, ac2ProjectId)
     await page.waitForLoadState('networkidle')
 
     const driverPopover = page.locator('.driver-popover')
@@ -172,7 +174,8 @@ test.describe.serial('Project Tour — AC#2: Returning user resume', () => {
 })
 
 // AC#3 — Mobile suppression
-test.describe('Project Tour — AC#3: Mobile suppression', () => {
+// serial: depends on PROJECT_TOUR_EMAIL user and ac1ProjectId created in AC#1 [setup]
+test.describe.serial('Project Tour — AC#3: Mobile suppression', () => {
   test('[P1] should NOT show project tour on mobile viewport (< 768px)', async ({ page }) => {
     // Set viewport to mobile
     await page.setViewportSize({ width: 375, height: 667 })
@@ -182,16 +185,8 @@ test.describe('Project Tour — AC#3: Mobile suppression', () => {
       setup_tour_completed: '2026-01-01T00:00:00Z',
     })
 
-    await page.goto('/login')
-    await page.getByLabel('Email').fill(PROJECT_TOUR_EMAIL)
-    await page.getByLabel('Password').fill(TEST_PASSWORD)
-    await page.getByRole('button', { name: 'Sign in' }).click()
-    await page.waitForURL('**/dashboard', { timeout: 15000 })
-
-    // Navigate to project
-    const projectLink = page.locator('a[href*="/projects/"]').first()
-    await projectLink.click()
-    await page.waitForURL('**/projects/**', { timeout: 10000 })
+    // Navigate directly to the project — avoids dashboard link flakiness on mobile
+    await loginAndGoToProject(page, PROJECT_TOUR_EMAIL, TEST_PASSWORD, ac1ProjectId)
     await page.waitForLoadState('networkidle')
 
     // Give tour time to appear if suppression is broken
@@ -212,7 +207,7 @@ test.describe('Project Tour — Task 5: Restart from Help menu', () => {
       project_tour_completed: '2026-01-01T00:00:00Z',
     })
 
-    await loginAndGoToProject(page, PROJECT_TOUR_EMAIL, TEST_PASSWORD)
+    await loginAndGoToProject(page, PROJECT_TOUR_EMAIL, TEST_PASSWORD, ac1ProjectId)
     await page.waitForLoadState('networkidle')
 
     // Open help menu
@@ -234,7 +229,7 @@ test.describe('Project Tour — Task 5: Restart from Help menu', () => {
       project_tour_completed: '2026-01-01T00:00:00Z',
     })
 
-    await loginAndGoToProject(page, PROJECT_TOUR_EMAIL, TEST_PASSWORD)
+    await loginAndGoToProject(page, PROJECT_TOUR_EMAIL, TEST_PASSWORD, ac1ProjectId)
     await page.waitForLoadState('networkidle')
 
     // Open help menu and click Restart Project Tour

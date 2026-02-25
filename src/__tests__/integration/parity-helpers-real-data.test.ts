@@ -368,6 +368,10 @@ describe.skipIf(!hasGoldenCorpus())('Parity Helpers — Real Data', () => {
       expect(totalMatched + totalXbenchOnly).toBe(totalXbench)
     })
 
+    it('should have matched + toolOnly = total engine across all files', () => {
+      expect(totalMatched + totalToolOnly).toBe(totalEngine)
+    })
+
     it('should have match rate > 0% (some findings overlap)', () => {
       const matchRate = totalXbench > 0 ? totalMatched / totalXbench : 0
       expect(matchRate).toBeGreaterThan(0)
