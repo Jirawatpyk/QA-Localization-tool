@@ -160,4 +160,100 @@ describe('updateTourState action', () => {
       expect(result.error).toMatch(/not authenticated/i)
     }
   })
+
+  // ────────────────────────────────────────────────
+  // ATDD RED PHASE — Story 2.8: tourId 'project' support
+  // Tests skipped until type bug fix (Task 1: add 'project_tour_completed' to Pick)
+  // AC Coverage: AC#1 (Task 1 — fix tourCompletedKey type)
+  // ────────────────────────────────────────────────
+
+  it('[P0] should set project_tour_completed to ISO 8601 timestamp when project tour completed', async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      id: 'usr-test-001',
+      email: 'qa@tenant-a.test',
+      tenantId: 'ten-a-001',
+      role: 'qa_reviewer',
+      displayName: 'QA Reviewer',
+      metadata: null,
+    })
+
+    const { updateTourState } = await import('@/features/onboarding/actions/updateTourState.action')
+    const result = await updateTourState({ action: 'complete', tourId: 'project' })
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data).toEqual({ success: true })
+    }
+
+    // Verify DB update was called with project_tour_completed ISO 8601 timestamp
+    expect(mockUpdate).toHaveBeenCalled()
+    const setCall = mockSet.mock.calls[0]?.[0] as
+      | {
+          metadata?: { project_tour_completed?: string }
+        }
+      | undefined
+
+    expect(setCall?.metadata?.project_tour_completed).toMatch(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/,
+    )
+  })
+
+  it('[P1] should set dismissed_at_step.project to 1-based step number when project tour dismissed', async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      id: 'usr-test-001',
+      email: 'qa@tenant-a.test',
+      tenantId: 'ten-a-001',
+      role: 'qa_reviewer',
+      displayName: 'QA Reviewer',
+      metadata: null,
+    })
+
+    const { updateTourState } = await import('@/features/onboarding/actions/updateTourState.action')
+    const result = await updateTourState({
+      action: 'dismiss',
+      tourId: 'project',
+      dismissedAtStep: 1,
+    })
+
+    expect(result.success).toBe(true)
+
+    const setCall = mockSet.mock.calls[0]?.[0] as
+      | {
+          metadata?: { dismissed_at_step?: { project?: number } }
+        }
+      | undefined
+
+    expect(setCall?.metadata?.dismissed_at_step?.project).toBe(1)
+  })
+
+  it('[P1] should clear project_tour_completed and dismissed_at_step.project when project tour restarted', async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      id: 'usr-test-001',
+      email: 'qa@tenant-a.test',
+      tenantId: 'ten-a-001',
+      role: 'qa_reviewer',
+      displayName: 'QA Reviewer',
+      metadata: {
+        project_tour_completed: '2026-02-20T10:00:00.000Z',
+        dismissed_at_step: { project: 2 },
+      },
+    })
+
+    const { updateTourState } = await import('@/features/onboarding/actions/updateTourState.action')
+    const result = await updateTourState({ action: 'restart', tourId: 'project' })
+
+    expect(result.success).toBe(true)
+
+    const setCall = mockSet.mock.calls[0]?.[0] as
+      | {
+          metadata?: {
+            project_tour_completed?: string | null
+            dismissed_at_step?: { project?: number | null }
+          }
+        }
+      | undefined
+
+    expect(setCall?.metadata?.project_tour_completed).toBeNull()
+    expect(setCall?.metadata?.dismissed_at_step?.project ?? null).toBeNull()
+  })
 })

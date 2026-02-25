@@ -28,7 +28,7 @@ export async function updateTourState(input: unknown): Promise<ActionResult<{ su
 
   const tourCompletedKey = `${tourId}_tour_completed` as keyof Pick<
     UserMetadata,
-    'setup_tour_completed' | 'review_tour_completed'
+    'setup_tour_completed' | 'review_tour_completed' | 'project_tour_completed'
   >
 
   if (action === 'complete') {

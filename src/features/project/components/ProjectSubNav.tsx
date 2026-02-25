@@ -10,12 +10,20 @@ type ProjectSubNavProps = {
 }
 
 const TABS = [
-  { label: 'Files', href: (id: string) => `/projects/${id}/upload` },
-  { label: 'Batches', href: (id: string) => `/projects/${id}/batches` },
-  { label: 'History', href: (id: string) => `/projects/${id}/files` },
-  { label: 'Parity', href: (id: string) => `/projects/${id}/parity` },
-  { label: 'Settings', href: (id: string) => `/projects/${id}/settings` },
-  { label: 'Glossary', href: (id: string) => `/projects/${id}/glossary` },
+  {
+    label: 'Files',
+    href: (id: string) => `/projects/${id}/upload`,
+    dataTour: 'project-files' as const,
+  },
+  { label: 'Batches', href: (id: string) => `/projects/${id}/batches`, dataTour: undefined },
+  { label: 'History', href: (id: string) => `/projects/${id}/files`, dataTour: undefined },
+  { label: 'Parity', href: (id: string) => `/projects/${id}/parity`, dataTour: undefined },
+  { label: 'Settings', href: (id: string) => `/projects/${id}/settings`, dataTour: undefined },
+  {
+    label: 'Glossary',
+    href: (id: string) => `/projects/${id}/glossary`,
+    dataTour: 'project-glossary' as const,
+  },
 ] as const
 
 export function ProjectSubNav({ projectId }: ProjectSubNavProps) {
@@ -34,6 +42,7 @@ export function ProjectSubNav({ projectId }: ProjectSubNavProps) {
           <Link
             key={tab.label}
             href={href}
+            data-tour={tab.dataTour}
             className={cn(
               'px-3 py-2 text-sm font-medium transition-colors',
               isActive

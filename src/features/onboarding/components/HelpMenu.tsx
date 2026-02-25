@@ -1,7 +1,7 @@
 'use client'
 
 import { HelpCircle, RotateCcw } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useTransition } from 'react'
 
 import {
@@ -11,14 +11,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { updateTourState } from '@/features/onboarding/actions/updateTourState.action'
+import type { TourId } from '@/features/onboarding/types'
 
 export function HelpMenu() {
   const router = useRouter()
+  const pathname = usePathname()
   const [isPending, startTransition] = useTransition()
+  const isProjectRoute = pathname.startsWith('/projects/')
 
-  function handleRestartTour() {
+  function handleRestartTour(tourId: TourId) {
     startTransition(async () => {
-      await updateTourState({ action: 'restart', tourId: 'setup' })
+      await updateTourState({ action: 'restart', tourId })
       router.refresh()
     })
   }
@@ -37,13 +40,23 @@ export function HelpMenu() {
 
       <DropdownMenuContent align="end">
         <DropdownMenuItem
-          onClick={handleRestartTour}
+          onClick={() => handleRestartTour('setup')}
           disabled={isPending}
           data-testid="restart-tour-btn"
         >
           <RotateCcw className="mr-2 h-4 w-4" />
           Restart Tour
         </DropdownMenuItem>
+        {isProjectRoute && (
+          <DropdownMenuItem
+            onClick={() => handleRestartTour('project')}
+            disabled={isPending}
+            data-testid="restart-project-tour-btn"
+          >
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Restart Project Tour
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )
