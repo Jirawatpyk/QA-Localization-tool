@@ -208,13 +208,10 @@ describe('HelpMenu', () => {
 
     // Both items should be aria-disabled / data-disabled during pending
     await waitFor(() => {
-      const setupBtn = screen.queryByTestId('restart-tour-btn')
-      if (setupBtn) {
-        expect(
-          setupBtn.hasAttribute('data-disabled') ||
-            setupBtn.getAttribute('aria-disabled') === 'true',
-        ).toBe(true)
-      }
+      const setupBtn = screen.getByTestId('restart-tour-btn')
+      expect(
+        setupBtn.hasAttribute('data-disabled') || setupBtn.getAttribute('aria-disabled') === 'true',
+      ).toBe(true)
     })
 
     // Cleanup: resolve promise inside act to avoid "suspended resource" warning

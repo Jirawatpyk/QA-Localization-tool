@@ -9,8 +9,9 @@ vi.mock('@/lib/auth/getCurrentUser', () => ({
   getCurrentUser: vi.fn(),
 }))
 
-// Drizzle chain mock: db.update(table).set(values).where(condition)
-const mockWhere = vi.fn().mockResolvedValue(undefined)
+// Drizzle chain mock: db.update(table).set(values).where(condition).returning(cols)
+const mockReturning = vi.fn().mockResolvedValue([{ id: 'usr-test-001' }])
+const mockWhere = vi.fn((..._args: unknown[]) => ({ returning: mockReturning }))
 const mockSet = vi.fn((..._args: unknown[]) => ({ where: mockWhere }))
 const mockUpdate = vi.fn((..._args: unknown[]) => ({ set: mockSet }))
 
@@ -30,9 +31,10 @@ describe('updateTourState action', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     // Restore chain after reset
+    mockReturning.mockResolvedValue([{ id: 'usr-test-001' }])
+    mockWhere.mockReturnValue({ returning: mockReturning })
     mockSet.mockReturnValue({ where: mockWhere })
     mockUpdate.mockReturnValue({ set: mockSet })
-    mockWhere.mockResolvedValue(undefined)
   })
 
   it('[P1] should set setup_tour_completed to ISO 8601 timestamp when tour completed', async () => {
@@ -294,7 +296,7 @@ describe('updateTourState action', () => {
       displayName: 'QA Reviewer',
       metadata: null,
     })
-    mockWhere.mockRejectedValueOnce(new Error('connection refused'))
+    mockReturning.mockRejectedValueOnce(new Error('connection refused'))
 
     const { updateTourState } = await import('@/features/onboarding/actions/updateTourState.action')
     const result = await updateTourState({ action: 'complete', tourId: 'project' })
@@ -303,6 +305,28 @@ describe('updateTourState action', () => {
     if (!result.success) {
       expect(result.error).toBeDefined()
     }
+  })
+
+  it('[P1] should return NOT_FOUND when DB update affects 0 rows (user deleted after auth check)', async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      id: 'usr-test-001',
+      email: 'qa@tenant-a.test',
+      tenantId: 'ten-a-001',
+      role: 'qa_reviewer',
+      displayName: 'QA Reviewer',
+      metadata: null,
+    })
+    mockReturning.mockResolvedValueOnce([]) // 0 rows updated — user not found
+
+    const { updateTourState } = await import('@/features/onboarding/actions/updateTourState.action')
+    const result = await updateTourState({ action: 'complete', tourId: 'project' })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('NOT_FOUND')
+    }
+    // DB was called but returned 0 rows
+    expect(mockUpdate).toHaveBeenCalled()
   })
 
   it('[P1] should return VALIDATION_ERROR when dismiss is called without dismissedAtStep for project tour', async () => {

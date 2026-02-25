@@ -76,10 +76,12 @@ export function ProjectTour({ userId, userMetadata }: ProjectTourProps) {
         onCloseClick: () => {
           dismissedRef.current = true
           const currentIndex = driverObj.getActiveIndex() ?? 0
-          void updateTourState({
+          updateTourState({
             action: 'dismiss',
             tourId: 'project',
             dismissedAtStep: currentIndex + 1,
+          }).catch(() => {
+            // Non-critical: dismiss state not persisted, tour will re-show next visit
           })
           driverObj.destroy()
         },
@@ -88,7 +90,9 @@ export function ProjectTour({ userId, userMetadata }: ProjectTourProps) {
           if (dismissedRef.current || cancelled) return
           const activeIndex = driverObj.getActiveIndex()
           if (activeIndex === LAST_STEP_INDEX) {
-            void updateTourState({ action: 'complete', tourId: 'project' })
+            updateTourState({ action: 'complete', tourId: 'project' }).catch(() => {
+              // Non-critical: complete state not persisted, tour will re-show next visit
+            })
           }
         },
       })

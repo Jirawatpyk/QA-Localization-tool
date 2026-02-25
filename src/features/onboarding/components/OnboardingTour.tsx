@@ -44,6 +44,12 @@ export function OnboardingTour({ userId, userMetadata }: OnboardingTourProps) {
 
   useEffect(() => {
     if (userMetadata?.setup_tour_completed) return
+    // Reset dismissedRef when a restart has cleared dismissed_at_step.
+    // After router.refresh() from HelpMenu restart, userMetadata reflects the
+    // server-cleared state (dismissed_at_step.setup = null/undefined).
+    if (dismissedRef.current && !userMetadata?.dismissed_at_step?.setup) {
+      dismissedRef.current = false
+    }
     if (dismissedRef.current) return
     if (typeof window !== 'undefined' && window.innerWidth < 768) return
 
@@ -69,10 +75,12 @@ export function OnboardingTour({ userId, userMetadata }: OnboardingTourProps) {
         onCloseClick: () => {
           dismissedRef.current = true
           const currentIndex = driverObj.getActiveIndex() ?? 0
-          void updateTourState({
+          updateTourState({
             action: 'dismiss',
             tourId: 'setup',
             dismissedAtStep: currentIndex + 1,
+          }).catch(() => {
+            // Non-critical: dismiss state not persisted, tour will re-show next visit
           })
           driverObj.destroy()
         },
@@ -81,7 +89,9 @@ export function OnboardingTour({ userId, userMetadata }: OnboardingTourProps) {
           if (dismissedRef.current || cancelled) return
           const activeIndex = driverObj.getActiveIndex()
           if (activeIndex === LAST_STEP_INDEX) {
-            void updateTourState({ action: 'complete', tourId: 'setup' })
+            updateTourState({ action: 'complete', tourId: 'setup' }).catch(() => {
+              // Non-critical: complete state not persisted, tour will re-show next visit
+            })
           }
         },
       })

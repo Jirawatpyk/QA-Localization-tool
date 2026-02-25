@@ -56,10 +56,15 @@ export async function updateTourState(input: unknown): Promise<ActionResult<{ su
   }
 
   try {
-    await db
+    const rows = await db
       .update(users)
       .set({ metadata: newMetadata })
       .where(and(eq(users.id, currentUser.id), withTenant(users.tenantId, currentUser.tenantId)))
+      .returning({ id: users.id })
+
+    if (rows.length === 0) {
+      return { success: false, code: 'NOT_FOUND', error: 'User not found' }
+    }
   } catch {
     return { success: false, code: 'DB_ERROR', error: 'Failed to update tour state' }
   }

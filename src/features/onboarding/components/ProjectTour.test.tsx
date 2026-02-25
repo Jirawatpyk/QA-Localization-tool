@@ -35,6 +35,8 @@ vi.mock('@/features/onboarding/actions/updateTourState.action', () => ({
 
 import { updateTourState } from '@/features/onboarding/actions/updateTourState.action'
 
+import { ProjectTour } from './ProjectTour'
+
 describe('ProjectTour', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -51,7 +53,6 @@ describe('ProjectTour', () => {
   // ────────────────────────────────────────────────
 
   it('[P0] should not start tour if project_tour_completed is set', async () => {
-    const { ProjectTour } = await import('./ProjectTour')
     render(
       <ProjectTour
         userId="usr-1"
@@ -65,7 +66,6 @@ describe('ProjectTour', () => {
   })
 
   it('[P1] should start tour from step 0 for first-time user (metadata null)', async () => {
-    const { ProjectTour } = await import('./ProjectTour')
     render(<ProjectTour userId="usr-1" userMetadata={null} />)
 
     await vi.waitFor(() => {
@@ -85,7 +85,6 @@ describe('ProjectTour', () => {
   })
 
   it('[P1] should start tour from step 0 for first-time user (metadata empty object)', async () => {
-    const { ProjectTour } = await import('./ProjectTour')
     render(<ProjectTour userId="usr-1" userMetadata={{}} />)
 
     await vi.waitFor(() => {
@@ -95,7 +94,6 @@ describe('ProjectTour', () => {
   })
 
   it('[P0] should set exactly 2 tour steps (Glossary + Files)', async () => {
-    const { ProjectTour } = await import('./ProjectTour')
     render(<ProjectTour userId="usr-1" userMetadata={null} />)
 
     await vi.waitFor(() => {
@@ -111,7 +109,6 @@ describe('ProjectTour', () => {
   })
 
   it('[P1] should call updateTourState dismiss with tourId "project" when onCloseClick fires (step 2)', async () => {
-    const { ProjectTour } = await import('./ProjectTour')
     render(<ProjectTour userId="usr-1" userMetadata={null} />)
 
     await vi.waitFor(() => {
@@ -133,7 +130,6 @@ describe('ProjectTour', () => {
   })
 
   it('[P1] should call updateTourState dismiss with dismissedAtStep: 1 when X clicked on first step', async () => {
-    const { ProjectTour } = await import('./ProjectTour')
     render(<ProjectTour userId="usr-1" userMetadata={null} />)
 
     await vi.waitFor(() => {
@@ -154,7 +150,6 @@ describe('ProjectTour', () => {
   })
 
   it('[P1] should fire complete via onDestroyed when tour finishes naturally on last step', async () => {
-    const { ProjectTour } = await import('./ProjectTour')
     render(<ProjectTour userId="usr-1" userMetadata={null} />)
 
     await vi.waitFor(() => {
@@ -174,7 +169,6 @@ describe('ProjectTour', () => {
   })
 
   it('[P1] should NOT fire complete when X is clicked on last step (dismiss only)', async () => {
-    const { ProjectTour } = await import('./ProjectTour')
     render(<ProjectTour userId="usr-1" userMetadata={null} />)
 
     await vi.waitFor(() => {
@@ -212,7 +206,6 @@ describe('ProjectTour', () => {
   // ────────────────────────────────────────────────
 
   it('[P1] should resume tour at correct step for returning user (dismissed_at_step.project = 2)', async () => {
-    const { ProjectTour } = await import('./ProjectTour')
     render(<ProjectTour userId="usr-1" userMetadata={{ dismissed_at_step: { project: 2 } }} />)
 
     await vi.waitFor(() => {
@@ -222,7 +215,6 @@ describe('ProjectTour', () => {
   })
 
   it('[P1] should clamp resumeStep to LAST_STEP_INDEX when dismissed_at_step exceeds step count', async () => {
-    const { ProjectTour } = await import('./ProjectTour')
     // User dismissed at step 5 (from hypothetical future longer tour) but now tour has only 2 steps
     render(<ProjectTour userId="usr-1" userMetadata={{ dismissed_at_step: { project: 5 } }} />)
 
@@ -233,7 +225,6 @@ describe('ProjectTour', () => {
   })
 
   it('[P2] should not re-init tour after dismiss when metadata still has dismissed_at_step set', async () => {
-    const { ProjectTour } = await import('./ProjectTour')
     const { rerender } = render(<ProjectTour userId="usr-1" userMetadata={null} />)
 
     await vi.waitFor(() => {
@@ -260,7 +251,6 @@ describe('ProjectTour', () => {
   })
 
   it('[P1] should re-init tour after restart clears dismissed_at_step in same session', async () => {
-    const { ProjectTour } = await import('./ProjectTour')
     const { rerender } = render(<ProjectTour userId="usr-1" userMetadata={null} />)
 
     await vi.waitFor(() => {
@@ -295,7 +285,6 @@ describe('ProjectTour', () => {
   it('[P1] should not start tour on mobile viewport (< 768px)', async () => {
     Object.defineProperty(window, 'innerWidth', { value: 600, writable: true, configurable: true })
 
-    const { ProjectTour } = await import('./ProjectTour')
     render(<ProjectTour userId="usr-1" userMetadata={null} />)
 
     await vi.waitFor(() => {
@@ -308,7 +297,6 @@ describe('ProjectTour', () => {
   // ────────────────────────────────────────────────
 
   it('[P2] should destroy driver on unmount', async () => {
-    const { ProjectTour } = await import('./ProjectTour')
     const { unmount } = render(<ProjectTour userId="usr-1" userMetadata={null} />)
 
     await vi.waitFor(() => {
@@ -321,7 +309,6 @@ describe('ProjectTour', () => {
   })
 
   it('[P2] should NOT fire complete via onDestroyed on cleanup unmount', async () => {
-    const { ProjectTour } = await import('./ProjectTour')
     const { unmount } = render(<ProjectTour userId="usr-1" userMetadata={null} />)
 
     await vi.waitFor(() => {
@@ -345,7 +332,6 @@ describe('ProjectTour', () => {
   })
 
   it('[L] should NOT fire complete via onDestroyed when getActiveIndex returns undefined', async () => {
-    const { ProjectTour } = await import('./ProjectTour')
     render(<ProjectTour userId="usr-1" userMetadata={null} />)
 
     await vi.waitFor(() => {
@@ -370,7 +356,6 @@ describe('ProjectTour', () => {
   it('[P1] should start tour on viewport exactly 768px (boundary — not suppressed)', async () => {
     Object.defineProperty(window, 'innerWidth', { value: 768, writable: true, configurable: true })
 
-    const { ProjectTour } = await import('./ProjectTour')
     render(<ProjectTour userId="usr-1" userMetadata={null} />)
 
     await vi.waitFor(() => {
@@ -387,7 +372,6 @@ describe('ProjectTour', () => {
     // session resumes at step 1, user dismisses again (dismissedRef = true),
     // then restarts. If user had only project_tour_completed set (no dismissed_at_step),
     // restart writes { project_tour_completed: null } — dismissed_at_step stays absent.
-    const { ProjectTour } = await import('./ProjectTour')
     const { rerender } = render(
       <ProjectTour userId="usr-1" userMetadata={{ dismissed_at_step: { project: 1 } }} />,
     )
@@ -421,7 +405,6 @@ describe('ProjectTour', () => {
   // ────────────────────────────────────────────────
 
   it('[L] should call updateTourState with dismissedAtStep: 1 when getActiveIndex returns undefined on close', async () => {
-    const { ProjectTour } = await import('./ProjectTour')
     render(<ProjectTour userId="usr-1" userMetadata={null} />)
 
     await vi.waitFor(() => {

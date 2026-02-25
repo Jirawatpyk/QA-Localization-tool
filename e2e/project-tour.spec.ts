@@ -22,12 +22,16 @@ import {
   signupOrLogin,
 } from './helpers/supabase-admin'
 
+// process.env is used directly here intentionally — E2E tests run under Playwright
+// (not Next.js runtime) and cannot import @/lib/env (Node ESM boundary).
 const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD || 'TestPassword123!'
 const PROJECT_TOUR_EMAIL = process.env.E2E_PROJECT_TOUR_EMAIL || 'e2e-projtour28@test.local'
 const PROJECT_TOUR_RETURNING_EMAIL =
   process.env.E2E_PROJECT_TOUR_RETURNING_EMAIL || 'e2e-projtour-return28@test.local'
 
-// Module-level project IDs set by [setup] tests, shared across serial describe blocks
+// Module-level project IDs set by [setup] tests, shared across serial describe blocks.
+// AC#2 and AC#3 depend on ac1ProjectId / ac2ProjectId created in their respective [setup] tests.
+// Run the full spec (not individual describe blocks) to ensure setup runs first.
 let ac1ProjectId: string
 let ac2ProjectId: string
 
