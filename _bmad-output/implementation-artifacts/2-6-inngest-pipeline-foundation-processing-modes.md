@@ -123,6 +123,7 @@ so that I can balance speed/cost with analysis depth and start reviewing while A
   - [x] 8.12 CR Round 2 (2026-02-25) — 3H · 6M · 3L fixed — all 12 findings resolved ✅ (509 tests)
   - [x] 8.13 CR Round 3 (2026-02-25) — 9H · 8M · 4L fixed — all 21 findings resolved ✅ (1303 tests total)
   - [x] 8.14 CR Round 4 (2026-02-25) — 1C · 3H · 6M · 3L fixed — all 13 findings resolved ✅ (1308 tests total)
+  - [x] 8.15 Post-CR R4 cleanup (2026-02-25) — `ProcessingMode` type propagated to 4 files: `processFile.test.ts`, `processBatch.test.ts`, `src/db/validation/index.ts`, `src/test/factories.ts` — inline `'economy' | 'thorough'` union eliminated across codebase ✅
 
 ## Dev Notes
 
@@ -744,6 +745,12 @@ claude-sonnet-4-6 (Claude Code)
     - L2: `PROCESSING_MODES = ['economy', 'thorough'] as const` extracted to `@/types/pipeline.ts` — `z.enum(PROCESSING_MODES)` now derives from type definition (no drift possible)
     - L4: Removed unnecessary `as string` cast in `startProcessing.action.ts`
     - Test additions: `throwAtCallIndex` error injection to Proxy mock (H5), mixed-status CONFLICT (H6), rollback `setCaptures` (H7), audit log action literal pinning (H8), empty fileIds exact behavior (H9), `retries:3` assertion (M1-test), store `completedAt` re-run clear (M2), `setFileResult` preserves status (M3), `failed` + mixed terminal (M4), schema `invalid projectId`/`missing projectId`/`duplicate fileIds` (M5), ModeCard keyboard Enter/Space (M7), error toast content + fallback (M8), `withTenant` on file SELECT (L3), `mode` NOT forwarded to `runL1ForFile` (L4), duplicate fileIds → `INVALID_INPUT` (C1)
+
+14. **Post-CR R4 cleanup (2026-02-25) — ProcessingMode type propagation (4 files, 0 new tests):**
+    - `processFile.test.ts` + `processBatch.test.ts`: `buildPipelineEvent`/`buildPipelineBatchEvent` helpers — `mode: 'economy' | 'thorough'` → `mode: ProcessingMode` + added `import type { ProcessingMode } from '@/types/pipeline'`
+    - `src/db/validation/index.ts`: drizzle-zod column adapter — `z.union([z.literal('economy'), z.literal('thorough')])` → `z.enum(PROCESSING_MODES)` — eliminates DB-layer drift
+    - `src/test/factories.ts`: shared factory functions — `mode: 'economy' | 'thorough'` → `mode: ProcessingMode` at both `buildPipelineEvent` and `buildPipelineBatchEvent` overrides
+    - All 4 locations found via targeted grep post-R4 self-audit; type-check + isolated tests confirm clean
 
 13. **CR Round 4 (2026-02-25) — 1C · 3H · 6M · 3L — all 13 findings fixed (+5 tests → 1308 total):**
     - C1 source: `processBatch.ts` Object.assign missing `onFailure: onFailureBatchFn` — function was registered in `createFunction` config but not exposed via `Object.assign`, making it untestable via direct invocation
