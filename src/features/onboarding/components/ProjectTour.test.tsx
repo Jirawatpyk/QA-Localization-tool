@@ -38,8 +38,8 @@ import { updateTourState } from '@/features/onboarding/actions/updateTourState.a
 describe('ProjectTour', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // Default: desktop viewport
-    Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true })
+    // Default: desktop viewport — configurable:true required to allow redefinition between tests
+    Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true, configurable: true })
   })
 
   afterEach(() => {
@@ -104,7 +104,9 @@ describe('ProjectTour', () => {
         | undefined
       expect(steps).toHaveLength(2)
       expect(steps?.[0]?.element).toBe('[data-tour="project-glossary"]')
+      expect(steps?.[0]?.popover?.title).toBe('Import Glossary')
       expect(steps?.[1]?.element).toBe('[data-tour="project-files"]')
+      expect(steps?.[1]?.popover?.title).toBe('Upload Files')
     })
   })
 
@@ -291,7 +293,7 @@ describe('ProjectTour', () => {
   // ────────────────────────────────────────────────
 
   it('[P1] should not start tour on mobile viewport (< 768px)', async () => {
-    Object.defineProperty(window, 'innerWidth', { value: 600, writable: true })
+    Object.defineProperty(window, 'innerWidth', { value: 600, writable: true, configurable: true })
 
     const { ProjectTour } = await import('./ProjectTour')
     render(<ProjectTour userId="usr-1" userMetadata={null} />)
@@ -359,5 +361,84 @@ describe('ProjectTour', () => {
 
     // undefined !== LAST_STEP_INDEX (1) → complete must NOT fire
     expect(updateTourState).not.toHaveBeenCalled()
+  })
+
+  // ────────────────────────────────────────────────
+  // H1: Viewport boundary — 768px exact (NOT suppressed)
+  // ────────────────────────────────────────────────
+
+  it('[P1] should start tour on viewport exactly 768px (boundary — not suppressed)', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 768, writable: true, configurable: true })
+
+    const { ProjectTour } = await import('./ProjectTour')
+    render(<ProjectTour userId="usr-1" userMetadata={null} />)
+
+    await vi.waitFor(() => {
+      expect(mockDriverFn).toHaveBeenCalled()
+    })
+  })
+
+  // ────────────────────────────────────────────────
+  // H2: C1 restart — userMetadata becomes null (null path)
+  // ────────────────────────────────────────────────
+
+  it('[P1] should re-init tour after restart when userMetadata has no dismissed_at_step (completed-then-restart path)', async () => {
+    // Real scenario: user previously dismissed (dismissed_at_step.project = 1),
+    // session resumes at step 1, user dismisses again (dismissedRef = true),
+    // then restarts. If user had only project_tour_completed set (no dismissed_at_step),
+    // restart writes { project_tour_completed: null } — dismissed_at_step stays absent.
+    const { ProjectTour } = await import('./ProjectTour')
+    const { rerender } = render(
+      <ProjectTour userId="usr-1" userMetadata={{ dismissed_at_step: { project: 1 } }} />,
+    )
+
+    await vi.waitFor(() => {
+      expect(mockDriverFn).toHaveBeenCalledTimes(1)
+    })
+
+    // Simulate dismiss via X button
+    const driverConfig = mockDriverFn.mock.calls[0]?.[0] as
+      | { onCloseClick?: () => void }
+      | undefined
+    mockGetActiveIndex.mockReturnValue(0)
+    driverConfig?.onCloseClick?.() // dismissedRef.current = true
+
+    mockDriverFn.mockClear()
+
+    // Restart action cleared project_tour_completed but dismissed_at_step was absent
+    // → server returns { project_tour_completed: null } (no dismissed_at_step key)
+    rerender(<ProjectTour userId="usr-1" userMetadata={{ project_tour_completed: null }} />)
+
+    // C1: dismissedRef.current=true AND !userMetadata?.dismissed_at_step?.project = !undefined = true
+    // → dismissedRef reset to false → tour fires
+    await vi.waitFor(() => {
+      expect(mockDriverFn).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  // ────────────────────────────────────────────────
+  // M2: onCloseClick — getActiveIndex() returns undefined (?? 0 fallback)
+  // ────────────────────────────────────────────────
+
+  it('[L] should call updateTourState with dismissedAtStep: 1 when getActiveIndex returns undefined on close', async () => {
+    const { ProjectTour } = await import('./ProjectTour')
+    render(<ProjectTour userId="usr-1" userMetadata={null} />)
+
+    await vi.waitFor(() => {
+      expect(mockDriverFn).toHaveBeenCalled()
+    })
+
+    const driverConfig = mockDriverFn.mock.calls[0]?.[0] as
+      | { onCloseClick?: () => void }
+      | undefined
+    mockGetActiveIndex.mockReturnValue(undefined as unknown as number)
+    driverConfig?.onCloseClick?.()
+
+    // undefined ?? 0 = 0, then 0 + 1 = 1 → dismissedAtStep: 1
+    expect(updateTourState).toHaveBeenCalledWith({
+      action: 'dismiss',
+      tourId: 'project',
+      dismissedAtStep: 1,
+    })
   })
 })

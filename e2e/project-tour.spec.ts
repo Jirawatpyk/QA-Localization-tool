@@ -52,9 +52,11 @@ test.describe.serial('Project Tour — AC#1: First-time user', () => {
 
     // Create a project and store its ID for direct navigation
     const userInfo = await getUserInfo(PROJECT_TOUR_EMAIL)
-    if (userInfo) {
-      ac1ProjectId = await createTestProject(userInfo.tenantId, 'E2E Project Tour Test')
-    }
+    if (!userInfo)
+      throw new Error(
+        `getUserInfo returned null for ${PROJECT_TOUR_EMAIL} — user not found in public.users`,
+      )
+    ac1ProjectId = await createTestProject(userInfo.tenantId, 'E2E Project Tour Test')
 
     // Set setup_tour_completed so the setup tour doesn't interfere
     // but leave project_tour_completed as null (first time)
@@ -145,9 +147,11 @@ test.describe.serial('Project Tour — AC#2: Returning user resume', () => {
 
     // Create a project and store its ID for direct navigation
     const userInfo = await getUserInfo(PROJECT_TOUR_RETURNING_EMAIL)
-    if (userInfo) {
-      ac2ProjectId = await createTestProject(userInfo.tenantId, 'E2E Project Tour Return Test')
-    }
+    if (!userInfo)
+      throw new Error(
+        `getUserInfo returned null for ${PROJECT_TOUR_RETURNING_EMAIL} — user not found in public.users`,
+      )
+    ac2ProjectId = await createTestProject(userInfo.tenantId, 'E2E Project Tour Return Test')
 
     // Set setup tour as completed + project tour dismissed at step 2
     await setUserMetadata(PROJECT_TOUR_RETURNING_EMAIL, {

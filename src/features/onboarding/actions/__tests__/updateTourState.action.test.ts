@@ -277,10 +277,12 @@ describe('updateTourState action', () => {
     expect(result.success).toBe(true)
 
     const setCall = mockSet.mock.calls[0]?.[0] as
-      | { metadata?: { project_tour_completed?: string | null } }
+      | { metadata?: { project_tour_completed?: string | null; dismissed_at_step?: unknown } }
       | undefined
 
     expect(setCall?.metadata?.project_tour_completed).toBeNull()
+    // dismissed_at_step must NOT be written when it was absent from the original metadata
+    expect(setCall?.metadata?.dismissed_at_step).toBeUndefined()
   })
 
   it('[P1] should return VALIDATION_ERROR when dismiss is called without dismissedAtStep for project tour', async () => {

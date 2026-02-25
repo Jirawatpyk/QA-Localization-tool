@@ -69,4 +69,29 @@ describe('updateTourStateSchema', () => {
     })
     expect(result.success).toBe(false)
   })
+
+  it('should accept valid complete action with tourId "project"', () => {
+    const result = updateTourStateSchema.safeParse({
+      action: 'complete',
+      tourId: 'project',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('should accept valid dismiss action with tourId "project"', () => {
+    const result = updateTourStateSchema.safeParse({
+      action: 'dismiss',
+      tourId: 'project',
+      dismissedAtStep: 1,
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('should accept valid restart action with tourId "project"', () => {
+    const result = updateTourStateSchema.safeParse({
+      action: 'restart',
+      tourId: 'project',
+    })
+    expect(result.success).toBe(true)
+  })
 })

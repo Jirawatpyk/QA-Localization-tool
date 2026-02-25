@@ -21,8 +21,10 @@ export function HelpMenu() {
 
   function handleRestartTour(tourId: TourId) {
     startTransition(async () => {
-      await updateTourState({ action: 'restart', tourId })
-      router.refresh()
+      const result = await updateTourState({ action: 'restart', tourId })
+      if (result.success) {
+        router.refresh()
+      }
     })
   }
 

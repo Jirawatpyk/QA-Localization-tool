@@ -356,3 +356,36 @@ These files exist in the working tree from a prior `db:generate` run (tech debt 
 | `.github/workflows/e2e-gate.yml` | Modified | Added `E2E_PROJECT_TOUR_EMAIL` and `E2E_PROJECT_TOUR_RETURNING_EMAIL` secrets for project-tour.spec.ts |
 | `src/__tests__/integration/parity-helpers-real-data.test.ts` | Modified | Fixed pre-existing TS error: `_totalToolOnly` → `totalToolOnly` (typo in variable declaration) |
 | `_bmad-output/implementation-artifacts/sprint-status.yaml` | Modified | `2-8-project-level-onboarding-tour`: review → done |
+
+### CR R2 (0C · 3H · 5M · 3L — 11 findings, all fixed, +8 tests → 64 unit + 10 E2E total)
+
+**HIGH (3 — all fixed)**
+- H1: `Object.defineProperty(innerWidth)` missing `configurable: true` in `ProjectTour.test.tsx` → potential cross-test flakiness when mobile test (600px) ran before desktop tests; also missing 768px exact boundary test. **Fix:** Added `configurable: true` to all `Object.defineProperty` calls; added `[P1] should start tour on viewport exactly 768px (boundary — not suppressed)`.
+- H2: C1 restart path with `userMetadata = { project_tour_completed: null }` (no `dismissed_at_step` — completed-then-restart path) untested — dismissed ref could prevent re-init in this shape. **Fix:** Added `[P1] should re-init tour after restart when userMetadata has no dismissed_at_step (completed-then-restart path)`.
+- H3: `getUserInfo` null case silently left `ac1ProjectId`/`ac2ProjectId` as `undefined` in E2E `[setup]` → all subsequent tests navigate to `/projects/undefined/upload` → misleading timeout in CI. **Fix:** Added explicit `if (!userInfo) throw new Error(...)` guard in both setup blocks.
+
+**MEDIUM (5 — all fixed)**
+- M1: `HelpMenu.tsx` called `router.refresh()` unconditionally even when `updateTourState` returned `{ success: false }` → silent failure (page refreshes with stale metadata, tour never restarts). **Fix source:** Check `result.success` before calling `router.refresh()`. **Fix test:** Added `[P1] should NOT call router.refresh() when updateTourState returns { success: false }`.
+- M2: `onCloseClick` with `getActiveIndex() = undefined` (`?? 0` fallback) untested — regression to `?? 1` would go undetected. **Fix:** Added `[L] should call updateTourState with dismissedAtStep: 1 when getActiveIndex returns undefined on close`.
+- M3: `ProjectSubNav` `data-tour` attributes unverified by any unit test — only JS constant checked in ProjectTour tests. **Fix:** Created `src/features/project/components/ProjectSubNav.test.tsx` with 4 tests (glossary attr, files attr, 6 tabs, non-tour tabs have no attr).
+- M4: `restart` without prior `dismissed_at_step` test missing assertion that `dismissed_at_step` stays absent (only checked `project_tour_completed = null`). **Fix:** Added `expect(setCall?.metadata?.dismissed_at_step).toBeUndefined()` to existing test.
+- M5: Task 5 E2E restart test reliance on `networkidle` + `toBeVisible(10s)` without server-state verification — noted as acceptable given 10s timeout; no code change required.
+
+**LOW (3 — all fixed)**
+- L1: `onboardingSchemas.test.ts` had no tests for `tourId: 'project'` (all used `'setup'`/`'review'`). **Fix:** Added 3 tests: complete/dismiss/restart with `tourId: 'project'`.
+- L2: Test 4 in `ProjectTour.test.tsx` checked element selectors but not `popover.title` values — regression to wrong step title undetected. **Fix:** Added `expect(steps?.[0]?.popover?.title).toBe('Import Glossary')` and `expect(steps?.[1]?.popover?.title).toBe('Upload Files')`.
+- L3: `isPending` disabled state during `startTransition` not tested — skipped (complex jsdom interaction with Radix UI + useTransition; low value per effort). Logged as tech debt.
+
+**ATDD Compliance (post-CR R2):** P0 3/3 ✅ | P1 24/24 ✅ (+3 from CR R2) | P2 4/6 | E2E: 10 active
+
+### CR R2 Change Log
+
+| File | Action | Description |
+|------|--------|-------------|
+| `src/features/onboarding/components/ProjectTour.test.tsx` | Modified | +3 new tests (H1: 768px boundary, H2: completed-then-restart null path, M2: getActiveIndex undefined on close); `configurable:true` + `popover.title` assertions added |
+| `src/features/onboarding/components/HelpMenu.tsx` | Modified | M1: check `result.success` before `router.refresh()` — prevent refresh on action failure |
+| `src/features/onboarding/components/HelpMenu.test.tsx` | Modified | M1 test: added `[P1] should NOT call router.refresh() when updateTourState returns { success: false }`; typed mock as `MockActionResult` union |
+| `src/features/project/components/ProjectSubNav.test.tsx` | Created | M3: 4 tests verifying `data-tour` attributes on Glossary/Files tabs |
+| `src/features/onboarding/actions/__tests__/updateTourState.action.test.ts` | Modified | M4: added `dismissed_at_step` absent assertion to restart-without-dismissed_at_step test |
+| `src/features/onboarding/validation/onboardingSchemas.test.ts` | Modified | L1: added 3 tests for `tourId: 'project'` (complete/dismiss/restart) |
+| `e2e/project-tour.spec.ts` | Modified | H3: explicit throw guards after `getUserInfo` null in both `[setup]` blocks |

@@ -9,8 +9,12 @@ vi.mock('next/navigation', () => ({
   usePathname: () => mockUsePathname(),
 }))
 
+type MockActionResult =
+  | { success: true; data: { success: true } }
+  | { success: false; code: string; error: string }
+
 const mockUpdateTourState = vi.fn((..._args: unknown[]) =>
-  Promise.resolve({ success: true, data: { success: true } }),
+  Promise.resolve<MockActionResult>({ success: true, data: { success: true } }),
 )
 vi.mock('@/features/onboarding/actions/updateTourState.action', () => ({
   updateTourState: (...args: unknown[]) => mockUpdateTourState(...args),
@@ -105,5 +109,32 @@ describe('HelpMenu', () => {
     await waitFor(() => {
       expect(mockRefresh).toHaveBeenCalled()
     })
+  })
+
+  it('[P1] should NOT call router.refresh() when updateTourState returns { success: false }', async () => {
+    mockUsePathname.mockReturnValue('/projects/proj-789/upload')
+    mockUpdateTourState.mockResolvedValue({
+      success: false,
+      code: 'UNAUTHORIZED',
+      error: 'Not authenticated',
+    })
+
+    render(<HelpMenu />)
+
+    const trigger = screen.getByTestId('help-menu-trigger')
+    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('restart-project-tour-btn')).toBeDefined()
+    })
+
+    fireEvent.click(screen.getByTestId('restart-project-tour-btn'))
+
+    await waitFor(() => {
+      expect(mockUpdateTourState).toHaveBeenCalled()
+    })
+
+    // router.refresh() must NOT fire on failure — stale metadata would prevent tour restart
+    expect(mockRefresh).not.toHaveBeenCalled()
   })
 })
