@@ -1,8 +1,6 @@
 import { faker } from '@faker-js/faker'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
-import { buildScoreRecord, buildSegment, buildScoringFinding } from '@/test/factories'
-
 // ── Hoisted mocks ──
 const {
   mockCalculateMqmScore,
