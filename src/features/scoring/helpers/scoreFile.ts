@@ -152,7 +152,10 @@ export async function scoreFile({
       })
       .returning()
 
-    return { newScore: inserted!, previousScore: prev }
+    if (!inserted) {
+      throw new Error(`Score insert returned no rows for file ${fileId}`)
+    }
+    return { newScore: inserted, previousScore: prev }
   })
 
   // Write audit log (non-fatal — score already committed)

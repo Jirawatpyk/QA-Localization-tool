@@ -61,7 +61,13 @@ export async function runL1ForFile({
     const segmentRows = await db
       .select()
       .from(segments)
-      .where(and(withTenant(segments.tenantId, tenantId), eq(segments.fileId, fileId)))
+      .where(
+        and(
+          withTenant(segments.tenantId, tenantId),
+          eq(segments.fileId, fileId),
+          eq(segments.projectId, projectId), // defense-in-depth: parity with scoreFile
+        ),
+      )
       .orderBy(segments.segmentNumber)
 
     // Load glossary terms (non-cached JOIN query — safe for Inngest runtime)

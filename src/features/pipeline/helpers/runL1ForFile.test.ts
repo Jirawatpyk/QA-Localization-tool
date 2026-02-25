@@ -474,7 +474,8 @@ describe('runL1ForFile', () => {
       }),
     ).rejects.toThrow()
 
-    // File status should be rolled back to 'failed' before re-throwing
+    // File status must be rolled back to 'failed' — removing rollback would not be caught otherwise
+    expect(dbState.setCaptures).toContainEqual({ status: 'failed' })
   })
 
   it('should not fail if status rollback fails (non-fatal on rollback)', async () => {

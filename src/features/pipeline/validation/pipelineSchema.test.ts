@@ -99,4 +99,54 @@ describe('startProcessingSchema', () => {
     if (!result.success) return
     expect(result.data.mode).toBe('thorough')
   })
+
+  it('should accept exactly 100 fileIds (max boundary)', async () => {
+    const { startProcessingSchema } = await import('./pipelineSchema')
+    const { faker } = await import('@faker-js/faker')
+
+    const maxIds = Array.from({ length: 100 }, () => faker.string.uuid())
+
+    const result = startProcessingSchema.safeParse({
+      fileIds: maxIds,
+      projectId: VALID_PROJECT_ID,
+      mode: 'economy',
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it('should reject invalid projectId (non-UUID)', async () => {
+    const { startProcessingSchema } = await import('./pipelineSchema')
+
+    const result = startProcessingSchema.safeParse({
+      fileIds: [VALID_FILE_ID_1],
+      projectId: 'not-a-uuid',
+      mode: 'economy',
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('should reject missing projectId', async () => {
+    const { startProcessingSchema } = await import('./pipelineSchema')
+
+    const result = startProcessingSchema.safeParse({
+      fileIds: [VALID_FILE_ID_1],
+      mode: 'economy',
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('should reject duplicate fileIds', async () => {
+    const { startProcessingSchema } = await import('./pipelineSchema')
+
+    const result = startProcessingSchema.safeParse({
+      fileIds: [VALID_FILE_ID_1, VALID_FILE_ID_1],
+      projectId: VALID_PROJECT_ID,
+      mode: 'economy',
+    })
+
+    expect(result.success).toBe(false)
+  })
 })

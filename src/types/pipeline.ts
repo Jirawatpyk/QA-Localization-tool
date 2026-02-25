@@ -1,5 +1,6 @@
 // Pipeline types — populated in Epic 2-3
-export type ProcessingMode = 'economy' | 'thorough'
+export const PROCESSING_MODES = ['economy', 'thorough'] as const
+export type ProcessingMode = (typeof PROCESSING_MODES)[number]
 
 // Inngest event data types — canonical source for both client.ts schemas and pipeline types.ts
 export type PipelineFileEventData = {

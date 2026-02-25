@@ -366,6 +366,45 @@ describe('scoreFile', () => {
     )
   })
 
+  it('should write audit log with action score.calculated when not auto-passed', async () => {
+    mockCheckAutoPass.mockResolvedValue(mockAutoPassNotEligible)
+    dbState.returnValues = [mockSegments, [], [undefined], [], [mockNewScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    expect(mockWriteAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'score.calculated' }),
+    )
+  })
+
+  it('should write audit log with action score.auto_passed when auto-passed', async () => {
+    mockCheckAutoPass.mockResolvedValue(mockAutoPassEligible)
+    const autoPassedScore = {
+      ...mockNewScore,
+      status: 'auto_passed',
+      autoPassRationale: mockAutoPassEligible.rationale,
+    }
+    dbState.returnValues = [mockSegments, [], [undefined], [], [autoPassedScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    expect(mockWriteAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'score.auto_passed' }),
+    )
+  })
+
   it('should not fail if audit log write fails', async () => {
     mockWriteAuditLog.mockRejectedValue(new Error('audit DB down'))
     dbState.returnValues = [mockSegments, [], [undefined], [], [mockNewScore]]

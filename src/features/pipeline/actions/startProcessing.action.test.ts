@@ -6,7 +6,12 @@ vi.mock('server-only', () => ({}))
 
 // ── Hoisted mocks ──
 const { mockRequireRole, mockWriteAuditLog, mockInngestSend, dbState } = vi.hoisted(() => {
-  const state = { callIndex: 0, returnValues: [] as unknown[], setCaptures: [] as unknown[] }
+  const state = {
+    callIndex: 0,
+    returnValues: [] as unknown[],
+    setCaptures: [] as unknown[],
+    throwAtCallIndex: null as number | null,
+  }
   return {
     mockRequireRole: vi.fn(),
     mockWriteAuditLog: vi.fn((..._args: unknown[]) => Promise.resolve()),
@@ -44,7 +49,12 @@ vi.mock('@/db/client', () => {
         })
       }
       if (prop === 'then') {
-        return (resolve?: (v: unknown) => void) => {
+        return (resolve?: (v: unknown) => void, reject?: (err: unknown) => void) => {
+          if (dbState.throwAtCallIndex !== null && dbState.callIndex === dbState.throwAtCallIndex) {
+            dbState.callIndex++
+            reject?.(new Error('Injected DB error'))
+            return
+          }
           const value = dbState.returnValues[dbState.callIndex] ?? []
           dbState.callIndex++
           resolve?.(value)
@@ -109,6 +119,7 @@ describe('startProcessing', () => {
     dbState.callIndex = 0
     dbState.returnValues = []
     dbState.setCaptures = []
+    dbState.throwAtCallIndex = null
     mockRequireRole.mockResolvedValue(mockUser)
     mockWriteAuditLog.mockResolvedValue(undefined)
     mockInngestSend.mockResolvedValue(undefined)
@@ -336,6 +347,58 @@ describe('startProcessing', () => {
     expect(dbState.callIndex).toBe(2)
     // L3: Verify .set() was called with the correct processingMode value (not hardcoded)
     expect(dbState.setCaptures).toContainEqual({ processingMode: 'thorough' })
+  })
+
+  it('should return INVALID_INPUT when fileIds contains duplicates', async () => {
+    const { startProcessing } = await import('./startProcessing.action')
+    const result = await startProcessing({
+      fileIds: [VALID_FILE_ID_1, VALID_FILE_ID_1],
+      projectId: VALID_PROJECT_ID,
+      mode: 'economy',
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INVALID_INPUT')
+    expect(mockInngestSend).not.toHaveBeenCalled()
+  })
+
+  it('should return CONFLICT when batch contains mixed statuses (some parsed, some already processing)', async () => {
+    const mixedFiles = [
+      { id: VALID_FILE_ID_1, status: 'parsed' },
+      { id: VALID_FILE_ID_2, status: 'l1_processing' },
+    ]
+    dbState.returnValues = [mixedFiles]
+
+    const { startProcessing } = await import('./startProcessing.action')
+    const result = await startProcessing({
+      fileIds: [VALID_FILE_ID_1, VALID_FILE_ID_2],
+      projectId: VALID_PROJECT_ID,
+      mode: 'economy',
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('CONFLICT')
+    expect(mockInngestSend).not.toHaveBeenCalled()
+  })
+
+  it('should return INTERNAL_ERROR and NOT call inngest.send when db.update(projects) throws', async () => {
+    const validFiles = [{ id: VALID_FILE_ID_1, status: 'parsed' }]
+    dbState.returnValues = [validFiles] // slot 0: file validation resolves
+    dbState.throwAtCallIndex = 1 // slot 1: projects update throws
+
+    const { startProcessing } = await import('./startProcessing.action')
+    const result = await startProcessing({
+      fileIds: [VALID_FILE_ID_1],
+      projectId: VALID_PROJECT_ID,
+      mode: 'economy',
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INTERNAL_ERROR')
+    expect(mockInngestSend).not.toHaveBeenCalled()
   })
 
   it('should return INTERNAL_ERROR when inngest.send throws', async () => {

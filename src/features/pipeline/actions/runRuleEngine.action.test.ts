@@ -153,6 +153,15 @@ describe('runRuleEngine', () => {
     expect(result.data.findingCount).toBe(0)
   })
 
+  // ── L3: Tenant isolation on file SELECT ──
+
+  it('should include withTenant on file SELECT query', async () => {
+    dbState.returnValues = [[mockFileRecord]]
+    const { withTenant } = await import('@/db/helpers/withTenant')
+    await runRuleEngine({ fileId: VALID_UUID })
+    expect(withTenant).toHaveBeenCalledWith(expect.anything(), mockUser.tenantId)
+  })
+
   it('should return INTERNAL_ERROR when runL1ForFile throws a non-retriable error', async () => {
     dbState.returnValues = [[mockFileRecord]]
     mockRunL1ForFile.mockRejectedValue(new Error('engine crash'))

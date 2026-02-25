@@ -147,6 +147,60 @@ describe('usePipelineStore', () => {
     expect(state.completedAt).toBeUndefined()
   })
 
+  // ── M2: re-run clears completedAt ──
+
+  it('should clear completedAt when startProcessing is called again (re-run)', async () => {
+    const { usePipelineStore } = await import('./pipeline.store')
+
+    // Complete first batch
+    usePipelineStore.getState().startProcessing([VALID_FILE_ID_1])
+    usePipelineStore.getState().updateFileStatus(VALID_FILE_ID_1, 'completed')
+    expect(usePipelineStore.getState().completedAt).toBeDefined()
+
+    // Re-run with new batch — completedAt must reset to undefined
+    usePipelineStore.getState().startProcessing([VALID_FILE_ID_2])
+    expect(usePipelineStore.getState().completedAt).toBeUndefined()
+  })
+
+  // ── M3: setFileResult preserves status ──
+
+  it('should preserve existing file status when setFileResult is called', async () => {
+    const { usePipelineStore } = await import('./pipeline.store')
+
+    usePipelineStore.getState().startProcessing([VALID_FILE_ID_1])
+    usePipelineStore.getState().updateFileStatus(VALID_FILE_ID_1, 'l1_completed')
+    usePipelineStore.getState().setFileResult(VALID_FILE_ID_1, {
+      findingCount: 5,
+      mqmScore: 85.5,
+    })
+
+    const fileData = usePipelineStore.getState().processingFiles.get(VALID_FILE_ID_1)
+    expect(fileData?.status).toBe('l1_completed')
+    expect(fileData?.findingCount).toBe(5)
+  })
+
+  // ── M4: failed terminal state triggers completedAt ──
+
+  it('should set completedAt when all files reach failed terminal state', async () => {
+    const { usePipelineStore } = await import('./pipeline.store')
+
+    usePipelineStore.getState().startProcessing([VALID_FILE_ID_1, VALID_FILE_ID_2])
+    usePipelineStore.getState().updateFileStatus(VALID_FILE_ID_1, 'failed')
+    usePipelineStore.getState().updateFileStatus(VALID_FILE_ID_2, 'failed')
+
+    expect(usePipelineStore.getState().completedAt).toBeDefined()
+  })
+
+  it('should set completedAt when files reach mixed completed and failed states', async () => {
+    const { usePipelineStore } = await import('./pipeline.store')
+
+    usePipelineStore.getState().startProcessing([VALID_FILE_ID_1, VALID_FILE_ID_2])
+    usePipelineStore.getState().updateFileStatus(VALID_FILE_ID_1, 'completed')
+    usePipelineStore.getState().updateFileStatus(VALID_FILE_ID_2, 'failed')
+
+    expect(usePipelineStore.getState().completedAt).toBeDefined()
+  })
+
   it('should handle updating non-existent fileId gracefully', async () => {
     const { usePipelineStore } = await import('./pipeline.store')
 

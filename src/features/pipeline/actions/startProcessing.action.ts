@@ -63,7 +63,7 @@ export async function startProcessing(
     }
 
     // Validate all files are in parsed status (ready for pipeline)
-    const notParsed = foundFiles.filter((f) => (f.status as string) !== 'parsed')
+    const notParsed = foundFiles.filter((f) => f.status !== 'parsed')
     if (notParsed.length > 0) {
       return {
         success: false,

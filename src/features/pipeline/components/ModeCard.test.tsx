@@ -67,6 +67,32 @@ describe('ModeCard', () => {
     expect(onSelect).toHaveBeenCalledOnce()
   })
 
+  // ── M7: Keyboard activation (WCAG) ──
+
+  it('should call onSelect when Enter key is pressed', async () => {
+    const user = userEvent.setup()
+    const onSelect = vi.fn()
+    render(<ModeCard {...defaultProps} onSelect={onSelect} />)
+
+    const card = screen.getByRole('radio')
+    card.focus()
+    await user.keyboard('{Enter}')
+
+    expect(onSelect).toHaveBeenCalledOnce()
+  })
+
+  it('should call onSelect when Space key is pressed', async () => {
+    const user = userEvent.setup()
+    const onSelect = vi.fn()
+    render(<ModeCard {...defaultProps} onSelect={onSelect} />)
+
+    const card = screen.getByRole('radio')
+    card.focus()
+    await user.keyboard(' ')
+
+    expect(onSelect).toHaveBeenCalledOnce()
+  })
+
   it('should have proper aria attributes for accessibility (aria-checked)', () => {
     const { rerender } = render(<ModeCard {...defaultProps} selected={false} />)
 

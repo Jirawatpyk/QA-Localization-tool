@@ -210,6 +210,35 @@ describe('processBatch', () => {
     })
   })
 
+  it('should have retries: 3', async () => {
+    const { inngest } = await import('@/lib/inngest/client')
+    const createFunctionMock = inngest.createFunction as ReturnType<typeof vi.fn>
+
+    vi.resetModules()
+    await import('./processBatch')
+
+    const firstArg = createFunctionMock.mock.calls[0]?.[0]
+    expect(firstArg).toMatchObject({
+      retries: 3,
+    })
+  })
+
+  it('should call step.sendEvent with empty array and return fileCount 0 when fileIds is empty', async () => {
+    const mockStep = createMockStep()
+    const eventData = buildPipelineBatchEvent({ batchId: VALID_BATCH_ID, fileIds: [] })
+
+    const { processBatch } = await import('./processBatch')
+    const result = await (processBatch as { handler: (...args: unknown[]) => unknown }).handler({
+      event: { data: eventData },
+      step: mockStep,
+    })
+
+    expect(mockStep.sendEvent).toHaveBeenCalledTimes(1)
+    const [, events] = mockStep.sendEvent.mock.calls[0] as [string, unknown[]]
+    expect(events).toHaveLength(0)
+    expect(result).toMatchObject({ batchId: VALID_BATCH_ID, fileCount: 0, status: 'dispatched' })
+  })
+
   it('should handle batch with single file', async () => {
     const mockStep = createMockStep()
     const singleFileId = faker.string.uuid()

@@ -51,10 +51,17 @@ const onFailureFn = async ({
 
   logger.error({ err: error, fileId }, 'processFilePipeline: function failed')
 
-  await db
-    .update(files)
-    .set({ status: 'failed' })
-    .where(and(withTenant(files.tenantId, tenantId), eq(files.id, fileId)))
+  try {
+    await db
+      .update(files)
+      .set({ status: 'failed' })
+      .where(and(withTenant(files.tenantId, tenantId), eq(files.id, fileId)))
+  } catch (dbErr) {
+    logger.error(
+      { err: dbErr, fileId },
+      'processFilePipeline: failed to update file status in onFailure',
+    )
+  }
 }
 
 export const processFilePipeline = Object.assign(

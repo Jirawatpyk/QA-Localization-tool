@@ -426,6 +426,22 @@ describe('processFilePipeline', () => {
     expect(dbState.callIndex).toBe(1)
   })
 
+  // ── L4: mode must NOT be forwarded to runL1ForFile ──
+
+  it('should NOT forward mode to runL1ForFile (L1 is mode-agnostic)', async () => {
+    const mockStep = createMockStep()
+    const eventData = buildPipelineEvent({ fileId: VALID_FILE_ID, mode: 'thorough' })
+
+    const { processFilePipeline } = await import('./processFile')
+    await (processFilePipeline as { handler: (...args: unknown[]) => unknown }).handler({
+      event: { data: eventData },
+      step: mockStep,
+    })
+
+    const callArg = mockRunL1ForFile.mock.calls[0]?.[0] as Record<string, unknown>
+    expect(callArg).not.toHaveProperty('mode')
+  })
+
   // ── P2: Function configuration ──
 
   it('should have function id process-file-pipeline', async () => {

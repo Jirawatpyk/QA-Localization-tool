@@ -1,4 +1,5 @@
 import { inngest } from '@/lib/inngest/client'
+import { logger } from '@/lib/logger'
 
 import type { PipelineBatchEventData } from './types'
 
@@ -41,9 +42,30 @@ const handlerFn = async ({
   }
 }
 
+// onFailure: log batch failure — no DB write needed (files remain in 'parsed', no transition was made)
+const onFailureBatchFn = async ({
+  event,
+  error,
+}: {
+  // Inngest v3 onFailure nested structure: event.data.event.data = original event data
+  event: { data: { event: { data: PipelineBatchEventData } } }
+  error: Error
+}) => {
+  const { batchId } = event.data.event.data
+  logger.error(
+    { err: error, batchId },
+    'processBatch: all retries exhausted — batch not dispatched',
+  )
+}
+
 export const processBatch = Object.assign(
   inngest.createFunction(
-    { id: 'process-batch-pipeline' },
+    {
+      id: 'process-batch-pipeline',
+      retries: 3,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onFailure: onFailureBatchFn as any,
+    },
     { event: 'pipeline.batch-started' as const },
     handlerFn,
   ),

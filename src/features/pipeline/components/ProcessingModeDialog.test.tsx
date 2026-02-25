@@ -1,5 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { ProcessingMode } from '@/types/pipeline'
@@ -169,6 +170,38 @@ describe('ProcessingModeDialog', () => {
 
     const economyCard = screen.getByRole('radio', { name: /Economy/i })
     expect(within(economyCard).queryByText('Recommended')).toBeNull()
+  })
+
+  // ── M8: Error toast content & fallback ──
+
+  it('should show error toast with action error message when startProcessing fails', async () => {
+    mockStartProcessing.mockResolvedValue(
+      // as never: mock return type is narrowly inferred from the initial `as const` impl
+      { success: false, code: 'CONFLICT', error: 'Files are already being processed' } as never,
+    )
+    const user = userEvent.setup()
+    render(<ProcessingModeDialog {...defaultProps} />)
+
+    await user.click(screen.getByRole('button', { name: 'Start Processing' }))
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Files are already being processed')
+    })
+  })
+
+  it('should show fallback error toast when action fails without an error message', async () => {
+    mockStartProcessing.mockResolvedValue(
+      // as never: mock return type is narrowly inferred from the initial `as const` impl
+      { success: false, code: 'INTERNAL_ERROR' } as never,
+    )
+    const user = userEvent.setup()
+    render(<ProcessingModeDialog {...defaultProps} />)
+
+    await user.click(screen.getByRole('button', { name: 'Start Processing' }))
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Failed to start processing')
+    })
   })
 
   it('should disable buttons and show loading state during submission', async () => {
