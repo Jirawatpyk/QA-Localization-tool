@@ -137,13 +137,28 @@ describe('generateParityReport', () => {
     dbState.throwAtCallIndex = null
     mockRequireRole.mockResolvedValue(mockUser)
     mockWriteAuditLog.mockResolvedValue(undefined)
+    // Reset parseXbenchReport to default resolved value (clearAllMocks doesn't reset mockRejectedValue)
+    mockParseXbenchReport.mockResolvedValue({
+      findings: [
+        {
+          sourceText: 'Test source',
+          targetText: 'Test target',
+          category: 'accuracy',
+          severity: 'major',
+          fileName: 'test.sdlxliff',
+          segmentNumber: 1,
+        },
+      ],
+      fileGroups: { 'test.sdlxliff': [{ category: 'accuracy', severity: 'major' }] },
+    })
   })
 
   // ── P0: Tenant isolation ──
 
-  it.skip('[P0] should include withTenant on all queries', async () => {
-    // Tool findings query + report insert should both use withTenant
+  it('[P0] should include withTenant on all queries', async () => {
+    // Project ownership + tool findings query + report insert
     dbState.returnValues = [
+      [{ id: VALID_PROJECT_ID }], // project ownership SELECT
       [{ category: 'accuracy', severity: 'major' }], // tool findings query
       [{ id: faker.string.uuid() }], // report insert returning
     ]
@@ -160,9 +175,10 @@ describe('generateParityReport', () => {
 
   // ── P1: Full flow ──
 
-  it.skip('[P1] should parse xlsx, compare with tool findings, persist report and write audit log', async () => {
+  it('[P1] should parse xlsx, compare with tool findings, persist report and write audit log', async () => {
     const reportId = faker.string.uuid()
     dbState.returnValues = [
+      [{ id: VALID_PROJECT_ID }], // project ownership SELECT
       [{ category: 'accuracy', severity: 'major', fileId: faker.string.uuid() }], // tool findings
       [{ id: reportId }], // report insert returning
     ]
@@ -193,7 +209,7 @@ describe('generateParityReport', () => {
     )
   })
 
-  it.skip('[P1] should return ActionResult error for invalid xlsx', async () => {
+  it('[P1] should return ActionResult error for invalid xlsx', async () => {
     mockParseXbenchReport.mockRejectedValue(new Error('Invalid xlsx format'))
 
     const { generateParityReport } = await import('./generateParityReport.action')
@@ -207,7 +223,7 @@ describe('generateParityReport', () => {
     expect(result.error).toContain('xlsx')
   })
 
-  it.skip('[P1] should store valid JSON in comparisonData that roundtrips correctly', async () => {
+  it('[P1] should store valid JSON in comparisonData that roundtrips correctly', async () => {
     const comparisonResult = {
       matched: [{ xbenchCategory: 'accuracy', toolCategory: 'accuracy', severity: 'major' }],
       xbenchOnly: [],
@@ -216,6 +232,7 @@ describe('generateParityReport', () => {
     mockCompareFindings.mockReturnValue(comparisonResult)
 
     dbState.returnValues = [
+      [{ id: VALID_PROJECT_ID }], // project ownership SELECT
       [{ category: 'accuracy', severity: 'major' }], // tool findings
       [{ id: faker.string.uuid() }], // report insert
     ]
@@ -226,7 +243,7 @@ describe('generateParityReport', () => {
       xbenchReportBuffer: Buffer.from('mock-xlsx'),
     })
 
-    // Verify the values captured contain serializable JSON
+    // Verify the values captured contain serializable JSON (index 0 = report INSERT)
     expect(dbState.valuesCaptures.length).toBeGreaterThan(0)
     const insertedValues = dbState.valuesCaptures[0] as Record<string, unknown>
     // comparisonData should be valid JSON (roundtrip-safe)

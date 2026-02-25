@@ -372,7 +372,7 @@ describe('processFilePipeline', () => {
     // withTenant must be called with the correct tenantId (tenant isolation in failure path)
     expect(withTenant).toHaveBeenCalledWith(expect.anything(), VALID_TENANT_ID)
     // Verify .set() was called with status: 'failed' (not some other status)
-    expect(dbState.setCaptures).toContainEqual({ status: 'failed' })
+    expect(dbState.setCaptures).toContainEqual(expect.objectContaining({ status: 'failed' }))
   })
 
   it('onFailure should log error with fileId context', async () => {

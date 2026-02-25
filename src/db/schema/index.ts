@@ -29,6 +29,8 @@ export { auditResults } from './auditResults'
 export { aiMetricsTimeseries } from './aiMetricsTimeseries'
 export { fixSuggestions } from './fixSuggestions'
 export { selfHealingConfig } from './selfHealingConfig'
+export { parityReports } from './parityReports'
+export { missingCheckReports } from './missingCheckReports'
 
 // Relations
 export {
@@ -59,4 +61,6 @@ export {
   aiMetricsTimeseriesRelations,
   fixSuggestionsRelations,
   selfHealingConfigRelations,
+  parityReportsRelations,
+  missingCheckReportsRelations,
 } from './relations'

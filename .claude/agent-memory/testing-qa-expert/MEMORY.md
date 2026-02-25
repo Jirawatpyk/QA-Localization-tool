@@ -89,6 +89,46 @@ Key findings:
   stripMarkup replaces with spaces so length never 0. Should be `stripped.trim().length===0`
   but .trim() was already called. Investigate as possible source defect.
 
+### Story 2.6 Test Review — CR Round 4 (Adversarial review of R3 tests) (2026-02-25)
+
+Full details in `story-2.6-cr-round4.md`. Summary: 2C · 3H · 6M · 3L. 14 findings.
+
+- C1: `onFailureBatchFn` NOT in `Object.assign` block → inaccessible for unit testing → zero tests
+- C2: `scoreFile` INSERT guard (`if (!inserted)`) — empty `.returning()` path uncovered
+- H1: `throwAtCallIndex` in Proxy mock only covers `.then` terminals, NOT `.returning()` terminals
+- H2: `onFailureFn` try-catch in processFile — DB update throw inside onFailure → no test
+- H3: ModeCard Space: `e.preventDefault()` not verifiable in RTL; `tabindex` only non-null checked
+- M2: Zod refine message `'Duplicate file IDs are not allowed'` unpinned in pipelineSchema test
+- M3: `score.auto_passed` test: persisted DB status unverified — only audit action is checked
+- M4: `as never` cast in ProcessingModeDialog tests eliminates TypeScript interface protection
+- M5: `withTenant` call count unpinned in runRuleEngine withTenant assertion
+- M6: `startedAt` not verified as updated on re-run (only `completedAt` checked)
+
+### Story 2.6 Test Review — CR Round 3 Findings (2026-02-25)
+
+Full details in `story-2.6-cr-round3.md`. Summary: 1C · 5H · 7M · 2L. 15 findings. All addressed in R3.
+
+- C1 (FIXED): duplicate fileIds → Zod refine added; INVALID_INPUT returned before DB
+- H3 (FIXED): rollback setCaptures now asserted with `toContainEqual({ status: 'failed' })`
+- H4 (FIXED): scoreFile audit literals pinned to exact `'score.calculated'` / `'score.auto_passed'`
+- H5 (FIXED): processBatch empty fileIds test added
+- M6 (FIXED): ModeCard keyboard Enter/Space tests added
+
+### Story 2.6 Test Review — CR Round 2 Findings (2026-02-25)
+
+Full details in `story-2.6-cr-round2.md`. Summary: 2C · 4H · 4M. 10 findings.
+
+- C1: processFile.test.ts onFailure `callIndex=1` proves DB touched but NOT that `status='failed'` was written — Proxy mock cannot capture `.set()` argument
+- C2: runL1ForFile.test.ts `callIndex=5` proves call count but NOT `l1_processing→l1_completed` values
+- H1: scoreFile.test.ts — NonRetriableError for empty segmentRows still untested (Round 1 H1 NOT FIXED)
+- H2: runL1ForFile.test.ts batch insert >100: only `findingCount` checked, not TWO tx.insert calls
+- H3: processBatch.test.ts `uploadBatchId` missing from `buildPipelineBatchEvent` — propagation silently untested (Round 1 M2 NOT FIXED, promoted to H)
+- H4: startProcessing.action.test.ts mode persistence: `callIndex=2` correct but `.set({mode:'thorough'})` value unverified
+- M1: pipeline.store.test.ts — no negative test that `completedAt` is NOT set when only some files reach terminal
+- M2: ProcessingModeDialog.test.tsx — AC#1 cost values $0.15/$0.35 never pinned
+- M3: ProcessingModeDialog.test.tsx — AC#1 time estimates ~30s/~2min never pinned
+- M4: startProcessing.action.test.ts — INTERNAL_ERROR path (inngest.send throws) not tested
+
 ### Story 2.6 Test Review — CR Round 1 Findings (2026-02-25)
 
 Full details in `story-2.6-cr-round1.md`. Summary: 3C · 4H · 5M · 1L. 13 findings.

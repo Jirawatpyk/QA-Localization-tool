@@ -168,12 +168,48 @@ Helper functions (runL1ForFile, scoreFile) receive tenantId as a typed function 
 **Note — Inngest route handler now has functions registered:**
 `processBatch` and `processFilePipeline` are active. Both correctly propagate tenant context. Update checklist: Inngest IS now in scope for future audits.
 
+### Story 2.7 Audit Results (Batch Summary, File History, Parity Tools)
+
+New tables confirmed tenant-scoped: `parity_reports`, `missing_check_reports` (both have tenant_id, notNull FK to tenants)
+
+**PASS:**
+
+- `getBatchSummary.action.ts` — withTenant() on projects SELECT; withTenant() on files (WHERE) AND scores (LEFT JOIN ON clause); gold standard LEFT JOIN pattern. FULL PASS.
+- `getFileHistory.action.ts` — identical LEFT JOIN pattern; withTenant() on files (WHERE) + scores (LEFT JOIN ON). FULL PASS.
+- `compareWithXbench.action.ts` — withTenant() on findings SELECT + eq(projectId). Read-only, no INSERT. PASS (with low-severity unverified projectId note — no data leak risk).
+- `batchComplete.ts` — Inngest handler; tenantId from event.data; delegates entirely to crossFileConsistency(); no direct DB access. PASS.
+- `batches/page.tsx` — withTenant() on uploadBatches + eq(projectId); requireRole() before DB access. PASS.
+- `batches/[batchId]/page.tsx` — no direct DB access; delegates to getBatchSummary() Server Action. PASS.
+
+**CRITICAL FINDING (unresolved):**
+
+- `crossFileConsistency.ts` L141-149 — DELETE WHERE clause uses `withTenant() + eq(projectId)` only. Deletes ALL findings for the project (L1 rules, L2 AI, L3 deep analysis). Intent was to delete only cross-file consistency findings before re-insert. Fix: add `eq(findings.scope, 'cross-file')` + `eq(findings.detectedByLayer, 'L1')` to both the SELECT (L130) and DELETE (L141) WHERE clauses.
+
+**HIGH FINDING (unresolved):**
+
+- `reportMissingCheck.action.ts` L52 — `withTenant(missingCheckReports.tenantId, user.tenantId)` called standalone; return value discarded. This is dead code with a misleading "Defense-in-depth" comment. The INSERT itself is correctly isolated (tenantId in value object), but the phantom guard creates false confidence and regression risk. Fix: remove the standalone call; add a real project ownership SELECT before INSERT.
+
+**MEDIUM FINDINGS (unresolved):**
+
+- `reportMissingCheck.action.ts` L54-67 — `projectId` + `fileId` from Zod input written to INSERT without verifying they belong to the calling tenant. DB FK rejects non-existent UUIDs but not cross-tenant UUIDs. Fix: ownership SELECT on projects with withTenant() before INSERT.
+- `generateParityReport.action.ts` L75-89 — same pattern; `projectId` not ownership-verified before `parity_reports` INSERT. The findings SELECT is correctly scoped (returns zero for wrong-tenant projectId), but the resulting INSERT persists a row with an unverified cross-tenant projectId reference.
+- `crossFileConsistency.ts` L130-138 — SELECT for existing findings is over-broad (all project findings), feeds the over-broad DELETE. Fix: add scope + layer filters to SELECT to match intended DELETE scope.
+
+**Schema confirmations (Story 2.7):**
+
+- `parity_reports` — tenant_id (uuid, notNull, FK to tenants). Confirmed.
+- `missing_check_reports` — tenant_id (uuid, notNull, FK to tenants). Confirmed.
+- `upload_batches` — tenant_id (uuid, notNull, FK to tenants). Re-confirmed (Story 2.1).
+
 ## Key Patterns to Watch
 
 - `glossary_terms` has NO tenant_id — always access via verified glossaryId from glossaries table
 - `severity_configs` has nullable tenant_id (system defaults have NULL) — query must handle this
 - `taxonomy_definitions` is global — never add tenant filter (it would be wrong)
 - RSC pages that do inline Drizzle queries must use withTenant() — currently all do
-- Inngest functions ARE NOW ACTIVE — `processBatch` + `processFilePipeline` both confirmed tenant-safe
+- Inngest functions ARE NOW ACTIVE — `processBatch` + `processFilePipeline` + `batchComplete` all confirmed tenant-safe
 - INSERT isolation pattern: no WHERE clause on INSERT — instead set `tenantId` field explicitly in value object. withTenant() only applies to SELECT/UPDATE/DELETE WHERE clauses.
 - Inngest tenantId pattern: Server Action sources tenantId from requireRole() → injects into event payload → helper functions receive tenantId as typed parameter. This is the correct trust boundary for Inngest.
+- ANTI-PATTERN: `withTenant(col, val)` called standalone (not passed to `.where()`) is dead code — the helper returns a SQL expression object; it must be composed into a query. Flag any standalone call as HIGH (misleading security comment risk).
+- ANTI-PATTERN: INSERT with unverified FK from client input — always add a prior SELECT with withTenant() to verify ownership of the referenced entity before writing. Affects parity_reports and missing_check_reports in Story 2.7.
+- ANTI-PATTERN for DELETE-then-reinsert idempotency: over-broad DELETE (project-level) wipes other layers' data. Always scope DELETE to the specific layer/scope being regenerated (e.g., `eq(findings.scope, 'cross-file')`).

@@ -97,10 +97,11 @@ describe('reportMissingCheck', () => {
 
   // ── P0: Tenant isolation + audit ──
 
-  it.skip('[P0] should include withTenant and write audit log', async () => {
+  it('[P0] should include withTenant and write audit log', async () => {
     const reportId = faker.string.uuid()
     const trackingRef = 'MCR-20260225-abc123'
     dbState.returnValues = [
+      [{ id: VALID_PROJECT_ID }], // project ownership SELECT
       [{ id: reportId, trackingReference: trackingRef }], // insert returning
     ]
 
@@ -126,10 +127,13 @@ describe('reportMissingCheck', () => {
 
   // ── P1: Success response ──
 
-  it.skip('[P1] should return ActionResult with tracking reference on success', async () => {
+  it('[P1] should return ActionResult with tracking reference on success', async () => {
     const reportId = faker.string.uuid()
     const trackingRef = 'MCR-20260225-a1b2c3'
-    dbState.returnValues = [[{ id: reportId, trackingReference: trackingRef }]]
+    dbState.returnValues = [
+      [{ id: VALID_PROJECT_ID }], // project ownership SELECT
+      [{ id: reportId, trackingReference: trackingRef }],
+    ]
 
     const { reportMissingCheck } = await import('./reportMissingCheck.action')
     const result = await reportMissingCheck({
@@ -146,9 +150,12 @@ describe('reportMissingCheck', () => {
     expect(typeof result.data.trackingReference).toBe('string')
   })
 
-  it.skip('[P1] should generate tracking reference in format MCR-YYYYMMDD-6chars', async () => {
+  it('[P1] should generate tracking reference in format MCR-YYYYMMDD-6chars', async () => {
     const reportId = faker.string.uuid()
-    dbState.returnValues = [[{ id: reportId, trackingReference: 'MCR-20260225-x1y2z3' }]]
+    dbState.returnValues = [
+      [{ id: VALID_PROJECT_ID }], // project ownership SELECT
+      [{ id: reportId, trackingReference: 'MCR-20260225-x1y2z3' }],
+    ]
 
     const { reportMissingCheck } = await import('./reportMissingCheck.action')
     const result = await reportMissingCheck({
@@ -168,7 +175,7 @@ describe('reportMissingCheck', () => {
 
   // ── P2: Validation ──
 
-  it.skip('[P2] should validate required fields and segmentNumber > 0 via Zod', async () => {
+  it('[P2] should validate required fields and segmentNumber > 0 via Zod', async () => {
     const { reportMissingCheck } = await import('./reportMissingCheck.action')
 
     // segmentNumber = 0 should be invalid

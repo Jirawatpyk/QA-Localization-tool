@@ -139,7 +139,7 @@ function buildFileWithScore(
   return {
     fileId: overrides?.fileId ?? faker.string.uuid(),
     fileName: overrides?.fileName ?? `${faker.word.noun()}.sdlxliff`,
-    mqmScore: overrides?.mqmScore ?? 97,
+    mqmScore: overrides?.mqmScore !== undefined ? overrides.mqmScore : 97,
     criticalCount: overrides?.criticalCount ?? 0,
     status: overrides?.status ?? 'l1_completed',
     createdAt: overrides?.createdAt ?? new Date('2026-02-25T10:00:00Z'),
@@ -159,7 +159,7 @@ describe('getBatchSummary', () => {
 
   // ── P0: Core behavior ──
 
-  it.skip('[P0] should return ActionResult with both groups for valid batch', async () => {
+  it('[P0] should return ActionResult with both groups for valid batch', async () => {
     // Setup: project with threshold 95, 2 files — one pass, one needs review
     const passFile = buildFileWithScore({ mqmScore: 97, criticalCount: 0 })
     const reviewFile = buildFileWithScore({ mqmScore: 80, criticalCount: 0 })
@@ -182,7 +182,7 @@ describe('getBatchSummary', () => {
     expect(result.data.needReview).toBeInstanceOf(Array)
   })
 
-  it.skip('[P0] should partition ALL files into exactly 2 groups with no overlap', async () => {
+  it('[P0] should partition ALL files into exactly 2 groups with no overlap', async () => {
     const files = Array.from({ length: 5 }, (_, i) =>
       buildFileWithScore({
         fileId: faker.string.uuid(),
@@ -212,7 +212,7 @@ describe('getBatchSummary', () => {
     expect(passIds.length + reviewIds.length).toBe(5)
   })
 
-  it.skip('[P0] should classify file as Recommended Pass when score >= threshold AND criticalCount=0', async () => {
+  it('[P0] should classify file as Recommended Pass when score >= threshold AND criticalCount=0', async () => {
     const passFile = buildFileWithScore({ mqmScore: 96, criticalCount: 0 })
     dbState.returnValues = [[{ autoPassThreshold: 95 }], [passFile]]
 
@@ -228,7 +228,7 @@ describe('getBatchSummary', () => {
     expect(result.data.needReview).toHaveLength(0)
   })
 
-  it.skip('[P0] should classify file as Need Review when criticalCount > 0 even if score >= threshold', async () => {
+  it('[P0] should classify file as Need Review when criticalCount > 0 even if score >= threshold', async () => {
     const criticalFile = buildFileWithScore({ mqmScore: 98, criticalCount: 1 })
     dbState.returnValues = [[{ autoPassThreshold: 95 }], [criticalFile]]
 
@@ -244,7 +244,7 @@ describe('getBatchSummary', () => {
     expect(result.data.needReview).toHaveLength(1)
   })
 
-  it.skip('[P0] should classify file as Need Review when score is null', async () => {
+  it('[P0] should classify file as Need Review when score is null', async () => {
     const nullScoreFile = buildFileWithScore({ mqmScore: null, criticalCount: 0 })
     dbState.returnValues = [[{ autoPassThreshold: 95 }], [nullScoreFile]]
 
@@ -260,7 +260,7 @@ describe('getBatchSummary', () => {
     expect(result.data.needReview).toHaveLength(1)
   })
 
-  it.skip('[P0] should include withTenant filter on files query and scores JOIN', async () => {
+  it('[P0] should include withTenant filter on files query and scores JOIN', async () => {
     dbState.returnValues = [[{ autoPassThreshold: 95 }], []]
 
     const { getBatchSummary } = await import('./getBatchSummary.action')
@@ -276,7 +276,7 @@ describe('getBatchSummary', () => {
 
   // ── P1: Sorting and defaults ──
 
-  it.skip('[P1] should sort Recommended Pass by score DESC then file_id ASC', async () => {
+  it('[P1] should sort Recommended Pass by score DESC then file_id ASC', async () => {
     const fileA = buildFileWithScore({
       fileId: 'a1a1a1a1-b2b2-4c3c-8d4d-e5e5e5e5e5e5',
       mqmScore: 98,
@@ -310,7 +310,7 @@ describe('getBatchSummary', () => {
     expect(passFiles[2]!.fileId).toBe(fileC.fileId)
   })
 
-  it.skip('[P1] should sort Need Review by score ASC then file_id ASC', async () => {
+  it('[P1] should sort Need Review by score ASC then file_id ASC', async () => {
     const fileA = buildFileWithScore({
       fileId: 'a1a1a1a1-b2b2-4c3c-8d4d-e5e5e5e5e5e5',
       mqmScore: 70,
@@ -344,7 +344,7 @@ describe('getBatchSummary', () => {
     expect(reviewFiles[2]!.fileId).toBe(fileC.fileId)
   })
 
-  it.skip('[P1] should produce stable sort when files have identical scores', async () => {
+  it('[P1] should produce stable sort when files have identical scores', async () => {
     const files = Array.from({ length: 4 }, (_, i) =>
       buildFileWithScore({
         fileId: `${String.fromCharCode(97 + i)}1${String.fromCharCode(97 + i)}1${String.fromCharCode(97 + i)}1${String.fromCharCode(97 + i)}1-b2b2-4c3c-8d4d-e5e5e5e5e5e5`,
@@ -370,7 +370,7 @@ describe('getBatchSummary', () => {
     expect(ids1).toEqual(ids2)
   })
 
-  it.skip('[P1] should use default threshold 95 when project autoPassThreshold is null', async () => {
+  it('[P1] should use default threshold 95 when project autoPassThreshold is null', async () => {
     // Score of 96 should pass with default threshold 95
     const passFile = buildFileWithScore({ mqmScore: 96, criticalCount: 0 })
     dbState.returnValues = [
@@ -390,7 +390,7 @@ describe('getBatchSummary', () => {
     expect(result.data.needReview).toHaveLength(0)
   })
 
-  it.skip('[P1] should calculate processing time as MAX(updatedAt) - MIN(createdAt)', async () => {
+  it('[P1] should calculate processing time as MAX(updatedAt) - MIN(createdAt)', async () => {
     const file1 = buildFileWithScore({
       mqmScore: 97,
       criticalCount: 0,
@@ -419,7 +419,7 @@ describe('getBatchSummary', () => {
 
   // ── P2: Edge cases ──
 
-  it.skip('[P2] should return empty groups and zero counts for empty batch', async () => {
+  it('[P2] should return empty groups and zero counts for empty batch', async () => {
     dbState.returnValues = [
       [{ autoPassThreshold: 95 }],
       [], // no files in batch
@@ -438,7 +438,7 @@ describe('getBatchSummary', () => {
     expect(result.data.totalFiles).toBe(0)
   })
 
-  it.skip('[P2] should return null processing time when all files still processing', async () => {
+  it('[P2] should return null processing time when all files still processing', async () => {
     const processingFile = buildFileWithScore({
       mqmScore: null,
       criticalCount: 0,

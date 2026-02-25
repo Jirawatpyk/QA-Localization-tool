@@ -176,9 +176,9 @@ describe('runL1ForFile', () => {
     // Both status updates (→l1_processing and →l1_completed) are tenant-scoped
     expect(withTenant).toHaveBeenCalledWith(expect.anything(), VALID_TENANT_ID)
     // Verify final .set() writes l1_completed (not some other status)
-    expect(dbState.setCaptures).toContainEqual({ status: 'l1_completed' })
+    expect(dbState.setCaptures).toContainEqual(expect.objectContaining({ status: 'l1_completed' }))
     // CAS update writes l1_processing first
-    expect(dbState.setCaptures).toContainEqual({ status: 'l1_processing' })
+    expect(dbState.setCaptures).toContainEqual(expect.objectContaining({ status: 'l1_processing' }))
   })
 
   it('should throw NonRetriableError when file not in parsed state (CAS guard)', async () => {
@@ -476,7 +476,7 @@ describe('runL1ForFile', () => {
     ).rejects.toThrow()
 
     // File status must be rolled back to 'failed' — removing rollback would not be caught otherwise
-    expect(dbState.setCaptures).toContainEqual({ status: 'failed' })
+    expect(dbState.setCaptures).toContainEqual(expect.objectContaining({ status: 'failed' }))
     // L1: rollback DB update must also be tenant-scoped (prevent cross-tenant status write)
     expect(withTenant).toHaveBeenCalledWith(expect.anything(), VALID_TENANT_ID)
   })

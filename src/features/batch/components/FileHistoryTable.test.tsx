@@ -78,7 +78,7 @@ describe('FileHistoryTable', () => {
 
   // ── P2: Filter buttons ──
 
-  it.skip('[P2] should render filter buttons for all, passed, needs_review, failed', () => {
+  it('[P2] should render filter buttons for all, passed, needs_review, failed', () => {
     // EXPECTED: A toolbar/button group with 4 filter options
     render(<FileHistoryTable {...defaultProps} />)
 
@@ -88,7 +88,7 @@ describe('FileHistoryTable', () => {
     expect(screen.getByRole('button', { name: /Failed/i })).toBeTruthy()
   })
 
-  it.skip('[P2] should call onFilterChange when filter button clicked', async () => {
+  it('[P2] should call onFilterChange when filter button clicked', async () => {
     // EXPECTED: Clicking "Needs Review" filter calls onFilterChange('needs_review')
     const user = userEvent.setup()
     const onFilterChange = vi.fn()
@@ -99,7 +99,7 @@ describe('FileHistoryTable', () => {
     expect(onFilterChange).toHaveBeenCalledWith('needs_review')
   })
 
-  it.skip('[P2] should render file rows with filename, date, status, score, reviewer', () => {
+  it('[P2] should render file rows with filename, date, status, score, reviewer', () => {
     // EXPECTED: Table renders 3 rows (one per file in sampleRows)
     // Each row shows: fileName, processedAt (formatted), status badge, MQM score, reviewer name
     render(<FileHistoryTable {...defaultProps} />)
@@ -131,7 +131,7 @@ describe('FileHistoryTable', () => {
 
   // ── P3: Edge states ──
 
-  it.skip('[P3] should display empty state message when no files match filter', () => {
+  it('[P3] should display empty state message when no files match filter', () => {
     // EXPECTED: When files array is empty, show a friendly empty state message
     render(<FileHistoryTable {...defaultProps} files={[]} />)
 
@@ -140,7 +140,7 @@ describe('FileHistoryTable', () => {
     expect(screen.queryByRole('table')).toBeNull()
   })
 
-  it.skip('[P3] should render pagination controls when files exceed PAGE_SIZE', () => {
+  it('[P3] should render pagination controls when files exceed PAGE_SIZE', () => {
     // EXPECTED: When file count exceeds PAGE_SIZE (e.g., 20), pagination appears
     const manyFiles = Array.from({ length: 25 }, (_, i) =>
       buildFileHistoryRow({
@@ -151,9 +151,10 @@ describe('FileHistoryTable', () => {
     render(<FileHistoryTable {...defaultProps} files={manyFiles} />)
 
     // Pagination controls should be visible
-    expect(screen.getByRole('navigation', { name: /pagination/i })).toBeTruthy()
-    // Should show page indicators
-    expect(screen.getByText(/1/)).toBeTruthy()
-    expect(screen.getByText(/2/)).toBeTruthy()
+    const nav = screen.getByRole('navigation', { name: /pagination/i })
+    expect(nav).toBeTruthy()
+    // Should show page indicators within pagination nav
+    expect(within(nav).getByText('1')).toBeTruthy()
+    expect(within(nav).getByText('2')).toBeTruthy()
   })
 })

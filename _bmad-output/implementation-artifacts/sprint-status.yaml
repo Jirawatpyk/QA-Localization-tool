@@ -63,7 +63,7 @@ development_status:
   2-4-rule-based-qa-engine-language-rules: done
   2-5-mqm-score-calculation-language-calibration: done
   2-6-inngest-pipeline-foundation-processing-modes: review
-  2-7-batch-summary-file-history-parity-tools: backlog
+  2-7-batch-summary-file-history-parity-tools: ready-for-dev
   epic-2-retrospective: optional
 
   # ============================================================

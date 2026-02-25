@@ -45,7 +45,7 @@ export async function runL1ForFile({
   // CAS guard: atomically set status parsed → l1_processing
   const [file] = await db
     .update(files)
-    .set({ status: 'l1_processing' })
+    .set({ status: 'l1_processing', updatedAt: new Date() })
     .where(
       and(withTenant(files.tenantId, tenantId), eq(files.id, fileId), eq(files.status, 'parsed')),
     )
@@ -141,7 +141,7 @@ export async function runL1ForFile({
     // Update file status to l1_completed (before audit — audit failure must not revert findings)
     await db
       .update(files)
-      .set({ status: 'l1_completed' })
+      .set({ status: 'l1_completed', updatedAt: new Date() })
       .where(and(withTenant(files.tenantId, tenantId), eq(files.id, fileId)))
 
     // Write audit log (non-fatal — findings + status already committed)
@@ -180,7 +180,7 @@ export async function runL1ForFile({
     try {
       await db
         .update(files)
-        .set({ status: 'failed' })
+        .set({ status: 'failed', updatedAt: new Date() })
         .where(and(withTenant(files.tenantId, tenantId), eq(files.id, fileId)))
     } catch (rollbackErr) {
       logger.error({ err: rollbackErr, fileId }, 'Failed to roll back file status to failed')

@@ -188,6 +188,33 @@
 - **Rule**: CLAUDE.md says "every query must use withTenant()". The OR condition here logically extends beyond what withTenant() supports.
 - **Decision**: Flag MEDIUM but note as documented exception. The correct fix would be to add a code comment explaining why withTenant() cannot be used here.
 
+## Story 2.7 Scan Summary (2026-02-25)
+
+- Files scanned: 26 (batch feature: 10 + parity feature: 9 + pipeline: 2 + pages: 4 + nav: 1)
+- **CRITICAL violations (0)**
+- **HIGH violations (1):**
+  - `xbenchReportParser.ts:23`: `buffer as any` — ExcelJS type mismatch; same recurring pattern as Story 2.3; should use `buffer as Buffer`
+- **MEDIUM violations (5):**
+  - `generateParityReport.action.ts:25-27`: `bothFound/toolOnly/xbenchOnly: unknown[]` — overly broad return type; should use `MatchedFinding[] / ToolFinding[] / XbenchFinding[]` imported from parityComparator
+  - `reportMissingCheck.action.ts:52`: `withTenant(missingCheckReports.tenantId, user.tenantId)` called as standalone expression — return value discarded; does not guard the INSERT; tenantId passed directly into `.values({ tenantId: user.tenantId })` instead
+  - `ParityResultsTable.tsx:80`: `colorClass="text-info"` passed as prop and applied to section/h3 — `text-info` maps to `--color-info` in tokens.css via Tailwind v4 `@theme` auto-utility; borderline (token exists but not listed in shadcn/ui semantic tokens; flag MEDIUM pending CR)
+  - `ReportMissingCheckDialog.tsx:6`: `from '../actions/reportMissingCheck.action'` — relative import crossing directory boundary; should use `@/features/parity/actions/reportMissingCheck.action`
+  - `FileHistoryTable.tsx` (implicit): `projectId` prop destructured in type but not used in component body (line 46 destructures it but it's never referenced inside)
+- **LOW violations (3):**
+  - `generateParityReport.action.ts:66-71`: multiple `as string` casts on Drizzle column values (`f.category as string`, `f.severity as string`, `f.fileId as string`, `f.segmentId as string`) — should use proper Drizzle inferred types or Zod-validated schema types
+  - `batchSchemas.ts`: Zod schema named `getBatchSummarySchema` — correct; `getFileHistorySchema` — correct. CLEAN.
+  - `crossFileConsistency.ts:67-83`: `seg.sourceText as string`, `seg.wordCount as number`, `seg.fileId as string`, `seg.targetText as string`, `seg.id as string` — multiple `as string/number` casts; prefer Drizzle inferred types
+- **All other checks CLEAN** — no `export default` in feature modules, no TypeScript `enum`, no raw SQL, no console.log, no process.env, no service_role, no hardcoded tenantId UUIDs, no inline Supabase client creation, no try-catch inside step.run() in batchComplete.ts, no snapshot tests, no "use client" on page.tsx files (all 4 pages are Server Components), md: breakpoint in BatchSummaryView.tsx is standard Tailwind (not arbitrary), text-success/text-warning/text-info/text-destructive are valid tokens.css-derived utility classes in Tailwind v4
+
+## Story 2.7 Key Patterns
+
+### Detached withTenant() Call (MEDIUM — Architectural Risk)
+
+- **Pattern**: `withTenant(table.tenantId, tenantId)` called as a standalone expression (result discarded), followed by `db.insert().values({ tenantId: user.tenantId })` — the call does nothing.
+- **Found in**: `reportMissingCheck.action.ts:52`
+- **Risk**: withTenant() used as a defense-in-depth guard but its return value (an SQL condition) is never applied to a query. The INSERT only has tenantId in the values payload, which is correct by itself, but the guard call is misleading and ineffective.
+- **Fix**: Remove the detached call; add a comment explaining that tenantId is enforced via `values({ tenantId: user.tenantId })` from the authenticated user.
+
 ## Story 2.6 Scan Summary (2026-02-25)
 
 - Files scanned: 11 (pipeline/inngest/processFile.ts, processBatch.ts, index.ts, pipeline/helpers/runL1ForFile.ts, scoring/helpers/scoreFile.ts, pipeline/actions/startProcessing.action.ts, pipeline/validation/pipelineSchema.ts, pipeline/components/ProcessingModeDialog.tsx, ModeCard.tsx, pipeline/stores/pipeline.store.ts, app/api/inngest/route.ts)

@@ -98,7 +98,7 @@ describe('ParityComparisonView', () => {
 
   // ── P2: Upload and compare flow ──
 
-  it.skip('[P2] should render upload zone for xlsx file', () => {
+  it('[P2] should render upload zone for xlsx file', () => {
     // EXPECTED: An upload area accepting .xlsx files with label or instruction text
     render(<ParityComparisonView projectId={PROJECT_ID} fileId={FILE_ID} />)
 
@@ -112,7 +112,7 @@ describe('ParityComparisonView', () => {
     expect(screen.getByText(/upload|drop|select/i)).toBeTruthy()
   })
 
-  it.skip('[P2] should render compare button that triggers comparison action', async () => {
+  it('[P2] should render compare button that triggers comparison action', async () => {
     // EXPECTED: After selecting a file, a "Compare" button appears.
     // Clicking it calls the compareWithXbench server action.
     const user = userEvent.setup()
@@ -135,7 +135,7 @@ describe('ParityComparisonView', () => {
     })
   })
 
-  it.skip('[P2] should display ParityResultsTable after comparison completes', async () => {
+  it('[P2] should display ParityResultsTable after comparison completes', async () => {
     // EXPECTED: After successful comparison, the ParityResultsTable renders with results
     const user = userEvent.setup()
     render(<ParityComparisonView projectId={PROJECT_ID} fileId={FILE_ID} />)
@@ -152,7 +152,7 @@ describe('ParityComparisonView', () => {
     })
   })
 
-  it.skip('[P2] should show loading state during comparison', async () => {
+  it('[P2] should show loading state during comparison', async () => {
     // EXPECTED: While compareWithXbench is pending, show a loading indicator
     // and disable the compare button
     mockCompareWithXbench.mockImplementation(() => new Promise(() => {})) // never resolves
@@ -170,7 +170,7 @@ describe('ParityComparisonView', () => {
     })
   })
 
-  it.skip('[P2] should display error message when comparison fails', async () => {
+  it('[P2] should display error message when comparison fails', async () => {
     // EXPECTED: On action failure, show error message via toast or inline
     const { toast } = await import('sonner')
     mockCompareWithXbench.mockResolvedValue({

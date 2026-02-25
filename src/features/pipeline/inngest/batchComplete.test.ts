@@ -85,7 +85,7 @@ describe('batchComplete', () => {
 
   // ── P1: Core behavior ──
 
-  it.skip('[P1] should call crossFileConsistency and persist findings', async () => {
+  it('[P1] should call crossFileConsistency and persist findings', async () => {
     const mockStep = createMockStep()
     const fileIds = [faker.string.uuid(), faker.string.uuid()]
 
@@ -112,7 +112,7 @@ describe('batchComplete', () => {
     )
   })
 
-  it.skip('[P1] should handle duplicate batch-completed event without creating duplicate findings', async () => {
+  it('[P1] should handle duplicate batch-completed event without creating duplicate findings', async () => {
     const mockStep = createMockStep()
     const fileIds = [faker.string.uuid()]
 
@@ -149,7 +149,7 @@ describe('batchComplete', () => {
     expect(mockCrossFileConsistency).toHaveBeenCalledTimes(2)
   })
 
-  it.skip('[P1] should be registered in Inngest serve function list', async () => {
+  it('[P1] should be registered in Inngest serve function list', async () => {
     const { inngest } = await import('@/lib/inngest/client')
     const createFunctionMock = inngest.createFunction as ReturnType<typeof vi.fn>
 

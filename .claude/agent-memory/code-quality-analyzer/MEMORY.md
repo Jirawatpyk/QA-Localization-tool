@@ -4,7 +4,7 @@
 
 - `story-2-4-findings.md` — Story 2.4 Rule Engine CR Round 1 + Round 2 + Round 3 findings
 - `story-2-5-findings.md` — Story 2.5 MQM Score Calculation CR Round 1 + Round 2 findings
-- `story-2-6-findings.md` — Story 2.6 Inngest Pipeline Foundation CR Round 1 findings
+- `story-2-6-findings.md` — Story 2.6 Inngest Pipeline Foundation CR Round 1 + Round 2 + Round 3 (adversarial) findings
 
 ## Recurring Patterns Found
 
@@ -26,7 +26,7 @@
 - Story 2.5: calculateScore — FIXED (audit log wrapped correctly)
 - Story 2.5: graduation notification — NOT wrapped at caller level (C1)
 - Story 2.6: runL1ForFile, scoreFile, startProcessing — ALL wrapped correctly
-- Story 2.6: runL1ForFile audit log missing userId (M1)
+- Story 2.6: runL1ForFile audit log missing userId (M1 → upgraded to C4 in R2)
 
 ### Supabase Realtime Payload Mismatch
 
@@ -71,51 +71,28 @@
 ### Non-null Assertion on Array[0] — RECURRING anti-pattern
 
 - Story 2.6 C2: `segmentRows[0]!.sourceLang` crashes on empty array
+- Story 2.6 R3 M2: `inserted!` after .returning() in scoreFile.ts — same pattern
 - Always add guard: `if (rows.length === 0) throw new Error('...')` before array[0]!
-- Check in every query result that uses `[0]!`
+- Check in every query result that uses `[0]!` AND every `.returning()` destructure
 
-## Story 2.4 Rule Engine — Key Patterns
+### Duplicate Array Input Validation — NEW pattern (Story 2.6 R3)
 
-- Pipeline engine at `src/features/pipeline/engine/`
-- Check functions: pure functions `(segment, ctx) → RuleCheckResult[]`
-- Language rules at `engine/language/` (engine-internal, not `src/lib/language/`)
-- Glossary check: dependency injection (GlossaryCheckFn type) for testability
-- Constants centralized in `engine/constants.ts`
-- InlineTagsData: `{ source: InlineTag[], target: InlineTag[] }` split
+- Zod z.array(z.string().uuid()) does NOT deduplicate
+- SQL `inArray(col, [dup1, dup1])` returns unique rows → length mismatch
+- Fix: always add .refine(ids => new Set(ids).size === ids.length) for ID arrays
+- Also: deduplicate before fan-out to prevent double-processing
 
-## Story 2.4 CR Round 2 — NEW Findings (see story-2-4-findings.md)
+### Asymmetric Query Filters — RECURRING pattern
 
-- C1: placeholderChecks Set loses duplicate count → false negatives
-- C2: getLastNonWhitespace returns lone surrogate for emoji
-- H1: normalizeNumber precision loss for 16+ digit numbers
-- H2: Thai numeral source normalization missing (TH→EN)
-- H3: checkKeyTermConsistency O(G\*S) performance risk
-- H4: Drizzle schema missing index definition
-- L1-L4: minor naming/guard issues
+- Story 2.5 R2 C1: scoreFile findings query missing projectId (fixed), segments had it
+- Story 2.6 R3 H2: runL1ForFile segments query missing projectId, scoreFile has it
+- Pattern: when one query gets a defense-in-depth filter, ALL sibling queries across ALL helper files need audit
+- Check: segments, findings, scores queries in EVERY helper function
 
-## Story 2.4 CR Round 3 — NEW Findings (see story-2-4-findings.md)
+## Story 2.4 Rule Engine — Key Patterns (see story-2-4-findings.md for details)
 
-- C1: NUMBER_REGEX captures hyphen as sign (false positives for ranges like "1-10")
-- C2: No stale findings cleanup on re-run → duplicate findings on re-parse
-- H1: ReDoS incomplete (length-only, no pattern complexity check)
-- H2: URL_REGEX case mismatch + missing parenthesis exclude
-- H3: End punctuation EN→TH flooding (still unfixed from R2-L2)
-- H4: Empty targets in checkSameSourceDiffTarget not skipped
-- H5: Findings insert + status update not in same transaction
-- M1-M4: PROPER_NOUN_RE, apostrophe false positive, CJK quotes, ctx unused
-- L1-L3: European number ambiguity, Buddhist year range, NUMBERS_ONLY_RE scope
-
-### NEW Pattern: Server Action atomicity
-
-- Findings INSERT + file status UPDATE must be in SAME transaction
-- Otherwise partial failure = inconsistent state (findings exist, status=failed)
-- Check this pattern in ALL future pipeline server actions (L2, L3)
-
-### NEW Pattern: Regex safety for user-provided patterns
-
-- Length check alone insufficient for ReDoS prevention
-- Need safe-regex2 or execution timeout for any `new RegExp(userInput)`
-- Applies to: customRuleChecks, any future user-defined patterns
+- Pipeline engine at `src/features/pipeline/engine/`; pure functions `(segment, ctx) → RuleCheckResult[]`
+- Key patterns: Server Action atomicity (findings+status in same tx), ReDoS protection (safe-regex2 or timeout)
 
 ## Cross-Story Patterns
 
@@ -125,36 +102,11 @@
 - NFKC: NOT before Intl.Segmenter (Thai sara am U+0E33 decomposes)
 - NFKC: YES before text comparison (glossary, consistency)
 
-## Story 2.5 MQM Score Calculation — Key Patterns
+## Story 2.5 MQM Score — Key Patterns (see story-2-5-findings.md for details)
 
-- Pure calculator at `src/features/scoring/mqmCalculator.ts` — NO server deps, importable from Inngest
-- 3-level penalty weight fallback: tenant DB → system DB (NULL tenant) → hardcoded constant
-- penaltyWeightLoader: INTENTIONAL exception to withTenant() — documented with comment
-- Auto-pass: 3-path logic (lang pair config → new pair <=50 files → new pair >50 files + project threshold)
-- Graduation notification: file 51 for new pair, JSONB dedup, per-admin insert
-- DELETE+INSERT idempotent pattern (no UNIQUE constraint yet — C2)
-- fileId unused in AutoPassInput type (H4) — removed in CR R1
-
-## Story 2.5 CR Round 2 — NEW Findings (see story-2-5-findings.md)
-
-- C1: Findings query missing projectId filter (asymmetric with segments query)
-- H1: Graduation notification caller still not wrapped in try-catch
-- H2: CONTRIBUTING_STATUSES still ReadonlySet<string> (FindingStatus added in R1 but not applied here)
-- H3: fileCount off-by-one (checkAutoPass runs before score INSERT)
-- M1: Double cast `as unknown as`, M2: Graduation dedup missing projectId
-- M3: JOIN performance, M4: Missing test for findings projectId
-
-### NEW Pattern: Defense-in-depth asymmetry
-
-- When adding projectId filter to one query, check ALL sibling queries in same function
-- Story 2.5 R1 H2 fixed segments but left findings unpatched — R2 C1 caught it
-- Always audit all queries when fixing one query's filters
-
-### NEW Pattern: Query ordering vs data dependency
-
-- checkAutoPass file count query runs BEFORE score INSERT → off-by-one
-- Functions that depend on COUNT of records should run AFTER the new record is committed
-- Or explicitly document the off-by-one behavior and adjust threshold accordingly
+- Pure calculator importable from Inngest; penaltyWeightLoader intentional withTenant() exception
+- Defense-in-depth asymmetry: when fixing one query's filters, audit ALL sibling queries
+- Graduation dedup missing projectId in JSONB containment query (still open R3-post L3)
 
 ## Story 2.6 Inngest Pipeline Foundation — Key Patterns
 
@@ -173,6 +125,37 @@
 - Object.assign adds properties AFTER function creation — Inngest runtime does NOT see them
 - onFailure, cancelOn, etc. MUST be in config object (1st arg)
 - Object.assign is ONLY for test utilities (exposing handler, onFailure for direct unit testing)
+
+### NEW Pattern: TOCTOU in Server Actions (Story 2.6 R2 C1)
+
+- SELECT + validate + dispatch is NOT atomic — concurrent requests can pass validation simultaneously
+- Fix: use CAS UPDATE (SET status='queued' WHERE status='parsed' RETURNING) as the validation step
+- Applies to: any Server Action that validates state then triggers async work
+
+### NEW Pattern: Inngest Event Type Duplication
+
+- client.ts inline Events type vs types.ts canonical types must stay in sync
+- ALWAYS import from canonical source (types.ts) into client.ts
+- Drift causes: correct event schema in handler but wrong validation at send time
+
+### NEW Pattern: Inngest processBatch Needs Failure Handling (Story 2.6 R3 M3) — FIXED
+
+- processBatch now has retries:3 + onFailureBatchFn
+- BUT: onFailureBatchFn not exposed via Object.assign for testing (R3-post H2)
+- ALL Inngest functions that trigger downstream work MUST have onFailure
+
+### NEW Pattern: PROCESSING_MODES SSOT Propagation (Story 2.6 R3 L2) — PARTIALLY FIXED
+
+- PROCESSING_MODES const at @/types/pipeline — used by pipelineSchema.ts
+- STILL HARDCODED in: projectSchemas.ts:12,18 + db/validation/index.ts:19
+- Check in every review: any z.enum(['economy', 'thorough']) should use PROCESSING_MODES
+
+### NEW Pattern: Object.assign Must Expose onFailure for Testing
+
+- processFile.ts: Object.assign exposes both handler AND onFailure — correct
+- processBatch.ts: Object.assign exposes only handler — MISSING onFailure
+- Always verify BOTH handler + onFailure are in Object.assign exports
+- Test file should have tests for onFailureFn behavior
 
 ## Project Structure Notes
 

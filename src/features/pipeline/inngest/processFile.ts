@@ -54,7 +54,7 @@ const onFailureFn = async ({
   try {
     await db
       .update(files)
-      .set({ status: 'failed' })
+      .set({ status: 'failed', updatedAt: new Date() })
       .where(and(withTenant(files.tenantId, tenantId), eq(files.id, fileId)))
   } catch (dbErr) {
     logger.error(

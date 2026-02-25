@@ -1,5 +1,3 @@
-// Stub: Story 2.7 — parity validation schemas
-// TODO: Implement in Story 2.7
 import { z } from 'zod'
 
 export const generateParityReportSchema = z.object({
@@ -12,10 +10,10 @@ export type GenerateParityReportInput = z.infer<typeof generateParityReportSchem
 
 export const reportMissingCheckSchema = z.object({
   projectId: z.string().uuid(),
-  fileId: z.string().uuid(),
+  fileReference: z.string().min(1),
   segmentNumber: z.number().int().positive(),
-  expectedCategory: z.string().min(1),
   expectedDescription: z.string().min(1),
+  xbenchCheckType: z.string().min(1),
 })
 
 export type ReportMissingCheckInput = z.infer<typeof reportMissingCheckSchema>

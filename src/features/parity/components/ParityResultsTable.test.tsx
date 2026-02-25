@@ -55,7 +55,7 @@ describe('ParityResultsTable', () => {
 
   // ── P2: Section rendering ──
 
-  it.skip('[P2] should render three sections: Both Found, Tool Only, Xbench Only', () => {
+  it('[P2] should render three sections: Both Found, Tool Only, Xbench Only', () => {
     // EXPECTED: Three distinct sections with headings indicating comparison groups
     render(<ParityResultsTable results={sampleResults} />)
 
@@ -64,7 +64,7 @@ describe('ParityResultsTable', () => {
     expect(screen.getByRole('heading', { name: /Xbench Only/i })).toBeTruthy()
   })
 
-  it.skip('[P2] should highlight Xbench Only section with red/destructive color', () => {
+  it('[P2] should highlight Xbench Only section with red/destructive color', () => {
     // EXPECTED: The Xbench Only section uses destructive/red styling to indicate
     // findings that our tool missed compared to Xbench (parity gap)
     render(<ParityResultsTable results={sampleResults} />)
@@ -78,7 +78,7 @@ describe('ParityResultsTable', () => {
     ).toBeTruthy()
   })
 
-  it.skip('[P2] should display Tool Only section with blue/info color', () => {
+  it('[P2] should display Tool Only section with blue/info color', () => {
     // EXPECTED: Tool Only section uses info/blue styling to indicate
     // extra findings our tool detected that Xbench didn't
     render(<ParityResultsTable results={sampleResults} />)
@@ -91,7 +91,7 @@ describe('ParityResultsTable', () => {
     ).toBeTruthy()
   })
 
-  it.skip('[P2] should display Both Found section with green/success color', () => {
+  it('[P2] should display Both Found section with green/success color', () => {
     // EXPECTED: Both Found section uses success/green styling to indicate
     // matching findings between our tool and Xbench (parity achieved)
     render(<ParityResultsTable results={sampleResults} />)
@@ -103,7 +103,7 @@ describe('ParityResultsTable', () => {
     ).toBeTruthy()
   })
 
-  it.skip('[P2] should show finding count per section', () => {
+  it('[P2] should show finding count per section', () => {
     // EXPECTED: Each section header shows the count of findings in parentheses or a badge
     // Both Found: 2, Tool Only: 1, Xbench Only: 3
     render(<ParityResultsTable results={sampleResults} />)

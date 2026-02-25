@@ -152,7 +152,7 @@ function buildFileHistoryRow(
   return {
     fileId: overrides?.fileId ?? faker.string.uuid(),
     fileName: overrides?.fileName ?? `${faker.word.noun()}.sdlxliff`,
-    mqmScore: overrides?.mqmScore ?? 85,
+    mqmScore: overrides?.mqmScore !== undefined ? overrides.mqmScore : 85,
     criticalCount: overrides?.criticalCount ?? 0,
     status: overrides?.status ?? 'l1_completed',
     createdAt: overrides?.createdAt ?? new Date('2026-02-25T10:00:00Z'),
@@ -172,7 +172,7 @@ describe('getFileHistory', () => {
 
   // ── P0: Tenant isolation ──
 
-  it.skip('[P0] should include withTenant on files and reviewActions queries', async () => {
+  it('[P0] should include withTenant on files and reviewActions queries', async () => {
     dbState.returnValues = [
       [{ autoPassThreshold: 95 }],
       [], // files query
@@ -190,7 +190,7 @@ describe('getFileHistory', () => {
 
   // ── P1: Filtering and ordering ──
 
-  it.skip('[P1] should return all files ordered by createdAt DESC', async () => {
+  it('[P1] should return all files ordered by createdAt DESC', async () => {
     const oldFile = buildFileHistoryRow({
       fileId: 'a1a1a1a1-b2b2-4c3c-8d4d-e5e5e5e5e5e5',
       createdAt: new Date('2026-02-24T10:00:00Z'),
@@ -216,7 +216,7 @@ describe('getFileHistory', () => {
     expect(result.data.files[1]!.fileId).toBe(oldFile.fileId)
   })
 
-  it.skip('[P1] should filter passed: auto_passed OR (score >= threshold AND 0 critical)', async () => {
+  it('[P1] should filter passed: auto_passed OR (score >= threshold AND 0 critical)', async () => {
     const autoPassedFile = buildFileHistoryRow({
       fileId: 'a1a1a1a1-b2b2-4c3c-8d4d-e5e5e5e5e5e5',
       mqmScore: 97,
@@ -256,7 +256,7 @@ describe('getFileHistory', () => {
     expect(fileIds).not.toContain(failedFile.fileId)
   })
 
-  it.skip('[P1] should filter needs_review: NOT passed AND NOT failed', async () => {
+  it('[P1] should filter needs_review: NOT passed AND NOT failed', async () => {
     const reviewFile = buildFileHistoryRow({
       mqmScore: 80,
       criticalCount: 0,
@@ -276,7 +276,7 @@ describe('getFileHistory', () => {
     expect(result.data.files[0]!.mqmScore).toBe(80)
   })
 
-  it.skip('[P1] should filter failed: file.status = failed', async () => {
+  it('[P1] should filter failed: file.status = failed', async () => {
     const failedFile = buildFileHistoryRow({
       status: 'failed',
       mqmScore: null,
@@ -295,7 +295,7 @@ describe('getFileHistory', () => {
     expect(result.data.files[0]!.status).toBe('failed')
   })
 
-  it.skip('[P1] should return correct last reviewer per file with 3 files 3 reviewers', async () => {
+  it('[P1] should return correct last reviewer per file with 3 files 3 reviewers', async () => {
     const file1 = buildFileHistoryRow({ fileId: faker.string.uuid(), lastReviewerName: 'Alice' })
     const file2 = buildFileHistoryRow({ fileId: faker.string.uuid(), lastReviewerName: 'Bob' })
     const file3 = buildFileHistoryRow({ fileId: faker.string.uuid(), lastReviewerName: 'Charlie' })
@@ -317,7 +317,7 @@ describe('getFileHistory', () => {
     expect(reviewerNames).toContain('Charlie')
   })
 
-  it.skip('[P1] should return null lastReviewerName when file has no review actions', async () => {
+  it('[P1] should return null lastReviewerName when file has no review actions', async () => {
     const noReviewFile = buildFileHistoryRow({ lastReviewerName: null })
     dbState.returnValues = [[{ autoPassThreshold: 95 }], [noReviewFile]]
 
@@ -332,7 +332,7 @@ describe('getFileHistory', () => {
     expect(result.data.files[0]!.lastReviewerName).toBeNull()
   })
 
-  it.skip('[P1] should pick latest review action when multiple exist for same file', async () => {
+  it('[P1] should pick latest review action when multiple exist for same file', async () => {
     // File with multiple review actions — should use most recent reviewer
     const file = buildFileHistoryRow({ lastReviewerName: 'LatestReviewer' })
     dbState.returnValues = [[{ autoPassThreshold: 95 }], [file]]
@@ -350,7 +350,7 @@ describe('getFileHistory', () => {
 
   // ── P2: Edge cases ──
 
-  it.skip('[P2] should return graceful empty result for empty project', async () => {
+  it('[P2] should return graceful empty result for empty project', async () => {
     dbState.returnValues = [[{ autoPassThreshold: 95 }], []]
 
     const { getFileHistory } = await import('./getFileHistory.action')
@@ -365,7 +365,7 @@ describe('getFileHistory', () => {
     expect(result.data.totalCount).toBe(0)
   })
 
-  it.skip('[P2] should handle pagination with PAGE_SIZE=50', async () => {
+  it('[P2] should handle pagination with PAGE_SIZE=50', async () => {
     // Simulate 60 files — page 1 should get 50, page 2 should get 10
     const firstPage = Array.from({ length: 50 }, () => buildFileHistoryRow())
     dbState.returnValues = [[{ autoPassThreshold: 95 }], firstPage]
@@ -382,7 +382,7 @@ describe('getFileHistory', () => {
     expect(result.data.files).toHaveLength(50)
   })
 
-  it.skip('[P2] should filter all returns every file', async () => {
+  it('[P2] should filter all returns every file', async () => {
     const files = Array.from({ length: 5 }, () => buildFileHistoryRow())
     dbState.returnValues = [[{ autoPassThreshold: 95 }], files]
 

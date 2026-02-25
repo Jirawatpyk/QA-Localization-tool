@@ -145,7 +145,7 @@ describe('crossFileConsistency', () => {
 
   // ── P0: Core consistency detection ──
 
-  it.skip('[P0] should create finding when same source has different targets across files', async () => {
+  it('[P0] should create finding when same source has different targets across files', async () => {
     // Same source text but different translations in 2 files
     const seg1 = buildSegmentRow({
       fileId: FILE_ID_1,
@@ -176,7 +176,7 @@ describe('crossFileConsistency', () => {
     expect(result.findingCount).toBeGreaterThan(0)
   })
 
-  it.skip('[P0] should create finding with scope=cross-file, segmentId=null, relatedFileIds=[f1,f2]', async () => {
+  it('[P0] should create finding with scope=cross-file, segmentId=null, relatedFileIds=[f1,f2]', async () => {
     const seg1 = buildSegmentRow({
       fileId: FILE_ID_1,
       sourceText: 'Submit',
@@ -214,7 +214,7 @@ describe('crossFileConsistency', () => {
     )
   })
 
-  it.skip('[P0] should include withTenant on segments query and findings INSERT', async () => {
+  it('[P0] should include withTenant on segments query and findings INSERT', async () => {
     dbState.returnValues = [
       [], // segments
       [], // glossary
@@ -234,7 +234,7 @@ describe('crossFileConsistency', () => {
 
   // ── P1: Normalization and filtering ──
 
-  it.skip('[P1] should NFKC normalize and trim source text before comparing', async () => {
+  it('[P1] should NFKC normalize and trim source text before comparing', async () => {
     // U+FF21 (fullwidth A) normalizes to A under NFKC
     const seg1 = buildSegmentRow({
       fileId: FILE_ID_1,
@@ -265,7 +265,7 @@ describe('crossFileConsistency', () => {
     expect(result.findingCount).toBeGreaterThan(0)
   })
 
-  it.skip('[P1] should skip source text shorter than 3 words', async () => {
+  it('[P1] should skip source text shorter than 3 words', async () => {
     // "OK" = 1 word — too short for cross-file consistency check
     const seg1 = buildSegmentRow({
       fileId: FILE_ID_1,
@@ -296,7 +296,7 @@ describe('crossFileConsistency', () => {
     expect(result.findingCount).toBe(0)
   })
 
-  it.skip('[P1] should exclude glossary-matched terms from analysis', async () => {
+  it('[P1] should exclude glossary-matched terms from analysis', async () => {
     // "Login" is in glossary → consistency check should skip it
     const seg1 = buildSegmentRow({
       fileId: FILE_ID_1,
@@ -325,7 +325,7 @@ describe('crossFileConsistency', () => {
     expect(result.findingCount).toBe(0)
   })
 
-  it.skip('[P1] should exclude segments with ApprovedSignOff confirmation state', async () => {
+  it('[P1] should exclude segments with ApprovedSignOff confirmation state', async () => {
     const seg1 = buildSegmentRow({
       fileId: FILE_ID_1,
       sourceText: 'Terms and conditions apply',
@@ -354,7 +354,7 @@ describe('crossFileConsistency', () => {
     expect(result.findingCount).toBe(0)
   })
 
-  it.skip('[P1] should deduplicate findings: same inconsistency produces 1 finding not N', async () => {
+  it('[P1] should deduplicate findings: same inconsistency produces 1 finding not N', async () => {
     // 3 files all have same source but different targets — should produce 1 finding, not 3
     const fileId3 = 'f3f3f3f3-a4a4-4b5b-8c6c-d7d7d7d7d7d7'
     const seg1 = buildSegmentRow({
@@ -391,7 +391,7 @@ describe('crossFileConsistency', () => {
     expect(result.findingCount).toBe(1)
   })
 
-  it.skip('[P1] should be idempotent: running twice produces same findings', async () => {
+  it('[P1] should be idempotent: running twice produces same findings', async () => {
     const seg1 = buildSegmentRow({
       fileId: FILE_ID_1,
       sourceText: 'Welcome back user',
@@ -439,7 +439,7 @@ describe('crossFileConsistency', () => {
     expect(result1.findingCount).toBe(result2.findingCount)
   })
 
-  it.skip('[P1] should NOT create finding when same source has same target across files', async () => {
+  it('[P1] should NOT create finding when same source has same target across files', async () => {
     // Consistent translation — no finding expected
     const seg1 = buildSegmentRow({
       fileId: FILE_ID_1,

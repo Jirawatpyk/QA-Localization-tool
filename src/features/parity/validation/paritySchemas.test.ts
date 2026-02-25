@@ -1,13 +1,13 @@
 /// <reference types="vitest/globals" />
 import { describe, expect, it } from 'vitest'
 
+import { generateParityReportSchema, reportMissingCheckSchema } from './paritySchemas'
+
 const VALID_PROJECT_ID = 'b1c2d3e4-f5a6-4b2c-9d3e-4f5a6b7c8d9e'
 const VALID_FILE_ID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
 
 describe('paritySchemas', () => {
-  it.skip('[P1] should validate generateParityReport input with projectId and xbenchReportFile', async () => {
-    const { generateParityReportSchema } = await import('./paritySchemas')
-
+  it('should validate generateParityReport input with projectId and xbenchReportFile', () => {
     const result = generateParityReportSchema.safeParse({
       projectId: VALID_PROJECT_ID,
       xbenchReportFile: 'report.xlsx',
@@ -18,9 +18,7 @@ describe('paritySchemas', () => {
     expect(result.data.projectId).toBe(VALID_PROJECT_ID)
   })
 
-  it.skip('[P1] should accept optional fileId in generateParityReport', async () => {
-    const { generateParityReportSchema } = await import('./paritySchemas')
-
+  it('should accept optional fileId in generateParityReport', () => {
     // With fileId
     const withFileId = generateParityReportSchema.safeParse({
       projectId: VALID_PROJECT_ID,
@@ -37,57 +35,61 @@ describe('paritySchemas', () => {
     expect(withoutFileId.success).toBe(true)
   })
 
-  it.skip('[P1] should validate reportMissingCheck with all required fields', async () => {
-    const { reportMissingCheckSchema } = await import('./paritySchemas')
-
+  it('should validate reportMissingCheck with all required fields', () => {
     const result = reportMissingCheckSchema.safeParse({
       projectId: VALID_PROJECT_ID,
-      fileId: VALID_FILE_ID,
+      fileReference: 'test-file.sdlxliff',
       segmentNumber: 42,
-      expectedCategory: 'accuracy',
       expectedDescription: 'Number format inconsistency was not detected by the tool',
+      xbenchCheckType: 'Numeric Mismatch',
     })
 
     expect(result.success).toBe(true)
     if (!result.success) return
     expect(result.data.segmentNumber).toBe(42)
-    expect(result.data.expectedCategory).toBe('accuracy')
+    expect(result.data.xbenchCheckType).toBe('Numeric Mismatch')
     expect(result.data.expectedDescription).toContain('Number format')
   })
 
-  it.skip('[P1] should reject reportMissingCheck with segmentNumber <= 0', async () => {
-    const { reportMissingCheckSchema } = await import('./paritySchemas')
-
-    // segmentNumber = 0
+  it('should reject reportMissingCheck with segmentNumber <= 0', () => {
     const zeroResult = reportMissingCheckSchema.safeParse({
       projectId: VALID_PROJECT_ID,
-      fileId: VALID_FILE_ID,
+      fileReference: 'test.sdlxliff',
       segmentNumber: 0,
-      expectedCategory: 'accuracy',
       expectedDescription: 'Missing check',
+      xbenchCheckType: 'Tag Mismatch',
     })
     expect(zeroResult.success).toBe(false)
 
-    // segmentNumber = -1
     const negativeResult = reportMissingCheckSchema.safeParse({
       projectId: VALID_PROJECT_ID,
-      fileId: VALID_FILE_ID,
+      fileReference: 'test.sdlxliff',
       segmentNumber: -1,
-      expectedCategory: 'accuracy',
       expectedDescription: 'Missing check',
+      xbenchCheckType: 'Tag Mismatch',
     })
     expect(negativeResult.success).toBe(false)
   })
 
-  it.skip('[P1] should reject reportMissingCheck with empty expectedDescription', async () => {
-    const { reportMissingCheckSchema } = await import('./paritySchemas')
-
+  it('should reject reportMissingCheck with empty expectedDescription', () => {
     const result = reportMissingCheckSchema.safeParse({
       projectId: VALID_PROJECT_ID,
-      fileId: VALID_FILE_ID,
+      fileReference: 'test.sdlxliff',
       segmentNumber: 5,
-      expectedCategory: 'terminology',
       expectedDescription: '',
+      xbenchCheckType: 'Consistency',
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('should reject reportMissingCheck with empty xbenchCheckType', () => {
+    const result = reportMissingCheckSchema.safeParse({
+      projectId: VALID_PROJECT_ID,
+      fileReference: 'test.sdlxliff',
+      segmentNumber: 5,
+      expectedDescription: 'Missing check',
+      xbenchCheckType: '',
     })
 
     expect(result.success).toBe(false)

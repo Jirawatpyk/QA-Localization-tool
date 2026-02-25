@@ -51,7 +51,7 @@ describe('FileStatusCard', () => {
 
   // ── P2: Core rendering ──
 
-  it.skip('[P2] should display filename, ScoreBadge, status badge, and severity counts', () => {
+  it('[P2] should display filename, ScoreBadge, status badge, and severity counts', () => {
     // EXPECTED: Card renders filename text, delegates score to ScoreBadge,
     // shows a status badge ("Needs Review"), and severity count breakdown
     render(<FileStatusCard file={defaultFile} projectId={PROJECT_ID} />)
@@ -66,13 +66,19 @@ describe('FileStatusCard', () => {
     // Status badge
     expect(screen.getByText(/Needs Review/i)).toBeTruthy()
 
-    // Severity counts visible
-    expect(screen.getByText(/1/)).toBeTruthy() // critical
-    expect(screen.getByText(/3/)).toBeTruthy() // major
-    expect(screen.getByText(/7/)).toBeTruthy() // minor
+    // Severity counts visible via data-severity attributes
+    const card = screen.getByRole('link')
+    const criticalEl = within(card)
+      .getByText(/critical/i)
+      .closest('[data-severity]')
+    expect(criticalEl?.textContent).toContain('1')
+    const majorEl = within(card).getByText(/major/i).closest('[data-severity]')
+    expect(majorEl?.textContent).toContain('3')
+    const minorEl = within(card).getByText(/minor/i).closest('[data-severity]')
+    expect(minorEl?.textContent).toContain('7')
   })
 
-  it.skip('[P2] should render as link to /projects/[projectId]/review/[fileId]', () => {
+  it('[P2] should render as link to /projects/[projectId]/review/[fileId]', () => {
     // EXPECTED: The card wraps content in a Next.js Link to the review page
     render(<FileStatusCard file={defaultFile} projectId={PROJECT_ID} />)
 
@@ -81,7 +87,7 @@ describe('FileStatusCard', () => {
     expect(link.getAttribute('href')).toBe(`/projects/${PROJECT_ID}/review/${defaultFile.fileId}`)
   })
 
-  it.skip('[P2] should display critical, major, minor counts separately', () => {
+  it('[P2] should display critical, major, minor counts separately', () => {
     // EXPECTED: Three distinct count indicators with labels or aria-labels
     // Critical: 1, Major: 3, Minor: 7
     const fileWithCounts: FileCardData = {
@@ -117,7 +123,7 @@ describe('FileStatusCard', () => {
 
   // ── P3: Navigation ──
 
-  it.skip('[P3] should navigate on click via href', () => {
+  it('[P3] should navigate on click via href', () => {
     // EXPECTED: The card is a link, so clicking navigates via the href attribute.
     // No onClick handler needed — standard anchor behavior.
     render(<FileStatusCard file={defaultFile} projectId={PROJECT_ID} />)

@@ -11,11 +11,11 @@ vi.mock('sonner', () => ({
 
 // Mock the server action (imports 'server-only')
 type MockReportResult =
-  | { success: true; data: { trackingRef: string } }
+  | { success: true; data: { trackingReference: string } }
   | { success: false; error: string }
 
 const mockReportMissingCheck = vi.fn<(..._args: unknown[]) => Promise<MockReportResult>>(
-  async () => ({ success: true, data: { trackingRef: 'PAR-2026-00042' } }),
+  async () => ({ success: true, data: { trackingReference: 'PAR-2026-00042' } }),
 )
 
 vi.mock('../actions/reportMissingCheck.action', () => ({
@@ -41,7 +41,7 @@ describe('ReportMissingCheckDialog', () => {
 
   // ── P2: Form fields ──
 
-  it.skip('[P2] should render form with fileReference, segmentNumber, description, checkType fields', () => {
+  it('[P2] should render form with fileReference, segmentNumber, description, checkType fields', () => {
     // EXPECTED: Dialog contains a form with 4 labeled fields:
     // 1. fileReference (text input - auto-populated or editable)
     // 2. segmentNumber (number input)
@@ -59,7 +59,7 @@ describe('ReportMissingCheckDialog', () => {
     expect(screen.getByLabelText(/Check Type/i)).toBeTruthy()
   })
 
-  it.skip('[P2] should validate required fields before submit', async () => {
+  it('[P2] should validate required fields before submit', async () => {
     // EXPECTED: Submitting with empty required fields shows validation errors
     // and does NOT call the server action
     const user = userEvent.setup()
@@ -77,7 +77,7 @@ describe('ReportMissingCheckDialog', () => {
     })
   })
 
-  it.skip('[P2] should call reportMissingCheck action on submit', async () => {
+  it('[P2] should call reportMissingCheck action on submit', async () => {
     // EXPECTED: After filling all required fields and submitting, the action is called
     // with the form data
     const user = userEvent.setup()
@@ -111,7 +111,7 @@ describe('ReportMissingCheckDialog', () => {
     })
   })
 
-  it.skip('[P2] should show tracking reference in confirmation toast on success', async () => {
+  it('[P2] should show tracking reference in confirmation toast on success', async () => {
     // EXPECTED: After successful submission, a success toast shows the tracking reference
     const user = userEvent.setup()
     render(<ReportMissingCheckDialog {...defaultProps} />)
@@ -133,7 +133,7 @@ describe('ReportMissingCheckDialog', () => {
     })
   })
 
-  it.skip('[P2] should show error toast on action failure', async () => {
+  it('[P2] should show error toast on action failure', async () => {
     // EXPECTED: On action failure, show error toast with the error message
     mockReportMissingCheck.mockResolvedValue({
       success: false,

@@ -5,7 +5,14 @@ import type { languagePairConfigs } from '@/db/schema/languagePairConfigs'
 import type { scores } from '@/db/schema/scores'
 import type { segments } from '@/db/schema/segments'
 import type { severityConfigs } from '@/db/schema/severityConfigs'
+import type {
+  BatchSummaryData,
+  CrossFileFindingSummary,
+  FileHistoryRow,
+  FileInBatch,
+} from '@/features/batch/types'
 import type { AppNotification, DashboardData, RecentFileRow } from '@/features/dashboard/types'
+import type { ParityComparisonResult, XbenchFinding } from '@/features/parity/types'
 import type { ExcelPreview } from '@/features/parser/actions/previewExcelColumns.action'
 import type { ExcelColumnMapping } from '@/features/parser/validation/excelMappingSchema'
 import type { ContributingFinding } from '@/features/scoring/types'
@@ -204,6 +211,101 @@ export function buildDbFinding(overrides?: Partial<DbFindingInsert>): DbFindingI
     targetTextExcerpt: null,
     reviewSessionId: null,
     segmentCount: 1,
+    scope: 'per-file',
+    relatedFileIds: null,
+    ...overrides,
+  }
+}
+
+export function buildFileInBatch(overrides?: Partial<FileInBatch>): FileInBatch {
+  return {
+    fileId: faker.string.uuid(),
+    fileName: `${faker.word.noun()}.sdlxliff`,
+    status: 'l1_completed',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    mqmScore: faker.number.float({ min: 70, max: 100, fractionDigits: 2 }),
+    scoreStatus: 'calculated',
+    criticalCount: 0,
+    majorCount: faker.number.int({ min: 0, max: 5 }),
+    minorCount: faker.number.int({ min: 0, max: 10 }),
+    ...overrides,
+  }
+}
+
+export function buildBatchSummaryData(overrides?: Partial<BatchSummaryData>): BatchSummaryData {
+  const recommendedPass = overrides?.recommendedPass ?? [buildFileInBatch({ mqmScore: 98 })]
+  const needsReview = overrides?.needsReview ?? [
+    buildFileInBatch({ mqmScore: 72, criticalCount: 1 }),
+  ]
+  return {
+    batchId: faker.string.uuid(),
+    projectId: faker.string.uuid(),
+    totalFiles: recommendedPass.length + needsReview.length,
+    passedCount: recommendedPass.length,
+    needsReviewCount: needsReview.length,
+    processingTimeMs: faker.number.int({ min: 1000, max: 60000 }),
+    recommendedPass,
+    needsReview,
+    crossFileFindings: [],
+    ...overrides,
+  }
+}
+
+export function buildFileHistoryRow(overrides?: Partial<FileHistoryRow>): FileHistoryRow {
+  return {
+    id: faker.string.uuid(),
+    fileName: `${faker.word.noun()}.sdlxliff`,
+    uploadDate: new Date(),
+    processingStatus: 'l1_completed',
+    mqmScore: faker.number.float({ min: 70, max: 100, fractionDigits: 2 }),
+    scoreStatus: 'calculated',
+    criticalCount: 0,
+    lastReviewerName: null,
+    decisionStatus: null,
+    ...overrides,
+  }
+}
+
+export function buildCrossFileFinding(
+  overrides?: Partial<CrossFileFindingSummary>,
+): CrossFileFindingSummary {
+  return {
+    id: faker.string.uuid(),
+    description: `Inconsistent translation: '${faker.lorem.word()}' translated differently`,
+    sourceTextExcerpt: faker.lorem.words(5),
+    relatedFileIds: [faker.string.uuid(), faker.string.uuid()],
+    ...overrides,
+  }
+}
+
+export function buildXbenchFinding(overrides?: Partial<XbenchFinding>): XbenchFinding {
+  return {
+    file: `${faker.word.noun()}.sdlxliff`,
+    segment: String(faker.number.int({ min: 1, max: 500 })),
+    sourceText: faker.lorem.sentence(),
+    targetText: faker.lorem.sentence(),
+    checkType: 'Numeric Mismatch',
+    description: faker.lorem.sentence(),
+    severity: 'Warning',
+    ...overrides,
+  }
+}
+
+export function buildParityComparisonResult(
+  overrides?: Partial<ParityComparisonResult>,
+): ParityComparisonResult {
+  return {
+    toolOnly: [],
+    bothFound: [],
+    xbenchOnly: [],
+    summary: {
+      toolFindingCount: 0,
+      xbenchFindingCount: 0,
+      bothFoundCount: 0,
+      toolOnlyCount: 0,
+      xbenchOnlyCount: 0,
+    },
     ...overrides,
   }
 }

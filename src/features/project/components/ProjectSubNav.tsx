@@ -11,6 +11,9 @@ type ProjectSubNavProps = {
 
 const TABS = [
   { label: 'Files', href: (id: string) => `/projects/${id}/upload` },
+  { label: 'Batches', href: (id: string) => `/projects/${id}/batches` },
+  { label: 'History', href: (id: string) => `/projects/${id}/files` },
+  { label: 'Parity', href: (id: string) => `/projects/${id}/parity` },
   { label: 'Settings', href: (id: string) => `/projects/${id}/settings` },
   { label: 'Glossary', href: (id: string) => `/projects/${id}/glossary` },
 ] as const
@@ -19,10 +22,13 @@ export function ProjectSubNav({ projectId }: ProjectSubNavProps) {
   const pathname = usePathname()
 
   return (
-    <nav className="flex gap-1 border-b border-border px-4" aria-label="Project navigation">
+    <nav
+      className="flex gap-1 overflow-x-auto border-b border-border px-4"
+      aria-label="Project navigation"
+    >
       {TABS.map((tab) => {
         const href = tab.href(projectId)
-        const isActive = pathname === href
+        const isActive = pathname === href || pathname.startsWith(href + '/')
 
         return (
           <Link

@@ -48,7 +48,7 @@ function buildToolFinding(overrides?: Partial<ToolFinding>): ToolFinding {
     targetTextExcerpt: 'สุนัขจิ้งจอกสีน้ำตาล',
     category: 'accuracy',
     severity: 'major',
-    fileId: faker.string.uuid(),
+    fileId: 'test-file-id',
     segmentId: faker.string.uuid(),
     ...overrides,
   }
@@ -57,7 +57,7 @@ function buildToolFinding(overrides?: Partial<ToolFinding>): ToolFinding {
 describe('parityComparator', () => {
   // ── P0: Core matching ──
 
-  it.skip('[P0] should match findings by same category and segment with plus-or-minus 1 severity tolerance', async () => {
+  it('[P0] should match findings by same category and segment with plus-or-minus 1 severity tolerance', async () => {
     // Xbench says "major", tool says "minor" — within +-1 tolerance → matched
     const xbenchFindings = [
       buildXbenchFinding({ category: 'accuracy', severity: 'major', segmentNumber: 5 }),
@@ -73,7 +73,7 @@ describe('parityComparator', () => {
     expect(result.toolOnly).toHaveLength(0)
   })
 
-  it.skip('[P0] should NFKC normalize and trim source text before matching', async () => {
+  it('[P0] should NFKC normalize and trim source text before matching', async () => {
     // Xbench uses fullwidth characters, tool uses normal — should still match after NFKC
     const xbenchFindings = [
       buildXbenchFinding({
@@ -98,7 +98,7 @@ describe('parityComparator', () => {
 
   // ── P1: Severity tolerance rules ──
 
-  it.skip('[P1] should accept critical-major as plus-or-minus 1 but reject critical-minor as plus-or-minus 2', async () => {
+  it('[P1] should accept critical-major as plus-or-minus 1 but reject critical-minor as plus-or-minus 2', async () => {
     // critical → major = +-1 → should match
     const xbenchCritical = [
       buildXbenchFinding({ category: 'accuracy', severity: 'critical', segmentNumber: 1 }),
@@ -117,7 +117,7 @@ describe('parityComparator', () => {
     expect(result2.toolOnly).toHaveLength(1)
   })
 
-  it.skip('[P1] should compare findings for specific fileId only not entire project', async () => {
+  it('[P1] should compare findings for specific fileId only not entire project', async () => {
     const targetFileId = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
     const otherFileId = 'b2c3d4e5-f6a7-4b2c-8d3e-4f5a6b7c8d9e'
 
@@ -137,7 +137,7 @@ describe('parityComparator', () => {
 
   // ── P2: Edge cases ──
 
-  it.skip('[P2] should return all as Xbench Only when tool findings empty', async () => {
+  it('[P2] should return all as Xbench Only when tool findings empty', async () => {
     const xbenchFindings = [
       buildXbenchFinding({ category: 'accuracy', severity: 'major' }),
       buildXbenchFinding({ category: 'completeness', severity: 'critical' }),
@@ -152,7 +152,7 @@ describe('parityComparator', () => {
     expect(result.toolOnly).toHaveLength(0)
   })
 
-  it.skip('[P2] should return all as Tool Only when xbench findings empty', async () => {
+  it('[P2] should return all as Tool Only when xbench findings empty', async () => {
     const xbenchFindings: XbenchFinding[] = []
     const toolFindings = [
       buildToolFinding({ category: 'accuracy', severity: 'major' }),

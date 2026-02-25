@@ -1,6 +1,6 @@
 # Story 2.7: Batch Summary, File History & Parity Tools
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -72,107 +72,78 @@ so that I can efficiently triage files and trust the tool's accuracy.
 
 **Task dependency order:** Tasks 1-2 first (DB migration + types). Tasks 3-5 can parallel (actions + components). Task 6 (cross-file) depends on Tasks 3-4. Task 7 (parity) semi-independent. Task 8 (golden corpus) depends on Task 7. Task 9 final DoD.
 
-- [ ] **Task 1: Database Migration — New Tables + Schema Changes** (AC: #1, #4, #5, #7)
-  - [ ] 1.1 Create `src/db/schema/parityReports.ts` — `parity_reports` table: `id`, `projectId`, `tenantId`, `fileId` (nullable — batch-level reports have no single file), `toolFindingCount`, `xbenchFindingCount`, `bothFoundCount`, `toolOnlyCount`, `xbenchOnlyCount`, `comparisonData` (jsonb — full result), `xbenchReportStoragePath`, `generatedBy`, `createdAt`
-  - [ ] 1.2 Create `src/db/schema/missingCheckReports.ts` — `missing_check_reports` table: `id`, `projectId`, `tenantId`, `fileReference`, `segmentNumber`, `expectedDescription`, `xbenchCheckType`, `status` (open|investigating|resolved|wont_fix), `trackingReference` (unique, auto-generated), `reportedBy`, `resolvedBy` (nullable), `resolvedAt` (nullable), `createdAt`
-  - [ ] 1.3a ALTER `files` table — **add `updatedAt` column** (required for AC #1 processing time):
-    - Currently `files.ts` only has `createdAt`. AC #1 processing time formula needs `MAX(files.updatedAt)`.
-    - Add to `src/db/schema/files.ts`: `updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),`
-    - Supabase migration: `ALTER TABLE files ADD COLUMN updated_at TIMESTAMPTZ NOT NULL DEFAULT now();`
-    - **Cascading change:** Update ALL existing `db.update(files).set({ status: '...' })` calls to also SET `updatedAt: new Date()`. Affected files:
-      - `src/features/pipeline/inngest/processFile.ts` — 4 status updates (l1_processing, l1_completed, failed, onFailure)
-      - `src/features/pipeline/helpers/runL1ForFile.ts` — 1 status update (if any)
-      - `src/features/pipeline/inngest/processBatch.ts` — error handler status update (if any)
-      - `src/features/parser/actions/` — parsing status updates
-    - Verify: search codebase for `db.update(files)` to catch all locations
-  - [ ] 1.3b ALTER `findings` table:
-    - **Make `segmentId` nullable:** Currently `.notNull()` — cross-file findings have no single segment. Change `segmentId` definition: remove `.notNull()` → `uuid('segment_id').references(() => segments.id, { onDelete: 'cascade' })` (nullable). This requires a Supabase migration: `ALTER TABLE findings ALTER COLUMN segment_id DROP NOT NULL;`
-    - **Add `scope` column:** `scope: varchar('scope', { length: 30 }).notNull().default('per-file')` — values: `'per-file'` (default, existing behavior) | `'cross-file'` (new, cross-file consistency). VARCHAR(30) for future extensibility (e.g., `'project-level'`).
-    - **Add `relatedFileIds` column:** `relatedFileIds: jsonb('related_file_ids').$type<string[]>()` — array of fileIds for cross-file findings to reference conflicting files (nullable)
-    - Update `src/db/schema/findings.ts` with exact Drizzle definitions above
-    - Supabase migration SQL (combined with Task 1.3a):
-      ```sql
-      -- Task 1.3a: files.updatedAt for processing time calculation
-      ALTER TABLE files ADD COLUMN updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+- [x] **Task 1: Database Migration — New Tables + Schema Changes** (AC: #1, #4, #5, #7)
+  - [x] 1.1 Create `src/db/schema/parityReports.ts`
+  - [x] 1.2 Create `src/db/schema/missingCheckReports.ts`
+  - [x] 1.3a ALTER `files` table — add `updatedAt` column
+  - [x] 1.3b ALTER `findings` table — segmentId nullable + scope + relatedFileIds
+  - [x] 1.4 Update `src/db/schema/index.ts` — re-export new schemas
+  - [x] 1.5 Update `src/db/schema/relations.ts` — add relations for new tables
+  - [x] 1.6 Run `npm run db:generate` + `npm run db:migrate` — Drizzle migration `0006_lazy_swordsman.sql` + Supabase migration `00015_story_2_7_schema.sql`
+  - [x] 1.7 RLS policies created for `parity_reports` + `missing_check_reports` (applied to cloud DB via raw SQL script)
+  - [x] 1.8 RLS tests: `parity-reports.rls.test.ts` (4 tests) + `missing-check-reports.rls.test.ts` (4 tests) — 36/36 total RLS pass
 
-      -- Task 1.3b: findings schema changes for cross-file support
-      ALTER TABLE findings ALTER COLUMN segment_id DROP NOT NULL;
-      ALTER TABLE findings ADD COLUMN scope VARCHAR(30) NOT NULL DEFAULT 'per-file';
-      ALTER TABLE findings ADD COLUMN related_file_ids JSONB;
-      ```
-  - [ ] 1.4 Update `src/db/schema/index.ts` — re-export new schemas
-  - [ ] 1.5 Update `src/db/schema/relations.ts` — add relations for new tables:
-    - `parityReports` → `projects` (many-to-one), `files` (many-to-one, nullable), `users` (many-to-one via `generatedBy`)
-    - `missingCheckReports` → `projects` (many-to-one), `users` (many-to-one via `reportedBy`), `users` (many-to-one via `resolvedBy`, nullable)
-    - Update `projects` relations: add `parityReports` (one-to-many), `missingCheckReports` (one-to-many)
-    - Update `users` relations: add `parityReports` (one-to-many), `reportedMissingChecks` (one-to-many)
-  - [ ] 1.6 Run `npm run db:generate` + `npm run db:migrate`
-  - [ ] 1.7 Create Supabase migration with RLS policies for new tables (tenant-scoped INSERT+SELECT, admin full access)
-  - [ ] 1.8 Add RLS tests in `src/db/__tests__/rls/` for new tables. Follow existing pattern from `src/db/__tests__/rls/findings.rls.test.ts` — test cross-tenant isolation (tenant A cannot read/write tenant B's data), same-tenant access, and admin override. Use Supabase test helpers for JWT claim injection.
-
-- [ ] **Task 2: Types, Validation Schemas & Factory Functions** (AC: all)
-  - [ ] 2.1 Create `src/features/batch/types.ts` — `BatchSummaryData`, `FileInBatch`, `FileHistoryRow`, `BatchFileGroup`
-  - [ ] 2.2 Create `src/features/parity/types.ts` — `ParityComparisonResult`, `ParityFinding`, `XbenchFinding`, `ParityMatch`
-  - [ ] 2.3 Create `src/features/batch/validation/batchSchemas.ts` — `getBatchSummarySchema`, `getFileHistorySchema`
-  - [ ] 2.4 Create `src/features/parity/validation/paritySchemas.ts` — `generateParityReportSchema`, `reportMissingCheckSchema`
-  - [ ] 2.5 Update `src/test/factories.ts`:
-    - Add new factories: `buildBatchSummaryData()`, `buildFileInBatch()`, `buildFileHistoryRow()`, `buildParityComparisonResult()`, `buildXbenchFinding()`, `buildMissingCheckReport()`
-    - Update existing `buildFinding()` factory — add `scope: 'per-file'` default + optional `relatedFileIds: null` default to match new columns
+- [x] **Task 2: Types, Validation Schemas & Factory Functions** (AC: all)
+  - [x] 2.1 Create `src/features/batch/types.ts`
+  - [x] 2.2 Create `src/features/parity/types.ts`
+  - [x] 2.3 Create `src/features/batch/validation/batchSchemas.ts`
+  - [x] 2.4 Create `src/features/parity/validation/paritySchemas.ts`
+  - [x] 2.5 Update `src/test/factories.ts` — added 6 new factory functions
     - Add `buildParityReport()` and `buildCrossFileFinding()` convenience factories
-  - [ ] 2.6 Tests: schema validation tests for all new schemas
+  - [x] 2.6 Tests: schema validation tests for all new schemas
 
-- [ ] **Task 3: Batch Summary Server Action & Route** (AC: #1, #2, #6)
-  - [ ] 3.1 Create `src/features/batch/actions/getBatchSummary.action.ts`
+- [x] **Task 3: Batch Summary Server Action & Route** (AC: #1, #2, #6)
+  - [x] 3.1 Create `src/features/batch/actions/getBatchSummary.action.ts`
     - Input: `{ batchId, projectId }`
     - Query: files by batchId → LEFT JOIN scores → count findings by severity per file → split into Recommended Pass / Need Review
     - **Scores JOIN guard:** `scores.fileId` is nullable (null = project-level aggregate) and a file may have multiple score rows (L1, L1L2). Filter to latest score per file: add `eq(scores.layerCompleted, 'L1')` in WHERE (Story 2.7 scope is L1 only) OR use application-side dedup picking the row with latest `calculatedAt` per fileId. Prefer SQL filter for efficiency.
     - Sorting: Recommended Pass = score DESC, file_id ASC. Need Review = score ASC, file_id ASC.
     - Returns: `ActionResult<BatchSummaryData>`
-  - [ ] 3.2 Create `src/app/(app)/projects/[projectId]/batches/page.tsx` — Batch list page (Server Component). Query all `uploadBatches` for this project (ordered by `createdAt` DESC), display batch cards with: file count, date, status summary. Each card links to `/projects/[projectId]/batches/[batchId]`. **Navigation entry points:** this page is the "Batches" tab destination; also linked from upload success flow (post-upload redirect).
-  - [ ] 3.3 Create `src/app/(app)/projects/[projectId]/batches/[batchId]/page.tsx` — Server Component, calls getBatchSummary, passes data to client component
-  - [ ] 3.4 Tests: `getBatchSummary.action.test.ts` — happy path, empty batch, all passed, all need review, mixed, tenant isolation, invalid batch
-  - [ ] 3.5 Add "Batches" tab to `ProjectSubNav.tsx` (new tab: label "Batches", href `/projects/${id}/batches`). **Fix isActive logic:** change `const isActive = pathname === href` to `const isActive = pathname === href || pathname.startsWith(href + '/')` — nested routes (e.g., `/batches/abc-123`) must also highlight the parent tab. Apply this fix to ALL tabs (affects existing Files/Settings/Glossary tabs + new Batches/History/Parity tabs).
+  - [x] 3.2 Create `src/app/(app)/projects/[projectId]/batches/page.tsx` — Batch list page (Server Component). Query all `uploadBatches` for this project (ordered by `createdAt` DESC), display batch cards with: file count, date, status summary. Each card links to `/projects/[projectId]/batches/[batchId]`. **Navigation entry points:** this page is the "Batches" tab destination; also linked from upload success flow (post-upload redirect).
+  - [x] 3.3 Create `src/app/(app)/projects/[projectId]/batches/[batchId]/page.tsx` — Server Component, calls getBatchSummary, passes data to client component
+  - [x] 3.4 Tests: `getBatchSummary.action.test.ts` — happy path, empty batch, all passed, all need review, mixed, tenant isolation, invalid batch
+  - [x] 3.5 Add "Batches" tab to `ProjectSubNav.tsx` (new tab: label "Batches", href `/projects/${id}/batches`). **Fix isActive logic:** change `const isActive = pathname === href` to `const isActive = pathname === href || pathname.startsWith(href + '/')` — nested routes (e.g., `/batches/abc-123`) must also highlight the parent tab. Apply this fix to ALL tabs (affects existing Files/Settings/Glossary tabs + new Batches/History/Parity tabs).
 
-- [ ] **Task 4: Batch Summary UI Components** (AC: #1, #2, #6)
-  - [ ] 4.1 Create `src/features/batch/components/BatchSummaryView.tsx` — Client component, two-column layout (Recommended Pass left, Need Review right), responsive
-  - [ ] 4.2 Create `src/features/batch/components/BatchSummaryHeader.tsx` — total files, passed count, needs review count, processing time
-  - [ ] 4.3 Create `src/features/batch/components/FileStatusCard.tsx` — filename, ScoreBadge, status badge, issue counts (critical/major/minor). Clickable → link to review (placeholder href for Epic 4)
-  - [ ] 4.4 Create `src/features/batch/components/ScoreBadge.tsx` — color-coded score display using design tokens from `@/styles/tokens.css`: green/success (>= 95), yellow/warning (80-94), red/destructive (< 80), gray/muted (na/calculating). Do NOT use inline Tailwind color values — reference CSS custom properties (e.g., `bg-[hsl(var(--success))]` or semantic class names).
-  - [ ] 4.5 Responsive layout: >= 1440px full, >= 1024px compact, < 768px summary only
-  - [ ] 4.6 Tests: `BatchSummaryView.test.tsx`, `FileStatusCard.test.tsx`, `ScoreBadge.test.tsx` — rendering, sorting verification, responsive breakpoints, accessibility
+- [x] **Task 4: Batch Summary UI Components** (AC: #1, #2, #6)
+  - [x] 4.1 Create `src/features/batch/components/BatchSummaryView.tsx` — Client component, two-column layout (Recommended Pass left, Need Review right), responsive
+  - [x] 4.2 Create `src/features/batch/components/BatchSummaryHeader.tsx` — total files, passed count, needs review count, processing time
+  - [x] 4.3 Create `src/features/batch/components/FileStatusCard.tsx` — filename, ScoreBadge, status badge, issue counts (critical/major/minor). Clickable → link to review (placeholder href for Epic 4)
+  - [x] 4.4 Create `src/features/batch/components/ScoreBadge.tsx` — color-coded score display using design tokens from `@/styles/tokens.css`: green/success (>= 95), yellow/warning (80-94), red/destructive (< 80), gray/muted (na/calculating). Do NOT use inline Tailwind color values — reference CSS custom properties (e.g., `bg-[hsl(var(--success))]` or semantic class names).
+  - [x] 4.5 Responsive layout: >= 1440px full, >= 1024px compact, < 768px summary only
+  - [x] 4.6 Tests: `BatchSummaryView.test.tsx`, `FileStatusCard.test.tsx`, `ScoreBadge.test.tsx` — rendering, sorting verification, responsive breakpoints, accessibility
 
-- [ ] **Task 5: File History Server Action, Route & UI** (AC: #3)
-  - [ ] 5.1 Create `src/features/batch/actions/getFileHistory.action.ts`
+- [x] **Task 5: File History Server Action, Route & UI** (AC: #3)
+  - [x] 5.1 Create `src/features/batch/actions/getFileHistory.action.ts`
     - Input: `{ projectId, filterStatus?: 'all' | 'passed' | 'needs_review' | 'failed' }`
     - Query: all files in project → LEFT JOIN scores → LEFT JOIN (latest reviewAction per file for last reviewer) → LEFT JOIN users for reviewer name
     - "passed" filter: `score.status = 'auto_passed'` OR (`score.mqmScore >= project.autoPassThreshold` AND criticalCount = 0)
     - "needs_review" filter: NOT passed AND NOT failed
     - "failed" filter: `file.status = 'failed'`
     - Returns: `ActionResult<FileHistoryRow[]>` ordered by createdAt DESC
-  - [ ] 5.2 Create `src/app/(app)/projects/[projectId]/files/page.tsx` — Server Component
-  - [ ] 5.3 Create `src/features/batch/components/FileHistoryTable.tsx` — Client component with filter buttons, paginated table (PAGE_SIZE = 50), follows GlossaryTermTable pattern
-  - [ ] 5.4 Add "History" tab to `ProjectSubNav.tsx` (label "History", href `/projects/${id}/files`). isActive fix applied in Task 3.5.
-  - [ ] 5.5 Tests: `getFileHistory.action.test.ts` — all filters, pagination, last reviewer join, tenant isolation
-  - [ ] 5.6 Tests: `FileHistoryTable.test.tsx` — filter toggling, empty state, pagination
+  - [x] 5.2 Create `src/app/(app)/projects/[projectId]/files/page.tsx` — Server Component
+  - [x] 5.3 Create `src/features/batch/components/FileHistoryTable.tsx` — Client component with filter buttons, paginated table (PAGE_SIZE = 50), follows GlossaryTermTable pattern
+  - [x] 5.4 Add "History" tab to `ProjectSubNav.tsx` (label "History", href `/projects/${id}/files`). isActive fix applied in Task 3.5.
+  - [x] 5.5 Tests: `getFileHistory.action.test.ts` — all filters, pagination, last reviewer join, tenant isolation
+  - [x] 5.6 Tests: `FileHistoryTable.test.tsx` — filter toggling, empty state, pagination
 
-- [ ] **Task 6: Cross-file Consistency Analysis** (AC: #7)
-  - [ ] 6.1 Create `src/features/pipeline/helpers/crossFileConsistency.ts`
+- [x] **Task 6: Cross-file Consistency Analysis** (AC: #7)
+  - [x] 6.1 Create `src/features/pipeline/helpers/crossFileConsistency.ts`
     - Input: `{ projectId, tenantId, batchId, fileIds }`
     - Logic: For each unique source text across files → if different target translations exist → create finding with `scope: 'cross-file'`, `relatedFileIds: [fileId1, fileId2]`
     - Group by language pair (from project settings) — only compare files with same source language
     - Exclude: (a) glossary-matched terms — query project glossary via `getCachedGlossaryTerms(projectId, tenantId)`, if source text is a glossary term AND target matches an approved glossary translation, skip. (b) Segments with `confirmation_state = 'ApprovedSignOff'`. (c) Duplicate cross-file findings: before inserting, check if a finding with same `category='consistency'`, `scope='cross-file'`, and same `sourceTextExcerpt` already exists for this batch — deduplicate by keeping the first occurrence (ordered by fileId).
     - Finding category: `consistency`, severity: `minor` (cross-file inconsistency is informational)
-  - [ ] 6.2 Create `src/features/pipeline/inngest/batchComplete.ts` — new Inngest function
+  - [x] 6.2 Create `src/features/pipeline/inngest/batchComplete.ts` — new Inngest function
     - Function ID: `'batch-complete-analysis'`
     - Trigger: `'pipeline.batch-completed'` event (new event type)
     - Logic: After all files in batch complete L1 → run cross-file consistency → persist findings
     - Concurrency: `{ key: 'event.data.projectId', limit: 1 }`
     - Register in `src/app/api/inngest/route.ts`
-  - [ ] 6.3 Update `src/features/pipeline/inngest/processBatch.ts` — after all files dispatched, add step to check batch completion and emit `pipeline.batch-completed` event
+  - [x] 6.3 Update `src/features/pipeline/inngest/processBatch.ts` — after all files dispatched, add step to check batch completion and emit `pipeline.batch-completed` event
     - **Design note:** processBatch fans out file events and returns immediately. Batch completion detection needs a different mechanism — either: (A) Each processFile checks if it's the last file in batch → emits event, or (B) Polling step in processBatch via `step.waitForEvent`. Option A is simpler.
     - Preferred: Option A — in `processFile.ts`, after scoring step, check if all files in batch are `l1_completed` → if yes, send `pipeline.batch-completed` event via `step.sendEvent`
     - **Guard clause:** `files.batchId` is nullable (files uploaded without batch context). Add early return guard: `if (!event.data.uploadBatchId) return { allCompleted: false, fileCount: 0 }` — skip batch completion check entirely for non-batch files.
-  - [ ] 6.4 Update types and Inngest client:
+  - [x] 6.4 Update types and Inngest client:
     - Add `PipelineBatchCompletedEventData` type to `src/types/pipeline.ts`:
       ```typescript
       export type PipelineBatchCompletedEventData = {
@@ -184,45 +155,45 @@ so that I can efficiently triage files and trust the tool's accuracy.
       }
       ```
     - Update `src/lib/inngest/client.ts` — add `'pipeline.batch-completed': { data: PipelineBatchCompletedEventData }` to events type map
-  - [ ] 6.5 Update `src/features/batch/components/BatchSummaryView.tsx` — add "Cross-file Issues" section if cross-file findings exist
-  - [ ] 6.6 Tests: `crossFileConsistency.test.ts` — same source/different target detection, language pair grouping, glossary exclusion, approved segment exclusion, empty case
-  - [ ] 6.7 Tests: `batchComplete.test.ts` — Inngest function tests, batch completion detection, finding persistence
+  - [x] 6.5 Update `src/features/batch/components/BatchSummaryView.tsx` — add "Cross-file Issues" section if cross-file findings exist
+  - [x] 6.6 Tests: `crossFileConsistency.test.ts` — same source/different target detection, language pair grouping, glossary exclusion, approved segment exclusion, empty case
+  - [x] 6.7 Tests: `batchComplete.test.ts` — Inngest function tests, batch completion detection, finding persistence
 
-- [ ] **Task 7: Xbench Parity Comparison Tool** (AC: #4, #5)
-  - [ ] 7.1 Verify `exceljs` dependency already installed (`"exceljs": "^4.4.0"` in package.json — added in Story 2.4 for golden corpus tests). No `@types/exceljs` needed (types bundled). If missing, run `npm install exceljs`.
-  - [ ] 7.2 Create `src/features/parity/helpers/xbenchReportParser.ts`
+- [x] **Task 7: Xbench Parity Comparison Tool** (AC: #4, #5)
+  - [x] 7.1 Verify `exceljs` dependency already installed (`"exceljs": "^4.4.0"` in package.json — added in Story 2.4 for golden corpus tests). No `@types/exceljs` needed (types bundled). If missing, run `npm install exceljs`.
+  - [x] 7.2 Create `src/features/parity/helpers/xbenchReportParser.ts`
     - Parse Xbench xlsx report into structured findings
     - Extract columns: filename, source text, target text, check type, description
     - Group findings by filename (one report covers N files)
     - Handle report authority rules (Original > Updated, ignore LI duplicates)
-  - [ ] 7.3 Create `src/features/parity/helpers/parityComparator.ts`
+  - [x] 7.3 Create `src/features/parity/helpers/parityComparator.ts`
     - Input: tool findings (from DB) + Xbench findings (parsed xlsx)
     - Matching logic: same issue type (category mapping: Xbench → tool categories) + same segment (source text match, NFKC-normalized) + within ±1 severity level
     - Output: `ParityComparisonResult { toolOnly, bothFound, xbenchOnly }`
     - Category mapping: Xbench "Tag Mismatch" → tool `tag_integrity`, "Numeric Mismatch" → tool `number_format`, etc.
-  - [ ] 7.4 Create `src/features/parity/actions/generateParityReport.action.ts`
+  - [x] 7.4 Create `src/features/parity/actions/generateParityReport.action.ts`
     - Input: `{ projectId, fileId (optional — batch-level if omitted), xbenchReportFile (uploaded xlsx) }`
     - Upload xlsx to Supabase Storage at `{tenantId}/{projectId}/parity/{filename}`
     - Parse xlsx → compare with tool findings → persist to `parity_reports` table
     - Write audit log
     - Returns: `ActionResult<ParityComparisonResult>`
-  - [ ] 7.5 Create `src/features/parity/actions/reportMissingCheck.action.ts`
+  - [x] 7.5 Create `src/features/parity/actions/reportMissingCheck.action.ts`
     - Input: `{ projectId, fileReference, segmentNumber, expectedDescription, xbenchCheckType }`
     - Generate tracking reference: `MCR-{YYYYMMDD}-{randomAlphanumeric(6)}`
     - Insert into `missing_check_reports` table
     - Write audit log
     - Returns: `ActionResult<{ trackingReference: string }>`
-  - [ ] 7.6 Create `src/app/(app)/projects/[projectId]/parity/page.tsx` — Server Component
-  - [ ] 7.7 Create `src/features/parity/components/ParityComparisonView.tsx` — Client component: upload zone for xlsx, trigger comparison, display results
-  - [ ] 7.8 Create `src/features/parity/components/ParityResultsTable.tsx` — Three sections: [Both Found] (green), [Tool Only] (blue), [Xbench Only] (red highlight — parity gaps)
-  - [ ] 7.9 Create `src/features/parity/components/ReportMissingCheckDialog.tsx` — Form dialog with fields + submit + confirmation toast with tracking reference
-  - [ ] 7.10 Add "Parity" tab to `ProjectSubNav.tsx` (label "Parity", href `/projects/${id}/parity`). isActive fix applied in Task 3.5.
-  - [ ] 7.11 Tests: `xbenchReportParser.test.ts` — xlsx parsing, column extraction, grouping by filename, authority rules
-  - [ ] 7.12 Tests: `parityComparator.test.ts` — matching logic, ±1 severity tolerance, category mapping, NFKC normalization, edge cases (empty, all match, no match)
-  - [ ] 7.13 Tests: `generateParityReport.action.test.ts` — happy path, invalid xlsx, tenant isolation, audit log
-  - [ ] 7.14 Tests: `reportMissingCheck.action.test.ts` — happy path, validation, tracking reference format, tenant isolation
+  - [x] 7.6 Create `src/app/(app)/projects/[projectId]/parity/page.tsx` — Server Component
+  - [x] 7.7 Create `src/features/parity/components/ParityComparisonView.tsx` — Client component: upload zone for xlsx, trigger comparison, display results
+  - [x] 7.8 Create `src/features/parity/components/ParityResultsTable.tsx` — Three sections: [Both Found] (green), [Tool Only] (blue), [Xbench Only] (red highlight — parity gaps)
+  - [x] 7.9 Create `src/features/parity/components/ReportMissingCheckDialog.tsx` — Form dialog with fields + submit + confirmation toast with tracking reference
+  - [x] 7.10 Add "Parity" tab to `ProjectSubNav.tsx` (label "Parity", href `/projects/${id}/parity`). isActive fix applied in Task 3.5.
+  - [x] 7.11 Tests: `xbenchReportParser.test.ts` — xlsx parsing, column extraction, grouping by filename, authority rules
+  - [x] 7.12 Tests: `parityComparator.test.ts` — matching logic, ±1 severity tolerance, category mapping, NFKC normalization, edge cases (empty, all match, no match)
+  - [x] 7.13 Tests: `generateParityReport.action.test.ts` — happy path, invalid xlsx, tenant isolation, audit log
+  - [x] 7.14 Tests: `reportMissingCheck.action.test.ts` — happy path, validation, tracking reference format, tenant isolation
 
-- [ ] **Task 8: Golden Corpus Integration Tests — Refactor + Extend** (AC: #8)
+- [x] **Task 8: Golden Corpus Integration Tests — Refactor + Extend** (AC: #8)
   - **Existing code:** `src/__tests__/integration/rule-engine-golden-corpus.test.ts` (427 lines) already implements most of AC #8:
     - Parses 8 Tier 1 "with_issues" SDLXLIFF files via `parseXliff`
     - Runs L1 engine (`processFile`) on all segments
@@ -230,24 +201,24 @@ so that I can efficiently triage files and trust the tool's accuracy.
     - Compares findings (category+severity matching)
     - Also: `golden-corpus-diagnostic.test.ts` exists for debugging
   - **What's needed:** Extract reusable helpers from the existing test, then use them in the parity feature module
-  - [ ] 8.1 Extract `src/features/parity/helpers/xbenchCategoryMapper.ts` — refactor the inline category mapping from `rule-engine-golden-corpus.test.ts` into a shared helper (Xbench check type → tool rule category). This is the same mapper used by `parityComparator.ts` (Task 7.3).
-  - [ ] 8.2 Extract `src/features/parity/helpers/xbenchReportParser.ts` — refactor xlsx parsing logic from the existing test into the shared `xbenchReportParser` (Task 7.2). Update the existing test to import from this helper instead of inline parsing.
-  - [ ] 8.3 Update `src/__tests__/integration/rule-engine-golden-corpus.test.ts` — refactor to use the extracted helpers (`xbenchReportParser`, `xbenchCategoryMapper`). Verify all existing tests still pass. Add clean file assertion (14 clean files → 0 findings each) if not already present.
-  - [ ] 8.4 Create `src/__tests__/integration/golden-corpus-parity.test.ts` — extends the refactored test to use `parityComparator` for formal parity comparison. Assert 0 [Xbench Only] entries for Tier 1 (or document known gaps with `tag_integrity` tolerance — see Known Gaps section).
-  - [ ] 8.5 Tests: `xbenchCategoryMapper.test.ts` — all Xbench check types mapped, unknown type handling, case-insensitive matching
+  - [x] 8.1 Extract `src/features/parity/helpers/xbenchCategoryMapper.ts` — refactor the inline category mapping from `rule-engine-golden-corpus.test.ts` into a shared helper (Xbench check type → tool rule category). This is the same mapper used by `parityComparator.ts` (Task 7.3).
+  - [x] 8.2 Extract `src/features/parity/helpers/xbenchReportParser.ts` — refactor xlsx parsing logic from the existing test into the shared `xbenchReportParser` (Task 7.2). Update the existing test to import from this helper instead of inline parsing.
+  - [x] 8.3 Update `src/__tests__/integration/rule-engine-golden-corpus.test.ts` — refactor to use the extracted helpers (`xbenchReportParser`, `xbenchCategoryMapper`). Verify all existing tests still pass. Add clean file assertion (14 clean files → 0 findings each) if not already present.
+  - [x] 8.4 Create `src/__tests__/integration/golden-corpus-parity.test.ts` — extends the refactored test to use `parityComparator` for formal parity comparison. Assert 0 [Xbench Only] entries for Tier 1 (or document known gaps with `tag_integrity` tolerance — see Known Gaps section).
+  - [x] 8.5 Tests: `xbenchCategoryMapper.test.ts` — all Xbench check types mapped, unknown type handling, case-insensitive matching
 
-- [ ] **Task 9: Definition of Done Verification**
-  - [ ] 9.1 `npm run db:generate` + `npm run db:migrate` — new tables applied
-  - [ ] 9.2 `npm run type-check` — zero errors
-  - [ ] 9.3 `npm run lint` — zero errors
-  - [ ] 9.4 `npx vitest run src/features/batch` — all batch tests pass
-  - [ ] 9.5 `npx vitest run src/features/parity` — all parity tests pass
-  - [ ] 9.6 `npx vitest run src/features/pipeline` — pipeline tests pass (regression check for cross-file additions)
-  - [ ] 9.7 `npm run test:unit` — full suite passes
-  - [ ] 9.8 `npm run test:rls` — RLS tests pass (new tables included)
-  - [ ] 9.9 Verified: `withTenant()` on every DB query
-  - [ ] 9.10 Verified: audit log written for all state-changing actions
-  - [ ] 9.11 Verified: no `export default` (except pages), no `any`, no `console.log`
+- [x] **Task 9: Definition of Done Verification**
+  - [x] 9.1 `npm run db:generate` + `npm run db:migrate` — new tables applied
+  - [x] 9.2 `npm run type-check` — zero errors
+  - [x] 9.3 `npm run lint` — zero errors
+  - [x] 9.4 `npx vitest run src/features/batch` — all batch tests pass
+  - [x] 9.5 `npx vitest run src/features/parity` — all parity tests pass
+  - [x] 9.6 `npx vitest run src/features/pipeline` — pipeline tests pass (regression check for cross-file additions)
+  - [x] 9.7 `npm run test:unit` — full suite passes (1419 tests, 0 failures, 116 files)
+  - [x] 9.8 `npm run test:rls` — RLS tests pass (36/36, new tables included)
+  - [x] 9.9 Verified: `withTenant()` on every DB query (anti-pattern + tenant isolation scan passed)
+  - [x] 9.10 Verified: audit log written for all state-changing actions
+  - [x] 9.11 Verified: no `export default` (except pages), no `any` (1 eslint-disable for ExcelJS Buffer), no `console.log`
 
 ## Dev Notes
 
@@ -836,6 +807,34 @@ Key patterns carried forward:
 - **Tenant isolation**: `withTenant()` on EVERY query, JOIN tables both filtered
 - **Step ID pattern**: `step.run('deterministic-id-${entityId}', ...)` for Inngest
 - **`step.sendEvent` batch form**: single checkpoint for multiple events
+
+---
+
+## Completion Notes (2026-02-25)
+
+### Test Summary
+- **Unit tests:** 1419 passed, 0 failed (116 files)
+- **Integration tests:** 3007 passed
+- **RLS tests:** 36/36 passed
+- **New tests added:** ~111 (from 1308 → 1419 unit)
+
+### Post-Implementation Scan Fixes
+- **CRITICAL:** `crossFileConsistency.ts` DELETE/SELECT scoped to `scope='cross-file'` + `detectedByLayer='L1'` — prevents destroying per-file findings from other pipeline layers
+- **HIGH:** `reportMissingCheck.action.ts` — removed detached `withTenant()` no-op, added project ownership SELECT + guard
+- **HIGH:** `generateParityReport.action.ts` — added project ownership SELECT + guard
+- **MEDIUM:** `ReportMissingCheckDialog.tsx` — fixed relative import to `@/` alias
+- **MEDIUM:** All `!` (non-null assertion) removed from production code — replaced with guard checks + early return
+
+### Golden Corpus Parity Results
+- `xbenchCategoryMapper` extended: added `'numeric mismatch': 'accuracy'` + `'repeated word': 'fluency'`
+- Known gaps documented: `tag_integrity` (data source difference, gap <= 17), `accuracy` (number_format may be 0 in parsed subset)
+- 20 golden corpus + parity tests passing
+
+### E2E Tests (Out of Scope)
+- `batch-summary.spec.ts`, `file-history.spec.ts`, `parity-comparison.spec.ts` — written as `test.skip` (RED phase). Require full stack to run. Deferred to E2E gate.
+
+### Known Issue
+- `xbenchReportParser.ts` has 1 `as any` with eslint-disable — ExcelJS `xlsx.load()` Buffer type mismatch (`Uint8Array` vs `Buffer`). `as Buffer` fails with TS2345.
 - **Event type system**: add new events to `PipelineEvents` in `src/lib/inngest/client.ts`
 
 ### Git Intelligence Summary

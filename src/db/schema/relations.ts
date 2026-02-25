@@ -13,7 +13,9 @@ import { fixSuggestions } from './fixSuggestions'
 import { glossaries } from './glossaries'
 import { glossaryTerms } from './glossaryTerms'
 import { languagePairConfigs } from './languagePairConfigs'
+import { missingCheckReports } from './missingCheckReports'
 import { notifications } from './notifications'
+import { parityReports } from './parityReports'
 import { projects } from './projects'
 import { reviewActions } from './reviewActions'
 import { reviewSessions } from './reviewSessions'
@@ -48,6 +50,8 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   reviewSessions: many(reviewSessions),
   feedbackEvents: many(feedbackEvents),
   notifications: many(notifications),
+  parityReports: many(parityReports),
+  reportedMissingChecks: many(missingCheckReports, { relationName: 'reportedBy' }),
 }))
 
 // --- User Roles ---
@@ -67,6 +71,8 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   exportedReports: many(exportedReports),
   auditResults: many(auditResults),
   aiMetricsTimeseries: many(aiMetricsTimeseries),
+  parityReports: many(parityReports),
+  missingCheckReports: many(missingCheckReports),
 }))
 
 // --- Files ---
@@ -81,6 +87,7 @@ export const filesRelations = relations(files, ({ one, many }) => ({
   fileAssignments: many(fileAssignments),
   aiUsageLogs: many(aiUsageLogs),
   runMetadata: many(runMetadata),
+  parityReports: many(parityReports),
 }))
 
 // --- Segments ---
@@ -350,4 +357,46 @@ export const uploadBatchesRelations = relations(uploadBatches, ({ one, many }) =
   tenant: one(tenants, { fields: [uploadBatches.tenantId], references: [tenants.id] }),
   createdByUser: one(users, { fields: [uploadBatches.createdBy], references: [users.id] }),
   files: many(files),
+}))
+
+// --- Parity Reports ---
+export const parityReportsRelations = relations(parityReports, ({ one }) => ({
+  project: one(projects, {
+    fields: [parityReports.projectId],
+    references: [projects.id],
+  }),
+  tenant: one(tenants, {
+    fields: [parityReports.tenantId],
+    references: [tenants.id],
+  }),
+  file: one(files, {
+    fields: [parityReports.fileId],
+    references: [files.id],
+  }),
+  generatedByUser: one(users, {
+    fields: [parityReports.generatedBy],
+    references: [users.id],
+  }),
+}))
+
+// --- Missing Check Reports ---
+export const missingCheckReportsRelations = relations(missingCheckReports, ({ one }) => ({
+  project: one(projects, {
+    fields: [missingCheckReports.projectId],
+    references: [projects.id],
+  }),
+  tenant: one(tenants, {
+    fields: [missingCheckReports.tenantId],
+    references: [tenants.id],
+  }),
+  reportedByUser: one(users, {
+    fields: [missingCheckReports.reportedBy],
+    references: [users.id],
+    relationName: 'reportedBy',
+  }),
+  resolvedByUser: one(users, {
+    fields: [missingCheckReports.resolvedBy],
+    references: [users.id],
+    relationName: 'resolvedBy',
+  }),
 }))

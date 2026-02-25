@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, real, integer, timestamp } from 'drizzle-orm/pg-core'
+import { jsonb, pgTable, uuid, varchar, text, real, integer, timestamp } from 'drizzle-orm/pg-core'
 
 import { files } from './files'
 import { projects } from './projects'
@@ -8,9 +8,8 @@ import { tenants } from './tenants'
 
 export const findings = pgTable('findings', {
   id: uuid('id').primaryKey().defaultRandom(),
-  segmentId: uuid('segment_id')
-    .notNull()
-    .references(() => segments.id, { onDelete: 'cascade' }),
+  // nullable: cross-file findings have no single segment
+  segmentId: uuid('segment_id').references(() => segments.id, { onDelete: 'cascade' }),
   projectId: uuid('project_id')
     .notNull()
     .references(() => projects.id, { onDelete: 'cascade' }),
@@ -36,6 +35,10 @@ export const findings = pgTable('findings', {
   // Truncated to 500 chars — for display in finding list without JOIN to segments
   sourceTextExcerpt: text('source_text_excerpt'),
   targetTextExcerpt: text('target_text_excerpt'),
+  // 'per-file' (default) | 'cross-file' (cross-file consistency findings)
+  scope: varchar('scope', { length: 30 }).notNull().default('per-file'),
+  // Array of fileIds for cross-file findings (nullable — only set for cross-file)
+  relatedFileIds: jsonb('related_file_ids').$type<string[]>(),
   segmentCount: integer('segment_count').notNull().default(1), // multi-segment span tracking
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

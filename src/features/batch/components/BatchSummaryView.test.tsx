@@ -85,7 +85,7 @@ describe('BatchSummaryView', () => {
 
   // ── P1: Core rendering ──
 
-  it.skip('[P1] should render Recommended Pass and Need Review groups', () => {
+  it('[P1] should render Recommended Pass and Need Review groups', () => {
     // EXPECTED: Two visually distinct group sections
     // - "Recommended Pass" group header for files with auto_passed status
     // - "Needs Review" group header for files needing manual review
@@ -101,7 +101,7 @@ describe('BatchSummaryView', () => {
     expect(screen.getByRole('heading', { name: /Needs? Review/i })).toBeTruthy()
   })
 
-  it.skip('[P1] should display correct file count in each group header', () => {
+  it('[P1] should display correct file count in each group header', () => {
     // EXPECTED: Each group header shows "N files" count
     render(
       <BatchSummaryView
@@ -122,7 +122,7 @@ describe('BatchSummaryView', () => {
     expect(within(reviewSection).getByText(/1 file/i)).toBeTruthy()
   })
 
-  it.skip('[P1] should render FileStatusCard for each file in both groups', () => {
+  it('[P1] should render FileStatusCard for each file in both groups', () => {
     // EXPECTED: 2 cards in passed group + 1 card in review group = 3 total FileStatusCard instances
     render(
       <BatchSummaryView
@@ -139,7 +139,7 @@ describe('BatchSummaryView', () => {
 
   // ── P3: Responsive breakpoints ──
 
-  it.skip('[P3] should show full detail FileStatusCards at >= 1440px', () => {
+  it('[P3] should show full detail FileStatusCards at >= 1440px', () => {
     // EXPECTED: At desktop-xl breakpoint (>= 1440px), each file shows full detail cards
     // with score, severity breakdown, and status badge all visible.
     // The layout uses grid with multiple columns.
@@ -156,7 +156,7 @@ describe('BatchSummaryView', () => {
     expect(container.className).toMatch(/grid/)
   })
 
-  it.skip('[P3] should show compact layout at >= 1024px', () => {
+  it('[P3] should show compact layout at >= 1024px', () => {
     // EXPECTED: At tablet/laptop breakpoint (>= 1024px), cards show condensed layout
     // (filename + score inline, no full severity breakdown)
     render(
@@ -172,7 +172,7 @@ describe('BatchSummaryView', () => {
     expect(container).toBeTruthy()
   })
 
-  it.skip('[P3] should show only summary counts at < 768px with no cards', () => {
+  it('[P3] should show only summary counts at < 768px with no cards', () => {
     // EXPECTED: At mobile breakpoint (< 768px), no individual file cards are rendered.
     // Instead, only aggregate counts are shown (e.g., "2 Passed, 1 Needs Review")
     render(
