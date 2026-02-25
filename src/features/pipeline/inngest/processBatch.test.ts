@@ -223,6 +223,59 @@ describe('processBatch', () => {
     })
   })
 
+  // ── L3: onFailure handler defined ──
+
+  it('should register onFailure handler in createFunction config', async () => {
+    const { inngest } = await import('@/lib/inngest/client')
+    const createFunctionMock = inngest.createFunction as ReturnType<typeof vi.fn>
+
+    vi.resetModules()
+    await import('./processBatch')
+
+    const firstArg = createFunctionMock.mock.calls[0]?.[0]
+    expect(firstArg).toMatchObject({
+      onFailure: expect.any(Function),
+    })
+  })
+
+  // ── C1: onFailureBatchFn is testable via Object.assign ──
+
+  it('onFailure should log error with batchId context', async () => {
+    const { logger } = await import('@/lib/logger')
+
+    const { processBatch } = await import('./processBatch')
+    const onFailure = (processBatch as { onFailure?: (...args: unknown[]) => unknown }).onFailure
+    expect(onFailure).toBeDefined()
+
+    const testError = new Error('all retries exhausted')
+    if (onFailure) {
+      await onFailure({
+        event: {
+          data: {
+            event: {
+              data: {
+                batchId: VALID_BATCH_ID,
+                fileIds: [faker.string.uuid()],
+                projectId: VALID_PROJECT_ID,
+                tenantId: VALID_TENANT_ID,
+                userId: VALID_USER_ID,
+                mode: 'economy',
+                uploadBatchId: faker.string.uuid(),
+              },
+            },
+          },
+        },
+        error: testError,
+      })
+    }
+
+    // Inngest v3 onFailure nested structure: event.data.event.data.batchId
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ err: testError, batchId: VALID_BATCH_ID }),
+      expect.any(String),
+    )
+  })
+
   it('should call step.sendEvent with empty array and return fileCount 0 when fileIds is empty', async () => {
     const mockStep = createMockStep()
     const eventData = buildPipelineBatchEvent({ batchId: VALID_BATCH_ID, fileIds: [] })

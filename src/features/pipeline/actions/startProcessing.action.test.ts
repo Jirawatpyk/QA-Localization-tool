@@ -399,6 +399,8 @@ describe('startProcessing', () => {
     if (result.success) return
     expect(result.code).toBe('INTERNAL_ERROR')
     expect(mockInngestSend).not.toHaveBeenCalled()
+    // M1: audit log must NOT be written when DB throws (no partial-success audit trail)
+    expect(mockWriteAuditLog).not.toHaveBeenCalled()
   })
 
   it('should return INTERNAL_ERROR when inngest.send throws', async () => {

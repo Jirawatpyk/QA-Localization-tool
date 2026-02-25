@@ -11,7 +11,11 @@ const {
   mockWriteAuditLog,
   dbState,
 } = vi.hoisted(() => {
-  const state = { callIndex: 0, returnValues: [] as unknown[] }
+  const state = {
+    callIndex: 0,
+    returnValues: [] as unknown[],
+    valuesCaptures: [] as unknown[],
+  }
   return {
     mockCalculateMqmScore: vi.fn(),
     mockCheckAutoPass: vi.fn(),
@@ -63,7 +67,12 @@ vi.mock('@/db/client', () => {
       if (prop === 'transaction') {
         return vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn(new Proxy({}, handler)))
       }
-      // 'values' and all other chainable methods return a new Proxy
+      if (prop === 'values') {
+        return vi.fn((args: unknown) => {
+          dbState.valuesCaptures.push(args)
+          return new Proxy({}, handler)
+        })
+      }
       return vi.fn(() => new Proxy({}, handler))
     },
   }
@@ -173,6 +182,7 @@ describe('scoreFile', () => {
     vi.clearAllMocks()
     dbState.callIndex = 0
     dbState.returnValues = []
+    dbState.valuesCaptures = []
     mockCalculateMqmScore.mockReturnValue(mockScoreResult)
     mockCheckAutoPass.mockResolvedValue(mockAutoPassNotEligible)
     mockLoadPenaltyWeights.mockResolvedValue({ critical: 25, major: 5, minor: 1 })
@@ -340,6 +350,28 @@ describe('scoreFile', () => {
 
     expect(result.status).toBe('auto_passed')
     expect(result.autoPassRationale).toBe(mockAutoPassEligible.rationale)
+    // M3: assert INSERT.values() was called with status: 'auto_passed' (not just the returned row)
+    expect(dbState.valuesCaptures).toContainEqual(
+      expect.objectContaining({ status: 'auto_passed' }),
+    )
+  })
+
+  // ── H1: INSERT returning guard ──
+
+  it('should throw when score INSERT returns empty array', async () => {
+    // Slot 4 returns [] → inserted = undefined → guard throws
+    // 0: segments, 1: findings, 2: prev score tx, 3: delete tx, 4: insert.returning (EMPTY)
+    dbState.returnValues = [mockSegments, [], [undefined], [], []]
+
+    const { scoreFile } = await import('./scoreFile')
+    await expect(
+      scoreFile({
+        fileId: VALID_FILE_ID,
+        projectId: VALID_PROJECT_ID,
+        tenantId: VALID_TENANT_ID,
+        userId: VALID_USER_ID,
+      }),
+    ).rejects.toThrow(/Score insert returned no rows/)
   })
 
   it('should write audit log with score data (non-fatal)', async () => {

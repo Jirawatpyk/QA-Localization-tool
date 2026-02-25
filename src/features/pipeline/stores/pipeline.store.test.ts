@@ -160,6 +160,8 @@ describe('usePipelineStore', () => {
     // Re-run with new batch — completedAt must reset to undefined
     usePipelineStore.getState().startProcessing([VALID_FILE_ID_2])
     expect(usePipelineStore.getState().completedAt).toBeUndefined()
+    // M6: startedAt must also be refreshed on re-run (not stuck at previous batch's timestamp)
+    expect(usePipelineStore.getState().startedAt).toBeGreaterThan(0)
   })
 
   // ── M3: setFileResult preserves status ──

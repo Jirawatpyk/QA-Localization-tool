@@ -3,7 +3,12 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 // ── Hoisted mocks ──
 const { mockRunL1ForFile, mockScoreFile, dbState } = vi.hoisted(() => {
-  const state = { callIndex: 0, returnValues: [] as unknown[], setCaptures: [] as unknown[] }
+  const state = {
+    callIndex: 0,
+    returnValues: [] as unknown[],
+    setCaptures: [] as unknown[],
+    throwAtCallIndex: null as number | null,
+  }
   return {
     mockRunL1ForFile: vi.fn((..._args: unknown[]) =>
       Promise.resolve({ findingCount: 5, duration: 120 }),
@@ -49,7 +54,12 @@ vi.mock('@/db/client', () => {
         })
       }
       if (prop === 'then') {
-        return (resolve?: (v: unknown) => void) => {
+        return (resolve?: (v: unknown) => void, reject?: (err: unknown) => void) => {
+          if (dbState.throwAtCallIndex !== null && dbState.callIndex === dbState.throwAtCallIndex) {
+            dbState.callIndex++
+            reject?.(new Error('DB update failed'))
+            return
+          }
           const value = dbState.returnValues[dbState.callIndex] ?? []
           dbState.callIndex++
           resolve?.(value)
@@ -127,6 +137,7 @@ describe('processFilePipeline', () => {
     dbState.callIndex = 0
     dbState.returnValues = []
     dbState.setCaptures = []
+    dbState.throwAtCallIndex = null
     mockRunL1ForFile.mockResolvedValue({ findingCount: 5, duration: 120 })
     mockScoreFile.mockResolvedValue({
       scoreId: faker.string.uuid(),
@@ -389,6 +400,45 @@ describe('processFilePipeline', () => {
 
     expect(logger.error).toHaveBeenCalledWith(
       expect.objectContaining({ err: testError, fileId: VALID_FILE_ID }),
+      expect.any(String),
+    )
+  })
+
+  // ── H2: onFailureFn try-catch path ──
+
+  it('onFailure should log DB error when status update throws (non-fatal)', async () => {
+    const { logger } = await import('@/lib/logger')
+    // DB update in onFailure throws at callIndex 0
+    dbState.throwAtCallIndex = 0
+
+    const { processFilePipeline } = await import('./processFile')
+    const onFailure = (processFilePipeline as { onFailure?: (...args: unknown[]) => unknown })
+      .onFailure
+
+    const testError = new Error('step failed')
+    if (onFailure) {
+      // Should not throw — try-catch wraps the DB update
+      await onFailure({
+        event: {
+          data: {
+            event: {
+              data: {
+                fileId: VALID_FILE_ID,
+                tenantId: VALID_TENANT_ID,
+              },
+            },
+          },
+        },
+        error: testError,
+      })
+    }
+
+    // First logger.error: original failure (always logged before try-catch)
+    // Second logger.error: DB update failure (inside catch block)
+    expect(logger.error).toHaveBeenCalledTimes(2)
+    expect(logger.error).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ fileId: VALID_FILE_ID }),
       expect.any(String),
     )
   })

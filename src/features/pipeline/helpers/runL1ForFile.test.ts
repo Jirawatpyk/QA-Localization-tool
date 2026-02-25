@@ -465,6 +465,7 @@ describe('runL1ForFile', () => {
     dbState.returnValues = [[mockFile], []]
 
     const { runL1ForFile } = await import('./runL1ForFile')
+    const { withTenant } = await import('@/db/helpers/withTenant')
 
     await expect(
       runL1ForFile({
@@ -476,6 +477,8 @@ describe('runL1ForFile', () => {
 
     // File status must be rolled back to 'failed' — removing rollback would not be caught otherwise
     expect(dbState.setCaptures).toContainEqual({ status: 'failed' })
+    // L1: rollback DB update must also be tenant-scoped (prevent cross-tenant status write)
+    expect(withTenant).toHaveBeenCalledWith(expect.anything(), VALID_TENANT_ID)
   })
 
   it('should not fail if status rollback fails (non-fatal on rollback)', async () => {

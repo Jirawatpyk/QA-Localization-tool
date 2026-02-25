@@ -6,9 +6,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ProcessingMode } from '@/types/pipeline'
 
 // Mock server action (imports 'server-only')
-const mockStartProcessing = vi.fn(
-  async (..._args: unknown[]) =>
-    ({ success: true, data: { batchId: 'test-batch-id', fileCount: 3 } }) as const,
+type MockStartProcessingResult =
+  | { success: true; data: { batchId: string; fileCount: number } }
+  | { success: false; code: string; error?: string }
+
+const mockStartProcessing = vi.fn<(..._args: unknown[]) => Promise<MockStartProcessingResult>>(
+  async () => ({ success: true, data: { batchId: 'test-batch-id', fileCount: 3 } }),
 )
 vi.mock('../actions/startProcessing.action', () => ({
   startProcessing: (...args: unknown[]) => mockStartProcessing(...args),
@@ -175,10 +178,11 @@ describe('ProcessingModeDialog', () => {
   // ── M8: Error toast content & fallback ──
 
   it('should show error toast with action error message when startProcessing fails', async () => {
-    mockStartProcessing.mockResolvedValue(
-      // as never: mock return type is narrowly inferred from the initial `as const` impl
-      { success: false, code: 'CONFLICT', error: 'Files are already being processed' } as never,
-    )
+    mockStartProcessing.mockResolvedValue({
+      success: false,
+      code: 'CONFLICT',
+      error: 'Files are already being processed',
+    })
     const user = userEvent.setup()
     render(<ProcessingModeDialog {...defaultProps} />)
 
@@ -190,10 +194,7 @@ describe('ProcessingModeDialog', () => {
   })
 
   it('should show fallback error toast when action fails without an error message', async () => {
-    mockStartProcessing.mockResolvedValue(
-      // as never: mock return type is narrowly inferred from the initial `as const` impl
-      { success: false, code: 'INTERNAL_ERROR' } as never,
-    )
+    mockStartProcessing.mockResolvedValue({ success: false, code: 'INTERNAL_ERROR' })
     const user = userEvent.setup()
     render(<ProcessingModeDialog {...defaultProps} />)
 

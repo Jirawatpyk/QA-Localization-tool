@@ -122,6 +122,7 @@ so that I can balance speed/cost with analysis depth and start reviewing while A
   - [x] 8.11 CR Round 1 (2026-02-25) — 1C · 4H · 11M · 6L fixed — all 22 findings resolved ✅
   - [x] 8.12 CR Round 2 (2026-02-25) — 3H · 6M · 3L fixed — all 12 findings resolved ✅ (509 tests)
   - [x] 8.13 CR Round 3 (2026-02-25) — 9H · 8M · 4L fixed — all 21 findings resolved ✅ (1303 tests total)
+  - [x] 8.14 CR Round 4 (2026-02-25) — 1C · 3H · 6M · 3L fixed — all 13 findings resolved ✅ (1308 tests total)
 
 ## Dev Notes
 
@@ -743,6 +744,22 @@ claude-sonnet-4-6 (Claude Code)
     - L2: `PROCESSING_MODES = ['economy', 'thorough'] as const` extracted to `@/types/pipeline.ts` — `z.enum(PROCESSING_MODES)` now derives from type definition (no drift possible)
     - L4: Removed unnecessary `as string` cast in `startProcessing.action.ts`
     - Test additions: `throwAtCallIndex` error injection to Proxy mock (H5), mixed-status CONFLICT (H6), rollback `setCaptures` (H7), audit log action literal pinning (H8), empty fileIds exact behavior (H9), `retries:3` assertion (M1-test), store `completedAt` re-run clear (M2), `setFileResult` preserves status (M3), `failed` + mixed terminal (M4), schema `invalid projectId`/`missing projectId`/`duplicate fileIds` (M5), ModeCard keyboard Enter/Space (M7), error toast content + fallback (M8), `withTenant` on file SELECT (L3), `mode` NOT forwarded to `runL1ForFile` (L4), duplicate fileIds → `INVALID_INPUT` (C1)
+
+13. **CR Round 4 (2026-02-25) — 1C · 3H · 6M · 3L — all 13 findings fixed (+5 tests → 1308 total):**
+    - C1 source: `processBatch.ts` Object.assign missing `onFailure: onFailureBatchFn` — function was registered in `createFunction` config but not exposed via `Object.assign`, making it untestable via direct invocation
+    - C1 test: Added `onFailure` invocation test + L3 `onFailure: expect.any(Function)` assertion to `processBatch.test.ts`
+    - H1: `scoreFile.test.ts` INSERT empty array test — `[inserted] = await tx.insert(scores)...returning()` returning `[]` throws guard; zero test coverage before CR R4
+    - H2: `processFile.test.ts` `onFailureFn` try-catch path — DB update throws in failure handler; `throwAtCallIndex` added to Proxy mock; test verifies `logger.error` called twice (original + DB error)
+    - H3 source: `projectSchemas.ts` hardcoded `z.enum(['economy', 'thorough'])` at 2 locations — replaced with `z.enum(PROCESSING_MODES)` from `@/types/pipeline` to eliminate drift when modes expand
+    - M1: `startProcessing.action.test.ts` DB-throws path — added `expect(mockWriteAuditLog).not.toHaveBeenCalled()` to assert no partial-success audit trail
+    - M2: `pipelineSchema.test.ts` — pinned refine error message with `expect(result.error.issues[0]?.message).toBe('Duplicate file IDs are not allowed')`
+    - M3: `scoreFile.test.ts` — added `valuesCaptures` to Proxy mock (`values` handler captures INSERT args); auto_passed test asserts `expect.objectContaining({ status: 'auto_passed' })` in valuesCaptures
+    - M4: `ProcessingModeDialog.test.tsx` — fixed mock typing: `vi.fn<(..._args: unknown[]) => Promise<MockStartProcessingResult>>` replaces narrow `as const` inference; removed both `as never` casts
+    - M5: `runRuleEngine.action.test.ts` — `toHaveBeenNthCalledWith(1, ...)` pins assertion to first `withTenant` call (not any call)
+    - M6: `pipeline.store.test.ts` — re-run test adds `expect(startedAt).toBeGreaterThan(0)` assertion
+    - L1: `runL1ForFile.test.ts` — rollback test adds `withTenant` assertion (tenant-scoped WHERE clause in failure path)
+    - L2: `pipelineSchema.test.ts` — mid-list duplicate test `[ID1, ID2, ID1]` added (not just head-to-head `[ID1, ID1]`)
+    - L3: `processBatch.test.ts` — `onFailure: expect.any(Function)` assertion added to createFunction config test
 
 11. **CR Round 2 (2026-02-25) — 3H · 6M · 3L — all 12 findings fixed (509 tests):**
     - H1: `scoreFile.test.ts` — `NonRetriableError` test added for empty segments path

@@ -71,5 +71,6 @@ export const processBatch = Object.assign(
   ),
   {
     handler: handlerFn,
+    onFailure: onFailureBatchFn,
   },
 )

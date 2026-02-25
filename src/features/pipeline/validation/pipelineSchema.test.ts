@@ -148,5 +148,26 @@ describe('startProcessingSchema', () => {
     })
 
     expect(result.success).toBe(false)
+    // M2: pin the refine error message so regressions are caught immediately
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toBe('Duplicate file IDs are not allowed')
+    }
+  })
+
+  // ── L2: mid-list duplicate ──
+
+  it('should reject mid-list duplicate fileIds (not just head-to-head)', async () => {
+    const { startProcessingSchema } = await import('./pipelineSchema')
+
+    const result = startProcessingSchema.safeParse({
+      fileIds: [VALID_FILE_ID_1, VALID_FILE_ID_2, VALID_FILE_ID_1],
+      projectId: VALID_PROJECT_ID,
+      mode: 'economy',
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toBe('Duplicate file IDs are not allowed')
+    }
   })
 })

@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { PROCESSING_MODES } from '@/types/pipeline'
+
 const bcp47Schema = z
   .string()
   .regex(/^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})*$/, 'Invalid BCP-47 language code')
@@ -9,13 +11,13 @@ export const createProjectSchema = z.object({
   description: z.string().max(1000).optional(),
   sourceLang: bcp47Schema,
   targetLangs: z.array(bcp47Schema).min(1, 'At least one target language required'),
-  processingMode: z.enum(['economy', 'thorough']).default('economy'),
+  processingMode: z.enum(PROCESSING_MODES).default('economy'),
 })
 
 export const updateProjectSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   description: z.string().max(1000).nullable().optional(),
-  processingMode: z.enum(['economy', 'thorough']).optional(),
+  processingMode: z.enum(PROCESSING_MODES).optional(),
   autoPassThreshold: z.number().int().min(0).max(100).optional(),
 })
 

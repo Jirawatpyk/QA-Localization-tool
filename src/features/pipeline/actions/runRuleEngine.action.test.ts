@@ -159,7 +159,7 @@ describe('runRuleEngine', () => {
     dbState.returnValues = [[mockFileRecord]]
     const { withTenant } = await import('@/db/helpers/withTenant')
     await runRuleEngine({ fileId: VALID_UUID })
-    expect(withTenant).toHaveBeenCalledWith(expect.anything(), mockUser.tenantId)
+    expect(withTenant).toHaveBeenNthCalledWith(1, expect.anything(), mockUser.tenantId)
   })
 
   it('should return INTERNAL_ERROR when runL1ForFile throws a non-retriable error', async () => {
