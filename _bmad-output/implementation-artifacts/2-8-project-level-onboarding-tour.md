@@ -397,9 +397,11 @@ Manual code inspection after R2 fixes found 1M additional finding:
 **M (1 — fixed)**
 - M6: `updateTourState.action.ts` `await db.update(...)` not wrapped in try-catch — if DB unreachable, function throws instead of returning `ActionResult` (signature mismatch). HelpMenu's `result.success` check would never run on DB exception, causing unhandled promise rejection in `startTransition`. **Fix:** Wrapped in try-catch; returns `{ success: false, code: 'DB_ERROR', error: '...' }`. Added `[P1] should return DB_ERROR (not throw) when DB update fails`.
 
-**L (1 — accepted, tech debt)**
-- L4: Missing user feedback (toast) when restart fails (DB_ERROR or UNAUTHORIZED) — user clicks "Restart Project Tour", nothing happens (no tour, no error). Acceptable per tour-as-preference pattern; logged as tech debt for future sprint.
+**Post-verify additional fixes (0C + 0H confirmed; L3/L4 also fixed):**
+- M6 fixed: DB exception wrapped in try-catch → returns `{ success: false, code: 'DB_ERROR' }` instead of throwing
+- L3 fixed: `[L] should disable menu items while restart is in progress (isPending = true)` — re-open dropdown after click, check `data-disabled`/`aria-disabled`
+- L4 fixed: `toast.error('Failed to restart tour. Please try again.')` added to HelpMenu; `[L] should show error toast when updateTourState returns { success: false }`
 
-**Final ATDD Compliance:** P0 3/3 ✅ | P1 25/25 ✅ (+1 DB error test) | P2 4/6 | E2E: 10 active
-**Total tests:** 1493 unit | 10 E2E
+**Final ATDD Compliance:** P0 3/3 ✅ | P1 25/25 ✅ | P2 6/6 ✅ (L3 + L4 activated) | E2E: 10 active
+**Total tests:** 1495 unit | 10 E2E
 **CR R2 Exit Status:** 0C + 0H → **PASSED** ✅
