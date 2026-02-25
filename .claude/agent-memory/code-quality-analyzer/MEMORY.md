@@ -2,162 +2,113 @@
 
 ## Index of Topic Files
 
-- `story-2-4-findings.md` — Story 2.4 Rule Engine CR Round 1 + Round 2 + Round 3 findings
-- `story-2-5-findings.md` — Story 2.5 MQM Score Calculation CR Round 1 + Round 2 findings
-- `story-2-6-findings.md` — Story 2.6 Inngest Pipeline Foundation CR Round 1 + Round 2 + Round 3 (adversarial) findings
+- `story-2-4-findings.md` — Story 2.4 Rule Engine CR R1-R3
+- `story-2-5-findings.md` — Story 2.5 MQM Score CR R1-R2
+- `story-2-6-findings.md` — Story 2.6 Inngest Pipeline CR R1-R3
+- `story-2-7-findings.md` — Story 2.7 Batch Summary & Parity CR R1-R4
 
-## Recurring Patterns Found
+## Recurring Anti-Patterns (check EVERY review)
 
-### withTenant() Usage
+### 1. withTenant() — MUST be on every DB query
 
-- Story 1.7: raw `eq(table.tenantId, tenantId)` instead of `withTenant()` — VIOLATION
-- Story 2.4: CORRECT on all 5 DB operations
-- Always check in every review
+- Story 1.7: raw eq() VIOLATION; Stories 2.4-2.7: all CORRECT
 
-### Audit Log Error Handling — RECURRING anti-pattern
+### 2. Audit Log Non-Fatal Pattern
 
-- writeAuditLog throws on failure (by design)
-- Happy-path: SHOULD throw — correct
-- Error-path: MUST be non-fatal (try-catch + logger.error)
-- Story 2.1: createBatch — NOT wrapped
-- Story 2.2: markFileFailed — NOT wrapped
-- Story 2.3: markFileFailed — FIXED
-- Story 2.4: runRuleEngine — FIXED (both happy + error path)
-- Story 2.5: calculateScore — FIXED (audit log wrapped correctly)
-- Story 2.5: graduation notification — NOT wrapped at caller level (C1)
-- Story 2.6: runL1ForFile, scoreFile, startProcessing — ALL wrapped correctly
-- Story 2.6: runL1ForFile audit log missing userId (M1 → upgraded to C4 in R2)
+- writeAuditLog: happy-path SHOULD throw; error-path MUST be try-catch+logger.error
+- Stories 2.1-2.2: NOT wrapped; Stories 2.3-2.7: ALL FIXED
 
-### Supabase Realtime Payload Mismatch
+### 3. Bare `string` Types for Status/Severity
 
-- snake_case DB → camelCase TypeScript cast without mapping → runtime undefined fields
+- FileInBatch.status, FileHistoryRow.processingStatus, XbenchFinding.severity — should be union types
 
-### Type Safety: Bare `string` types
+### 4. Non-null Assertion on Array[0] / .returning()
 
-- RecentFileRow.status, AppNotification.type, UploadFileResult.status/fileType — all bare strings
-- Story 2.5: ContributingFinding.status, ScoreResult.status — bare strings (H2, H6)
-- Should be union types for compile-time safety
+- Always guard: `if (rows.length === 0) throw` before `rows[0]!`
 
-### Test Pattern: Chainable Drizzle Mock
+### 5. Asymmetric Query Filters (Defense-in-Depth)
 
-- Proxy-based `createChainMock(resolvedValue)` — duplicated across test files
-- Should be extracted to shared test utility
+- When one query gets projectId filter, audit ALL sibling queries across all helpers
 
-### Missing DB Constraints
+### 6. inArray() Empty Array Guard
 
-- No unique constraint on `segments(file_id, segment_number)` — allows duplicates
-- No composite indexes on files table for (tenant_id, project_id)
-- idx_findings_file_layer in Supabase migration but NOT in Drizzle schema
-- Story 2.5: No UNIQUE constraint on `scores(file_id, tenant_id)` — concurrent DELETE+INSERT can create duplicates (C2)
+- `inArray(col, [])` = invalid SQL; always add `if (ids.length === 0) return`
 
-### segmentId NOT persisted to DB
+### 7. Inngest Function Requirements
 
-- ParsedSegment.segmentId (mrk mid / trans-unit @id / TU-001) extracted but not stored
-- DB schema segments has no segment_id column
-- Flagged in Stories 2.2, 2.3 — still open
+- Config MUST have: retries, onFailure (in createFunction 1st arg)
+- Object.assign MUST expose: handler + onFailure (for unit tests)
+- MUST register in route.ts functions array
 
-### CAS Guard Pattern (ESTABLISHED)
+### 8. DELETE+INSERT Atomicity
 
-- All status-transition actions MUST use atomic `UPDATE ... WHERE status='expected'` + `.returning()`
-- Confirmed working in: parseFile.action.ts, runRuleEngine.action.ts, runL1ForFile.ts
+- MUST use db.transaction() — Story 2.7 crossFileConsistency: FIXED in R3 (took 3 rounds)
 
-### Inngest onFailure Registration — CRITICAL Pattern
+### 9. Zod Array Uniqueness
 
-- `onFailure` must be in config object (1st arg of `inngest.createFunction()`)
-- Object.assign testability pattern exposes handler for tests BUT does NOT register with Inngest
-- Story 2.6 C1: `processFile.ts` missing `onFailure` in config → files stuck in l1_processing
-- Always verify: config arg includes `onFailure: onFailureFn` when using Object.assign pattern
+- z.array(z.string().uuid()) does NOT deduplicate; add .refine(ids => new Set(ids).size === ids.length)
 
-### Non-null Assertion on Array[0] — RECURRING anti-pattern
+### 10. Optional Filter: Use null, NOT empty string
 
-- Story 2.6 C2: `segmentRows[0]!.sourceLang` crashes on empty array
-- Story 2.6 R3 M2: `inserted!` after .returning() in scoreFile.ts — same pattern
-- Always add guard: `if (rows.length === 0) throw new Error('...')` before array[0]!
-- Check in every query result that uses `[0]!` AND every `.returning()` destructure
+- `optionalId ?? ''` then filter silently matches nothing; use `fileId ? filter : noFilter`
 
-### Duplicate Array Input Validation — NEW pattern (Story 2.6 R3)
+### 11. Set Spread in Hot Loops
 
-- Zod z.array(z.string().uuid()) does NOT deduplicate
-- SQL `inArray(col, [dup1, dup1])` returns unique rows → length mismatch
-- Fix: always add .refine(ids => new Set(ids).size === ids.length) for ID arrays
-- Also: deduplicate before fan-out to prevent double-processing
+- `[...set].some()` inside segment/finding loops: creates array allocation per iteration
+- Use `for...of` on Set directly, or cache `[...set]` once before loop
 
-### Asymmetric Query Filters — RECURRING pattern
+### 12. Form State Reset on Dialog Close
 
-- Story 2.5 R2 C1: scoreFile findings query missing projectId (fixed), segments had it
-- Story 2.6 R3 H2: runL1ForFile segments query missing projectId, scoreFile has it
-- Pattern: when one query gets a defense-in-depth filter, ALL sibling queries across ALL helper files need audit
-- Check: segments, findings, scores queries in EVERY helper function
+- Custom dialog components must reset state on re-open (useEffect on `open` prop)
+- Missing reset = stale data shown to user on second open
 
-## Story 2.4 Rule Engine — Key Patterns (see story-2-4-findings.md for details)
+## CAS Guard Pattern (ESTABLISHED)
 
-- Pipeline engine at `src/features/pipeline/engine/`; pure functions `(segment, ctx) → RuleCheckResult[]`
-- Key patterns: Server Action atomicity (findings+status in same tx), ReDoS protection (safe-regex2 or timeout)
+- All status-transition actions: atomic `UPDATE WHERE status='expected' RETURNING`
+- Confirmed in: parseFile, runRuleEngine, runL1ForFile
 
 ## Cross-Story Patterns
 
 - Path traversal: sanitizeFileName needs fallback for empty/dot results
 - FormData type safety: `as File[]` unsafe, need instanceof guard
-- Unhandled promises in hooks: `void promise.then()` without `.catch()`
-- NFKC: NOT before Intl.Segmenter (Thai sara am U+0E33 decomposes)
-- NFKC: YES before text comparison (glossary, consistency)
+- NFKC: NOT before Intl.Segmenter (Thai sara am); YES before text comparison
+- TOCTOU in Server Actions: SELECT+validate+dispatch NOT atomic; use CAS UPDATE
 
-## Story 2.5 MQM Score — Key Patterns (see story-2-5-findings.md for details)
-
-- Pure calculator importable from Inngest; penaltyWeightLoader intentional withTenant() exception
-- Defense-in-depth asymmetry: when fixing one query's filters, audit ALL sibling queries
-- Graduation dedup missing projectId in JSONB containment query (still open R3-post L3)
-
-## Story 2.6 Inngest Pipeline Foundation — Key Patterns
+## Story 2.6 Inngest Key Patterns
 
 - Shared helpers: `runL1ForFile.ts`, `scoreFile.ts` — NO 'use server', importable from Inngest
-- Object.assign testability pattern for Inngest functions (expose handler + onFailure for unit tests)
-- processBatch fan-out: `step.sendEvent(id, events[])` batch form (single checkpoint)
-- processFilePipeline: concurrency key on projectId limit 1 (serialize per project)
-- Non-cached glossary loader: `getGlossaryTerms()` at `src/lib/cache/glossaryCache.ts` (JOIN-based)
-- Server Actions are thin wrappers: auth + validation + ActionResult mapping only
-- Pipeline event types at `src/features/pipeline/inngest/types.ts`
-- Inngest client events at `src/lib/inngest/client.ts` — DUPLICATED (should reference types.ts)
+- Object.assign testability pattern for Inngest functions
+- processBatch fan-out: `step.sendEvent(id, events[])` batch form
+- processFilePipeline: concurrency key on projectId limit 1
+- Event types canonical at `@/types/pipeline`, re-exported via `inngest/types.ts`
+- client.ts Events type imports from canonical source
 
-### NEW Pattern: Inngest function config vs Object.assign
+## Story 2.7 Key Patterns
 
-- `inngest.createFunction(config, trigger, handler)` — config object is what Inngest reads
-- Object.assign adds properties AFTER function creation — Inngest runtime does NOT see them
-- onFailure, cancelOn, etc. MUST be in config object (1st arg)
-- Object.assign is ONLY for test utilities (exposing handler, onFailure for direct unit testing)
+- R1: 31 findings (6C/9H/11M/5L) — all R1 Critical FIXED in R2
+- R2: 15 findings (2C/4H/6M/3L) — C1 (fileId??''), C2 (as string nullable) FIXED in R3
+- R3: 8 findings (1C/3H/3M/1L) — all R3 Critical+High FIXED in R4 code
+- R4: 7 findings (0C/2H/3M/2L) — all H+M fixed in final commit
+- STILL OPEN after R4: getFileHistory fetch-all (tech debt, 10K cap mitigated)
+- → All security findings (Issues 1-7) verified RESOLVED on 2026-02-25
 
-### NEW Pattern: TOCTOU in Server Actions (Story 2.6 R2 C1)
+## Missing DB Constraints (accumulated — verified 2026-02-25)
 
-- SELECT + validate + dispatch is NOT atomic — concurrent requests can pass validation simultaneously
-- Fix: use CAS UPDATE (SET status='queued' WHERE status='parsed' RETURNING) as the validation step
-- Applies to: any Server Action that validates state then triggers async work
+- ⚠️ OPEN: No UNIQUE on segments(file_id, segment_number) — re-parse can create duplicates
+- ⚠️ OPEN: No composite index on files(tenant_id, project_id) — perf only, low priority
+- ℹ️ BY DESIGN: scores.fileId is nullable (project-level aggregates) — UNIQUE not appropriate
+- ⚠️ OPEN: idx_findings_file_layer in migration but NOT in Drizzle schema
+- ⚠️ OPEN: segmentId NOT persisted to DB (Stories 2.2-2.3, design decision needed)
+- → Tracked in: `_bmad-output/implementation-artifacts/tech-debt-tracker.md`
 
-### NEW Pattern: Inngest Event Type Duplication
+## PROCESSING_MODES SSOT
 
-- client.ts inline Events type vs types.ts canonical types must stay in sync
-- ALWAYS import from canonical source (types.ts) into client.ts
-- Drift causes: correct event schema in handler but wrong validation at send time
+- Canonical: `@/types/pipeline` PROCESSING_MODES const
+- ✅ RESOLVED (2026-02-25): All sites now import from `@/types/pipeline` — projectSchemas.ts, pipelineSchema.ts, db/validation/index.ts
 
-### NEW Pattern: Inngest processBatch Needs Failure Handling (Story 2.6 R3 M3) — FIXED
+## Test Patterns
 
-- processBatch now has retries:3 + onFailureBatchFn
-- BUT: onFailureBatchFn not exposed via Object.assign for testing (R3-post H2)
-- ALL Inngest functions that trigger downstream work MUST have onFailure
-
-### NEW Pattern: PROCESSING_MODES SSOT Propagation (Story 2.6 R3 L2) — PARTIALLY FIXED
-
-- PROCESSING_MODES const at @/types/pipeline — used by pipelineSchema.ts
-- STILL HARDCODED in: projectSchemas.ts:12,18 + db/validation/index.ts:19
-- Check in every review: any z.enum(['economy', 'thorough']) should use PROCESSING_MODES
-
-### NEW Pattern: Object.assign Must Expose onFailure for Testing
-
-- processFile.ts: Object.assign exposes both handler AND onFailure — correct
-- processBatch.ts: Object.assign exposes only handler — MISSING onFailure
-- Always verify BOTH handler + onFailure are in Object.assign exports
-- Test file should have tests for onFailureFn behavior
-
-## Project Structure Notes
-
-- See `patterns.md` or previous file for detailed structure notes
-- Test colocation inconsistent: some in `__tests__/`, some colocated
+- Proxy-based chainable Drizzle mock: duplicated, should extract to shared utility
+- Drizzle mock `values` handler: push to captures then return new Proxy (chainable)
+- `throwAtCallIndex` in Proxy mock for DB error injection
+- `vi.fn((..._args: unknown[]) => ...)` for mocks whose .calls are accessed

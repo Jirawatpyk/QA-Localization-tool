@@ -58,6 +58,10 @@ See `patterns.md` for detailed notes on architecture and violations.
 2. LOW — `createTerm.action.ts` L57-65: duplicate-check query on `glossary_terms` filters by `glossaryId` only (no explicit tenant guard). Safe because `glossaryId` was verified via withTenant() in the same request, but pattern is inconsistent.
 3. LOW — `updateTerm.action.ts` L79-93: same pattern — dup check on `glossaryTerms` by `glossaryId` only. Same risk level as above.
 
+### RESOLVED FINDINGS (verified 2026-02-25)
+
+Items below were flagged in earlier audits but have been FIXED. Kept for historical reference.
+
 ### Story 2.1 Audit Results (Upload Infrastructure)
 
 New tables confirmed tenant-scoped: `upload_batches` (has tenant_id, RLS in 00010_upload_batches_rls.sql)
@@ -68,11 +72,7 @@ New tables confirmed tenant-scoped: `upload_batches` (has tenant_id, RLS in 0001
 - `createBatch.action.ts` — INSERT with tenantId from session + audit log; PASS
 - `getUploadedFiles.action.ts` — withTenant() on files; PASS
 - `route.ts` (upload) — files INSERT uses tenantId from session; admin client used ONLY for Storage (not DB); PASS
-
-**HIGH FINDING (unresolved):**
-
-- `route.ts` L49+L135 — `batchId` taken from FormData (user-controlled), written to files.batch_id without verifying the batch belongs to currentUser.tenantId. RLS on upload_batches only blocks direct writes, NOT FK references from another table's INSERT. This is a cross-tenant batchId injection risk. Fix: SELECT upload_batches with withTenant() to verify ownership before use.
-- `route.ts` L52+L126 — `projectId` from FormData written to files.project_id without ownership check. Same pattern — no SELECT with withTenant() on projects table before INSERT. RLS on files INSERT only checks tenant_id on the new row, not that the projectId belongs to that tenant. Fix: verify projectId via withTenant() SELECT on projects before proceeding.
+- `route.ts` — ✅ FIXED (verified 2026-02-25): projectId and batchId from FormData now verified via SELECT + withTenant() before use (lines 88-115)
 
 ### Story 2.2 Audit Results (SDLXLIFF/XLIFF Parser)
 
@@ -104,13 +104,9 @@ New tables confirmed tenant-scoped: `upload_batches` (has tenant_id, RLS in 0001
 
 ### Story 2.4 Audit Results (L1 Rule Engine)
 
-**CRITICAL FINDING (unresolved):**
+**✅ RESOLVED (verified 2026-02-25):**
 
-- `runRuleEngine.action.ts` L166-169 — final status UPDATE to `l1_completed` uses `eq(files.id, input.fileId)` with NO `withTenant()`. An attacker who knows another tenant's fileId (via GUID enumeration) can transition that file's status. Must add `withTenant(files.tenantId, currentUser.tenantId)` to the WHERE clause. Severity: CRITICAL.
-
-**HIGH FINDING (unresolved):**
-
-- `runRuleEngine.action.ts` L183-186 — rollback UPDATE to `failed` (inside catch block) uses `eq(files.id, input.fileId)` with NO `withTenant()`. Same cross-tenant status-tampering risk. Must add `withTenant(files.tenantId, currentUser.tenantId)`. Severity: HIGH (exploitable only when an exception occurs, but the fix is still mandatory).
+- Logic moved from `runRuleEngine.action.ts` to `runL1ForFile.ts` (Story 2.6 refactor). All 3 UPDATE statements (CAS, final l1_completed, rollback failed) now include `withTenant()`. Confirmed at lines 47, 142, 181 of `runL1ForFile.ts`.
 
 **PASS:**
 
@@ -181,19 +177,11 @@ New tables confirmed tenant-scoped: `parity_reports`, `missing_check_reports` (b
 - `batches/page.tsx` — withTenant() on uploadBatches + eq(projectId); requireRole() before DB access. PASS.
 - `batches/[batchId]/page.tsx` — no direct DB access; delegates to getBatchSummary() Server Action. PASS.
 
-**CRITICAL FINDING (unresolved):**
+**✅ ALL RESOLVED (verified 2026-02-25):**
 
-- `crossFileConsistency.ts` L141-149 — DELETE WHERE clause uses `withTenant() + eq(projectId)` only. Deletes ALL findings for the project (L1 rules, L2 AI, L3 deep analysis). Intent was to delete only cross-file consistency findings before re-insert. Fix: add `eq(findings.scope, 'cross-file')` + `eq(findings.detectedByLayer, 'L1')` to both the SELECT (L130) and DELETE (L141) WHERE clauses.
-
-**HIGH FINDING (unresolved):**
-
-- `reportMissingCheck.action.ts` L52 — `withTenant(missingCheckReports.tenantId, user.tenantId)` called standalone; return value discarded. This is dead code with a misleading "Defense-in-depth" comment. The INSERT itself is correctly isolated (tenantId in value object), but the phantom guard creates false confidence and regression risk. Fix: remove the standalone call; add a real project ownership SELECT before INSERT.
-
-**MEDIUM FINDINGS (unresolved):**
-
-- `reportMissingCheck.action.ts` L54-67 — `projectId` + `fileId` from Zod input written to INSERT without verifying they belong to the calling tenant. DB FK rejects non-existent UUIDs but not cross-tenant UUIDs. Fix: ownership SELECT on projects with withTenant() before INSERT.
-- `generateParityReport.action.ts` L75-89 — same pattern; `projectId` not ownership-verified before `parity_reports` INSERT. The findings SELECT is correctly scoped (returns zero for wrong-tenant projectId), but the resulting INSERT persists a row with an unverified cross-tenant projectId reference.
-- `crossFileConsistency.ts` L130-138 — SELECT for existing findings is over-broad (all project findings), feeds the over-broad DELETE. Fix: add scope + layer filters to SELECT to match intended DELETE scope.
+- `crossFileConsistency.ts` — DELETE now scoped to `scope='cross-file' + detectedByLayer='L1' + inArray(fileIds)` (line 185-202)
+- `reportMissingCheck.action.ts` — standalone withTenant() removed; proper project ownership SELECT with withTenant() added (line 47-55)
+- `generateParityReport.action.ts` — project ownership SELECT with withTenant() added before INSERT (line 64-72)
 
 **Schema confirmations (Story 2.7):**
 
@@ -210,6 +198,6 @@ New tables confirmed tenant-scoped: `parity_reports`, `missing_check_reports` (b
 - Inngest functions ARE NOW ACTIVE — `processBatch` + `processFilePipeline` + `batchComplete` all confirmed tenant-safe
 - INSERT isolation pattern: no WHERE clause on INSERT — instead set `tenantId` field explicitly in value object. withTenant() only applies to SELECT/UPDATE/DELETE WHERE clauses.
 - Inngest tenantId pattern: Server Action sources tenantId from requireRole() → injects into event payload → helper functions receive tenantId as typed parameter. This is the correct trust boundary for Inngest.
-- ANTI-PATTERN: `withTenant(col, val)` called standalone (not passed to `.where()`) is dead code — the helper returns a SQL expression object; it must be composed into a query. Flag any standalone call as HIGH (misleading security comment risk).
-- ANTI-PATTERN: INSERT with unverified FK from client input — always add a prior SELECT with withTenant() to verify ownership of the referenced entity before writing. Affects parity_reports and missing_check_reports in Story 2.7.
+- ANTI-PATTERN: `withTenant(col, val)` called standalone (not passed to `.where()`) is dead code — the helper returns a SQL expression object; it must be composed into a query. Flag any standalone call as HIGH (misleading security comment risk). _Example fixed: reportMissingCheck.action.ts (2026-02-25)_
+- ANTI-PATTERN: INSERT with unverified FK from client input — always add a prior SELECT with withTenant() to verify ownership of the referenced entity before writing. _Example fixed: reportMissingCheck + generateParityReport (2026-02-25)_
 - ANTI-PATTERN for DELETE-then-reinsert idempotency: over-broad DELETE (project-level) wipes other layers' data. Always scope DELETE to the specific layer/scope being regenerated (e.g., `eq(findings.scope, 'cross-file')`).

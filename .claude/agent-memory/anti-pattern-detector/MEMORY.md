@@ -208,12 +208,11 @@
 
 ## Story 2.7 Key Patterns
 
-### Detached withTenant() Call (MEDIUM — Architectural Risk)
+### Detached withTenant() Call (MEDIUM — ✅ RESOLVED 2026-02-25)
 
-- **Pattern**: `withTenant(table.tenantId, tenantId)` called as a standalone expression (result discarded), followed by `db.insert().values({ tenantId: user.tenantId })` — the call does nothing.
-- **Found in**: `reportMissingCheck.action.ts:52`
-- **Risk**: withTenant() used as a defense-in-depth guard but its return value (an SQL condition) is never applied to a query. The INSERT only has tenantId in the values payload, which is correct by itself, but the guard call is misleading and ineffective.
-- **Fix**: Remove the detached call; add a comment explaining that tenantId is enforced via `values({ tenantId: user.tenantId })` from the authenticated user.
+- **Pattern**: `withTenant(table.tenantId, tenantId)` called as a standalone expression (result discarded).
+- **Was in**: `reportMissingCheck.action.ts:52`
+- **Fix applied**: Standalone call removed; proper project ownership SELECT with withTenant() added instead.
 
 ## Story 2.6 Scan Summary (2026-02-25)
 
@@ -233,18 +232,18 @@
   - `scoreFile.ts:208`: `createGraduationNotification` private function structural concern
 - **CLEAN:** `runL1ForFile.ts` (all withTenant() correct, NonRetriableError used correctly, try-catch OUTSIDE step.run context), `startProcessing.action.ts` (all @/ imports, withTenant() on every query), `pipelineSchema.ts` (correct naming), `route.ts` (correct Next.js named exports), `ModeCard.tsx`
 
-## Recurring Pattern: `inngest.createFunction as any` Workaround (HIGH)
+## Recurring Pattern: `inngest.createFunction as any` Workaround (MEDIUM — scoped)
 
-- **Pattern**: `(inngest.createFunction as any)(...)` with `eslint-disable-next-line @typescript-eslint/no-explicit-any` comment — used to bypass Inngest SDK TypeScript type mismatch when handler uses manual type annotation instead of SDK-inferred context type.
-- **Found in Story 2.6**: `processFile.ts:62`, `processBatch.ts:44`
-- **Root cause**: Handler functions (`handlerFn`) manually type the `{ event, step }` context instead of using Inngest SDK generic type inference. Inngest v3 strict generics reject hand-typed handlers.
-- **Fix**: Type `handlerFn` using `Parameters<ReturnType<typeof inngest.createFunction>>` or use `inngest.createFunction` directly without Object.assign wrapper. Alternative: use `createFunction` without typed SDK client if typing conflict cannot be resolved.
+- **Pattern**: `as any` on Inngest createFunction — used to bypass SDK TypeScript type mismatch.
+- **Current state (2026-02-25)**: Scoped to `onFailure: onFailureFn as any` only (not entire createFunction call). Blast radius reduced in CR R2.
+- **Files**: `processFile.ts`, `processBatch.ts`, `batchComplete.ts`
+- **Accepted**: eslint-disable scoped, comment explains rationale. Full fix requires Inngest SDK generics improvement.
 
-## Recurring Pattern: Barrel Export in Feature Inngest Subdirectory (HIGH)
+## Recurring Pattern: Barrel Export in Feature Inngest Subdirectory (HIGH — ⚠️ STILL OPEN)
 
 - **Found in Story 2.6**: `src/features/pipeline/inngest/index.ts` — re-exports from `./processBatch`, `./processFile`, `./types`
-- **Status**: CLAUDE.md explicitly forbids barrel exports in feature modules. No architecture approval comment in the file (unlike `db/schema/index.ts`).
-- **Fix**: Delete `index.ts`; update `src/app/api/inngest/route.ts` to import directly from `@/features/pipeline/inngest/processFile` and `@/features/pipeline/inngest/processBatch`.
+- **Status**: CLAUDE.md explicitly forbids barrel exports in feature modules. No architecture approval comment.
+- **Fix**: Delete `index.ts`; update `route.ts` to import directly. → Tracked in tech-debt-tracker.md
 
 ## Edge Cases Noted
 

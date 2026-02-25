@@ -8,19 +8,21 @@
 - Route handler: `src/app/api/inngest/route.ts` — registers `processFilePipeline` + `processBatch`
 - Event types defined inline in `client.ts` (not separate file)
 
-### Registered Functions (Story 2.6)
+### Registered Functions (Stories 2.6-2.7)
 
-| Export Name           | Function ID              | Trigger Event            | Concurrency                                   |
-| --------------------- | ------------------------ | ------------------------ | --------------------------------------------- |
-| `processFilePipeline` | `process-file-pipeline`  | `pipeline.process-file`  | `[{ key: 'event.data.projectId', limit: 1 }]` |
-| `processBatch`        | `process-batch-pipeline` | `pipeline.batch-started` | none (fan-out only)                           |
+| Export Name           | Function ID              | Trigger Event              | Concurrency                                   |
+| --------------------- | ------------------------ | -------------------------- | --------------------------------------------- |
+| `processFilePipeline` | `process-file-pipeline`  | `pipeline.process-file`    | `[{ key: 'event.data.projectId', limit: 1 }]` |
+| `processBatch`        | `process-batch-pipeline` | `pipeline.batch-started`   | none (fan-out only)                           |
+| `batchComplete`       | `batch-complete`         | `pipeline.batch-completed` | none (retries: 3, onFailure: onFailureFn)     |
 
-Both exported from `src/features/pipeline/inngest/index.ts`.
+All registered in `src/app/api/inngest/route.ts`.
 
 ### Event Names (confirmed dot-notation)
 
 - `pipeline.process-file` — trigger for per-file processing
 - `pipeline.batch-started` — trigger for batch fan-out
+- `pipeline.batch-completed` — trigger for cross-file analysis (Story 2.7)
 
 ### Key Patterns Confirmed in Story 2.6
 
@@ -62,11 +64,10 @@ event: {
 await Promise.all(fileIds.map((fileId) => step.sendEvent({ name: 'pipeline.process-file', data: {...} })))
 ```
 
-**CRITICAL: step.sendEvent API signature — WRONG in Story 2.6 code**
+**step.sendEvent API signature — ✅ FIXED (verified 2026-02-25)**
 
 - Inngest v3 actual API: `step.sendEvent(id: string, event: SendEventPayload)`
-- Story 2.6 uses: `step.sendEvent({ name, data })` — missing string ID first arg
-- This will fail at runtime
+- processBatch.ts now uses correct batch form: `step.sendEvent('dispatch-files-${batchId}', fileIds.map(...))`
 
 **NonRetriableError usage (correct):**
 
