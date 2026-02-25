@@ -19,7 +19,7 @@ export function BatchSummaryHeader({
       : null
 
   return (
-    <div className="flex flex-wrap gap-4" data-testid="mock-header">
+    <div className="flex flex-wrap gap-4" data-testid="batch-summary-header">
       <div className="rounded-lg border bg-card p-4">
         <p className="text-sm text-muted-foreground">Total Files</p>
         <p className="text-2xl font-bold" data-testid="total-files">

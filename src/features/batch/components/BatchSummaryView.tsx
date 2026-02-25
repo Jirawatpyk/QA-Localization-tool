@@ -1,5 +1,7 @@
 'use client'
 
+import type { CrossFileFindingSummary } from '@/features/batch/types'
+
 import { BatchSummaryHeader } from './BatchSummaryHeader'
 import { FileStatusCard } from './FileStatusCard'
 
@@ -18,6 +20,7 @@ type BatchSummaryViewProps = {
   passedFiles: BatchFileItem[]
   reviewFiles: BatchFileItem[]
   processingTimeMs?: number | null
+  crossFileFindings?: CrossFileFindingSummary[]
   compact?: boolean
 }
 
@@ -26,6 +29,7 @@ export function BatchSummaryView({
   passedFiles,
   reviewFiles,
   processingTimeMs,
+  crossFileFindings = [],
   compact = false,
 }: BatchSummaryViewProps) {
   const totalFiles = passedFiles.length + reviewFiles.length
@@ -78,9 +82,39 @@ export function BatchSummaryView({
         </section>
       </div>
 
+      {/* AC#7: Cross-file Issues section */}
+      {crossFileFindings.length > 0 && (
+        <section data-testid="cross-file-issues">
+          <h3 className="mb-3 text-lg font-semibold">Cross-file Issues</h3>
+          <p className="mb-2 text-sm text-muted-foreground">
+            {crossFileFindings.length}{' '}
+            {crossFileFindings.length === 1 ? 'inconsistency' : 'inconsistencies'} found
+          </p>
+          <div className="space-y-2">
+            {crossFileFindings.map((finding) => (
+              <div
+                key={finding.id}
+                className="rounded-lg border border-warning/20 bg-warning/5 p-3"
+              >
+                <p className="text-sm">{finding.description}</p>
+                {finding.sourceTextExcerpt && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Source: &ldquo;{finding.sourceTextExcerpt}&rdquo;
+                  </p>
+                )}
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Affects {finding.relatedFileIds.length} files
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <div className="md:hidden">
         <p className="text-sm text-muted-foreground">
           {passedFiles.length} passed, {reviewFiles.length} need review
+          {crossFileFindings.length > 0 && `, ${crossFileFindings.length} cross-file issues`}
         </p>
       </div>
     </div>

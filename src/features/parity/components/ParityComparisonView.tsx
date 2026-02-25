@@ -47,7 +47,7 @@ export function ParityComparisonView({ projectId, fileId }: ParityComparisonView
       const result = await compareWithXbench({
         projectId,
         fileId,
-        xbenchReportBuffer: Buffer.from(buffer),
+        xbenchReportBuffer: new Uint8Array(buffer),
       })
 
       if (result.success) {

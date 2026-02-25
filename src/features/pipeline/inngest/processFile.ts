@@ -16,9 +16,12 @@ const handlerFn = async ({
   step,
 }: {
   event: { data: PipelineFileEventData }
-  step: { run: <T>(id: string, fn: () => Promise<T>) => Promise<T> }
+  step: {
+    run: <T>(id: string, fn: () => Promise<T>) => Promise<T>
+    sendEvent: (id: string, event: unknown) => Promise<void>
+  }
 }) => {
-  const { fileId, projectId, tenantId, userId } = event.data
+  const { fileId, projectId, tenantId, userId, mode, uploadBatchId } = event.data
 
   // Step 1: Run L1 rule engine (deterministic checks, Xbench parity)
   const l1Result = await step.run(`l1-rules-${fileId}`, () =>
@@ -29,6 +32,36 @@ const handlerFn = async ({
   const scoreResult = await step.run(`score-${fileId}`, () =>
     scoreFile({ fileId, projectId, tenantId, userId }),
   )
+
+  // Step 3: Check if batch is complete (all files l1_completed or failed)
+  // Guard: files.batchId is nullable — skip for non-batch uploads
+  if (uploadBatchId) {
+    const batchComplete = await step.run(`check-batch-${fileId}`, async () => {
+      const batchFiles = await db
+        .select({ id: files.id, status: files.status })
+        .from(files)
+        .where(and(withTenant(files.tenantId, tenantId), eq(files.batchId, uploadBatchId)))
+
+      const allCompleted = batchFiles.every(
+        (f) => f.status === 'l1_completed' || f.status === 'failed',
+      )
+
+      return { allCompleted, fileCount: batchFiles.length }
+    })
+
+    if (batchComplete.allCompleted) {
+      await step.sendEvent(`batch-completed-${uploadBatchId}`, {
+        name: 'pipeline.batch-completed',
+        data: {
+          batchId: uploadBatchId,
+          projectId,
+          tenantId,
+          mode,
+          userId,
+        },
+      })
+    }
+  }
 
   return {
     fileId,

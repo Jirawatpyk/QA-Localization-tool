@@ -60,6 +60,16 @@ vi.mock('@/lib/logger', () => ({
   logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }))
 
+vi.mock('@/lib/supabase/admin', () => ({
+  createAdminClient: vi.fn(() => ({
+    storage: {
+      from: vi.fn(() => ({
+        upload: vi.fn((..._args: unknown[]) => Promise.resolve({ error: null })),
+      })),
+    },
+  })),
+}))
+
 vi.mock('@/db/client', () => {
   const handler: ProxyHandler<Record<string, unknown>> = {
     get: (_target, prop) => {
@@ -116,6 +126,33 @@ vi.mock('@/db/schema/findings', () => ({
     category: 'category',
     severity: 'severity',
     detectedByLayer: 'detected_by_layer',
+    sourceTextExcerpt: 'source_text_excerpt',
+    targetTextExcerpt: 'target_text_excerpt',
+    segmentId: 'segment_id',
+  },
+}))
+
+vi.mock('@/db/schema/projects', () => ({
+  projects: {
+    id: 'id',
+    tenantId: 'tenant_id',
+  },
+}))
+
+vi.mock('@/db/schema/parityReports', () => ({
+  parityReports: {
+    id: 'id',
+    tenantId: 'tenant_id',
+    projectId: 'project_id',
+    fileId: 'file_id',
+    comparisonData: 'comparison_data',
+    xbenchReportStoragePath: 'xbench_report_storage_path',
+    toolFindingCount: 'tool_finding_count',
+    xbenchFindingCount: 'xbench_finding_count',
+    bothFoundCount: 'both_found_count',
+    toolOnlyCount: 'tool_only_count',
+    xbenchOnlyCount: 'xbench_only_count',
+    generatedBy: 'generated_by',
   },
 }))
 
@@ -166,7 +203,7 @@ describe('generateParityReport', () => {
     const { generateParityReport } = await import('./generateParityReport.action')
     await generateParityReport({
       projectId: VALID_PROJECT_ID,
-      xbenchReportBuffer: Buffer.from('mock-xlsx'),
+      xbenchReportBuffer: new Uint8Array([1, 2, 3]),
     })
 
     const { withTenant } = await import('@/db/helpers/withTenant')
@@ -186,7 +223,7 @@ describe('generateParityReport', () => {
     const { generateParityReport } = await import('./generateParityReport.action')
     const result = await generateParityReport({
       projectId: VALID_PROJECT_ID,
-      xbenchReportBuffer: Buffer.from('mock-xlsx'),
+      xbenchReportBuffer: new Uint8Array([1, 2, 3]),
     })
 
     // 1) parseXbenchReport called
@@ -215,7 +252,7 @@ describe('generateParityReport', () => {
     const { generateParityReport } = await import('./generateParityReport.action')
     const result = await generateParityReport({
       projectId: VALID_PROJECT_ID,
-      xbenchReportBuffer: Buffer.from('not-xlsx'),
+      xbenchReportBuffer: new Uint8Array([0xff, 0xfe]),
     })
 
     expect(result.success).toBe(false)
@@ -240,7 +277,7 @@ describe('generateParityReport', () => {
     const { generateParityReport } = await import('./generateParityReport.action')
     await generateParityReport({
       projectId: VALID_PROJECT_ID,
-      xbenchReportBuffer: Buffer.from('mock-xlsx'),
+      xbenchReportBuffer: new Uint8Array([1, 2, 3]),
     })
 
     // Verify the values captured contain serializable JSON (index 0 = report INSERT)

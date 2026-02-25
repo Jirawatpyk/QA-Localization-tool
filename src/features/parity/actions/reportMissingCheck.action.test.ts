@@ -74,8 +74,29 @@ vi.mock('drizzle-orm', () => ({
   eq: vi.fn((...args: unknown[]) => args),
 }))
 
+vi.mock('@/db/schema/projects', () => ({
+  projects: {
+    id: 'id',
+    tenantId: 'tenant_id',
+  },
+}))
+
+vi.mock('@/db/schema/missingCheckReports', () => ({
+  missingCheckReports: {
+    id: 'id',
+    tenantId: 'tenant_id',
+    projectId: 'project_id',
+    fileReference: 'file_reference',
+    segmentNumber: 'segment_number',
+    expectedDescription: 'expected_description',
+    xbenchCheckType: 'xbench_check_type',
+    status: 'status',
+    trackingReference: 'tracking_reference',
+    reportedBy: 'reported_by',
+  },
+}))
+
 const VALID_PROJECT_ID = 'b1c2d3e4-f5a6-4b2c-9d3e-4f5a6b7c8d9e'
-const VALID_FILE_ID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
 
 const mockUser = {
   id: faker.string.uuid(),
@@ -108,10 +129,10 @@ describe('reportMissingCheck', () => {
     const { reportMissingCheck } = await import('./reportMissingCheck.action')
     await reportMissingCheck({
       projectId: VALID_PROJECT_ID,
-      fileId: VALID_FILE_ID,
+      fileReference: 'test.sdlxliff',
       segmentNumber: 42,
-      expectedCategory: 'accuracy',
       expectedDescription: 'Number format inconsistency not detected',
+      xbenchCheckType: 'number',
     })
 
     const { withTenant } = await import('@/db/helpers/withTenant')
@@ -138,10 +159,10 @@ describe('reportMissingCheck', () => {
     const { reportMissingCheck } = await import('./reportMissingCheck.action')
     const result = await reportMissingCheck({
       projectId: VALID_PROJECT_ID,
-      fileId: VALID_FILE_ID,
+      fileReference: 'test.sdlxliff',
       segmentNumber: 10,
-      expectedCategory: 'completeness',
       expectedDescription: 'Untranslated segment not caught by tool',
+      xbenchCheckType: 'completeness',
     })
 
     expect(result.success).toBe(true)
@@ -160,10 +181,10 @@ describe('reportMissingCheck', () => {
     const { reportMissingCheck } = await import('./reportMissingCheck.action')
     const result = await reportMissingCheck({
       projectId: VALID_PROJECT_ID,
-      fileId: VALID_FILE_ID,
+      fileReference: 'test.sdlxliff',
       segmentNumber: 5,
-      expectedCategory: 'terminology',
       expectedDescription: 'Glossary term mismatch not flagged',
+      xbenchCheckType: 'term',
     })
 
     expect(result.success).toBe(true)
@@ -181,10 +202,10 @@ describe('reportMissingCheck', () => {
     // segmentNumber = 0 should be invalid
     const result = await reportMissingCheck({
       projectId: VALID_PROJECT_ID,
-      fileId: VALID_FILE_ID,
+      fileReference: 'test.sdlxliff',
       segmentNumber: 0,
-      expectedCategory: 'accuracy',
       expectedDescription: 'Missing check description',
+      xbenchCheckType: 'number',
     })
 
     expect(result.success).toBe(false)

@@ -20,15 +20,28 @@ type CrossFileConsistencyResult = {
 }
 
 const MIN_WORD_COUNT = 3
+const EXCERPT_MAX_LENGTH = 500
 
 export async function crossFileConsistency(
   input: CrossFileConsistencyInput,
 ): Promise<CrossFileConsistencyResult> {
   const { projectId, tenantId, fileIds } = input
 
-  // 1. Fetch all segments across batch files
+  // C6: Guard against empty fileIds — inArray([]) generates invalid SQL
+  if (fileIds.length === 0) {
+    return { findingCount: 0 }
+  }
+
+  // 1. Fetch all segments across batch files (selective columns for M9)
   const allSegments = await db
-    .select()
+    .select({
+      id: segments.id,
+      fileId: segments.fileId,
+      sourceText: segments.sourceText,
+      targetText: segments.targetText,
+      wordCount: segments.wordCount,
+      confirmationState: segments.confirmationState,
+    })
     .from(segments)
     .where(
       and(
@@ -43,7 +56,6 @@ export async function crossFileConsistency(
   }
 
   // 2. Fetch glossary terms for this tenant (for exclusion)
-  // glossaryTerms → glossaries (via glossaryId) → glossaries.tenantId
   const glossary = await db
     .select({ sourceTerm: glossaryTerms.sourceTerm, targetTerm: glossaryTerms.targetTerm })
     .from(glossaryTerms)
@@ -57,7 +69,7 @@ export async function crossFileConsistency(
   // 3. Group segments by NFKC-normalized source text
   const sourceGroups = new Map<
     string,
-    Array<{ fileId: string; targetText: string; segmentId: string }>
+    Array<{ fileId: string; targetText: string; segmentId: string; sourceText: string }>
   >()
 
   for (const seg of allSegments) {
@@ -80,6 +92,7 @@ export async function crossFileConsistency(
       fileId: seg.fileId as string,
       targetText: (seg.targetText as string).normalize('NFKC').trim(),
       segmentId: seg.id as string,
+      sourceText,
     })
     sourceGroups.set(key, entry)
   }
@@ -89,9 +102,10 @@ export async function crossFileConsistency(
     sourceText: string
     targets: Map<string, string[]>
     relatedFileIds: string[]
+    mostCommonTarget: string
   }> = []
 
-  for (const [sourceKey, entries] of sourceGroups) {
+  for (const [_sourceKey, entries] of sourceGroups) {
     // Group by target text
     const targetToFileIds = new Map<string, Set<string>>()
     for (const entry of entries) {
@@ -107,18 +121,25 @@ export async function crossFileConsistency(
     // Collect all file IDs involved
     const allFileIds = new Set<string>()
     const targets = new Map<string, string[]>()
+    let mostCommonTarget = ''
+    let maxCount = 0
     for (const [target, fIds] of targetToFileIds) {
       targets.set(target, [...fIds])
       for (const fId of fIds) allFileIds.add(fId)
+      if (fIds.size > maxCount) {
+        maxCount = fIds.size
+        mostCommonTarget = target
+      }
     }
 
     // Ensure the inconsistency spans multiple files (not just within one file)
     if (allFileIds.size < 2) continue
 
     inconsistencies.push({
-      sourceText: sourceKey,
+      sourceText: entries[0]!.sourceText,
       targets,
       relatedFileIds: [...allFileIds],
+      mostCommonTarget,
     })
   }
 
@@ -126,11 +147,10 @@ export async function crossFileConsistency(
     return { findingCount: 0 }
   }
 
-  // 5. Check for existing cross-file findings (for idempotency — delete + re-insert)
-  // CRITICAL: scope filter prevents deleting L1/L2/L3 per-file findings
-  const existingFindings = await db
-    .select()
-    .from(findings)
+  // 5. Delete existing cross-file L1 findings (idempotent re-run)
+  // CRITICAL: scope filter prevents deleting per-file findings from other pipeline layers
+  await db
+    .delete(findings)
     .where(
       and(
         withTenant(findings.tenantId, tenantId),
@@ -140,41 +160,34 @@ export async function crossFileConsistency(
       ),
     )
 
-  if (existingFindings.length > 0) {
-    await db
-      .delete(findings)
-      .where(
-        and(
-          withTenant(findings.tenantId, tenantId),
-          eq(findings.projectId, projectId),
-          eq(findings.scope, 'cross-file'),
-          eq(findings.detectedByLayer, 'L1'),
-        ),
-      )
-  }
-
-  // 6. Insert new findings — one per inconsistency (deduplicated)
-  for (const inconsistency of inconsistencies) {
+  // 6. Batch insert new findings (H8: single INSERT instead of loop)
+  const findingValues = inconsistencies.map((inconsistency) => {
     const targetVariants = [...inconsistency.targets.keys()]
     const description = `Cross-file translation inconsistency: same source text has ${targetVariants.length} different translations across files`
 
-    await db.insert(findings).values({
+    return {
       projectId,
       tenantId,
-      fileId: inconsistency.relatedFileIds[0],
+      fileId: inconsistency.relatedFileIds[0]!,
       segmentId: null,
-      category: 'consistency',
-      severity: 'major',
+      category: 'consistency' as const,
+      severity: 'minor' as const, // H3: AC#7 says minor, not major
       description,
-      detectedByLayer: 'L1',
-      status: 'open',
-      scope: 'cross-file',
+      detectedByLayer: 'L1' as const,
+      status: 'open' as const,
+      scope: 'cross-file' as const,
       relatedFileIds: inconsistency.relatedFileIds,
-    })
-  }
+      // M2: Add source/target excerpts for UI display
+      sourceTextExcerpt: inconsistency.sourceText.slice(0, EXCERPT_MAX_LENGTH),
+      targetTextExcerpt: inconsistency.mostCommonTarget.slice(0, EXCERPT_MAX_LENGTH),
+    }
+  })
+
+  await db.insert(findings).values(findingValues)
 
   logger.info(
-    `Cross-file consistency: found ${inconsistencies.length} inconsistencies across ${fileIds.length} files`,
+    { findingCount: inconsistencies.length, fileCount: fileIds.length },
+    'Cross-file consistency analysis complete',
   )
 
   return { findingCount: inconsistencies.length }

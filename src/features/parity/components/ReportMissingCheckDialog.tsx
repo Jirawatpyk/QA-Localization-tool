@@ -54,11 +54,10 @@ export function ReportMissingCheckDialog({
     try {
       const result = await reportMissingCheck({
         projectId,
-        fileId: fileId ?? '',
-        fileReference,
+        fileReference: fileReference || fileId || '',
         segmentNumber: Number(segmentNumber),
-        description,
-        checkType,
+        expectedDescription: description,
+        xbenchCheckType: checkType,
       })
 
       if (result.success) {

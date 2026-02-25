@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 
+import { formatFileStatus } from '../helpers/formatFileStatus'
+
 import { ScoreBadge } from './ScoreBadge'
 
 type FileCardData = {
@@ -20,14 +22,6 @@ type FileStatusCardProps = {
   variant?: 'compact' | 'full'
 }
 
-function formatStatus(status: string): string {
-  if (status === 'auto_passed') return 'Auto Passed'
-  if (status === 'needs_review') return 'Needs Review'
-  if (status === 'failed') return 'Failed'
-  if (status === 'l1_completed') return 'L1 Completed'
-  return status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-}
-
 export function FileStatusCard({ file, projectId, variant = 'full' }: FileStatusCardProps) {
   const href = projectId ? `/projects/${projectId}/review/${file.fileId}` : '#'
 
@@ -43,7 +37,7 @@ export function FileStatusCard({ file, projectId, variant = 'full' }: FileStatus
 
       <div className="mt-2 flex items-center gap-2">
         <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
-          {formatStatus(file.status)}
+          {formatFileStatus(file.status)}
         </span>
       </div>
 

@@ -91,6 +91,10 @@ vi.mock('@/db/schema/findings', () => ({
     description: 'description',
     detectedByLayer: 'detected_by_layer',
     status: 'status',
+    scope: 'scope',
+    relatedFileIds: 'related_file_ids',
+    sourceTextExcerpt: 'source_text_excerpt',
+    targetTextExcerpt: 'target_text_excerpt',
   },
 }))
 
@@ -100,6 +104,14 @@ vi.mock('@/db/schema/glossaryTerms', () => ({
     tenantId: 'tenant_id',
     sourceTerm: 'source_term',
     targetTerm: 'target_term',
+    glossaryId: 'glossary_id',
+  },
+}))
+
+vi.mock('@/db/schema/glossaries', () => ({
+  glossaries: {
+    id: 'id',
+    tenantId: 'tenant_id',
   },
 }))
 
@@ -204,9 +216,12 @@ describe('crossFileConsistency', () => {
 
     // Verify the finding insert captures contain the expected shape
     // Cross-file findings have no single segmentId — they reference multiple files
+    // valuesCaptures[0] is an array of finding objects (batch INSERT)
     expect(dbState.valuesCaptures.length).toBeGreaterThan(0)
-    const insertedFinding = dbState.valuesCaptures[0] as Record<string, unknown>
-    expect(insertedFinding).toMatchObject(
+    const insertedFindings = dbState.valuesCaptures[0] as Array<Record<string, unknown>>
+    expect(insertedFindings).toBeInstanceOf(Array)
+    expect(insertedFindings.length).toBeGreaterThan(0)
+    expect(insertedFindings[0]).toMatchObject(
       expect.objectContaining({
         category: expect.stringContaining('consistency'),
         detectedByLayer: 'L1',

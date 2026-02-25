@@ -177,9 +177,9 @@ describe('getBatchSummary', () => {
     expect(result.success).toBe(true)
     if (!result.success) return
     expect(result.data).toHaveProperty('recommendedPass')
-    expect(result.data).toHaveProperty('needReview')
+    expect(result.data).toHaveProperty('needsReview')
     expect(result.data.recommendedPass).toBeInstanceOf(Array)
-    expect(result.data.needReview).toBeInstanceOf(Array)
+    expect(result.data.needsReview).toBeInstanceOf(Array)
   })
 
   it('[P0] should partition ALL files into exactly 2 groups with no overlap', async () => {
@@ -202,7 +202,7 @@ describe('getBatchSummary', () => {
     if (!result.success) return
 
     const passIds = result.data.recommendedPass.map((f: { fileId: string }) => f.fileId)
-    const reviewIds = result.data.needReview.map((f: { fileId: string }) => f.fileId)
+    const reviewIds = result.data.needsReview.map((f: { fileId: string }) => f.fileId)
 
     // No overlap: intersection must be empty
     const overlap = passIds.filter((id: string) => reviewIds.includes(id))
@@ -225,7 +225,7 @@ describe('getBatchSummary', () => {
     expect(result.success).toBe(true)
     if (!result.success) return
     expect(result.data.recommendedPass).toHaveLength(1)
-    expect(result.data.needReview).toHaveLength(0)
+    expect(result.data.needsReview).toHaveLength(0)
   })
 
   it('[P0] should classify file as Need Review when criticalCount > 0 even if score >= threshold', async () => {
@@ -241,7 +241,7 @@ describe('getBatchSummary', () => {
     expect(result.success).toBe(true)
     if (!result.success) return
     expect(result.data.recommendedPass).toHaveLength(0)
-    expect(result.data.needReview).toHaveLength(1)
+    expect(result.data.needsReview).toHaveLength(1)
   })
 
   it('[P0] should classify file as Need Review when score is null', async () => {
@@ -257,7 +257,7 @@ describe('getBatchSummary', () => {
     expect(result.success).toBe(true)
     if (!result.success) return
     expect(result.data.recommendedPass).toHaveLength(0)
-    expect(result.data.needReview).toHaveLength(1)
+    expect(result.data.needsReview).toHaveLength(1)
   })
 
   it('[P0] should include withTenant filter on files query and scores JOIN', async () => {
@@ -337,7 +337,7 @@ describe('getBatchSummary', () => {
 
     expect(result.success).toBe(true)
     if (!result.success) return
-    const reviewFiles = result.data.needReview
+    const reviewFiles = result.data.needsReview
     // Score ASC: 60 first, then 70s; same score → file_id ASC
     expect(reviewFiles[0]!.fileId).toBe(fileB.fileId)
     expect(reviewFiles[1]!.fileId).toBe(fileA.fileId)
@@ -365,8 +365,8 @@ describe('getBatchSummary', () => {
     expect(result2.success).toBe(true)
     if (!result1.success || !result2.success) return
     // Stable: same input → same order
-    const ids1 = result1.data.needReview.map((f: { fileId: string }) => f.fileId)
-    const ids2 = result2.data.needReview.map((f: { fileId: string }) => f.fileId)
+    const ids1 = result1.data.needsReview.map((f: { fileId: string }) => f.fileId)
+    const ids2 = result2.data.needsReview.map((f: { fileId: string }) => f.fileId)
     expect(ids1).toEqual(ids2)
   })
 
@@ -387,7 +387,7 @@ describe('getBatchSummary', () => {
     expect(result.success).toBe(true)
     if (!result.success) return
     expect(result.data.recommendedPass).toHaveLength(1)
-    expect(result.data.needReview).toHaveLength(0)
+    expect(result.data.needsReview).toHaveLength(0)
   })
 
   it('[P1] should calculate processing time as MAX(updatedAt) - MIN(createdAt)', async () => {
@@ -434,7 +434,7 @@ describe('getBatchSummary', () => {
     expect(result.success).toBe(true)
     if (!result.success) return
     expect(result.data.recommendedPass).toHaveLength(0)
-    expect(result.data.needReview).toHaveLength(0)
+    expect(result.data.needsReview).toHaveLength(0)
     expect(result.data.totalFiles).toBe(0)
   })
 

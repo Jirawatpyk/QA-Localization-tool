@@ -140,9 +140,9 @@ describe('FileHistoryTable', () => {
     expect(screen.queryByRole('table')).toBeNull()
   })
 
-  it('[P3] should render pagination controls when files exceed PAGE_SIZE', () => {
-    // EXPECTED: When file count exceeds PAGE_SIZE (e.g., 20), pagination appears
-    const manyFiles = Array.from({ length: 25 }, (_, i) =>
+  it('[P3] should render pagination controls when files exceed FILE_HISTORY_PAGE_SIZE', () => {
+    // EXPECTED: When file count exceeds FILE_HISTORY_PAGE_SIZE (50), pagination appears
+    const manyFiles = Array.from({ length: 55 }, (_, i) =>
       buildFileHistoryRow({
         fileId: `a1b2c3d4-e5f6-4a1b-8c2d-${String(i).padStart(12, '0')}`,
         fileName: `file-${i}.sdlxliff`,

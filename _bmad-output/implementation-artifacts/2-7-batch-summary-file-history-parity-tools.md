@@ -833,9 +833,10 @@ Key patterns carried forward:
 ### E2E Tests (Out of Scope)
 - `batch-summary.spec.ts`, `file-history.spec.ts`, `parity-comparison.spec.ts` — written as `test.skip` (RED phase). Require full stack to run. Deferred to E2E gate.
 
-### Known Issue
+### Known Issues
 - `xbenchReportParser.ts` has 1 `as any` with eslint-disable — ExcelJS `xlsx.load()` Buffer type mismatch (`Uint8Array` vs `Buffer`). `as Buffer` fails with TS2345.
 - **Event type system**: add new events to `PipelineEvents` in `src/lib/inngest/client.ts`
+- **Xbench report format gap**: `parseXbenchReport` supports standard tabular format only (header in row 1). Golden corpus Xbench report uses sectioned format (category headers at row 12+). Production use case (user uploads Xbench export) uses standard format — no impact. Integration tests use inline `readGoldenCorpusXbench()` workaround. **Backlog:** Add Strategy Pattern format auto-detection (Epic 2 enhancement or Epic 3).
 
 ### Git Intelligence Summary
 
@@ -866,10 +867,93 @@ Key findings:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+claude-opus-4-6
 
 ### Debug Log References
 
 ### Completion Notes List
 
+CR R1: 39 findings (6C·10H·15M·8L) — all fixed + tests green (1429 tests, 118 files)
+
 ### File List
+
+**Schema / DB:**
+- `supabase/migrations/00015_story_2_7_schema.sql` — parity_reports + missing_check_reports + ALTER findings/files
+
+**Actions (Server Actions):**
+- `src/features/batch/actions/getBatchSummary.action.ts`
+- `src/features/batch/actions/getFileHistory.action.ts`
+- `src/features/parity/actions/generateParityReport.action.ts`
+- `src/features/parity/actions/compareWithXbench.action.ts`
+- `src/features/parity/actions/reportMissingCheck.action.ts`
+
+**Components:**
+- `src/features/batch/components/BatchSummaryView.tsx`
+- `src/features/batch/components/BatchSummaryHeader.tsx`
+- `src/features/batch/components/FileStatusCard.tsx`
+- `src/features/batch/components/FileHistoryTable.tsx`
+- `src/features/batch/components/FileHistoryPageClient.tsx`
+- `src/features/batch/components/ScoreBadge.tsx`
+- `src/features/parity/components/ParityComparisonView.tsx`
+- `src/features/parity/components/ParityResultsTable.tsx`
+- `src/features/parity/components/ReportMissingCheckDialog.tsx`
+
+**Helpers:**
+- `src/features/batch/helpers/formatFileStatus.ts` (CR R1 L3: shared utility)
+- `src/features/pipeline/helpers/crossFileConsistency.ts`
+- `src/features/parity/helpers/parityComparator.ts`
+- `src/features/parity/helpers/xbenchReportParser.ts`
+- `src/features/parity/helpers/xbenchCategoryMapper.ts`
+
+**Pipeline / Inngest:**
+- `src/features/pipeline/inngest/batchComplete.ts`
+- `src/features/pipeline/inngest/processFile.ts` (Step 3 batch completion added)
+- `src/app/api/inngest/route.ts` (batchComplete registered)
+
+**Types / Validation:**
+- `src/features/batch/types.ts`
+- `src/features/batch/validation/batchSchemas.ts`
+- `src/features/parity/types.ts`
+- `src/features/parity/validation/paritySchemas.ts`
+- `src/types/pipeline.ts` (PipelineBatchCompletedEventData)
+- `src/lib/inngest/client.ts` (batch-completed event registration)
+
+**DB Schema:**
+- `src/db/schema/parityReports.ts`
+- `src/db/schema/missingCheckReports.ts`
+- `src/db/schema/findings.ts` (scope, relatedFileIds added)
+- `src/db/schema/files.ts` (updatedAt added)
+- `src/db/schema/relations.ts` (parity relations)
+
+**Pages:**
+- `src/app/(app)/projects/[projectId]/batches/page.tsx`
+- `src/app/(app)/projects/[projectId]/batches/[batchId]/page.tsx`
+- `src/app/(app)/projects/[projectId]/files/page.tsx`
+- `src/app/(app)/projects/[projectId]/parity/page.tsx`
+
+**Navigation:**
+- `src/features/project/components/ProjectSubNav.tsx`
+
+**Tests:**
+- `src/features/batch/actions/getBatchSummary.action.test.ts`
+- `src/features/batch/actions/getFileHistory.action.test.ts`
+- `src/features/batch/components/BatchSummaryView.test.tsx`
+- `src/features/batch/components/FileHistoryTable.test.tsx`
+- `src/features/batch/components/FileStatusCard.test.tsx`
+- `src/features/batch/components/ScoreBadge.test.tsx`
+- `src/features/batch/validation/batchSchemas.test.ts`
+- `src/features/parity/actions/generateParityReport.action.test.ts`
+- `src/features/parity/actions/reportMissingCheck.action.test.ts`
+- `src/features/parity/actions/compareWithXbench.action.test.ts` (CR R1 H10: new)
+- `src/features/parity/components/ParityComparisonView.test.tsx`
+- `src/features/parity/components/ParityResultsTable.test.tsx`
+- `src/features/parity/components/ReportMissingCheckDialog.test.tsx`
+- `src/features/parity/validation/paritySchemas.test.ts`
+- `src/features/parity/helpers/parityComparator.test.ts`
+- `src/features/parity/helpers/xbenchReportParser.test.ts`
+- `src/features/parity/helpers/xbenchCategoryMapper.test.ts`
+- `src/features/pipeline/helpers/crossFileConsistency.test.ts`
+- `src/features/pipeline/inngest/batchComplete.test.ts`
+- `src/features/pipeline/inngest/processFile.batch-completion.test.ts`
+- `src/__tests__/integration/golden-corpus-parity.test.ts`
+- `src/__tests__/integration/parity-helpers-real-data.test.ts`

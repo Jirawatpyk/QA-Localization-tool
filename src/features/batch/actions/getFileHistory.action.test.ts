@@ -295,10 +295,10 @@ describe('getFileHistory', () => {
     expect(result.data.files[0]!.status).toBe('failed')
   })
 
-  it('[P1] should return correct last reviewer per file with 3 files 3 reviewers', async () => {
-    const file1 = buildFileHistoryRow({ fileId: faker.string.uuid(), lastReviewerName: 'Alice' })
-    const file2 = buildFileHistoryRow({ fileId: faker.string.uuid(), lastReviewerName: 'Bob' })
-    const file3 = buildFileHistoryRow({ fileId: faker.string.uuid(), lastReviewerName: 'Charlie' })
+  it('[P1] should return null lastReviewerName for all files (deferred to Epic 4)', async () => {
+    const file1 = buildFileHistoryRow({ fileId: faker.string.uuid() })
+    const file2 = buildFileHistoryRow({ fileId: faker.string.uuid() })
+    const file3 = buildFileHistoryRow({ fileId: faker.string.uuid() })
     dbState.returnValues = [[{ autoPassThreshold: 95 }], [file1, file2, file3]]
 
     const { getFileHistory } = await import('./getFileHistory.action')
@@ -310,11 +310,9 @@ describe('getFileHistory', () => {
     expect(result.success).toBe(true)
     if (!result.success) return
     expect(result.data.files).toHaveLength(3)
-    // Each file should have its own reviewer name
+    // lastReviewerName is always null until Epic 4 implements review actions JOIN
     const reviewerNames = result.data.files.map((f) => f.lastReviewerName)
-    expect(reviewerNames).toContain('Alice')
-    expect(reviewerNames).toContain('Bob')
-    expect(reviewerNames).toContain('Charlie')
+    expect(reviewerNames).toEqual([null, null, null])
   })
 
   it('[P1] should return null lastReviewerName when file has no review actions', async () => {
@@ -332,9 +330,9 @@ describe('getFileHistory', () => {
     expect(result.data.files[0]!.lastReviewerName).toBeNull()
   })
 
-  it('[P1] should pick latest review action when multiple exist for same file', async () => {
-    // File with multiple review actions — should use most recent reviewer
-    const file = buildFileHistoryRow({ lastReviewerName: 'LatestReviewer' })
+  it('[P1] should return null lastReviewerName (deferred to Epic 4 — no review actions JOIN yet)', async () => {
+    // Even if DB row had reviewer data, the action maps lastReviewerName to null
+    const file = buildFileHistoryRow({})
     dbState.returnValues = [[{ autoPassThreshold: 95 }], [file]]
 
     const { getFileHistory } = await import('./getFileHistory.action')
@@ -345,7 +343,7 @@ describe('getFileHistory', () => {
 
     expect(result.success).toBe(true)
     if (!result.success) return
-    expect(result.data.files[0]!.lastReviewerName).toBe('LatestReviewer')
+    expect(result.data.files[0]!.lastReviewerName).toBeNull()
   })
 
   // ── P2: Edge cases ──

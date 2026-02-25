@@ -85,9 +85,13 @@ describe('batchComplete', () => {
 
   // ── P1: Core behavior ──
 
-  it('[P1] should call crossFileConsistency and persist findings', async () => {
+  it('[P1] should resolve fileIds from DB and call crossFileConsistency', async () => {
     const mockStep = createMockStep()
-    const fileIds = [faker.string.uuid(), faker.string.uuid()]
+    const fileId1 = faker.string.uuid()
+    const fileId2 = faker.string.uuid()
+
+    // Step 1: resolve-batch-files query returns file IDs
+    dbState.returnValues = [[{ id: fileId1 }, { id: fileId2 }]]
 
     const { batchComplete } = await import('./batchComplete')
     await (batchComplete as { handler: (...args: unknown[]) => unknown }).handler({
@@ -96,7 +100,6 @@ describe('batchComplete', () => {
           batchId: VALID_BATCH_ID,
           projectId: VALID_PROJECT_ID,
           tenantId: VALID_TENANT_ID,
-          fileIds,
         },
       },
       step: mockStep,
@@ -107,38 +110,41 @@ describe('batchComplete', () => {
         projectId: VALID_PROJECT_ID,
         tenantId: VALID_TENANT_ID,
         batchId: VALID_BATCH_ID,
-        fileIds,
+        fileIds: [fileId1, fileId2],
       }),
     )
   })
 
   it('[P1] should handle duplicate batch-completed event without creating duplicate findings', async () => {
     const mockStep = createMockStep()
-    const fileIds = [faker.string.uuid()]
+    const fileId = faker.string.uuid()
 
     const { batchComplete } = await import('./batchComplete')
 
-    // First invocation
+    // First invocation — resolve-batch-files returns file
+    dbState.returnValues = [[{ id: fileId }]]
+
     await (batchComplete as { handler: (...args: unknown[]) => unknown }).handler({
       event: {
         data: {
           batchId: VALID_BATCH_ID,
           projectId: VALID_PROJECT_ID,
           tenantId: VALID_TENANT_ID,
-          fileIds,
         },
       },
       step: mockStep,
     })
 
-    // Second invocation (duplicate event)
+    // Reset for second invocation (duplicate event)
+    dbState.callIndex = 0
+    dbState.returnValues = [[{ id: fileId }]]
+
     await (batchComplete as { handler: (...args: unknown[]) => unknown }).handler({
       event: {
         data: {
           batchId: VALID_BATCH_ID,
           projectId: VALID_PROJECT_ID,
           tenantId: VALID_TENANT_ID,
-          fileIds,
         },
       },
       step: mockStep,

@@ -307,8 +307,8 @@ describe.skipIf(!hasGoldenCorpus())('Golden Corpus — Formal Parity Comparison'
 
     // Consistency gap is expected (Xbench=cross-file, engine=per-file)
     // Terminology gap is expected (different glossary matching algorithms)
-    // We assert the total gap is bounded
-    expect(nonFluencyXbenchOnly).toBeLessThanOrEqual(200)
+    // We assert the total gap is bounded — tightened from 200 to 50 (CR R1 L8)
+    expect(nonFluencyXbenchOnly).toBeLessThanOrEqual(50)
   })
 
   it('should have tag_integrity parity gap within known baseline (≤ 17)', () => {

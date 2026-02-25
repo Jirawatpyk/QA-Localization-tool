@@ -165,7 +165,7 @@ describe('processFile - batch completion step', () => {
 
   // ── P0: Batch completion emission ──
 
-  it.skip('[P0] should emit pipeline.batch-completed when all batch files are l1_completed or failed', async () => {
+  it('[P0] should emit pipeline.batch-completed when all batch files are l1_completed or failed', async () => {
     const mockStep = createMockStep()
     const eventData = buildPipelineEvent()
 
@@ -184,23 +184,21 @@ describe('processFile - batch completion step', () => {
       step: mockStep,
     })
 
-    // Should emit batch-completed event via step.sendEvent
+    // Should emit batch-completed event via step.sendEvent (single event form)
     expect(mockStep.sendEvent).toHaveBeenCalledWith(
       expect.stringContaining('batch-completed'),
-      expect.arrayContaining([
-        expect.objectContaining({
-          name: 'pipeline.batch-completed',
-          data: expect.objectContaining({
-            batchId: VALID_UPLOAD_BATCH_ID,
-            projectId: VALID_PROJECT_ID,
-            tenantId: VALID_TENANT_ID,
-          }),
+      expect.objectContaining({
+        name: 'pipeline.batch-completed',
+        data: expect.objectContaining({
+          batchId: VALID_UPLOAD_BATCH_ID,
+          projectId: VALID_PROJECT_ID,
+          tenantId: VALID_TENANT_ID,
         }),
-      ]),
+      }),
     )
   })
 
-  it.skip('[P0] should NOT emit batch-completed when some files still processing', async () => {
+  it('[P0] should NOT emit batch-completed when some files still processing', async () => {
     const mockStep = createMockStep()
     const eventData = buildPipelineEvent()
 
@@ -225,7 +223,7 @@ describe('processFile - batch completion step', () => {
     )
   })
 
-  it.skip('[P0] should include withTenant filter on batch files query', async () => {
+  it('[P0] should include withTenant filter on batch files query', async () => {
     const mockStep = createMockStep()
     const eventData = buildPipelineEvent()
 

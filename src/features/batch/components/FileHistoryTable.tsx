@@ -2,6 +2,10 @@
 
 import { useState } from 'react'
 
+import { FILE_HISTORY_PAGE_SIZE } from '@/features/batch/types'
+
+import { formatFileStatus } from '../helpers/formatFileStatus'
+
 import { ScoreBadge } from './ScoreBadge'
 
 type FileHistoryRow = {
@@ -22,8 +26,6 @@ type FileHistoryTableProps = {
   projectId: string
 }
 
-const PAGE_SIZE = 20
-
 const FILTER_LABELS: Record<FileHistoryFilter, string> = {
   all: 'All',
   passed: 'Passed',
@@ -31,18 +33,26 @@ const FILTER_LABELS: Record<FileHistoryFilter, string> = {
   failed: 'Failed',
 }
 
-function formatStatus(status: string): string {
-  if (status === 'auto_passed') return 'Passed'
-  if (status === 'needs_review') return 'Needs Review'
-  if (status === 'failed') return 'Failed'
-  if (status === 'l1_completed') return 'Completed'
-  return status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+function getPaginationPages(current: number, total: number): (number | '...')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+
+  const pages: (number | '...')[] = [1]
+  if (current > 3) pages.push('...')
+
+  const start = Math.max(2, current - 1)
+  const end = Math.min(total - 1, current + 1)
+  for (let i = start; i <= end; i++) pages.push(i)
+
+  if (current < total - 2) pages.push('...')
+  pages.push(total)
+
+  return pages
 }
 
 export function FileHistoryTable({ files, activeFilter, onFilterChange }: FileHistoryTableProps) {
   const [page, setPage] = useState(1)
-  const totalPages = Math.ceil(files.length / PAGE_SIZE)
-  const pagedFiles = files.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const totalPages = Math.ceil(files.length / FILE_HISTORY_PAGE_SIZE)
+  const pagedFiles = files.slice((page - 1) * FILE_HISTORY_PAGE_SIZE, page * FILE_HISTORY_PAGE_SIZE)
 
   return (
     <div className="space-y-4">
@@ -103,7 +113,7 @@ export function FileHistoryTable({ files, activeFilter, onFilterChange }: FileHi
                 </td>
                 <td className="px-4 py-2 text-sm">
                   <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
-                    {formatStatus(file.status)}
+                    {formatFileStatus(file.status)}
                   </span>
                 </td>
                 <td className="px-4 py-2">
@@ -118,21 +128,27 @@ export function FileHistoryTable({ files, activeFilter, onFilterChange }: FileHi
         </table>
       )}
 
-      {/* Pagination */}
+      {/* Pagination with ellipsis */}
       {totalPages > 1 && (
-        <nav aria-label="pagination" className="flex items-center justify-center gap-2">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <button
-              key={p}
-              type="button"
-              className={`rounded px-3 py-1 text-sm ${
-                page === p ? 'bg-primary text-primary-foreground' : 'bg-muted'
-              }`}
-              onClick={() => setPage(p)}
-            >
-              {p}
-            </button>
-          ))}
+        <nav aria-label="pagination" className="flex items-center justify-center gap-1">
+          {getPaginationPages(page, totalPages).map((p, idx) =>
+            p === '...' ? (
+              <span key={`ellipsis-${idx}`} className="px-2 text-sm text-muted-foreground">
+                ...
+              </span>
+            ) : (
+              <button
+                key={p}
+                type="button"
+                className={`rounded px-3 py-1 text-sm ${
+                  page === p ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                }`}
+                onClick={() => setPage(p as number)}
+              >
+                {p}
+              </button>
+            ),
+          )}
         </nav>
       )}
     </div>

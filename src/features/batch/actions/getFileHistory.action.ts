@@ -60,10 +60,16 @@ export async function getFileHistory(input: unknown): Promise<ActionResult<FileH
         criticalCount: scores.criticalCount,
         status: files.status,
         createdAt: files.createdAt,
-        lastReviewerName: scores.status, // placeholder — real impl merges review actions
       })
       .from(files)
-      .leftJoin(scores, and(eq(scores.fileId, files.id), withTenant(scores.tenantId, tenantId)))
+      .leftJoin(
+        scores,
+        and(
+          eq(scores.fileId, files.id),
+          eq(scores.layerCompleted, 'L1'),
+          withTenant(scores.tenantId, tenantId),
+        ),
+      )
       .where(and(withTenant(files.tenantId, tenantId), eq(files.projectId, projectId)))
       .orderBy(desc(files.createdAt))
 
@@ -82,16 +88,22 @@ export async function getFileHistory(input: unknown): Promise<ActionResult<FileH
       return true
     })
 
+    // Map to include lastReviewerName (null until Epic 4 implements review actions)
+    const mappedFiles = filtered.map((f) => ({
+      ...f,
+      lastReviewerName: null as string | null, // TODO: Epic 4 — join reviewActions + users for actual reviewer name
+    }))
+
     // Pagination
     const currentPage = page ?? 1
     const offset = (currentPage - 1) * PAGE_SIZE
-    const paged = filtered.slice(offset, offset + PAGE_SIZE)
+    const paged = mappedFiles.slice(offset, offset + PAGE_SIZE)
 
     return {
       success: true,
       data: {
         files: paged,
-        totalCount: filtered.length,
+        totalCount: mappedFiles.length,
       },
     }
   } catch (err) {

@@ -35,7 +35,7 @@ type BatchSummaryResult = {
   needsReviewCount: number
   processingTimeMs: number | null
   recommendedPass: FileInBatch[]
-  needReview: FileInBatch[]
+  needsReview: FileInBatch[]
 }
 
 export async function getBatchSummary(input: unknown): Promise<ActionResult<BatchSummaryResult>> {
@@ -73,7 +73,14 @@ export async function getBatchSummary(input: unknown): Promise<ActionResult<Batc
         minorCount: scores.minorCount,
       })
       .from(files)
-      .leftJoin(scores, and(eq(scores.fileId, files.id), withTenant(scores.tenantId, tenantId)))
+      .leftJoin(
+        scores,
+        and(
+          eq(scores.fileId, files.id),
+          eq(scores.layerCompleted, 'L1'),
+          withTenant(scores.tenantId, tenantId),
+        ),
+      )
       .where(
         and(
           withTenant(files.tenantId, tenantId),
@@ -84,7 +91,7 @@ export async function getBatchSummary(input: unknown): Promise<ActionResult<Batc
 
     // Classify files into groups
     const recommendedPass: FileInBatch[] = []
-    const needReview: FileInBatch[] = []
+    const needsReview: FileInBatch[] = []
 
     for (const f of filesWithScores) {
       const isPass = f.mqmScore !== null && f.mqmScore >= threshold && (f.criticalCount ?? 0) === 0
@@ -92,7 +99,7 @@ export async function getBatchSummary(input: unknown): Promise<ActionResult<Batc
       if (isPass) {
         recommendedPass.push(f)
       } else {
-        needReview.push(f)
+        needsReview.push(f)
       }
     }
 
@@ -102,7 +109,7 @@ export async function getBatchSummary(input: unknown): Promise<ActionResult<Batc
     )
 
     // Sort: Need Review = score ASC, fileId ASC
-    needReview.sort(
+    needsReview.sort(
       (a, b) => (a.mqmScore ?? 100) - (b.mqmScore ?? 100) || a.fileId.localeCompare(b.fileId),
     )
 
@@ -112,8 +119,15 @@ export async function getBatchSummary(input: unknown): Promise<ActionResult<Batc
       (f) => f.status === 'l1_completed' || f.status === 'failed',
     )
     if (completedFiles.length > 0 && completedFiles.length === filesWithScores.length) {
-      const maxUpdated = Math.max(...filesWithScores.map((f) => new Date(f.updatedAt).getTime()))
-      const minCreated = Math.min(...filesWithScores.map((f) => new Date(f.createdAt).getTime()))
+      // H7: Use reduce instead of Math.max/min(...spread) to avoid stack overflow on large batches
+      let maxUpdated = -Infinity
+      let minCreated = Infinity
+      for (const f of filesWithScores) {
+        const updated = new Date(f.updatedAt).getTime()
+        const created = new Date(f.createdAt).getTime()
+        if (updated > maxUpdated) maxUpdated = updated
+        if (created < minCreated) minCreated = created
+      }
       processingTimeMs = maxUpdated - minCreated
     }
 
@@ -124,10 +138,10 @@ export async function getBatchSummary(input: unknown): Promise<ActionResult<Batc
         projectId,
         totalFiles: filesWithScores.length,
         passedCount: recommendedPass.length,
-        needsReviewCount: needReview.length,
+        needsReviewCount: needsReview.length,
         processingTimeMs,
         recommendedPass,
-        needReview,
+        needsReview,
       },
     }
   } catch (err) {

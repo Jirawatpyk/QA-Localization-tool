@@ -75,14 +75,16 @@ export function compareFindings(
       const tCategory = tf.category.toLowerCase()
       const tSource = normalize(tf.sourceTextExcerpt)
 
-      // Match criteria: same category + (same source text OR both have source) + severity within +-1
+      // Match criteria: same category + same segment (source text match) + severity within +-1
       const categoryMatch = xCategory === tCategory
-      const _sourceMatch =
+      const sourceMatch =
         xSource === tSource ||
-        (xSource.length > 0 && tSource.length > 0 && xSource.includes(tSource))
+        (xSource.length > 0 &&
+          tSource.length > 0 &&
+          (xSource.includes(tSource) || tSource.includes(xSource)))
       const severityMatch = severityWithinTolerance(xf.severity, tf.severity, 1)
 
-      if (categoryMatch && severityMatch) {
+      if (categoryMatch && sourceMatch && severityMatch) {
         matched.push({
           xbenchCategory: xf.category,
           toolCategory: tf.category,

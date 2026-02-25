@@ -19,7 +19,7 @@ export default async function BatchDetailPage({
     )
   }
 
-  const { recommendedPass, needReview, processingTimeMs } = result.data
+  const { recommendedPass, needsReview, processingTimeMs } = result.data
 
   return (
     <div className="p-6">
@@ -34,7 +34,7 @@ export default async function BatchDetailPage({
           majorCount: f.majorCount ?? 0,
           minorCount: f.minorCount ?? 0,
         }))}
-        reviewFiles={needReview.map((f) => ({
+        reviewFiles={needsReview.map((f) => ({
           fileId: f.fileId,
           fileName: f.fileName,
           status: f.status,

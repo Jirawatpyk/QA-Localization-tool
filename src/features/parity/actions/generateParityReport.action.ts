@@ -3,6 +3,7 @@
 import 'server-only'
 
 import { and, eq } from 'drizzle-orm'
+import { z } from 'zod'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
@@ -14,109 +15,156 @@ import { compareFindings } from '@/features/parity/helpers/parityComparator'
 import { parseXbenchReport } from '@/features/parity/helpers/xbenchReportParser'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
+import { createAdminClient } from '@/lib/supabase/admin'
 import type { ActionResult } from '@/types/actionResult'
 
-type GenerateParityReportInput = {
-  projectId: string
-  xbenchReportBuffer: Buffer
-}
+const inputSchema = z.object({
+  projectId: z.string().uuid(),
+  xbenchReportBuffer: z.instanceof(Uint8Array),
+  fileId: z.string().uuid().optional(),
+})
 
 type ParityReportResult = {
   reportId: string
-  bothFound: unknown[]
-  toolOnly: unknown[]
-  xbenchOnly: unknown[]
+  bothFound: Array<{ xbenchCategory: string; toolCategory: string; severity: string }>
+  toolOnly: Array<{
+    sourceTextExcerpt: string | null
+    targetTextExcerpt: string | null
+    category: string
+    severity: string
+  }>
+  xbenchOnly: Array<{
+    sourceText: string
+    targetText: string
+    category: string
+    severity: string
+  }>
   toolFindingCount: number
   xbenchFindingCount: number
 }
 
 export async function generateParityReport(
-  input: GenerateParityReportInput,
+  input: unknown,
 ): Promise<ActionResult<ParityReportResult>> {
-  const user = await requireRole('qa_reviewer')
+  const parsed = inputSchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, error: 'Invalid input', code: 'VALIDATION_ERROR' }
+  }
 
-  let xbenchResult
   try {
-    xbenchResult = await parseXbenchReport(input.xbenchReportBuffer)
-  } catch {
-    logger.error('Failed to parse Xbench report')
-    return {
-      success: false,
-      error: 'Failed to parse xlsx report. Please ensure it is a valid Xbench export.',
-      code: 'INVALID_INPUT',
+    const user = await requireRole('qa_reviewer')
+    const { projectId, xbenchReportBuffer, fileId } = parsed.data
+
+    let xbenchResult
+    try {
+      xbenchResult = await parseXbenchReport(xbenchReportBuffer)
+    } catch {
+      logger.error('Failed to parse Xbench report')
+      return {
+        success: false,
+        error: 'Failed to parse xlsx report. Please ensure it is a valid Xbench export.',
+        code: 'INVALID_INPUT',
+      }
     }
-  }
 
-  // Verify project belongs to user's tenant
-  const [project] = await db
-    .select({ id: projects.id })
-    .from(projects)
-    .where(and(withTenant(projects.tenantId, user.tenantId), eq(projects.id, input.projectId)))
+    // Verify project belongs to user's tenant
+    const [project] = await db
+      .select({ id: projects.id })
+      .from(projects)
+      .where(and(withTenant(projects.tenantId, user.tenantId), eq(projects.id, projectId)))
 
-  if (!project) {
-    return { success: false, error: 'Project not found', code: 'NOT_FOUND' }
-  }
+    if (!project) {
+      return { success: false, error: 'Project not found', code: 'NOT_FOUND' }
+    }
 
-  // Fetch tool findings for this project
-  const toolFindings = await db
-    .select()
-    .from(findings)
-    .where(
-      and(withTenant(findings.tenantId, user.tenantId), eq(findings.projectId, input.projectId)),
+    // Fetch tool findings for this project
+    const toolFindings = await db
+      .select()
+      .from(findings)
+      .where(and(withTenant(findings.tenantId, user.tenantId), eq(findings.projectId, projectId)))
+
+    // Compare xbench findings with tool findings
+    // When fileId is provided, filter to that file; otherwise compare all project findings
+    const comparisonResult = compareFindings(
+      xbenchResult.findings,
+      toolFindings.map((f) => ({
+        sourceTextExcerpt: f.sourceTextExcerpt,
+        targetTextExcerpt: f.targetTextExcerpt,
+        category: f.category as string,
+        severity: f.severity as string,
+        fileId: f.fileId as string,
+        segmentId: f.segmentId as string,
+      })),
+      fileId ?? '',
     )
 
-  // Compare xbench findings with tool findings
-  const comparisonResult = compareFindings(
-    xbenchResult.findings,
-    toolFindings.map((f) => ({
-      sourceTextExcerpt: null,
-      targetTextExcerpt: null,
-      category: f.category as string,
-      severity: f.severity as string,
-      fileId: f.fileId as string,
-      segmentId: f.segmentId as string,
-    })),
-    (toolFindings[0]?.fileId as string) ?? '',
-  )
+    // Upload Xbench report to Supabase Storage for audit trail
+    const storagePath = `${user.tenantId}/${projectId}/parity/report-${Date.now()}.xlsx`
+    try {
+      const supabase = createAdminClient()
+      const { error: uploadError } = await supabase.storage
+        .from('parity-reports')
+        .upload(storagePath, xbenchReportBuffer, {
+          contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          upsert: false,
+        })
+      if (uploadError) {
+        logger.error(
+          { err: uploadError, storagePath },
+          'Non-fatal: failed to upload Xbench report to storage',
+        )
+      }
+    } catch (storageErr) {
+      logger.error({ err: storageErr, storagePath }, 'Non-fatal: storage upload exception')
+    }
 
-  // Persist report
-  const [report] = await db
-    .insert(parityReports)
-    .values({
-      projectId: input.projectId,
-      tenantId: user.tenantId,
-      comparisonData: comparisonResult,
-      xbenchReportStoragePath: 'uploaded',
-      toolFindingCount: toolFindings.length,
-      xbenchFindingCount: xbenchResult.findings.length,
-      bothFoundCount: comparisonResult.matched.length,
-      toolOnlyCount: comparisonResult.toolOnly.length,
-      xbenchOnlyCount: comparisonResult.xbenchOnly.length,
-      generatedBy: user.id,
-    })
-    .returning()
+    // Persist report
+    const [report] = await db
+      .insert(parityReports)
+      .values({
+        projectId,
+        tenantId: user.tenantId,
+        fileId: fileId ?? null,
+        comparisonData: comparisonResult,
+        xbenchReportStoragePath: storagePath,
+        toolFindingCount: toolFindings.length,
+        xbenchFindingCount: xbenchResult.findings.length,
+        bothFoundCount: comparisonResult.matched.length,
+        toolOnlyCount: comparisonResult.toolOnly.length,
+        xbenchOnlyCount: comparisonResult.xbenchOnly.length,
+        generatedBy: user.id,
+      })
+      .returning()
 
-  if (!report) {
-    return { success: false, error: 'Failed to create report', code: 'INTERNAL_ERROR' }
-  }
+    if (!report) {
+      return { success: false, error: 'Failed to create report', code: 'INTERNAL_ERROR' }
+    }
 
-  await writeAuditLog({
-    action: 'parity_report_generated',
-    tenantId: user.tenantId,
-    userId: user.id,
-    entityType: 'parity_report',
-    entityId: report.id,
-  })
+    try {
+      await writeAuditLog({
+        action: 'parity_report_generated',
+        tenantId: user.tenantId,
+        userId: user.id,
+        entityType: 'parity_report',
+        entityId: report.id,
+      })
+    } catch (auditErr) {
+      logger.error({ err: auditErr }, 'Non-fatal: failed to write audit log for parity report')
+    }
 
-  return {
-    success: true,
-    data: {
-      reportId: report.id,
-      bothFound: comparisonResult.matched,
-      toolOnly: comparisonResult.toolOnly,
-      xbenchOnly: comparisonResult.xbenchOnly,
-      toolFindingCount: toolFindings.length,
-      xbenchFindingCount: xbenchResult.findings.length,
-    },
+    return {
+      success: true,
+      data: {
+        reportId: report.id,
+        bothFound: comparisonResult.matched,
+        toolOnly: comparisonResult.toolOnly,
+        xbenchOnly: comparisonResult.xbenchOnly,
+        toolFindingCount: toolFindings.length,
+        xbenchFindingCount: xbenchResult.findings.length,
+      },
+    }
+  } catch (err) {
+    logger.error({ err }, 'generateParityReport failed')
+    return { success: false, error: 'Failed to generate parity report', code: 'INTERNAL_ERROR' }
   }
 }

@@ -102,11 +102,10 @@ describe('ReportMissingCheckDialog', () => {
     await waitFor(() => {
       expect(mockReportMissingCheck).toHaveBeenCalledWith({
         projectId: PROJECT_ID,
-        fileId: FILE_ID,
-        fileReference: 'chapter1.sdlxliff',
+        fileReference: expect.stringContaining('chapter1.sdlxliff'),
         segmentNumber: 42,
-        description: 'Missing number format check for Buddhist year',
-        checkType: 'number',
+        expectedDescription: 'Missing number format check for Buddhist year',
+        xbenchCheckType: 'number',
       })
     })
   })
