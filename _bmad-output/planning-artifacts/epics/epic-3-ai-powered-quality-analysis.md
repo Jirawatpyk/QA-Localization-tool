@@ -82,6 +82,8 @@ So that I can control costs, prevent abuse, and ensure consistent AI behavior ac
 - L2: select from available models (e.g., `gpt-4o-mini-2024-07-18`)
 - L3: select from available models (e.g., `claude-sonnet-4-5-20250929`)
 **And** pinned versions are stored in project configuration (FR72)
+
+> **⚠️ Gap Note (2026-02-26):** `projects` table currently has `ai_budget_monthly_usd` but **no columns for pinned model versions**. This story MUST include a migration task to add `l2_pinned_model` + `l3_pinned_model` columns (or `ai_config` JSONB). See `epic-3-gap-analysis-2026-02-26.md`.
 **And** the fallback chain respects pinned versions: pinned first → latest same provider → next provider
 
 **Given** a pinned model version becomes unavailable
@@ -212,6 +214,8 @@ So that I get the most thorough quality assessment with high-confidence findings
 **And** L3 deepens L2 analysis: full semantic accuracy verification + glossary consistency + tone/register analysis + cultural sensitivity. When L3 confirms L2 finding, boost confidence. When L3 contradicts (finds no issue where L2 did), mark for review with "L3 disagrees" badge
 **And** the response uses Zod structured output: `{ findings: [{ segmentId, category, severity, description, suggestion, confidence, reasoning }] }`
 **And** the `reasoning` field explains why the issue was flagged (for reviewer context)
+
+> **⚠️ Gap Note (2026-02-26):** P5 `L3PromptInput` type does NOT yet support surrounding context (±2 segments). Dev MUST extend: (1) `prompts/types.ts` — add `surroundingContext` field, (2) `prompts/build-l3-prompt.ts` — format context section, (3) `pipeline/helpers/runL3ForFile.ts` — fetch ±2 segments from DB. See `epic-3-gap-analysis-2026-02-26.md`.
 
 **Given** L3 analysis produces findings
 **When** findings are saved
