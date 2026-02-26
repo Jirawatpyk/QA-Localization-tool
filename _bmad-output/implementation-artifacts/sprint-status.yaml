@@ -63,7 +63,7 @@ development_status:
   2-4-rule-based-qa-engine-language-rules: done
   2-5-mqm-score-calculation-language-calibration: done
   2-6-inngest-pipeline-foundation-processing-modes: done
-  2-7-batch-summary-file-history-parity-tools: review
+  2-7-batch-summary-file-history-parity-tools: done
   # Story 2.8: Deferred from Story 1.7 CR R3 — Project-level onboarding tour (driver.js)
   # Dependencies: Story 2.1 (Upload UI exists)
   2-8-project-level-onboarding-tour: done
@@ -72,7 +72,7 @@ development_status:
   # - Missing: sectioned format (golden corpus custom report)
   # - Impact: LOW (production unaffected, integration tests use workaround)
   # - When: After Epic 2 review complete, before or during Epic 3
-  2-9-xbench-report-multi-format-support: backlog
+  2-9-xbench-report-multi-format-support: done
   epic-2-retrospective: optional
 
   # ============================================================

@@ -7,6 +7,7 @@
 - `story-2-6-findings.md` — Story 2.6 Inngest Pipeline CR R1-R3
 - `story-2-7-findings.md` — Story 2.7 Batch Summary & Parity CR R1-R4
 - `story-2-8-findings.md` — Story 2.8 Project Onboarding Tour CR R1
+- `story-2-9-findings.md` — Story 2.9 Xbench Multi-format CR R1
 
 ## Recurring Anti-Patterns (check EVERY review)
 
@@ -113,10 +114,35 @@
 - Affects: ProjectTour.tsx, OnboardingTour.tsx — restart from HelpMenu fails silently
 - Fix: reset ref when metadata indicates tour should re-trigger (e.g., `project_tour_completed` becomes null)
 
-### 14. void Promise Without .catch() — Silent Swallow
+### 14. void Promise Without .catch() -- Silent Swallow
 
 - `void asyncFn()` discards both return value AND rejection — no error feedback
 - Use `.catch(() => { /* non-critical */ })` at minimum for diagnostics
+
+### 15. XbenchFinding Type Fragmentation (Story 2.9)
+
+- 3 separate `XbenchFinding` types with DIFFERENT schemas: xbenchReportParser.ts, parityComparator.ts, types.ts
+- types.ts version uses `file`/`segment(string)`/`checkType` vs others use `fileName`/`segmentNumber(number)`/`category`
+- Tech debt: consolidate to single SSOT in xbenchReportParser.ts, others import
+
+### 16. Sentinel State Without Recovery (Story 2.9)
+
+- `currentCategory = 'LI'` sentinel in parseSectioned: line 140 returns BEFORE section marker detection
+- If LI section is NOT last, all subsequent findings are silently lost
+- Fix: check LI only on file-reference rows, let section markers always update currentCategory
+- **STATUS:** FIXED in pre-CR (guard moved to file-ref branch only, section markers always update)
+
+### 17. Inconsistent String Matching Strategy in Parsers (Story 2.9)
+
+- parseSectioned uses MIXED matching: `.includes()` for some, `===` strict equality for others, `.startsWith()` for yet others
+- Strict `===` breaks if Xbench appends metadata like "Tag Mismatch (3 entries)"
+- Fix: use `.startsWith()` consistently for all section markers
+
+### 18. Hardcoded Category List vs Mapper Coverage Gap
+
+- parseSectioned recognizes 6 categories but xbenchCategoryMapper supports 12+
+- Unrecognized categories (Double Space, Untranslated, Spell Check, etc.) cause findings to inherit previous section's category
+- Fix: catch-all approach (any non-file-ref, non-LI row becomes currentCategory) OR at minimum logger.warn
 
 ## Test Patterns
 

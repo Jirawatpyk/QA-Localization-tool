@@ -5,11 +5,6 @@
  * Tests the shared parity helpers (compareFindings, xbenchCategoryMapper)
  * against the REAL golden corpus data.
  *
- * Note: parseXbenchReport uses a standard tabular xlsx format (header in row 1),
- * while the golden corpus Xbench report uses a sectioned format (category headers
- * starting at row 12+). This test documents the format gap and tests the helpers
- * that DO work with real data.
- *
  * Data: docs/test-data/Golden-Test-Mona/2026-02-24_With_Issues_Mona/
  */
 
@@ -29,7 +24,6 @@ import { existsSync, readFileSync } from 'fs'
 import path from 'path'
 
 import { faker } from '@faker-js/faker'
-import ExcelJS from 'exceljs'
 
 import { compareFindings } from '@/features/parity/helpers/parityComparator'
 import { mapXbenchCategory } from '@/features/parity/helpers/xbenchCategoryMapper'
@@ -58,72 +52,7 @@ const SDLXLIFF_FILES = [
   'Traning Plan and SM Support Kit/AP BT Training Plan.pptx.sdlxliff',
 ]
 
-// ── Types ──
-
-type GoldenXbenchFinding = {
-  category: string
-  mqmCategory: string
-  fileName: string
-  segmentNumber: number
-  sourceText: string
-  targetText: string
-}
-
 // ── Helpers ──
-
-function getCellText(cell: ExcelJS.Cell): string {
-  const value = cell.value
-  if (value === null || value === undefined) return ''
-  if (typeof value === 'string') return value.trim()
-  if (typeof value === 'number') return String(value)
-  if (typeof value === 'object' && 'richText' in value) {
-    return (value as { richText: { text: string }[] }).richText
-      .map((rt) => rt.text)
-      .join('')
-      .trim()
-  }
-  return String(value).trim()
-}
-
-/** Parse the golden corpus Xbench report (sectioned format, not tabular) */
-async function readGoldenCorpusXbench(filePath: string): Promise<GoldenXbenchFinding[]> {
-  const workbook = new ExcelJS.Workbook()
-  await workbook.xlsx.readFile(filePath)
-  const sheet = workbook.getWorksheet('Xbench QA')
-  if (!sheet) throw new Error('Xbench QA sheet not found')
-
-  const findings: GoldenXbenchFinding[] = []
-  let currentCategory = ''
-
-  sheet.eachRow((row, rowNumber) => {
-    if (rowNumber <= 12) return
-
-    const colA = getCellText(row.getCell(1))
-    const colC = getCellText(row.getCell(3))
-
-    const fileMatch = colA.match(/^(.+\.sdlxliff)\s*\((\d+)\)$/)
-
-    if (fileMatch) {
-      findings.push({
-        category: currentCategory,
-        mqmCategory: mapXbenchCategory(currentCategory),
-        fileName: fileMatch[1]!,
-        segmentNumber: parseInt(fileMatch[2]!, 10),
-        sourceText: colC,
-        targetText: getCellText(row.getCell(4)),
-      })
-    } else if (colA) {
-      if (colA.includes('Inconsistency in Source')) currentCategory = 'Inconsistency in Source'
-      else if (colA.includes('Inconsistency in Target')) currentCategory = 'Inconsistency in Target'
-      else if (colA === 'Tag Mismatch') currentCategory = 'Tag Mismatch'
-      else if (colA === 'Numeric Mismatch') currentCategory = 'Numeric Mismatch'
-      else if (colA === 'Repeated Word') currentCategory = 'Repeated Word'
-      else if (colA.startsWith('Key Term Mismatch')) currentCategory = 'Key Term Mismatch'
-    }
-  })
-
-  return findings
-}
 
 function toSegmentRecord(
   seg: ParsedSegment,
@@ -155,35 +84,38 @@ function hasGoldenCorpus(): boolean {
 // ── Test Suite ──
 
 describe.skipIf(!hasGoldenCorpus())('Parity Helpers — Real Data', () => {
-  // ── 1. parseXbenchReport — format compatibility ──
+  // ── 1. parseXbenchReport — sectioned format support (Story 2.9) ──
 
   describe('parseXbenchReport format handling', () => {
-    it('should not throw when reading the real golden corpus xlsx', async () => {
-      const buffer = readFileSync(XBENCH_REPORT_PATH)
-      // parseXbenchReport expects standard tabular format (header in row 1).
-      // Golden corpus uses sectioned format — parser won't extract structured data
-      // but should NOT crash.
-      await expect(parseXbenchReport(buffer)).resolves.toBeDefined()
-    })
-
-    it('should return a valid structure even with non-standard format', async () => {
+    it('should parse the real golden corpus xlsx and return findings', async () => {
       const buffer = readFileSync(XBENCH_REPORT_PATH)
       const result = await parseXbenchReport(buffer)
 
+      // Golden corpus is sectioned format — after Story 2.9, parser extracts real findings
       expect(result).toHaveProperty('findings')
       expect(result).toHaveProperty('fileGroups')
       expect(Array.isArray(result.findings)).toBe(true)
+      expect(result.findings.length).toBeGreaterThan(0)
+    })
+
+    it('should return a valid structure with fileGroups populated', async () => {
+      const buffer = readFileSync(XBENCH_REPORT_PATH)
+      const result = await parseXbenchReport(buffer)
+
       expect(typeof result.fileGroups).toBe('object')
+      expect(Object.keys(result.fileGroups).length).toBeGreaterThan(0)
     })
   })
 
   // ── 2. xbenchCategoryMapper — all golden corpus categories ──
 
   describe('xbenchCategoryMapper with golden corpus categories', () => {
-    let goldenFindings: GoldenXbenchFinding[]
+    let goldenFindings: Awaited<ReturnType<typeof parseXbenchReport>>['findings']
 
     beforeAll(async () => {
-      goldenFindings = await readGoldenCorpusXbench(XBENCH_REPORT_PATH)
+      const buffer = readFileSync(XBENCH_REPORT_PATH)
+      const result = await parseXbenchReport(buffer)
+      goldenFindings = result.findings
     }, 30_000)
 
     it('should parse > 0 findings from golden corpus', () => {
@@ -241,18 +173,20 @@ describe.skipIf(!hasGoldenCorpus())('Parity Helpers — Real Data', () => {
 
       const engineFindings: RuleCheckResult[] = await processFile(segments, [], new Set(), [])
 
-      // Parse golden corpus Xbench findings
-      const goldenFindings = await readGoldenCorpusXbench(XBENCH_REPORT_PATH)
+      // Parse golden corpus Xbench findings via parseXbenchReport (sectioned format)
+      const buffer = readFileSync(XBENCH_REPORT_PATH)
+      const { findings: goldenFindings } = await parseXbenchReport(buffer)
       const fileName = path.basename(relPath)
       const fileFindings = goldenFindings.filter((f) => f.fileName === fileName)
       xbenchCount = fileFindings.length
 
-      // Map to compareFindings input format
+      // Map to compareFindings input format — pass raw Xbench category (f.category)
+      // compareFindings internally calls mapXbenchToToolCategory(xf.category) for matching
       const mappedXbench = fileFindings.map((f) => ({
         sourceText: f.sourceText,
         targetText: f.targetText,
-        category: f.mqmCategory,
-        severity: 'major',
+        category: f.category, // raw Xbench category — compareFindings maps internally
+        severity: f.severity,
         fileName: f.fileName,
         segmentNumber: f.segmentNumber,
       }))
@@ -288,6 +222,8 @@ describe.skipIf(!hasGoldenCorpus())('Parity Helpers — Real Data', () => {
     })
 
     it('should have engine producing additional findings (toolOnly)', () => {
+      // Engine finds spacing, punctuation, capitalization issues that Xbench
+      // does not check; also runs without glossary so Key Term coverage differs
       expect(comparisonResult.toolOnly.length).toBeGreaterThan(0)
     })
   })
@@ -305,7 +241,8 @@ describe.skipIf(!hasGoldenCorpus())('Parity Helpers — Real Data', () => {
       const projectId = faker.string.uuid()
       const tenantId = faker.string.uuid()
 
-      const goldenFindings = await readGoldenCorpusXbench(XBENCH_REPORT_PATH)
+      const buffer = readFileSync(XBENCH_REPORT_PATH)
+      const { findings: goldenFindings } = await parseXbenchReport(buffer)
 
       totalMatched = 0
       totalXbenchOnly = 0
@@ -338,7 +275,7 @@ describe.skipIf(!hasGoldenCorpus())('Parity Helpers — Real Data', () => {
           sourceText: f.sourceText,
           targetText: f.targetText,
           category: f.category,
-          severity: 'major',
+          severity: f.severity,
           fileName: f.fileName,
           segmentNumber: f.segmentNumber,
         }))
