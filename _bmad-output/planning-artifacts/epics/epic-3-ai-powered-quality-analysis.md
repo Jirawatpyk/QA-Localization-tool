@@ -6,6 +6,17 @@
 **NFRs addressed:** NFR3 (L2 < 30s/100 segments), NFR4 (L3 < 2 minutes per flagged segments), NFR16 (AI failure does not block QA), NFR18 (queue jobs survive restart), NFR36 (all AI API calls logged)
 **Architecture:** Vercel AI SDK v6 structured output, LAYER_MODELS config, fallbackChain pattern, Inngest pipeline extension (L2+L3 steps), Upstash rate limiting for AI triggers
 
+### Preparation Artifacts (P1-P5.1)
+
+| # | Artifact | Path | Used By |
+|---|----------|------|---------|
+| P1 | AI SDK Spike Guide | `planning-artifacts/research/ai-sdk-spike-guide-2026-02-26.md` | Story 3.0, 3.1 |
+| P2 | AI Mock Strategy | `src/test/mocks/ai-providers.ts` + `src/test/fixtures/ai-responses.ts` | Story 3.2a-3.5 (all AI tests) |
+| P3 | Proactive Guardrails | CLAUDE.md (Guardrails #16-22) | All stories |
+| P4 | Inngest L2/L3 Templates | `planning-artifacts/research/inngest-l2-l3-template-guide-2026-02-26.md` + `src/features/pipeline/helpers/runL2ForFile.ts`, `runL3ForFile.ts`, `chunkSegments.ts` | Story 3.2a, 3.3 |
+| P5 | Prompt Intelligence Module | `src/features/pipeline/prompts/` (7 modules, 66 tests) | Story 3.2a (`buildL2Prompt`), 3.3 (`buildL3Prompt`) |
+| P5.1 | Prompt Evaluation Framework | `src/features/pipeline/prompts/evaluation/` (golden segments, scoring, 43 tests) | Story 3.4 (regression testing) |
+
 ### Story 3.0: Score & Review Infrastructure
 
 As a Developer,
