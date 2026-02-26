@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **qa-localization-tool** is an AI-powered localization QA web application that combines deterministic rule-based checks (Xbench parity) with AI semantic analysis. The core value is **Single-Pass Completion** — enabling QA reviewers to approve files without a proofreader loop.
 
-**Status:** Epic 1 (Foundation) done, Epic 2 (File Processing & QA Engine) in-progress. Planning artifacts in `_bmad-output/planning-artifacts/`.
+**Status:** Epic 1 (Foundation) done, Epic 2 (File Processing & QA Engine) done, Epic 3 (AI-Powered Quality Analysis) next. Planning artifacts in `_bmad-output/planning-artifacts/`.
 
 **Target Users:** QA Reviewers (native + non-native language support), Project Managers.
 
@@ -74,6 +74,8 @@ src/
 ├── features/               # Feature modules (core of the app)
 │   ├── parser/             # FR1-FR9: SDLXLIFF/XLIFF/Excel parsing
 │   ├── pipeline/           # FR10-FR22: Inngest orchestration + 3 layers
+│   │   ├── prompts/        # L2/L3 prompt builders + evaluation framework
+│   │   └── helpers/        # runL2ForFile, runL3ForFile, chunkSegments
 │   ├── scoring/            # FR23-FR30: MQM calculator, score lifecycle
 │   ├── review/             # FR31-FR40: Review panel, finding actions, keyboard nav
 │   ├── glossary/           # FR41-FR45: Multi-token matching, import/export
@@ -188,14 +190,16 @@ This checklist was created from Epic 1 retrospective learnings. Top 5 red flags:
 
 ## Key Planning Documents
 
-| Document                      | Path                                                               |
-| ----------------------------- | ------------------------------------------------------------------ |
-| PRD (80 FRs + 42 NFRs)        | `_bmad-output/planning-artifacts/prd.md`                           |
-| Architecture                  | `_bmad-output/planning-artifacts/architecture/index.md`            |
-| UX Specification              | `_bmad-output/planning-artifacts/ux-design-specification/index.md` |
-| Epics (11 epics, 99 FRs)      | `_bmad-output/planning-artifacts/epics/index.md`                   |
-| Project Context (agent rules) | `_bmad-output/project-context.md`                                  |
-| Original Product Plan         | `docs/qa-localization-tool-plan.md`                                |
+| Document                      | Path                                                                                  |
+| ----------------------------- | ------------------------------------------------------------------------------------- |
+| PRD (80 FRs + 42 NFRs)        | `_bmad-output/planning-artifacts/prd.md`                                              |
+| Architecture                  | `_bmad-output/planning-artifacts/architecture/index.md`                               |
+| UX Specification              | `_bmad-output/planning-artifacts/ux-design-specification/index.md`                    |
+| Epics (11 epics, 99 FRs)      | `_bmad-output/planning-artifacts/epics/index.md`                                      |
+| Project Context (agent rules) | `_bmad-output/project-context.md`                                                     |
+| Original Product Plan         | `docs/qa-localization-tool-plan.md`                                                   |
+| AI SDK Spike Guide            | `_bmad-output/planning-artifacts/research/ai-sdk-spike-guide-2026-02-26.md`           |
+| Inngest L2/L3 Template Guide  | `_bmad-output/planning-artifacts/research/inngest-l2-l3-template-guide-2026-02-26.md` |
 
 ## Runtime Compatibility
 
