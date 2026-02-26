@@ -113,15 +113,19 @@ describe('useReviewStore', () => {
 
   // ── P1-BV: Boundary Values ──
 
-  it('should handle resetForFile with empty findingsMap', () => {
-    // No findings added — reset should still work cleanly
-    useReviewStore.getState().resetForFile('file-id')
+  it('should reset findingsMap with exactly 1 finding to empty', () => {
+    useReviewStore.getState().setFinding('f1', buildFinding({ id: 'f1' }))
+    expect(useReviewStore.getState().findingsMap.size).toBe(1)
+
+    useReviewStore.getState().resetForFile('new-file')
     expect(useReviewStore.getState().findingsMap.size).toBe(0)
   })
 
-  it('should handle resetForFile with null score', () => {
-    // Score never set — reset should leave null
-    useReviewStore.getState().resetForFile('file-id')
+  it('should reset non-null score back to null', () => {
+    useReviewStore.getState().updateScore(92, 'calculated')
+    expect(useReviewStore.getState().currentScore).toBe(92)
+
+    useReviewStore.getState().resetForFile('new-file')
     expect(useReviewStore.getState().currentScore).toBeNull()
   })
 

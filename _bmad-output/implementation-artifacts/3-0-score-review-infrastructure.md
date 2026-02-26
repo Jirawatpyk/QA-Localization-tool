@@ -1,6 +1,6 @@
 # Story 3.0: Score & Review Infrastructure
 
-Status: review
+Status: done
 
 ## Story
 
@@ -107,8 +107,8 @@ So that Stories 3.1-3.5 can use consistent score lifecycle, finding state events
   - [x] 3.4 Use `Object.assign` to expose `handler` + `onFailure` for tests
   - [x] 3.5 Register in `src/app/api/inngest/route.ts` functions array
   - [x] 3.6 Refactor `scoreFile()` — add optional `layerFilter` param, read existing `layerCompleted`, update `processFile.ts` to pass `layerFilter: 'L1'`
-  - [x] 3.7 Write unit tests (`recalculateScore.test.ts`) — 9/9 GREEN
-  - [x] 3.8 Update `scoreFile.test.ts` — 27/27 GREEN (19 existing + 8 new incl. boundary)
+  - [x] 3.7 Write unit tests (`recalculateScore.test.ts`) — 10/10 GREEN
+  - [x] 3.8 Update `scoreFile.test.ts` — 26/26 GREEN (19 existing + 7 new incl. boundary)
 
 - [x] **Task 4: Supabase Realtime Hook** (AC: #4)
   - [x] 4.1 Create `use-score-subscription.ts`
@@ -130,7 +130,7 @@ So that Stories 3.1-3.5 can use consistent score lifecycle, finding state events
   - [x] 6.1 Verify all Inngest functions registered in route.ts (4 functions)
   - [x] 6.2 Run `npm run type-check` — zero errors
   - [x] 6.3 Run `npm run lint` — zero errors, 5 pre-existing warnings (none from Story 3.0 files)
-  - [x] 6.4 Run full test suite — 73/73 Story 3.0 tests pass; 2 pre-existing timeouts in L2/L3 template tests (not touched by Story 3.0)
+  - [x] 6.4 Run full test suite — 74/74 Story 3.0 tests pass
 
 ## Dev Notes
 
@@ -396,10 +396,10 @@ Claude Opus 4.6
 
 - Task 1: Consolidated `FindingStatus` (8 DB-aligned values), removed phantom `'enhancement'` from `FindingSeverity`, added `ScoreStatus` type, `FindingChangedEventData` in pipeline.ts, `finding.changed` event in Inngest client, `buildFindingChangedEvent` factory
 - Task 2: Review store with 3 slices (findings, score, selection) + `resetForFile` — 15 tests GREEN
-- Task 3: `recalculateScore` Inngest function with Object.assign pattern, onFailure handler, concurrency per project — 9 tests GREEN. `scoreFile()` refactored: `layerFilter` param, preserve existing `layerCompleted` — 27 tests GREEN (8 new incl. boundary, 19 existing backward-compat)
+- Task 3: `recalculateScore` Inngest function with Object.assign pattern, onFailure handler, concurrency per project — 10 tests GREEN. `scoreFile()` refactored: `layerFilter` param, preserve existing `layerCompleted` — 26 tests GREEN (7 new incl. boundary, 19 existing)
 - Task 4: `useScoreSubscription` hook with Realtime + polling fallback with exponential backoff (5s→10s→20s→40s, max 60s) — 10 tests GREEN. Animation deferred to Epic 4 UI story
-- Task 5: `createFindingChangedEmitter()` plain utility + `useFindingChangedEmitter()` React wrapper — 8 tests GREEN
-- Task 6: type-check zero errors, lint zero errors (5 pre-existing warnings), 73/73 Story 3.0 tests pass
+- Task 5: `createFindingChangedEmitter()` plain utility + `useFindingChangedEmitter()` React wrapper — 9 tests GREEN
+- Task 6: type-check zero errors, lint zero errors, 74/74 Story 3.0 tests pass
 
 ### Pre-CR Scan Results
 
@@ -428,6 +428,21 @@ Claude Opus 4.6
 
 **Post-fix verification:** `npm run type-check` ✅ | `npm run lint` ✅ | 73/73 tests PASS ✅
 
+**CR R2 — 8 findings (0C, 1H, 4M, 3L) — ALL FIXED**
+
+| ID | Severity | File | Finding | Fix |
+|----|----------|------|---------|-----|
+| H1 | High | scoreFile.test.ts | fileCount 49/51 boundary tests tautological (5 returnValues → inner try/catch silences) | Provided 8 returnValues slots; if guard broken, extra DB calls push callIndex > 5 |
+| M1 | Medium | recalculateScore.test.ts | step.run step ID `recalculate-score-${fileId}` never asserted | Added `expect(runMock).toHaveBeenCalledWith()` with deterministic ID |
+| M2 | Medium | recalculateScore.test.ts | onFailure audit-write failure path untested | Added test: mockWriteAuditLog.mockRejectedValue → resolves.toBeUndefined() |
+| M3 | Medium | use-score-subscription.test.ts | Recovery test doesn't assert store state before recovery | Added `expect(currentScore).toBe(85)` after pre-recovery polls |
+| M4 | Medium | scoreFile.test.ts | "round to 2 decimal places" asserts mock precision, not source behavior | Renamed to "pass through mqmScore without modification", assert exact value |
+| L1 | Low | review.store.test.ts | 2 boundary tests trivially true (beforeEach already resets) | Replaced with meaningful state-change-then-reset tests |
+| L2 | Low | scoreFile.test.ts | backward compat test duplicates happy-path + layerFilter test | Removed duplicate test |
+| L3 | Low | finding-changed-emitter.test.ts | Missing BV: emits spaced exactly 500ms apart | Added test: two emits at 500ms spacing → both fire independently |
+
+**Post-fix verification:** `npm run type-check` ✅ | `npm run lint` ✅ | 74/74 tests PASS ✅
+
 ### File List
 
 **New Files:**
@@ -437,9 +452,9 @@ Claude Opus 4.6
 - `src/features/review/hooks/use-score-subscription.test.ts` — 10 tests
 - `src/features/review/hooks/use-finding-changed-emitter.ts` — React wrapper hook
 - `src/features/review/utils/finding-changed-emitter.ts` — Debounced emitter utility
-- `src/features/review/utils/finding-changed-emitter.test.ts` — 8 tests
+- `src/features/review/utils/finding-changed-emitter.test.ts` — 9 tests
 - `src/features/pipeline/inngest/recalculateScore.ts` — Inngest recalculate-score function
-- `src/features/pipeline/inngest/recalculateScore.test.ts` — 9 tests
+- `src/features/pipeline/inngest/recalculateScore.test.ts` — 10 tests
 
 **Modified Files:**
 - `src/types/finding.ts` — Consolidated FindingStatus (8 values), removed phantom 'enhancement', added ScoreStatus
@@ -447,7 +462,7 @@ Claude Opus 4.6
 - `src/types/index.ts` — Re-export ScoreStatus, FindingChangedEventData
 - `src/features/scoring/types.ts` — Import FindingStatus from @/types/finding (single source of truth)
 - `src/features/scoring/helpers/scoreFile.ts` — Added layerFilter param, preserve existing layerCompleted
-- `src/features/scoring/helpers/scoreFile.test.ts` — 8 new ATDD tests for layerFilter refactor (incl. 2 boundary)
+- `src/features/scoring/helpers/scoreFile.test.ts` — 7 new ATDD tests for layerFilter refactor (incl. 2 boundary)
 - `src/features/pipeline/inngest/processFile.ts` — Pass layerFilter: 'L1' to scoreFile
 - `src/lib/inngest/client.ts` — Added finding.changed event to Events type
 - `src/app/api/inngest/route.ts` — Registered recalculateScore function

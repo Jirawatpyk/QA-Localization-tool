@@ -138,10 +138,11 @@ describe('useScoreSubscription', () => {
       subscribeCallback('CHANNEL_ERROR')
     })
 
-    // Advance past first poll
+    // Advance past first poll — verify store was updated by polling
     await vi.advanceTimersByTimeAsync(5000)
     const callsBeforeRecovery = mockFrom.mock.calls.length
     expect(callsBeforeRecovery).toBeGreaterThanOrEqual(1)
+    expect(useReviewStore.getState().currentScore).toBe(85)
 
     // Recovery — should stop polling
     act(() => {

@@ -111,4 +111,20 @@ describe('createFindingChangedEmitter', () => {
     await vi.advanceTimersByTimeAsync(500)
     expect(mockTriggerFn).toHaveBeenCalledOnce()
   })
+
+  it('should emit twice for two emits spaced exactly 500ms apart', async () => {
+    const emitter = createFindingChangedEmitter(mockTriggerFn)
+    const event1 = buildFindingChangedEvent({ findingId: 'f1' })
+    const event2 = buildFindingChangedEvent({ findingId: 'f2' })
+
+    emitter.emit(event1)
+    await vi.advanceTimersByTimeAsync(500) // first fires
+    expect(mockTriggerFn).toHaveBeenCalledTimes(1)
+    expect(mockTriggerFn).toHaveBeenCalledWith(event1)
+
+    emitter.emit(event2)
+    await vi.advanceTimersByTimeAsync(500) // second fires
+    expect(mockTriggerFn).toHaveBeenCalledTimes(2)
+    expect(mockTriggerFn).toHaveBeenLastCalledWith(event2)
+  })
 })

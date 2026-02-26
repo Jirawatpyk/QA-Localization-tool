@@ -498,7 +498,17 @@ describe('scoreFile', () => {
       fileCount: 49,
     })
     const autoScore = { ...mockNewScore, status: 'auto_passed' }
-    dbState.returnValues = [mockSegments, [], [undefined], [], [autoScore]]
+    // Provide 8 slots — if notification guard breaks, extra DB calls will push callIndex > 5
+    dbState.returnValues = [
+      mockSegments,
+      [],
+      [undefined],
+      [],
+      [autoScore],
+      [],
+      [{ userId: 'admin-1' }],
+      [],
+    ]
 
     const { scoreFile } = await import('./scoreFile')
     await scoreFile({
@@ -520,7 +530,17 @@ describe('scoreFile', () => {
       fileCount: 51,
     })
     const autoScore = { ...mockNewScore, status: 'auto_passed' }
-    dbState.returnValues = [mockSegments, [], [undefined], [], [autoScore]]
+    // Provide 8 slots — if notification guard breaks, extra DB calls will push callIndex > 5
+    dbState.returnValues = [
+      mockSegments,
+      [],
+      [undefined],
+      [],
+      [autoScore],
+      [],
+      [{ userId: 'admin-1' }],
+      [],
+    ]
 
     const { scoreFile } = await import('./scoreFile')
     await scoreFile({
@@ -560,7 +580,7 @@ describe('scoreFile', () => {
     expect(result.mqmScore).toBe(100)
   })
 
-  it('should round mqmScore to 2 decimal places', async () => {
+  it('should pass through mqmScore from calculator without modification', async () => {
     mockCalculateMqmScore.mockReturnValue({
       mqmScore: 85.67,
       npt: 14.33,
@@ -581,9 +601,9 @@ describe('scoreFile', () => {
       userId: VALID_USER_ID,
     })
 
-    // MQM score should be rounded to 2 decimal places
-    const decimals = result.mqmScore.toString().split('.')[1]
-    expect(decimals ? decimals.length : 0).toBeLessThanOrEqual(2)
+    // scoreFile passes through calculator result — DB numeric(5,2) handles rounding at persist layer
+    expect(result.mqmScore).toBe(85.67)
+    expect(result.npt).toBe(14.33)
   })
 
   it('should return ScoreFileResult with all fields', async () => {
@@ -704,22 +724,6 @@ describe('scoreFile', () => {
     expect(dbState.valuesCaptures).toContainEqual(
       expect.objectContaining({ layerCompleted: 'L1L2L3' }),
     )
-  })
-
-  it('should maintain backward compatibility with existing callers', async () => {
-    dbState.returnValues = [mockSegments, [], [undefined], [], [mockNewScore]]
-
-    const { scoreFile } = await import('./scoreFile')
-    // Call without layerFilter (existing behavior) — should not throw
-    const result = await scoreFile({
-      fileId: VALID_FILE_ID,
-      projectId: VALID_PROJECT_ID,
-      tenantId: VALID_TENANT_ID,
-      userId: VALID_USER_ID,
-    })
-
-    expect(result.mqmScore).toBe(85)
-    expect(result.scoreId).toBeDefined()
   })
 
   it('should handle recalculation with 0 contributing findings (score=100)', async () => {

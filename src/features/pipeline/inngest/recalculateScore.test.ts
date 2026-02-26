@@ -57,7 +57,7 @@ describe('recalculateScore', () => {
 
   // ── P0: Happy Path ──
 
-  it('should call scoreFile with correct params from event data', async () => {
+  it('should call scoreFile with correct params and deterministic step ID', async () => {
     const event = buildFindingChangedEvent({
       fileId: 'b2c3d4e5-f6a1-4b2c-9d3e-4f5a6b7c8d9e',
       projectId: 'c3d4e5f6-a1b2-4c3d-ae4f-5a6b7c8d9e0f',
@@ -75,6 +75,12 @@ describe('recalculateScore', () => {
         tenantId: 'd4e5f6a1-b2c3-4d4e-bf5a-6b7c8d9e0f1a',
         userId: 'e5f6a1b2-c3d4-4e5f-a6a7-b8c9d0e1f2a3',
       }),
+    )
+    // Verify deterministic step ID includes fileId (prevents Inngest memoization collision)
+    const runMock = mockStep.run as ReturnType<typeof vi.fn>
+    expect(runMock).toHaveBeenCalledWith(
+      `recalculate-score-b2c3d4e5-f6a1-4b2c-9d3e-4f5a6b7c8d9e`,
+      expect.any(Function),
     )
   })
 
@@ -157,6 +163,17 @@ describe('recalculateScore', () => {
         }),
       }),
     )
+  })
+
+  it('should complete onFailure without throwing when audit log write fails', async () => {
+    mockWriteAuditLog.mockRejectedValue(new Error('audit DB down'))
+    const eventData = buildFindingChangedEvent()
+    const failureEvent = { data: { event: { data: eventData } } }
+
+    // Should not throw even if audit write fails
+    await expect(
+      recalculateScore.onFailure({ event: failureEvent, error: new Error('score failed') }),
+    ).resolves.toBeUndefined()
   })
 
   it('should have retries set to 3', () => {
