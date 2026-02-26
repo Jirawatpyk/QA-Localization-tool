@@ -1,4 +1,7 @@
 import type { Severity } from '@/features/pipeline/engine/types'
+import type { FindingStatus } from '@/types/finding'
+
+export type { FindingStatus } from '@/types/finding'
 
 export type PenaltyWeights = {
   critical: number
@@ -24,17 +27,6 @@ export type ScoreInput = {
   fileId: string
   projectId: string
 }
-
-// All valid finding statuses — calculator filters internally via CONTRIBUTING_STATUSES
-export type FindingStatus =
-  | 'pending'
-  | 'accepted'
-  | 're_accepted'
-  | 'rejected'
-  | 'flagged'
-  | 'noted'
-  | 'source_issue'
-  | 'manual'
 
 // Minimal shape needed for scoring (subset of DB finding columns)
 export type ContributingFinding = {

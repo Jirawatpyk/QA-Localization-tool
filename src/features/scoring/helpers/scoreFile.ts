@@ -15,12 +15,15 @@ import { calculateMqmScore } from '@/features/scoring/mqmCalculator'
 import { loadPenaltyWeights } from '@/features/scoring/penaltyWeightLoader'
 import type { ContributingFinding } from '@/features/scoring/types'
 import { logger } from '@/lib/logger'
+import type { DetectedByLayer } from '@/types/finding'
 
 type ScoreFileInput = {
   fileId: string
   projectId: string
   tenantId: string
   userId: string
+  /** Filter findings to a specific layer. undefined = all layers (review context). */
+  layerFilter?: DetectedByLayer | undefined
 }
 
 type ScoreFileResult = {
@@ -48,6 +51,7 @@ export async function scoreFile({
   projectId,
   tenantId,
   userId,
+  layerFilter,
 }: ScoreFileInput): Promise<ScoreFileResult> {
   // Load all segments for word count SUM
   // Include ALL segments (even ApprovedSignOff) per MQM standard and Xbench parity
@@ -74,7 +78,9 @@ export async function scoreFile({
   const sourceLang = segmentRows[0]!.sourceLang
   const targetLang = segmentRows[0]!.targetLang
 
-  // Load L1 findings — calculator will filter by CONTRIBUTING_STATUSES
+  // Load findings — calculator will filter by CONTRIBUTING_STATUSES
+  // When layerFilter is set (pipeline context): only that layer's findings
+  // When layerFilter is undefined (review context): ALL layers
   // Filter by projectId (defense-in-depth: prevents within-tenant cross-project contamination)
   const findingRows = await db
     .select({
@@ -87,8 +93,8 @@ export async function scoreFile({
       and(
         eq(findings.fileId, fileId),
         eq(findings.projectId, projectId),
-        eq(findings.detectedByLayer, 'L1'),
         withTenant(findings.tenantId, tenantId),
+        layerFilter ? eq(findings.detectedByLayer, layerFilter) : undefined,
       ),
     )
 
@@ -125,6 +131,9 @@ export async function scoreFile({
       .from(scores)
       .where(and(eq(scores.fileId, fileId), withTenant(scores.tenantId, tenantId)))
 
+    // Preserve existing layerCompleted from previous score row, or default based on layerFilter
+    const layerCompleted = prev?.layerCompleted ?? layerFilter ?? 'L1'
+
     // Delete existing score (if any)
     await tx
       .delete(scores)
@@ -143,7 +152,7 @@ export async function scoreFile({
         majorCount: scoreResult.majorCount,
         minorCount: scoreResult.minorCount,
         npt: scoreResult.npt,
-        layerCompleted: 'L1',
+        layerCompleted,
         status,
         // Only store rationale when file actually auto-passed (H2: prevents non-null rationale
         // being persisted when status='na' overrides auto-pass)

@@ -1,6 +1,7 @@
 import { EventSchemas, Inngest } from 'inngest'
 
 import type {
+  FindingChangedEventData,
   PipelineBatchCompletedEventData,
   PipelineBatchEventData,
   PipelineFileEventData,
@@ -11,6 +12,7 @@ type Events = {
   'pipeline.process-file': { data: PipelineFileEventData }
   'pipeline.batch-started': { data: PipelineBatchEventData }
   'pipeline.batch-completed': { data: PipelineBatchCompletedEventData }
+  'finding.changed': { data: FindingChangedEventData }
 }
 
 export const inngest = new Inngest({

@@ -77,7 +77,23 @@ vi.mock('@/db/schema/findings', () => ({
   },
 }))
 vi.mock('@/db/schema/scores', () => ({
-  scores: { fileId: 'file_id', tenantId: 'tenant_id', id: 'id' },
+  scores: {
+    id: 'id',
+    fileId: 'file_id',
+    projectId: 'project_id',
+    tenantId: 'tenant_id',
+    mqmScore: 'mqm_score',
+    status: 'status',
+    layerCompleted: 'layer_completed',
+    totalWords: 'total_words',
+    criticalCount: 'critical_count',
+    majorCount: 'major_count',
+    minorCount: 'minor_count',
+    npt: 'npt',
+    autoPassRationale: 'auto_pass_rationale',
+    calculatedAt: 'calculated_at',
+    createdAt: 'created_at',
+  },
 }))
 vi.mock('@/db/schema/userRoles', () => ({
   userRoles: { tenantId: 'tenant_id', role: 'role', userId: 'user_id' },
@@ -549,5 +565,137 @@ describe('scoreFile', () => {
       status: expect.stringMatching(/^(calculated|na|auto_passed)$/),
       autoPassRationale: expect.toSatisfy((v: unknown) => v === null || typeof v === 'string'),
     })
+  })
+
+  // ── ATDD P0: layerFilter refactor (Story 3.0 AC3) ──
+
+  it('should query ALL findings when layerFilter is undefined', async () => {
+    dbState.returnValues = [mockSegments, [], [undefined], [], [mockNewScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      // No layerFilter — should query all findings regardless of layer
+    })
+
+    const { eq } = await import('drizzle-orm')
+    const eqMock = eq as ReturnType<typeof vi.fn>
+    // Should NOT have eq(detectedByLayer, 'L1') when layerFilter is undefined
+    const layerFilterCalls = eqMock.mock.calls.filter(
+      (call: unknown[]) => call[0] === 'detected_by_layer',
+    )
+    expect(layerFilterCalls.length).toBe(0)
+  })
+
+  it('should query only L1 findings when layerFilter is L1', async () => {
+    dbState.returnValues = [mockSegments, [], [undefined], [], [mockNewScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      layerFilter: 'L1',
+    })
+
+    const { eq } = await import('drizzle-orm')
+    const eqMock = eq as ReturnType<typeof vi.fn>
+    // Should have eq(detectedByLayer, 'L1') when layerFilter is 'L1'
+    const layerFilterCalls = eqMock.mock.calls.filter(
+      (call: unknown[]) => call[0] === 'detected_by_layer' && call[1] === 'L1',
+    )
+    expect(layerFilterCalls.length).toBe(1)
+  })
+
+  it('should read existing layerCompleted from score row', async () => {
+    const previousScore = { ...mockNewScore, layerCompleted: 'L1L2' }
+    dbState.returnValues = [
+      mockSegments,
+      [],
+      [previousScore],
+      [],
+      [{ ...mockNewScore, layerCompleted: 'L1L2' }],
+    ]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    // Verify the INSERT values include preserved layerCompleted
+    expect(dbState.valuesCaptures).toContainEqual(
+      expect.objectContaining({ layerCompleted: 'L1L2' }),
+    )
+  })
+
+  it('should preserve layerCompleted value (not hardcode L1)', async () => {
+    const previousScore = { ...mockNewScore, layerCompleted: 'L1L2L3' }
+    dbState.returnValues = [
+      mockSegments,
+      [],
+      [previousScore],
+      [],
+      [{ ...mockNewScore, layerCompleted: 'L1L2L3' }],
+    ]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    // Should preserve L1L2L3, not hardcode L1
+    expect(dbState.valuesCaptures).toContainEqual(
+      expect.objectContaining({ layerCompleted: 'L1L2L3' }),
+    )
+  })
+
+  it('should maintain backward compatibility with existing callers', async () => {
+    dbState.returnValues = [mockSegments, [], [undefined], [], [mockNewScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    // Call without layerFilter (existing behavior) — should not throw
+    const result = await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    expect(result.mqmScore).toBe(85)
+    expect(result.scoreId).toBeDefined()
+  })
+
+  it('should handle recalculation with 0 contributing findings (score=100)', async () => {
+    mockCalculateMqmScore.mockReturnValue({
+      mqmScore: 100,
+      npt: 0,
+      criticalCount: 0,
+      majorCount: 0,
+      minorCount: 0,
+      totalWords: 1000,
+      status: 'calculated' as const,
+    })
+    const perfectScore = { ...mockNewScore, mqmScore: 100, npt: 0, majorCount: 0, minorCount: 0 }
+    dbState.returnValues = [mockSegments, [], [undefined], [], [perfectScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    const result = await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    expect(result.mqmScore).toBe(100)
   })
 })

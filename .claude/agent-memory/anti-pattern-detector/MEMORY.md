@@ -264,3 +264,45 @@
 - `sql\`` template literals in Drizzle ORM (`count(\*)::int`, `lower()`) are NOT raw SQL violations — they are Drizzle's type-safe SQL helper.
 - JOIN ON clause `eq(table.tenantId, tenantId)` vs WHERE clause — debatable whether withTenant() required in ON conditions.
 - `or(eq(table.tenantId, x), isNull(table.tenantId))` pattern in penaltyWeightLoader — architectural exception; withTenant() cannot wrap an OR condition that includes IS NULL.
+- `import ExcelJS from 'exceljs'` is NOT an export-default violation — ExcelJS is a 3rd party library using CJS module.exports. Integration test files importing it are fine.
+- `process.stderr.write()` in integration test files is NOT a console.log violation — it is intentional diagnostic output for CI/measurement tests, and uses stderr (not stdout) to avoid contaminating test output.
+- `process.env['GOLDEN_CORPUS_PATH']` in integration tests is LOW (not HIGH) — test files cannot use `@/lib/env` (env.ts is server-only; Vitest runs outside Next.js context). Same rationale as E2E tests (Story 2.8 precedent). However, since this env var controls test corpus path (not app secrets), the risk is minimal.
+
+## Story 2.10 Scan Summary (2026-02-26) — FINAL
+
+- Files scanned: 7 (golden-corpus-parity.test.ts, clean-corpus-baseline.test.ts, tier2-multilang-parity.test.ts, ruleEngine.perf.test.ts, factories.ts, eslint.config.mjs, package.json)
+- **MEDIUM violations (1):**
+  - `factories.ts` line 500: `id: \`00000000-0000-4000-8000-${String(i).padStart(12, '0')}\``— segment IDs exceed the 12-char limit of the UUID node section (UUID v4 node section is 12 hex chars = correct) but for i >= 1000000 (1M+) these overflow. Within the 5001-segment test range, all IDs are valid UUID v4 format. Flag LOW-borderline. fileId/projectId/tenantId (lines 481–483) use`'00000000-0000-4000-8000-000000000001/002/003'` — valid UUID v4.
+- **LOW violations (3):**
+  - `golden-corpus-parity.test.ts` lines 50–51: `process.env['GOLDEN_CORPUS_PATH']` — direct env access in integration test; cannot use @/lib/env in Vitest (env.ts is server-only). Flag LOW per Story 2.8 E2E precedent. eslint.config.mjs line 152 explicitly whitelists `src/__tests__/integration/**` for process.env.
+  - `clean-corpus-baseline.test.ts` lines 36–37, 43, 95: same pattern — whitelisted, LOW.
+  - `tier2-multilang-parity.test.ts` lines 35–36, 47, 165: same pattern — whitelisted, LOW.
+- **CLEAN:** no `export default` violations (eslint.config.mjs `export default` is file-level config exception, whitelisted), no `any` types, no `enum`, no raw SQL, no console.log (all output uses process.stderr.write — intentional diagnostic, NOT console.log), no snapshot tests, no "use client", no service_role, no inline Supabase client, no try-catch in step.run(), all test imports use @/ alias correctly, no inline Tailwind (test-only files), `import ExcelJS from 'exceljs'` is CJS default export (not a violation), all behavioral assertions (no toMatchSnapshot), `buildPerfSegments()` has explicit return type `SegmentRecord[]`, hardcoded UUIDs in buildPerfSegments ARE valid UUID v4 format.
+- **package.json:** `test:parity` script uses `cross-env GOLDEN_CORPUS_PATH=...` which passes env via cross-env (not process.env in app code) — clean.
+
+## Confirmed Architectural Pattern: process.stderr.write() in Integration Tests
+
+- **Verified**: `process.stderr.write()` is the established pattern for diagnostic output in integration/parity tests.
+- `eslint.config.mjs` "no-console" rule allows `warn` and `error` but NOT `log` — `process.stderr.write()` bypasses this entirely (not a console call).
+- This is intentional: measurements should appear on stderr (not pollute test runner stdout).
+- ALL 4 integration test files (Story 2.10) follow this pattern consistently.
+
+## Story 3.0 Scan Summary (2026-02-26)
+
+- Files scanned: 14 (review/stores/review.store.ts, review/hooks/use-score-subscription.ts, review/hooks/use-finding-changed-emitter.ts, review/utils/finding-changed-emitter.ts, pipeline/inngest/recalculateScore.ts, pipeline/inngest/recalculateScore.test.ts, review/stores/review.store.test.ts, types/finding.ts, types/pipeline.ts, types/index.ts, scoring/types.ts, scoring/helpers/scoreFile.ts, pipeline/inngest/processFile.ts, lib/inngest/client.ts, app/api/inngest/route.ts, test/factories.ts)
+- **HIGH violations (1):**
+  - `recalculateScore.ts:75` + `processFile.ts:116`: `onFailure: onFailureFn as any` — scoped `any` for Inngest SDK type mismatch. eslint-disable comment present. Same recurring pattern as Stories 2.6/2.7. Accepted per established precedent.
+- **MEDIUM violations (2):**
+  - `scoreFile.ts:108`: `findingRows as unknown as ContributingFinding[]` — double cast; safer than `as any` but still bypasses type checking. `ContributingFinding` is already imported at top of file. Should use Zod validation or Drizzle inferred type instead.
+  - `processFile.ts:11`: `from './types'` — same-directory relative import (no `..`); consistent with recurring LOW pattern from Stories 2.4–2.6.
+- **LOW violations (2):**
+  - `processFile.ts:11`: `from './types'` — same-directory relative import (borderline per established precedent)
+  - `recalculateScore.test.ts` uses `createDrizzleMock()` global without import — correct (setup.ts registers it on globalThis), not a violation
+- **All other checks CLEAN** — no `export default` in feature modules, no `any` (except scoped eslint-disable), no `enum`, no raw SQL, no `console.log`, no `process.env`, no `service_role`, no hardcoded tenantId UUIDs, no inline Supabase client creation, no try-catch INSIDE step.run() (try-catch in onFailureFn is OUTSIDE step.run — correct), no snapshot tests, no "use client" on page.tsx, withTenant() on every query in scoreFile.ts, `createBrowserClient()` correctly used (not inline creation), factories.ts all UUIDs via faker.string.uuid(), buildFindingChangedEvent() new factory correct.
+
+## Recurring Pattern: `onFailure: onFailureFn as any` in Inngest Functions — Established Exception
+
+- **Pattern**: All Inngest functions in this codebase use `onFailure: onFailureFn as any` with `eslint-disable @typescript-eslint/no-explicit-any` comment.
+- **Root cause**: Inngest SDK TypeScript generics for `onFailure` don't align with actual handler signature at compile time.
+- **Status**: ACCEPTED per Story 2.6 precedent. blast radius is scoped (single field, not entire createFunction call).
+- **Files**: `processFile.ts`, `processBatch.ts`, `batchComplete.ts`, `recalculateScore.ts`

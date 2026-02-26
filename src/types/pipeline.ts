@@ -1,3 +1,5 @@
+import type { FindingStatus } from '@/types/finding'
+
 // Pipeline types — populated in Epic 2-3
 export const PROCESSING_MODES = ['economy', 'thorough'] as const
 export type ProcessingMode = (typeof PROCESSING_MODES)[number]
@@ -28,6 +30,18 @@ export type PipelineBatchCompletedEventData = {
   tenantId: string
   mode: ProcessingMode
   userId: string
+}
+
+// Finding state change event — triggers score recalculation via Inngest
+export type FindingChangedEventData = {
+  findingId: string
+  fileId: string
+  projectId: string
+  tenantId: string
+  previousState: FindingStatus
+  newState: FindingStatus
+  triggeredBy: string // userId
+  timestamp: string // ISO 8601
 }
 
 export type PipelineStatus = 'queued' | 'processing' | 'completed' | 'failed'

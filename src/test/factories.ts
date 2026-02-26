@@ -18,7 +18,7 @@ import type { ExcelColumnMapping } from '@/features/parser/validation/excelMappi
 import type { ContributingFinding } from '@/features/scoring/types'
 import type { BatchRecord, UploadFileResult } from '@/features/upload/types'
 import type { Finding } from '@/types/finding'
-import type { ProcessingMode, PipelineRun } from '@/types/pipeline'
+import type { FindingChangedEventData, ProcessingMode, PipelineRun } from '@/types/pipeline'
 import type { ReviewSession } from '@/types/review'
 
 type SegmentRecord = typeof segments.$inferSelect
@@ -426,6 +426,26 @@ export function buildPipelineBatchEvent(
     userId: faker.string.uuid(),
     mode: 'economy' as const,
     uploadBatchId: faker.string.uuid(),
+    ...overrides,
+  }
+}
+
+/**
+ * Factory for finding.changed Inngest event data.
+ * Used in recalculateScore and debounce emitter tests.
+ */
+export function buildFindingChangedEvent(
+  overrides?: Partial<FindingChangedEventData>,
+): FindingChangedEventData {
+  return {
+    findingId: faker.string.uuid(),
+    fileId: faker.string.uuid(),
+    projectId: faker.string.uuid(),
+    tenantId: faker.string.uuid(),
+    previousState: 'pending',
+    newState: 'accepted',
+    triggeredBy: faker.string.uuid(),
+    timestamp: new Date().toISOString(),
     ...overrides,
   }
 }

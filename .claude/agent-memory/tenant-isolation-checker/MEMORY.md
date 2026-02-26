@@ -166,28 +166,31 @@ Helper functions (runL1ForFile, scoreFile) receive tenantId as a typed function 
 
 ### Story 2.7 Audit Results (Batch Summary, File History, Parity Tools)
 
-New tables confirmed tenant-scoped: `parity_reports`, `missing_check_reports` (both have tenant_id, notNull FK to tenants)
+New tables: `parity_reports`, `missing_check_reports` (both tenant-scoped). All actions PASS.
+See patterns.md for detail. All 3 original findings RESOLVED (verified 2026-02-25).
 
-**PASS:**
+### Story 3.0 Audit Results (Score & Review Infrastructure — 2026-02-26)
 
-- `getBatchSummary.action.ts` — withTenant() on projects SELECT; withTenant() on files (WHERE) AND scores (LEFT JOIN ON clause); gold standard LEFT JOIN pattern. FULL PASS.
-- `getFileHistory.action.ts` — identical LEFT JOIN pattern; withTenant() on files (WHERE) + scores (LEFT JOIN ON). FULL PASS.
-- `compareWithXbench.action.ts` — withTenant() on findings SELECT + eq(projectId). Read-only, no INSERT. PASS (with low-severity unverified projectId note — no data leak risk).
-- `batchComplete.ts` — Inngest handler; tenantId from event.data; delegates entirely to crossFileConsistency(); no direct DB access. PASS.
-- `batches/page.tsx` — withTenant() on uploadBatches + eq(projectId); requireRole() before DB access. PASS.
-- `batches/[batchId]/page.tsx` — no direct DB access; delegates to getBatchSummary() Server Action. PASS.
+**Result: 0C/0H/0M/0L — SECURE (full pass).**
 
-**✅ ALL RESOLVED (verified 2026-02-25):**
+- `scoreFile.ts` (MODIFIED — layerFilter param added): all 5 query ops (SELECT segments, SELECT findings, SELECT/DELETE/INSERT scores, SELECT notifications dedup, SELECT userRoles, INSERT notifications) use withTenant() or explicit tenantId in values. layerFilter is an additive WHERE term only; it never replaces withTenant(). FULL PASS.
+- `recalculateScore.ts` (NEW Inngest function): zero direct DB queries — delegates to scoreFile(). tenantId sourced from event.data (FindingChangedEventData.tenantId — required field). Registered in route.ts functions array. onFailure reads event.data.event.data (correct Inngest v3 nested structure). FULL PASS.
+- `processFile.ts` (MODIFIED — passes layerFilter: 'L1' to scoreFile): no new DB queries introduced by change. Existing batch-check SELECT + onFailure UPDATE both confirmed withTenant() present. FULL PASS.
+- `src/types/pipeline.ts` (FindingChangedEventData): tenantId is a required non-optional field. TypeScript enforces presence at every call site. PASS.
+- `src/lib/inngest/client.ts` (finding.changed schema): typed to FindingChangedEventData — tenant requirement enforced statically. PASS.
+- `recalculateScore` registered in `src/app/api/inngest/route.ts` functions array — confirmed active.
 
-- `crossFileConsistency.ts` — DELETE now scoped to `scope='cross-file' + detectedByLayer='L1' + inArray(fileIds)` (line 185-202)
-- `reportMissingCheck.action.ts` — standalone withTenant() removed; proper project ownership SELECT with withTenant() added (line 47-55)
-- `generateParityReport.action.ts` — project ownership SELECT with withTenant() added before INSERT (line 64-72)
+**Key observation (layerFilter safety):** The `layerFilter` parameter in `scoreFile()` is composed inside `and()` with an explicit ternary: `layerFilter ? eq(...) : undefined`. Drizzle treats `undefined` in `and()` as a no-op — it does NOT remove the adjacent `withTenant()` condition. Additive-only refinement pattern is safe. This is a confirmed safe pattern for optional filter additions to queries that already include tenant scoping.
 
-**Schema confirmations (Story 2.7):**
+### Story 2.10 Audit Results (Parity Verification Tests — 2026-02-26)
 
-- `parity_reports` — tenant_id (uuid, notNull, FK to tenants). Confirmed.
-- `missing_check_reports` — tenant_id (uuid, notNull, FK to tenants). Confirmed.
-- `upload_batches` — tenant_id (uuid, notNull, FK to tenants). Re-confirmed (Story 2.1).
+**Result: 0C/0H/0M/1L — SECURE.** See `patterns.md` § "Story 2.10" for full detail.
+
+- All integration tests use `faker.string.uuid()` for tenantId/projectId/fileId. PASS.
+- `processFile()` is pure in-memory (no DB) — tenant fields on SegmentRecord are metadata only.
+- LOW: `buildPerfSegments()` in `factories.ts` uses hardcoded non-UUID-v4 strings (intentional
+  for determinism). Zero security risk. Risk: Zod `uuid()` validation would reject if applied.
+  Recommended fix: use valid UUID v4 format literals (see patterns.md for examples).
 
 ## Key Patterns to Watch
 

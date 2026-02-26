@@ -8,6 +8,8 @@
 - `story-2-7-findings.md` — Story 2.7 Batch Summary & Parity CR R1-R4
 - `story-2-8-findings.md` — Story 2.8 Project Onboarding Tour CR R1
 - `story-2-9-findings.md` — Story 2.9 Xbench Multi-format CR R1
+- `story-2-10-findings.md` — Story 2.10 Parity Verification CR R1
+- `story-3-0-findings.md` — Story 3.0 Score & Review Infrastructure CR R1
 
 ## Recurring Anti-Patterns (check EVERY review)
 
@@ -63,6 +65,22 @@
 
 - Custom dialog components must reset state on re-open (useEffect on `open` prop)
 - Missing reset = stale data shown to user on second open
+
+### 19. Unsafe `as T` Cast on External Payloads (Story 3.0)
+
+- Supabase Realtime, Inngest event.data, webhook payloads — ALWAYS validate with Zod before cast
+- `payload.new.status as ScoreStatus` = runtime type mismatch if DB adds new status value
+- Fix: `z.enum([...]).safeParse()` before passing to store/function
+
+### 20. Polling Fallback Must Actually Fetch Data (Story 3.0)
+
+- Timer-only polling = dead code — must include actual Supabase query inside poll loop
+- Also: `startPolling` callback must capture `fileId` in closure/deps
+
+### 21. Zustand Map/Set Batch Setter (Story 3.0)
+
+- `new Map(s.findingsMap)` O(n) per single update — provide `setFindings(map)` for bulk loads
+- Same applies to Set-based selectedIds if "Select All" feature added
 
 ## CAS Guard Pattern (ESTABLISHED)
 
@@ -150,3 +168,13 @@
 - Usage: `const { dbState, dbMockModule } = vi.hoisted(() => createDrizzleMock())` then `vi.mock('@/db/client', () => dbMockModule)`
 - Features: `returnValues[callIndex]`, `valuesCaptures`, `setCaptures`, `throwAtCallIndex`, `transaction` support
 - `vi.fn((..._args: unknown[]) => ...)` for mocks whose .calls are accessed
+
+## Story 2.10 Parity Verification CR R1 (2026-02-26)
+
+- R1: 2C/6H/5S — C1: invalid UUID in buildPerfSegments, C2: dead import parseXbenchReport in tier2 test
+- Integration test mock block duplicated 4x — candidate for shared setup file
+- `toSegmentRecord()` duplicated 3x across integration tests — extract to factories.ts
+- `computePerFindingParity()` called 3x with same data — compute once in beforeAll
+- XbenchFinding type fragmentation continues (Anti-pattern #15) — now 4 definitions (added golden-corpus-parity.test.ts)
+- `process.env` direct access in test files: decided EXEMPT for test-time config (not runtime env)
+- `buildPerfSegments` word count uses space-split (inaccurate for Thai/CJK templates)

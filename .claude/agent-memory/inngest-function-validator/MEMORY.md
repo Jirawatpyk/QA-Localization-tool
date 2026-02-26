@@ -8,13 +8,14 @@
 - Route handler: `src/app/api/inngest/route.ts` — registers `processFilePipeline` + `processBatch`
 - Event types defined inline in `client.ts` (not separate file)
 
-### Registered Functions (Stories 2.6-2.7)
+### Registered Functions (Stories 2.6–3.0)
 
 | Export Name           | Function ID              | Trigger Event              | Concurrency                                   |
 | --------------------- | ------------------------ | -------------------------- | --------------------------------------------- |
 | `processFilePipeline` | `process-file-pipeline`  | `pipeline.process-file`    | `[{ key: 'event.data.projectId', limit: 1 }]` |
 | `processBatch`        | `process-batch-pipeline` | `pipeline.batch-started`   | none (fan-out only)                           |
 | `batchComplete`       | `batch-complete`         | `pipeline.batch-completed` | none (retries: 3, onFailure: onFailureFn)     |
+| `recalculateScore`    | `recalculate-score`      | `finding.changed`          | `[{ key: 'event.data.projectId', limit: 1 }]` |
 
 All registered in `src/app/api/inngest/route.ts`.
 
@@ -23,6 +24,7 @@ All registered in `src/app/api/inngest/route.ts`.
 - `pipeline.process-file` — trigger for per-file processing
 - `pipeline.batch-started` — trigger for batch fan-out
 - `pipeline.batch-completed` — trigger for cross-file analysis (Story 2.7)
+- `finding.changed` — trigger for score recalculation (Story 3.0)
 
 ### Key Patterns Confirmed in Story 2.6
 
@@ -82,9 +84,29 @@ await Promise.all(fileIds.map((fileId) => step.sendEvent({ name: 'pipeline.proce
 
 **onFailureFn has raw DB write outside step.run():**
 
-- `processFile.ts` line 54–58: `onFailureFn` does `db.update(files)` directly
+- `processFile.ts` lines 93–103: `onFailureFn` does `db.update(files)` directly
 - ACCEPTABLE: `onFailure` is called after all retries exhausted — no `step.run` context available
 - Inngest v3 design: `onFailure` handler does not support `step.run`
+
+**recalculateScore.ts: scoreFile call has NO layerFilter (by design):**
+
+- Story 3.0 intent: recalculate score across ALL layers (L1+L2+L3) whenever a finding changes
+- `scoreFile({ fileId, projectId, tenantId, userId })` — no `layerFilter` = all layers
+- processFile.ts by contrast passes `layerFilter: 'L1'` (Step 2 in pipeline, only L1 done at that point)
+- This asymmetry is correct and intentional — NOT a violation
+
+**recalculateScore.ts test file: `createDrizzleMock` called without import:**
+
+- Test file uses `createDrizzleMock()` in `vi.hoisted()` without import statement
+- This is CORRECT: `createDrizzleMock` is attached to `globalThis` via `src/test/setup.ts` setupFiles
+- setupFiles run before `vi.hoisted()` — globalThis access is safe
+- Pattern confirmed as intentional across all Inngest function tests
+
+**recalculateScore.ts: `onFailureFn` try-catch wraps audit log only:**
+
+- Lines 47–65: try-catch in `onFailureFn` wraps ONLY the `writeAuditLog` call
+- This is correct — audit log is non-fatal in error/rollback path (CLAUDE.md Guardrail #2)
+- NOT a violation of Rule 1 — this is in `onFailureFn`, not inside `step.run()`
 
 **runL1ForFile.ts has try-catch wrapping DB operations:**
 

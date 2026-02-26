@@ -28,9 +28,9 @@ const handlerFn = async ({
     runL1ForFile({ fileId, projectId, tenantId, userId }),
   )
 
-  // Step 2: Calculate MQM score (L2/L3 deferred to future stories)
+  // Step 2: Calculate MQM score — L1 only at this pipeline stage
   const scoreResult = await step.run(`score-${fileId}`, () =>
-    scoreFile({ fileId, projectId, tenantId, userId }),
+    scoreFile({ fileId, projectId, tenantId, userId, layerFilter: 'L1' }),
   )
 
   // Step 3: Check if batch is complete (all files l1_completed or failed)
