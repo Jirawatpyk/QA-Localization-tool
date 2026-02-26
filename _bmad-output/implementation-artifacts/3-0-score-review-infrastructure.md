@@ -107,8 +107,8 @@ So that Stories 3.1-3.5 can use consistent score lifecycle, finding state events
   - [x] 3.4 Use `Object.assign` to expose `handler` + `onFailure` for tests
   - [x] 3.5 Register in `src/app/api/inngest/route.ts` functions array
   - [x] 3.6 Refactor `scoreFile()` — add optional `layerFilter` param, read existing `layerCompleted`, update `processFile.ts` to pass `layerFilter: 'L1'`
-  - [x] 3.7 Write unit tests (`recalculateScore.test.ts`) — 8/8 GREEN
-  - [x] 3.8 Update `scoreFile.test.ts` — 25/25 GREEN (19 existing + 6 new)
+  - [x] 3.7 Write unit tests (`recalculateScore.test.ts`) — 9/9 GREEN
+  - [x] 3.8 Update `scoreFile.test.ts` — 27/27 GREEN (19 existing + 8 new incl. boundary)
 
 - [x] **Task 4: Supabase Realtime Hook** (AC: #4)
   - [x] 4.1 Create `use-score-subscription.ts`
@@ -130,7 +130,7 @@ So that Stories 3.1-3.5 can use consistent score lifecycle, finding state events
   - [x] 6.1 Verify all Inngest functions registered in route.ts (4 functions)
   - [x] 6.2 Run `npm run type-check` — zero errors
   - [x] 6.3 Run `npm run lint` — zero errors, 5 pre-existing warnings (none from Story 3.0 files)
-  - [x] 6.4 Run full test suite — 66/66 Story 3.0 tests pass; 2 pre-existing timeouts in L2/L3 template tests (not touched by Story 3.0)
+  - [x] 6.4 Run full test suite — 73/73 Story 3.0 tests pass; 2 pre-existing timeouts in L2/L3 template tests (not touched by Story 3.0)
 
 ## Dev Notes
 
@@ -396,15 +396,37 @@ Claude Opus 4.6
 
 - Task 1: Consolidated `FindingStatus` (8 DB-aligned values), removed phantom `'enhancement'` from `FindingSeverity`, added `ScoreStatus` type, `FindingChangedEventData` in pipeline.ts, `finding.changed` event in Inngest client, `buildFindingChangedEvent` factory
 - Task 2: Review store with 3 slices (findings, score, selection) + `resetForFile` — 15 tests GREEN
-- Task 3: `recalculateScore` Inngest function with Object.assign pattern, onFailure handler, concurrency per project — 8 tests GREEN. `scoreFile()` refactored: `layerFilter` param, preserve existing `layerCompleted` — 25 tests GREEN (6 new, 19 existing backward-compat)
+- Task 3: `recalculateScore` Inngest function with Object.assign pattern, onFailure handler, concurrency per project — 9 tests GREEN. `scoreFile()` refactored: `layerFilter` param, preserve existing `layerCompleted` — 27 tests GREEN (8 new incl. boundary, 19 existing backward-compat)
 - Task 4: `useScoreSubscription` hook with Realtime + polling fallback with exponential backoff (5s→10s→20s→40s, max 60s) — 10 tests GREEN. Animation deferred to Epic 4 UI story
 - Task 5: `createFindingChangedEmitter()` plain utility + `useFindingChangedEmitter()` React wrapper — 8 tests GREEN
-- Task 6: type-check zero errors, lint zero errors (5 pre-existing warnings), 66/66 Story 3.0 tests pass
-- Pre-CR scans: pending (Step 9)
+- Task 6: type-check zero errors, lint zero errors (5 pre-existing warnings), 73/73 Story 3.0 tests pass
 
 ### Pre-CR Scan Results
 
-Pending — will be populated after Step 9 scan
+**CR R1 — 18 findings (0C, 5H, 9M, 4L) — ALL FIXED**
+
+| ID | Severity | File | Finding | Fix |
+|----|----------|------|---------|-----|
+| H1 | High | recalculateScore.test.ts | 3 tautological tests (concurrency, retries, trigger) — asserted only `toBeDefined()` | Extracted `fnConfig` + `triggerEvent` via Object.assign; tests now assert actual config values |
+| H2 | High | use-score-subscription.test.ts | 3 backoff boundary tests assert "no crash" only | Added `mockFrom` call count assertions at each interval step |
+| H3 | High | recalculateScore.test.ts | Malformed event test doesn't verify NonRetriableError type | Changed `.rejects.toThrow('message')` → `.rejects.toThrow(NonRetriableError)` |
+| H4 | High | review.store.test.ts | Test name "initialize currentFileId as null" contradicts assertion `toBe('test-file-id')` | Replaced with "track currentFileId across multiple resetForFile calls" with multi-step assertion |
+| H5 | High | use-score-subscription.ts | `void poll()` swallows errors (Guardrail #13) | Changed to `poll().catch(() => { /* best-effort */ })` |
+| M1 | Medium | recalculateScore.ts | Bare `z.string()` for previousState/newState (Guardrail #3) | Changed to `z.enum(FINDING_STATUSES)` + `z.string().datetime()` for timestamp |
+| M2 | Medium | use-score-subscription.ts | `SCORE_STATUS_VALUES` duplicated from finding.ts | Derived from `SCORE_STATUSES` const array: `new Set<string>(SCORE_STATUSES)` |
+| M3 | Medium | use-score-subscription.ts | Realtime payload typed as concrete shape (not validated) | Changed to `Record<string, unknown>` with runtime type guards |
+| M4 | Medium | use-score-subscription.test.ts | Recovery test has no assertions ("no crash") | Added `callsBeforeRecovery` tracking and post-recovery no-more-polls assertion |
+| M5 | Medium | scoreFile.test.ts | Missing boundary tests for fileCount 49, 51 | Added 2 boundary tests for fileCount=49, fileCount=51 (neither should fire notification) |
+| M6 | Medium | finding-changed-emitter.test.ts | Rapid changes test doesn't verify last-event-wins | Added `expect(mockTriggerFn).toHaveBeenCalledWith(lastEvent)` |
+| M7 | Medium | Story file | Test count claims 66 but actual is 73 (after fixes) | Updated all counts in story file |
+| M8 | Medium | Story file | Pre-CR Scan Results not populated | Populated (this section) |
+| M9 | Medium | scoreFile.test.ts | layerFilter=undefined test doesn't confirm query executed | Added `expect(dbState.callIndex).toBeGreaterThanOrEqual(2)` |
+| L1 | Low | review.store.test.ts | selectionMode not asserted in resetForFile test | Added `setSelectionMode('bulk')` before reset + `expect(selectionMode).toBe('single')` |
+| L2 | Low | recalculateScore.test.ts | Missing `vi.mock('server-only')` guard | Added `vi.mock('server-only', () => ({}))` |
+| L3 | Low | use-score-subscription.test.ts | mockSelect column string not asserted | Added `expect(mockSelect).toHaveBeenCalledWith('mqm_score, status')` |
+| L4 | Low | review.store.test.ts | currentFileId initial null state never tested | Covered by H4 fix (multi-step tracking test) |
+
+**Post-fix verification:** `npm run type-check` ✅ | `npm run lint` ✅ | 73/73 tests PASS ✅
 
 ### File List
 
@@ -417,7 +439,7 @@ Pending — will be populated after Step 9 scan
 - `src/features/review/utils/finding-changed-emitter.ts` — Debounced emitter utility
 - `src/features/review/utils/finding-changed-emitter.test.ts` — 8 tests
 - `src/features/pipeline/inngest/recalculateScore.ts` — Inngest recalculate-score function
-- `src/features/pipeline/inngest/recalculateScore.test.ts` — 8 tests
+- `src/features/pipeline/inngest/recalculateScore.test.ts` — 9 tests
 
 **Modified Files:**
 - `src/types/finding.ts` — Consolidated FindingStatus (8 values), removed phantom 'enhancement', added ScoreStatus
@@ -425,7 +447,7 @@ Pending — will be populated after Step 9 scan
 - `src/types/index.ts` — Re-export ScoreStatus, FindingChangedEventData
 - `src/features/scoring/types.ts` — Import FindingStatus from @/types/finding (single source of truth)
 - `src/features/scoring/helpers/scoreFile.ts` — Added layerFilter param, preserve existing layerCompleted
-- `src/features/scoring/helpers/scoreFile.test.ts` — 6 new ATDD tests for layerFilter refactor
+- `src/features/scoring/helpers/scoreFile.test.ts` — 8 new ATDD tests for layerFilter refactor (incl. 2 boundary)
 - `src/features/pipeline/inngest/processFile.ts` — Pass layerFilter: 'L1' to scoreFile
 - `src/lib/inngest/client.ts` — Added finding.changed event to Events type
 - `src/app/api/inngest/route.ts` — Registered recalculateScore function

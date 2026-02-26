@@ -1,4 +1,5 @@
 export type { ActionResult } from './actionResult'
+export { FINDING_STATUSES, SCORE_STATUSES } from './finding'
 export type {
   DetectedByLayer,
   Finding,

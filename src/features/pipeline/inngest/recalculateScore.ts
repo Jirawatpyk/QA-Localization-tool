@@ -5,6 +5,7 @@ import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { scoreFile } from '@/features/scoring/helpers/scoreFile'
 import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
+import { FINDING_STATUSES } from '@/types/finding'
 import type { FindingChangedEventData } from '@/types/pipeline'
 
 const findingChangedSchema = z.object({
@@ -13,9 +14,9 @@ const findingChangedSchema = z.object({
   projectId: z.string().uuid(),
   tenantId: z.string().uuid(),
   triggeredBy: z.string().uuid(),
-  previousState: z.string(),
-  newState: z.string(),
-  timestamp: z.string(),
+  previousState: z.enum(FINDING_STATUSES),
+  newState: z.enum(FINDING_STATUSES),
+  timestamp: z.string().datetime(),
 })
 
 // Handler: score ALL findings (all layers) for the file
@@ -83,20 +84,28 @@ const onFailureFn = async ({
   }
 }
 
+const TRIGGER_EVENT = 'finding.changed' as const
+
+const fnConfig = {
+  id: 'recalculate-score',
+  retries: 3 as const,
+  concurrency: [{ key: 'event.data.projectId', limit: 1 }] as [{ key: string; limit: number }],
+}
+
 export const recalculateScore = Object.assign(
   inngest.createFunction(
     {
-      id: 'recalculate-score',
-      retries: 3,
-      concurrency: [{ key: 'event.data.projectId', limit: 1 }],
+      ...fnConfig,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onFailure: onFailureFn as any,
     },
-    { event: 'finding.changed' as const },
+    { event: TRIGGER_EVENT },
     handlerFn,
   ),
   {
     handler: handlerFn,
     onFailure: onFailureFn,
+    fnConfig,
+    triggerEvent: TRIGGER_EVENT,
   },
 )

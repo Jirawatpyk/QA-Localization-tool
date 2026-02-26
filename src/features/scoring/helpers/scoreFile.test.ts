@@ -490,6 +490,50 @@ describe('scoreFile', () => {
     expect(dbState.callIndex).toBe(5)
   })
 
+  it('should not fire notification when fileCount is 49 (boundary below threshold)', async () => {
+    mockCheckAutoPass.mockResolvedValue({
+      eligible: true,
+      rationale: 'Auto-pass',
+      isNewPair: true,
+      fileCount: 49,
+    })
+    const autoScore = { ...mockNewScore, status: 'auto_passed' }
+    dbState.returnValues = [mockSegments, [], [undefined], [], [autoScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    // fileCount=49 !== NEW_PAIR_FILE_THRESHOLD(50) → notification NOT triggered
+    expect(dbState.callIndex).toBe(5)
+  })
+
+  it('should not fire notification when fileCount is 51 (boundary above threshold)', async () => {
+    mockCheckAutoPass.mockResolvedValue({
+      eligible: true,
+      rationale: 'Auto-pass',
+      isNewPair: true,
+      fileCount: 51,
+    })
+    const autoScore = { ...mockNewScore, status: 'auto_passed' }
+    dbState.returnValues = [mockSegments, [], [undefined], [], [autoScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    // fileCount=51 !== NEW_PAIR_FILE_THRESHOLD(50) → notification NOT triggered
+    expect(dbState.callIndex).toBe(5)
+  })
+
   // ── P2: Edge cases ──
 
   it('should handle zero findings', async () => {
@@ -580,6 +624,9 @@ describe('scoreFile', () => {
       userId: VALID_USER_ID,
       // No layerFilter — should query all findings regardless of layer
     })
+
+    // Verify findings query was actually executed (callIndex advanced past segments + findings)
+    expect(dbState.callIndex).toBeGreaterThanOrEqual(2)
 
     const { eq } = await import('drizzle-orm')
     const eqMock = eq as ReturnType<typeof vi.fn>

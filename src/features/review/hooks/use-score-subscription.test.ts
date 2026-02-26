@@ -121,6 +121,7 @@ describe('useScoreSubscription', () => {
     // First poll fires immediately, then schedules next at 5s
     await vi.advanceTimersByTimeAsync(0)
     expect(mockFrom).toHaveBeenCalledWith('scores')
+    expect(mockSelect).toHaveBeenCalledWith('mqm_score, status')
     expect(mockEq).toHaveBeenCalledWith('file_id', 'file-123')
 
     // Verify store updated from poll data
@@ -128,7 +129,7 @@ describe('useScoreSubscription', () => {
     expect(useReviewStore.getState().currentScore).toBe(85)
   })
 
-  it('should resubscribe after channel recovery', async () => {
+  it('should resubscribe after channel recovery and stop polling', async () => {
     renderHook(() => useScoreSubscription('file-123'))
 
     // Simulate error then recovery
@@ -139,13 +140,17 @@ describe('useScoreSubscription', () => {
 
     // Advance past first poll
     await vi.advanceTimersByTimeAsync(5000)
+    const callsBeforeRecovery = mockFrom.mock.calls.length
+    expect(callsBeforeRecovery).toBeGreaterThanOrEqual(1)
 
     // Recovery — should stop polling
     act(() => {
       subscribeCallback('SUBSCRIBED')
     })
 
-    // No crash after recovery
+    // After recovery, no more polls should fire
+    await vi.advanceTimersByTimeAsync(60000)
+    expect(mockFrom.mock.calls.length).toBe(callsBeforeRecovery)
   })
 
   it('should unsubscribe from old channel when fileId changes', () => {
@@ -171,8 +176,14 @@ describe('useScoreSubscription', () => {
       subscribeCallback('CHANNEL_ERROR')
     })
 
-    // First poll at 5s — no crash
+    // Immediate poll fires first
+    await vi.advanceTimersByTimeAsync(0)
+    const callsAfterImmediate = mockFrom.mock.calls.length
+    expect(callsAfterImmediate).toBeGreaterThanOrEqual(1)
+
+    // After 5s, second poll fires
     await vi.advanceTimersByTimeAsync(5000)
+    expect(mockFrom.mock.calls.length).toBeGreaterThan(callsAfterImmediate)
   })
 
   it('should increase polling interval: 5s → 10s → 20s → 40s', async () => {
@@ -183,12 +194,25 @@ describe('useScoreSubscription', () => {
       subscribeCallback('CHANNEL_ERROR')
     })
 
+    // Immediate poll
+    await vi.advanceTimersByTimeAsync(0)
+    const callsAfterImmediate = mockFrom.mock.calls.length
+
     // Advance through backoff sequence
-    await vi.advanceTimersByTimeAsync(5000) // 1st poll at 5s
+    await vi.advanceTimersByTimeAsync(5000) // 1st scheduled poll at 5s
+    const callsAfter5s = mockFrom.mock.calls.length
+    expect(callsAfter5s).toBeGreaterThan(callsAfterImmediate)
+
     await vi.advanceTimersByTimeAsync(10000) // 2nd poll at 10s
+    const callsAfter10s = mockFrom.mock.calls.length
+    expect(callsAfter10s).toBeGreaterThan(callsAfter5s)
+
     await vi.advanceTimersByTimeAsync(20000) // 3rd poll at 20s
+    const callsAfter20s = mockFrom.mock.calls.length
+    expect(callsAfter20s).toBeGreaterThan(callsAfter10s)
+
     await vi.advanceTimersByTimeAsync(40000) // 4th poll at 40s
-    // No crash = backoff working
+    expect(mockFrom.mock.calls.length).toBeGreaterThan(callsAfter20s)
   })
 
   it('should cap polling interval at 60s (NOT 80s)', async () => {
@@ -199,15 +223,20 @@ describe('useScoreSubscription', () => {
       subscribeCallback('CHANNEL_ERROR')
     })
 
-    // Advance through: 5s + 10s + 20s + 40s + 60s (cap, NOT 80s)
+    // Advance through: immediate + 5s + 10s + 20s + 40s + 60s (cap, NOT 80s)
+    await vi.advanceTimersByTimeAsync(0) // immediate
     await vi.advanceTimersByTimeAsync(5000)
     await vi.advanceTimersByTimeAsync(10000)
     await vi.advanceTimersByTimeAsync(20000)
     await vi.advanceTimersByTimeAsync(40000)
+
+    const callsBeforeCap = mockFrom.mock.calls.length
     await vi.advanceTimersByTimeAsync(60000) // 5th poll capped at 60s
+    const callsAfterCap = mockFrom.mock.calls.length
+    expect(callsAfterCap).toBeGreaterThan(callsBeforeCap)
 
     // 6th poll should also be 60s (not 120s)
     await vi.advanceTimersByTimeAsync(60000)
-    // No crash = cap working
+    expect(mockFrom.mock.calls.length).toBeGreaterThan(callsAfterCap)
   })
 })

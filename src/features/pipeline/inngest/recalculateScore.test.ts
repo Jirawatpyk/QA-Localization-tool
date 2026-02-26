@@ -37,6 +37,7 @@ vi.mock('@/db/client', () => dbMockModule)
 vi.mock('@/lib/logger', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
 }))
+vi.mock('server-only', () => ({}))
 
 import { recalculateScore } from '@/features/pipeline/inngest/recalculateScore'
 import { buildFindingChangedEvent } from '@/test/factories'
@@ -106,23 +107,21 @@ describe('recalculateScore', () => {
   })
 
   it('should throw NonRetriableError for malformed event data', async () => {
+    const { NonRetriableError: InngestNonRetriableError } = await import('inngest')
     const mockStep = createMockStep()
     const malformedEvent = { fileId: 'not-a-uuid', projectId: '', tenantId: '', triggeredBy: '' }
 
     await expect(
       recalculateScore.handler({ event: { data: malformedEvent as never }, step: mockStep }),
-    ).rejects.toThrow('Invalid finding.changed event data')
+    ).rejects.toThrow(InngestNonRetriableError)
   })
 
   // ── P0: Inngest Config ──
 
   it('should have concurrency key set to event.data.projectId', () => {
-    // Verify via the Inngest function's config — the function options are baked in at createFunction time
-    // The function ID contains the expected config; we verify through the Object.assign pattern
-    expect(recalculateScore).toBeDefined()
-    // The actual concurrency is verified by the Inngest runtime; we trust the config passed to createFunction
-    // In the source: concurrency: [{ key: 'event.data.projectId', limit: 1 }]
-    expect(recalculateScore.handler).toBeDefined()
+    expect(recalculateScore.fnConfig.concurrency).toEqual([
+      { key: 'event.data.projectId', limit: 1 },
+    ])
   })
 
   it('should expose handler and onFailure via Object.assign', () => {
@@ -161,20 +160,10 @@ describe('recalculateScore', () => {
   })
 
   it('should have retries set to 3', () => {
-    // The retries config is passed to inngest.createFunction
-    // We verify the function exists and has the correct shape
-    // Inngest bakes retries into the function config at creation time
-    expect(recalculateScore).toBeDefined()
-    expect(recalculateScore.handler).toBeDefined()
+    expect(recalculateScore.fnConfig.retries).toBe(3)
   })
 
   it('should be triggered by finding.changed event', () => {
-    // The trigger is set via { event: 'finding.changed' } in createFunction
-    // We verify the function exists and can be called with finding.changed event data
-    const event = buildFindingChangedEvent()
-    expect(event.findingId).toBeDefined()
-    expect(event.tenantId).toBeDefined()
-    // The actual event trigger binding is verified by Inngest runtime
-    expect(recalculateScore.handler).toBeDefined()
+    expect(recalculateScore.triggerEvent).toBe('finding.changed')
   })
 })

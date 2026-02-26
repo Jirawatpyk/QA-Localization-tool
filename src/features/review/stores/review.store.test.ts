@@ -75,6 +75,7 @@ describe('useReviewStore', () => {
     useReviewStore.getState().setFinding('f1', buildFinding({ id: 'f1' }))
     useReviewStore.getState().updateScore(85, 'calculated')
     useReviewStore.getState().toggleSelection('f1')
+    useReviewStore.getState().setSelectionMode('bulk')
 
     useReviewStore.getState().resetForFile('new-file-id')
 
@@ -85,6 +86,8 @@ describe('useReviewStore', () => {
     expect(state.isRecalculating).toBe(false)
     expect(state.selectedIds.size).toBe(0)
     expect(state.selectedId).toBeNull()
+    expect(state.selectionMode).toBe('single')
+    expect(state.currentFileId).toBe('new-file-id')
   })
 
   // ── P1: Extended State ──
@@ -165,10 +168,14 @@ describe('useReviewStore', () => {
     expect(useReviewStore.getState().currentFileId).toBe('new-file-id')
   })
 
-  it('should initialize currentFileId as null', () => {
-    // After a fresh reset with known file, reset to check initial
-    const state = useReviewStore.getState()
-    // currentFileId was set by beforeEach resetForFile('test-file-id')
-    expect(state.currentFileId).toBe('test-file-id')
+  it('should track currentFileId across multiple resetForFile calls', () => {
+    // beforeEach sets currentFileId to 'test-file-id'
+    expect(useReviewStore.getState().currentFileId).toBe('test-file-id')
+
+    useReviewStore.getState().resetForFile('second-file')
+    expect(useReviewStore.getState().currentFileId).toBe('second-file')
+
+    useReviewStore.getState().resetForFile('third-file')
+    expect(useReviewStore.getState().currentFileId).toBe('third-file')
   })
 })

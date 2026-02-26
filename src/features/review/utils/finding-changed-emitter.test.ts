@@ -41,16 +41,18 @@ describe('createFindingChangedEmitter', () => {
     expect(mockTriggerFn).not.toHaveBeenCalled()
   })
 
-  it('should emit only once for rapid changes within 500ms', async () => {
+  it('should emit only once for rapid changes within 500ms (last-event-wins)', async () => {
     const emitter = createFindingChangedEmitter(mockTriggerFn)
     emitter.emit(buildFindingChangedEvent({ findingId: 'f1' }))
     await vi.advanceTimersByTimeAsync(100)
     emitter.emit(buildFindingChangedEvent({ findingId: 'f2' }))
     await vi.advanceTimersByTimeAsync(100)
-    emitter.emit(buildFindingChangedEvent({ findingId: 'f3' }))
+    const lastEvent = buildFindingChangedEvent({ findingId: 'f3' })
+    emitter.emit(lastEvent)
 
     await vi.advanceTimersByTimeAsync(500)
     expect(mockTriggerFn).toHaveBeenCalledOnce()
+    expect(mockTriggerFn).toHaveBeenCalledWith(lastEvent)
   })
 
   it('should cancel pending emission via cancel()', async () => {
