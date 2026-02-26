@@ -29,6 +29,11 @@ import { updateTourState } from '@/features/onboarding/actions/updateTourState.a
 
 import { OnboardingTour } from './OnboardingTour'
 
+// Dynamic import('driver.js') in the component is async even when mocked.
+// Under full-suite load (1700+ tests), microtask resolution can exceed
+// vi.waitFor's default 1000ms timeout — use a generous budget.
+const DYNAMIC_IMPORT_TIMEOUT = { timeout: 3000 }
+
 describe('OnboardingTour', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -79,7 +84,7 @@ describe('OnboardingTour', () => {
         ]),
       )
       expect(mockDrive).toHaveBeenCalledWith(0)
-    })
+    }, DYNAMIC_IMPORT_TIMEOUT)
   })
 
   it('should resume tour at correct step for returning user', async () => {
@@ -88,7 +93,7 @@ describe('OnboardingTour', () => {
     await vi.waitFor(() => {
       // dismissed_at_step is 1-based (2), resume is 0-based (1)
       expect(mockDrive).toHaveBeenCalledWith(1)
-    })
+    }, DYNAMIC_IMPORT_TIMEOUT)
   })
 
   it('should clamp resumeStep to LAST_STEP_INDEX when dismissed_at_step exceeds step count', async () => {
@@ -98,7 +103,7 @@ describe('OnboardingTour', () => {
     await vi.waitFor(() => {
       // 4 - 1 = 3, but clamped to LAST_STEP_INDEX (1)
       expect(mockDrive).toHaveBeenCalledWith(1)
-    })
+    }, DYNAMIC_IMPORT_TIMEOUT)
   })
 
   it('should set 2 tour steps', async () => {
@@ -107,7 +112,7 @@ describe('OnboardingTour', () => {
     await vi.waitFor(() => {
       const steps = mockSetSteps.mock.calls[0]?.[0] as Array<{ element: string }> | undefined
       expect(steps).toHaveLength(2)
-    })
+    }, DYNAMIC_IMPORT_TIMEOUT)
   })
 
   it('should call updateTourState dismiss when onCloseClick fires', async () => {
@@ -115,7 +120,7 @@ describe('OnboardingTour', () => {
 
     await vi.waitFor(() => {
       expect(mockDriverFn).toHaveBeenCalled()
-    })
+    }, DYNAMIC_IMPORT_TIMEOUT)
 
     const driverConfig = mockDriverFn.mock.calls[0]?.[0] as
       | {
@@ -138,7 +143,7 @@ describe('OnboardingTour', () => {
 
     await vi.waitFor(() => {
       expect(mockDriverFn).toHaveBeenCalled()
-    })
+    }, DYNAMIC_IMPORT_TIMEOUT)
 
     const driverConfig = mockDriverFn.mock.calls[0]?.[0] as
       | {
@@ -171,7 +176,7 @@ describe('OnboardingTour', () => {
 
     await vi.waitFor(() => {
       expect(mockDriverFn).toHaveBeenCalled()
-    })
+    }, DYNAMIC_IMPORT_TIMEOUT)
 
     const driverConfig = mockDriverFn.mock.calls[0]?.[0] as
       | {
@@ -194,7 +199,7 @@ describe('OnboardingTour', () => {
 
     await vi.waitFor(() => {
       expect(mockDriverFn).toHaveBeenCalledTimes(1)
-    })
+    }, DYNAMIC_IMPORT_TIMEOUT)
 
     // Simulate dismiss via X button
     const driverConfig = mockDriverFn.mock.calls[0]?.[0] as
@@ -223,7 +228,7 @@ describe('OnboardingTour', () => {
 
     await vi.waitFor(() => {
       expect(mockDriverFn).toHaveBeenCalled()
-    })
+    }, DYNAMIC_IMPORT_TIMEOUT)
 
     unmount()
 
@@ -236,7 +241,7 @@ describe('OnboardingTour', () => {
 
     await vi.waitFor(() => {
       expect(mockDriverFn).toHaveBeenCalled()
-    })
+    }, DYNAMIC_IMPORT_TIMEOUT)
 
     unmount()
 
@@ -248,7 +253,7 @@ describe('OnboardingTour', () => {
 
     await vi.waitFor(() => {
       expect(mockDriverFn).toHaveBeenCalled()
-    })
+    }, DYNAMIC_IMPORT_TIMEOUT)
 
     const driverConfig = mockDriverFn.mock.calls[0]?.[0] as { onDestroyed?: () => void } | undefined
 

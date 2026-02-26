@@ -42,7 +42,6 @@ const NCR_CORPUS_DIR = path.join(
   'JOS24-00585 NCR - One Time Passcode_7 Languages',
 )
 const QA_TRANSLATION_DIR = path.join(NCR_CORPUS_DIR, '1 QA-Translation')
-const QA_REPORT_DIR = path.join(NCR_CORPUS_DIR, 'QA Report')
 
 function hasNcrCorpus(): boolean {
   if (process.env['GOLDEN_CORPUS_PATH']) return true

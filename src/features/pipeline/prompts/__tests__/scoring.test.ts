@@ -114,35 +114,11 @@ describe('evaluateFindings', () => {
         makeSegment({
           id: 'seg-1',
           expectedFindings: [
-            { category: 'accuracy', severity: 'critical', descriptionKeywords: ['wrong'] },
-          ],
-        }),
-      ]
-      const findings = new Map([
-        [
-          'seg-1',
-          [
-            makeFinding({
-              segmentId: 'seg-1',
-              category: 'mistranslation', // sub-category of accuracy
-              description: 'Wrong meaning conveyed',
-            }),
-          ],
-        ],
-      ])
-
-      // 'accuracy' is contained in... actually 'mistranslation' doesn't contain 'accuracy'
-      // But 'accuracy'.includes('mistranslation') is false too
-      // Let's use a real sub-category match
-      const segments2: GoldenSegment[] = [
-        makeSegment({
-          id: 'seg-1',
-          expectedFindings: [
             { category: 'style', severity: 'minor', descriptionKeywords: ['punctuation'] },
           ],
         }),
       ]
-      const findings2 = new Map([
+      const findings = new Map([
         [
           'seg-1',
           [
@@ -155,7 +131,7 @@ describe('evaluateFindings', () => {
         ],
       ])
 
-      const result = evaluateFindings(segments2, findings2)
+      const result = evaluateFindings(segments, findings)
       expect(result.truePositives).toBe(1)
     })
   })

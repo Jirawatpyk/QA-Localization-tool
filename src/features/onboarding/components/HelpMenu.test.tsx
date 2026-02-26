@@ -1,12 +1,11 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { toast } from 'sonner'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// Mock sonner toast (project pattern: vi.mock before imports)
+// Mock sonner toast (vitest hoists vi.mock automatically)
 vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }))
-
-import { toast } from 'sonner'
 
 const mockUsePathname = vi.fn(() => '/dashboard')
 const mockRefresh = vi.fn()
