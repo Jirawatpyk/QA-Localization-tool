@@ -169,6 +169,16 @@
         Action: After fixing R1 findings, verify pre-CR scan ran properly for the next story.</critical>
     </check>
 
+    <!-- CR Round Target (Epic 2 Retro A3) -->
+    <check if="review_round gte 3">
+      <critical>⚠️ CR ROUND TARGET EXCEEDED: This is R{{review_round}} (target: ≤2 rounds per story, Epic 2 Retro A3).
+        Epic 2 averaged 2.9 rounds/story. Exceeding 2 rounds signals:
+        - Pre-CR quality scan may not be catching enough issues
+        - Story scope may be too large
+        - New tech domain may need proactive guardrails added to CLAUDE.md BEFORE implementation
+        Action: After this review, conduct a mini-retro on WHY this story needed {{review_round}} rounds.</critical>
+    </check>
+
     <output>**🔥 CODE REVIEW FINDINGS, {user_name}!**
 
       **Story:** {{story_file}}

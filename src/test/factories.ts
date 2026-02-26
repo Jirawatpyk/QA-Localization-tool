@@ -429,3 +429,103 @@ export function buildPipelineBatchEvent(
     ...overrides,
   }
 }
+
+// ── Performance Test Segment Factory ──
+// Deterministic: same output every call (seeded, no randomness)
+// Mix: 60% normal, 10% tags, 10% numbers, 5% placeholders, 10% Thai/CJK, 5% edge cases
+
+const PERF_TEMPLATES = {
+  normal: [
+    { source: 'Click the button to continue.', target: 'คลิกปุ่มเพื่อดำเนินการต่อ' },
+    { source: 'Save your changes before closing.', target: 'บันทึกการเปลี่ยนแปลงก่อนปิด' },
+    { source: 'Welcome to the application.', target: 'ยินดีต้อนรับสู่แอปพลิเคชัน' },
+    { source: 'Please enter your password.', target: 'กรุณาใส่รหัสผ่านของคุณ' },
+    {
+      source: 'The file has been uploaded successfully.',
+      target: 'ไฟล์ได้รับการอัปโหลดเรียบร้อยแล้ว',
+    },
+    { source: 'An error occurred. Please try again.', target: 'เกิดข้อผิดพลาด กรุณาลองอีกครั้ง' },
+  ],
+  withTags: [
+    {
+      source: '<g id="1">Bold text</g> and normal.',
+      target: '<g id="1">ข้อความตัวหนา</g> และปกติ',
+    },
+    { source: 'Start <x id="2"/>here<x id="3"/>.', target: 'เริ่ม <x id="2"/>ที่นี่<x id="3"/>' },
+    {
+      source: '<g id="5">Step 1:</g> Configure settings.',
+      target: '<g id="5">ขั้นตอนที่ 1:</g> กำหนดค่า',
+    },
+  ],
+  withNumbers: [
+    {
+      source: 'Version 2.5.1 released on 2024-01-15.',
+      target: 'เวอร์ชัน 2.5.1 เผยแพร่เมื่อ 2024-01-15',
+    },
+    { source: 'Total: $1,234.56 for 100 items.', target: 'รวม: $1,234.56 สำหรับ 100 รายการ' },
+    { source: 'Page 3 of 50 results.', target: 'หน้า 3 จาก 50 ผลลัพธ์' },
+  ],
+  withPlaceholders: [
+    { source: 'Hello {0}, welcome to {1}.', target: 'สวัสดี {0} ยินดีต้อนรับสู่ {1}' },
+    { source: 'Error %s: %d files failed.', target: 'ข้อผิดพลาด %s: %d ไฟล์ล้มเหลว' },
+  ],
+  thaiCjk: [
+    { source: 'Training plan for barista.', target: 'แผนการฝึกอบรมสำหรับบาริสต้า' },
+    { source: 'Customer experience standards.', target: 'มาตรฐานประสบการณ์ลูกค้า' },
+    { source: 'Quality assurance checklist.', target: '品質保証チェックリスト' },
+    { source: 'User interface guidelines.', target: '用户界面指南' },
+  ],
+  edgeCases: [
+    { source: 'Simple text.', target: '' }, // empty target
+    { source: 'A'.repeat(500), target: 'B'.repeat(500) }, // very long
+    { source: '©™®℠', target: '©™®℠' }, // special chars
+  ],
+} as const
+
+/**
+ * Generate deterministic synthetic segments for performance testing.
+ * Mix: 60% normal, 10% tags, 10% numbers, 5% placeholders, 10% Thai/CJK, 5% edge cases.
+ * Uses modulo cycling — same count always produces same output.
+ */
+export function buildPerfSegments(count: number): SegmentRecord[] {
+  if (count === 0) return []
+
+  const fileId = '00000000-0000-4000-8000-000000000001'
+  const projectId = '00000000-0000-4000-8000-000000000002'
+  const tenantId = '00000000-0000-4000-8000-000000000003'
+  const segments: SegmentRecord[] = []
+
+  for (let i = 0; i < count; i++) {
+    // Deterministic category assignment based on index
+    const pct = (i * 100) / count
+    let templates: readonly { source: string; target: string }[]
+    if (pct < 60) templates = PERF_TEMPLATES.normal
+    else if (pct < 70) templates = PERF_TEMPLATES.withTags
+    else if (pct < 80) templates = PERF_TEMPLATES.withNumbers
+    else if (pct < 85) templates = PERF_TEMPLATES.withPlaceholders
+    else if (pct < 95) templates = PERF_TEMPLATES.thaiCjk
+    else templates = PERF_TEMPLATES.edgeCases
+
+    const template = templates[i % templates.length]!
+
+    segments.push({
+      id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
+      fileId,
+      projectId,
+      tenantId,
+      segmentNumber: i + 1,
+      sourceText: template.source,
+      targetText: template.target,
+      sourceLang: 'en-US',
+      targetLang: 'th-TH',
+      wordCount: template.source.split(' ').length,
+      confirmationState: 'Translated',
+      matchPercentage: null,
+      translatorComment: null,
+      inlineTags: null,
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+    })
+  }
+
+  return segments
+}

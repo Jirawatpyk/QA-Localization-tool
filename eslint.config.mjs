@@ -149,6 +149,7 @@ const eslintConfig = defineConfig([
       "src/db/client.ts",
       "src/db/__tests__/**",
       "src/db/seeds/**",
+      "src/__tests__/integration/**",
       "src/proxy.ts",
       "next.config.ts",
       "drizzle.config.ts",

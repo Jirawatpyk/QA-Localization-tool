@@ -12,12 +12,15 @@
     "test:rls": "vitest run --project rls",
     "test:e2e": "playwright test",
     "test": "vitest run",
+    "test:parity": "cross-env GOLDEN_CORPUS_PATH=docs/test-data/Golden-Test-Mona vitest run --project integration src/__tests__/integration/golden-corpus* src/__tests__/integration/clean-corpus* src/__tests__/integration/tier2*",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "prepare": "husky"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.47",
+    "@ai-sdk/openai": "^3.0.34",
     "@hookform/resolvers": "^5.2.2",
     "@react-pdf/renderer": "^4.3.2",
     "@supabase/ssr": "0.8.0",
@@ -68,6 +71,7 @@
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "5.1.4",
     "@vitest/coverage-v8": "4.0.18",
+    "cross-env": "^10.1.0",
     "drizzle-kit": "0.31.9",
     "drizzle-zod": "0.8.3",
     "eslint": "9.29.0",

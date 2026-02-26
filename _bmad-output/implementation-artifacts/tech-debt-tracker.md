@@ -91,7 +91,30 @@
 - **Origin:** Story 2.4, flagged by code-quality-analyzer + testing-qa-expert
 - **Status:** RESOLVED (2026-02-25 — all 15 files migrated, 1457 tests pass)
 
-### TD-TEST-002: Low-priority test gaps (carry-over)
+### TD-TEST-002: Integration test DRY — toSegmentRecord() duplicated 6x
+- **Severity:** Medium
+- **Risk:** If `SegmentRecord` type changes, must update 6 identical copies
+- **Files:** `golden-corpus-parity.test.ts`, `clean-corpus-baseline.test.ts`, `tier2-multilang-parity.test.ts`, `golden-corpus-diagnostic.test.ts`, `parity-helpers-real-data.test.ts`, `rule-engine-golden-corpus.test.ts`
+- **Fix:** Extract `buildSegmentRecordFromParsed()` to `src/test/factories.ts`
+- **Origin:** Story 2.10, flagged by code-quality-analyzer
+- **Status:** DEFERRED (fix when creating shared integration test infrastructure, early Epic 3)
+
+### TD-TEST-003: Integration test DRY — mock block duplicated 4+ files
+- **Severity:** Medium
+- **Risk:** Adding a new mock (e.g., new server-only module) requires updating 4+ files
+- **Files:** All integration test files using `vi.mock('server-only')` + `writeAuditLog` + `logger` + `glossaryCache`
+- **Fix:** Create `src/__tests__/integration/setup.ts` as shared `setupFiles` in vitest config
+- **Origin:** Story 2.10, flagged by code-quality-analyzer
+- **Status:** DEFERRED (fix when creating shared integration test infrastructure, early Epic 3)
+
+### TD-TEST-004: computePerFindingParity() called 3x with same data
+- **Severity:** Low
+- **Risk:** O(N*M) matching repeated needlessly in `golden-corpus-parity.test.ts`
+- **Fix:** Compute once in `beforeAll`, store in suite-level variable
+- **Origin:** Story 2.10, flagged by code-quality-analyzer
+- **Status:** DEFERRED (quick refactor, do with TD-TEST-002/003)
+
+### TD-TEST-005: Low-priority test gaps (carry-over)
 - **Severity:** Low
 - **Items:**
   - `BatchSummaryView.test.tsx` — `crossFileFindings` prop untested

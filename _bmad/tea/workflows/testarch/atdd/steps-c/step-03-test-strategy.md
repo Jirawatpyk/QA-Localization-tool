@@ -43,6 +43,23 @@ Translate acceptance criteria into a prioritized, level-appropriate test plan.
 
 ---
 
+## 1b. Boundary Value Tests (MANDATORY — Epic 2 Retro A2)
+
+For every threshold, counter, limit, or comparison in the acceptance criteria:
+
+- **Identify all boundary values:** `<=` vs `<`, `>=` vs `>`, `=== 0`, empty arrays, max limits
+- **Generate explicit boundary test scenarios** for each:
+  - Value exactly at boundary (e.g., `count === 50`)
+  - Value one below boundary (e.g., `count === 49`)
+  - Value one above boundary (e.g., `count === 51`)
+  - Zero / empty / null edge cases
+- **Priority:** P0 for business-critical thresholds, P1 for all others
+- **Minimum:** At least 1 boundary test per AC that contains a numeric comparison or limit
+
+If no boundary values are present in the story's ACs, explicitly note: "No boundary values identified — boundary tests N/A."
+
+---
+
 ## 2. Select Test Levels
 
 Choose the best level per scenario:

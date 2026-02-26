@@ -118,7 +118,7 @@ So that L2 screening has a reliable, tested foundation for calling AI models wit
 
 **Given** the L2 prompt template
 **When** assembled for a batch of segments
-**Then** the prompt includes: source text, target text, language pair, and any L1 findings for context
+**Then** the prompt MUST be assembled via `buildL2Prompt()` from `src/features/pipeline/prompts/build-l2-prompt.ts` which includes: glossary terms, MQM taxonomy categories, project domain context, language-specific instructions, few-shot calibration examples, confidence scoring guidance, and L1 findings for dedup
 **And** L2 focuses on SEMANTIC issues not caught by L1 rules: mistranslations, omissions, additions, fluency issues, register/tone mismatches, and cultural inappropriateness. L2 does NOT re-check L1 categories (tags, placeholders, numbers) unless semantic interpretation matters
 **And** prompt template is tested with mock responses to verify Zod parsing
 
@@ -197,7 +197,7 @@ So that I get the most thorough quality assessment with high-confidence findings
 
 **Given** a segment is sent to the L3 model
 **When** it performs deep contextual analysis
-**Then** the prompt includes: source text, target text, language pair, surrounding context (±2 segments in file order — if at boundary, use available segments: first segment has 0 above, 2 below; context sent as `{ previous: [{…}], current: {…}, next: [{…}] }`), L1 findings, L2 findings, and relevant glossary terms
+**Then** the prompt MUST be assembled via `buildL3Prompt()` from `src/features/pipeline/prompts/build-l3-prompt.ts` which includes: glossary terms, MQM taxonomy categories, project domain context, language-specific instructions, few-shot calibration examples, confidence scoring with rationale requirement, cross-layer dedup instructions, and all prior findings (L1+L2). Additionally, surrounding context (±2 segments in file order — if at boundary, use available segments: first segment has 0 above, 2 below; context sent as `{ previous: [{…}], current: {…}, next: [{…}] }`) MUST be included
 **And** L3 deepens L2 analysis: full semantic accuracy verification + glossary consistency + tone/register analysis + cultural sensitivity. When L3 confirms L2 finding, boost confidence. When L3 contradicts (finds no issue where L2 did), mark for review with "L3 disagrees" badge
 **And** the response uses Zod structured output: `{ findings: [{ segmentId, category, severity, description, suggestion, confidence, reasoning }] }`
 **And** the `reasoning` field explains why the issue was flagged (for reviewer context)

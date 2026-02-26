@@ -115,6 +115,9 @@ Each feature module contains: `components/`, `actions/` (Server Actions), `hooks
 - `service_role` key in client code, hardcoded `tenant_id`, inline Supabase client creation
 - try-catch inside Inngest `step.run()`, arbitrary Tailwind breakpoints, snapshot tests
 - `process.env` direct access, inline Tailwind colors (use tokens.css), `"use client"` on pages
+- `generateObject()`, `streamObject()` (deprecated in AI SDK 6.0 — use `generateText` + `Output.object()`)
+- `.optional()` / `.nullish()` in AI output Zod schemas (OpenAI rejects — use `.nullable()` only)
+- AI calls without cost logging, AI calls without budget check, inline `openai()`/`anthropic()` constructor
 
 ### Coding Guardrails (CR Lessons — check BEFORE writing every file)
 
@@ -133,6 +136,13 @@ Each feature module contains: `components/`, `actions/` (Server Actions), `hooks
 13. **`void asyncFn()` swallows errors** — use `.catch(() => { /* non-critical */ })` or `await` with try-catch
 14. **Asymmetric query filters** — when one query gets `eq(projectId)`, audit ALL sibling queries in same function for consistency (defense-in-depth)
 15. **ExcelJS type mismatch** — use `// @ts-expect-error ExcelJS Buffer type conflict` (not `as never`, `as any`, or `as Buffer`)
+16. **AI structured output** — use `generateText({ output: Output.object({ schema }), ... })` from `ai` package. NEVER use deprecated `generateObject`/`streamObject`. Access parsed result via `result.output` (NOT `result.object`). Use `maxOutputTokens` (NOT `maxTokens` — renamed in v5+). For streaming: `streamText` + `Output.object()`. Import `Output` from `'ai'`
+17. **AI Zod schemas: `.nullable()` only** — OpenAI rejects `.optional()` and `.nullish()` in structured output schemas (causes `NoObjectGeneratedError` with `finish_reason: 'content-filter'`). Use `.nullable()` for all optional fields. Required fields: no modifier
+18. **AI error classification in Inngest** — `RateLimitError` (429) = retriable, let Inngest retry. `NoObjectGeneratedError` / auth 401 / content filter = `throw new NonRetriableError(...)`. Never retry schema or auth errors. Always log with context: `{ finishReason, usage, model, cause }`
+19. **AI cost tracking mandatory** — every `generateText`/`streamText` call MUST log `result.usage` (`inputTokens`, `outputTokens`) + estimated cost via `logAIUsage()` from `@/lib/ai/costs`. Never ignore token usage. Aggregate across chunks for per-file total
+20. **AI provider via `@/lib/ai`** — never inline `openai()` or `anthropic()` constructor in feature code. Use shared `customProvider` from `@/lib/ai/client.ts` with fallback chain. L2 = `gpt-4o-mini`, L3 = `claude-sonnet-4-5-20250929`. Provider-specific options go in `providerOptions: { openai: { ... } }`, not top-level
+21. **AI chunks in Inngest: one `step.run()` per chunk** — chunk segments at 30K chars. Each chunk = separate deterministic step ID: `l2-chunk-${fileId}-${i}`. Failed chunk logs error + continues (don't fail entire layer). Collect partial results. Return `{ findingCount, chunksProcessed, partialFailure }`
+22. **AI budget guard before layer** — check tenant AI quota BEFORE making any AI calls. If budget exhausted → `throw new NonRetriableError('AI quota exhausted')`. Log remaining quota after each call. Pattern: `checkTenantBudget(tenantId)` → `{ hasQuota, remainingTokens }`
 
 ## Naming Conventions
 
@@ -158,6 +168,8 @@ Each feature module contains: `components/`, `actions/` (Server Actions), `hooks
 - **Test data** via factory functions in `src/test/factories.ts` — never hardcode
 - **Naming:** `describe("{Unit}")` → `it("should {behavior} when {condition}")`
 - **CI gates:** quality-gate (every PR: lint→type-check→tests→build), e2e-gate (merge to main), chaos-test (weekly)
+- **Boundary value tests (MANDATORY):** Every AC with numeric thresholds/limits MUST have explicit boundary tests (at, below, above, zero). ATDD step-03 enforces this. (Epic 2 Retro A2)
+- **CR round target: ≤2 per story.** Epic 2 averaged 2.9. If R3+ needed → mini-retro on root cause. Pre-CR quality scan (3 agents) should prevent most findings from reaching CR. (Epic 2 Retro A3)
 
 ## Pre-Story Checklist (MANDATORY — SM + Dev Lead)
 
@@ -195,11 +207,12 @@ This checklist was created from Epic 1 retrospective learnings. Top 5 red flags:
 
 ## Framework Docs Rule
 
-Before writing code that uses **Inngest**, **Drizzle ORM**, or **Supabase** APIs — fetch latest docs via Context7 MCP first. Do NOT rely on training data for SDK method signatures, especially:
+Before writing code that uses **Inngest**, **Drizzle ORM**, **Supabase**, or **Vercel AI SDK** APIs — fetch latest docs via Context7 MCP first. Do NOT rely on training data for SDK method signatures, especially:
 
 - Inngest: `step.sendEvent()`, `step.run()`, `onFailure` type, `concurrency` config
 - Drizzle: `transaction()`, `returning()`, `inArray()`, JOIN syntax
 - Supabase: Realtime channel filters, Storage API, Auth helpers
+- Vercel AI SDK: `generateText()` + `Output.object()`, `streamText()`, `customProvider()`, error types (`RateLimitError`, `NoObjectGeneratedError`), `usage` property
 
 ## CJK/Thai Language Rules
 

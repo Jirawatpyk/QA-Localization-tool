@@ -66,6 +66,27 @@ lastSaved: ''
 
 ---
 
+## Boundary Value Tests (Epic 2 Retro A2 — MANDATORY)
+
+{For each AC with numeric comparisons, thresholds, limits, or counters — list explicit boundary test scenarios}
+
+### {AC or Feature with boundary}
+
+| Boundary | At | Below | Above | Zero/Empty |
+|----------|----|-------|-------|------------|
+| {e.g., fileCount < 50} | `count === 50` (reject) | `count === 49` (accept) | `count === 51` (reject) | `count === 0` (accept) |
+
+**Tests:**
+
+- ✅ **Test:** {boundary_test_name}
+  - **Priority:** {P0|P1}
+  - **Boundary:** {description_of_boundary}
+  - **Values tested:** {at, below, above, zero}
+
+{If no boundary values in this story: "No boundary values identified — boundary tests N/A."}
+
+---
+
 ## Data Factories Created
 
 {List all data factory files created with their exports}
