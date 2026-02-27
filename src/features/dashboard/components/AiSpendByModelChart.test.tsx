@@ -7,8 +7,15 @@ vi.mock('sonner', () => ({
 
 vi.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  BarChart: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="recharts-bar-chart">{children}</div>
+  BarChart: ({ children, data }: { children: React.ReactNode; data?: Array<{ name: string }> }) => (
+    <div data-testid="recharts-bar-chart">
+      {data?.map((d, i) => (
+        <span key={i} data-testid={`bar-label-${i}`}>
+          {d.name}
+        </span>
+      ))}
+      {children}
+    </div>
   ),
   Bar: () => null,
   XAxis: () => null,
@@ -60,13 +67,15 @@ describe('AiSpendByModelChart', () => {
 
   // ── P1: Legend / model labels ──
 
-  it('should display chart container (not empty state) when data is provided', async () => {
+  it('should display provider and model labels for each data entry', async () => {
     const { AiSpendByModelChart } = await import('./AiSpendByModelChart')
     render(<AiSpendByModelChart data={MODEL_SPEND_DATA} />)
 
-    // Chart container must be present
+    // Chart container must be present, empty-state must NOT be rendered
     expect(screen.getByTestId('ai-model-chart-container')).toBeTruthy()
-    // And empty-state message must NOT be rendered
     expect(screen.queryByTestId('ai-model-chart-empty')).toBeNull()
+    // Provider/model label strings must appear in chart data (ATDD P1)
+    expect(screen.getByText('openai/gpt-4o-mini')).toBeTruthy()
+    expect(screen.getByText('anthropic/claude-sonnet-4-5-20250929')).toBeTruthy()
   })
 })

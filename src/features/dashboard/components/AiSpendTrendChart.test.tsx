@@ -8,8 +8,10 @@ vi.mock('sonner', () => ({
 
 vi.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  LineChart: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="recharts-line-chart">{children}</div>
+  LineChart: ({ children, data }: { children: React.ReactNode; data?: unknown[] }) => (
+    <div data-testid="recharts-line-chart" data-count={data?.length ?? 0}>
+      {children}
+    </div>
   ),
   Line: () => null,
   XAxis: () => null,
@@ -61,9 +63,12 @@ describe('AiSpendTrendChart', () => {
     const { AiSpendTrendChart } = await import('./AiSpendTrendChart')
     render(<AiSpendTrendChart data={TREND_DATA_7D} />)
 
-    // The chart container exists and rendered without filtering out $0 days
+    // Container exists
     const chartContainer = screen.getByTestId('ai-trend-chart-container')
     expect(chartContainer).toBeTruthy()
+    // All 7 data points must be passed to the chart (no sparse filtering)
+    const lineChart = screen.getByTestId('recharts-line-chart')
+    expect(lineChart.getAttribute('data-count')).toBe('7')
   })
 
   it('should show L2/L3 toggle buttons to switch view mode', async () => {

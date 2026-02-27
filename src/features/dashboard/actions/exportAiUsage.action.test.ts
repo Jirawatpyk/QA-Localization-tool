@@ -30,6 +30,10 @@ vi.mock('drizzle-orm', () => ({
   lte: vi.fn((...args: unknown[]) => args),
 }))
 
+vi.mock('@/db/helpers/withTenant', () => ({
+  withTenant: vi.fn((..._args: unknown[]) => 'tenant-filter'),
+}))
+
 vi.mock('@/db/schema/aiUsageLogs', () => ({
   aiUsageLogs: {
     tenantId: 'tenant_id',
@@ -185,14 +189,28 @@ describe('exportAiUsage', () => {
     // exportAiUsage uses current month — verify cap is applied at query level
     await exportAiUsage()
 
-    // Verify date boundary was computed as max 90 days ago
+    // Verify date boundary was computed as max 90 days ago (no silent if-guard)
     const { gte } = await import('drizzle-orm')
-    if (vi.mocked(gte).mock.calls.length > 0) {
-      const [_, datePassed] = vi.mocked(gte).mock.calls[0] as [unknown, Date]
-      const ninetyDaysAgo = new Date()
-      ninetyDaysAgo.setUTCDate(ninetyDaysAgo.getUTCDate() - 90)
-      // Start date should not be more than 90 days ago
-      expect(datePassed.getTime()).toBeGreaterThanOrEqual(ninetyDaysAgo.getTime() - 60_000)
-    }
+    expect(vi.mocked(gte).mock.calls.length).toBeGreaterThan(0)
+    const [_, datePassed] = vi.mocked(gte).mock.calls[0] as [unknown, Date]
+    const ninetyDaysAgo = new Date()
+    ninetyDaysAgo.setUTCDate(ninetyDaysAgo.getUTCDate() - 90)
+    ninetyDaysAgo.setUTCHours(0, 0, 0, 0)
+    // Start date should not be more than 90 days ago
+    expect(datePassed.getTime()).toBeGreaterThanOrEqual(ninetyDaysAgo.getTime() - 60_000)
+  })
+
+  // ── P1: Tenant isolation (defense-in-depth) ──
+
+  it('should apply withTenant on both aiUsageLogs (WHERE) and projects (JOIN) for defense-in-depth', async () => {
+    dbState.returnValues = [[]]
+
+    const { exportAiUsage } = await import('./exportAiUsage.action')
+    await exportAiUsage()
+
+    const { withTenant } = await import('@/db/helpers/withTenant')
+    // Called twice: once for ai_usage_logs WHERE, once for projects JOIN condition
+    expect(withTenant).toHaveBeenCalledTimes(2)
+    expect(withTenant).toHaveBeenCalledWith(expect.anything(), MOCK_ADMIN.tenantId)
   })
 })

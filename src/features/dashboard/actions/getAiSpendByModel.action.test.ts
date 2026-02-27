@@ -131,6 +131,12 @@ describe('getAiSpendByModel', () => {
 
     const { gte } = await import('drizzle-orm')
     expect(gte).toHaveBeenCalled()
+    // Verify the date passed is approximately 30 days ago
+    const [_, datePassed] = vi.mocked(gte).mock.calls[0] as [unknown, Date]
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30)
+    thirtyDaysAgo.setUTCHours(0, 0, 0, 0)
+    expect(Math.abs(datePassed.getTime() - thirtyDaysAgo.getTime())).toBeLessThan(60_000)
   })
 
   it('should accept days=90 parameter and filter to last 90 days only', async () => {
@@ -141,6 +147,12 @@ describe('getAiSpendByModel', () => {
 
     const { gte } = await import('drizzle-orm')
     expect(gte).toHaveBeenCalled()
+    // Verify the date passed is approximately 90 days ago
+    const [_, datePassed] = vi.mocked(gte).mock.calls[0] as [unknown, Date]
+    const ninetyDaysAgo = new Date()
+    ninetyDaysAgo.setUTCDate(ninetyDaysAgo.getUTCDate() - 90)
+    ninetyDaysAgo.setUTCHours(0, 0, 0, 0)
+    expect(Math.abs(datePassed.getTime() - ninetyDaysAgo.getTime())).toBeLessThan(60_000)
   })
 
   it('should return FORBIDDEN when user role is not admin', async () => {

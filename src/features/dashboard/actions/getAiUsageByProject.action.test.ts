@@ -173,6 +173,20 @@ describe('getAiUsageByProject', () => {
     expect(result.data).toHaveLength(2)
   })
 
+  it('should sort projects by totalCostUsd descending (highest spend first)', async () => {
+    // DB returns zero-spend project first — action must reorder by totalCostUsd desc
+    dbState.returnValues = [[ZERO_SPEND_PROJECT, PROJECT_WITH_SPEND]]
+
+    const { getAiUsageByProject } = await import('./getAiUsageByProject.action')
+    const result = await getAiUsageByProject()
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    // Highest spend (45.50) must come first
+    expect(result.data[0]?.totalCostUsd).toBeCloseTo(45.5)
+    expect(result.data[1]?.totalCostUsd).toBe(0)
+  })
+
   it('should return monthlyBudgetUsd=null when project has no budget set (unlimited)', async () => {
     dbState.returnValues = [
       [
