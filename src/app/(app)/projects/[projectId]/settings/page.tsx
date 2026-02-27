@@ -6,6 +6,7 @@ import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { languagePairConfigs } from '@/db/schema/languagePairConfigs'
 import { projects } from '@/db/schema/projects'
+import { getProjectAiBudget } from '@/features/pipeline/actions/getProjectAiBudget.action'
 import { ProjectSettings } from '@/features/project/components/ProjectSettings'
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
 
@@ -38,9 +39,24 @@ export default async function ProjectSettingsPage({
     .from(languagePairConfigs)
     .where(withTenant(languagePairConfigs.tenantId, currentUser.tenantId))
 
+  const budgetResult = await getProjectAiBudget({ projectId })
+  const budgetData = budgetResult.success
+    ? budgetResult.data
+    : {
+        usedBudgetUsd: 0,
+        monthlyBudgetUsd: null,
+        budgetAlertThresholdPct: 80,
+        remainingBudgetUsd: Infinity,
+      }
+
   return (
     <CompactLayout>
-      <ProjectSettings project={project} languagePairConfigs={configs} />
+      <ProjectSettings
+        project={project}
+        languagePairConfigs={configs}
+        isAdmin={currentUser.role === 'admin'}
+        budgetData={budgetData}
+      />
     </CompactLayout>
   )
 }

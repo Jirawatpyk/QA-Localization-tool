@@ -15,6 +15,12 @@ type BatchFileItem = {
   minorCount: number
 }
 
+type AiCostSummary = {
+  totalCostUsd: number
+  fileCount: number
+  costPer100kWords: number
+}
+
 type BatchSummaryViewProps = {
   projectId: string
   passedFiles: BatchFileItem[]
@@ -22,6 +28,7 @@ type BatchSummaryViewProps = {
   processingTimeMs?: number | null
   crossFileFindings?: CrossFileFindingSummary[]
   compact?: boolean
+  aiCostSummary?: AiCostSummary
 }
 
 export function BatchSummaryView({
@@ -31,8 +38,17 @@ export function BatchSummaryView({
   processingTimeMs,
   crossFileFindings = [],
   compact = false,
+  aiCostSummary,
 }: BatchSummaryViewProps) {
   const totalFiles = passedFiles.length + reviewFiles.length
+
+  const costLine = aiCostSummary ? (
+    <div data-testid="ai-cost-summary" className="text-sm text-muted-foreground">
+      AI cost: ${aiCostSummary.totalCostUsd.toFixed(2)} ({aiCostSummary.fileCount}{' '}
+      {aiCostSummary.fileCount === 1 ? 'file' : 'files'}, $
+      {aiCostSummary.costPer100kWords.toFixed(2)} per 100K words)
+    </div>
+  ) : null
 
   if (compact) {
     return (
@@ -43,6 +59,7 @@ export function BatchSummaryView({
           needsReviewCount={reviewFiles.length}
           processingTimeMs={processingTimeMs}
         />
+        {costLine}
       </div>
     )
   }
@@ -55,6 +72,8 @@ export function BatchSummaryView({
         needsReviewCount={reviewFiles.length}
         processingTimeMs={processingTimeMs}
       />
+
+      {costLine}
 
       <div className="hidden md:grid md:grid-cols-2 gap-6" data-testid="batch-summary-grid">
         <section>

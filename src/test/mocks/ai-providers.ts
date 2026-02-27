@@ -34,10 +34,12 @@ export type AIMockFunctions = {
   mockGenerateText: ReturnType<typeof vi.fn>
   mockClassifyAIError: ReturnType<typeof vi.fn>
   mockCheckTenantBudget: ReturnType<typeof vi.fn>
+  mockCheckProjectBudget: ReturnType<typeof vi.fn>
   mockWriteAuditLog: ReturnType<typeof vi.fn>
   mockLogAIUsage: ReturnType<typeof vi.fn>
   mockEstimateCost: ReturnType<typeof vi.fn>
   mockAggregateUsage: ReturnType<typeof vi.fn>
+  mockGetModelForLayerWithFallback: ReturnType<typeof vi.fn>
 }
 
 export type AIMockModules = {
@@ -47,6 +49,7 @@ export type AIMockModules = {
   aiErrors: Record<string, unknown>
   aiBudget: Record<string, unknown>
   aiTypes: Record<string, unknown>
+  aiProviders: Record<string, unknown>
   audit: Record<string, unknown>
   logger: Record<string, unknown>
 }
@@ -78,14 +81,27 @@ export function createAIMock(options?: AIMockOptions): AIMockResult {
   const mockCheckTenantBudget = vi.fn((..._args: unknown[]) =>
     Promise.resolve({
       hasQuota: true,
-      remainingTokens: Number.MAX_SAFE_INTEGER,
-      monthlyLimitTokens: Number.MAX_SAFE_INTEGER,
-      usedTokens: 0,
+      remainingBudgetUsd: Infinity,
+      monthlyBudgetUsd: null,
+      usedBudgetUsd: 0,
+    }),
+  )
+
+  const mockCheckProjectBudget = vi.fn((..._args: unknown[]) =>
+    Promise.resolve({
+      hasQuota: true,
+      remainingBudgetUsd: Infinity,
+      monthlyBudgetUsd: null,
+      usedBudgetUsd: 0,
     }),
   )
 
   const mockWriteAuditLog = vi.fn((..._args: unknown[]) => Promise.resolve())
-  const mockLogAIUsage = vi.fn()
+  const mockLogAIUsage = vi.fn((..._args: unknown[]) => Promise.resolve())
+  const defaultModel = layer === 'L2' ? 'gpt-4o-mini' : 'claude-sonnet-4-5-20250929'
+  const mockGetModelForLayerWithFallback = vi.fn((..._args: unknown[]) =>
+    Promise.resolve({ primary: defaultModel, fallbacks: [] }),
+  )
   const mockEstimateCost = vi.fn((..._args: unknown[]) => 0.001)
   const mockAggregateUsage = vi.fn((..._args: unknown[]) => ({
     inputTokens: 100,
@@ -95,6 +111,25 @@ export function createAIMock(options?: AIMockOptions): AIMockResult {
 
   // ── Module mocks (pass to vi.mock() factory callbacks) ──
 
+  const modelConfig = {
+    'gpt-4o-mini': {
+      layer: 'L2' as const,
+      maxOutputTokens: 4096,
+      temperature: 0.3,
+      timeoutMs: 30000,
+      costPer1kInput: 0.00015,
+      costPer1kOutput: 0.0006,
+    },
+    'claude-sonnet-4-5-20250929': {
+      layer: 'L3' as const,
+      maxOutputTokens: 8192,
+      temperature: 0.2,
+      timeoutMs: 60000,
+      costPer1kInput: 0.003,
+      costPer1kOutput: 0.015,
+    },
+  }
+
   const modules: AIMockModules = {
     ai: {
       generateText: (...args: unknown[]) => mockGenerateText(...args),
@@ -102,6 +137,7 @@ export function createAIMock(options?: AIMockOptions): AIMockResult {
     },
     aiClient: {
       getModelForLayer: vi.fn(() => modelName),
+      getModelById: vi.fn(() => modelName),
     },
     aiCosts: {
       estimateCost: (...args: unknown[]) => mockEstimateCost(...args),
@@ -113,26 +149,20 @@ export function createAIMock(options?: AIMockOptions): AIMockResult {
     },
     aiBudget: {
       checkTenantBudget: (...args: unknown[]) => mockCheckTenantBudget(...args),
+      checkProjectBudget: (...args: unknown[]) => mockCheckProjectBudget(...args),
     },
     aiTypes: {
-      MODEL_CONFIG: {
-        'gpt-4o-mini': {
-          layer: 'L2',
-          maxOutputTokens: 4096,
-          temperature: 0.3,
-          timeoutMs: 30000,
-          costPer1kInput: 0.00015,
-          costPer1kOutput: 0.0006,
-        },
-        'claude-sonnet-4-5-20250929': {
-          layer: 'L3',
-          maxOutputTokens: 8192,
-          temperature: 0.2,
-          timeoutMs: 60000,
-          costPer1kInput: 0.003,
-          costPer1kOutput: 0.015,
-        },
-      },
+      MODEL_CONFIG: modelConfig,
+      getConfigForModel: vi.fn((modelId: string, layerArg: string) => {
+        const exact = modelConfig[modelId as keyof typeof modelConfig]
+        if (exact) return exact
+        const defaultId = layerArg === 'L2' ? 'gpt-4o-mini' : 'claude-sonnet-4-5-20250929'
+        return modelConfig[defaultId as keyof typeof modelConfig]
+      }),
+    },
+    aiProviders: {
+      getModelForLayerWithFallback: (...args: unknown[]) =>
+        mockGetModelForLayerWithFallback(...args),
     },
     audit: {
       writeAuditLog: (...args: unknown[]) => mockWriteAuditLog(...args),
@@ -147,10 +177,12 @@ export function createAIMock(options?: AIMockOptions): AIMockResult {
       mockGenerateText,
       mockClassifyAIError,
       mockCheckTenantBudget,
+      mockCheckProjectBudget,
       mockWriteAuditLog,
       mockLogAIUsage,
       mockEstimateCost,
       mockAggregateUsage,
+      mockGetModelForLayerWithFallback,
     },
     modules,
   }

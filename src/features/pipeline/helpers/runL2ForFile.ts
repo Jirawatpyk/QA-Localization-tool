@@ -10,13 +10,15 @@ import { findings } from '@/db/schema/findings'
 import { segments } from '@/db/schema/segments'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { FINDING_BATCH_SIZE, MAX_EXCERPT_LENGTH } from '@/features/pipeline/engine/constants'
-import { checkTenantBudget } from '@/lib/ai/budget'
-import { getModelForLayer } from '@/lib/ai/client'
+import { checkProjectBudget } from '@/lib/ai/budget'
+import { getModelById } from '@/lib/ai/client'
 import { aggregateUsage, estimateCost, logAIUsage } from '@/lib/ai/costs'
 import { classifyAIError } from '@/lib/ai/errors'
+import { getModelForLayerWithFallback } from '@/lib/ai/providers'
 import type { AIUsageRecord, ChunkResult } from '@/lib/ai/types'
-import { MODEL_CONFIG } from '@/lib/ai/types'
+import { getConfigForModel } from '@/lib/ai/types'
 import { logger } from '@/lib/logger'
+import { aiL2ProjectLimiter } from '@/lib/ratelimit'
 
 import { chunkSegments } from './chunkSegments'
 
@@ -90,10 +92,6 @@ type L1FindingContext = {
   description: string
 }
 
-// ── Constants ──
-
-const L2_MODEL_ID = 'gpt-4o-mini' as const
-
 // ── Main Function ──
 
 /**
@@ -136,11 +134,20 @@ export async function runL2ForFile({
   }
 
   try {
-    // Step 2: Budget guard (Guardrail #22)
-    const budget = await checkTenantBudget(tenantId)
-    if (!budget.hasQuota) {
-      throw new NonRetriableError(`Tenant ${tenantId} AI quota exhausted`)
+    // Step 2a: Per-project L2 rate limit
+    const { success: rateLimitAllowed } = await aiL2ProjectLimiter.limit(projectId)
+    if (!rateLimitAllowed) {
+      throw new NonRetriableError('L2 analysis queue full for this project. Resuming shortly.')
     }
+
+    // Step 2b: Budget guard (Guardrail #22)
+    const budget = await checkProjectBudget(projectId, tenantId)
+    if (!budget.hasQuota) {
+      throw new NonRetriableError('AI quota exhausted')
+    }
+
+    // Step 2c: Resolve model (pinned model from project config → fallback chain)
+    const { primary: modelId } = await getModelForLayerWithFallback('L2', projectId, tenantId)
 
     // Step 3: Load segments (withTenant on every query)
     const segmentRows: SegmentRow[] = await db
@@ -187,13 +194,13 @@ export async function runL2ForFile({
     const startTime = performance.now()
     const chunkResults: ChunkResult<L2ChunkResponse>[] = []
     const usageRecords: AIUsageRecord[] = []
-    const config = MODEL_CONFIG[L2_MODEL_ID]
+    const config = getConfigForModel(modelId, 'L2')
 
     for (const chunk of chunks) {
       const chunkStart = performance.now()
       try {
         const result = await generateText({
-          model: getModelForLayer('L2'),
+          model: getModelById(modelId),
           output: Output.object({ schema: l2ChunkResponseSchema }),
           temperature: config.temperature,
           maxOutputTokens: config.maxOutputTokens,
@@ -201,12 +208,12 @@ export async function runL2ForFile({
         })
 
         // Cost tracking (Guardrail #19)
-        const cost = estimateCost(L2_MODEL_ID, result.usage)
+        const cost = estimateCost(modelId, 'L2', result.usage)
         const record: AIUsageRecord = {
           tenantId,
           projectId,
           fileId,
-          model: L2_MODEL_ID,
+          model: modelId,
           layer: 'L2',
           inputTokens: result.usage.inputTokens ?? 0,
           outputTokens: result.usage.outputTokens ?? 0,
@@ -214,7 +221,9 @@ export async function runL2ForFile({
           chunkIndex: chunk.chunkIndex,
           durationMs: Math.round(performance.now() - chunkStart),
         }
-        logAIUsage(record)
+        logAIUsage(record).catch(() => {
+          /* non-critical — DB failure already logged inside logAIUsage */
+        })
         usageRecords.push(record)
 
         chunkResults.push({
@@ -294,7 +303,7 @@ export async function runL2ForFile({
         sourceTextExcerpt: seg ? seg.sourceText.slice(0, MAX_EXCERPT_LENGTH) : null,
         targetTextExcerpt: seg ? seg.targetText.slice(0, MAX_EXCERPT_LENGTH) : null,
         detectedByLayer: 'L2' as const,
-        aiModel: L2_MODEL_ID,
+        aiModel: modelId,
         aiConfidence: f.confidence,
         reviewSessionId: null,
         status: 'pending' as const,
@@ -343,7 +352,7 @@ export async function runL2ForFile({
           chunksSucceeded,
           chunksFailed,
           partialFailure: chunksFailed > 0,
-          aiModel: L2_MODEL_ID,
+          aiModel: modelId,
           duration,
         },
       })
@@ -357,7 +366,7 @@ export async function runL2ForFile({
     return {
       findingCount: allFindings.length,
       duration,
-      aiModel: L2_MODEL_ID,
+      aiModel: modelId,
       chunksTotal: chunks.length,
       chunksSucceeded,
       chunksFailed,

@@ -22,6 +22,7 @@ export const aiUsageLogs = pgTable('ai_usage_logs', {
   outputTokens: integer('output_tokens').notNull(),
   estimatedCost: real('estimated_cost').notNull(),
   latencyMs: integer('latency_ms').notNull(),
+  chunkIndex: integer('chunk_index'), // nullable — matches AIUsageRecord.chunkIndex
   status: varchar('status', { length: 30 }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })

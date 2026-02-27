@@ -39,13 +39,29 @@ export const MODEL_CONFIG: Record<
   },
 }
 
+// ── Model Config Lookup ──
+
+/**
+ * Get MODEL_CONFIG for a model ID, falling back to the layer's default config.
+ *
+ * Pinned model variants (e.g. 'gpt-4o-mini-2024-07-18') share the same config
+ * as their base model. If no exact match, uses the layer default.
+ */
+export function getConfigForModel(modelId: string, layer: AILayer) {
+  const exact = MODEL_CONFIG[modelId as ModelId]
+  if (exact) return exact
+
+  const defaultModelId = layer === 'L2' ? 'gpt-4o-mini' : 'claude-sonnet-4-5-20250929'
+  return MODEL_CONFIG[defaultModelId]
+}
+
 // ── Cost Tracking ──
 
 export type AIUsageRecord = {
   tenantId: string
   projectId: string
   fileId: string
-  model: ModelId
+  model: string // model ID (may be pinned variant, not just ModelId)
   layer: AILayer
   inputTokens: number
   outputTokens: number
@@ -68,9 +84,9 @@ export type AIErrorKind =
 
 export type BudgetCheckResult = {
   hasQuota: boolean
-  remainingTokens: number
-  monthlyLimitTokens: number
-  usedTokens: number
+  remainingBudgetUsd: number
+  monthlyBudgetUsd: number | null // null = unlimited
+  usedBudgetUsd: number
 }
 
 // ── Chunk Result ──

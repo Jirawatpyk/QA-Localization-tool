@@ -11,6 +11,8 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
+import { AiBudgetCard } from '@/features/pipeline/components/AiBudgetCard'
+import { ModelPinningSettings } from '@/features/pipeline/components/ModelPinningSettings'
 import { updateProject } from '@/features/project/actions/updateProject.action'
 
 import { LanguagePairConfigTable } from './LanguagePairConfigTable'
@@ -24,6 +26,10 @@ type Project = {
   processingMode: string
   status: string
   autoPassThreshold: number
+  aiBudgetMonthlyUsd: string | null
+  budgetAlertThresholdPct: number
+  l2PinnedModel: string | null
+  l3PinnedModel: string | null
 }
 
 type LanguagePairConfig = {
@@ -40,12 +46,26 @@ type LanguagePairConfig = {
   updatedAt: Date
 }
 
+type BudgetData = {
+  usedBudgetUsd: number
+  monthlyBudgetUsd: number | null
+  budgetAlertThresholdPct: number
+  remainingBudgetUsd: number
+}
+
 type ProjectSettingsProps = {
   project: Project
   languagePairConfigs: LanguagePairConfig[]
+  isAdmin: boolean
+  budgetData: BudgetData
 }
 
-export function ProjectSettings({ project, languagePairConfigs }: ProjectSettingsProps) {
+export function ProjectSettings({
+  project,
+  languagePairConfigs,
+  isAdmin,
+  budgetData,
+}: ProjectSettingsProps) {
   const [isPending, startTransition] = useTransition()
   const [name, setName] = useState(project.name)
   const [description, setDescription] = useState(project.description ?? '')
@@ -162,6 +182,25 @@ export function ProjectSettings({ project, languagePairConfigs }: ProjectSetting
             projectSourceLang={project.sourceLang}
             projectTargetLangs={project.targetLangs}
           />
+        </section>
+
+        <Separator />
+
+        <section>
+          <h3 className="mb-4 text-base font-semibold text-text-primary">AI Configuration</h3>
+          <div className="max-w-lg space-y-6">
+            <AiBudgetCard
+              usedBudgetUsd={budgetData.usedBudgetUsd}
+              monthlyBudgetUsd={budgetData.monthlyBudgetUsd}
+              budgetAlertThresholdPct={budgetData.budgetAlertThresholdPct}
+            />
+            <ModelPinningSettings
+              projectId={project.id}
+              l2PinnedModel={project.l2PinnedModel}
+              l3PinnedModel={project.l3PinnedModel}
+              isAdmin={isAdmin}
+            />
+          </div>
         </section>
       </div>
     </>

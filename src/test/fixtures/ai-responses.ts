@@ -149,14 +149,14 @@ export function buildSegmentRow(overrides?: Record<string, unknown>) {
 
 export const BUDGET_HAS_QUOTA = {
   hasQuota: true,
-  remainingTokens: Number.MAX_SAFE_INTEGER,
-  monthlyLimitTokens: Number.MAX_SAFE_INTEGER,
-  usedTokens: 0,
+  remainingBudgetUsd: Infinity,
+  monthlyBudgetUsd: null,
+  usedBudgetUsd: 0,
 }
 
 export const BUDGET_EXHAUSTED = {
   hasQuota: false,
-  remainingTokens: 0,
-  monthlyLimitTokens: 1000,
-  usedTokens: 1000,
+  remainingBudgetUsd: 0,
+  monthlyBudgetUsd: 100,
+  usedBudgetUsd: 100,
 }

@@ -45,9 +45,16 @@ export async function updateProject(
     return { success: false, code: 'NOT_FOUND', error: 'Project not found' }
   }
 
+  // Convert aiBudgetMonthlyUsd from number to string for decimal column
+  const { aiBudgetMonthlyUsd, ...rest } = parsed.data
+  const setData: Record<string, unknown> = { ...rest, updatedAt: new Date() }
+  if (aiBudgetMonthlyUsd !== undefined) {
+    setData.aiBudgetMonthlyUsd = aiBudgetMonthlyUsd === null ? null : String(aiBudgetMonthlyUsd)
+  }
+
   const [updated] = await db
     .update(projects)
-    .set({ ...parsed.data, updatedAt: new Date() })
+    .set(setData)
     .where(and(eq(projects.id, projectId), withTenant(projects.tenantId, currentUser.tenantId)))
     .returning()
 

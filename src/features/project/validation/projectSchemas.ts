@@ -19,6 +19,8 @@ export const updateProjectSchema = z.object({
   description: z.string().max(1000).nullable().optional(),
   processingMode: z.enum(PROCESSING_MODES).optional(),
   autoPassThreshold: z.number().int().min(0).max(100).optional(),
+  aiBudgetMonthlyUsd: z.number().min(0).nullable().optional(), // null = unlimited
+  budgetAlertThresholdPct: z.number().int().min(1).max(100).optional(), // default 80
 })
 
 export const updateLanguagePairConfigSchema = z.object({

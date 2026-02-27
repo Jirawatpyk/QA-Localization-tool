@@ -191,4 +191,86 @@ describe('BatchSummaryView', () => {
     // Individual file cards should NOT be rendered
     expect(screen.queryByTestId('mock-card-f1-uuid-0001-0001-000000000001')).toBeNull()
   })
+
+  // ── Story 3.1: AI cost summary line (EXTEND) ──
+
+  it('[P0] should render AI cost summary line when aiCostSummary prop is provided', () => {
+    const aiCostSummary = {
+      totalCostUsd: 1.25,
+      fileCount: 3,
+      costPer100kWords: 0.4,
+    }
+
+    render(
+      <BatchSummaryView
+        projectId={PROJECT_ID}
+        passedFiles={passedFiles}
+        reviewFiles={reviewFiles}
+        aiCostSummary={aiCostSummary}
+      />,
+    )
+
+    expect(screen.getByTestId('ai-cost-summary')).toBeTruthy()
+    // RED: aiCostSummary prop not yet on BatchSummaryView
+  })
+
+  it("[P0] should display formatted cost: 'AI cost: $X.XX (Y files, $Z.ZZ per 100K words)'", () => {
+    const aiCostSummary = {
+      totalCostUsd: 1.25,
+      fileCount: 3,
+      costPer100kWords: 0.4,
+    }
+
+    render(
+      <BatchSummaryView
+        projectId={PROJECT_ID}
+        passedFiles={passedFiles}
+        reviewFiles={reviewFiles}
+        aiCostSummary={aiCostSummary}
+      />,
+    )
+
+    const costLine = screen.getByTestId('ai-cost-summary')
+    expect(costLine.textContent).toContain('AI cost:')
+    expect(costLine.textContent).toContain('$1.25')
+    expect(costLine.textContent).toContain('3 files')
+    expect(costLine.textContent).toContain('$0.40')
+    expect(costLine.textContent).toContain('100K words')
+    // RED: cost line formatting not yet implemented (AC6)
+  })
+
+  it('[P1] should not render AI cost line when aiCostSummary prop is undefined', () => {
+    render(
+      <BatchSummaryView
+        projectId={PROJECT_ID}
+        passedFiles={passedFiles}
+        reviewFiles={reviewFiles}
+        // aiCostSummary not provided
+      />,
+    )
+
+    expect(screen.queryByTestId('ai-cost-summary')).toBeNull()
+    // RED: conditional rendering not yet implemented
+  })
+
+  it('[P1] should display $0.00 cost when aiCostSummary.totalCostUsd is 0', () => {
+    const aiCostSummary = {
+      totalCostUsd: 0,
+      fileCount: 2,
+      costPer100kWords: 0,
+    }
+
+    render(
+      <BatchSummaryView
+        projectId={PROJECT_ID}
+        passedFiles={passedFiles}
+        reviewFiles={reviewFiles}
+        aiCostSummary={aiCostSummary}
+      />,
+    )
+
+    const costLine = screen.getByTestId('ai-cost-summary')
+    expect(costLine.textContent).toContain('$0.00')
+    // RED: zero-cost boundary case
+  })
 })

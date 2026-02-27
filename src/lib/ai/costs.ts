@@ -2,28 +2,43 @@ import 'server-only'
 
 import type { LanguageModelUsage } from 'ai'
 
+import { db } from '@/db/client'
+import { aiUsageLogs } from '@/db/schema/aiUsageLogs'
 import { logger } from '@/lib/logger'
 
-import type { AIUsageRecord, ModelId } from './types'
-import { MODEL_CONFIG } from './types'
+import type { AILayer, AIUsageRecord } from './types'
+import { getConfigForModel } from './types'
 
 /**
  * Calculate estimated cost in USD from token usage.
+ *
+ * Accepts any model ID string (including pinned variants).
+ * Falls back to layer default cost rates if model not in MODEL_CONFIG.
  */
-export function estimateCost(model: ModelId, usage: LanguageModelUsage): number {
-  const config = MODEL_CONFIG[model]
+export function estimateCost(model: string, layer: AILayer, usage: LanguageModelUsage): number {
+  const config = getConfigForModel(model, layer)
   const inputCost = ((usage.inputTokens ?? 0) / 1000) * config.costPer1kInput
   const outputCost = ((usage.outputTokens ?? 0) / 1000) * config.costPer1kOutput
   return Math.round((inputCost + outputCost) * 1_000_000) / 1_000_000 // 6 decimal places
 }
 
 /**
+ * Derive provider name from model ID.
+ */
+function deriveProvider(model: string): string {
+  if (model.startsWith('gpt-')) return 'openai'
+  if (model.startsWith('claude-')) return 'anthropic'
+  if (model.startsWith('gemini-')) return 'google'
+  return 'unknown'
+}
+
+/**
  * Log AI usage for cost tracking and audit.
  *
- * This logs to pino (structured JSON) for now.
- * Future: write to ai_usage_logs DB table (Story 3.1).
+ * Writes to ai_usage_logs DB table AND pino structured log.
+ * DB failure is non-fatal (swallowed + logged) — audit log pattern.
  */
-export function logAIUsage(record: AIUsageRecord): void {
+export async function logAIUsage(record: AIUsageRecord): Promise<void> {
   logger.info(
     {
       tenantId: record.tenantId,
@@ -39,6 +54,28 @@ export function logAIUsage(record: AIUsageRecord): void {
     },
     'AI usage recorded',
   )
+
+  try {
+    await db.insert(aiUsageLogs).values({
+      fileId: record.fileId,
+      projectId: record.projectId,
+      tenantId: record.tenantId,
+      layer: record.layer,
+      model: record.model,
+      provider: deriveProvider(record.model),
+      inputTokens: record.inputTokens,
+      outputTokens: record.outputTokens,
+      estimatedCost: record.estimatedCostUsd,
+      latencyMs: record.durationMs,
+      chunkIndex: record.chunkIndex,
+      status: 'success',
+    })
+  } catch (err) {
+    logger.error(
+      { err, fileId: record.fileId, model: record.model },
+      'Failed to persist AI usage log (non-fatal)',
+    )
+  }
 }
 
 /**

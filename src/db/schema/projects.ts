@@ -24,6 +24,9 @@ export const projects = pgTable('projects', {
   status: varchar('status', { length: 20 }).notNull().default('draft'), // 'draft' | 'processing' | 'reviewed' | 'completed'
   autoPassThreshold: integer('auto_pass_threshold').notNull().default(95),
   aiBudgetMonthlyUsd: numeric('ai_budget_monthly_usd', { precision: 10, scale: 2 }), // NULL = unlimited
+  budgetAlertThresholdPct: integer('budget_alert_threshold_pct').notNull().default(80), // AC7: warn at N%
+  l2PinnedModel: varchar('l2_pinned_model', { length: 100 }), // NULL = system default (AC3)
+  l3PinnedModel: varchar('l3_pinned_model', { length: 100 }), // NULL = system default (AC3)
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })

@@ -17,6 +17,18 @@ vi.mock('../actions/startProcessing.action', () => ({
   startProcessing: (...args: unknown[]) => mockStartProcessing(...args),
 }))
 
+// ── Story 3.1: Mock getFilesWordCount action ──
+type MockWordCountResult =
+  | { success: true; data: { totalWords: number } }
+  | { success: false; code: string; error: string }
+
+const mockGetFilesWordCount = vi.fn<(..._args: unknown[]) => Promise<MockWordCountResult>>(
+  async () => ({ success: true, data: { totalWords: 50_000 } }),
+)
+vi.mock('../actions/getFilesWordCount.action', () => ({
+  getFilesWordCount: (...args: unknown[]) => mockGetFilesWordCount(...args),
+}))
+
 // Mock sonner toast
 vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -94,38 +106,45 @@ describe('ProcessingModeDialog', () => {
     expect(economyCard.getAttribute('aria-checked')).toBe('false')
   })
 
-  it('should display cost estimate based on file count and mode', () => {
+  it('should display cost estimate based on file count and mode', async () => {
+    mockGetFilesWordCount.mockResolvedValue({ success: true, data: { totalWords: 50_000 } })
     render(<ProcessingModeDialog {...defaultProps} />)
 
-    // AC#1: Cost bar shows Economy estimate for 3 files: 3 × $0.15 = $0.45
-    const costSection = screen.getByTestId('cost-estimate')
-    expect(costSection).toBeTruthy()
-    expect(costSection.textContent).toContain('0.45')
-    // AC#1: Economy time estimate
-    expect(costSection.textContent).toContain('~30s')
+    // AC#1: Cost bar shows Economy estimate: (50000/100K) × $0.40 = $0.20
+    await waitFor(() => {
+      const costSection = screen.getByTestId('cost-estimate')
+      expect(costSection).toBeTruthy()
+      expect(costSection.textContent).toContain('0.20')
+      // AC#1: Economy time estimate
+      expect(costSection.textContent).toContain('~30s')
+    })
   })
 
   it('should display Thorough cost estimate when mode switched', async () => {
+    mockGetFilesWordCount.mockResolvedValue({ success: true, data: { totalWords: 50_000 } })
     const user = userEvent.setup()
     render(<ProcessingModeDialog {...defaultProps} />)
 
     await user.click(screen.getByRole('radio', { name: /Thorough/i }))
 
-    // AC#1: Thorough estimate for 3 files: 3 × $0.35 = $1.05
+    // AC#1: Thorough estimate: (50000/100K) × $2.40 = $1.20
     await waitFor(() => {
       const costSection = screen.getByTestId('cost-estimate')
-      expect(costSection.textContent).toContain('1.05')
+      expect(costSection.textContent).toContain('1.20')
       expect(costSection.textContent).toContain('~2 min')
     })
   })
 
   it('should update cost when mode changes', async () => {
+    mockGetFilesWordCount.mockResolvedValue({ success: true, data: { totalWords: 50_000 } })
     const user = userEvent.setup()
     render(<ProcessingModeDialog {...defaultProps} />)
 
-    // Capture economy cost
-    const costSection = screen.getByTestId('cost-estimate')
-    const economyCost = costSection.textContent
+    // Wait for word count to load, capture economy cost
+    await waitFor(() => {
+      expect(screen.getByTestId('cost-estimate').textContent).toContain('0.20')
+    })
+    const economyCost = screen.getByTestId('cost-estimate').textContent
 
     // Switch to Thorough
     const thoroughCard = screen.getByRole('radio', { name: /Thorough/i })
@@ -222,5 +241,104 @@ describe('ProcessingModeDialog', () => {
       const cancelBtn = screen.getByRole('button', { name: 'Cancel' })
       expect(cancelBtn.hasAttribute('disabled')).toBe(true)
     })
+  })
+
+  // ── Story 3.1: Word-count-based cost estimation (EXTEND) ──
+
+  it('should fetch word count via getFilesWordCount action on mount', async () => {
+    // Arrange: mock returns 50,000 words
+    mockGetFilesWordCount.mockResolvedValue({ success: true, data: { totalWords: 50_000 } })
+
+    render(<ProcessingModeDialog {...defaultProps} />)
+
+    await waitFor(() => {
+      expect(mockGetFilesWordCount).toHaveBeenCalledWith({
+        fileIds: TEST_FILE_IDS,
+        projectId: TEST_PROJECT_ID,
+      })
+    })
+    // RED: getFilesWordCount not yet called in ProcessingModeDialog
+  })
+
+  it('should display economy cost estimate using formula: (words/100k)*0.40', async () => {
+    // 50,000 words × $0.40/100K = $0.20
+    mockGetFilesWordCount.mockResolvedValue({ success: true, data: { totalWords: 50_000 } })
+
+    render(<ProcessingModeDialog {...defaultProps} />)
+
+    await waitFor(() => {
+      const costSection = screen.getByTestId('cost-estimate')
+      expect(costSection.textContent).toContain('0.20')
+    })
+    // RED: word-count-based formula not yet implemented (currently per-file hardcoded)
+  })
+
+  it('should display thorough cost estimate using formula: (words/100k)*2.40', async () => {
+    // 50,000 words × $2.40/100K = $1.20
+    mockGetFilesWordCount.mockResolvedValue({ success: true, data: { totalWords: 50_000 } })
+    const user = userEvent.setup()
+
+    render(<ProcessingModeDialog {...defaultProps} />)
+
+    await user.click(screen.getByRole('radio', { name: /Thorough/i }))
+
+    await waitFor(() => {
+      const costSection = screen.getByTestId('cost-estimate')
+      expect(costSection.textContent).toContain('1.20')
+    })
+    // RED: thorough rate ($2.40/100K) not yet applied
+  })
+
+  it('should show loading skeleton while word count is fetching', async () => {
+    // Word count never resolves — stays in loading state
+    mockGetFilesWordCount.mockImplementation(() => new Promise(() => {}))
+
+    render(<ProcessingModeDialog {...defaultProps} />)
+
+    expect(screen.getByTestId('cost-estimate-loading')).toBeTruthy()
+    // RED: loading skeleton not yet implemented
+  })
+
+  it("should display comparison note 'vs. manual QA: ~$150-300 per 100K words'", async () => {
+    mockGetFilesWordCount.mockResolvedValue({ success: true, data: { totalWords: 50_000 } })
+
+    render(<ProcessingModeDialog {...defaultProps} />)
+
+    await waitFor(() => {
+      const comparisonNote = screen.getByTestId('cost-comparison-note')
+      expect(comparisonNote.textContent).toContain('$150')
+      expect(comparisonNote.textContent).toContain('$300')
+      expect(comparisonNote.textContent).toContain('manual QA')
+    })
+    // RED: comparison note not yet added (AC1 requirement)
+  })
+
+  // ── Story 3.1: Boundary value tests (Epic 2 retro A2) ──
+
+  it('should display $0.00 cost estimate when totalWords is 0', async () => {
+    // Boundary: 0 words → (0/100000)*0.40 = $0.00
+    mockGetFilesWordCount.mockResolvedValue({ success: true, data: { totalWords: 0 } })
+
+    render(<ProcessingModeDialog {...defaultProps} />)
+
+    await waitFor(() => {
+      const costSection = screen.getByTestId('cost-estimate')
+      expect(costSection.textContent).toContain('0.00')
+    })
+    // RED: zero words edge case
+  })
+
+  it('should display exact rate cost when totalWords is exactly 100,000', async () => {
+    // Boundary: 100K words → economy = $0.40 exactly, thorough = $2.40 exactly
+    mockGetFilesWordCount.mockResolvedValue({ success: true, data: { totalWords: 100_000 } })
+
+    render(<ProcessingModeDialog {...defaultProps} />)
+
+    await waitFor(() => {
+      // Economy mode (default): $0.40 exactly
+      const costSection = screen.getByTestId('cost-estimate')
+      expect(costSection.textContent).toContain('0.40')
+    })
+    // RED: exact rate match at 100K words
   })
 })

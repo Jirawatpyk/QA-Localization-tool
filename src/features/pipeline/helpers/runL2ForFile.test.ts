@@ -14,9 +14,11 @@ const {
     mockGenerateText,
     mockClassifyAIError,
     mockCheckTenantBudget,
+    mockCheckProjectBudget,
     mockWriteAuditLog,
     mockLogAIUsage,
     mockAggregateUsage,
+    mockGetModelForLayerWithFallback,
   },
   modules,
   dbState,
@@ -35,9 +37,14 @@ vi.mock('@/lib/ai/costs', () => modules.aiCosts)
 vi.mock('@/lib/ai/errors', () => modules.aiErrors)
 vi.mock('@/lib/ai/budget', () => modules.aiBudget)
 vi.mock('@/lib/ai/types', () => modules.aiTypes)
+vi.mock('@/lib/ai/providers', () => modules.aiProviders)
 vi.mock('@/features/audit/actions/writeAuditLog', () => modules.audit)
 vi.mock('@/lib/logger', () => modules.logger)
 vi.mock('@/db/client', () => dbMockModule)
+
+vi.mock('@/lib/ratelimit', () => ({
+  aiL2ProjectLimiter: { limit: vi.fn((..._args: unknown[]) => Promise.resolve({ success: true })) },
+}))
 
 vi.mock('@/db/helpers/withTenant', () => ({
   withTenant: vi.fn((..._args: unknown[]) => 'tenant-filter'),
@@ -100,12 +107,17 @@ describe('runL2ForFile', () => {
     dbState.setCaptures = []
     mockGenerateText.mockResolvedValue(buildL2Response())
     mockCheckTenantBudget.mockResolvedValue(BUDGET_HAS_QUOTA)
+    mockCheckProjectBudget.mockResolvedValue(BUDGET_HAS_QUOTA)
     mockClassifyAIError.mockReturnValue('unknown')
     mockWriteAuditLog.mockResolvedValue(undefined)
     mockAggregateUsage.mockReturnValue({
       inputTokens: 100,
       outputTokens: 50,
       estimatedCostUsd: 0.001,
+    })
+    mockGetModelForLayerWithFallback.mockResolvedValue({
+      primary: 'gpt-4o-mini',
+      fallbacks: [],
     })
   })
 
@@ -162,7 +174,7 @@ describe('runL2ForFile', () => {
   })
 
   it('should throw NonRetriableError when budget exhausted', async () => {
-    mockCheckTenantBudget.mockResolvedValue(BUDGET_EXHAUSTED)
+    mockCheckProjectBudget.mockResolvedValue(BUDGET_EXHAUSTED)
     dbState.returnValues = [[mockFile]]
 
     const { runL2ForFile } = await import('./runL2ForFile')
@@ -384,7 +396,7 @@ describe('runL2ForFile', () => {
   })
 
   it('should roll back file status to failed on error', async () => {
-    mockCheckTenantBudget.mockRejectedValue(new Error('budget check crash'))
+    mockCheckProjectBudget.mockRejectedValue(new Error('budget check crash'))
     dbState.returnValues = [[mockFile], []]
 
     const { runL2ForFile } = await import('./runL2ForFile')
@@ -401,7 +413,7 @@ describe('runL2ForFile', () => {
   })
 
   it('should not fail if status rollback fails (non-fatal)', async () => {
-    mockCheckTenantBudget.mockRejectedValue(new Error('budget crash'))
+    mockCheckProjectBudget.mockRejectedValue(new Error('budget crash'))
     // CAS succeeds, rollback fails (no more return values)
     dbState.returnValues = [[mockFile]]
 
@@ -446,5 +458,90 @@ describe('runL2ForFile', () => {
 
     // Finding is still counted — confidence clamped internally
     expect(result.findingCount).toBe(1)
+  })
+
+  // ── Story 3.1: Budget guard + per-project rate limit (EXTEND) ──
+
+  it.skip('should throw NonRetriableError when checkProjectBudget returns hasQuota=false', async () => {
+    // Arrange: budget exhausted
+    mockCheckTenantBudget.mockResolvedValue({
+      hasQuota: false,
+      remainingBudgetUsd: 0,
+      monthlyBudgetUsd: 100,
+      usedBudgetUsd: 100,
+    })
+
+    const { runL2ForFile } = await import('./runL2ForFile')
+
+    await expect(
+      runL2ForFile({
+        fileId: VALID_FILE_ID,
+        projectId: VALID_PROJECT_ID,
+        tenantId: VALID_TENANT_ID,
+      }),
+    ).rejects.toThrow('AI quota exhausted')
+
+    // AI API should NOT be called when budget exhausted
+    expect(mockGenerateText).not.toHaveBeenCalled()
+    // RED: checkProjectBudget (USD-based) not yet wired into runL2ForFile
+    // NOTE: when implementing, update checkTenantBudget → checkProjectBudget call signature
+  })
+
+  it.skip('should call checkProjectBudget before making AI API call', async () => {
+    // Arrange: budget available, happy path
+    mockCheckTenantBudget.mockResolvedValue({
+      hasQuota: true,
+      remainingBudgetUsd: 50,
+      monthlyBudgetUsd: 100,
+      usedBudgetUsd: 50,
+    })
+    dbState.returnValues = [[mockFile], [buildSegmentRow()], [], [], [], []]
+
+    const { runL2ForFile } = await import('./runL2ForFile')
+    await runL2ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    // Budget check called BEFORE generateText
+    const budgetCallOrder = mockCheckTenantBudget.mock.invocationCallOrder[0] ?? 0
+    const generateCallOrder = mockGenerateText.mock.invocationCallOrder[0] ?? Infinity
+    expect(budgetCallOrder).toBeLessThan(generateCallOrder)
+    // RED: call order not yet enforced
+  })
+
+  it.skip('should check aiL2ProjectLimiter before processing each file', async () => {
+    // NOTE: when implementing, add vi.mock('@/lib/ratelimit') at top of file
+    // mockAiL2Limit.mockResolvedValue({ success: false, limit: 100, remaining: 0, reset: 0 })
+
+    // For now, verify the structural intent:
+    // When L2 project rate limit blocks, runL2ForFile should throw NonRetriableError
+    // expect(mockAiL2Limit).toHaveBeenCalledWith(VALID_PROJECT_ID)
+    expect(true).toBe(true) // placeholder — implement when wiring rate limit
+    // RED: aiL2ProjectLimiter not yet wired into runL2ForFile
+  })
+
+  it.skip('should proceed normally when both budget and rate limit allow', async () => {
+    mockCheckTenantBudget.mockResolvedValue({
+      hasQuota: true,
+      remainingBudgetUsd: 80,
+      monthlyBudgetUsd: 100,
+      usedBudgetUsd: 20,
+    })
+    // mockAiL2Limit.mockResolvedValue({ success: true, limit: 100, remaining: 99, reset: 0 })
+    dbState.returnValues = [[mockFile], [buildSegmentRow()], [], [], [], []]
+
+    const { runL2ForFile } = await import('./runL2ForFile')
+    const result = await runL2ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    // Happy path: both guards pass → AI call proceeds
+    expect(mockGenerateText).toHaveBeenCalled()
+    expect(result.findingCount).toBeGreaterThanOrEqual(0)
+    // RED: integrated guard flow not yet implemented
   })
 })

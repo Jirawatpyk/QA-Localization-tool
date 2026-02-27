@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { anthropic } from '@ai-sdk/anthropic'
+import { google } from '@ai-sdk/google'
 import { openai } from '@ai-sdk/openai'
 import { customProvider } from 'ai'
 
@@ -28,7 +29,7 @@ export const qaProvider = customProvider({
 })
 
 /**
- * Convenience: get the model for a given pipeline layer.
+ * Convenience: get the model for a given pipeline layer (uses system defaults).
  *
  * @example
  *   const model = getModelForLayer('L2')
@@ -38,4 +39,21 @@ export function getModelForLayer(layer: 'L2' | 'L3') {
   return layer === 'L2'
     ? qaProvider.languageModel('l2-screening')
     : qaProvider.languageModel('l3-analysis')
+}
+
+/**
+ * Create an AI SDK language model instance from a model ID string.
+ *
+ * Maps model ID prefix to the appropriate provider SDK.
+ * Used when a project has a pinned model that differs from the system default.
+ *
+ * @example
+ *   const model = getModelById('gpt-4o-mini-2024-07-18')
+ *   const result = await generateText({ model, ... })
+ */
+export function getModelById(modelId: string) {
+  if (modelId.startsWith('gpt-') || modelId.startsWith('o1-')) return openai(modelId)
+  if (modelId.startsWith('claude-')) return anthropic(modelId)
+  if (modelId.startsWith('gemini-')) return google(modelId)
+  throw new Error(`Unsupported model provider for: ${modelId}`)
 }

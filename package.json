@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.47",
+    "@ai-sdk/google": "^3.0.33",
     "@ai-sdk/openai": "^3.0.34",
     "@hookform/resolvers": "^5.2.2",
     "@react-pdf/renderer": "^4.3.2",
