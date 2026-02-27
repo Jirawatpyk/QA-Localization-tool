@@ -62,145 +62,47 @@ See `patterns.md` for detailed notes on architecture and violations.
 
 Items below were flagged in earlier audits but have been FIXED. Kept for historical reference.
 
-### Story 2.1 Audit Results (Upload Infrastructure)
+### Stories 2.1–2.7 Audit Results (Upload, Parsers, L1, Scoring, Pipeline, Batch)
 
-New tables confirmed tenant-scoped: `upload_batches` (has tenant_id, RLS in 00010_upload_batches_rls.sql)
+**All PASS — 0C/0H/0M/0L.** Full detail in `patterns.md`.
 
-**PASS:**
-
-- `checkDuplicate.action.ts` — withTenant() on files (WHERE) + withTenant() on scores (leftJoin ON clause); PASS
-- `createBatch.action.ts` — INSERT with tenantId from session + audit log; PASS
-- `getUploadedFiles.action.ts` — withTenant() on files; PASS
-- `route.ts` (upload) — files INSERT uses tenantId from session; admin client used ONLY for Storage (not DB); PASS
-- `route.ts` — ✅ FIXED (verified 2026-02-25): projectId and batchId from FormData now verified via SELECT + withTenant() before use (lines 88-115)
-
-### Story 2.2 Audit Results (SDLXLIFF/XLIFF Parser)
-
-**PASS (all checks):**
-
-- `parseFile.action.ts` — SELECT files uses withTenant(); UPDATE 'parsing' uses withTenant(); UPDATE 'parsed' uses withTenant(); markFileFailed() UPDATE uses withTenant(); batchInsertSegments() sets tenantId explicitly from session; defense-in-depth cross-tenant check (file.tenantId !== currentUser.tenantId) present; all 3 audit log writes carry tenantId from session. FULL PASS.
-- `sdlxliffParser.ts` — pure XML parser, zero DB access, zero Supabase calls confirmed. No tenant isolation concerns.
-
-**Confirmed schema facts:**
-
-- `segments` table has `tenant_id` column (uuid, notNull, FK to tenants). INSERT-level isolation enforced.
-- `files` table has `tenant_id` column confirmed. All UPDATE WHERE clauses use withTenant(files.tenantId, ...).
-
-**Pattern noted:** `batchInsertSegments()` does NOT use withTenant() helper on the INSERT (INSERT has no WHERE clause by design), but sets `tenantId` field explicitly in each row value object — this is the correct and only way to enforce tenant isolation on INSERTs. Consistent with createProject, createBatch patterns.
-
-### Story 2.3 Audit Results (Excel Bilingual Parser)
-
-**PASS (all checks):**
-
-- `previewExcelColumns.action.ts` — requireRole('qa_reviewer', 'write') before any DB access; SELECT files uses and(eq(files.id, fileId), withTenant(files.tenantId, currentUser.tenantId)); Storage download uses file.storagePath from the verified DB row (NOT from client input); excelParser.ts is zero-DB pure computation. FULL PASS.
-- `parseFile.action.ts` (Excel branch) — SELECT projects uses and(eq(projects.id, file.projectId), withTenant(projects.tenantId, currentUser.tenantId)); file.projectId sourced from verified file row (not client); all markFileFailed() calls pass tenantId from session; batchInsertSegments() unchanged from Story 2.2 — tenantId set explicitly in value object. FULL PASS.
-
-**Key observation:** Both actions derive the Storage path (file.storagePath) and the project FK (file.projectId) from the tenant-verified DB row, never from user input. This is the correct defense-in-depth pattern for Storage downloads and FK chaining.
-
-**Schema confirmations (Story 2.3):**
-
-- `projects` table — `tenant_id` column confirmed (uuid, notNull, FK to tenants). withTenant() on projects SELECT is correct.
-- `excelParser.ts` — zero DB access, zero Supabase calls confirmed via grep. No tenant isolation concerns.
-
-### Story 2.4 Audit Results (L1 Rule Engine)
-
-**✅ RESOLVED (verified 2026-02-25):**
-
-- Logic moved from `runRuleEngine.action.ts` to `runL1ForFile.ts` (Story 2.6 refactor). All 3 UPDATE statements (CAS, final l1_completed, rollback failed) now include `withTenant()`. Confirmed at lines 47, 142, 181 of `runL1ForFile.ts`.
-
-**PASS:**
-
-- CAS guard UPDATE (L54-64) — withTenant() correctly present alongside eq(files.id) and eq(files.status). Atomically scoped to tenant + fileId + status guard.
-- segments SELECT (L76-85) — withTenant() + eq(segments.fileId). Both dimensions present.
-- suppressionRules SELECT (L91-100) — withTenant() + eq(isActive) + eq(projectId). Three-way filter correct. projectId sourced from verified `file` object (not user input).
-- findings INSERT batch (L136-141) — tenantId set explicitly from currentUser.tenantId in each row value object. Correct INSERT pattern.
-- Audit log write (L150-163) — tenantId from currentUser.tenantId. PASS.
-- glossaryCache.ts (getCachedGlossaryTerms) — withTenant() on glossaries SELECT; glossary_terms accessed via inArray(glossaryIds) (safe, IDs came from tenant-scoped query). Pre-existing PASS confirmed again.
-
-**Schema confirmations (Story 2.4):**
-
-- `findings` table — tenant_id column (uuid, notNull, FK to tenants). Confirmed.
-- `suppression_rules` — tenant_id column (uuid, notNull, FK to tenants). Confirmed.
-
-### Story 2.5 Audit Results (MQM Score Calculation)
-
-**PASS (all checks):**
-
-- `autoPassChecker.ts` — languagePairConfigs SELECT: withTenant() present; scores+segments JOIN: withTenant() on BOTH sides (L57+L58, defense-in-depth confirmed); projects SELECT (fallback branch): withTenant() present. FULL PASS.
-- `calculateScore.action.ts` — segments SELECT: withTenant() present; findings SELECT: withTenant() present; scores SELECT inside transaction: withTenant() present; scores DELETE inside transaction: withTenant() present; scores INSERT: tenantId set explicitly from session in value object (correct INSERT pattern); notifications SELECT (dedup guard): withTenant() present; userRoles SELECT (admin list): withTenant() present; notifications INSERT: tenantId from session in value object. FULL PASS.
-- `penaltyWeightLoader.ts` — severity_configs SELECT uses `or(eq(tenantId), isNull(tenantId))` which is the correct and intentional pattern for this table (nullable tenant_id = system defaults). withTenant() helper is intentionally NOT used here because the query must include NULL rows. The application-level resolution (L42-56) correctly prioritizes tenant rows over system rows. PASS (by design, documented in code comment).
-
-**Schema confirmations (Story 2.5):**
-
-- `scores` table — tenant_id column (uuid, notNull, FK to tenants). Confirmed.
-- `notifications` table — tenant_id column (uuid, notNull, FK to tenants). Confirmed.
-- `severity_configs` — nullable tenant_id (null = system default). Intentional design; withTenant() would be wrong here.
-- `languagePairConfigs`, `segments`, `findings`, `userRoles` — all previously confirmed as tenant-scoped.
-
-**Pattern noted — severity_configs fallback query:**
-`loadPenaltyWeights()` intentionally omits withTenant() in favor of `or(eq(tenantId), isNull(tenantId))` because system default rows have tenant_id IS NULL. This is the documented exception. It does NOT leak cross-tenant data because the query only returns rows for the calling tenant OR NULL-tenant rows, and the resolution logic at L42 always prefers tenant-specific rows first.
-
-**Pattern noted — inner JOIN defense-in-depth (autoPassChecker.ts L51-59):**
-The scores+segments JOIN applies withTenant() to BOTH tables in the same AND clause. This is the gold standard pattern for multi-table queries. Record as a positive example for future code reviews.
-
-### Story 2.6 Audit Results (Inngest Pipeline Foundation)
-
-**PASS (all checks — FULL PASS across all three primary files and their full Inngest execution chain):**
-
-- `startProcessing.action.ts` — requireRole() before any DB access; files SELECT uses withTenant() + eq(projectId) + inArray(fileIds); projects UPDATE uses withTenant(); tenantId sourced exclusively from requireRole() session (never from client input); pipeline event payload includes tenantId from session; audit log carries tenantId from session. FULL PASS.
-- `runL1ForFile.ts` (helper, not server action) — tenantId received as function parameter from Inngest event payload (not from user input). CAS guard UPDATE uses withTenant(); segments SELECT uses withTenant() + eq(fileId); suppressionRules SELECT uses withTenant() + eq(isActive) + eq(projectId); getGlossaryTerms() uses withTenant() on glossaries JOIN (correct — glossaryTerms has no tenant_id); findings DELETE inside transaction uses withTenant(); findings INSERT batch: tenantId set explicitly in each value object; l1_completed UPDATE uses withTenant(); rollback UPDATE uses withTenant(). FULL PASS.
-- `scoreFile.ts` (helper, not server action) — tenantId received as function parameter from Inngest event payload. segments SELECT uses withTenant() + eq(fileId) + eq(projectId); findings SELECT uses withTenant() + eq(fileId) + eq(projectId); scores SELECT inside transaction uses withTenant(); scores DELETE inside transaction uses withTenant(); scores INSERT: tenantId set explicitly in value object; createGraduationNotification() — notifications dedup SELECT uses withTenant(); userRoles SELECT uses withTenant(); notifications INSERT: tenantId set explicitly in value object. FULL PASS.
-- `processBatch.ts` — no DB access; fan-out propagates tenantId from event.data through to each pipeline.process-file event payload. Tenant context never lost across steps. PASS.
-- `processFile.ts` — no direct DB queries in handler; delegates to runL1ForFile() + scoreFile() with tenantId from event.data; onFailure handler UPDATE files uses withTenant(). concurrency key is event.data.projectId (correct — project-scoped queue). FULL PASS.
-
-**Schema confirmations (Story 2.6):**
-
-- `glossaryTerms` — confirmed NO tenant_id column; access via glossaryId FK to glossaries (which has tenant_id). INNER JOIN approach in getGlossaryTerms() is the correct and only safe pattern.
-- `severityConfigs` — nullable tenant_id column confirmed. loadPenaltyWeights() exception (or(eq, isNull) instead of withTenant()) re-confirmed correct.
-
-**Pattern noted — tenantId in Inngest helpers:**
-Helper functions (runL1ForFile, scoreFile) receive tenantId as a typed function parameter. This is the correct pattern for Inngest runtime — there is no session to read from. The security boundary is the Server Action (startProcessing) which sources tenantId from requireRole() and injects it into the event payload. Inngest's event payload is server-controlled and cannot be tampered with by clients.
-
-**Note — Inngest route handler now has functions registered:**
-`processBatch` and `processFilePipeline` are active. Both correctly propagate tenant context. Update checklist: Inngest IS now in scope for future audits.
-
-### Story 2.7 Audit Results (Batch Summary, File History, Parity Tools)
-
-New tables: `parity_reports`, `missing_check_reports` (both tenant-scoped). All actions PASS.
-See patterns.md for detail. All 3 original findings RESOLVED (verified 2026-02-25).
+Key schema confirmations: `upload_batches`, `segments`, `findings`, `scores`, `suppression_rules`,
+`notifications`, `parity_reports`, `missing_check_reports` — all tenant-scoped. `glossaryTerms`
+has NO tenant_id (access via verified glossaryId FK). `severity_configs` has nullable tenant_id
+(system defaults NULL — use `or(eq, isNull)` not `withTenant()` for that table specifically).
 
 ### Story 3.0 Audit Results (Score & Review Infrastructure — 2026-02-26)
 
-**Result: 0C/0H/0M/0L — SECURE (full pass).**
-
-- `scoreFile.ts` (MODIFIED — layerFilter param added): all 5 query ops (SELECT segments, SELECT findings, SELECT/DELETE/INSERT scores, SELECT notifications dedup, SELECT userRoles, INSERT notifications) use withTenant() or explicit tenantId in values. layerFilter is an additive WHERE term only; it never replaces withTenant(). FULL PASS.
-- `recalculateScore.ts` (NEW Inngest function): zero direct DB queries — delegates to scoreFile(). tenantId sourced from event.data (FindingChangedEventData.tenantId — required field). Registered in route.ts functions array. onFailure reads event.data.event.data (correct Inngest v3 nested structure). FULL PASS.
-- `processFile.ts` (MODIFIED — passes layerFilter: 'L1' to scoreFile): no new DB queries introduced by change. Existing batch-check SELECT + onFailure UPDATE both confirmed withTenant() present. FULL PASS.
-- `src/types/pipeline.ts` (FindingChangedEventData): tenantId is a required non-optional field. TypeScript enforces presence at every call site. PASS.
-- `src/lib/inngest/client.ts` (finding.changed schema): typed to FindingChangedEventData — tenant requirement enforced statically. PASS.
-- `recalculateScore` registered in `src/app/api/inngest/route.ts` functions array — confirmed active.
-
-**Key observation (layerFilter safety):** The `layerFilter` parameter in `scoreFile()` is composed inside `and()` with an explicit ternary: `layerFilter ? eq(...) : undefined`. Drizzle treats `undefined` in `and()` as a no-op — it does NOT remove the adjacent `withTenant()` condition. Additive-only refinement pattern is safe. This is a confirmed safe pattern for optional filter additions to queries that already include tenant scoping.
+**Result: 0C/0H/0M/0L — SECURE.** Key pattern: `layerFilter ? eq(...) : undefined` in `scoreFile()`
+is additive-only inside `and()` — Drizzle treats undefined as no-op; `withTenant()` remains active.
+`recalculateScore.ts` (Inngest): zero DB queries; delegates to scoreFile(); tenantId from event.data.
 
 ### Story 2.10 Audit Results (Parity Verification Tests — 2026-02-26)
 
 **Result: 0C/0H/0M/1L — SECURE.** See `patterns.md` § "Story 2.10" for full detail.
 
-- All integration tests use `faker.string.uuid()` for tenantId/projectId/fileId. PASS.
-- `processFile()` is pure in-memory (no DB) — tenant fields on SegmentRecord are metadata only.
-- LOW: `buildPerfSegments()` in `factories.ts` uses hardcoded non-UUID-v4 strings (intentional
-  for determinism). Zero security risk. Risk: Zod `uuid()` validation would reject if applied.
-  Recommended fix: use valid UUID v4 format literals (see patterns.md for examples).
+- LOW: `buildPerfSegments()` in `factories.ts` uses hardcoded non-UUID-v4 strings — zero security risk.
+
+### Story 3.1 Audit Results (AI Cost Control, Throttling, Model Pinning — 2026-02-27)
+
+**Result: 0C/0H/0M/0L — SECURE (full pass, 10 files).** See `patterns.md` § "Story 3.1" for full detail.
+
+New table: `ai_usage_logs` — tenant-scoped (`tenantId uuid notNull FK tenants`). Confirmed PASS.
+New `projects` columns: `aiBudgetMonthlyUsd`, `budgetAlertThresholdPct`, `l2PinnedModel`, `l3PinnedModel` — all SELECT/UPDATE queries use `withTenant()`.
+
+Feature gap (not security): `runL2ForFile.ts` + `runL3ForFile.ts` call `getModelForLayer` (static),
+not `getModelForLayerWithFallback` (per-project pinned). Pinning is not yet applied at runtime.
 
 ## Key Patterns to Watch
 
 - `glossary_terms` has NO tenant_id — always access via verified glossaryId from glossaries table
 - `severity_configs` has nullable tenant_id (system defaults have NULL) — query must handle this
 - `taxonomy_definitions` is global — never add tenant filter (it would be wrong)
+- `ai_usage_logs` is tenant-scoped — SELECT uses withTenant(); INSERT sets tenantId in values
 - RSC pages that do inline Drizzle queries must use withTenant() — currently all do
 - Inngest functions ARE NOW ACTIVE — `processBatch` + `processFilePipeline` + `batchComplete` all confirmed tenant-safe
-- INSERT isolation pattern: no WHERE clause on INSERT — instead set `tenantId` field explicitly in value object. withTenant() only applies to SELECT/UPDATE/DELETE WHERE clauses.
-- Inngest tenantId pattern: Server Action sources tenantId from requireRole() → injects into event payload → helper functions receive tenantId as typed parameter. This is the correct trust boundary for Inngest.
-- ANTI-PATTERN: `withTenant(col, val)` called standalone (not passed to `.where()`) is dead code — the helper returns a SQL expression object; it must be composed into a query. Flag any standalone call as HIGH (misleading security comment risk). _Example fixed: reportMissingCheck.action.ts (2026-02-25)_
-- ANTI-PATTERN: INSERT with unverified FK from client input — always add a prior SELECT with withTenant() to verify ownership of the referenced entity before writing. _Example fixed: reportMissingCheck + generateParityReport (2026-02-25)_
-- ANTI-PATTERN for DELETE-then-reinsert idempotency: over-broad DELETE (project-level) wipes other layers' data. Always scope DELETE to the specific layer/scope being regenerated (e.g., `eq(findings.scope, 'cross-file')`).
+- INSERT isolation pattern: no WHERE clause on INSERT — set `tenantId` explicitly in value object. withTenant() only for SELECT/UPDATE/DELETE.
+- Inngest tenantId pattern: Server Action sources tenantId from requireRole() → injects into event payload → helper functions receive tenantId as typed parameter.
+- ANTI-PATTERN: `withTenant(col, val)` called standalone (not in `.where()`) is dead code — must be composed into AND clause. Flag as HIGH.
+- ANTI-PATTERN: INSERT with unverified FK from client input — always SELECT with withTenant() first to verify ownership.
+- ANTI-PATTERN: over-broad DELETE in idempotent re-run — scope DELETE to the specific layer/entity being regenerated.

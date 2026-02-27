@@ -66,10 +66,12 @@ describe('buildFallbackChain', () => {
 
   it('should use pinned model as primary when set for L3', async () => {
     const { buildFallbackChain } = await import('./providers')
-    const chain = buildFallbackChain('L3', 'claude-sonnet-4-5-20250929')
+    // Use a non-default model to verify pinning actually changes the primary
+    const chain = buildFallbackChain('L3', 'gpt-4o')
 
-    expect(chain.primary).toBe('claude-sonnet-4-5-20250929')
-    // RED: pinned model becomes primary
+    expect(chain.primary).toBe('gpt-4o')
+    // When pinned to non-default, system default should be in fallbacks
+    expect(chain.fallbacks).toContain('claude-sonnet-4-5-20250929')
   })
 
   it('should include system default in fallbacks when pinned model overrides it', async () => {

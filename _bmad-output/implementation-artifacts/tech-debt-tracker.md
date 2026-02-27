@@ -144,6 +144,18 @@
 
 ---
 
+## Category 5: Pattern Consistency
+
+### TD-PATTERN-001: Server Actions missing Zod input schemas (4 files)
+- **Severity:** Low
+- **Risk:** Pattern inconsistency only — all 4 actions validate input via manual checks (not Zod)
+- **Files:** `getFilesWordCount.action.ts`, `getProjectAiBudget.action.ts`, `updateBudgetAlertThreshold.action.ts`, `updateModelPinning.action.ts`
+- **Fix:** Add Zod schemas + `.safeParse()` to match `startProcessing.action.ts` pattern — do all 4 together as batch chore
+- **Origin:** Story 3.1 CR R1, flagged by code-quality-analyzer (L1 finding)
+- **Status:** DEFERRED (batch chore, Epic 4 — no correctness or security risk)
+
+---
+
 ## Resolved Items (for historical reference)
 
 These were flagged by agent memory but verified as **FIXED** on 2026-02-25:

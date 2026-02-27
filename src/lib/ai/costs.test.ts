@@ -80,10 +80,10 @@ describe('logAIUsage', () => {
       model: 'gpt-4o-mini',
       inputTokens: 250,
       outputTokens: 80,
+      estimatedCost: 0.000085,
       latencyMs: 1200,
       status: 'success',
     })
-    // RED: logAIUsage currently pino-only, no DB INSERT
   })
 
   it("should derive provider='openai' from gpt-4o-mini model ID", async () => {

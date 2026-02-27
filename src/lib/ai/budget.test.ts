@@ -151,13 +151,17 @@ describe('checkProjectBudget', () => {
     const { checkProjectBudget } = await import('./budget')
     await checkProjectBudget(VALID_PROJECT_ID, VALID_TENANT_ID)
 
-    // Assert: gte was called with a date representing start of current month
+    // Assert: gte was called with a UTC-based Date representing 1st of current month at 00:00:00 UTC
     const { gte } = await import('drizzle-orm')
-    expect(gte).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ getDate: expect.any(Function) }), // Date object
-    )
-    // RED: month boundary filter must be applied
+    expect(gte).toHaveBeenCalledWith(expect.anything(), expect.any(Date))
+
+    // Verify the Date is actually the 1st of the current month in UTC
+    const calledDate = (gte as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as Date
+    expect(calledDate.getUTCDate()).toBe(1)
+    expect(calledDate.getUTCHours()).toBe(0)
+    expect(calledDate.getUTCMinutes()).toBe(0)
+    expect(calledDate.getUTCSeconds()).toBe(0)
+    expect(calledDate.getUTCMilliseconds()).toBe(0)
   })
 
   // ── P1: Additional coverage ──

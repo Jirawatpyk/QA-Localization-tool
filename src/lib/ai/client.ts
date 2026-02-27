@@ -52,7 +52,8 @@ export function getModelForLayer(layer: 'L2' | 'L3') {
  *   const result = await generateText({ model, ... })
  */
 export function getModelById(modelId: string) {
-  if (modelId.startsWith('gpt-') || modelId.startsWith('o1-')) return openai(modelId)
+  if (modelId.startsWith('gpt-') || modelId.startsWith('o1-') || modelId.startsWith('o3-'))
+    return openai(modelId)
   if (modelId.startsWith('claude-')) return anthropic(modelId)
   if (modelId.startsWith('gemini-')) return google(modelId)
   throw new Error(`Unsupported model provider for: ${modelId}`)

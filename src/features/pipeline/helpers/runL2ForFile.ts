@@ -134,10 +134,10 @@ export async function runL2ForFile({
   }
 
   try {
-    // Step 2a: Per-project L2 rate limit
+    // Step 2a: Per-project L2 rate limit (retriable — Inngest retries with backoff)
     const { success: rateLimitAllowed } = await aiL2ProjectLimiter.limit(projectId)
     if (!rateLimitAllowed) {
-      throw new NonRetriableError('L2 analysis queue full for this project. Resuming shortly.')
+      throw new Error('L2 analysis queue full for this project. Resuming shortly.')
     }
 
     // Step 2b: Budget guard (Guardrail #22)
@@ -147,7 +147,14 @@ export async function runL2ForFile({
     }
 
     // Step 2c: Resolve model (pinned model from project config → fallback chain)
-    const { primary: modelId } = await getModelForLayerWithFallback('L2', projectId, tenantId)
+    const { primary: modelId, fallbacks } = await getModelForLayerWithFallback(
+      'L2',
+      projectId,
+      tenantId,
+    )
+    if (fallbacks.length > 0) {
+      logger.info({ fileId, modelId, fallbacks }, 'L2 fallback chain available (not yet consumed)')
+    }
 
     // Step 3: Load segments (withTenant on every query)
     const segmentRows: SegmentRow[] = await db

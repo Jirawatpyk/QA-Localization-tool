@@ -34,6 +34,11 @@ function ModelSelect({
   const [selectedModel, setSelectedModel] = useState(currentModel)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  // Sync state when prop changes (Guardrail #12: useState only captures initial value)
+  useEffect(() => {
+    setSelectedModel(currentModel)
+  }, [currentModel])
+
   // Close on click outside or Escape key
   useEffect(() => {
     if (!isOpen) return
@@ -93,7 +98,9 @@ function ModelSelect({
               role="option"
               aria-selected={selectedModel === opt.value}
               onClick={() => {
-                void handleSelect(opt.value)
+                handleSelect(opt.value).catch(() => {
+                  /* non-critical — toast handles user feedback inside handleSelect */
+                })
               }}
               className="cursor-pointer px-3 py-2 text-sm hover:bg-accent"
             >

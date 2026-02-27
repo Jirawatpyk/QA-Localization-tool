@@ -11,6 +11,7 @@ import { projects } from '@/db/schema/projects'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { updateProjectSchema } from '@/features/project/validation/projectSchemas'
 import { requireRole } from '@/lib/auth/requireRole'
+import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
 
 type ProjectResult = {
@@ -47,7 +48,10 @@ export async function updateProject(
 
   // Convert aiBudgetMonthlyUsd from number to string for decimal column
   const { aiBudgetMonthlyUsd, ...rest } = parsed.data
-  const setData: Record<string, unknown> = { ...rest, updatedAt: new Date() }
+  const setData: typeof rest & { updatedAt: Date; aiBudgetMonthlyUsd?: string | null } = {
+    ...rest,
+    updatedAt: new Date(),
+  }
   if (aiBudgetMonthlyUsd !== undefined) {
     setData.aiBudgetMonthlyUsd = aiBudgetMonthlyUsd === null ? null : String(aiBudgetMonthlyUsd)
   }
@@ -62,20 +66,24 @@ export async function updateProject(
     return { success: false, code: 'UPDATE_FAILED', error: 'Failed to update project' }
   }
 
-  await writeAuditLog({
-    tenantId: currentUser.tenantId,
-    userId: currentUser.id,
-    entityType: 'project',
-    entityId: projectId,
-    action: 'project.updated',
-    oldValue: {
-      name: existing.name,
-      description: existing.description,
-      processingMode: existing.processingMode,
-      autoPassThreshold: existing.autoPassThreshold,
-    },
-    newValue: { ...parsed.data },
-  })
+  try {
+    await writeAuditLog({
+      tenantId: currentUser.tenantId,
+      userId: currentUser.id,
+      entityType: 'project',
+      entityId: projectId,
+      action: 'project.updated',
+      oldValue: {
+        name: existing.name,
+        description: existing.description,
+        processingMode: existing.processingMode,
+        autoPassThreshold: existing.autoPassThreshold,
+      },
+      newValue: { ...parsed.data },
+    })
+  } catch (auditErr) {
+    logger.error({ err: auditErr, projectId }, 'Audit log failed for project update (non-fatal)')
+  }
 
   revalidatePath('/projects')
   revalidatePath(`/projects/${projectId}/settings`)

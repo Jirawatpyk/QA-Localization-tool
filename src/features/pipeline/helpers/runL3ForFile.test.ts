@@ -17,10 +17,14 @@ const {
   modules,
   dbState,
   dbMockModule,
+  mockAiL3Limit,
 } = vi.hoisted(() => {
   const { dbState, dbMockModule } = createDrizzleMock()
   const { mocks, modules } = createAIMock({ layer: 'L3' })
-  return { mocks, modules, dbState, dbMockModule }
+  const mockAiL3Limit = vi.fn((..._args: unknown[]) =>
+    Promise.resolve({ success: true, limit: 50, remaining: 49, reset: 0 }),
+  )
+  return { mocks, modules, dbState, dbMockModule, mockAiL3Limit }
 })
 
 // ── Module mocks ──
@@ -37,7 +41,7 @@ vi.mock('@/lib/logger', () => modules.logger)
 vi.mock('@/db/client', () => dbMockModule)
 
 vi.mock('@/lib/ratelimit', () => ({
-  aiL3ProjectLimiter: { limit: vi.fn((..._args: unknown[]) => Promise.resolve({ success: true })) },
+  aiL3ProjectLimiter: { limit: (...args: unknown[]) => mockAiL3Limit(...args) },
 }))
 
 vi.mock('@/db/helpers/withTenant', () => ({
@@ -102,6 +106,7 @@ describe('runL3ForFile', () => {
     mockGenerateText.mockResolvedValue(buildL3Response())
     mockCheckTenantBudget.mockResolvedValue(BUDGET_HAS_QUOTA)
     mockCheckProjectBudget.mockResolvedValue(BUDGET_HAS_QUOTA)
+    mockAiL3Limit.mockResolvedValue({ success: true, limit: 50, remaining: 49, reset: 0 })
     mockClassifyAIError.mockReturnValue('unknown')
     mockWriteAuditLog.mockResolvedValue(undefined)
     mockGetModelForLayerWithFallback.mockResolvedValue({
@@ -362,38 +367,9 @@ describe('runL3ForFile', () => {
   })
 
   // ── Story 3.1: Budget guard + per-project rate limit (EXTEND) ──
+  // NOTE: Redundant stubs deleted (budget exhausted → equivalent active test, happy path → line 115)
 
-  it.skip('should throw NonRetriableError when checkProjectBudget returns hasQuota=false', async () => {
-    // Arrange: budget exhausted (USD-based — after Story 3.1 type refactor)
-    mockCheckTenantBudget.mockResolvedValue({
-      hasQuota: false,
-      remainingBudgetUsd: 0,
-      monthlyBudgetUsd: 100,
-      usedBudgetUsd: 100,
-    })
-
-    const { runL3ForFile } = await import('./runL3ForFile')
-
-    await expect(
-      runL3ForFile({
-        fileId: VALID_FILE_ID,
-        projectId: VALID_PROJECT_ID,
-        tenantId: VALID_TENANT_ID,
-      }),
-    ).rejects.toThrow('AI quota exhausted')
-
-    // L3 AI API should NOT be called when budget exhausted
-    expect(mockGenerateText).not.toHaveBeenCalled()
-    // RED: checkProjectBudget (USD-based) not yet wired into runL3ForFile
-  })
-
-  it.skip('should call checkProjectBudget before making AI API call', async () => {
-    mockCheckTenantBudget.mockResolvedValue({
-      hasQuota: true,
-      remainingBudgetUsd: 50,
-      monthlyBudgetUsd: 100,
-      usedBudgetUsd: 50,
-    })
+  it('should call checkProjectBudget before making AI API call', async () => {
     dbState.returnValues = [[mockFile], [buildSegmentRow()], [], [], [], []]
 
     const { runL3ForFile } = await import('./runL3ForFile')
@@ -404,41 +380,32 @@ describe('runL3ForFile', () => {
     })
 
     // Budget check called BEFORE generateText
-    const budgetCallOrder = mockCheckTenantBudget.mock.invocationCallOrder[0] ?? 0
+    const budgetCallOrder = mockCheckProjectBudget.mock.invocationCallOrder[0] ?? 0
     const generateCallOrder = mockGenerateText.mock.invocationCallOrder[0] ?? Infinity
     expect(budgetCallOrder).toBeLessThan(generateCallOrder)
-    // RED: call order not yet enforced in runL3ForFile
   })
 
-  it.skip('should check aiL3ProjectLimiter before processing each file', async () => {
-    // NOTE: when implementing, add vi.mock('@/lib/ratelimit') at top of file
-    // mockAiL3Limit.mockResolvedValue({ success: false, limit: 50, remaining: 0, reset: 0 })
-
-    // Structural intent: L3 project rate limit blocks → NonRetriableError
-    // expect(mockAiL3Limit).toHaveBeenCalledWith(VALID_PROJECT_ID)
-    expect(true).toBe(true) // placeholder — implement when wiring rate limit
-    // RED: aiL3ProjectLimiter not yet wired into runL3ForFile
-  })
-
-  it.skip('should proceed normally when both budget and rate limit allow', async () => {
-    mockCheckTenantBudget.mockResolvedValue({
-      hasQuota: true,
-      remainingBudgetUsd: 80,
-      monthlyBudgetUsd: 100,
-      usedBudgetUsd: 20,
+  it('should throw retriable error when aiL3ProjectLimiter blocks', async () => {
+    mockAiL3Limit.mockResolvedValue({
+      success: false,
+      limit: 50,
+      remaining: 0,
+      reset: Date.now() + 3600_000,
     })
-    // mockAiL3Limit.mockResolvedValue({ success: true, limit: 50, remaining: 49, reset: 0 })
-    dbState.returnValues = [[mockFile], [buildSegmentRow()], [], [], [], []]
+    dbState.returnValues = [[mockFile]]
 
     const { runL3ForFile } = await import('./runL3ForFile')
-    const result = await runL3ForFile({
-      fileId: VALID_FILE_ID,
-      projectId: VALID_PROJECT_ID,
-      tenantId: VALID_TENANT_ID,
-    })
 
-    expect(mockGenerateText).toHaveBeenCalled()
-    expect(result.findingCount).toBeGreaterThanOrEqual(0)
-    // RED: integrated guard flow not yet implemented in runL3ForFile
+    // Rate limit → retriable Error (NOT NonRetriableError — Inngest retries)
+    await expect(
+      runL3ForFile({
+        fileId: VALID_FILE_ID,
+        projectId: VALID_PROJECT_ID,
+        tenantId: VALID_TENANT_ID,
+      }),
+    ).rejects.toThrow(/queue full/)
+
+    // AI should NOT be called when rate limited
+    expect(mockGenerateText).not.toHaveBeenCalled()
   })
 })

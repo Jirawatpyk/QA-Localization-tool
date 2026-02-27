@@ -133,10 +133,10 @@ export async function runL3ForFile({
   }
 
   try {
-    // Step 2a: Per-project L3 rate limit
+    // Step 2a: Per-project L3 rate limit (retriable — Inngest retries with backoff)
     const { success: rateLimitAllowed } = await aiL3ProjectLimiter.limit(projectId)
     if (!rateLimitAllowed) {
-      throw new NonRetriableError('L3 deep analysis queue full. Resuming shortly.')
+      throw new Error('L3 deep analysis queue full. Resuming shortly.')
     }
 
     // Step 2b: Budget guard (Guardrail #22)
@@ -146,7 +146,14 @@ export async function runL3ForFile({
     }
 
     // Step 2c: Resolve model (pinned model from project config → fallback chain)
-    const { primary: modelId } = await getModelForLayerWithFallback('L3', projectId, tenantId)
+    const { primary: modelId, fallbacks } = await getModelForLayerWithFallback(
+      'L3',
+      projectId,
+      tenantId,
+    )
+    if (fallbacks.length > 0) {
+      logger.info({ fileId, modelId, fallbacks }, 'L3 fallback chain available (not yet consumed)')
+    }
 
     // Step 3: Load segments
     const segmentRows: SegmentRow[] = await db

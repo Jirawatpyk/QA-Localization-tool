@@ -9,7 +9,8 @@
 - `story-2-8-findings.md` — Story 2.8 Project Onboarding Tour CR R1
 - `story-2-9-findings.md` — Story 2.9 Xbench Multi-format CR R1
 - `story-2-10-findings.md` — Story 2.10 Parity Verification CR R1
-- `story-3-0-findings.md` — Story 3.0 Score & Review Infrastructure CR R1
+- `story-3-0-findings.md` — Story 3.0 Score & Review Infrastructure CR R1-R2
+- `story-3-1-findings.md` — Story 3.1 AI Cost Control CR R1 (1C/5H/8M/5L)
 
 ## Recurring Anti-Patterns (check EVERY review)
 
@@ -82,10 +83,50 @@
 - `new Map(s.findingsMap)` O(n) per single update — provide `setFindings(map)` for bulk loads
 - Same applies to Set-based selectedIds if "Select All" feature added
 
+### 22. Zod Schema Must Match TypeScript Union Types (Story 3.0 R2)
+
+- `z.string()` for fields typed as union (`FindingStatus`, `ScoreStatus`) = validation hole
+- Fix: use `z.enum([...values])` derived from same SSOT const as the TypeScript type
+- Applies to: Inngest event schemas, Realtime payload validators, API input schemas
+
+### 23. Duplicated Validation Set vs Type -- Derive from Shared Const
+
+- `SCORE_STATUS_VALUES` in use-score-subscription manually lists same values as `ScoreStatus` type
+- Drift risk: add status to type but forget Set = silent Realtime rejection
+- Fix: export `as const` array from types file, derive both Set and Type from it
+
+### 24. Duplicated Allowlist/Config Between Server and Client (Story 3.1)
+
+- AVAILABLE_MODELS in action vs L2_MODELS/L3_MODELS in component = DRY violation
+- Fix: single SSOT const importable by both server + client
+- **STATUS:** FIXED in CR R1 code — shared models.ts (no server-only)
+
+### 25. Custom Dropdown Without Click-Outside Handler (Story 3.1)
+
+- ModelPinningSettings custom dropdown: no click-outside, no keyboard nav
+- **STATUS:** FIXED in CR R1 code — useEffect click-outside handler added
+
+### 26. Feature Infrastructure Created But Not Wired (Story 3.1)
+
+- providers.ts getModelForLayerWithFallback() exists
+- **STATUS:** PARTIALLY FIXED — runL2/L3 now call getModelForLayerWithFallback but only use primary, ignoring fallbacks
+
+### 27. UTC vs Local Time in Date Calculations (Story 3.1)
+
+- `new Date().setDate(1).setHours(0,0,0,0)` uses local time — mismatch with timestamptz columns
+- Fix: use `setUTCDate(1).setUTCHours(0,0,0,0)` for DB comparisons
+- Affected: budget.ts, getProjectAiBudget.action.ts
+
+### 28. Rate Limit as NonRetriableError (Story 3.1)
+
+- Upstash rate limit rejection thrown as NonRetriableError = Inngest won't retry
+- Rate limits are transient — should use plain Error for Inngest retry
+- Affected: runL2ForFile.ts, runL3ForFile.ts
+
 ## CAS Guard Pattern (ESTABLISHED)
 
 - All status-transition actions: atomic `UPDATE WHERE status='expected' RETURNING`
-- Confirmed in: parseFile, runRuleEngine, runL1ForFile
+- Confirmed in: parseFile, runRuleEngine, runL1ForFile, runL2ForFile, runL3ForFile
 
 ## Cross-Story Patterns
 

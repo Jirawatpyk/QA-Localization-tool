@@ -123,7 +123,23 @@
       "Bash(cd \"C:\\\\Users\\\\Jiraw\\\\OneDrive\\\\Documents\\\\qa-localization-tool\" && npx dotenv-cli -e .env.local -- npm run db:migrate 2>&1)",
       "Bash(echo openpyxl not available:*)",
       "WebFetch(domain:www.npmjs.com)",
-      "WebFetch(domain:jsr.io)"
+      "WebFetch(domain:jsr.io)",
+      "Bash(New-Item:*)",
+      "Bash(npm run:*)",
+      "Bash(cd /c/Users/Jiraw/OneDrive/Documents/qa-localization-tool && psql \"postgresql://postgres:postgres@localhost:54322/postgres\" -c \"SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename IN \\('parity_reports','missing_check_reports'\\);\" 2>&1)",
+      "Bash(cd /c/Users/Jiraw/OneDrive/Documents/qa-localization-tool && docker exec -i supabase_db_qa-localization-tool psql -U postgres -c \"SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename IN \\('parity_reports','missing_check_reports'\\);\" 2>&1)",
+      "Bash(cd /c/Users/Jiraw/OneDrive/Documents/qa-localization-tool && docker exec -i supabase_db_qa-localization-tool psql -U postgres -c \"NOTIFY pgrst, 'reload schema';\" 2>&1)",
+      "Bash(docker ps:*)",
+      "Bash(docker restart:*)",
+      "Bash(docker exec:*)",
+      "Bash(wc:*)",
+      "Bash(cd \"C:/Users/Jiraw/OneDrive/Documents/qa-localization-tool\" && npx dotenv-cli -e .env.local -- npm run db:migrate 2>&1)",
+      "Bash(cd \"C:/Users/Jiraw/OneDrive/Documents/qa-localization-tool\" && DATABASE_URL=\"postgresql://postgres:postgres@localhost:54322/postgres\" npx drizzle-kit migrate 2>&1)",
+      "Bash(GOLDEN_CORPUS_PATH=docs/test-data/Golden-Test-Mona npx vitest:*)",
+      "Bash(do echo:*)",
+      "mcp__claude_ai_Context7__resolve-library-id",
+      "mcp__claude_ai_Context7__query-docs",
+      "Bash(mv:*)"
     ]
   }
 }

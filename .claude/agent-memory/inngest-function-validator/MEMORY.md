@@ -1,12 +1,13 @@
 # Inngest Function Validator — Memory
 
-## Codebase State (as of Story 2.6, 2026-02-25)
+## Codebase State (as of Story 3.0, 2026-02-27)
 
 ### Inngest Infrastructure
 
 - Client: `src/lib/inngest/client.ts` — `new Inngest({ id: 'qa-localization-tool', schemas: new EventSchemas().fromRecord<Events>() })`
-- Route handler: `src/app/api/inngest/route.ts` — registers `processFilePipeline` + `processBatch`
+- Route handler: `src/app/api/inngest/route.ts` — registers `processFilePipeline` + `processBatch` + `batchComplete` + `recalculateScore`
 - Event types defined inline in `client.ts` (not separate file)
+- `recalculateScore` does NOT use `(inngest.createFunction as any)` cast — uses `inngest.createFunction(...)` directly (type-safe, no cast needed because it uses typed event name via `as const`)
 
 ### Registered Functions (Stories 2.6–3.0)
 
@@ -94,6 +95,19 @@ await Promise.all(fileIds.map((fileId) => step.sendEvent({ name: 'pipeline.proce
 - `scoreFile({ fileId, projectId, tenantId, userId })` — no `layerFilter` = all layers
 - processFile.ts by contrast passes `layerFilter: 'L1'` (Step 2 in pipeline, only L1 done at that point)
 - This asymmetry is correct and intentional — NOT a violation
+
+**recalculateScore step ID pattern:**
+
+- `recalculate-score-${fileId}` — deterministic, includes fileId for uniqueness
+- Only 1 step in the function — no collision risk
+
+**findingChangedSchema Zod validation in recalculateScore:**
+
+- Validates event data at handler entry using `safeParse`, throws `NonRetriableError` on failure
+- `triggeredBy` typed as `z.string().uuid()` — matches `FindingChangedEventData.triggeredBy: string`
+- `previousState` / `newState` typed as `z.string()` in Zod schema, but `FindingChangedEventData` uses `FindingStatus` union type
+- This is a MEDIUM mismatch: Zod accepts any string for state fields, but the canonical type is `FindingStatus`
+- Does NOT cause runtime bugs (event sender is responsible for valid values), but weakens validation
 
 **recalculateScore.ts test file: `createDrizzleMock` called without import:**
 

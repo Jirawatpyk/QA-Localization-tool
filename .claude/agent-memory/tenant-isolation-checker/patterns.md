@@ -102,3 +102,62 @@ For pure in-memory engine tests:
 2. Generate a fresh fileId per file in the loop (not shared across files).
 3. Mock writeAuditLog + glossaryCache — prevents accidental DB writes.
 4. processFile() has no DB — tenant fields on SegmentRecord are payload metadata only.
+
+## Story 3.1 — AI Cost Control, Throttling, Model Pinning (2026-02-27)
+
+**Audit date:** 2026-02-27
+**Result:** 0 Critical / 0 High / 0 Medium / 0 Low — SECURE (full pass, all 10 files)
+
+### New Table Confirmed Tenant-Scoped
+
+- `ai_usage_logs` — `tenantId uuid notNull FK(tenants)` confirmed in schema. SELECT queries
+  use `withTenant(aiUsageLogs.tenantId, tenantId)`. INSERT sets `tenantId: record.tenantId`
+  in values object. Correct pattern throughout.
+
+### New `projects` Columns Audited
+
+- `aiBudgetMonthlyUsd` (nullable numeric) — NULL = unlimited budget
+- `budgetAlertThresholdPct` (integer notNull default 80)
+- `l2PinnedModel` / `l3PinnedModel` (nullable varchar) — NULL = system default
+
+All SELECT/UPDATE queries on `projects` that touch these columns include `withTenant()`.
+
+### Key Patterns Confirmed
+
+**`checkProjectBudget(projectId, tenantId)`** — `tenantId` is a typed required parameter, always
+sourced from the authenticated session in calling Server Actions. The function is `server-only`.
+The two-query pattern (projects SELECT → aiUsageLogs SUM SELECT) applies `withTenant()` to both.
+
+**`logAIUsage(record)`** — INSERT-only. Sets `tenantId: record.tenantId` in values. Non-fatal
+DB failure pattern (catch + log). No WHERE clause needed on INSERT.
+
+**`getModelForLayerWithFallback(layer, projectId, tenantId)`** — projects SELECT includes
+`withTenant()`. NOTE: `runL2ForFile.ts` and `runL3ForFile.ts` currently call `getModelForLayer`
+(static fallback) from `@/lib/ai/client`, NOT `getModelForLayerWithFallback`. This means
+per-project model pinning is NOT yet applied at runtime. This is a feature gap, not a security
+gap — the static default is safe.
+
+**AI finding segment ID validation** — `runL2ForFile.ts` and `runL3ForFile.ts` both validate
+AI-returned segmentIds against the `segmentIdSet` built from the tenant-scoped DB query before
+inserting any finding. This prevents hallucinated cross-file or cross-tenant segment IDs from
+being stored.
+
+**AVAILABLE_MODELS allowlist in `updateModelPinning.action.ts`** — prevents arbitrary model
+ID injection into the `projects.l2PinnedModel` / `projects.l3PinnedModel` DB columns.
+Always validate model strings against this set before any DB write.
+
+**`checkTenantBudget()` stub** — makes zero DB calls; always returns `hasQuota: true`.
+Not a security concern. Legacy compat stub; callers should migrate to `checkProjectBudget()`.
+
+### Files Audited
+
+- `getFilesWordCount.action.ts` — segments SELECT: `withTenant()` + `inArray(fileIds)`. PASS.
+- `getProjectAiBudget.action.ts` — projects SELECT: `withTenant()`. aiUsageLogs SELECT: `withTenant()`. PASS.
+- `updateBudgetAlertThreshold.action.ts` — projects UPDATE: `withTenant()`. `.returning()` + `!updated` check. Audit log. PASS.
+- `updateModelPinning.action.ts` — allowlist guard + projects UPDATE: `withTenant()`. `.returning()` + `!updated`. Audit log. PASS.
+- `src/lib/ai/budget.ts` — checkProjectBudget: both queries use `withTenant()`. checkTenantBudget: zero DB. PASS.
+- `src/lib/ai/costs.ts` — INSERT only; `tenantId` set in values. Non-fatal error handling. PASS.
+- `src/lib/ai/providers.ts` — getModelForLayerWithFallback: projects SELECT uses `withTenant()`. PASS.
+- `runL2ForFile.ts` — CAS UPDATE, segments SELECT, findings SELECT, findings DELETE (in tx), findings INSERT (values), file UPDATE, rollback UPDATE: all use `withTenant()` or explicit tenantId. PASS.
+- `runL3ForFile.ts` — same 12-step pattern as runL2; all 7 DB ops confirmed. PASS.
+- `startProcessing.action.ts` — files SELECT: 3-way filter (`withTenant` + projectId + inArray). projects UPDATE: `withTenant()`. tenantId injected into Inngest payload. PASS.

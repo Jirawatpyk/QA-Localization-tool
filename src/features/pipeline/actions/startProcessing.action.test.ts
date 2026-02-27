@@ -26,7 +26,7 @@ const {
       Promise.resolve({
         hasQuota: true,
         remainingBudgetUsd: Infinity,
-        monthlyBudgetUsd: null,
+        monthlyBudgetUsd: null as number | null,
         usedBudgetUsd: 0,
       }),
     ),
@@ -472,10 +472,13 @@ describe('startProcessing', () => {
 
   // ── Story 3.1: Rate limit + budget guard (EXTEND) ──
 
-  it.skip('should return RATE_LIMITED when aiPipelineLimiter blocks user', async () => {
-    // Arrange: rate limit mock returns success=false
-    // NOTE: add vi.mock('@/lib/ratelimit', ...) at top of describe block when implementing
-    // mockAiPipelineLimit.mockResolvedValue({ success: false, limit: 5, remaining: 0, reset: Date.now() + 60_000 })
+  it('should return RATE_LIMITED when aiPipelineLimiter blocks user', async () => {
+    mockAiPipelineLimit.mockResolvedValue({
+      success: false,
+      limit: 5,
+      remaining: 0,
+      reset: Date.now() + 60_000,
+    })
 
     const { startProcessing } = await import('./startProcessing.action')
     const result = await startProcessing({
@@ -489,12 +492,10 @@ describe('startProcessing', () => {
     expect(result.code).toBe('RATE_LIMITED')
     expect(result.error).toContain('Rate limit exceeded')
     expect(mockInngestSend).not.toHaveBeenCalled()
-    // RED: aiPipelineLimiter not yet wired into startProcessing
   })
 
-  it.skip('should proceed when aiPipelineLimiter allows user', async () => {
-    // Arrange: rate limit allows, files are valid
-    // mockAiPipelineLimit.mockResolvedValue({ success: true, limit: 5, remaining: 4, reset: 0 })
+  it('should proceed when aiPipelineLimiter allows user', async () => {
+    mockAiPipelineLimit.mockResolvedValue({ success: true, limit: 5, remaining: 4, reset: 0 })
     const validFiles = [
       {
         id: VALID_FILE_ID_1,
@@ -514,13 +515,26 @@ describe('startProcessing', () => {
 
     expect(result.success).toBe(true)
     expect(mockInngestSend).toHaveBeenCalled()
-    // RED: rate limit check not yet wired
   })
 
-  it.skip('should return BUDGET_EXCEEDED when checkProjectBudget returns hasQuota=false', async () => {
-    // Arrange: budget exhausted
-    // mockCheckProjectBudget.mockResolvedValue({ hasQuota: false, usedBudgetUsd: 100, monthlyBudgetUsd: 100, remainingBudgetUsd: 0 })
-    // mockAiPipelineLimit.mockResolvedValue({ success: true, limit: 5, remaining: 4, reset: 0 })
+  it('should return BUDGET_EXCEEDED when checkProjectBudget returns hasQuota=false', async () => {
+    mockCheckProjectBudget.mockResolvedValue({
+      hasQuota: false,
+      usedBudgetUsd: 100,
+      monthlyBudgetUsd: 100,
+      remainingBudgetUsd: 0,
+    })
+    mockAiPipelineLimit.mockResolvedValue({ success: true, limit: 5, remaining: 4, reset: 0 })
+
+    const validFiles = [
+      {
+        id: VALID_FILE_ID_1,
+        projectId: VALID_PROJECT_ID,
+        tenantId: mockUser.tenantId,
+        status: 'parsed',
+      },
+    ]
+    dbState.returnValues = [validFiles]
 
     const { startProcessing } = await import('./startProcessing.action')
     const result = await startProcessing({
@@ -534,13 +548,16 @@ describe('startProcessing', () => {
     expect(result.code).toBe('BUDGET_EXCEEDED')
     expect(result.error).toContain('budget exhausted')
     expect(mockInngestSend).not.toHaveBeenCalled()
-    // RED: budget guard not yet wired into startProcessing
   })
 
-  it.skip('should proceed when checkProjectBudget returns hasQuota=true', async () => {
-    // Arrange: budget available
-    // mockCheckProjectBudget.mockResolvedValue({ hasQuota: true, usedBudgetUsd: 50, monthlyBudgetUsd: 100, remainingBudgetUsd: 50 })
-    // mockAiPipelineLimit.mockResolvedValue({ success: true, limit: 5, remaining: 4, reset: 0 })
+  it('should proceed when checkProjectBudget returns hasQuota=true', async () => {
+    mockCheckProjectBudget.mockResolvedValue({
+      hasQuota: true,
+      usedBudgetUsd: 50,
+      monthlyBudgetUsd: 100,
+      remainingBudgetUsd: 50,
+    })
+    mockAiPipelineLimit.mockResolvedValue({ success: true, limit: 5, remaining: 4, reset: 0 })
     const validFiles = [
       {
         id: VALID_FILE_ID_1,
@@ -559,12 +576,10 @@ describe('startProcessing', () => {
     })
 
     expect(result.success).toBe(true)
-    // RED: budget check not yet wired
   })
 
-  it.skip('should check rate limit BEFORE budget check (rate limit is first guard)', async () => {
-    // Arrange: rate limit blocks — budget check should NOT be called
-    // mockAiPipelineLimit.mockResolvedValue({ success: false, limit: 5, remaining: 0, reset: 0 })
+  it('should check rate limit BEFORE budget check (rate limit is first guard)', async () => {
+    mockAiPipelineLimit.mockResolvedValue({ success: false, limit: 5, remaining: 0, reset: 0 })
 
     const { startProcessing } = await import('./startProcessing.action')
     await startProcessing({
@@ -574,14 +589,17 @@ describe('startProcessing', () => {
     })
 
     // Budget check should be skipped when rate limited
-    // expect(mockCheckProjectBudget).not.toHaveBeenCalled()
-    // RED: guard ordering not yet implemented
+    expect(mockCheckProjectBudget).not.toHaveBeenCalled()
   })
 
-  it.skip('should pass projectId and tenantId to checkProjectBudget', async () => {
-    // Arrange: both guards allow
-    // mockAiPipelineLimit.mockResolvedValue({ success: true, limit: 5, remaining: 4, reset: 0 })
-    // mockCheckProjectBudget.mockResolvedValue({ hasQuota: true, usedBudgetUsd: 0, monthlyBudgetUsd: 100, remainingBudgetUsd: 100 })
+  it('should pass projectId and tenantId to checkProjectBudget', async () => {
+    mockAiPipelineLimit.mockResolvedValue({ success: true, limit: 5, remaining: 4, reset: 0 })
+    mockCheckProjectBudget.mockResolvedValue({
+      hasQuota: true,
+      usedBudgetUsd: 0,
+      monthlyBudgetUsd: 100,
+      remainingBudgetUsd: 100,
+    })
     const validFiles = [
       {
         id: VALID_FILE_ID_1,
@@ -599,7 +617,6 @@ describe('startProcessing', () => {
       mode: 'economy',
     })
 
-    // expect(mockCheckProjectBudget).toHaveBeenCalledWith(VALID_PROJECT_ID, mockUser.tenantId)
-    // RED: checkProjectBudget call signature not yet verified
+    expect(mockCheckProjectBudget).toHaveBeenCalledWith(VALID_PROJECT_ID, mockUser.tenantId)
   })
 })

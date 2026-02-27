@@ -99,27 +99,62 @@ describe('updateBudgetAlertThreshold', () => {
     // RED: role-based access control
   })
 
-  it('should return INVALID_INPUT when threshold is outside 1-100 range', async () => {
+  it('should return INVALID_INPUT when threshold is 0 (below valid range)', async () => {
     const { updateBudgetAlertThreshold } = await import('./updateBudgetAlertThreshold.action')
 
-    // Test: 0 is invalid
-    const resultZero = await updateBudgetAlertThreshold({
+    const result = await updateBudgetAlertThreshold({
       projectId: VALID_PROJECT_ID,
       thresholdPct: 0,
     })
-    expect(resultZero.success).toBe(false)
-    if (resultZero.success) return
-    expect(resultZero.code).toBe('INVALID_INPUT')
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INVALID_INPUT')
+  })
 
-    // Test: 101 is invalid
-    const resultOver = await updateBudgetAlertThreshold({
+  it('should return INVALID_INPUT when threshold is 101 (above valid range)', async () => {
+    const { updateBudgetAlertThreshold } = await import('./updateBudgetAlertThreshold.action')
+
+    const result = await updateBudgetAlertThreshold({
       projectId: VALID_PROJECT_ID,
       thresholdPct: 101,
     })
-    expect(resultOver.success).toBe(false)
-    if (resultOver.success) return
-    expect(resultOver.code).toBe('INVALID_INPUT')
-    // RED: range validation 1-100
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INVALID_INPUT')
+  })
+
+  it('should accept threshold at boundary value 1 (minimum valid)', async () => {
+    dbState.returnValues = [[{ id: VALID_PROJECT_ID, budgetAlertThresholdPct: 1 }]]
+
+    const { updateBudgetAlertThreshold } = await import('./updateBudgetAlertThreshold.action')
+    const result = await updateBudgetAlertThreshold({
+      projectId: VALID_PROJECT_ID,
+      thresholdPct: 1,
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('should accept threshold at boundary value 100 (maximum valid)', async () => {
+    dbState.returnValues = [[{ id: VALID_PROJECT_ID, budgetAlertThresholdPct: 100 }]]
+
+    const { updateBudgetAlertThreshold } = await import('./updateBudgetAlertThreshold.action')
+    const result = await updateBudgetAlertThreshold({
+      projectId: VALID_PROJECT_ID,
+      thresholdPct: 100,
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('should return INVALID_INPUT for non-integer threshold (50.5)', async () => {
+    const { updateBudgetAlertThreshold } = await import('./updateBudgetAlertThreshold.action')
+
+    const result = await updateBudgetAlertThreshold({
+      projectId: VALID_PROJECT_ID,
+      thresholdPct: 50.5,
+    })
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INVALID_INPUT')
   })
 
   // ── P1: Audit + isolation ──

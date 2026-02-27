@@ -59,10 +59,10 @@ export async function checkProjectBudget(
     }
   }
 
-  // Step 3: Query current month's total spend
+  // Step 3: Query current month's total spend (UTC to avoid timezone drift)
   const monthStart = new Date()
-  monthStart.setDate(1)
-  monthStart.setHours(0, 0, 0, 0)
+  monthStart.setUTCDate(1)
+  monthStart.setUTCHours(0, 0, 0, 0)
 
   const [usage] = await db
     .select({

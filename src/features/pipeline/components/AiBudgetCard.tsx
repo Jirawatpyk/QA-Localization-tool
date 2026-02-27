@@ -1,15 +1,16 @@
-'use client'
-
 type AiBudgetCardProps = {
   usedBudgetUsd: number
   monthlyBudgetUsd: number | null // null = unlimited
   budgetAlertThresholdPct?: number // default 80
 }
 
-function getProgressColor(pct: number, thresholdPct: number): { fill: string; marker: string } {
-  if (pct >= 100) return { fill: 'bg-red-500', marker: 'text-red-500' }
-  if (pct >= thresholdPct) return { fill: 'bg-yellow-500', marker: 'text-yellow-500' }
-  return { fill: 'bg-green-500', marker: 'text-green-500' }
+function getProgressColor(
+  pct: number,
+  thresholdPct: number,
+): { fill: string; marker: string; status: string } {
+  if (pct >= 100) return { fill: 'bg-error', marker: 'text-error', status: 'exceeded' }
+  if (pct >= thresholdPct) return { fill: 'bg-warning', marker: 'text-warning', status: 'warning' }
+  return { fill: 'bg-success', marker: 'text-success', status: 'ok' }
 }
 
 export function AiBudgetCard({
@@ -31,7 +32,11 @@ export function AiBudgetCard({
 
   const pct =
     monthlyBudgetUsd > 0 ? Math.min(100, Math.round((usedBudgetUsd / monthlyBudgetUsd) * 100)) : 0
-  const { fill: fillColor, marker: markerColor } = getProgressColor(pct, budgetAlertThresholdPct)
+  const {
+    fill: fillColor,
+    marker: markerColor,
+    status,
+  } = getProgressColor(pct, budgetAlertThresholdPct)
   const isExceeded = usedBudgetUsd >= monthlyBudgetUsd
 
   return (
@@ -44,6 +49,7 @@ export function AiBudgetCard({
 
       <div
         data-testid="ai-budget-progress"
+        data-status={status}
         role="progressbar"
         aria-valuenow={pct}
         aria-valuemin={0}
@@ -54,7 +60,7 @@ export function AiBudgetCard({
       </div>
 
       {isExceeded && (
-        <div data-testid="ai-budget-status" className="mt-2 text-sm font-medium text-red-600">
+        <div data-testid="ai-budget-status" className="mt-2 text-sm font-medium text-error">
           Budget exceeded — AI processing paused
         </div>
       )}

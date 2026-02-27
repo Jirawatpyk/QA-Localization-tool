@@ -51,10 +51,11 @@ export function ProcessingModeDialog({
 
   const fileCount = fileIds.length
 
-  // Fetch word count when dialog opens
+  // Fetch word count when dialog opens (Guardrail #11: reset state on re-open)
   useEffect(() => {
     if (!open || fileIds.length === 0) return
 
+    setTotalWords(null)
     setIsLoadingWords(true)
     getFilesWordCount({ fileIds, projectId })
       .then((result) => {

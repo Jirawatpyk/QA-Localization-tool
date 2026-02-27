@@ -25,10 +25,9 @@ describe('AiBudgetCard', () => {
     render(<AiBudgetCard usedBudgetUsd={50} monthlyBudgetUsd={100} budgetAlertThresholdPct={80} />)
 
     const progressBar = screen.getByTestId('ai-budget-progress')
-    // 50% usage — below 80% threshold → green
+    // 50% usage — below 80% threshold → green (ok)
     expect(progressBar.getAttribute('aria-valuenow')).toBe('50')
-    expect(progressBar.className).toMatch(/green/)
-    // RED: AiBudgetCard.tsx not yet created
+    expect(progressBar.getAttribute('data-status')).toBe('ok')
   })
 
   it('should render yellow progress bar when usage equals alert threshold (80%)', async () => {
@@ -36,10 +35,9 @@ describe('AiBudgetCard', () => {
     render(<AiBudgetCard usedBudgetUsd={80} monthlyBudgetUsd={100} budgetAlertThresholdPct={80} />)
 
     const progressBar = screen.getByTestId('ai-budget-progress')
-    // 80% — at threshold → yellow
+    // 80% — at threshold → yellow (warning)
     expect(progressBar.getAttribute('aria-valuenow')).toBe('80')
-    expect(progressBar.className).toMatch(/yellow|orange/)
-    // RED: threshold color logic not yet implemented
+    expect(progressBar.getAttribute('data-status')).toBe('warning')
   })
 
   it('should render red progress bar when usage is at or above 100%', async () => {
@@ -49,8 +47,7 @@ describe('AiBudgetCard', () => {
     const progressBar = screen.getByTestId('ai-budget-progress')
     // 100% — exceeded → red
     expect(progressBar.getAttribute('aria-valuenow')).toBe('100')
-    expect(progressBar.className).toMatch(/red/)
-    // RED: exceeded color logic not yet implemented
+    expect(progressBar.getAttribute('data-status')).toBe('exceeded')
   })
 
   it("should display spend text: '$X.XX / $Y.YY used'", async () => {
@@ -92,10 +89,8 @@ describe('AiBudgetCard', () => {
     render(<AiBudgetCard usedBudgetUsd={79} monthlyBudgetUsd={100} budgetAlertThresholdPct={80} />)
 
     const progressBar = screen.getByTestId('ai-budget-progress')
-    // 79% — below threshold → green
-    expect(progressBar.className).toMatch(/green/)
-    expect(progressBar.className).not.toMatch(/yellow|orange|red/)
-    // RED: boundary — 79% must be green
+    // 79% — below threshold → ok (green)
+    expect(progressBar.getAttribute('data-status')).toBe('ok')
   })
 
   it('should render yellow at exactly 80% usage (at threshold)', async () => {
@@ -103,9 +98,7 @@ describe('AiBudgetCard', () => {
     render(<AiBudgetCard usedBudgetUsd={80} monthlyBudgetUsd={100} budgetAlertThresholdPct={80} />)
 
     const progressBar = screen.getByTestId('ai-budget-progress')
-    // 80% — exactly at threshold → yellow (not green)
-    expect(progressBar.className).toMatch(/yellow|orange/)
-    expect(progressBar.className).not.toMatch(/green/)
-    // RED: boundary — 80% must flip to yellow
+    // 80% — exactly at threshold → warning (yellow)
+    expect(progressBar.getAttribute('data-status')).toBe('warning')
   })
 })

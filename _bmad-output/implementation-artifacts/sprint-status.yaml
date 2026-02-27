@@ -84,7 +84,13 @@ development_status:
   # ============================================================
   epic-3: in-progress
   3-0-score-review-infrastructure: done
-  3-1-ai-cost-control-throttling-model-pinning: backlog
+  # Story 3.0.5: UX Foundation Gap Fix — ScoreBadge variants, Breadcrumb, severity badge color
+  # Dependencies: Story 3.0 (done). Blocks: Story 3.2c
+  3-0-5-ux-foundation-gap-fix: ready-for-dev
+  3-1-ai-cost-control-throttling-model-pinning: done
+  # Story 3.1a: Split from 3.1 — full AI usage dashboard (reporting UI)
+  # Dependencies: Story 3.1 (ai_usage_logs DB persistence)
+  3-1a-ai-usage-dashboard-reporting: ready-for-dev
   3-2a-ai-provider-integration-structured-output: backlog
   3-2b-l2-batch-processing-pipeline-extension: backlog
   3-2c-l2-results-display-score-update: backlog

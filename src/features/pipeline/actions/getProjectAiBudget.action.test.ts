@@ -4,10 +4,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('server-only', () => ({}))
 
 // ── Hoisted mocks ──
-const { mockRequireRole, dbState, dbMockModule } = vi.hoisted(() => {
+const { mockRequireRole, mockCheckProjectBudget, dbState, dbMockModule } = vi.hoisted(() => {
   const { dbState, dbMockModule } = createDrizzleMock()
   return {
     mockRequireRole: vi.fn(),
+    mockCheckProjectBudget: vi.fn((..._args: unknown[]) =>
+      Promise.resolve({
+        hasQuota: true,
+        remainingBudgetUsd: Infinity,
+        monthlyBudgetUsd: null as number | null,
+        usedBudgetUsd: 0,
+      }),
+    ),
     dbState,
     dbMockModule,
   }
@@ -15,6 +23,10 @@ const { mockRequireRole, dbState, dbMockModule } = vi.hoisted(() => {
 
 vi.mock('@/lib/auth/requireRole', () => ({
   requireRole: (...args: unknown[]) => mockRequireRole(...args),
+}))
+
+vi.mock('@/lib/ai/budget', () => ({
+  checkProjectBudget: (...args: unknown[]) => mockCheckProjectBudget(...args),
 }))
 
 vi.mock('@/db/client', () => dbMockModule)
@@ -26,25 +38,13 @@ vi.mock('@/db/helpers/withTenant', () => ({
 vi.mock('drizzle-orm', () => ({
   and: vi.fn((...args: unknown[]) => args),
   eq: vi.fn((...args: unknown[]) => args),
-  gte: vi.fn((...args: unknown[]) => args),
-  sql: vi.fn((..._args: unknown[]) => 'sql-expr'),
 }))
 
 vi.mock('@/db/schema/projects', () => ({
   projects: {
     id: 'id',
     tenantId: 'tenant_id',
-    aiBudgetMonthlyUsd: 'ai_budget_monthly_usd',
     budgetAlertThresholdPct: 'budget_alert_threshold_pct',
-  },
-}))
-
-vi.mock('@/db/schema/aiUsageLogs', () => ({
-  aiUsageLogs: {
-    tenantId: 'tenant_id',
-    projectId: 'project_id',
-    estimatedCost: 'estimated_cost',
-    createdAt: 'created_at',
   },
 }))
 
@@ -70,17 +70,25 @@ describe('getProjectAiBudget', () => {
     dbState.returnValues = []
     dbState.throwAtCallIndex = null
     mockRequireRole.mockResolvedValue(mockUser)
+    mockCheckProjectBudget.mockResolvedValue({
+      hasQuota: true,
+      remainingBudgetUsd: Infinity,
+      monthlyBudgetUsd: null,
+      usedBudgetUsd: 0,
+    })
   })
 
   // ── P0: Core behavior ──
 
   it('should return usedBudgetUsd and monthlyBudgetUsd for project', async () => {
-    // callIndex=0: projects SELECT → budget + alert threshold
-    // callIndex=1: ai_usage_logs SUM → current month usage
-    dbState.returnValues = [
-      [{ aiBudgetMonthlyUsd: '50.00', budgetAlertThresholdPct: 80 }],
-      [{ total: '12.40' }],
-    ]
+    // callIndex=0: projects SELECT → alert threshold only
+    dbState.returnValues = [[{ budgetAlertThresholdPct: 80 }]]
+    mockCheckProjectBudget.mockResolvedValue({
+      hasQuota: true,
+      remainingBudgetUsd: 37.6,
+      monthlyBudgetUsd: 50,
+      usedBudgetUsd: 12.4,
+    })
 
     const { getProjectAiBudget } = await import('./getProjectAiBudget.action')
     const result = await getProjectAiBudget({ projectId: VALID_PROJECT_ID })
@@ -90,12 +98,16 @@ describe('getProjectAiBudget', () => {
     expect(result.data.monthlyBudgetUsd).toBe(50)
     expect(result.data.usedBudgetUsd).toBeCloseTo(12.4)
     expect(result.data.budgetAlertThresholdPct).toBe(80)
-    // RED: getProjectAiBudget.action.ts not yet created
   })
 
   it('should return monthlyBudgetUsd=null when project has no budget set', async () => {
-    // Arrange: NULL budget = unlimited
-    dbState.returnValues = [[{ aiBudgetMonthlyUsd: null, budgetAlertThresholdPct: 80 }]]
+    dbState.returnValues = [[{ budgetAlertThresholdPct: 80 }]]
+    mockCheckProjectBudget.mockResolvedValue({
+      hasQuota: true,
+      remainingBudgetUsd: Infinity,
+      monthlyBudgetUsd: null,
+      usedBudgetUsd: 0,
+    })
 
     const { getProjectAiBudget } = await import('./getProjectAiBudget.action')
     const result = await getProjectAiBudget({ projectId: VALID_PROJECT_ID })
@@ -103,7 +115,6 @@ describe('getProjectAiBudget', () => {
     expect(result.success).toBe(true)
     if (!result.success) return
     expect(result.data.monthlyBudgetUsd).toBeNull()
-    // RED: unlimited budget = null monthlyBudgetUsd
   })
 
   it('should return FORBIDDEN when auth fails', async () => {
@@ -115,30 +126,48 @@ describe('getProjectAiBudget', () => {
     expect(result.success).toBe(false)
     if (result.success) return
     expect(result.code).toBe('FORBIDDEN')
-    // RED: auth check required
+  })
+
+  it('should return NOT_FOUND when project does not exist', async () => {
+    dbState.returnValues = [[]]
+
+    const { getProjectAiBudget } = await import('./getProjectAiBudget.action')
+    const result = await getProjectAiBudget({ projectId: VALID_PROJECT_ID })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('NOT_FOUND')
   })
 
   // ── P1: Guards ──
 
-  it('should use withTenant on ai_usage_logs query', async () => {
-    dbState.returnValues = [
-      [{ aiBudgetMonthlyUsd: '100.00', budgetAlertThresholdPct: 80 }],
-      [{ total: '0' }],
-    ]
+  it('should delegate to checkProjectBudget with projectId and tenantId', async () => {
+    dbState.returnValues = [[{ budgetAlertThresholdPct: 80 }]]
+
+    const { getProjectAiBudget } = await import('./getProjectAiBudget.action')
+    await getProjectAiBudget({ projectId: VALID_PROJECT_ID })
+
+    expect(mockCheckProjectBudget).toHaveBeenCalledWith(VALID_PROJECT_ID, mockUser.tenantId)
+  })
+
+  it('should use withTenant on projects query', async () => {
+    dbState.returnValues = [[{ budgetAlertThresholdPct: 80 }]]
 
     const { getProjectAiBudget } = await import('./getProjectAiBudget.action')
     await getProjectAiBudget({ projectId: VALID_PROJECT_ID })
 
     const { withTenant } = await import('@/db/helpers/withTenant')
     expect(withTenant).toHaveBeenCalledWith(expect.anything(), mockUser.tenantId)
-    // RED: withTenant guard (Guardrail #1)
   })
 
   it('should return usedBudgetUsd=0 when no usage records exist this month', async () => {
-    dbState.returnValues = [
-      [{ aiBudgetMonthlyUsd: '100.00', budgetAlertThresholdPct: 80 }],
-      [{ total: '0' }],
-    ]
+    dbState.returnValues = [[{ budgetAlertThresholdPct: 80 }]]
+    mockCheckProjectBudget.mockResolvedValue({
+      hasQuota: true,
+      remainingBudgetUsd: 100,
+      monthlyBudgetUsd: 100,
+      usedBudgetUsd: 0,
+    })
 
     const { getProjectAiBudget } = await import('./getProjectAiBudget.action')
     const result = await getProjectAiBudget({ projectId: VALID_PROJECT_ID })
@@ -146,6 +175,17 @@ describe('getProjectAiBudget', () => {
     expect(result.success).toBe(true)
     if (!result.success) return
     expect(result.data.usedBudgetUsd).toBe(0)
-    // RED: zero usage boundary — COALESCE handling
+  })
+
+  it('should return INTERNAL_ERROR when checkProjectBudget throws', async () => {
+    dbState.returnValues = [[{ budgetAlertThresholdPct: 80 }]]
+    mockCheckProjectBudget.mockRejectedValue(new Error('DB connection failed'))
+
+    const { getProjectAiBudget } = await import('./getProjectAiBudget.action')
+    const result = await getProjectAiBudget({ projectId: VALID_PROJECT_ID })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INTERNAL_ERROR')
   })
 })

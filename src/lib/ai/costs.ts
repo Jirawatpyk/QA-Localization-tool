@@ -26,7 +26,8 @@ export function estimateCost(model: string, layer: AILayer, usage: LanguageModel
  * Derive provider name from model ID.
  */
 function deriveProvider(model: string): string {
-  if (model.startsWith('gpt-')) return 'openai'
+  if (model.startsWith('gpt-') || model.startsWith('o1-') || model.startsWith('o3-'))
+    return 'openai'
   if (model.startsWith('claude-')) return 'anthropic'
   if (model.startsWith('gemini-')) return 'google'
   return 'unknown'

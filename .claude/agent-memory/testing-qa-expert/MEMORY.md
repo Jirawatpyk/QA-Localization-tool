@@ -10,8 +10,18 @@
 - Shared factories/mocks: `src/test/factories.ts`, `src/test/drizzleMock.ts` (canonical Drizzle mock factory)
 - RLS helpers: `src/db/__tests__/rls/helpers.ts`
 
+### ATDD RED Phase — Dynamic Import + Non-existent Module (2026-02-27)
+
+When `it.skip()` contains `await import('./module')` and the module does NOT exist yet,
+Vite fails at TRANSFORM time (not runtime). Even `vi.mock('./module', ...)` does NOT prevent
+the transform-time error. Fix: create a stub `.ts` file at the path with minimal exports.
+Stub approach is preferred over workaround mocks — establishes API contract early.
+Example: `src/lib/ai/providers.ts` stub created during Story 3.1 ATDD phase.
+
 ### Story CR Review History (most recent first)
 
+- **3.1 R1** → `story-3.1-cr-round1.md` — 0C · 3H · 5M · 4L (103 tests; 10 P0 skips; H1: skip stubs target wrong mock (mockCheckTenantBudget vs mockCheckProjectBudget); H2: tautological expect(true).toBe(true) placeholder; H3: commented-out mock setup in startProcessing skips)
+- **3.0 R2** → `story-3.0-cr-round2.md` — 0C · 2H · 4M · 3L (73 tests green; tautological BV tests, missing step.run assertion, rounding test asserts non-existent behavior)
 - **2.9 R1** → `story-2.9-cr-round1.md` — 0C · 3H · 5M · 4L (16 unit tests all passing; 15 integration tests all passing; stale comment + weak assertions + untested branches)
 - **2.7 R4** → `story-2.7-cr-round4.md` — 0C · 3H · 4M · 2L (8 of 12 R3 gaps fixed; 4 remain + 2 new)
 - **2.7 R3** → `story-2.7-cr-round3.md` — 2C · 3H · 6M · 3L (8 of 16 R2 gaps fixed; 8 remain)

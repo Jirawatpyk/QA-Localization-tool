@@ -23,10 +23,14 @@ const {
   modules,
   dbState,
   dbMockModule,
+  mockAiL2Limit,
 } = vi.hoisted(() => {
   const { dbState, dbMockModule } = createDrizzleMock()
   const { mocks, modules } = createAIMock({ layer: 'L2' })
-  return { mocks, modules, dbState, dbMockModule }
+  const mockAiL2Limit = vi.fn((..._args: unknown[]) =>
+    Promise.resolve({ success: true, limit: 100, remaining: 99, reset: 0 }),
+  )
+  return { mocks, modules, dbState, dbMockModule, mockAiL2Limit }
 })
 
 // ── Module mocks ──
@@ -43,7 +47,7 @@ vi.mock('@/lib/logger', () => modules.logger)
 vi.mock('@/db/client', () => dbMockModule)
 
 vi.mock('@/lib/ratelimit', () => ({
-  aiL2ProjectLimiter: { limit: vi.fn((..._args: unknown[]) => Promise.resolve({ success: true })) },
+  aiL2ProjectLimiter: { limit: (...args: unknown[]) => mockAiL2Limit(...args) },
 }))
 
 vi.mock('@/db/helpers/withTenant', () => ({
@@ -108,6 +112,7 @@ describe('runL2ForFile', () => {
     mockGenerateText.mockResolvedValue(buildL2Response())
     mockCheckTenantBudget.mockResolvedValue(BUDGET_HAS_QUOTA)
     mockCheckProjectBudget.mockResolvedValue(BUDGET_HAS_QUOTA)
+    mockAiL2Limit.mockResolvedValue({ success: true, limit: 100, remaining: 99, reset: 0 })
     mockClassifyAIError.mockReturnValue('unknown')
     mockWriteAuditLog.mockResolvedValue(undefined)
     mockAggregateUsage.mockReturnValue({
@@ -461,40 +466,9 @@ describe('runL2ForFile', () => {
   })
 
   // ── Story 3.1: Budget guard + per-project rate limit (EXTEND) ──
+  // NOTE: Redundant stubs deleted (budget exhausted → line 176, happy path → line 126)
 
-  it.skip('should throw NonRetriableError when checkProjectBudget returns hasQuota=false', async () => {
-    // Arrange: budget exhausted
-    mockCheckTenantBudget.mockResolvedValue({
-      hasQuota: false,
-      remainingBudgetUsd: 0,
-      monthlyBudgetUsd: 100,
-      usedBudgetUsd: 100,
-    })
-
-    const { runL2ForFile } = await import('./runL2ForFile')
-
-    await expect(
-      runL2ForFile({
-        fileId: VALID_FILE_ID,
-        projectId: VALID_PROJECT_ID,
-        tenantId: VALID_TENANT_ID,
-      }),
-    ).rejects.toThrow('AI quota exhausted')
-
-    // AI API should NOT be called when budget exhausted
-    expect(mockGenerateText).not.toHaveBeenCalled()
-    // RED: checkProjectBudget (USD-based) not yet wired into runL2ForFile
-    // NOTE: when implementing, update checkTenantBudget → checkProjectBudget call signature
-  })
-
-  it.skip('should call checkProjectBudget before making AI API call', async () => {
-    // Arrange: budget available, happy path
-    mockCheckTenantBudget.mockResolvedValue({
-      hasQuota: true,
-      remainingBudgetUsd: 50,
-      monthlyBudgetUsd: 100,
-      usedBudgetUsd: 50,
-    })
+  it('should call checkProjectBudget before making AI API call', async () => {
     dbState.returnValues = [[mockFile], [buildSegmentRow()], [], [], [], []]
 
     const { runL2ForFile } = await import('./runL2ForFile')
@@ -505,43 +479,32 @@ describe('runL2ForFile', () => {
     })
 
     // Budget check called BEFORE generateText
-    const budgetCallOrder = mockCheckTenantBudget.mock.invocationCallOrder[0] ?? 0
+    const budgetCallOrder = mockCheckProjectBudget.mock.invocationCallOrder[0] ?? 0
     const generateCallOrder = mockGenerateText.mock.invocationCallOrder[0] ?? Infinity
     expect(budgetCallOrder).toBeLessThan(generateCallOrder)
-    // RED: call order not yet enforced
   })
 
-  it.skip('should check aiL2ProjectLimiter before processing each file', async () => {
-    // NOTE: when implementing, add vi.mock('@/lib/ratelimit') at top of file
-    // mockAiL2Limit.mockResolvedValue({ success: false, limit: 100, remaining: 0, reset: 0 })
-
-    // For now, verify the structural intent:
-    // When L2 project rate limit blocks, runL2ForFile should throw NonRetriableError
-    // expect(mockAiL2Limit).toHaveBeenCalledWith(VALID_PROJECT_ID)
-    expect(true).toBe(true) // placeholder — implement when wiring rate limit
-    // RED: aiL2ProjectLimiter not yet wired into runL2ForFile
-  })
-
-  it.skip('should proceed normally when both budget and rate limit allow', async () => {
-    mockCheckTenantBudget.mockResolvedValue({
-      hasQuota: true,
-      remainingBudgetUsd: 80,
-      monthlyBudgetUsd: 100,
-      usedBudgetUsd: 20,
+  it('should throw retriable error when aiL2ProjectLimiter blocks', async () => {
+    mockAiL2Limit.mockResolvedValue({
+      success: false,
+      limit: 100,
+      remaining: 0,
+      reset: Date.now() + 3600_000,
     })
-    // mockAiL2Limit.mockResolvedValue({ success: true, limit: 100, remaining: 99, reset: 0 })
-    dbState.returnValues = [[mockFile], [buildSegmentRow()], [], [], [], []]
+    dbState.returnValues = [[mockFile]]
 
     const { runL2ForFile } = await import('./runL2ForFile')
-    const result = await runL2ForFile({
-      fileId: VALID_FILE_ID,
-      projectId: VALID_PROJECT_ID,
-      tenantId: VALID_TENANT_ID,
-    })
 
-    // Happy path: both guards pass → AI call proceeds
-    expect(mockGenerateText).toHaveBeenCalled()
-    expect(result.findingCount).toBeGreaterThanOrEqual(0)
-    // RED: integrated guard flow not yet implemented
+    // Rate limit → retriable Error (NOT NonRetriableError — Inngest retries)
+    await expect(
+      runL2ForFile({
+        fileId: VALID_FILE_ID,
+        projectId: VALID_PROJECT_ID,
+        tenantId: VALID_TENANT_ID,
+      }),
+    ).rejects.toThrow(/queue full/)
+
+    // AI should NOT be called when rate limited
+    expect(mockGenerateText).not.toHaveBeenCalled()
   })
 })
