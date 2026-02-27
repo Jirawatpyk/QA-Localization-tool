@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 const NAV_ITEMS = [
   { label: 'User Management', href: '/admin', testId: 'admin-tab-users' },
   { label: 'Taxonomy Mapping', href: '/admin/taxonomy', testId: 'admin-tab-taxonomy' },
+  { label: 'AI Usage', href: '/admin/ai-usage', testId: 'admin-tab-ai-usage' },
 ] as const
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
