@@ -1,15 +1,19 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('sonner', () => ({
-  toast: { error: vi.fn(), success: vi.fn() },
-}))
-
 // ── Test data ──
 
 const ZERO_SUMMARY = {
   totalCostUsd: 0,
   filesProcessed: 0,
+  avgCostPerFileUsd: 0,
+  projectedMonthCostUsd: null,
+}
+
+// filesProcessed=1 but $0 cost — does NOT trigger empty state (only both=0 does)
+const ZERO_COST_SUMMARY = {
+  totalCostUsd: 0,
+  filesProcessed: 1,
   avgCostPerFileUsd: 0,
   projectedMonthCostUsd: null,
 }
@@ -38,9 +42,9 @@ describe('AiUsageSummaryCards', () => {
     expect(screen.getByTestId('ai-usage-projected-cost')).toBeTruthy()
   })
 
-  it('should display $0.00 for all cost cards when summary has zero values', async () => {
+  it('should display $0.00 for cost cards when totalCostUsd is 0 but files exist', async () => {
     const { AiUsageSummaryCards } = await import('./AiUsageSummaryCards')
-    render(<AiUsageSummaryCards summary={ZERO_SUMMARY} />)
+    render(<AiUsageSummaryCards summary={ZERO_COST_SUMMARY} />)
 
     const totalCostCard = screen.getByTestId('ai-usage-total-cost')
     expect(totalCostCard.textContent).toContain('0.00')
@@ -76,7 +80,7 @@ describe('AiUsageSummaryCards', () => {
 
   it('should show em-dash ("—") in projected cost card when projectedMonthCostUsd is null', async () => {
     const { AiUsageSummaryCards } = await import('./AiUsageSummaryCards')
-    render(<AiUsageSummaryCards summary={ZERO_SUMMARY} />)
+    render(<AiUsageSummaryCards summary={ZERO_COST_SUMMARY} />)
 
     const projectedCard = screen.getByTestId('ai-usage-projected-cost')
     // null means less than 5 days elapsed — show "—" placeholder
@@ -92,5 +96,52 @@ describe('AiUsageSummaryCards', () => {
     const projectedCard = screen.getByTestId('ai-usage-projected-cost')
     // projectedMonthCostUsd=25.75 → should display $25.75
     expect(projectedCard.textContent).toContain('25.75')
+  })
+
+  // ── Story 3.1b — AC1: Empty State + Label Corrections ──
+
+  it('should show empty-state message when filesProcessed===0 AND totalCostUsd===0', async () => {
+    const { AiUsageSummaryCards } = await import('./AiUsageSummaryCards')
+    render(<AiUsageSummaryCards summary={ZERO_SUMMARY} />)
+
+    expect(screen.getByTestId('ai-usage-empty-state')).toBeTruthy()
+    expect(screen.getByText(/No AI processing recorded yet/)).toBeTruthy()
+  })
+
+  it('should NOT show empty-state message when data exists (totalCostUsd > 0)', async () => {
+    const { AiUsageSummaryCards } = await import('./AiUsageSummaryCards')
+    render(<AiUsageSummaryCards summary={FULL_SUMMARY} />)
+
+    expect(screen.queryByTestId('ai-usage-empty-state')).toBeNull()
+  })
+
+  it('should display card label "Total AI Cost (MTD)" instead of old label', async () => {
+    const { AiUsageSummaryCards } = await import('./AiUsageSummaryCards')
+    render(<AiUsageSummaryCards summary={FULL_SUMMARY} />)
+
+    expect(screen.getByText('Total AI Cost (MTD)')).toBeTruthy()
+  })
+
+  it('should display card label "Projected Month Cost" instead of old label', async () => {
+    const { AiUsageSummaryCards } = await import('./AiUsageSummaryCards')
+    render(<AiUsageSummaryCards summary={FULL_SUMMARY} />)
+
+    expect(screen.getByText('Projected Month Cost')).toBeTruthy()
+  })
+
+  // ── Story 3.1b — AC1-BV: Empty state boundary (AND condition) ──
+
+  it('should NOT show empty-state when filesProcessed===0 but totalCostUsd===0.01 (BV: only BOTH zero triggers)', async () => {
+    const { AiUsageSummaryCards } = await import('./AiUsageSummaryCards')
+    render(<AiUsageSummaryCards summary={{ ...ZERO_SUMMARY, totalCostUsd: 0.01 }} />)
+
+    expect(screen.queryByTestId('ai-usage-empty-state')).toBeNull()
+  })
+
+  it('should NOT show empty-state when filesProcessed===1 but totalCostUsd===0 (BV: only BOTH zero triggers)', async () => {
+    const { AiUsageSummaryCards } = await import('./AiUsageSummaryCards')
+    render(<AiUsageSummaryCards summary={ZERO_COST_SUMMARY} />)
+
+    expect(screen.queryByTestId('ai-usage-empty-state')).toBeNull()
   })
 })

@@ -2,10 +2,6 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('sonner', () => ({
-  toast: { error: vi.fn(), success: vi.fn() },
-}))
-
 vi.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   LineChart: ({ children, data }: { children: React.ReactNode; data?: unknown[] }) => (
@@ -94,5 +90,36 @@ describe('AiSpendTrendChart', () => {
     // Action guarantees 7 points even when all $0 — chart still renders
     expect(screen.getByTestId('recharts-line-chart')).toBeTruthy()
     expect(screen.queryByTestId('ai-trend-chart-empty')).toBeNull()
+  })
+
+  // ── Story 3.1b — AC4: aria-pressed on L2/L3 toggle ──
+
+  it('should have aria-pressed="false" on L2/L3 toggle by default (total view)', async () => {
+    const { AiSpendTrendChart } = await import('./AiSpendTrendChart')
+    render(<AiSpendTrendChart data={TREND_DATA_7D} />)
+
+    const toggle = screen.getByTestId('ai-trend-l2l3-toggle')
+    expect(toggle.getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('should have aria-pressed="true" on L2/L3 toggle after clicking (breakdown view)', async () => {
+    const user = userEvent.setup()
+    const { AiSpendTrendChart } = await import('./AiSpendTrendChart')
+    render(<AiSpendTrendChart data={TREND_DATA_7D} />)
+
+    const toggle = screen.getByTestId('ai-trend-l2l3-toggle')
+    await user.click(toggle)
+    expect(toggle.getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('should toggle aria-pressed back to "false" on second click (back to total view)', async () => {
+    const user = userEvent.setup()
+    const { AiSpendTrendChart } = await import('./AiSpendTrendChart')
+    render(<AiSpendTrendChart data={TREND_DATA_7D} />)
+
+    const toggle = screen.getByTestId('ai-trend-l2l3-toggle')
+    await user.click(toggle) // → breakdown (true)
+    await user.click(toggle) // → total (false)
+    expect(toggle.getAttribute('aria-pressed')).toBe('false')
   })
 })

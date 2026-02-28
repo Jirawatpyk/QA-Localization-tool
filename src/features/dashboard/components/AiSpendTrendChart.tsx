@@ -27,6 +27,7 @@ export function AiSpendTrendChart({ data }: AiSpendTrendChartProps) {
         <button
           data-testid="ai-trend-l2l3-toggle"
           type="button"
+          aria-pressed={showL2L3}
           onClick={() => setShowL2L3((prev) => !prev)}
           className="rounded border px-3 py-1 text-xs text-muted-foreground hover:bg-muted"
         >
@@ -40,7 +41,12 @@ export function AiSpendTrendChart({ data }: AiSpendTrendChartProps) {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" tick={{ fontSize: 11 }} />
             <YAxis tickFormatter={(v) => `$${v}`} width={60} />
-            <Tooltip formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(4)}`, '']} />
+            <Tooltip
+              formatter={(v: number | undefined, name: string | undefined) => [
+                `$${(v ?? 0).toFixed(4)}`,
+                name ?? '',
+              ]}
+            />
             <Legend />
             {showL2L3 ? (
               <>
@@ -65,7 +71,7 @@ export function AiSpendTrendChart({ data }: AiSpendTrendChartProps) {
               <Line
                 type="monotone"
                 dataKey="totalCostUsd"
-                name="Total Cost (USD)"
+                name="Total Cost"
                 stroke="var(--chart-1)"
                 dot={false}
                 strokeWidth={2}

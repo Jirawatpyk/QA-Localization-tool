@@ -7,10 +7,21 @@ interface AiUsageSummaryCardsProps {
 export function AiUsageSummaryCards({ summary }: AiUsageSummaryCardsProps) {
   const fmtCost = (n: number) => `$${n.toFixed(2)}`
 
+  if (summary.filesProcessed === 0 && summary.totalCostUsd === 0) {
+    return (
+      <div
+        data-testid="ai-usage-empty-state"
+        className="py-8 text-center text-sm text-muted-foreground"
+      >
+        No AI processing recorded yet. Process your first file to see usage data.
+      </div>
+    )
+  }
+
   return (
     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
       <div data-testid="ai-usage-total-cost" className="rounded-lg border bg-card p-4 shadow-sm">
-        <p className="text-sm text-muted-foreground">Total Cost (Month)</p>
+        <p className="text-sm text-muted-foreground">Total AI Cost (MTD)</p>
         <p className="mt-1 text-2xl font-semibold">{fmtCost(summary.totalCostUsd)}</p>
       </div>
 
@@ -31,7 +42,7 @@ export function AiUsageSummaryCards({ summary }: AiUsageSummaryCardsProps) {
         data-testid="ai-usage-projected-cost"
         className="rounded-lg border bg-card p-4 shadow-sm"
       >
-        <p className="text-sm text-muted-foreground">Projected Month</p>
+        <p className="text-sm text-muted-foreground">Projected Month Cost</p>
         <p className="mt-1 text-2xl font-semibold">
           {summary.projectedMonthCostUsd !== null ? fmtCost(summary.projectedMonthCostUsd) : '—'}
         </p>

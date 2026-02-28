@@ -1,10 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('sonner', () => ({
-  toast: { error: vi.fn(), success: vi.fn() },
-}))
-
 vi.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   BarChart: ({ children, data }: { children: React.ReactNode; data?: Array<{ name: string }> }) => (
@@ -17,7 +13,7 @@ vi.mock('recharts', () => ({
       {children}
     </div>
   ),
-  Bar: () => null,
+  Bar: ({ name }: { name?: string }) => <span data-testid="bar-name-prop">{name}</span>,
   XAxis: () => null,
   YAxis: () => null,
   CartesianGrid: () => null,
@@ -77,5 +73,56 @@ describe('AiSpendByModelChart', () => {
     // Provider/model label strings must appear in chart data (ATDD P1)
     expect(screen.getByText('openai/gpt-4o-mini')).toBeTruthy()
     expect(screen.getByText('anthropic/claude-sonnet-4-5-20250929')).toBeTruthy()
+  })
+
+  // ── Story 3.1b — AC3: Per-Model Breakdown Table ──
+
+  it('should render model breakdown table below chart when data is provided', async () => {
+    const { AiSpendByModelChart } = await import('./AiSpendByModelChart')
+    render(<AiSpendByModelChart data={MODEL_SPEND_DATA} />)
+
+    expect(screen.getByTestId('ai-model-breakdown-table')).toBeTruthy()
+  })
+
+  it('should render table with 5 columns: Model, Provider, Total Cost (USD), Input Tokens, Output Tokens', async () => {
+    const { AiSpendByModelChart } = await import('./AiSpendByModelChart')
+    render(<AiSpendByModelChart data={MODEL_SPEND_DATA} />)
+
+    const table = screen.getByTestId('ai-model-breakdown-table')
+    expect(table.textContent).toContain('Model')
+    expect(table.textContent).toContain('Provider')
+    expect(table.textContent).toContain('Total Cost (USD)')
+    expect(table.textContent).toContain('Input Tokens')
+    expect(table.textContent).toContain('Output Tokens')
+  })
+
+  it('should render one row per model entry with correct data values', async () => {
+    const { AiSpendByModelChart } = await import('./AiSpendByModelChart')
+    render(<AiSpendByModelChart data={MODEL_SPEND_DATA} />)
+
+    const row0 = screen.getByTestId('ai-model-breakdown-row-0')
+    const row1 = screen.getByTestId('ai-model-breakdown-row-1')
+    expect(row0.textContent).toContain('gpt-4o-mini')
+    expect(row0.textContent).toContain('openai')
+    expect(row1.textContent).toContain('claude-sonnet-4-5-20250929')
+    expect(row1.textContent).toContain('anthropic')
+  })
+
+  it('should NOT render breakdown table when data is empty (empty state shown instead)', async () => {
+    const { AiSpendByModelChart } = await import('./AiSpendByModelChart')
+    render(<AiSpendByModelChart data={[]} />)
+
+    expect(screen.queryByTestId('ai-model-breakdown-table')).toBeNull()
+    expect(screen.getByTestId('ai-model-chart-empty')).toBeTruthy()
+  })
+
+  // ── Story 3.1b — AC4: Tooltip label 'Cost (USD)' ──
+
+  it('should use "Cost (USD)" as Bar name prop — matches tooltip and legend label', async () => {
+    const { AiSpendByModelChart } = await import('./AiSpendByModelChart')
+    render(<AiSpendByModelChart data={MODEL_SPEND_DATA} />)
+
+    // Bar mock renders name prop as testid span — verifies name="Cost (USD)" in source
+    expect(screen.getByTestId('bar-name-prop').textContent).toBe('Cost (USD)')
   })
 })
