@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 
 // ── Test data ──
 
@@ -49,11 +49,27 @@ const UNLIMITED_PROJECT = {
   budgetAlertThresholdPct: 80,
 }
 
-describe('AiSpendByProjectTable', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
+// BV: exactly at 80% alert threshold → warning (not ok, not exceeded)
+const AT_THRESHOLD_PROJECT = {
+  projectId: 'b2c3d4e5-f6a7-4b2c-9d3e-4f5a6b7c8d9e',
+  projectName: 'At Threshold Project',
+  totalCostUsd: 80.0,
+  filesProcessed: 10,
+  monthlyBudgetUsd: 100,
+  budgetAlertThresholdPct: 80,
+}
 
+// BV: exactly at 100% → exceeded (not warning)
+const AT_EXCEEDED_PROJECT = {
+  projectId: 'd4e5f6a7-b8c9-4d4e-bf50-6a7b8c9d0e2f',
+  projectName: 'At Exceeded Project',
+  totalCostUsd: 100.0,
+  filesProcessed: 10,
+  monthlyBudgetUsd: 100,
+  budgetAlertThresholdPct: 80,
+}
+
+describe('AiSpendByProjectTable', () => {
   // ── P0: Core rendering ──
 
   it('should render empty state when projects array is empty', async () => {
@@ -118,6 +134,28 @@ describe('AiSpendByProjectTable', () => {
     expect(indicator.getAttribute('data-status')).toBe('exceeded')
   })
 
+  // ── Story 3.1b CR R2 — H1: BV at exactly 80% alert threshold ──
+
+  it('should show warning indicator at exactly 80% budget (BV: >= threshold, < 100%)', async () => {
+    const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
+    render(<AiSpendByProjectTable projects={[AT_THRESHOLD_PROJECT]} />)
+
+    // 80/100 = 80.0% — exactly at alertThresholdPct=80 → warning (not ok)
+    const indicator = screen.getByTestId(`ai-budget-indicator-${AT_THRESHOLD_PROJECT.projectId}`)
+    expect(indicator.getAttribute('data-status')).toBe('warning')
+  })
+
+  // ── Story 3.1b CR R2 — H2: BV at exactly 100% (exceeded boundary) ──
+
+  it('should show exceeded indicator at exactly 100% budget (BV: >= 100 → exceeded)', async () => {
+    const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
+    render(<AiSpendByProjectTable projects={[AT_EXCEEDED_PROJECT]} />)
+
+    // 100/100 = 100.0% — exactly at 100% boundary → exceeded (not warning)
+    const indicator = screen.getByTestId(`ai-budget-indicator-${AT_EXCEEDED_PROJECT.projectId}`)
+    expect(indicator.getAttribute('data-status')).toBe('exceeded')
+  })
+
   // ── Story 3.1b — AC2: Sortable Table + aria-sort ──
 
   it('should default to Cost (Month) descending sort order (highest first)', async () => {
@@ -169,6 +207,7 @@ describe('AiSpendByProjectTable', () => {
 
     const rows = screen.getAllByTestId(/^ai-project-row-/)
     expect(rows[0]?.textContent).toContain('Zero Spend Project')
+    expect(rows[1]?.textContent).toContain('Exceeded Project')
   })
 
   it('should show ↓ indicator on Cost header by default (descending); ↑ after first click', async () => {
@@ -251,6 +290,10 @@ describe('AiSpendByProjectTable', () => {
 
     // Sort must reset to default: cost descending
     expect(screen.getByTestId('ai-project-sort-cost').getAttribute('aria-sort')).toBe('descending')
+    // Row order must also reset: ACTIVE_PROJECT ($75.50) before ZERO_SPEND_PROJECT ($0.00)
+    const rows = screen.getAllByTestId(/^ai-project-row-/)
+    expect(rows[0]?.textContent).toContain('Active Project')
+    expect(rows[1]?.textContent).toContain('Zero Spend Project')
   })
 
   // ── Story 3.1b CR R1 — M4: Budget % sort toggle cycle (second click → descending) ──

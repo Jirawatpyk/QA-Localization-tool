@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 
 vi.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -42,10 +42,6 @@ const ZERO_TREND_DATA = Array.from({ length: 7 }, (_, i) => {
 })
 
 describe('AiSpendTrendChart', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   // ── P0: Core rendering ──
 
   it('should render LineChart container when data is provided', async () => {
@@ -121,5 +117,19 @@ describe('AiSpendTrendChart', () => {
     await user.click(toggle) // → breakdown (true)
     await user.click(toggle) // → total (false)
     expect(toggle.getAttribute('aria-pressed')).toBe('false')
+  })
+
+  // ── Story 3.1b CR R2 — M4: Toggle button label text change ──
+
+  it('should show "Show L2/L3 Breakdown" by default and "Show Total" after click', async () => {
+    const user = userEvent.setup()
+    const { AiSpendTrendChart } = await import('./AiSpendTrendChart')
+    render(<AiSpendTrendChart data={TREND_DATA_7D} />)
+
+    const toggle = screen.getByTestId('ai-trend-l2l3-toggle')
+    expect(toggle.textContent).toBe('Show L2/L3 Breakdown')
+
+    await user.click(toggle)
+    expect(toggle.textContent).toBe('Show Total')
   })
 })

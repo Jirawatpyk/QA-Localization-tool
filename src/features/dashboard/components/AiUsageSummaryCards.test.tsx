@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 
 // ── Test data ──
 
@@ -26,10 +26,6 @@ const FULL_SUMMARY = {
 }
 
 describe('AiUsageSummaryCards', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   // ── P0: Core rendering ──
 
   it('should render all 4 metric card sections', async () => {
@@ -67,7 +63,7 @@ describe('AiUsageSummaryCards', () => {
     expect(filesCard.textContent).toContain('42')
   })
 
-  it('should display avgCostPerFileUsd rounded to $0.3690', async () => {
+  it('should display avgCostPerFileUsd rounded to $0.37 (2 decimal places)', async () => {
     const { AiUsageSummaryCards } = await import('./AiUsageSummaryCards')
     render(<AiUsageSummaryCards summary={FULL_SUMMARY} />)
 

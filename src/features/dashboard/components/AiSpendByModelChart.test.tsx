@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 
 vi.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -41,10 +41,6 @@ const MODEL_SPEND_DATA = [
 ]
 
 describe('AiSpendByModelChart', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   // ── P0: Core rendering ──
 
   it('should render BarChart container when data is provided', async () => {
@@ -104,6 +100,9 @@ describe('AiSpendByModelChart', () => {
     const row1 = screen.getByTestId('ai-model-breakdown-row-1')
     expect(row0.textContent).toContain('gpt-4o-mini')
     expect(row0.textContent).toContain('openai')
+    expect(row0.textContent).toContain('$5.0000') // totalCostUsd.toFixed(4)
+    expect(row0.textContent).toContain('100,000') // inputTokens.toLocaleString()
+    expect(row0.textContent).toContain('20,000') // outputTokens.toLocaleString()
     expect(row1.textContent).toContain('claude-sonnet-4-5-20250929')
     expect(row1.textContent).toContain('anthropic')
   })

@@ -126,7 +126,7 @@ export function AiSpendByProjectTable({ projects }: AiSpendByProjectTableProps) 
                         className={`inline-block h-2 w-2 rounded-full ${STATUS_COLORS[status]}`}
                       />
                       <span>
-                        {budgetPct.toFixed(0)}% of ${p.monthlyBudgetUsd}
+                        {budgetPct.toFixed(0)}% of ${p.monthlyBudgetUsd.toFixed(2)}
                       </span>
                     </div>
                   ) : (

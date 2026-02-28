@@ -17,6 +17,8 @@ interface AiSpendByModelChartProps {
   data: AiModelSpend[]
 }
 
+const COST_LABEL = 'Cost (USD)' as const
+
 export function AiSpendByModelChart({ data }: AiSpendByModelChartProps) {
   if (data.length === 0) {
     return (
@@ -43,10 +45,10 @@ export function AiSpendByModelChart({ data }: AiSpendByModelChartProps) {
             <XAxis dataKey="name" tick={{ fontSize: 11 }} />
             <YAxis tickFormatter={(v) => `$${v}`} width={60} />
             <Tooltip
-              formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(4)}`, 'Cost (USD)']}
+              formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(4)}`, COST_LABEL]}
             />
             <Legend />
-            <Bar dataKey="cost" name="Cost (USD)" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="cost" name={COST_LABEL} fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
