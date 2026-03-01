@@ -9,18 +9,27 @@ import {
 } from '@/components/ui/table'
 import { ScoreBadge } from '@/features/batch/components/ScoreBadge'
 import type { RecentFileRow } from '@/features/dashboard/types'
+import type { DbFileStatus } from '@/types/pipeline'
 
 type RecentFilesTableProps = {
   files: RecentFileRow[]
 }
 
-function getStatusVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
+function getStatusVariant(
+  status: DbFileStatus,
+): 'default' | 'secondary' | 'destructive' | 'outline' {
   switch (status) {
     case 'parsed':
+    case 'l1_completed':
+    case 'l2_completed':
+    case 'l3_completed':
       return 'default'
     case 'parsing':
+    case 'l1_processing':
+    case 'l2_processing':
+    case 'l3_processing':
       return 'secondary'
-    case 'error':
+    case 'failed':
       return 'destructive'
     default:
       return 'outline'

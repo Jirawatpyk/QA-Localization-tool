@@ -12,6 +12,7 @@ import { scores } from '@/db/schema/scores'
 import type { DashboardData, RecentFileRow } from '@/features/dashboard/types'
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
 import type { ActionResult } from '@/types/actionResult'
+import type { DbFileStatus } from '@/types/pipeline'
 
 export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
   const currentUser = await getCurrentUser()
@@ -46,7 +47,7 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
     fileName: row.fileName,
     projectId: row.projectId,
     projectName: row.projectName,
-    status: row.status,
+    status: row.status as DbFileStatus,
     createdAt: row.createdAt.toISOString(),
     mqmScore: row.mqmScore ?? null,
     findingsCount: 0, // populated in future stories when findings are queryable

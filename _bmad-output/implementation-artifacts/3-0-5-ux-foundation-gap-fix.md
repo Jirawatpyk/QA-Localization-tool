@@ -424,15 +424,18 @@ function mockReducedMotion(matches: boolean) {
 | `src/components/layout/app-breadcrumb.test.tsx` | New: 7 tests covering static/dynamic/truncation/entity resolution |
 | `src/components/layout/actions/getBreadcrumbEntities.action.ts` | New: server action for entity name resolution (placeholder for DB queries) |
 | `src/components/layout/app-header.tsx` | Replaced static content with `<AppBreadcrumb />` |
-| ~~`src/components/ui/breadcrumb.tsx`~~ | Deleted in CR R1 — installed but never imported (dead code) |
+| `src/components/ui/breadcrumb.tsx` | Reinstalled via `npx shadcn@latest add breadcrumb` — used by AppBreadcrumb (post-CR refactor) |
 | `src/features/taxonomy/components/TaxonomyMappingTable.tsx` | Replaced Badge variant → span className with design tokens |
 | `src/features/taxonomy/components/TaxonomyMappingTable.test.tsx` | Activated 3 ATDD severity badge color tests |
-| `src/features/dashboard/components/RecentFilesTable.tsx` | Replaced raw span → ScoreBadge component, fixed import order |
-| `src/features/dashboard/components/RecentFilesTable.test.tsx` | Activated 2 ATDD ScoreBadge integration tests |
+| `src/features/dashboard/types.ts` | 3x `interface` → `type`, `status: string` → `status: DbFileStatus` (Guardrail #3) |
+| `src/features/dashboard/actions/getDashboardData.action.ts` | Added `as DbFileStatus` cast on `row.status` |
+| `src/features/dashboard/components/RecentFilesTable.tsx` | Replaced raw span → ScoreBadge, `getStatusVariant` param `string` → `DbFileStatus`, `'error'` → `'failed'`, added all pipeline statuses |
+| `src/features/dashboard/components/RecentFilesTable.test.tsx` | Activated 2 ATDD ScoreBadge tests + 2 new status variant tests (failed, processing) |
+| `src/types/pipeline.ts` | Added `DbFileStatus` union type (10 values matching Drizzle schema) |
 
 ### Test Results
 
-- **Story tests:** 55/55 passed (6 test files — breadcrumb.tsx deleted)
+- **Story tests:** 59/59 passed (7 test files)
 - **Lint:** 0 errors, 0 warnings
 - **Type-check:** passed
 - **Backward compat:** FileStatusCard (4), FileHistoryTable (5) all pass
@@ -447,22 +450,55 @@ function mockReducedMotion(matches: boolean) {
 
 ### Completion Notes
 
-#### CR R1 (2026-03-01) — 0C + 2H + 4M + 4L = 10 findings → ALL FIXED
+#### CR R1 (2026-03-01) — Full Finding Audit
 
-**Sub-agents ran:** code-quality-analyzer, testing-qa-expert (2 mandatory CR sub-agents)
+**Sub-agents ran:** code-quality-analyzer (0C/2H/5M/8L), testing-qa-expert (0C/1H/4M/3L)
 **Conditional scans:** rls-policy-reviewer skipped (no schema/migration), inngest-function-validator skipped (no pipeline files)
+**Raw total:** 24 findings → 10 FIXED, 4 DEFERRED, 10 WONTFIX/DUPLICATE
 
-| ID | Severity | File | Fix Summary |
-|----|----------|------|-------------|
-| H1 | HIGH | `ScoreBadge.tsx:103` | Removed `effectiveState!` non-null assertion → simplified `isMuted = effectiveState === null` (TS narrows automatically) + removed dead `isNull` var |
-| H2 | HIGH | `ScoreBadge.test.tsx:286-314` | AC4 animation tests now use `vi.useFakeTimers()` + post-300ms removal assertion — eliminates flakiness risk |
-| M1 | MEDIUM | `breadcrumb.tsx` | Deleted unused shadcn component (103 lines dead code, 0 importers) |
-| M2 | MEDIUM | `TaxonomyMappingTable.tsx:51` | `SEVERITY_CLASSES` typed `Record<Severity, string>` (was `Record<string, string>` — Guardrail #3) |
-| M3 | MEDIUM | `ScoreBadge.test.tsx:164` | Split test 2.12 into separate lg + md label-visible assertions |
-| M4 | MEDIUM | `ScoreBadge.test.tsx:184` | Added `expect(screen.queryByText('Passed')).toBeNull()` negative assertion for sm tooltip-only |
-| L1 | LOW | `ScoreBadge.test.tsx:103` | Tightened `/info/` → `/bg-info\/10/` + `/text-info/` for rule-only state |
-| L2 | LOW | `app-breadcrumb.test.tsx` | Added `.catch()` fallback test — verifies breadcrumb shows raw ID on network error |
-| L3 | LOW | `getBreadcrumbEntities.action.ts` | Added Zod validation (`z.string().uuid().nullable().optional()`) on input — defense-in-depth for Epic 4 |
-| L4 | LOW | `RecentFilesTable.test.tsx` | Scoped `document.querySelectorAll` → `container.querySelectorAll` (prevent cross-test leak) |
+##### FIXED (10)
+
+| ID | Sev | Source | File | Fix Summary |
+|----|-----|--------|------|-------------|
+| H1 | HIGH | CQA-H1 | `ScoreBadge.tsx:103` | Removed `effectiveState!` non-null assertion → `isMuted = effectiveState === null` |
+| H2 | HIGH | TEA-H1 | `ScoreBadge.test.tsx:286-314` | AC4 animation tests: `vi.useFakeTimers()` + post-300ms removal assertion |
+| M1 | MED | Manual | `breadcrumb.tsx` | Deleted unused shadcn component (0 importers). Later reinstated + refactored in post-CR fix |
+| M2 | MED | CQA-M1 | `TaxonomyMappingTable.tsx:51` | `Record<Severity, string>` (was `Record<string, string>` — Guardrail #3) |
+| M3 | MED | TEA-M1 | `ScoreBadge.test.tsx:164` | Split test 2.12 into separate lg + md label-visible assertions |
+| M4 | MED | TEA-M2 | `ScoreBadge.test.tsx:184` | Added `queryByText('Passed').toBeNull()` negative assertion for sm |
+| L1 | LOW | TEA-M3 | `ScoreBadge.test.tsx:103` | Tightened `/info/` → `/bg-info\/10/` + `/text-info/` |
+| L2 | LOW | Manual | `app-breadcrumb.test.tsx` | Added `.catch()` fallback test for network error |
+| L3 | LOW | CQA-H2 | `getBreadcrumbEntities.action.ts` | Added Zod validation on input — defense-in-depth |
+| L4 | LOW | TEA-L2 | `RecentFilesTable.test.tsx` | `container.querySelectorAll` instead of `document.querySelectorAll` |
+
+##### DEFERRED (4) — tracked in `tech-debt-tracker.md`
+
+| ID | Sev | Source | File | Reason | Tracker ID |
+|----|-----|--------|------|--------|------------|
+| ~~D1~~ | MED | CQA-M3 | `RecentFilesTable.tsx` | **RESOLVED** — `RecentFileRow.status` changed to `DbFileStatus` union type, cast added in `getDashboardData.action.ts` | TD-CODE-005 → RESOLVED |
+| D2 | MED | CQA-M5 | `app-breadcrumb.tsx` | truncateSegments keeps only first+last, should show secondToLast for context | TD-UX-002 |
+| D3 | MED | CQA-M3old | `app-breadcrumb.tsx` | No AbortController on entity fetch — race condition on rapid navigation | TD-UX-001 |
+| D4 | LOW | CQA-M4 | `app-breadcrumb.tsx` | shadcn breadcrumb not used — DRY violation | **RESOLVED** post-CR (breadcrumb refactor commit `3a84381`) |
+
+##### WONTFIX (10) — not actionable or out of scope
+
+| ID | Sev | Source | Finding | Reason |
+|----|-----|--------|---------|--------|
+| ~~W1~~ | MED | CQA-M2 | `dashboard/types.ts` uses `interface` not `type` | **RESOLVED** — 3x `interface` → `type` (RecentFileRow, DashboardData, AppNotification) |
+| W2 | LOW | TEA-M4 | getBreadcrumbEntities mock/source asymmetry | Test mock overrides source — correct test pattern, not a defect |
+| W3 | LOW | TEA-L1 | `queryByText('/')` vacuous (aria-hidden) | **RESOLVED** by breadcrumb refactor — now uses `data-slot` check |
+| W4 | LOW | TEA-L3 | `vi.clearAllMocks()` no-op in ScoreBadge test | Harmless standard boilerplate — removing would be pedantic |
+| W5-W10 | LOW | CQA-L | 6 additional LOW findings | `interface` vs `type` in app-header.tsx/RecentFilesTable.tsx, Server Action path convention, empty `.catch()` comment, etc. — all pre-existing patterns, no runtime risk |
 
 **Post-fix verification:** 55/55 tests passed, lint 0 errors, type-check passed, backward compat 9/9 passed
+
+#### Post-CR Fixes (2026-03-01)
+
+| Fix | Files | Summary |
+|-----|-------|---------|
+| Breadcrumb shadcn refactor | `breadcrumb.tsx`, `app-breadcrumb.tsx`, `app-breadcrumb.test.tsx` | Reinstalled shadcn Breadcrumb, refactored JSX from raw HTML → shadcn primitives (commit `3a84381`) |
+| W1 → FIXED | `dashboard/types.ts` | 3x `interface` → `type` per project convention |
+| D1 → RESOLVED | `types/pipeline.ts`, `dashboard/types.ts`, `getDashboardData.action.ts` | Added `DbFileStatus` union type, `status: DbFileStatus`, `as DbFileStatus` cast |
+| PE-1 fix | `RecentFilesTable.tsx`, `RecentFilesTable.test.tsx` | `getStatusVariant`: param `string` → `DbFileStatus`, `'error'` → `'failed'`, added all pipeline status mappings, 2 new tests |
+
+**Post-fix verification:** 59/59 tests passed, lint 0, type-check 0

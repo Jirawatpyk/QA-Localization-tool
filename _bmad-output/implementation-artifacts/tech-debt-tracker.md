@@ -1,7 +1,7 @@
 # Tech Debt Tracker
 
 **Created:** 2026-02-25 (post Story 2.7 CR R4)
-**Last Verified:** 2026-02-25
+**Last Verified:** 2026-03-01
 **Source:** Cross-referenced from agent memory (anti-pattern-detector, code-quality-analyzer, tenant-isolation-checker, testing-qa-expert, inngest-function-validator)
 
 ---
@@ -67,6 +67,23 @@
 - **Note:** `previewExcelColumns.action.ts` does NOT have this assertion (tracker was incorrect)
 - **Origin:** Story 2.3, flagged by anti-pattern-detector
 - **Status:** RESOLVED (2026-02-25 — `@ts-expect-error` is the correct pattern for library type mismatches)
+
+### TD-CODE-005: RecentFileRow.status bare `string` (Guardrail #3)
+- **Severity:** Low
+- **File:** `src/features/dashboard/types.ts`
+- **Risk:** `RecentFileRow.status` uses `string` instead of `FileStatus` union type — violates Guardrail #3
+- **Fix:** Added `DbFileStatus` union type to `@/types/pipeline`, changed `status: string` → `status: DbFileStatus`, added `as DbFileStatus` cast in `getDashboardData.action.ts`, fixed `getStatusVariant` in `RecentFilesTable.tsx` (`'error'` → `'failed'` + all pipeline statuses)
+- **Origin:** Story 3.0.5 CR R1, flagged by code-quality-analyzer (M3)
+- **Status:** RESOLVED (2026-03-01)
+
+### TD-CODE-004: Bare `string` types in L1FindingContext (Guardrail #3)
+- **Severity:** Low
+- **File:** `src/features/pipeline/helpers/runL2ForFile.ts:74-81`
+- **Risk:** Internal `L1FindingContext` type uses `severity: string` and `detectedByLayer: string` instead of union types — violates Guardrail #3 ("No bare `string` for status/severity")
+- **Mitigation:** Internal type only (not exported); values come from DB which already constrains them
+- **Fix:** Change to `severity: 'critical' | 'major' | 'minor'` and `detectedByLayer: DetectedByLayer` (import from `@/types/finding`)
+- **Origin:** Story 3.2a CR R2, flagged as M1/M2 (optional fix)
+- **Status:** DEFERRED (low risk — internal type, fix during next runL2ForFile touch)
 
 ### TD-CODE-003: getFileHistory fetches ALL files + JS filter/paginate
 - **Severity:** Medium
@@ -146,6 +163,15 @@
 
 ## Category 5: Pattern Consistency
 
+### TD-PATTERN-002: uploadBatchId type should be `string | null`
+- **Severity:** Low
+- **File:** `src/types/pipeline.ts` — `PipelineFileEventData.uploadBatchId: string`
+- **Risk:** Files uploaded without a batch (future single-file upload) would need a dummy batchId or fail type check. DB schema `files.batchId` is already nullable
+- **Mitigation:** Current upload flow always creates a batch, so value is always populated
+- **Fix:** Change `uploadBatchId: string` → `uploadBatchId: string | null` in `PipelineFileEventData`, update all consumers to handle null
+- **Origin:** Story 2.6, identified during Story 3.2b validation
+- **Status:** DEFERRED (no current code path sends null; fix when adding single-file upload, Epic 4+)
+
 ### TD-PATTERN-001: Server Actions missing Zod input schemas (4 files)
 - **Severity:** Low
 - **Risk:** Pattern inconsistency only — all 4 actions validate input via manual checks (not Zod)
@@ -168,6 +194,41 @@
 
 ---
 
+## Category 7: UX & Component Consistency
+
+### TD-UX-001: AppBreadcrumb missing AbortController on entity fetch
+- **Severity:** Low
+- **File:** `src/components/layout/app-breadcrumb.tsx`
+- **Risk:** Rapid navigation can cause race condition — stale entity names rendered for wrong route
+- **Mitigation:** Render-time state reset (`if (pathname !== prevPathname) setEntities({})`) clears stale data on route change, but in-flight fetch can still resolve after
+- **Fix:** Add `AbortController` to `fetchEntities()` with cleanup in `useEffect` return
+- **Origin:** Story 3.0.5 CR R1, flagged by code-quality-analyzer (M3)
+- **Status:** DEFERRED (low risk — breadcrumb is non-critical UI, Epic 4 when review routes add real DB queries)
+
+### TD-UX-002: truncateSegments shows only first+last, loses context
+- **Severity:** Low
+- **File:** `src/components/layout/app-breadcrumb.tsx`
+- **Risk:** UX only — deeply nested routes (5+ segments) lose the second-to-last segment which provides navigation context
+- **Current:** `[first, ellipsis, last]`
+- **Better:** `[first, ellipsis, secondToLast, last]`
+- **Origin:** Story 3.0.5 CR R1, flagged by code-quality-analyzer (M5)
+- **Status:** DEFERRED (UX refinement, Epic 4 when review routes create 5+ segment paths)
+
+---
+
+## Category 8: Pipeline & Concurrency
+
+### TD-PIPE-001: Batch completion race condition in processFile
+- **Severity:** Medium
+- **File:** `src/features/pipeline/inngest/processFile.ts` — batch completion check step
+- **Risk:** Two concurrent `processFilePipeline` invocations finishing simultaneously can both query batch status before either writes terminal status, causing both to miss the "all completed" condition → `pipeline.batch-ready` event never fires
+- **Mitigation:** Inngest `concurrency: { key: projectId, limit: 5 }` reduces (but doesn't eliminate) window. Batch completion is also eventually caught by polling/manual trigger
+- **Fix:** Use DB-level atomic check: `UPDATE upload_batches SET status='completed' WHERE id=? AND (SELECT count(*) FROM files WHERE batch_id=? AND status NOT IN ('l2_completed','l3_completed','failed')) = 0 RETURNING *` — if RETURNING is empty, another invocation already completed the batch
+- **Origin:** Story 2.6 design, identified during Story 3.2b validation (mode-aware terminal status makes race window wider)
+- **Status:** DEFERRED (low probability with current concurrency limits; fix in Story 3.4 resilience or Epic 4)
+
+---
+
 ## Resolved Items (for historical reference)
 
 These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
@@ -187,3 +248,4 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 | TD-CODE-002: ExcelJS type assertion | 2.3 | `@ts-expect-error` replaces `as never`/`as any` |
 | TD-TEST-001: Drizzle mock DRY | 2.4 | `createDrizzleMock()` shared utility, 15 files migrated |
 | TD-TENANT-001: Realtime tenant filter | 1.7 | Already implemented at `useNotifications.ts:66` |
+| TD-CODE-005: RecentFileRow.status bare string | 3.0.5 | `DbFileStatus` union type, `status: DbFileStatus`, cast in action, `getStatusVariant` fixed |

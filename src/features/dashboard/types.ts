@@ -1,3 +1,5 @@
+import type { DbFileStatus } from '@/types/pipeline'
+
 // ── AI Usage Dashboard types (Story 3.1a) ──────────────────────────────────
 
 export type AiUsageSummary = {
@@ -33,25 +35,25 @@ export type AiSpendTrendPoint = {
 
 // ── Legacy dashboard types ───────────────────────────────────────────────────
 
-export interface RecentFileRow {
+export type RecentFileRow = {
   id: string
   fileName: string
   projectId: string
   projectName: string
-  status: string // 'uploaded' | 'parsing' | 'parsed' | 'error'
+  status: DbFileStatus
   createdAt: string // ISO 8601
   mqmScore: number | null // from scores table (null if not scored yet)
   findingsCount: number // from findings count (default 0)
 }
 
-export interface DashboardData {
+export type DashboardData = {
   recentFiles: RecentFileRow[] // last 10 files for tenant
   pendingReviewsCount: number // count of files with status 'parsed' and no score yet
   teamActivityCount: number // count of review_actions in last 7 days for tenant
 }
 
 // IMPORTANT: Do NOT use the browser's built-in `Notification` type
-export interface AppNotification {
+export type AppNotification = {
   id: string
   tenantId: string
   userId: string

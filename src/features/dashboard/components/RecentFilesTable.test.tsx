@@ -97,4 +97,47 @@ describe('RecentFilesTable — ScoreBadge Integration', () => {
     const hasMdash = Array.from(mdashSpans).some((el) => el.textContent === '\u2014')
     expect(hasMdash).toBe(false)
   })
+
+  // 7.3 [P1] Failed status should render destructive badge variant
+  it('[P1] should render failed status with destructive badge variant', async () => {
+    const failedFile: RecentFileRow = {
+      id: 'd4e5f6a7-b8c9-4d4e-bf5a-6b7c8d9e0f1a',
+      fileName: 'failed-file.sdlxliff',
+      projectId: 'b2c3d4e5-f6a7-4b2c-9d3e-4f5a6b7c8d9e',
+      projectName: 'Test Project',
+      status: 'failed',
+      createdAt: '2026-03-01T08:00:00Z',
+      mqmScore: null,
+      findingsCount: 0,
+    }
+
+    const { RecentFilesTable } = await import('./RecentFilesTable')
+    render(<RecentFilesTable files={[failedFile]} />)
+
+    const badge = screen.getByText('failed')
+    expect(badge).toBeTruthy()
+    // Badge with destructive variant has data-variant="destructive" (shadcn convention)
+    expect(badge.className).toMatch(/destructive/)
+  })
+
+  // 7.4 [P1] Processing statuses should render secondary badge variant
+  it('[P1] should render processing statuses with secondary badge variant', async () => {
+    const processingFile: RecentFileRow = {
+      id: 'e5f6a7b8-c9d0-4e5f-ca6b-7c8d9e0f1a2b',
+      fileName: 'processing-file.sdlxliff',
+      projectId: 'b2c3d4e5-f6a7-4b2c-9d3e-4f5a6b7c8d9e',
+      projectName: 'Test Project',
+      status: 'l2_processing',
+      createdAt: '2026-03-01T07:00:00Z',
+      mqmScore: null,
+      findingsCount: 0,
+    }
+
+    const { RecentFilesTable } = await import('./RecentFilesTable')
+    render(<RecentFilesTable files={[processingFile]} />)
+
+    const badge = screen.getByText('l2_processing')
+    expect(badge).toBeTruthy()
+    expect(badge.className).toMatch(/secondary/)
+  })
 })

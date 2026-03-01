@@ -44,6 +44,19 @@ export type FindingChangedEventData = {
   timestamp: string // ISO 8601
 }
 
+// DB files.status column — all possible pipeline statuses
+export type DbFileStatus =
+  | 'uploaded'
+  | 'parsing'
+  | 'parsed'
+  | 'l1_processing'
+  | 'l1_completed'
+  | 'l2_processing'
+  | 'l2_completed'
+  | 'l3_processing'
+  | 'l3_completed'
+  | 'failed'
+
 export type PipelineStatus = 'queued' | 'processing' | 'completed' | 'failed'
 
 export type PipelineRun = {
