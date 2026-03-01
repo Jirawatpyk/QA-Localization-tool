@@ -96,12 +96,11 @@ export function ScoreBadge({ score, state, size = 'sm', criticalCount }: ScoreBa
   }, [score, reducedMotion])
 
   const displayText = score !== null ? score.toFixed(1) : 'N/A'
-  const isNull = score === null
 
   // Determine effective state
   const effectiveState = state ?? deriveState(score, criticalCount)
-  const isMuted = isNull && effectiveState === null
-  const stateClasses = isMuted ? MUTED_CLASSES : STATE_CLASSES[effectiveState!]
+  const isMuted = effectiveState === null
+  const stateClasses = isMuted ? MUTED_CLASSES : STATE_CLASSES[effectiveState]
   const label = effectiveState !== null ? STATE_LABELS[effectiveState] : undefined
 
   const isAnalyzing = effectiveState === 'analyzing'

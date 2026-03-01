@@ -48,7 +48,7 @@ type Props = {
   onAdd: () => void
 }
 
-const SEVERITY_CLASSES: Record<string, string> = {
+const SEVERITY_CLASSES: Record<Severity, string> = {
   critical: 'bg-severity-critical text-white',
   major: 'bg-severity-major text-white',
   minor: 'bg-severity-minor text-white',

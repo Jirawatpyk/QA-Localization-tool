@@ -100,7 +100,8 @@ describe('ScoreBadge', () => {
       render(<ScoreBadge score={92} state="rule-only" size="md" />)
 
       const container = screen.getByTestId('score-badge')
-      expect(container.className).toMatch(/info/)
+      expect(container.className).toMatch(/bg-info\/10/)
+      expect(container.className).toMatch(/text-info/)
       expect(screen.getByText('Rule-based')).toBeTruthy()
     })
   })
@@ -161,13 +162,22 @@ describe('ScoreBadge', () => {
       expect(container.className).not.toMatch(/status-fail/)
     })
 
-    it('[P1] should show label below score for lg and md variants', () => {
+    it('[P1] should show label below score for lg variant', () => {
       render(<ScoreBadge score={98} state="pass" size="lg" />)
 
       expect(screen.getByText('98.0')).toBeTruthy()
       const label = screen.getByText('Passed')
       expect(label).toBeTruthy()
       // Label should NOT be visually hidden (sr-only)
+      expect(label.className).not.toMatch(/sr-only/)
+    })
+
+    it('[P1] should show label below score for md variant', () => {
+      render(<ScoreBadge score={98} state="pass" size="md" />)
+
+      expect(screen.getByText('98.0')).toBeTruthy()
+      const label = screen.getByText('Passed')
+      expect(label).toBeTruthy()
       expect(label.className).not.toMatch(/sr-only/)
     })
 
@@ -181,6 +191,8 @@ describe('ScoreBadge', () => {
       expect(container?.getAttribute('title') ?? container?.getAttribute('aria-label')).toBe(
         'Passed',
       )
+      // Label must NOT be rendered as a standalone visible text node for sm
+      expect(screen.queryByText('Passed')).toBeNull()
     })
   })
 
@@ -283,22 +295,38 @@ describe('ScoreBadge', () => {
   // -- AC4: Score Change Animation (3 tests, P2) --
 
   describe('AC4: Score Change Animation', () => {
-    it('[P2] should apply slide-up animation class when score increases', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('[P2] should apply slide-up animation class when score increases', async () => {
       const { rerender } = render(<ScoreBadge score={80} />)
 
       rerender(<ScoreBadge score={90} />)
 
       const badge = screen.getByText('90.0')
-      expect(badge.className).toMatch(/slide-up|animate-slide-up/)
+      expect(badge.className).toMatch(/animate-slide-up/)
+
+      // Verify class removed after 300ms timeout
+      await vi.advanceTimersByTimeAsync(300)
+      expect(badge.className).not.toMatch(/animate-slide-up/)
     })
 
-    it('[P2] should apply slide-down animation class when score decreases', () => {
+    it('[P2] should apply slide-down animation class when score decreases', async () => {
       const { rerender } = render(<ScoreBadge score={90} />)
 
       rerender(<ScoreBadge score={75} />)
 
       const badge = screen.getByText('75.0')
-      expect(badge.className).toMatch(/slide-down|animate-slide-down/)
+      expect(badge.className).toMatch(/animate-slide-down/)
+
+      // Verify class removed after 300ms timeout
+      await vi.advanceTimersByTimeAsync(300)
+      expect(badge.className).not.toMatch(/animate-slide-down/)
     })
 
     it('[P2] should disable slide animation when prefers-reduced-motion is enabled', () => {
@@ -309,8 +337,8 @@ describe('ScoreBadge', () => {
       rerender(<ScoreBadge score={90} />)
 
       const badge = screen.getByText('90.0')
-      expect(badge.className).not.toMatch(/slide-up|animate-slide-up/)
-      expect(badge.className).not.toMatch(/slide-down|animate-slide-down/)
+      expect(badge.className).not.toMatch(/animate-slide-up/)
+      expect(badge.className).not.toMatch(/animate-slide-down/)
     })
   })
 

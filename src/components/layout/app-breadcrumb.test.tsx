@@ -132,6 +132,21 @@ describe('AppBreadcrumb', () => {
     expect(screen.queryByText('...')).toBeNull()
   })
 
+  // Error fallback [P1] — .catch() path when entity resolution fails
+  it('[P1] should fall back to raw ID when entity resolution fails', async () => {
+    mockUsePathname.mockReturnValue('/projects/abc/glossary')
+    mockGetBreadcrumbEntities.mockRejectedValue(new Error('Network error'))
+
+    render(<AppBreadcrumb />)
+
+    // Falls back to raw ID 'abc' — component does not crash
+    await waitFor(() => {
+      expect(screen.getByText('abc')).toBeTruthy()
+    })
+    expect(screen.getByText('Dashboard')).toBeTruthy()
+    expect(screen.getByText('Glossary')).toBeTruthy()
+  })
+
   // B10 [P1] 5 segments -> truncation (boundary)
   it('[P1] should truncate at 5 segments (boundary)', async () => {
     // 5+ segments: dashboard / projects / abc / review / sessionXyz / findings

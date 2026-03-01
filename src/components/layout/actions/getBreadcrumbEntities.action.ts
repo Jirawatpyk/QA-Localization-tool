@@ -1,26 +1,33 @@
 'use server'
 import 'server-only'
 
+import { z } from 'zod'
+
 export type BreadcrumbEntities = {
   projectName?: string | undefined
   sessionName?: string | undefined
 }
 
-type BreadcrumbInput = {
-  projectId?: string | undefined
-  sessionId?: string | undefined
-}
+const breadcrumbInputSchema = z.object({
+  projectId: z.string().uuid().nullable().optional(),
+  sessionId: z.string().uuid().nullable().optional(),
+})
 
-export async function getBreadcrumbEntities(input: BreadcrumbInput): Promise<BreadcrumbEntities> {
+export async function getBreadcrumbEntities(
+  input: z.input<typeof breadcrumbInputSchema>,
+): Promise<BreadcrumbEntities> {
+  const parsed = breadcrumbInputSchema.safeParse(input)
+  if (!parsed.success) return {}
+
   const result: BreadcrumbEntities = {}
 
   // TODO: Implement DB queries with withTenant() when review routes are created (Epic 4)
   // For now, return raw IDs as display names — tests mock this entirely
-  if (input.projectId) {
-    result.projectName = input.projectId
+  if (parsed.data.projectId) {
+    result.projectName = parsed.data.projectId
   }
-  if (input.sessionId) {
-    result.sessionName = input.sessionId
+  if (parsed.data.sessionId) {
+    result.sessionName = parsed.data.sessionId
   }
 
   return result

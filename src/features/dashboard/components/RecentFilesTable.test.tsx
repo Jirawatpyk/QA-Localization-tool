@@ -55,7 +55,7 @@ describe('RecentFilesTable — ScoreBadge Integration', () => {
     //   data-testid="score-badge", which will NOT be present in the current code.
 
     const { RecentFilesTable } = await import('./RecentFilesTable')
-    render(<RecentFilesTable files={MOCK_FILES} />)
+    const { container } = render(<RecentFilesTable files={MOCK_FILES} />)
 
     // ScoreBadge mock renders with data-testid="score-badge"
     const scoreBadges = screen.getAllByTestId('score-badge')
@@ -66,8 +66,8 @@ describe('RecentFilesTable — ScoreBadge Integration', () => {
     expect(numericBadge).toBeTruthy()
     expect(numericBadge?.textContent).toBe('92.5')
 
-    // There should NOT be a raw font-mono span for score display
-    const rawSpans = document.querySelectorAll('.font-mono.text-sm')
+    // There should NOT be a raw font-mono span for score display (scoped to container)
+    const rawSpans = container.querySelectorAll('.font-mono.text-sm')
     expect(rawSpans.length).toBe(0)
   })
 
@@ -83,7 +83,7 @@ describe('RecentFilesTable — ScoreBadge Integration', () => {
     //   which our mock translates to data-testid="score-badge" with "N/A" text.
 
     const { RecentFilesTable } = await import('./RecentFilesTable')
-    render(<RecentFilesTable files={MOCK_FILES} />)
+    const { container } = render(<RecentFilesTable files={MOCK_FILES} />)
 
     // Find all ScoreBadge instances — should include one for the null score
     const scoreBadges = screen.getAllByTestId('score-badge')
@@ -92,8 +92,8 @@ describe('RecentFilesTable — ScoreBadge Integration', () => {
     expect(nullBadge).toBeTruthy()
     expect(nullBadge?.textContent).toBe('N/A')
 
-    // The raw em dash span should NOT be present
-    const mdashSpans = document.querySelectorAll('.text-muted-foreground')
+    // The raw em dash span should NOT be present (scoped to container)
+    const mdashSpans = container.querySelectorAll('.text-muted-foreground')
     const hasMdash = Array.from(mdashSpans).some((el) => el.textContent === '\u2014')
     expect(hasMdash).toBe(false)
   })
