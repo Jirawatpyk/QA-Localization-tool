@@ -34,7 +34,7 @@ describe('AppBreadcrumb', () => {
     // Only "Dashboard" text should be visible
     expect(screen.getByText('Dashboard')).toBeTruthy()
     // No separator should be rendered (single segment)
-    expect(screen.queryByText('/')).toBeNull()
+    expect(document.querySelector('[data-slot="breadcrumb-separator"]')).toBeNull()
   })
 
   // 5.2 [P1] Nested route shows correct segments
@@ -65,10 +65,11 @@ describe('AppBreadcrumb', () => {
       expect(screen.getByText('Project ABC')).toBeTruthy()
     })
 
-    // Last segment ("Glossary") should be bold and NOT a link
+    // Last segment ("Glossary") should be bold, NOT a link, and have aria-current="page"
     const lastSegment = screen.getByText('Glossary')
     expect(lastSegment.className).toMatch(/font-bold|font-semibold/)
     expect(lastSegment.closest('a')).toBeNull()
+    expect(lastSegment.getAttribute('aria-current')).toBe('page')
 
     // First segment ("Dashboard") should be a clickable link
     const firstSegment = screen.getByText('Dashboard')
@@ -88,7 +89,7 @@ describe('AppBreadcrumb', () => {
 
     // Ellipsis should be visible in the middle
     await waitFor(() => {
-      expect(screen.getByText('...')).toBeTruthy()
+      expect(screen.getByText('More')).toBeTruthy()
     })
     // First (Dashboard) and last (Details) segments should remain visible
     expect(screen.getByText('Dashboard')).toBeTruthy()
@@ -129,7 +130,7 @@ describe('AppBreadcrumb', () => {
     expect(screen.getByText('Upload')).toBeTruthy()
 
     // No ellipsis should be present
-    expect(screen.queryByText('...')).toBeNull()
+    expect(screen.queryByText('More')).toBeNull()
   })
 
   // Error fallback [P1] — .catch() path when entity resolution fails
@@ -160,7 +161,7 @@ describe('AppBreadcrumb', () => {
 
     // Ellipsis should be visible (truncation active)
     await waitFor(() => {
-      expect(screen.getByText('...')).toBeTruthy()
+      expect(screen.getByText('More')).toBeTruthy()
     })
     // First segment (Dashboard) and last segment (Findings) must be visible
     expect(screen.getByText('Dashboard')).toBeTruthy()

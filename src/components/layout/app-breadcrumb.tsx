@@ -2,12 +2,21 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
   getBreadcrumbEntities,
   type BreadcrumbEntities,
 } from '@/components/layout/actions/getBreadcrumbEntities.action'
+import {
+  Breadcrumb,
+  BreadcrumbEllipsis,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb'
 
 const STATIC_SEGMENTS = new Set([
   'dashboard',
@@ -138,43 +147,40 @@ export function AppBreadcrumb() {
   const displayItems = truncateSegments(resolved)
 
   return (
-    <nav aria-label="breadcrumb">
-      <ol className="flex items-center gap-1.5 text-sm">
+    <Breadcrumb>
+      <BreadcrumbList>
         {displayItems.map((item, index) => {
           if ('ellipsis' in item) {
             return (
-              <li key="ellipsis" className="flex items-center gap-1.5">
-                <span aria-hidden="true" className="text-muted-foreground">
-                  /
-                </span>
-                <span>...</span>
-              </li>
+              <Fragment key="ellipsis">
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbEllipsis />
+                </BreadcrumbItem>
+              </Fragment>
             )
           }
 
           const isLast = index === displayItems.length - 1
 
           return (
-            <li key={item.href} className="flex items-center gap-1.5">
-              {index > 0 && (
-                <span aria-hidden="true" className="text-muted-foreground">
-                  /
-                </span>
-              )}
-              {isLast ? (
-                <span className="font-semibold text-text-primary">{item.label}</span>
-              ) : (
-                <Link
-                  href={item.href}
-                  className="text-text-secondary hover:text-text-primary transition-colors"
-                >
-                  {item.label}
-                </Link>
-              )}
-            </li>
+            <Fragment key={item.href}>
+              {index > 0 && <BreadcrumbSeparator />}
+              <BreadcrumbItem>
+                {isLast ? (
+                  <BreadcrumbPage className="font-semibold text-text-primary">
+                    {item.label}
+                  </BreadcrumbPage>
+                ) : (
+                  <BreadcrumbLink asChild className="text-text-secondary hover:text-text-primary">
+                    <Link href={item.href}>{item.label}</Link>
+                  </BreadcrumbLink>
+                )}
+              </BreadcrumbItem>
+            </Fragment>
           )
         })}
-      </ol>
-    </nav>
+      </BreadcrumbList>
+    </Breadcrumb>
   )
 }
