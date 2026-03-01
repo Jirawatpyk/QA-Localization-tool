@@ -2,7 +2,7 @@
  * Type-safe AI response fixtures for L2/L3 pipeline tests.
  *
  * Provides factory functions that create `generateText()` result shapes
- * matching the production Zod schemas (l2ChunkResponseSchema, l3ChunkResponseSchema).
+ * matching the production Zod schemas (l2OutputSchema, l3ChunkResponseSchema).
  *
  * Usage:
  * ```ts

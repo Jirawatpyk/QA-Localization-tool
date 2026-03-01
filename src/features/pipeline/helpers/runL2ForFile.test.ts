@@ -256,7 +256,9 @@ describe('runL2ForFile', () => {
     const { withTenant } = await import('@/db/helpers/withTenant')
     // CAS + segments + l1Findings + glossary + project + findings delete + status update = 7
     // (taxonomy has NO tenant_id — withTenant NOT called)
-    expect(vi.mocked(withTenant).mock.calls.length).toBeGreaterThanOrEqual(7)
+    // CAS + segments + l1Findings + glossary + project + txDelete + statusUpdate = 7
+    // (taxonomy has NO tenant_id — withTenant NOT called)
+    expect(vi.mocked(withTenant).mock.calls.length).toBe(7)
   })
 
   // ── P1: AI + Chunking ──
