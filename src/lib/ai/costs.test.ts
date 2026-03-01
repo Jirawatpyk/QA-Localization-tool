@@ -27,6 +27,7 @@ vi.mock('@/db/schema/aiUsageLogs', () => ({
     latencyMs: 'latency_ms',
     status: 'status',
     chunkIndex: 'chunk_index',
+    languagePair: 'language_pair',
   },
 }))
 
@@ -47,6 +48,7 @@ const baseRecord = {
   estimatedCostUsd: 0.000085,
   chunkIndex: null,
   durationMs: 1200,
+  languagePair: 'en-US→th' as string | null,
 }
 
 describe('logAIUsage', () => {

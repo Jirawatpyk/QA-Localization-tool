@@ -75,7 +75,7 @@ describe('buildL2Prompt', () => {
     expect(result).toContain('segmentId')
     expect(result).toContain('category')
     expect(result).toContain('severity')
-    expect(result).toContain('suggestedFix')
+    expect(result).toContain('suggestion')
   })
 
   it('should include few-shot examples', () => {

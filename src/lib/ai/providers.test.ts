@@ -3,12 +3,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // Must be first
 vi.mock('server-only', () => ({}))
 
-// NOTE: providers.ts stub exists but is incomplete — tests validate the full implementation.
-// Tests are it() because the real implementation is incomplete.
-// When Story 3.1 Task 7 is fully implemented, remove it() to make tests pass (GREEN).
-
 // ── Hoisted mocks ──
 const { dbState, dbMockModule } = vi.hoisted(() => createDrizzleMock())
+
+const mockGenerateText = vi.fn()
 
 vi.mock('@/db/client', () => dbMockModule)
 
@@ -28,6 +26,27 @@ vi.mock('@/db/schema/projects', () => ({
     l2PinnedModel: 'l2_pinned_model',
     l3PinnedModel: 'l3_pinned_model',
   },
+}))
+
+vi.mock('ai', () => ({
+  generateText: mockGenerateText,
+  customProvider: vi.fn(),
+}))
+
+vi.mock('@/lib/ai/client', () => ({
+  getModelById: vi.fn(() => 'mocked-model-instance'),
+  qaProvider: { languageModel: vi.fn() },
+  getModelForLayer: vi.fn(),
+}))
+
+const mockLogger = {
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+}
+vi.mock('@/lib/logger', () => ({
+  logger: mockLogger,
 }))
 
 // ── Test constants ──
@@ -143,5 +162,114 @@ describe('getModelForLayerWithFallback', () => {
 
     expect(chain.primary).toBe('gpt-4o-mini-2024-07-18')
     // RED: getModelForLayerWithFallback queries projects table for pinned model
+  })
+})
+
+// ── Story 3.2a AC1: Provider Health Check ──
+
+describe('checkProviderHealth', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('[P0] should return available=true and latencyMs > 0 for healthy provider', async () => {
+    mockGenerateText.mockResolvedValueOnce({
+      output: null,
+      usage: { inputTokens: 0, outputTokens: 0 },
+    })
+
+    const { checkProviderHealth } = await import('./providers')
+    const result = await checkProviderHealth('openai')
+
+    expect(result.available).toBe(true)
+    expect(result.latencyMs).toBeGreaterThanOrEqual(0)
+    expect(typeof result.latencyMs).toBe('number')
+  })
+
+  it('[P0] should return available=false when provider probe fails', async () => {
+    mockGenerateText.mockRejectedValueOnce(new Error('Connection refused'))
+
+    const { checkProviderHealth } = await import('./providers')
+    const result = await checkProviderHealth('openai')
+
+    expect(result.available).toBe(false)
+  })
+
+  it('[P1] should never throw — always return result even for unknown provider', async () => {
+    const { checkProviderHealth } = await import('./providers')
+    const result = await checkProviderHealth('nonexistent-provider')
+
+    expect(result).toBeDefined()
+    expect(typeof result.available).toBe('boolean')
+    expect(typeof result.latencyMs).toBe('number')
+  })
+
+  it('[P1] should complete within reasonable timeout (not blocking)', async () => {
+    mockGenerateText.mockResolvedValueOnce({
+      output: null,
+      usage: { inputTokens: 0, outputTokens: 0 },
+    })
+
+    const { checkProviderHealth } = await import('./providers')
+    const start = performance.now()
+    await checkProviderHealth('openai')
+    const elapsed = performance.now() - start
+
+    expect(elapsed).toBeLessThan(5000)
+  })
+
+  it('[P1] should log health check result via pino', async () => {
+    mockGenerateText.mockResolvedValueOnce({
+      output: null,
+      usage: { inputTokens: 0, outputTokens: 0 },
+    })
+
+    const { checkProviderHealth } = await import('./providers')
+    await checkProviderHealth('openai')
+
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: 'openai' }),
+      expect.any(String),
+    )
+  })
+})
+
+// ── Story 3.2a AC1: Fallback chain + health check integration ──
+
+describe('fallback chain with health check integration', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    dbState.callIndex = 0
+    dbState.returnValues = []
+  })
+
+  it('[P1] should skip unhealthy primary and use first available fallback', async () => {
+    // Primary (openai) health check fails, fallback (google) succeeds
+    mockGenerateText
+      .mockRejectedValueOnce(new Error('connection refused'))
+      .mockResolvedValueOnce({ output: null, usage: { inputTokens: 0, outputTokens: 0 } })
+
+    const { buildFallbackChain, resolveHealthyModel } = await import('./providers')
+    const chain = buildFallbackChain('L2', null)
+    const resolved = await resolveHealthyModel(chain)
+
+    expect(resolved.primary).toBeDefined()
+    expect(resolved.primary).toBe('gemini-2.0-flash')
+  })
+
+  it('[P1] should log when fallback is activated due to health check failure', async () => {
+    // Primary fails, fallback succeeds
+    mockGenerateText
+      .mockRejectedValueOnce(new Error('connection refused'))
+      .mockResolvedValueOnce({ output: null, usage: { inputTokens: 0, outputTokens: 0 } })
+
+    const { buildFallbackChain, resolveHealthyModel } = await import('./providers')
+    const chain = buildFallbackChain('L2', null)
+    await resolveHealthyModel(chain)
+
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ fallbackModel: 'gemini-2.0-flash' }),
+      expect.any(String),
+    )
   })
 })

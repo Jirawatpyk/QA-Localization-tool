@@ -35,7 +35,7 @@ const DEFAULT_L2_FINDING: L2ChunkResponse['findings'][number] = {
   severity: 'major',
   confidence: 85,
   description: 'Number mismatch in translation',
-  suggestedFix: null,
+  suggestion: null,
 }
 
 const DEFAULT_L3_FINDING: L3ChunkResponse['findings'][number] = {
@@ -140,8 +140,8 @@ export function buildSegmentRow(overrides?: Record<string, unknown>) {
       overrides?.targetText ??
       '\u0e2a\u0e27\u0e31\u0e2a\u0e14\u0e35\u0e0a\u0e32\u0e27\u0e42\u0e25\u0e01',
     segmentNumber: overrides?.segmentNumber ?? 1,
-    sourceLang: 'en',
-    targetLang: 'th',
+    sourceLang: (overrides?.sourceLang as string) ?? 'en',
+    targetLang: (overrides?.targetLang as string) ?? 'th',
   }
 }
 

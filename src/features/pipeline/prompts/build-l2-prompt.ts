@@ -90,7 +90,7 @@ For each issue found, return:
 - **severity:** critical (meaning change/data loss), major (noticeable impact), minor (polish)
 - **confidence:** 0-100 certainty score
 - **description:** Clear explanation of what is wrong and why
-- **suggestedFix:** Corrected translation or null if you are not confident in a fix
+- **suggestion:** Corrected translation or null if you are not confident in a fix
 
 If no issues are found, return an empty findings array. Do NOT invent issues.`
 

@@ -156,6 +156,18 @@
 
 ---
 
+## Category 6: AI Infrastructure
+
+### TD-AI-001: Provider detection logic duplicated across 3 files
+- **Severity:** Low
+- **Risk:** If a new provider is added, detection logic must be updated in 3 places
+- **Files:** `src/lib/ai/costs.ts`, `src/lib/ai/providers.ts`, `src/lib/ai/client.ts`
+- **Fix:** Extract shared `detectProvider(modelId): string` to `src/lib/ai/models.ts` and import from all 3 files
+- **Origin:** Story 3.2a, flagged by code-quality-analyzer (H3)
+- **Status:** DEFERRED (refactor scope, Epic 3 cleanup or Story 3.4)
+
+---
+
 ## Resolved Items (for historical reference)
 
 These were flagged by agent memory but verified as **FIXED** on 2026-02-25:

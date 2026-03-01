@@ -1,15 +1,22 @@
 import { generateText, Output } from 'ai'
 import { and, eq } from 'drizzle-orm'
 import { NonRetriableError } from 'inngest'
-import { z } from 'zod'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { files } from '@/db/schema/files'
 import { findings } from '@/db/schema/findings'
+import { glossaries } from '@/db/schema/glossaries'
+import { glossaryTerms } from '@/db/schema/glossaryTerms'
+import { projects } from '@/db/schema/projects'
 import { segments } from '@/db/schema/segments'
+import { taxonomyDefinitions } from '@/db/schema/taxonomyDefinitions'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { FINDING_BATCH_SIZE, MAX_EXCERPT_LENGTH } from '@/features/pipeline/engine/constants'
+import { chunkSegments } from '@/features/pipeline/helpers/chunkSegments'
+import { buildL2Prompt } from '@/features/pipeline/prompts/build-l2-prompt'
+import type { L2Output } from '@/features/pipeline/schemas/l2-output'
+import { l2OutputSchema } from '@/features/pipeline/schemas/l2-output'
 import { checkProjectBudget } from '@/lib/ai/budget'
 import { getModelById } from '@/lib/ai/client'
 import { aggregateUsage, estimateCost, logAIUsage } from '@/lib/ai/costs'
@@ -20,8 +27,6 @@ import { getConfigForModel } from '@/lib/ai/types'
 import { logger } from '@/lib/logger'
 import { aiL2ProjectLimiter } from '@/lib/ratelimit'
 
-import { chunkSegments } from './chunkSegments'
-
 // ── Types ──
 
 type RunL2Input = {
@@ -31,7 +36,7 @@ type RunL2Input = {
   userId?: string
 }
 
-export type L2Finding = {
+export type L2MappedFinding = {
   segmentId: string
   category: string
   severity: 'critical' | 'major' | 'minor'
@@ -55,23 +60,8 @@ export type L2Result = {
   }
 }
 
-// ── AI Response Schema (Guardrail #17: .nullable() only, never .optional()) ──
-
-export const l2ChunkResponseSchema = z.object({
-  findings: z.array(
-    z.object({
-      segmentId: z.string(),
-      category: z.string(),
-      severity: z.enum(['critical', 'major', 'minor']),
-      confidence: z.number(),
-      description: z.string(),
-      suggestedFix: z.string().nullable(),
-    }),
-  ),
-  summary: z.string(),
-})
-
-export type L2ChunkResponse = z.infer<typeof l2ChunkResponseSchema>
+// Re-export L2Output as L2ChunkResponse for backwards compatibility
+export type L2ChunkResponse = L2Output
 
 // ── Internal Types ──
 
@@ -90,6 +80,20 @@ type L1FindingContext = {
   category: string
   severity: string
   description: string
+  detectedByLayer: string
+}
+
+// ── Language Pair Derivation ──
+
+/**
+ * Derive language pair string from segment rows.
+ * Returns "sourceLang→targetLang" (e.g. "en-US→th") or null if unavailable.
+ */
+function deriveLanguagePair(segmentRows: SegmentRow[]): string | null {
+  if (segmentRows.length === 0) return null
+  const first = segmentRows[0]!
+  if (!first.sourceLang || !first.targetLang) return null
+  return `${first.sourceLang}→${first.targetLang}`
 }
 
 // ── Main Function ──
@@ -184,6 +188,7 @@ export async function runL2ForFile({
         category: findings.category,
         severity: findings.severity,
         description: findings.description,
+        detectedByLayer: findings.detectedByLayer,
       })
       .from(findings)
       .where(
@@ -194,28 +199,76 @@ export async function runL2ForFile({
         ),
       )
 
+    // Step 4b: Load glossary terms via JOIN through glossaries table
+    // glossary_terms has NO projectId/tenantId — must JOIN via glossaries
+    const glossaryRows = await db
+      .select({
+        sourceTerm: glossaryTerms.sourceTerm,
+        targetTerm: glossaryTerms.targetTerm,
+        caseSensitive: glossaryTerms.caseSensitive,
+      })
+      .from(glossaryTerms)
+      .innerJoin(glossaries, eq(glossaryTerms.glossaryId, glossaries.id))
+      .where(and(withTenant(glossaries.tenantId, tenantId), eq(glossaries.projectId, projectId)))
+
+    // Step 4c: Load taxonomy categories (shared global — NO withTenant)
+    const taxonomyRows = await db
+      .select({
+        category: taxonomyDefinitions.category,
+        parentCategory: taxonomyDefinitions.parentCategory,
+        severity: taxonomyDefinitions.severity,
+        description: taxonomyDefinitions.description,
+      })
+      .from(taxonomyDefinitions)
+      .where(eq(taxonomyDefinitions.isActive, true))
+
+    // Step 4d: Load project details for prompt context
+    const [projectRow] = await db
+      .select({
+        name: projects.name,
+        description: projects.description,
+        sourceLang: projects.sourceLang,
+        targetLangs: projects.targetLangs,
+        processingMode: projects.processingMode,
+      })
+      .from(projects)
+      .where(and(withTenant(projects.tenantId, tenantId), eq(projects.id, projectId)))
+
+    if (!projectRow) {
+      throw new NonRetriableError('Project not found')
+    }
+
     // Step 5: Chunk segments (Guardrail #21)
     const chunks = chunkSegments(segmentRows)
 
     // Step 6: Process each chunk with AI (partial failure tolerance)
     const startTime = performance.now()
-    const chunkResults: ChunkResult<L2ChunkResponse>[] = []
+    const chunkResults: ChunkResult<L2Output>[] = []
     const usageRecords: AIUsageRecord[] = []
     const config = getConfigForModel(modelId, 'L2')
 
     for (const chunk of chunks) {
       const chunkStart = performance.now()
       try {
+        const prompt = buildL2Prompt({
+          segments: chunk.segments,
+          l1Findings: l1FindingRows,
+          glossaryTerms: glossaryRows,
+          taxonomyCategories: taxonomyRows,
+          project: projectRow,
+        })
+
         const result = await generateText({
           model: getModelById(modelId),
-          output: Output.object({ schema: l2ChunkResponseSchema }),
+          output: Output.object({ schema: l2OutputSchema }),
           temperature: config.temperature,
           maxOutputTokens: config.maxOutputTokens,
-          prompt: buildL2Prompt(chunk.segments, l1FindingRows),
+          prompt,
         })
 
         // Cost tracking (Guardrail #19)
         const cost = estimateCost(modelId, 'L2', result.usage)
+        const languagePair = deriveLanguagePair(segmentRows)
         const record: AIUsageRecord = {
           tenantId,
           projectId,
@@ -227,6 +280,7 @@ export async function runL2ForFile({
           estimatedCostUsd: cost,
           chunkIndex: chunk.chunkIndex,
           durationMs: Math.round(performance.now() - chunkStart),
+          languagePair,
         }
         logAIUsage(record).catch(() => {
           /* non-critical — DB failure already logged inside logAIUsage */
@@ -268,7 +322,7 @@ export async function runL2ForFile({
 
     // Step 7: Flatten + validate findings from successful chunks
     const segmentIdSet = new Set(segmentRows.map((s) => s.id))
-    const allFindings: L2Finding[] = []
+    const allFindings: L2MappedFinding[] = []
 
     for (const cr of chunkResults) {
       if (!cr.success || !cr.data) continue
@@ -289,7 +343,7 @@ export async function runL2ForFile({
           severity: f.severity,
           confidence: Math.min(100, Math.max(0, f.confidence)),
           description: f.description,
-          suggestedFix: f.suggestedFix,
+          suggestedFix: f.suggestion,
         })
       }
     }
@@ -396,44 +450,3 @@ export async function runL2ForFile({
     throw err
   }
 }
-
-// ── Prompt Builder ──
-// Minimal template — Story 3.1 refines with full prompt engineering
-
-function buildL2Prompt(segmentRows: SegmentRow[], l1Findings: L1FindingContext[]): string {
-  const segmentText = segmentRows
-    .map(
-      (s) =>
-        `[${s.id}] (${s.sourceLang}→${s.targetLang})\nSource: ${s.sourceText}\nTarget: ${s.targetText}`,
-    )
-    .join('\n\n')
-
-  const l1Context =
-    l1Findings.length > 0
-      ? `\n\nExisting L1 rule-based findings (do NOT duplicate these):\n${l1Findings
-          .map((f) => `- [${f.segmentId}] ${f.category} (${f.severity}): ${f.description}`)
-          .join('\n')}`
-      : ''
-
-  return `You are a localization QA reviewer. Analyze these translation segments for quality issues.
-
-Focus on semantic issues that rule-based checks cannot catch:
-- Accuracy: mistranslation, omission, addition
-- Fluency: unnatural phrasing, grammar errors
-- Terminology: inconsistent term usage
-- Style: register mismatch, locale convention violations
-
-For each issue found, return:
-- segmentId: the exact segment ID from the input
-- category: issue category (accuracy, fluency, terminology, style, locale)
-- severity: critical (meaning change), major (noticeable impact), minor (polish)
-- confidence: 0-100 how certain you are
-- description: clear explanation of the issue
-- suggestedFix: suggested correction or null if unclear
-
-Segments:
-${segmentText}${l1Context}`
-}
-
-// Exported for testing
-export { buildL2Prompt as _buildL2Prompt }

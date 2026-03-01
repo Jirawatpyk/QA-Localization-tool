@@ -221,6 +221,7 @@ export async function runL3ForFile({
           estimatedCostUsd: cost,
           chunkIndex: chunk.chunkIndex,
           durationMs: Math.round(performance.now() - chunkStart),
+          languagePair: null, // L3 language pair wired in Story 3.3
         }
         logAIUsage(record).catch(() => {
           /* non-critical — DB failure already logged inside logAIUsage */

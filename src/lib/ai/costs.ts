@@ -52,6 +52,7 @@ export async function logAIUsage(record: AIUsageRecord): Promise<void> {
       estimatedCostUsd: record.estimatedCostUsd,
       chunkIndex: record.chunkIndex,
       durationMs: record.durationMs,
+      languagePair: record.languagePair,
     },
     'AI usage recorded',
   )
@@ -69,6 +70,7 @@ export async function logAIUsage(record: AIUsageRecord): Promise<void> {
       estimatedCost: record.estimatedCostUsd,
       latencyMs: record.durationMs,
       chunkIndex: record.chunkIndex,
+      languagePair: record.languagePair,
       status: 'success',
     })
   } catch (err) {

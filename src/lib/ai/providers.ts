@@ -1,11 +1,14 @@
 import 'server-only'
 
+import { generateText } from 'ai'
 import { and, eq } from 'drizzle-orm'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { projects } from '@/db/schema/projects'
+import { logger } from '@/lib/logger'
 
+import { getModelById } from './client'
 import type { AILayer } from './types'
 
 // ── Types ──
@@ -13,6 +16,11 @@ import type { AILayer } from './types'
 export type FallbackChain = {
   primary: string
   fallbacks: string[]
+}
+
+export type ProviderHealthResult = {
+  available: boolean
+  latencyMs: number
 }
 
 // ── Config ──
@@ -68,4 +76,105 @@ export async function getModelForLayerWithFallback(
 
   const pinnedModel = layer === 'L2' ? project.l2PinnedModel : project.l3PinnedModel
   return buildFallbackChain(layer, pinnedModel ?? null)
+}
+
+// ── Provider Health Check ──
+
+/**
+ * Map provider name to a lightweight probe model ID.
+ */
+const PROVIDER_PROBE_MODELS: Record<string, string> = {
+  openai: 'gpt-4o-mini',
+  anthropic: 'claude-sonnet-4-5-20250929',
+  google: 'gemini-2.0-flash',
+}
+
+/**
+ * Extract provider name from a model ID string.
+ */
+function getProviderForModel(modelId: string): string {
+  if (modelId.startsWith('gpt-') || modelId.startsWith('o1-') || modelId.startsWith('o3-'))
+    return 'openai'
+  if (modelId.startsWith('claude-')) return 'anthropic'
+  if (modelId.startsWith('gemini-')) return 'google'
+  return 'unknown'
+}
+
+/**
+ * Lightweight health probe for an AI provider.
+ *
+ * Makes a minimal generateText call to check availability.
+ * Never throws — always returns a result. Logs status via pino.
+ */
+export async function checkProviderHealth(provider: string): Promise<ProviderHealthResult> {
+  const start = performance.now()
+  try {
+    const probeModelId = PROVIDER_PROBE_MODELS[provider]
+    if (!probeModelId) {
+      const latencyMs = Math.round(performance.now() - start)
+      logger.warn(
+        { provider, available: false, latencyMs },
+        'Unknown provider — health check skipped',
+      )
+      return { available: false, latencyMs }
+    }
+
+    const model = getModelById(probeModelId)
+    await generateText({
+      model,
+      prompt: 'ping',
+      maxOutputTokens: 1,
+    })
+
+    const latencyMs = Math.round(performance.now() - start)
+    logger.info({ provider, available: true, latencyMs }, 'Provider health check passed')
+    return { available: true, latencyMs }
+  } catch {
+    const latencyMs = Math.round(performance.now() - start)
+    logger.warn({ provider, available: false, latencyMs }, 'Provider health check failed')
+    return { available: false, latencyMs }
+  }
+}
+
+/**
+ * Resolve the first healthy model from a fallback chain.
+ *
+ * Checks provider health starting from primary, then fallbacks in order.
+ * If primary is unhealthy, promotes the first healthy fallback to primary.
+ * If all are unhealthy, returns the original chain (let the actual AI call fail).
+ */
+export async function resolveHealthyModel(chain: FallbackChain): Promise<FallbackChain> {
+  const primaryProvider = getProviderForModel(chain.primary)
+  const primaryHealth = await checkProviderHealth(primaryProvider)
+
+  if (primaryHealth.available) {
+    return chain
+  }
+
+  logger.warn(
+    { primary: chain.primary, provider: primaryProvider },
+    'Primary model provider unhealthy — trying fallbacks',
+  )
+
+  for (const fallback of chain.fallbacks) {
+    const fbProvider = getProviderForModel(fallback)
+    const fbHealth = await checkProviderHealth(fbProvider)
+
+    if (fbHealth.available) {
+      logger.info(
+        { fallbackModel: fallback, originalPrimary: chain.primary },
+        'Fallback model activated due to primary health check failure',
+      )
+      return {
+        primary: fallback,
+        fallbacks: [chain.primary, ...chain.fallbacks.filter((m) => m !== fallback)],
+      }
+    }
+  }
+
+  logger.error(
+    { primary: chain.primary, fallbacks: chain.fallbacks },
+    'All providers unhealthy — using primary anyway',
+  )
+  return chain
 }

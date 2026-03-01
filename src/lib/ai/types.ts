@@ -68,6 +68,7 @@ export type AIUsageRecord = {
   estimatedCostUsd: number
   chunkIndex: number | null
   durationMs: number
+  languagePair: string | null // e.g. "en-US→th" — nullable for backward compat
 }
 
 // ── Error Classification ──
