@@ -10,8 +10,6 @@ import { AiUsageDashboard } from '@/features/dashboard/components/AiUsageDashboa
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
 import { logger } from '@/lib/logger'
 
-export const dynamic = 'force-dynamic'
-
 export const metadata = {
   title: 'AI Usage — QA Localization Tool',
 }
