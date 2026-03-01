@@ -93,7 +93,7 @@ development_status:
   3-1a-ai-usage-dashboard-reporting: ready-for-dev
   # Story 3.1b: UX polish follow-on to 3.1a — empty state, sortable table, model breakdown, tooltip/aria
   3-1b-ai-dashboard-ux-polish: done
-  3-2a-ai-provider-integration-structured-output: review
+  3-2a-ai-provider-integration-structured-output: done
   3-2b-l2-batch-processing-pipeline-extension: backlog
   3-2c-l2-results-display-score-update: backlog
   3-3-ai-layer-3-deep-contextual-analysis: backlog

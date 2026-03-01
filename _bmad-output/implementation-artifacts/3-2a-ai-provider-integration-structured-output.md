@@ -1,6 +1,6 @@
 # Story 3.2a: AI Provider Integration & Structured Output
 
-Status: review
+Status: done
 
 ## Story
 
@@ -428,3 +428,21 @@ Claude Opus 4.6 (claude-opus-4-6)
 | L4 | Low | `L2ChunkResponse` backwards-compat alias unnecessary | Removed alias, updated `ai-responses.ts` to import `L2Output` directly from schema |
 
 **Post-fix verification:** 81/81 tests PASS, TypeScript 0 errors
+
+### CR R2
+
+**Date:** 2026-03-01
+**Findings:** 0C + 0H + 1M + 1L = 2 total
+**Exit criteria:** 0C + 0H → PASS ✅
+
+| ID | Sev | Description | Fix |
+|----|-----|-------------|-----|
+| M1 | Med | M4 inconsistency — line 259 still `toBeGreaterThanOrEqual(7)` (line 685 fixed in R1) | Changed to `toBe(7)` with explanatory comment |
+| L1 | Low | Stale JSDoc in `ai-responses.ts` referencing `l2ChunkResponseSchema` | Updated to `l2OutputSchema` |
+
+**Dismissed (out of scope):**
+- H1 (sub-agent): `runL3ForFile.ts` missing `logAIUsage` in error path → L3 not in 3.2a scope (→ Story 3.3)
+- H2 (sub-agent): `suggestion` vs `suggestedFix` naming → by design per Critical DB Column Mapping
+
+**Post-fix verification:** 5,071 tests PASS, TypeScript 0 errors
+**Story status:** done ✅
