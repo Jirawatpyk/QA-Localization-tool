@@ -12,7 +12,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -31,13 +30,14 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { TaxonomyMapping } from '@/features/taxonomy/types'
+import type { Severity } from '@/features/taxonomy/validation/taxonomySchemas'
 import { severityValues } from '@/features/taxonomy/validation/taxonomySchemas'
 
 type UpdateFields = {
   internalName: string
   category: string
   parentCategory: string
-  severity: string
+  severity: Severity
   description: string
 }
 
@@ -48,17 +48,17 @@ type Props = {
   onAdd: () => void
 }
 
-const SEVERITY_BADGE: Record<string, 'destructive' | 'default' | 'secondary'> = {
-  critical: 'destructive',
-  major: 'default',
-  minor: 'secondary',
+const SEVERITY_CLASSES: Record<string, string> = {
+  critical: 'bg-severity-critical text-white',
+  major: 'bg-severity-major text-white',
+  minor: 'bg-severity-minor text-white',
 }
 
 type EditDraft = {
   internalName: string
   category: string
   parentCategory: string
-  severity: string
+  severity: Severity
   description: string
 }
 
@@ -181,7 +181,7 @@ export function TaxonomyMappingTable({ mappings, onUpdate, onDelete, onAdd }: Pr
                     {isEditing && draft ? (
                       <Select
                         value={draft.severity}
-                        onValueChange={(val) => setDraft({ ...draft, severity: val })}
+                        onValueChange={(val) => setDraft({ ...draft, severity: val as Severity })}
                       >
                         <SelectTrigger className="h-7 text-xs w-[110px]" aria-label="severity">
                           <SelectValue />
@@ -195,12 +195,11 @@ export function TaxonomyMappingTable({ mappings, onUpdate, onDelete, onAdd }: Pr
                         </SelectContent>
                       </Select>
                     ) : (
-                      <Badge
-                        variant={SEVERITY_BADGE[mapping.severity ?? 'minor'] ?? 'secondary'}
-                        className="text-xs"
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${SEVERITY_CLASSES[mapping.severity ?? 'minor'] ?? SEVERITY_CLASSES['minor']}`}
                       >
                         {mapping.severity ?? 'minor'}
-                      </Badge>
+                      </span>
                     )}
                   </TableCell>
 

@@ -3,6 +3,37 @@
   transition: width 200ms ease-out;
 }
 
+/* Score change morph animations */
+@keyframes score-slide-up {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes score-slide-down {
+  from {
+    transform: translateY(-8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@utility animate-slide-up {
+  animation: score-slide-up 300ms ease-out;
+}
+
+@utility animate-slide-down {
+  animation: score-slide-down 300ms ease-out;
+}
+
 /* Respect reduced motion preferences */
 @media (prefers-reduced-motion: reduce) {
   .sidebar-transition {

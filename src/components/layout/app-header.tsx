@@ -1,9 +1,10 @@
 import { Bell, User } from 'lucide-react'
 
+import { AppBreadcrumb } from '@/components/layout/app-breadcrumb'
 import { NotificationDropdown } from '@/features/dashboard/components/NotificationDropdown'
 import { HelpMenu } from '@/features/onboarding/components/HelpMenu'
 
-interface AppHeaderProps {
+type AppHeaderProps = {
   userId?: string | undefined
   tenantId?: string | undefined
 }
@@ -12,7 +13,7 @@ export function AppHeader({ userId, tenantId }: AppHeaderProps) {
   return (
     <header className="flex h-12 items-center justify-between border-b border-border bg-surface px-4">
       <div className="flex items-center gap-2">
-        <h1 className="text-sm font-medium text-text-primary">QA Localization Tool</h1>
+        <AppBreadcrumb />
       </div>
       <div className="flex items-center gap-2">
         {userId && tenantId ? (

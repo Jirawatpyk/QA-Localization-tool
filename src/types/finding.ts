@@ -32,6 +32,11 @@ export const SCORE_STATUSES = [
 
 export type ScoreStatus = (typeof SCORE_STATUSES)[number]
 
+// ScoreBadge visual states (NOT the DB lifecycle type — that's ScoreStatus above)
+// These represent the visual appearance of the score badge in the UI
+export type ScoreBadgeState = 'pass' | 'review' | 'fail' | 'analyzing' | 'rule-only'
+export type ScoreBadgeSize = 'sm' | 'md' | 'lg'
+
 export type Finding = {
   id: string
   tenantId: string

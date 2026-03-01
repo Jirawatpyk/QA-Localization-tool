@@ -7,9 +7,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { ScoreBadge } from '@/features/batch/components/ScoreBadge'
 import type { RecentFileRow } from '@/features/dashboard/types'
 
-interface RecentFilesTableProps {
+type RecentFilesTableProps = {
   files: RecentFileRow[]
 }
 
@@ -57,11 +58,7 @@ export function RecentFilesTable({ files }: RecentFilesTableProps) {
               <TableCell className="font-medium">{file.fileName}</TableCell>
               <TableCell>{file.projectName}</TableCell>
               <TableCell className="text-right">
-                {file.mqmScore != null ? (
-                  <span className="font-mono text-sm">{file.mqmScore.toFixed(1)}</span>
-                ) : (
-                  <span className="text-muted-foreground">&mdash;</span>
-                )}
+                <ScoreBadge score={file.mqmScore} size="sm" />
               </TableCell>
               <TableCell>
                 <Badge variant={getStatusVariant(file.status)}>{file.status}</Badge>

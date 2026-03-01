@@ -11,6 +11,9 @@
 - `story-2-10-findings.md` — Story 2.10 Parity Verification CR R1
 - `story-3-0-findings.md` — Story 3.0 Score & Review Infrastructure CR R1-R2
 - `story-3-1-findings.md` — Story 3.1 AI Cost Control CR R1 (1C/5H/8M/5L)
+- `story-3-1a-findings.md` — Story 3.1a AI Usage Dashboard CR R1-R2 (R2: 0C/3H/5M/4L)
+- `story-3-1b-findings.md` — Story 3.1b AI Dashboard UX Polish CR R1 (0C/2H/5M/6L)
+- `story-3-0-5-findings.md` — Story 3.0.5 UX Foundation Gap Fix CR R1 (0C/1H/5M/8L)
 
 ## Recurring Anti-Patterns (check EVERY review)
 
@@ -122,6 +125,19 @@
 - Upstash rate limit rejection thrown as NonRetriableError = Inngest won't retry
 - Rate limits are transient — should use plain Error for Inngest retry
 - Affected: runL2ForFile.ts, runL3ForFile.ts
+
+### 29. AC Compliance Gaps — Feature Specified But Not Implemented (Story 3.1a R2)
+
+- 3 HIGH findings in R2 were all missing features explicitly specified in AC text
+- Pattern: Code works correctly but AC-specified UI features are absent
+- Root cause: Dev implements core logic but misses secondary AC requirements (empty state text, sortable table, summary table)
+- **Check during review:** For each AC, verify EVERY "And" clause has corresponding implementation
+
+### 30. Recharts Tooltip Formatter Overrides Line Name (Story 3.1a R2)
+
+- `formatter={(v) => [formatted, '']}` — empty string replaces Line's `name` prop in tooltip
+- In multi-series charts (L2/L3 breakdown), labels become indistinguishable
+- Fix: return just formatted value (not array), or pass name through: `[formatted, name]`
 
 ## CAS Guard Pattern (ESTABLISHED)
 

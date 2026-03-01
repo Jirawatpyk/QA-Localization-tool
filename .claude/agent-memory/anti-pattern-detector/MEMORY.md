@@ -4,6 +4,9 @@
 
 - Stories 1.1–2.8: See `story-scans-1-2.md` (archived)
 - Story 3.1: See `story-3-1-findings.md` (2026-02-27)
+- Story 3.1a: 2026-02-28 — 3M + 1L. Inline palette in STATUS_COLORS (bg-green-500, bg-yellow-500, bg-red-500), useState(prop) without sync useEffect, `interface` vs `type` in pre-existing types.ts (legacy), relative `../` imports within feature (LOW).
+- Story 3.1b: 2026-02-28 — 1M + 1L. useState sort state not reset on projects prop change (Guardrail #12 recurring), interface vs type alias in 4 component files (LOW).
+- Story 3.0.5: 2026-03-01 — 1H + 2M + 3L. Missing `import 'server-only'` in getBreadcrumbEntities.action.ts (HIGH); bare `string` for severity in UpdateFields/EditDraft in TaxonomyMappingTable (MEDIUM); bare `string` for status in getStatusVariant function signature in RecentFilesTable (MEDIUM); `interface` vs `type` in app-header.tsx + RecentFilesTable.tsx (LOW); Server Action in `src/components/layout/actions/` instead of feature module (LOW); empty `.catch(() => {})` without non-critical comment in AppBreadcrumb (LOW).
 
 ## Recurring Violations by Category
 
@@ -20,6 +23,9 @@
 - Opacity modifiers on tokens (`warning/20`, `warning/5`) are borderline — underlying token is valid; `/N` suffix is Tailwind v4 standard. Flag LOW.
 - `muted-foreground`, `text-destructive`, `text-success`, `text-warning`, `text-info`, `text-error`, `bg-warning`, `bg-error`, `bg-success` are ALL valid tokens (confirmed in tokens.css / globals.css)
 - `var(--color-overlay, #1e293b)` — CSS variable with fallback hex: acceptable (token is primary, hex is fallback only)
+- `var(--chart-1, #6366f1)` pattern in recharts `fill`/`stroke` props — CSS var with hex fallback. Use token (`var(--chart-1)`) without hardcoded fallback hex. Flag MEDIUM (inline color fallback is still an inline color).
+- `var(--chart-1)` WITHOUT hex fallback (Story 3.1b) — CLEAN. `--chart-1/2/3/4/5` confirmed defined in globals.css `:root` lines 73–77 and mapped in `@theme inline` lines 23–27. Using bare `var(--chart-1)` in recharts fill/stroke = valid design token usage.
+- Story 3.1a: `STATUS_COLORS` in `AiSpendByProjectTable.tsx` uses `bg-green-500`, `bg-yellow-500`, `bg-red-500` — clear violations. Fix: use `bg-success`, `bg-warning`, `bg-error` from tokens.css.
 
 ### console.log (HIGH)
 
@@ -80,6 +86,8 @@
 
 - `useState(prop)` does NOT sync when prop changes after mount — need `useEffect(() => { setState(prop) }, [prop])`
 - Story 3.1: `ModelPinningSettings.tsx` — `ModelSelect` uses `useState(currentModel)` without sync effect
+- Story 3.1a: `AiUsageDashboard.tsx` — `useState<Period>(selectedDays)` without sync useEffect. BUT: `selectedDays` comes from RSC searchParams (URL-driven), page re-renders on URL change, so `activePeriod` diverges only if parent changes the prop without navigation. Flag MEDIUM — pattern is risky even if current usage is safe.
+- Story 3.1b: `AiSpendByProjectTable.tsx` — `useState<SortCol>('cost')` + `useState<SortDir>('desc')` not reset when `projects` prop changes. When period filter changes (7d→30d→90d), sort state persists from previous period. Fix: `useEffect(() => { setSortCol('cost'); setSortDir('desc') }, [projects])`. MEDIUM recurring Guardrail #12 violation.
 - Pattern to check: any component with `useState(propValue)` where prop can change
 
 ### 'use client' on Pure Display Components (LOW)
@@ -99,3 +107,12 @@
 - `export default` allowed ONLY in: `page.tsx`, `layout.tsx`, `error.tsx`, `route.ts`
 - `'use client'` on `page.tsx` is ALWAYS forbidden
 - `"use server"` + `import 'server-only'` pattern is correct and required for Server Actions
+- Story 3.0.5: New action in `src/components/layout/actions/` — only `src/features/` actions include `import 'server-only'`. Layout-level actions must also include it.
+
+## Allowlist: Additional Valid Tokens (confirmed Story 3.0.5)
+
+`bg-surface`, `text-text-secondary`, `bg-severity-critical`, `bg-severity-major`, `bg-severity-minor`,
+`text-status-pass`, `text-status-pending`, `text-status-fail`, `text-status-analyzing`,
+`bg-status-pass/10`, `bg-status-pending/10`, `bg-status-fail/10`, `bg-status-analyzing/10`,
+`border-status-pass/20`, `border-status-pending/20`, `border-status-fail/20`, `border-status-analyzing/20`,
+`bg-info/10`, `text-info`, `border-info/20`, `bg-card`, `hover:bg-error/90` (opacity on token = LOW)

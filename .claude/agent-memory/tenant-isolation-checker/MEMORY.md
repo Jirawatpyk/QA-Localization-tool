@@ -83,6 +83,18 @@ is additive-only inside `and()` — Drizzle treats undefined as no-op; `withTena
 
 - LOW: `buildPerfSegments()` in `factories.ts` uses hardcoded non-UUID-v4 strings — zero security risk.
 
+### Story 3.1a Audit Results (AI Usage Dashboard — 2026-02-28)
+
+**Result: 0C/0H/0M/0L — SECURE (full pass, 5 files).**
+
+Files: `getAiUsageSummary`, `getAiUsageByProject`, `getAiSpendByModel`, `getAiSpendTrend`, `exportAiUsage` (all in `src/features/dashboard/actions/`).
+
+Key LEFT JOIN patterns confirmed correct:
+
+- `getAiUsageByProject`: drives from `projects` (outer); `withTenant(projects.tenantId)` in WHERE; `withTenant(aiUsageLogs.tenantId)` in JOIN condition. Zero-spend projects preserved correctly.
+- `exportAiUsage`: drives from `aiUsageLogs` (outer); `withTenant(aiUsageLogs.tenantId)` in WHERE; `withTenant(projects.tenantId)` in JOIN condition. Project name enrichment cannot leak cross-tenant names.
+- In both cases: WHERE-side filter guards the driving table; JOIN-side filter guards the enrichment table. This is the canonical correct pattern for tenant-safe LEFT JOINs.
+
 ### Story 3.1 Audit Results (AI Cost Control, Throttling, Model Pinning — 2026-02-27)
 
 **Result: 0C/0H/0M/0L — SECURE (full pass, 10 files).** See `patterns.md` § "Story 3.1" for full detail.
@@ -92,6 +104,27 @@ New `projects` columns: `aiBudgetMonthlyUsd`, `budgetAlertThresholdPct`, `l2Pinn
 
 Feature gap (not security): `runL2ForFile.ts` + `runL3ForFile.ts` call `getModelForLayer` (static),
 not `getModelForLayerWithFallback` (per-project pinned). Pinning is not yet applied at runtime.
+
+### Story 3.0.5 Audit Results (UX Foundation Gap Fix — 2026-03-01)
+
+**Result: 0C/0H/0M/0L — SECURE (full pass, 9 files).** Pure UI story — zero new DB access paths.
+
+Files audited:
+
+- `src/components/layout/actions/getBreadcrumbEntities.action.ts` — placeholder only, no DB queries
+- `src/components/layout/app-breadcrumb.tsx` — 'use client', delegates to server action only
+- `src/components/layout/app-header.tsx` — presentation only, tenantId flows from server parent
+- `src/components/layout/app-sidebar.tsx` — navigation only, no data access
+- `src/features/batch/components/ScoreBadge.tsx` — presentation only, no data access
+- `src/features/dashboard/components/RecentFilesTable.tsx` — props from pre-audited getDashboardData
+- `src/features/taxonomy/components/TaxonomyMappingTable.tsx` — props-only, callbacks to server actions
+- 2 test files — no DB clients instantiated
+
+FORWARD RISK (Epic 4): `getBreadcrumbEntities.action.ts` will need real DB queries when review routes
+are created. MUST use `getCurrentUser()`/`requireRole()` for tenantId (not from input params), then
+`withTenant(projects.tenantId, tenantId)` for project name lookup and
+`withTenant(reviewSessions.tenantId, tenantId)` for session name lookup. Input `projectId`/`sessionId`
+are URL-sourced and must be treated as untrusted.
 
 ## Key Patterns to Watch
 
@@ -106,3 +139,4 @@ not `getModelForLayerWithFallback` (per-project pinned). Pinning is not yet appl
 - ANTI-PATTERN: `withTenant(col, val)` called standalone (not in `.where()`) is dead code — must be composed into AND clause. Flag as HIGH.
 - ANTI-PATTERN: INSERT with unverified FK from client input — always SELECT with withTenant() first to verify ownership.
 - ANTI-PATTERN: over-broad DELETE in idempotent re-run — scope DELETE to the specific layer/entity being regenerated.
+- LEFT JOIN isolation rule (confirmed 3.1a): withTenant() on driving table goes in WHERE; withTenant() on joined table goes in JOIN condition. Putting the join-side filter in WHERE converts LEFT JOIN to INNER JOIN, dropping zero-rows. Both sides MUST be filtered (Guardrail #14).
