@@ -63,7 +63,6 @@ describe('buildFallbackChain', () => {
 
     expect(chain.primary).toBe('gpt-4o-mini')
     expect(chain.fallbacks).not.toContain('gpt-4o-mini') // no self-fallback
-    // RED: providers.ts not yet created
   })
 
   it('should use system default when pinnedModel is null for L3', async () => {
@@ -72,7 +71,6 @@ describe('buildFallbackChain', () => {
 
     expect(chain.primary).toBe('claude-sonnet-4-5-20250929')
     expect(chain.fallbacks).not.toContain('claude-sonnet-4-5-20250929')
-    // RED: providers.ts not yet created
   })
 
   it('should use pinned model as primary when set for L2', async () => {
@@ -80,7 +78,6 @@ describe('buildFallbackChain', () => {
     const chain = buildFallbackChain('L2', 'gpt-4o-mini-2024-07-18')
 
     expect(chain.primary).toBe('gpt-4o-mini-2024-07-18')
-    // RED: pinned model must become primary
   })
 
   it('should use pinned model as primary when set for L3', async () => {
@@ -99,7 +96,6 @@ describe('buildFallbackChain', () => {
 
     // When pinned, system default moves to fallback position
     expect(chain.fallbacks).toContain('gpt-4o-mini')
-    // RED: system default must be in fallback chain when overridden
   })
 
   it('should not duplicate pinned model in fallbacks array', async () => {
@@ -109,7 +105,6 @@ describe('buildFallbackChain', () => {
 
     // 'gpt-4o-mini' should appear as primary only, not also in fallbacks
     expect(chain.fallbacks.filter((m) => m === 'gpt-4o-mini').length).toBe(0)
-    // RED: filter(m => m !== primary) prevents duplication
   })
 
   // ── P1: Fallback chain completeness ──
@@ -121,7 +116,6 @@ describe('buildFallbackChain', () => {
     expect(chain.primary).toBe('gpt-4o-mini')
     expect(chain.fallbacks).toContain('gemini-2.0-flash')
     expect(LAYER_DEFAULTS.L2.fallbacks).toContain('gemini-2.0-flash')
-    // RED: LAYER_DEFAULTS must include gemini fallback for L2
   })
 
   it('should return L3 fallback chain: claude-sonnet-4-5-20250929 → gpt-4o', async () => {
@@ -131,7 +125,6 @@ describe('buildFallbackChain', () => {
     expect(chain.primary).toBe('claude-sonnet-4-5-20250929')
     expect(chain.fallbacks).toContain('gpt-4o')
     expect(LAYER_DEFAULTS.L3.fallbacks).toContain('gpt-4o')
-    // RED: LAYER_DEFAULTS must include gpt-4o fallback for L3
   })
 
   it('should filter out primary from fallbacks (no self-fallback)', async () => {
@@ -142,7 +135,6 @@ describe('buildFallbackChain', () => {
 
     const l3Chain = buildFallbackChain('L3', null)
     expect(l3Chain.fallbacks).not.toContain(l3Chain.primary)
-    // RED: filter ensures no self-reference in fallbacks
   })
 })
 
@@ -161,7 +153,6 @@ describe('getModelForLayerWithFallback', () => {
     const chain = await getModelForLayerWithFallback('L2', VALID_PROJECT_ID, VALID_TENANT_ID)
 
     expect(chain.primary).toBe('gpt-4o-mini-2024-07-18')
-    // RED: getModelForLayerWithFallback queries projects table for pinned model
   })
 })
 

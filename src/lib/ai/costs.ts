@@ -7,7 +7,7 @@ import { aiUsageLogs } from '@/db/schema/aiUsageLogs'
 import { logger } from '@/lib/logger'
 
 import type { AILayer, AIUsageRecord } from './types'
-import { getConfigForModel } from './types'
+import { deriveProviderFromModelId, getConfigForModel } from './types'
 
 /**
  * Calculate estimated cost in USD from token usage.
@@ -22,16 +22,7 @@ export function estimateCost(model: string, layer: AILayer, usage: LanguageModel
   return Math.round((inputCost + outputCost) * 1_000_000) / 1_000_000 // 6 decimal places
 }
 
-/**
- * Derive provider name from model ID.
- */
-function deriveProvider(model: string): string {
-  if (model.startsWith('gpt-') || model.startsWith('o1-') || model.startsWith('o3-'))
-    return 'openai'
-  if (model.startsWith('claude-')) return 'anthropic'
-  if (model.startsWith('gemini-')) return 'google'
-  return 'unknown'
-}
+// Provider derivation: uses shared deriveProviderFromModelId from types.ts
 
 /**
  * Log AI usage for cost tracking and audit.
@@ -64,14 +55,14 @@ export async function logAIUsage(record: AIUsageRecord): Promise<void> {
       tenantId: record.tenantId,
       layer: record.layer,
       model: record.model,
-      provider: deriveProvider(record.model),
+      provider: deriveProviderFromModelId(record.model),
       inputTokens: record.inputTokens,
       outputTokens: record.outputTokens,
       estimatedCost: record.estimatedCostUsd,
       latencyMs: record.durationMs,
       chunkIndex: record.chunkIndex,
       languagePair: record.languagePair,
-      status: 'success',
+      status: record.status,
     })
   } catch (err) {
     logger.error(

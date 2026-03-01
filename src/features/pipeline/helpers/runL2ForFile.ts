@@ -60,9 +60,6 @@ export type L2Result = {
   }
 }
 
-// Re-export L2Output as L2ChunkResponse for backwards compatibility
-export type L2ChunkResponse = L2Output
-
 // ── Internal Types ──
 
 type SegmentRow = {
@@ -281,6 +278,7 @@ export async function runL2ForFile({
           chunkIndex: chunk.chunkIndex,
           durationMs: Math.round(performance.now() - chunkStart),
           languagePair,
+          status: 'success',
         }
         logAIUsage(record).catch(() => {
           /* non-critical — DB failure already logged inside logAIUsage */
@@ -307,6 +305,26 @@ export async function runL2ForFile({
           { err: error, fileId, chunkIndex: chunk.chunkIndex, aiErrorKind: kind },
           'L2 chunk failed (non-retriable — continuing with remaining chunks)',
         )
+
+        // AC4: Log failed chunk with status 'error' for cost tracking completeness
+        const languagePair = deriveLanguagePair(segmentRows)
+        const errorRecord: AIUsageRecord = {
+          tenantId,
+          projectId,
+          fileId,
+          model: modelId,
+          layer: 'L2',
+          inputTokens: 0,
+          outputTokens: 0,
+          estimatedCostUsd: 0,
+          chunkIndex: chunk.chunkIndex,
+          durationMs: Math.round(performance.now() - chunkStart),
+          languagePair,
+          status: 'error',
+        }
+        logAIUsage(errorRecord).catch(() => {
+          /* non-critical — DB failure already logged inside logAIUsage */
+        })
 
         chunkResults.push({
           chunkIndex: chunk.chunkIndex,

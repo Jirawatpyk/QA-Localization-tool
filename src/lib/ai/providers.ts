@@ -10,6 +10,7 @@ import { logger } from '@/lib/logger'
 
 import { getModelById } from './client'
 import type { AILayer } from './types'
+import { deriveProviderFromModelId } from './types'
 
 // ── Types ──
 
@@ -82,23 +83,21 @@ export async function getModelForLayerWithFallback(
 
 /**
  * Map provider name to a lightweight probe model ID.
+ * Derived from LAYER_DEFAULTS to stay in sync — first seen model per provider wins
+ * (L2 models are cheaper, so they're preferred for health probes).
  */
-const PROVIDER_PROBE_MODELS: Record<string, string> = {
-  openai: 'gpt-4o-mini',
-  anthropic: 'claude-sonnet-4-5-20250929',
-  google: 'gemini-2.0-flash',
-}
+const PROVIDER_PROBE_MODELS: Record<string, string> = Object.values(LAYER_DEFAULTS).reduce(
+  (acc, config) => {
+    for (const model of [config.systemDefault, ...config.fallbacks]) {
+      const provider = deriveProviderFromModelId(model)
+      if (!acc[provider]) acc[provider] = model
+    }
+    return acc
+  },
+  {} as Record<string, string>,
+)
 
-/**
- * Extract provider name from a model ID string.
- */
-function getProviderForModel(modelId: string): string {
-  if (modelId.startsWith('gpt-') || modelId.startsWith('o1-') || modelId.startsWith('o3-'))
-    return 'openai'
-  if (modelId.startsWith('claude-')) return 'anthropic'
-  if (modelId.startsWith('gemini-')) return 'google'
-  return 'unknown'
-}
+// Provider derivation: uses shared deriveProviderFromModelId from types.ts
 
 /**
  * Lightweight health probe for an AI provider.
@@ -144,7 +143,7 @@ export async function checkProviderHealth(provider: string): Promise<ProviderHea
  * If all are unhealthy, returns the original chain (let the actual AI call fail).
  */
 export async function resolveHealthyModel(chain: FallbackChain): Promise<FallbackChain> {
-  const primaryProvider = getProviderForModel(chain.primary)
+  const primaryProvider = deriveProviderFromModelId(chain.primary)
   const primaryHealth = await checkProviderHealth(primaryProvider)
 
   if (primaryHealth.available) {
@@ -157,7 +156,7 @@ export async function resolveHealthyModel(chain: FallbackChain): Promise<Fallbac
   )
 
   for (const fallback of chain.fallbacks) {
-    const fbProvider = getProviderForModel(fallback)
+    const fbProvider = deriveProviderFromModelId(fallback)
     const fbHealth = await checkProviderHealth(fbProvider)
 
     if (fbHealth.available) {

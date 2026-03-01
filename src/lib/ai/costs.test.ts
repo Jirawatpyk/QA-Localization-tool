@@ -49,6 +49,7 @@ const baseRecord = {
   chunkIndex: null,
   durationMs: 1200,
   languagePair: 'en-US→th' as string | null,
+  status: 'success' as const,
 }
 
 describe('logAIUsage', () => {
@@ -85,6 +86,7 @@ describe('logAIUsage', () => {
       estimatedCost: 0.000085,
       latencyMs: 1200,
       status: 'success',
+      languagePair: 'en-US→th',
     })
   })
 
@@ -96,7 +98,6 @@ describe('logAIUsage', () => {
 
     const insertedValues = dbState.valuesCaptures[0] as Record<string, unknown>
     expect(insertedValues.provider).toBe('openai')
-    // RED: deriveProvider not yet implemented
   })
 
   it("should derive provider='anthropic' from claude-* model ID", async () => {
@@ -111,7 +112,6 @@ describe('logAIUsage', () => {
 
     const insertedValues = dbState.valuesCaptures[0] as Record<string, unknown>
     expect(insertedValues.provider).toBe('anthropic')
-    // RED: deriveProvider not yet implemented
   })
 
   it("should derive provider='google' from gemini-* model ID", async () => {
@@ -123,7 +123,6 @@ describe('logAIUsage', () => {
 
     const insertedValues = dbState.valuesCaptures[0] as Record<string, unknown>
     expect(insertedValues.provider).toBe('google')
-    // RED: deriveProvider not yet implemented for google
   })
 
   it("should derive provider='unknown' for unrecognized model ID", async () => {
@@ -134,7 +133,6 @@ describe('logAIUsage', () => {
 
     const insertedValues = dbState.valuesCaptures[0] as Record<string, unknown>
     expect(insertedValues.provider).toBe('unknown')
-    // RED: deriveProvider fallback to 'unknown'
   })
 
   it('should include tenantId in INSERT values (tenant isolation)', async () => {
@@ -145,7 +143,6 @@ describe('logAIUsage', () => {
 
     const insertedValues = dbState.valuesCaptures[0] as Record<string, unknown>
     expect(insertedValues.tenantId).toBe(VALID_TENANT_ID)
-    // RED: tenant isolation check for ai_usage_logs INSERT
   })
 
   // ── P1: Secondary behavior ──
@@ -164,7 +161,6 @@ describe('logAIUsage', () => {
       }),
       'AI usage recorded',
     )
-    // RED: pino log must coexist with DB insert
   })
 
   it('should not throw when DB insert fails (log error, swallow)', async () => {
@@ -178,7 +174,6 @@ describe('logAIUsage', () => {
 
     const { logger } = await import('@/lib/logger')
     expect(logger.error).toHaveBeenCalled()
-    // RED: DB failure in logAIUsage must be swallowed (audit log non-fatal pattern)
   })
 
   it('should include chunkIndex when provided (not null)', async () => {
@@ -189,6 +184,5 @@ describe('logAIUsage', () => {
 
     const insertedValues = dbState.valuesCaptures[0] as Record<string, unknown>
     expect(insertedValues.chunkIndex).toBe(3)
-    // RED: chunkIndex column added in Task 1.3 migration
   })
 })

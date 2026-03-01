@@ -69,6 +69,21 @@ export type AIUsageRecord = {
   chunkIndex: number | null
   durationMs: number
   languagePair: string | null // e.g. "en-US→th" — nullable for backward compat
+  status: 'success' | 'error' // AC4: track both successful and failed AI calls
+}
+
+// ── Provider Derivation ──
+
+/**
+ * Derive provider name from model ID string.
+ * Shared utility — used by costs.ts, providers.ts, and health checks.
+ */
+export function deriveProviderFromModelId(model: string): string {
+  if (model.startsWith('gpt-') || model.startsWith('o1-') || model.startsWith('o3-'))
+    return 'openai'
+  if (model.startsWith('claude-')) return 'anthropic'
+  if (model.startsWith('gemini-')) return 'google'
+  return 'unknown'
 }
 
 // ── Error Classification ──

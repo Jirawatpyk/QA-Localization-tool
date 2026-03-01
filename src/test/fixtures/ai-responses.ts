@@ -13,8 +13,8 @@
  * ```
  */
 
-import type { L2ChunkResponse } from '@/features/pipeline/helpers/runL2ForFile'
 import type { L3ChunkResponse } from '@/features/pipeline/helpers/runL3ForFile'
+import type { L2Output } from '@/features/pipeline/schemas/l2-output'
 
 // ── GenerateText Result Shape ──
 
@@ -29,7 +29,7 @@ export type MockGenerateTextResult<T> = {
 
 const DEFAULT_SEGMENT_ID = 'd1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5a'
 
-const DEFAULT_L2_FINDING: L2ChunkResponse['findings'][number] = {
+const DEFAULT_L2_FINDING: L2Output['findings'][number] = {
   segmentId: DEFAULT_SEGMENT_ID,
   category: 'accuracy',
   severity: 'major',
@@ -50,12 +50,12 @@ const DEFAULT_L3_FINDING: L3ChunkResponse['findings'][number] = {
 
 // ── L2 Response Builder ──
 
-type L2FindingOverride = Partial<L2ChunkResponse['findings'][number]>
+type L2FindingOverride = Partial<L2Output['findings'][number]>
 
 export function buildL2Response(
   findingOverrides?: L2FindingOverride[],
   usageOverrides?: Partial<MockGenerateTextResult<unknown>['usage']>,
-): MockGenerateTextResult<L2ChunkResponse> {
+): MockGenerateTextResult<L2Output> {
   const findings = (findingOverrides ?? []).map((f) => ({
     ...DEFAULT_L2_FINDING,
     ...f,

@@ -159,6 +159,13 @@ export function createAIMock(options?: AIMockOptions): AIMockResult {
         const defaultId = layerArg === 'L2' ? 'gpt-4o-mini' : 'claude-sonnet-4-5-20250929'
         return modelConfig[defaultId as keyof typeof modelConfig]
       }),
+      deriveProviderFromModelId: vi.fn((model: string) => {
+        if (model.startsWith('gpt-') || model.startsWith('o1-') || model.startsWith('o3-'))
+          return 'openai'
+        if (model.startsWith('claude-')) return 'anthropic'
+        if (model.startsWith('gemini-')) return 'google'
+        return 'unknown'
+      }),
     },
     aiProviders: {
       getModelForLayerWithFallback: (...args: unknown[]) =>

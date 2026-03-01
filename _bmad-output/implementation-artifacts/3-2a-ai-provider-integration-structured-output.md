@@ -150,6 +150,7 @@ so that **the L2 screening pipeline can make real AI calls with proper schema va
 | `costs.ts` | `src/lib/ai/costs.ts` | Update `logAIUsage()` to accept + persist `languagePair` |
 | `providers.ts` | `src/lib/ai/providers.ts` | Add `checkProviderHealth()` function + integrate into fallback chain |
 | `files.ts` | `src/db/schema/files.ts` | Update status type comment to include L2/L3 statuses |
+| `runL3ForFile.ts` | `src/features/pipeline/helpers/runL3ForFile.ts` | Add `status: 'success'` to `AIUsageRecord` (H1 fix — status field added to type) |
 | `build-l2-prompt.ts` | `src/features/pipeline/prompts/build-l2-prompt.ts` | **Only if** output format section doesn't align with L2 semantic categories |
 
 ### Critical DB Column Mapping
@@ -364,7 +365,7 @@ Claude Opus 4.6 (claude-opus-4-6)
 
 ### Debug Log References
 
-- Pre-CR anti-pattern scan: 0 Critical, 0 High, 2 Medium (bare `string` in L1FindingContext — Drizzle returns `string` from varchar, safe), 2 Low (name collision L2Finding — internal only, relative import — same directory convention)
+- Pre-CR anti-pattern scan: 0 Critical, 0 High, 2 Medium (bare `string` in L1FindingContext — Drizzle returns `string` from varchar, safe), 2 Low (FIXED — L2Finding→L2MappedFinding rename, `./chunkSegments`→`@/` alias)
 - Pre-CR code quality scan: 1 Critical (FIXED — prompt field `suggestedFix`→`suggestion` to match schema), 3 High (H1: `resolveHealthyModel` not called — by design, deferred to Story 3.4; H2: health probe cost — minimal, by design; H3: provider detection duplication — refactor scope for later story)
 - Tenant isolation: PASS — all 9 DB queries verified, glossary JOIN via `glossaries.tenantId`, taxonomy correctly skips `withTenant()` (no `tenant_id` column)
 - All 72 ATDD tests GREEN (21 schema + 17 providers + 34 runL2ForFile)
@@ -380,14 +381,14 @@ Claude Opus 4.6 (claude-opus-4-6)
 - Task 5: Updated `files.ts` status comment to include L2/L3 statuses. No separate `FileStatus` type file found (inline comments serve as documentation)
 - Task 6: All 72 tests pass — 21 schema + 17 providers + 34 runL2ForFile (20 existing + 9 AC3 + 5 AC4)
 - Schema field mapping: AI output `suggestion` → DB column `suggestedFix` (mapping at step 7 line 357)
-- Type alias: `export type L2ChunkResponse = L2Output` for backwards compatibility with test fixtures
+- Type alias: `L2ChunkResponse` removed in CR R1 (L4) — test fixtures updated to import `L2Output` directly from schema
 
 ### File List
 
 **Created:**
 - `src/features/pipeline/schemas/l2-output.ts` — L2 Zod output schema
 - `src/features/pipeline/schemas/l2-output.test.ts` — 21 schema validation tests
-- `supabase/migrations/00020_ai_usage_logs_language_pair.sql` — language_pair column migration
+- `supabase/migrations/00018_story_3_2a_language_pair.sql` — language_pair column migration
 
 **Modified:**
 - `src/features/pipeline/helpers/runL2ForFile.ts` — Wire real prompt builder, context loading, schema import
@@ -402,3 +403,28 @@ Claude Opus 4.6 (claude-opus-4-6)
 - `src/test/fixtures/ai-responses.ts` — `suggestion` field, overrideable lang fields
 - `src/features/pipeline/prompts/build-l2-prompt.ts` — Fixed output format field `suggestedFix`→`suggestion` to match l2OutputSchema (C1 fix)
 - `src/features/pipeline/prompts/__tests__/build-l2-prompt.test.ts` — Updated assertion for field name change
+- `src/test/mocks/ai-providers.ts` — Added `deriveProviderFromModelId` mock (H2 fix)
+- `src/features/pipeline/helpers/runL3ForFile.ts` — Added `status: 'success'` to AIUsageRecord (H1 fix)
+
+### CR R1 — Code Review Round 1
+
+**Date:** 2026-03-01
+**Findings:** 0C + 2H + 6M + 4L = 12 total
+**Exit criteria:** 0C + 0H achieved ✅
+
+| ID | Sev | Description | Fix |
+|----|-----|-------------|-----|
+| H1 | High | Failed chunk cost tracking missing — `logAIUsage()` not called on chunk error; test was tautological | Added `status` field to `AIUsageRecord`, `logAIUsage` call in catch block with `status: 'error'`, fixed test to assert `status: 'error'` specifically |
+| H2 | High | `deriveProvider` duplicated in costs.ts, providers.ts, and PROVIDER_PROBE_MODELS | Extracted shared `deriveProviderFromModelId()` to `types.ts`, imported in both consumers, added to AI mock factory |
+| M1 | Med | Dead mock `mockCheckTenantBudget` in 3 beforeEach blocks | Removed from destructuring + all beforeEach blocks |
+| M2 | Med | Stale ATDD RED-phase block comments + `// RED:` orphans | Removed all stale comments from runL2ForFile.test.ts, providers.test.ts, costs.test.ts |
+| M3 | Med | l2OutputSchema assertion used `expect.anything()` | Imported actual `l2OutputSchema` and used in assertion |
+| M4 | Med | taxonomy withTenant assertion used `>=7` (non-deterministic) | Changed to exact `toBe(7)` |
+| M5 | Med | `runL3ForFile.ts` missing from story File List | Added to Modified file list |
+| M6 | Med | `languagePair` not asserted in costs.test.ts INSERT test | Added `languagePair: 'en-US→th'` to `toMatchObject` assertion |
+| L1 | Low | Migration filename mismatch (story: 00020, actual: 00018) | Fixed to `00018_story_3_2a_language_pair.sql` |
+| L2 | Low | `PROVIDER_PROBE_MODELS` sync risk — hardcoded separately from `LAYER_DEFAULTS` | Derived from `LAYER_DEFAULTS` using `reduce()` |
+| L3 | Low | `// RED:` orphan comments in costs.test.ts | Removed all 8 orphan comments |
+| L4 | Low | `L2ChunkResponse` backwards-compat alias unnecessary | Removed alias, updated `ai-responses.ts` to import `L2Output` directly from schema |
+
+**Post-fix verification:** 81/81 tests PASS, TypeScript 0 errors

@@ -13,7 +13,6 @@ const {
   mocks: {
     mockGenerateText,
     mockClassifyAIError,
-    mockCheckTenantBudget,
     mockCheckProjectBudget,
     mockWriteAuditLog,
     mockLogAIUsage,
@@ -160,7 +159,6 @@ describe('runL2ForFile', () => {
     dbState.returnValues = []
     dbState.setCaptures = []
     mockGenerateText.mockResolvedValue(buildL2Response())
-    mockCheckTenantBudget.mockResolvedValue(BUDGET_HAS_QUOTA)
     mockCheckProjectBudget.mockResolvedValue(BUDGET_HAS_QUOTA)
     mockAiL2Limit.mockResolvedValue({ success: true, limit: 100, remaining: 99, reset: 0 })
     mockClassifyAIError.mockReturnValue('unknown')
@@ -563,11 +561,7 @@ describe('runL2ForFile', () => {
   })
 })
 
-// ══════════════════════════════════════════════════════════════════
-// ATDD RED Phase — Story 3.2a AC3: Wire Real Prompt Builder
-// All tests use it.skip() — context loading + real prompt wiring not yet implemented.
-// Dev must modify runL2ForFile.ts then remove it.skip().
-// ══════════════════════════════════════════════════════════════════
+// ── Story 3.2a AC3: Context Loading ──
 
 describe('runL2ForFile — Story 3.2a: Context Loading (AC3)', () => {
   beforeEach(() => {
@@ -576,7 +570,6 @@ describe('runL2ForFile — Story 3.2a: Context Loading (AC3)', () => {
     dbState.returnValues = []
     dbState.setCaptures = []
     mockGenerateText.mockResolvedValue(buildL2Response())
-    mockCheckTenantBudget.mockResolvedValue(BUDGET_HAS_QUOTA)
     mockCheckProjectBudget.mockResolvedValue(BUDGET_HAS_QUOTA)
     mockAiL2Limit.mockResolvedValue({ success: true, limit: 100, remaining: 99, reset: 0 })
     mockClassifyAIError.mockReturnValue('unknown')
@@ -689,7 +682,7 @@ describe('runL2ForFile — Story 3.2a: Context Loading (AC3)', () => {
     const calls = vi.mocked(withTenant).mock.calls
     // CAS + segments + l1Findings + glossary + project + txDelete + statusUpdate = 7
     // taxonomy is NOT included (no tenant_id)
-    expect(calls.length).toBeGreaterThanOrEqual(7)
+    expect(calls.length).toBe(7)
     // Verify taxonomy data passed to buildL2Prompt
     expect(mockBuildL2Prompt).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -738,10 +731,11 @@ describe('runL2ForFile — Story 3.2a: Context Loading (AC3)', () => {
       tenantId: VALID_TENANT_ID,
     })
 
-    // Verify Output.object was called (with schema argument) and result passed to generateText
+    // Verify Output.object was called with the actual l2OutputSchema (not inline schema)
     const { Output } = await import('ai')
+    const { l2OutputSchema } = await import('@/features/pipeline/schemas/l2-output')
     expect(vi.mocked(Output.object)).toHaveBeenCalledWith(
-      expect.objectContaining({ schema: expect.anything() }),
+      expect.objectContaining({ schema: l2OutputSchema }),
     )
     expect(mockGenerateText).toHaveBeenCalledTimes(1)
   })
@@ -871,11 +865,7 @@ describe('runL2ForFile — Story 3.2a: Context Loading (AC3)', () => {
   })
 })
 
-// ══════════════════════════════════════════════════════════════════
-// ATDD RED Phase — Story 3.2a AC4: Cost Tracking + languagePair
-// All tests use it.skip() — languagePair not yet wired.
-// Dev must add languagePair to AIUsageRecord + logAIUsage + runL2ForFile then remove it.skip().
-// ══════════════════════════════════════════════════════════════════
+// ── Story 3.2a AC4: Cost Tracking + languagePair ──
 
 describe('runL2ForFile — Story 3.2a: Cost Tracking + languagePair (AC4)', () => {
   beforeEach(() => {
@@ -884,7 +874,6 @@ describe('runL2ForFile — Story 3.2a: Cost Tracking + languagePair (AC4)', () =
     dbState.returnValues = []
     dbState.setCaptures = []
     mockGenerateText.mockResolvedValue(buildL2Response([{ segmentId: VALID_SEGMENT_ID }]))
-    mockCheckTenantBudget.mockResolvedValue(BUDGET_HAS_QUOTA)
     mockCheckProjectBudget.mockResolvedValue(BUDGET_HAS_QUOTA)
     mockAiL2Limit.mockResolvedValue({ success: true, limit: 100, remaining: 99, reset: 0 })
     mockClassifyAIError.mockReturnValue('unknown')
@@ -1003,9 +992,21 @@ describe('runL2ForFile — Story 3.2a: Cost Tracking + languagePair (AC4)', () =
       tenantId: VALID_TENANT_ID,
     })
 
-    // Failed chunk should log with status: 'error'
+    // Verify failed chunk specifically logged with status: 'error'
     expect(mockLogAIUsage).toHaveBeenCalledWith(
       expect.objectContaining({
+        status: 'error',
+        chunkIndex: 0,
+        languagePair: expect.any(String),
+        inputTokens: 0,
+        outputTokens: 0,
+      }),
+    )
+    // Verify successful chunk logged with status: 'success'
+    expect(mockLogAIUsage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'success',
+        chunkIndex: 1,
         languagePair: expect.any(String),
       }),
     )
