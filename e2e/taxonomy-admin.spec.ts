@@ -392,26 +392,15 @@ test.describe.serial('Story 3.2b7 — Taxonomy Mapping Reorder', () => {
     const firstRowName = await firstRowCells.nth(1).textContent()
     const thirdRowName = await thirdRowCells.nth(1).textContent()
 
-    // When: Admin drags the first data row's drag handle to the third row position
-    // NOTE: @dnd-kit uses pointer events (NOT HTML5 drag API) — must simulate
-    //       full mouse event sequence: move → mousedown → move in steps → mouseup
+    // When: Admin reorders the first data row down 2 positions via keyboard
+    // NOTE: @dnd-kit KeyboardSensor is more reliable than PointerSensor in headless CI.
+    //       Keyboard sequence: focus handle → Space (pick up) → ArrowDown × 2 → Space (drop)
     const dragHandle = rows.nth(1).getByTestId('drag-handle')
-    const targetRow = rows.nth(3)
-
-    const handleBox = await dragHandle.boundingBox()
-    const targetBox = await targetRow.boundingBox()
-    if (!handleBox || !targetBox) throw new Error('Drag handle or target row not visible')
-
-    // Pointer sequence: position cursor → press → drag in 10 incremental steps → release
-    await page.mouse.move(handleBox!.x + handleBox!.width / 2, handleBox!.y + handleBox!.height / 2)
-    await page.mouse.down()
-    // Move in small increments to trigger @dnd-kit's onDragMove detection
-    await page.mouse.move(
-      targetBox!.x + targetBox!.width / 2,
-      targetBox!.y + targetBox!.height / 2,
-      { steps: 10 },
-    )
-    await page.mouse.up()
+    await dragHandle.focus()
+    await page.keyboard.press('Space')
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('Space')
 
     // Then: Success toast appears confirming the reorder was saved
     await expect(page.getByText('Mappings reordered')).toBeVisible({ timeout: 10000 })
