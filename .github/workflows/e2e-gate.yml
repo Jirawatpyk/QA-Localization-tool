@@ -79,9 +79,17 @@ jobs:
           echo "Waiting for Inngest dev server on port 8288..."
           timeout 30 bash -c 'until curl -sf http://localhost:8288 > /dev/null 2>&1; do sleep 1; done'
           echo "Inngest dev server is ready"
-          # Give Inngest time to discover functions from the running Next.js app
-          sleep 5
-          echo "Inngest function discovery complete"
+
+      - name: Sync Inngest functions
+        run: |
+          # Trigger function sync by PUT'ing to the serve endpoint (same as Inngest SDK handshake)
+          echo "Triggering Inngest function sync..."
+          curl -sf -X PUT http://localhost:3000/api/inngest 2>&1 || true
+          sleep 3
+          # Retry sync to ensure functions are registered
+          curl -sf -X PUT http://localhost:3000/api/inngest 2>&1 || true
+          sleep 2
+          echo "Inngest function sync complete"
 
       - name: Run E2E tests
         run: npx playwright test

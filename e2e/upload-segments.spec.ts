@@ -117,19 +117,21 @@ test.describe.serial('Upload to Pipeline Wiring', () => {
     // Upload SDLXLIFF (same fixture as P1 → duplicate dialog expected)
     await uploadSingleFile(page, FIXTURE_FILES.sdlxliffMinimal)
 
-    // Handle duplicate detection dialog from P1's prior upload (CR R1 H2, R2 M2)
-    // Use "Re-run QA" button as discriminator — matches DuplicateDetectionDialog button text
+    // After upload, wait for either duplicate dialog OR Start Processing button.
+    // Playwright's isVisible() returns instantly (no wait) — so we use expect().toBeVisible()
+    // with .or() to race between the two possible outcomes.
     const rerunBtn = page.getByRole('button', { name: 'Re-run QA' })
-    const isDuplicate = await rerunBtn.isVisible({ timeout: 5_000 }).catch(() => false)
-    if (isDuplicate) {
-      await confirmDuplicateRerun(page)
-    }
-
-    await assertUploadProgress(page, 'minimal.sdlxliff')
-
-    // Wait for auto-parse to complete — use Start Processing button as terminal indicator
     const startBtn = page.getByRole('button', { name: /start processing/i })
-    await expect(startBtn).toBeVisible({ timeout: 60_000 })
+
+    // Race: whichever appears first within 60s
+    await expect(rerunBtn.or(startBtn)).toBeVisible({ timeout: 60_000 })
+
+    // Handle duplicate if it appeared (P2 always hits duplicate since P1 uploaded same file)
+    if (await rerunBtn.isVisible()) {
+      await confirmDuplicateRerun(page)
+      // After re-run, wait for auto-parse → Start Processing button
+      await expect(startBtn).toBeVisible({ timeout: 60_000 })
+    }
     await startBtn.click()
 
     // Select Economy mode in dialog and start

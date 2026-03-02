@@ -392,26 +392,38 @@ test.describe.serial('Story 3.2b7 — Taxonomy Mapping Reorder', () => {
     const firstRowName = await firstRowCells.nth(1).textContent()
     const thirdRowName = await thirdRowCells.nth(1).textContent()
 
-    // When: Admin reorders the first data row down 2 positions via keyboard
-    // NOTE: @dnd-kit KeyboardSensor requires delays between key presses in headless CI
-    //       so dnd-kit can process activation/movement events between React renders.
-    //       Keyboard sequence: focus handle → Space (pick up) → ArrowDown × 2 → Space (drop)
+    // When: Admin reorders the first data row down 2 positions via mouse drag.
+    // NOTE: @dnd-kit KeyboardSensor's ArrowDown doesn't trigger sortableKeyboardCoordinates
+    //       in headless Chromium. PointerSensor with mouse events works reliably.
+    //       PointerSensor activationConstraint: { distance: 8 } requires 8px movement.
     const dragHandle = rows.nth(1).getByTestId('drag-handle')
-    await dragHandle.focus()
+    const targetRow = rows.nth(3)
+
+    // Hover ensures Playwright targets the correct element coordinates
+    await dragHandle.hover()
+    const handleBox = await dragHandle.boundingBox()
+    const targetBox = await targetRow.boundingBox()
+    expect(handleBox).toBeTruthy()
+    expect(targetBox).toBeTruthy()
+
+    const cx = handleBox!.x + handleBox!.width / 2
+    const startY = handleBox!.y + handleBox!.height / 2
+    const endY = targetBox!.y + targetBox!.height + 5 // below target row
+
+    // Mouse down on drag handle
+    await page.mouse.down()
     await page.waitForTimeout(200)
 
-    // Activate drag
-    await page.keyboard.press('Space')
-    await page.waitForTimeout(500) // dnd-kit needs time to register activation
+    // Move past 8px activation threshold in small steps
+    await page.mouse.move(cx, startY + 20, { steps: 10 })
+    await page.waitForTimeout(500) // Wait for PointerSensor activation
 
-    // Move down 2 positions
-    await page.keyboard.press('ArrowDown')
-    await page.waitForTimeout(300)
-    await page.keyboard.press('ArrowDown')
-    await page.waitForTimeout(300)
+    // Move to below the third row
+    await page.mouse.move(cx, endY, { steps: 30 })
+    await page.waitForTimeout(500) // Wait for dragOver to register
 
-    // Drop
-    await page.keyboard.press('Space')
+    // Release to drop
+    await page.mouse.up()
 
     // Then: Success toast appears confirming the reorder was saved
     await expect(page.getByText('Mappings reordered')).toBeVisible({ timeout: 15000 })
