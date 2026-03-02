@@ -3,7 +3,12 @@ import path from 'node:path'
 import { test, expect } from '@playwright/test'
 
 import { cleanupTestProject } from './helpers/pipeline-admin'
-import { createTestProject, getUserInfo, signupOrLogin } from './helpers/supabase-admin'
+import {
+  createTestProject,
+  getUserInfo,
+  setUserMetadata,
+  signupOrLogin,
+} from './helpers/supabase-admin'
 
 /**
  * Story 2.7 — Parity Comparison Tool (E2E)
@@ -75,6 +80,12 @@ test.describe('Parity Comparison Tool (Story 2.7)', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
+
+    // Suppress onboarding tours so driver.js overlay doesn't intercept clicks
+    await setUserMetadata(TEST_EMAIL, {
+      setup_tour_completed: '2026-01-01T00:00:00Z',
+      project_tour_completed: '2026-01-01T00:00:00Z',
+    })
 
     const userInfo = await getUserInfo(TEST_EMAIL)
     expect(userInfo).not.toBeNull()
@@ -262,8 +273,9 @@ test.describe('Parity Comparison Tool (Story 2.7)', () => {
     await dialog.locator('#segmentNumber').fill('42')
     await dialog.locator('#description').fill('Missing consistency check for repeated terms')
 
-    // Select Check Type via custom dropdown
+    // Select Check Type via custom dropdown — wait for listbox to render after state update
     await dialog.locator('#checkType').click()
+    await expect(dialog.getByRole('listbox')).toBeVisible({ timeout: 3_000 })
     await dialog.getByRole('option', { name: 'Consistency' }).click()
 
     // Submit
@@ -272,8 +284,8 @@ test.describe('Parity Comparison Tool (Story 2.7)', () => {
     // Success toast should appear with tracking reference
     await expect(page.getByText(/Report submitted.*MCR-/i)).toBeVisible({ timeout: 10_000 })
 
-    // Dialog should close after success
-    await expect(dialog).not.toBeVisible()
+    // Dialog should close after success (state transition needs timeout under CI load)
+    await expect(dialog).not.toBeVisible({ timeout: 5_000 })
   })
 
   test('[P2] should show validation errors in Report Missing Check dialog (T3.5)', async ({

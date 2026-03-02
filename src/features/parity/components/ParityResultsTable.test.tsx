@@ -2,16 +2,16 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type { ParitySeverity } from '@/features/parity/types'
 import { buildFinding } from '@/test/factories'
 
 import { ParityResultsTable } from './ParityResultsTable'
 
-// Type for parity comparison result (component not yet created)
 type ParityFinding = {
   id: string
   description: string
   segmentNumber: number
-  severity: string
+  severity: ParitySeverity
   category: string
 }
 

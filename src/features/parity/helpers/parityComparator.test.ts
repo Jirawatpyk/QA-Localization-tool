@@ -122,6 +122,27 @@ describe('parityComparator', () => {
     expect(result2.toolOnly).toHaveLength(1)
   })
 
+  it('[P1] should accept minor-trivial as plus-or-minus 1 but reject major-trivial as plus-or-minus 2', async () => {
+    // minor → trivial = +-1 → should match
+    const xbenchMinor = [
+      buildXbenchFinding({ category: 'accuracy', severity: 'minor', segmentNumber: 1 }),
+    ]
+    const toolTrivial = [buildToolFinding({ category: 'accuracy', severity: 'trivial' })]
+
+    const { compareFindings } = await import('./parityComparator')
+    const result1 = compareFindings(xbenchMinor, toolTrivial, 'test-file-id')
+    expect(result1.matched).toHaveLength(1)
+
+    // major → trivial = +-2 → should NOT match
+    const xbenchMajor = [
+      buildXbenchFinding({ category: 'accuracy', severity: 'major', segmentNumber: 1 }),
+    ]
+    const result2 = compareFindings(xbenchMajor, toolTrivial, 'test-file-id')
+    expect(result2.matched).toHaveLength(0)
+    expect(result2.xbenchOnly).toHaveLength(1)
+    expect(result2.toolOnly).toHaveLength(1)
+  })
+
   it('[P1] should compare findings for specific fileId only not entire project', async () => {
     const targetFileId = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
     const otherFileId = 'b2c3d4e5-f6a7-4b2c-8d3e-4f5a6b7c8d9e'

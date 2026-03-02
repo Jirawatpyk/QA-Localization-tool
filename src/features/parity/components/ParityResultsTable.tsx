@@ -1,10 +1,12 @@
 'use client'
 
+import type { ParitySeverity } from '@/features/parity/types'
+
 type ParityFinding = {
   id: string
   description: string
   segmentNumber: number
-  severity: string
+  severity: ParitySeverity
   category: string
 }
 

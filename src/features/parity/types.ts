@@ -11,6 +11,7 @@ export function toParitySeverity(value: string | undefined | null): ParitySeveri
     : 'minor'
 }
 
+/** Raw Xbench finding from Excel — severity is raw string, coerce via toParitySeverity() before use */
 export type XbenchFinding = {
   file: string
   segment: string
@@ -23,7 +24,7 @@ export type XbenchFinding = {
 
 export type ParityFinding = {
   category: string
-  severity: string
+  severity: ParitySeverity
   sourceText: string
   targetText: string
   description: string

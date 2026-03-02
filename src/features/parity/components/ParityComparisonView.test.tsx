@@ -24,6 +24,8 @@ vi.mock('./ReportMissingCheckDialog', () => ({
   ReportMissingCheckDialog: vi.fn(() => null),
 }))
 
+import type { ParitySeverity } from '@/features/parity/types'
+
 // Mock the comparison action (imports 'server-only')
 type MockCompareResult =
   | {
@@ -33,21 +35,21 @@ type MockCompareResult =
           id: string
           description: string
           segmentNumber: number
-          severity: string
+          severity: ParitySeverity
           category: string
         }>
         toolOnly: Array<{
           id: string
           description: string
           segmentNumber: number
-          severity: string
+          severity: ParitySeverity
           category: string
         }>
         xbenchOnly: Array<{
           id: string
           description: string
           segmentNumber: number
-          severity: string
+          severity: ParitySeverity
           category: string
         }>
       }
@@ -86,6 +88,7 @@ vi.mock('../actions/compareWithXbench.action', () => ({
 }))
 
 import { ParityComparisonView } from './ParityComparisonView'
+import { ReportMissingCheckDialog } from './ReportMissingCheckDialog'
 
 const PROJECT_ID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
 const FILE_ID = 'b2c3d4e5-f6a1-4b2c-9d3e-4f5a6b7c8d9e'
@@ -173,6 +176,27 @@ describe('ParityComparisonView', () => {
       const button = screen.getByRole('button', { name: /Comparing|Loading/i })
       expect(button.hasAttribute('disabled')).toBe(true)
     })
+  })
+
+  // ── TD-E2E-010: ReportMissingCheckDialog wiring ──
+
+  it('[P2] should render "Report Missing Check" button', () => {
+    render(<ParityComparisonView projectId={PROJECT_ID} fileId={FILE_ID} />)
+
+    const button = screen.getByRole('button', { name: /Report Missing Check/i })
+    expect(button).toBeTruthy()
+  })
+
+  it('[P2] should open ReportMissingCheckDialog when "Report Missing Check" is clicked', async () => {
+    const user = userEvent.setup()
+    render(<ParityComparisonView projectId={PROJECT_ID} fileId={FILE_ID} />)
+
+    await user.click(screen.getByRole('button', { name: /Report Missing Check/i }))
+
+    const MockDialog = vi.mocked(ReportMissingCheckDialog)
+    const lastCall = MockDialog.mock.calls[MockDialog.mock.calls.length - 1]
+    // Dialog should be called with open=true after button click
+    expect(lastCall?.[0]).toMatchObject({ open: true, projectId: PROJECT_ID, fileId: FILE_ID })
   })
 
   it('[P2] should display error message when comparison fails', async () => {

@@ -179,6 +179,8 @@ export async function runL2ForFile({
       .orderBy(segments.segmentNumber)
 
     // Step 4: Load L1 findings for context (L2 avoids duplicating L1 issues)
+    // SAFETY: WHERE detectedByLayer='L1' guarantees valid FindingSeverity ('critical'|'major'|'minor')
+    // and DetectedByLayer ('L1') — Drizzle infers varchar → string, cast is safe within this domain
     const l1FindingRows = (await db
       .select({
         id: findings.id,
