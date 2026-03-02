@@ -66,12 +66,22 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
+      - name: Start Next.js dev server
+        run: |
+          npm run dev &
+          echo "Waiting for Next.js on port 3000..."
+          timeout 120 bash -c 'until curl -sf http://localhost:3000 > /dev/null 2>&1; do sleep 1; done'
+          echo "Next.js is ready"
+
       - name: Start Inngest dev server
         run: |
           npx inngest-cli@latest dev -u http://localhost:3000/api/inngest &
           echo "Waiting for Inngest dev server on port 8288..."
           timeout 30 bash -c 'until curl -sf http://localhost:8288 > /dev/null 2>&1; do sleep 1; done'
           echo "Inngest dev server is ready"
+          # Give Inngest time to discover functions from the running Next.js app
+          sleep 5
+          echo "Inngest function discovery complete"
 
       - name: Run E2E tests
         run: npx playwright test

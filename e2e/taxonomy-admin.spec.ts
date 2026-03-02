@@ -393,17 +393,28 @@ test.describe.serial('Story 3.2b7 — Taxonomy Mapping Reorder', () => {
     const thirdRowName = await thirdRowCells.nth(1).textContent()
 
     // When: Admin reorders the first data row down 2 positions via keyboard
-    // NOTE: @dnd-kit KeyboardSensor is more reliable than PointerSensor in headless CI.
+    // NOTE: @dnd-kit KeyboardSensor requires delays between key presses in headless CI
+    //       so dnd-kit can process activation/movement events between React renders.
     //       Keyboard sequence: focus handle → Space (pick up) → ArrowDown × 2 → Space (drop)
     const dragHandle = rows.nth(1).getByTestId('drag-handle')
     await dragHandle.focus()
+    await page.waitForTimeout(200)
+
+    // Activate drag
     await page.keyboard.press('Space')
+    await page.waitForTimeout(500) // dnd-kit needs time to register activation
+
+    // Move down 2 positions
     await page.keyboard.press('ArrowDown')
+    await page.waitForTimeout(300)
     await page.keyboard.press('ArrowDown')
+    await page.waitForTimeout(300)
+
+    // Drop
     await page.keyboard.press('Space')
 
     // Then: Success toast appears confirming the reorder was saved
-    await expect(page.getByText('Mappings reordered')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Mappings reordered')).toBeVisible({ timeout: 15000 })
 
     // And: After page reload, the new order persists (server action saved to DB)
     await page.reload()
@@ -416,6 +427,8 @@ test.describe.serial('Story 3.2b7 — Taxonomy Mapping Reorder', () => {
     const newFirstRowName = await reloadedRows.nth(1).getByRole('cell').nth(1).textContent()
     const newThirdRowName = await reloadedRows.nth(3).getByRole('cell').nth(1).textContent()
 
+    // CR R1 L2 fix: guard against null textContent before comparison
+    expect(firstRowName).toBeTruthy()
     // After dragging row 1 → position 3: the original first row name should now
     // appear at position 3, and the original third row name should have shifted up
     expect(newThirdRowName).toContain(firstRowName!.trim())

@@ -118,8 +118,8 @@ test.describe.serial('Upload to Pipeline Wiring', () => {
     await uploadSingleFile(page, FIXTURE_FILES.sdlxliffMinimal)
 
     // Handle duplicate detection dialog from P1's prior upload (CR R1 H2, R2 M2)
-    // Use "Re-run" button as discriminator — avoids matching ProcessingModeDialog
-    const rerunBtn = page.getByRole('button', { name: 'Re-run', exact: true })
+    // Use "Re-run QA" button as discriminator — matches DuplicateDetectionDialog button text
+    const rerunBtn = page.getByRole('button', { name: 'Re-run QA' })
     const isDuplicate = await rerunBtn.isVisible({ timeout: 5_000 }).catch(() => false)
     if (isDuplicate) {
       await confirmDuplicateRerun(page)

@@ -173,8 +173,8 @@ export async function assertDuplicateDetected(page: Page, expectedScore?: number
   // Should show "was uploaded on [date]" text
   await expect(dialog.getByText('This file was uploaded on', { exact: false })).toBeVisible()
 
-  // Should have Re-run and Cancel options
-  await expect(dialog.getByRole('button', { name: 'Re-run', exact: true })).toBeVisible()
+  // Should have Re-run QA and Cancel options
+  await expect(dialog.getByRole('button', { name: 'Re-run QA' })).toBeVisible()
   await expect(dialog.getByRole('button', { name: 'Cancel', exact: true })).toBeVisible()
 
   // Optionally assert the previous score is shown
@@ -188,7 +188,7 @@ export async function assertDuplicateDetected(page: Page, expectedScore?: number
  */
 export async function confirmDuplicateRerun(page: Page): Promise<void> {
   const dialog = page.getByRole('dialog')
-  await dialog.getByRole('button', { name: 'Re-run', exact: true }).click()
+  await dialog.getByRole('button', { name: 'Re-run QA' }).click()
   // Dialog should close after confirmation
   await expect(dialog).not.toBeVisible({ timeout: 5_000 })
 }
