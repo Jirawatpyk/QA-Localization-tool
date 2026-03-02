@@ -33,6 +33,19 @@ vi.mock('@/features/pipeline/helpers/runL1ForFile', () => ({
   runL1ForFile: (...args: unknown[]) => mockRunL1ForFile(...args),
 }))
 
+// Mock L2/L3 helpers to prevent transitive server-only import (ai/client.ts → server-only)
+vi.mock('@/features/pipeline/helpers/runL2ForFile', () => ({
+  runL2ForFile: vi.fn((..._args: unknown[]) =>
+    Promise.resolve({ findingCount: 0, chunksProcessed: 1, partialFailure: false }),
+  ),
+}))
+
+vi.mock('@/features/pipeline/helpers/runL3ForFile', () => ({
+  runL3ForFile: vi.fn((..._args: unknown[]) =>
+    Promise.resolve({ findingCount: 0, chunksProcessed: 1, partialFailure: false }),
+  ),
+}))
+
 vi.mock('@/features/scoring/helpers/scoreFile', () => ({
   scoreFile: (...args: unknown[]) => mockScoreFile(...args),
 }))
@@ -130,15 +143,15 @@ describe('processFile - batch completion step', () => {
 
   // ── P0: Batch completion emission ──
 
-  it('[P0] should emit pipeline.batch-completed when all batch files are l1_completed or failed', async () => {
+  it('[P0] should emit pipeline.batch-completed when all batch files are l2_completed or failed', async () => {
     const mockStep = createMockStep()
     const eventData = buildPipelineEvent()
 
-    // After L1 + score steps, the handler should query sibling files in the same batch.
-    // All files are terminal (l1_completed or failed) → emit batch-completed event.
+    // After L1 + L2 + score steps, the handler should query sibling files in the same batch.
+    // All files are terminal (l2_completed or failed for economy mode) → emit batch-completed event.
     const siblingFiles = [
-      { id: VALID_FILE_ID, status: 'l1_completed', batchId: VALID_UPLOAD_BATCH_ID },
-      { id: faker.string.uuid(), status: 'l1_completed', batchId: VALID_UPLOAD_BATCH_ID },
+      { id: VALID_FILE_ID, status: 'l2_completed', batchId: VALID_UPLOAD_BATCH_ID },
+      { id: faker.string.uuid(), status: 'l2_completed', batchId: VALID_UPLOAD_BATCH_ID },
       { id: faker.string.uuid(), status: 'failed', batchId: VALID_UPLOAD_BATCH_ID },
     ]
     dbState.returnValues = [siblingFiles]
@@ -205,14 +218,15 @@ describe('processFile - batch completion step', () => {
 
     // Should NOT call step.run for batch check, and NOT call step.sendEvent
     expect(mockStep.sendEvent).not.toHaveBeenCalled()
-    // H5: Only L1 + score steps run (2 calls), batch check step is skipped
-    expect(mockStep.run).toHaveBeenCalledTimes(2)
-    // Should still return L1 result (L1 + score steps still run)
+    // Economy mode: L1 + score-L1 + L2 + score-L1L2 = 4 calls, batch check step is skipped
+    expect(mockStep.run).toHaveBeenCalledTimes(4)
+    // Should still return result with L1L2 layer (economy mode runs L1 + L2)
     expect(result).toMatchObject({
       fileId: expect.any(String),
-      findingCount: expect.any(Number),
+      l1FindingCount: expect.any(Number),
+      l2FindingCount: expect.any(Number),
       mqmScore: expect.any(Number),
-      layerCompleted: 'L1',
+      layerCompleted: 'L1L2',
     })
   })
 
@@ -221,7 +235,7 @@ describe('processFile - batch completion step', () => {
     const eventData = buildPipelineEvent()
 
     const siblingFiles = [
-      { id: VALID_FILE_ID, status: 'l1_completed', batchId: VALID_UPLOAD_BATCH_ID },
+      { id: VALID_FILE_ID, status: 'l2_completed', batchId: VALID_UPLOAD_BATCH_ID },
     ]
     dbState.returnValues = [siblingFiles]
 
