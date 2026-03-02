@@ -38,6 +38,13 @@ let tenantId: string
 let fileId: string
 
 test.describe.serial('Pipeline to Findings', () => {
+  // TODO(TD-E2E-008): Skip in CI — requires Inngest dev server + OpenAI API key for full pipeline
+  test.skip(
+    process.env.INNGEST_EVENT_KEY === 'ci-placeholder' ||
+      process.env.OPENAI_API_KEY === 'ci-placeholder',
+    'Requires Inngest + AI infrastructure (not available in CI)',
+  )
+
   // ── Setup: Auth + Project ────────────────────────────────────────────────
   test('[setup] signup/login and create project', async ({ page }) => {
     test.setTimeout(60_000)

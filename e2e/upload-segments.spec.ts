@@ -56,6 +56,9 @@ test.describe.serial('Upload to Pipeline Wiring', () => {
   }) => {
     test.setTimeout(120_000)
 
+    // Each Playwright test gets a fresh page — must re-authenticate
+    await signupOrLogin(page, TEST_EMAIL)
+
     // Navigate to upload page
     await gotoProjectUpload(page, projectId)
 
@@ -88,8 +91,18 @@ test.describe.serial('Upload to Pipeline Wiring', () => {
   })
 
   // ── Test #20 (P2): Pipeline findings appear after processing starts ─────
+  // TODO(TD-E2E-008): Requires Inngest dev server + OpenAI API key — skip in CI until pipeline infra wired
   test('[P2] pipeline findings appear after processing starts via dialog', async ({ page }) => {
+    // Skip when pipeline infrastructure not available (CI uses ci-placeholder keys)
+    test.skip(
+      process.env.INNGEST_EVENT_KEY === 'ci-placeholder' ||
+        process.env.OPENAI_API_KEY === 'ci-placeholder',
+      'Requires Inngest + AI infrastructure (not available in CI)',
+    )
     test.setTimeout(300_000) // 5 min — L1 + L2 pipeline can take a while
+
+    // Each Playwright test gets a fresh page — must re-authenticate
+    await signupOrLogin(page, TEST_EMAIL)
 
     // Navigate to upload page
     await gotoProjectUpload(page, projectId)
