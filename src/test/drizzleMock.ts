@@ -45,9 +45,13 @@ export function createDrizzleMock(): DrizzleMockResult {
 
   const handler: ProxyHandler<Record<string, unknown>> = {
     get: (_target, prop) => {
-      // Terminal: .returning() — resolves from returnValues[callIndex]
+      // Terminal: .returning() — resolves from returnValues[callIndex], supports error injection
       if (prop === 'returning') {
         return vi.fn(() => {
+          if (state.throwAtCallIndex !== null && state.callIndex === state.throwAtCallIndex) {
+            state.callIndex++
+            return Promise.reject(new Error('DB query failed'))
+          }
           const value = state.returnValues[state.callIndex] ?? []
           state.callIndex++
           return Promise.resolve(value)

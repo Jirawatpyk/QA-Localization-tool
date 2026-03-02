@@ -45,7 +45,7 @@ export type UpdateBudgetAlertThresholdInput = z.infer<typeof updateBudgetAlertTh
 export const updateModelPinningSchema = z.object({
   projectId: z.string().uuid(),
   layer: z.enum(PIPELINE_LAYERS),
-  model: z.string().nullable(),
+  model: z.string().min(1).nullable(),
 })
 
 export type UpdateModelPinningInput = z.infer<typeof updateModelPinningSchema>

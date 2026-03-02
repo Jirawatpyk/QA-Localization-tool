@@ -46,6 +46,12 @@ vi.mock('@/lib/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }))
 
+vi.mock('@/lib/ai/models', () => ({
+  ALL_AVAILABLE_MODELS: new Set(['gpt-4o-mini-2024-07-18', 'claude-sonnet-4-5-20250929']),
+  AVAILABLE_L2_MODELS: ['gpt-4o-mini-2024-07-18'] as const,
+  AVAILABLE_L3_MODELS: ['claude-sonnet-4-5-20250929'] as const,
+}))
+
 // ── Test constants ──
 
 const VALID_PROJECT_ID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
@@ -193,5 +199,74 @@ describe('updateModelPinning', () => {
     const { withTenant } = await import('@/db/helpers/withTenant')
     expect(withTenant).toHaveBeenCalledWith(expect.anything(), adminUser.tenantId)
     // RED: withTenant guard on UPDATE (Guardrail #1)
+  })
+
+  it('should return INVALID_INPUT when projectId is not a UUID', async () => {
+    const { updateModelPinning } = await import('./updateModelPinning.action')
+    const result = await updateModelPinning({
+      projectId: 'not-a-uuid',
+      layer: 'L2',
+      model: 'gpt-4o-mini-2024-07-18',
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INVALID_INPUT')
+  })
+
+  it('should return INVALID_INPUT when layer is L1 (not pinnable)', async () => {
+    const { updateModelPinning } = await import('./updateModelPinning.action')
+    const result = await updateModelPinning({
+      projectId: VALID_PROJECT_ID,
+      layer: 'L1',
+      model: 'gpt-4o-mini-2024-07-18',
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INVALID_INPUT')
+  })
+
+  it('should return INVALID_INPUT when model is empty string', async () => {
+    const { updateModelPinning } = await import('./updateModelPinning.action')
+    const result = await updateModelPinning({
+      projectId: VALID_PROJECT_ID,
+      layer: 'L2',
+      model: '',
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INVALID_INPUT')
+  })
+
+  it('should return NOT_FOUND when project does not exist in tenant', async () => {
+    dbState.returnValues = [[]] // UPDATE returns nothing
+
+    const { updateModelPinning } = await import('./updateModelPinning.action')
+    const result = await updateModelPinning({
+      projectId: VALID_PROJECT_ID,
+      layer: 'L2',
+      model: 'gpt-4o-mini-2024-07-18',
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('NOT_FOUND')
+  })
+
+  it('should return INTERNAL_ERROR when DB query throws', async () => {
+    dbState.throwAtCallIndex = 0
+
+    const { updateModelPinning } = await import('./updateModelPinning.action')
+    const result = await updateModelPinning({
+      projectId: VALID_PROJECT_ID,
+      layer: 'L2',
+      model: 'gpt-4o-mini-2024-07-18',
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INTERNAL_ERROR')
   })
 })

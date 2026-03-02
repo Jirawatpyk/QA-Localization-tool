@@ -171,3 +171,335 @@ describe('startProcessingSchema', () => {
     }
   })
 })
+
+// ── getFilesWordCountSchema ──
+
+describe('getFilesWordCountSchema', () => {
+  it('should accept valid input with fileIds and projectId', async () => {
+    const { getFilesWordCountSchema } = await import('./pipelineSchema')
+
+    const result = getFilesWordCountSchema.safeParse({
+      fileIds: [VALID_FILE_ID_1, VALID_FILE_ID_2],
+      projectId: VALID_PROJECT_ID,
+    })
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.fileIds).toHaveLength(2)
+  })
+
+  it('should reject empty fileIds array', async () => {
+    const { getFilesWordCountSchema } = await import('./pipelineSchema')
+
+    const result = getFilesWordCountSchema.safeParse({
+      fileIds: [],
+      projectId: VALID_PROJECT_ID,
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('should reject fileIds with more than 100 items', async () => {
+    const { getFilesWordCountSchema } = await import('./pipelineSchema')
+    const { faker } = await import('@faker-js/faker')
+
+    const manyIds = Array.from({ length: 101 }, () => faker.string.uuid())
+
+    const result = getFilesWordCountSchema.safeParse({
+      fileIds: manyIds,
+      projectId: VALID_PROJECT_ID,
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('should accept exactly 100 fileIds (max boundary)', async () => {
+    const { getFilesWordCountSchema } = await import('./pipelineSchema')
+    const { faker } = await import('@faker-js/faker')
+
+    const maxIds = Array.from({ length: 100 }, () => faker.string.uuid())
+
+    const result = getFilesWordCountSchema.safeParse({
+      fileIds: maxIds,
+      projectId: VALID_PROJECT_ID,
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it('should reject duplicate fileIds', async () => {
+    const { getFilesWordCountSchema } = await import('./pipelineSchema')
+
+    const result = getFilesWordCountSchema.safeParse({
+      fileIds: [VALID_FILE_ID_1, VALID_FILE_ID_1],
+      projectId: VALID_PROJECT_ID,
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toBe('Duplicate file IDs are not allowed')
+    }
+  })
+
+  it('should reject invalid UUID in fileIds', async () => {
+    const { getFilesWordCountSchema } = await import('./pipelineSchema')
+
+    const result = getFilesWordCountSchema.safeParse({
+      fileIds: ['not-a-valid-uuid'],
+      projectId: VALID_PROJECT_ID,
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('should reject non-UUID projectId', async () => {
+    const { getFilesWordCountSchema } = await import('./pipelineSchema')
+
+    const result = getFilesWordCountSchema.safeParse({
+      fileIds: [VALID_FILE_ID_1],
+      projectId: 'not-a-uuid',
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('should reject missing projectId', async () => {
+    const { getFilesWordCountSchema } = await import('./pipelineSchema')
+
+    const result = getFilesWordCountSchema.safeParse({
+      fileIds: [VALID_FILE_ID_1],
+    })
+
+    expect(result.success).toBe(false)
+  })
+})
+
+// ── updateBudgetAlertThresholdSchema ──
+
+describe('updateBudgetAlertThresholdSchema', () => {
+  it('should accept valid input with projectId and thresholdPct', async () => {
+    const { updateBudgetAlertThresholdSchema } = await import('./pipelineSchema')
+
+    const result = updateBudgetAlertThresholdSchema.safeParse({
+      projectId: VALID_PROJECT_ID,
+      thresholdPct: 80,
+    })
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.thresholdPct).toBe(80)
+  })
+
+  it('should accept thresholdPct=1 (min boundary)', async () => {
+    const { updateBudgetAlertThresholdSchema } = await import('./pipelineSchema')
+
+    const result = updateBudgetAlertThresholdSchema.safeParse({
+      projectId: VALID_PROJECT_ID,
+      thresholdPct: 1,
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it('should accept thresholdPct=100 (max boundary)', async () => {
+    const { updateBudgetAlertThresholdSchema } = await import('./pipelineSchema')
+
+    const result = updateBudgetAlertThresholdSchema.safeParse({
+      projectId: VALID_PROJECT_ID,
+      thresholdPct: 100,
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it('should reject thresholdPct=0 (below min)', async () => {
+    const { updateBudgetAlertThresholdSchema } = await import('./pipelineSchema')
+
+    const result = updateBudgetAlertThresholdSchema.safeParse({
+      projectId: VALID_PROJECT_ID,
+      thresholdPct: 0,
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('should reject thresholdPct=101 (above max)', async () => {
+    const { updateBudgetAlertThresholdSchema } = await import('./pipelineSchema')
+
+    const result = updateBudgetAlertThresholdSchema.safeParse({
+      projectId: VALID_PROJECT_ID,
+      thresholdPct: 101,
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('should reject float thresholdPct (must be integer)', async () => {
+    const { updateBudgetAlertThresholdSchema } = await import('./pipelineSchema')
+
+    const result = updateBudgetAlertThresholdSchema.safeParse({
+      projectId: VALID_PROJECT_ID,
+      thresholdPct: 50.5,
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('should reject non-UUID projectId', async () => {
+    const { updateBudgetAlertThresholdSchema } = await import('./pipelineSchema')
+
+    const result = updateBudgetAlertThresholdSchema.safeParse({
+      projectId: 'not-a-uuid',
+      thresholdPct: 80,
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('should reject missing thresholdPct', async () => {
+    const { updateBudgetAlertThresholdSchema } = await import('./pipelineSchema')
+
+    const result = updateBudgetAlertThresholdSchema.safeParse({
+      projectId: VALID_PROJECT_ID,
+    })
+
+    expect(result.success).toBe(false)
+  })
+})
+
+// ── updateModelPinningSchema ──
+
+describe('updateModelPinningSchema', () => {
+  it('should accept valid L2 layer with model string', async () => {
+    const { updateModelPinningSchema } = await import('./pipelineSchema')
+
+    const result = updateModelPinningSchema.safeParse({
+      projectId: VALID_PROJECT_ID,
+      layer: 'L2',
+      model: 'gpt-4o-mini-2024-07-18',
+    })
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.layer).toBe('L2')
+    expect(result.data.model).toBe('gpt-4o-mini-2024-07-18')
+  })
+
+  it('should accept valid L3 layer with model string', async () => {
+    const { updateModelPinningSchema } = await import('./pipelineSchema')
+
+    const result = updateModelPinningSchema.safeParse({
+      projectId: VALID_PROJECT_ID,
+      layer: 'L3',
+      model: 'claude-sonnet-4-5-20250929',
+    })
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.layer).toBe('L3')
+  })
+
+  it('should accept null model (clear pinning)', async () => {
+    const { updateModelPinningSchema } = await import('./pipelineSchema')
+
+    const result = updateModelPinningSchema.safeParse({
+      projectId: VALID_PROJECT_ID,
+      layer: 'L2',
+      model: null,
+    })
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.model).toBeNull()
+  })
+
+  it('should reject empty string model (must be .min(1) or null)', async () => {
+    const { updateModelPinningSchema } = await import('./pipelineSchema')
+
+    const result = updateModelPinningSchema.safeParse({
+      projectId: VALID_PROJECT_ID,
+      layer: 'L2',
+      model: '',
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('should reject invalid layer value (L1 is not a pinnable layer)', async () => {
+    const { updateModelPinningSchema } = await import('./pipelineSchema')
+
+    const result = updateModelPinningSchema.safeParse({
+      projectId: VALID_PROJECT_ID,
+      layer: 'L1',
+      model: 'gpt-4o-mini',
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('should reject non-UUID projectId', async () => {
+    const { updateModelPinningSchema } = await import('./pipelineSchema')
+
+    const result = updateModelPinningSchema.safeParse({
+      projectId: 'not-a-uuid',
+      layer: 'L2',
+      model: 'gpt-4o-mini',
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('should reject missing layer', async () => {
+    const { updateModelPinningSchema } = await import('./pipelineSchema')
+
+    const result = updateModelPinningSchema.safeParse({
+      projectId: VALID_PROJECT_ID,
+      model: 'gpt-4o-mini',
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('should reject missing model field entirely', async () => {
+    const { updateModelPinningSchema } = await import('./pipelineSchema')
+
+    const result = updateModelPinningSchema.safeParse({
+      projectId: VALID_PROJECT_ID,
+      layer: 'L2',
+    })
+
+    expect(result.success).toBe(false)
+  })
+})
+
+// ── getProjectAiBudgetSchema ──
+
+describe('getProjectAiBudgetSchema', () => {
+  it('should accept valid projectId', async () => {
+    const { getProjectAiBudgetSchema } = await import('./pipelineSchema')
+
+    const result = getProjectAiBudgetSchema.safeParse({
+      projectId: VALID_PROJECT_ID,
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it('should reject non-UUID projectId', async () => {
+    const { getProjectAiBudgetSchema } = await import('./pipelineSchema')
+
+    const result = getProjectAiBudgetSchema.safeParse({
+      projectId: 'not-a-uuid',
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('should reject missing projectId', async () => {
+    const { getProjectAiBudgetSchema } = await import('./pipelineSchema')
+
+    const result = getProjectAiBudgetSchema.safeParse({})
+
+    expect(result.success).toBe(false)
+  })
+})

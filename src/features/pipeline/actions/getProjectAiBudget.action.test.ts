@@ -188,4 +188,25 @@ describe('getProjectAiBudget', () => {
     if (result.success) return
     expect(result.code).toBe('INTERNAL_ERROR')
   })
+
+  // ── P1: Validation ──
+
+  it('should return INVALID_INPUT when projectId is not a UUID', async () => {
+    const { getProjectAiBudget } = await import('./getProjectAiBudget.action')
+    const result = await getProjectAiBudget({ projectId: 'not-a-uuid' })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INVALID_INPUT')
+    expect(dbState.callIndex).toBe(0) // never reached DB
+  })
+
+  it('should return INVALID_INPUT when projectId is missing', async () => {
+    const { getProjectAiBudget } = await import('./getProjectAiBudget.action')
+    const result = await getProjectAiBudget({})
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INVALID_INPUT')
+  })
 })

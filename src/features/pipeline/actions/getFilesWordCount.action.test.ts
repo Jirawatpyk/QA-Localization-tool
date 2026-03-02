@@ -144,4 +144,31 @@ describe('getFilesWordCount', () => {
     expect(result.code).toBe('INVALID_INPUT')
     expect(dbState.callIndex).toBe(0)
   })
+
+  it('should reject duplicate fileIds via Zod refine', async () => {
+    const { getFilesWordCount } = await import('./getFilesWordCount.action')
+    const result = await getFilesWordCount({
+      fileIds: [VALID_FILE_ID_1, VALID_FILE_ID_1],
+      projectId: VALID_PROJECT_ID,
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INVALID_INPUT')
+    expect(dbState.callIndex).toBe(0)
+  })
+
+  it('should return INTERNAL_ERROR when DB query throws', async () => {
+    dbState.throwAtCallIndex = 0
+
+    const { getFilesWordCount } = await import('./getFilesWordCount.action')
+    const result = await getFilesWordCount({
+      fileIds: [VALID_FILE_ID_1],
+      projectId: VALID_PROJECT_ID,
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INTERNAL_ERROR')
+  })
 })

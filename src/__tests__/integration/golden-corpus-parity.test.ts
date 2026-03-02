@@ -376,6 +376,10 @@ describe.skipIf(!hasGoldenCorpus())('Golden Corpus — Formal Parity Comparison'
     return _parityCache
   }
 
+  afterAll(() => {
+    _parityCache = null
+  })
+
   function computePerFindingParity() {
     const matched: ParityMatch[] = []
     const xbenchOnly: ParityGap[] = []
