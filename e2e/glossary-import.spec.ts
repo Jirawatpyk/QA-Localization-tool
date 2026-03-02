@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import path from 'node:path'
 
-import { setUserMetadata } from './helpers/supabase-admin'
+import { TEST_PASSWORD, setUserMetadata } from './helpers/supabase-admin'
 
 /**
  * Story 1.4 — Glossary Import & Management (E2E)
@@ -10,7 +10,6 @@ import { setUserMetadata } from './helpers/supabase-admin'
  * Uses accessible selectors (getByRole, getByLabel, getByText) per Playwright best practices.
  */
 
-const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD ?? 'TestPassword123!'
 const TEST_EMAIL = `e2e-g14-${Date.now()}@test.local`
 const PROJECT_NAME = `Glossary E2E ${Date.now()}`
 const FIXTURE_CSV = path.resolve(__dirname, 'fixtures', 'glossary-sample.csv')

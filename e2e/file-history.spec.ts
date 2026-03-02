@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-import { cleanupTestProject } from './helpers/pipeline-admin'
+import { cleanupTestProject, type SeedFileStatus } from './helpers/pipeline-admin'
 import {
   SUPABASE_URL,
   adminHeaders,
@@ -24,14 +24,6 @@ const TEST_EMAIL = `e2e-filehist-${Date.now()}@test.local`
 
 let projectId: string
 let tenantId: string
-
-type SeedFileStatus =
-  | 'pending'
-  | 'parsed'
-  | 'l1_completed'
-  | 'l2_completed'
-  | 'l3_completed'
-  | 'failed'
 
 async function seedFile(
   pId: string,

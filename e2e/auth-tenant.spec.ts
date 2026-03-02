@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test'
 
+import { TEST_PASSWORD } from './helpers/supabase-admin'
+
 // E4: Auth flow — signup, login, protected routes, admin access
 // Runs against live Supabase Cloud (mailer_autoconfirm: true)
 
-const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD ?? 'TestPassword123!'
 const TEST_EMAIL = `e2e-${Date.now()}@test.local`
 const TEST_DISPLAY_NAME = 'E2E Test User'
 

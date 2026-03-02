@@ -9,6 +9,14 @@ import { SUPABASE_URL, adminHeaders } from './supabase-admin'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+export type SeedFileStatus =
+  | 'pending'
+  | 'parsed'
+  | 'l1_completed'
+  | 'l2_completed'
+  | 'l3_completed'
+  | 'failed'
+
 type FileRow = {
   id: string
   status: string

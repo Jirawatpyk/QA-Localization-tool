@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 
-import { setUserMetadata, signupOrLogin } from './helpers/supabase-admin'
+import { TEST_PASSWORD, setUserMetadata, signupOrLogin } from './helpers/supabase-admin'
 
 // ATDD GREEN PHASE — Story 1.7: Dashboard, Notifications & Onboarding
 // AC Coverage: AC#3 (first-time tour), AC#6 (returning user resume + restart)
@@ -9,7 +9,6 @@ import { setUserMetadata, signupOrLogin } from './helpers/supabase-admin'
 // - driver.js overlay selector: .driver-popover
 // - Tour resume is 0-indexed: dismissed_at_step (1-based) -> drive(step - 1) (0-based)
 
-const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD || 'TestPassword123!'
 const FIRST_TIME_EMAIL = process.env.E2E_FIRST_TIME_EMAIL || 'e2e-firsttime17@test.local'
 const RETURNING_EMAIL = process.env.E2E_RETURNING_EMAIL || 'e2e-returning17@test.local'
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'e2e-admin17@test.local'

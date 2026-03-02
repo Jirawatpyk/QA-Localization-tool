@@ -1,5 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 
+import { TEST_PASSWORD } from './helpers/supabase-admin'
+
 /**
  * Story 1.6 — Taxonomy Mapping Editor (E2E ATDD)
  *
@@ -18,7 +20,6 @@ import { test, expect, type Page } from '@playwright/test'
  *  timestamp names for AC3/AC4 to remain resilient across runs.
  */
 
-const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD ?? 'TestPassword123!'
 // Fixed email — reused across runs to avoid accumulating test users in the DB
 const TEST_EMAIL = process.env.E2E_TAX16_EMAIL ?? 'e2e-tax16@test.local'
 // Unique names scoped to this run — avoids conflicts from prior incomplete runs

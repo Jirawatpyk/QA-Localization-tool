@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-import { cleanupTestProject } from './helpers/pipeline-admin'
+import { cleanupTestProject, type SeedFileStatus } from './helpers/pipeline-admin'
 import {
   SUPABASE_URL,
   adminHeaders,
@@ -44,14 +44,6 @@ async function seedBatch(pId: string, tId: string, fileCount: number): Promise<s
   if (!data || data.length === 0) throw new Error(`Seed batch returned empty for project ${pId}`)
   return data[0].id
 }
-
-type SeedFileStatus =
-  | 'pending'
-  | 'parsed'
-  | 'l1_completed'
-  | 'l2_completed'
-  | 'l3_completed'
-  | 'failed'
 
 async function seedFile(
   pId: string,
