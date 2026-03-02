@@ -8,7 +8,7 @@ import { logger } from '@/lib/logger'
 // Flow: 1. Rate limit (Upstash) -> 2. Read session -> 3. Verify JWT
 //       -> 4. Extract tenant_id -> 5. Pass through
 
-const PUBLIC_ROUTES = ['/login', '/signup', '/callback']
+const PUBLIC_ROUTES = ['/login', '/signup', '/callback', '/api/inngest']
 const AUTH_ROUTES = ['/login', '/signup', '/callback']
 
 export async function proxy(request: NextRequest) {
