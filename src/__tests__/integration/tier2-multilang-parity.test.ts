@@ -9,29 +9,18 @@
  * Only processes SDLXLIFF files. VTT/Excel/other formats are documented as skipped.
  */
 
-// ── Mocks ──
-vi.mock('server-only', () => ({}))
-vi.mock('@/features/audit/actions/writeAuditLog', () => ({
-  writeAuditLog: vi.fn().mockResolvedValue(undefined),
-}))
-vi.mock('@/lib/logger', () => ({
-  logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}))
-vi.mock('@/lib/cache/glossaryCache', () => ({
-  getCachedGlossaryTerms: vi.fn().mockResolvedValue([]),
-}))
-
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs'
 import path from 'path'
 
 import { faker } from '@faker-js/faker'
 
 import { parseXliff } from '@/features/parser/sdlxliffParser'
-import type { ParsedSegment } from '@/features/parser/types'
 import { processFile } from '@/features/pipeline/engine/ruleEngine'
 import type { SegmentRecord } from '@/features/pipeline/engine/types'
+import { buildSegmentRecordFromParsed } from '@/test/factories'
 
 // ── Paths ──
+// NOTE: process.env used directly — @/lib/env unavailable in Vitest Node test process
 
 const GOLDEN_CORPUS_BASE = process.env['GOLDEN_CORPUS_PATH']
   ? path.resolve(process.cwd(), process.env['GOLDEN_CORPUS_PATH'])
@@ -122,31 +111,6 @@ function discoverLanguages(): LanguageDir[] {
   return languages
 }
 
-// ── Helpers ──
-
-function toSegmentRecord(
-  seg: ParsedSegment,
-  ids: { fileId: string; projectId: string; tenantId: string },
-): SegmentRecord {
-  return {
-    id: faker.string.uuid(),
-    fileId: ids.fileId,
-    projectId: ids.projectId,
-    tenantId: ids.tenantId,
-    segmentNumber: seg.segmentNumber,
-    sourceText: seg.sourceText,
-    targetText: seg.targetText,
-    sourceLang: seg.sourceLang,
-    targetLang: seg.targetLang,
-    wordCount: seg.wordCount,
-    confirmationState: seg.confirmationState,
-    matchPercentage: seg.matchPercentage,
-    translatorComment: seg.translatorComment,
-    inlineTags: seg.inlineTags,
-    createdAt: new Date(),
-  }
-}
-
 type LanguageResult = {
   language: string
   fileCount: number
@@ -190,7 +154,7 @@ describe.skipIf(!hasNcrCorpus())('Tier 2 Multi-Language Parity (AC2)', () => {
 
         const fileId = faker.string.uuid()
         const segments = result.data.segments.map((seg) =>
-          toSegmentRecord(seg, { fileId, projectId, tenantId }),
+          buildSegmentRecordFromParsed(seg, { fileId, projectId, tenantId }),
         )
         totalSegments += segments.length
 

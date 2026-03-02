@@ -14,18 +14,6 @@
  * Run: npx vitest run --project integration src/__tests__/integration/tag-gap-diagnostic.test.ts
  */
 
-// ── Mocks ──
-vi.mock('server-only', () => ({}))
-vi.mock('@/features/audit/actions/writeAuditLog', () => ({
-  writeAuditLog: vi.fn().mockResolvedValue(undefined),
-}))
-vi.mock('@/lib/logger', () => ({
-  logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() },
-}))
-vi.mock('@/lib/cache/glossaryCache', () => ({
-  getCachedGlossaryTerms: vi.fn().mockResolvedValue([]),
-}))
-
 import { existsSync, readFileSync } from 'fs'
 import path from 'path'
 
@@ -36,6 +24,7 @@ import { parseXliff } from '@/features/parser/sdlxliffParser'
 import type { InlineTagsData } from '@/features/parser/types'
 import { checkTagIntegrity } from '@/features/pipeline/engine/checks/tagChecks'
 import type { SegmentCheckContext, SegmentRecord } from '@/features/pipeline/engine/types'
+import { buildSegmentRecordFromParsed } from '@/test/factories'
 
 // ── Paths ──
 
@@ -203,23 +192,9 @@ describe.skipIf(!hasGoldenCorpus())('G2 Tag Gap Diagnostic', () => {
       }
 
       const fileId = faker.string.uuid()
-      const segments: SegmentRecord[] = result.data.segments.map((seg) => ({
-        id: faker.string.uuid(),
-        fileId,
-        projectId,
-        tenantId,
-        segmentNumber: seg.segmentNumber,
-        sourceText: seg.sourceText,
-        targetText: seg.targetText,
-        sourceLang: seg.sourceLang,
-        targetLang: seg.targetLang,
-        wordCount: seg.wordCount,
-        confirmationState: seg.confirmationState,
-        matchPercentage: seg.matchPercentage,
-        translatorComment: seg.translatorComment,
-        inlineTags: seg.inlineTags,
-        createdAt: new Date(),
-      }))
+      const segments: SegmentRecord[] = result.data.segments.map((seg) =>
+        buildSegmentRecordFromParsed(seg, { fileId, projectId, tenantId }),
+      )
 
       parsedFiles.push({ fileName: path.basename(relPath), segments })
     }

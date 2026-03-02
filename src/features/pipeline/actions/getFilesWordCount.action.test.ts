@@ -130,21 +130,18 @@ describe('getFilesWordCount', () => {
     // RED: withTenant guard (Guardrail #1)
   })
 
-  it('should return 0 words for empty fileIds array (guard inArray([]) before query)', async () => {
-    // Arrange: empty fileIds — should NOT call inArray with empty array (invalid SQL)
+  it('should reject empty fileIds array via Zod validation (Guardrail #5)', async () => {
+    // Arrange: empty fileIds — Zod .min(1) rejects before DB is queried
     const { getFilesWordCount } = await import('./getFilesWordCount.action')
     const result = await getFilesWordCount({
       fileIds: [],
       projectId: VALID_PROJECT_ID,
     })
 
-    // Should early-return 0 without hitting DB
-    expect(result.success).toBe(true)
-    if (!result.success) return
-    expect(result.data.totalWords).toBe(0)
-
-    // DB should NOT have been called (inArray guard)
+    // Should fail validation — never reaches DB
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INVALID_INPUT')
     expect(dbState.callIndex).toBe(0)
-    // RED: Guardrail #5 — inArray(col, []) = invalid SQL
   })
 })

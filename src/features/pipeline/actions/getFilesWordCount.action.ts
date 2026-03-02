@@ -7,17 +7,10 @@ import { and, eq, inArray, sql } from 'drizzle-orm'
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { segments } from '@/db/schema/segments'
+import { getFilesWordCountSchema } from '@/features/pipeline/validation/pipelineSchema'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
-
-type GetFilesWordCountInput = {
-  fileIds: string[]
-  projectId: string
-}
-
-type GetFilesWordCountResult =
-  | { success: true; data: { totalWords: number } }
-  | { success: false; code: string; error: string }
+import type { ActionResult } from '@/types/actionResult'
 
 /**
  * Get total word count for a set of files.
@@ -26,21 +19,21 @@ type GetFilesWordCountResult =
  * Used by ProcessingModeDialog to display word-count-based cost estimates.
  */
 export async function getFilesWordCount(
-  input: GetFilesWordCountInput,
-): Promise<GetFilesWordCountResult> {
+  input: unknown,
+): Promise<ActionResult<{ totalWords: number }>> {
+  // Validate input
+  const parsed = getFilesWordCountSchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, code: 'INVALID_INPUT', error: parsed.error.message }
+  }
+  const { fileIds, projectId } = parsed.data
+
   // Auth
   let currentUser
   try {
     currentUser = await requireRole('qa_reviewer', 'read')
   } catch {
     return { success: false, code: 'FORBIDDEN', error: 'Insufficient permissions' }
-  }
-
-  const { fileIds, projectId } = input
-
-  // Guard: inArray(col, []) = invalid SQL (Guardrail #5)
-  if (fileIds.length === 0) {
-    return { success: true, data: { totalWords: 0 } }
   }
 
   try {

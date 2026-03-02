@@ -15,18 +15,6 @@
  *   - glossary: Algorithm differences in Intl.Segmenter boundary validation
  */
 
-// ── Mocks ──
-vi.mock('server-only', () => ({}))
-vi.mock('@/features/audit/actions/writeAuditLog', () => ({
-  writeAuditLog: vi.fn().mockResolvedValue(undefined),
-}))
-vi.mock('@/lib/logger', () => ({
-  logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}))
-vi.mock('@/lib/cache/glossaryCache', () => ({
-  getCachedGlossaryTerms: vi.fn().mockResolvedValue([]),
-}))
-
 import { existsSync, readFileSync } from 'fs'
 import path from 'path'
 
@@ -35,7 +23,6 @@ import ExcelJS from 'exceljs'
 
 import { mapXbenchCategory } from '@/features/parity/helpers/xbenchCategoryMapper'
 import { parseXliff } from '@/features/parser/sdlxliffParser'
-import type { ParsedSegment } from '@/features/parser/types'
 import { processFile } from '@/features/pipeline/engine/ruleEngine'
 import type {
   GlossaryTermRecord,
@@ -43,9 +30,11 @@ import type {
   RuleCheckResult,
   SegmentRecord,
 } from '@/features/pipeline/engine/types'
+import { buildSegmentRecordFromParsed } from '@/test/factories'
 
 // ── File Paths ──
 
+// NOTE: process.env used directly — @/lib/env unavailable in Vitest Node test process
 // GOLDEN_CORPUS_PATH env var: when set, forces test execution (FAIL, not skip, if missing).
 // Without it, tests gracefully skip for CI where corpus isn't committed.
 const GOLDEN_CORPUS_BASE = process.env['GOLDEN_CORPUS_PATH']
@@ -120,29 +109,6 @@ function getCellText(cell: ExcelJS.Cell): string {
       .trim()
   }
   return String(value).trim()
-}
-
-function toSegmentRecord(
-  seg: ParsedSegment,
-  ids: { fileId: string; projectId: string; tenantId: string },
-): SegmentRecord {
-  return {
-    id: faker.string.uuid(),
-    fileId: ids.fileId,
-    projectId: ids.projectId,
-    tenantId: ids.tenantId,
-    segmentNumber: seg.segmentNumber,
-    sourceText: seg.sourceText,
-    targetText: seg.targetText,
-    sourceLang: seg.sourceLang,
-    targetLang: seg.targetLang,
-    wordCount: seg.wordCount,
-    confirmationState: seg.confirmationState,
-    matchPercentage: seg.matchPercentage,
-    translatorComment: seg.translatorComment,
-    inlineTags: seg.inlineTags,
-    createdAt: new Date(),
-  }
 }
 
 async function readXbenchReport(filePath: string): Promise<{
@@ -246,7 +212,7 @@ describe.skipIf(!hasGoldenCorpus())('Golden Corpus — Formal Parity Comparison'
 
       const fileId = faker.string.uuid()
       const segments = result.data.segments.map((seg) =>
-        toSegmentRecord(seg, { fileId, projectId, tenantId }),
+        buildSegmentRecordFromParsed(seg, { fileId, projectId, tenantId }),
       )
 
       fileResults.push({
@@ -403,6 +369,13 @@ describe.skipIf(!hasGoldenCorpus())('Golden Corpus — Formal Parity Comparison'
     gapType: 'architectural_difference' | 'genuine_gap' | 'xbench_false_positive'
   }
 
+  // Compute once and cache — O(N*M) matching is expensive (TD-TEST-004)
+  let _parityCache: ReturnType<typeof computePerFindingParity> | null = null
+  function getPerFindingParity() {
+    if (!_parityCache) _parityCache = computePerFindingParity()
+    return _parityCache
+  }
+
   function computePerFindingParity() {
     const matched: ParityMatch[] = []
     const xbenchOnly: ParityGap[] = []
@@ -527,7 +500,7 @@ describe.skipIf(!hasGoldenCorpus())('Golden Corpus — Formal Parity Comparison'
   }
 
   it('should achieve ≥ 99.5% overall parity (matched/totalXbench × 100)', () => {
-    const { matched, xbenchOnly, toolOnlyCount } = computePerFindingParity()
+    const { matched, xbenchOnly, toolOnlyCount } = getPerFindingParity()
     const totalXbench = xbenchFindings.length
     const totalEngine = fileResults.reduce((sum, f) => sum + f.findingsWithGlossary.length, 0)
     const parityPct = (matched.length / totalXbench) * 100
@@ -567,7 +540,7 @@ describe.skipIf(!hasGoldenCorpus())('Golden Corpus — Formal Parity Comparison'
   })
 
   it('should produce per-check-type breakdown with parity % per category', () => {
-    const { matched, xbenchOnly } = computePerFindingParity()
+    const { matched, xbenchOnly } = getPerFindingParity()
 
     // Build per-Xbench-category breakdown
     type CategoryBreakdown = {
@@ -642,7 +615,7 @@ describe.skipIf(!hasGoldenCorpus())('Golden Corpus — Formal Parity Comparison'
   })
 
   it('should categorize every Xbench-only finding as fixable or architectural difference', () => {
-    const { xbenchOnly } = computePerFindingParity()
+    const { xbenchOnly } = getPerFindingParity()
 
     // Every Xbench-only finding must be categorized
     for (const gap of xbenchOnly) {

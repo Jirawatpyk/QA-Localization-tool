@@ -8,18 +8,6 @@
  * Data: docs/test-data/Golden-Test-Mona/2026-02-24_With_Issues_Mona/
  */
 
-// ── Mocks ──
-vi.mock('server-only', () => ({}))
-vi.mock('@/features/audit/actions/writeAuditLog', () => ({
-  writeAuditLog: vi.fn().mockResolvedValue(undefined),
-}))
-vi.mock('@/lib/logger', () => ({
-  logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}))
-vi.mock('@/lib/cache/glossaryCache', () => ({
-  getCachedGlossaryTerms: vi.fn().mockResolvedValue([]),
-}))
-
 import { existsSync, readFileSync } from 'fs'
 import path from 'path'
 
@@ -30,9 +18,9 @@ import { mapXbenchCategory } from '@/features/parity/helpers/xbenchCategoryMappe
 import { parseXbenchReport } from '@/features/parity/helpers/xbenchReportParser'
 import { toParitySeverity } from '@/features/parity/types'
 import { parseXliff } from '@/features/parser/sdlxliffParser'
-import type { ParsedSegment } from '@/features/parser/types'
 import { processFile } from '@/features/pipeline/engine/ruleEngine'
 import type { RuleCheckResult, SegmentRecord } from '@/features/pipeline/engine/types'
+import { buildSegmentRecordFromParsed } from '@/test/factories'
 
 // ── File Paths ──
 
@@ -52,31 +40,6 @@ const SDLXLIFF_FILES = [
   'Traning Plan and SM Support Kit/AP BT SM Support Kit.pptx.sdlxliff',
   'Traning Plan and SM Support Kit/AP BT Training Plan.pptx.sdlxliff',
 ]
-
-// ── Helpers ──
-
-function toSegmentRecord(
-  seg: ParsedSegment,
-  ids: { fileId: string; projectId: string; tenantId: string },
-): SegmentRecord {
-  return {
-    id: faker.string.uuid(),
-    fileId: ids.fileId,
-    projectId: ids.projectId,
-    tenantId: ids.tenantId,
-    segmentNumber: seg.segmentNumber,
-    sourceText: seg.sourceText,
-    targetText: seg.targetText,
-    sourceLang: seg.sourceLang,
-    targetLang: seg.targetLang,
-    wordCount: seg.wordCount,
-    confirmationState: seg.confirmationState,
-    matchPercentage: seg.matchPercentage,
-    translatorComment: seg.translatorComment,
-    inlineTags: seg.inlineTags,
-    createdAt: new Date(),
-  }
-}
 
 function hasGoldenCorpus(): boolean {
   return existsSync(GOLDEN_DIR) && existsSync(XBENCH_REPORT_PATH)
@@ -169,7 +132,7 @@ describe.skipIf(!hasGoldenCorpus())('Parity Helpers — Real Data', () => {
 
       const fileId = faker.string.uuid()
       const segments: SegmentRecord[] = parseResult.data.segments.map((seg) =>
-        toSegmentRecord(seg, { fileId, projectId, tenantId }),
+        buildSegmentRecordFromParsed(seg, { fileId, projectId, tenantId }),
       )
 
       const engineFindings: RuleCheckResult[] = await processFile(segments, [], new Set(), [])
@@ -260,7 +223,7 @@ describe.skipIf(!hasGoldenCorpus())('Parity Helpers — Real Data', () => {
 
         const fileId = faker.string.uuid()
         const segments = parseResult.data.segments.map((seg) =>
-          toSegmentRecord(seg, { fileId, projectId, tenantId }),
+          buildSegmentRecordFromParsed(seg, { fileId, projectId, tenantId }),
         )
 
         const engineFindings = await processFile(segments, [], new Set(), [])

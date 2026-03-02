@@ -10,29 +10,18 @@
  * If count > 20, investigate root cause.
  */
 
-// ── Mocks ──
-vi.mock('server-only', () => ({}))
-vi.mock('@/features/audit/actions/writeAuditLog', () => ({
-  writeAuditLog: vi.fn().mockResolvedValue(undefined),
-}))
-vi.mock('@/lib/logger', () => ({
-  logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}))
-vi.mock('@/lib/cache/glossaryCache', () => ({
-  getCachedGlossaryTerms: vi.fn().mockResolvedValue([]),
-}))
-
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs'
 import path from 'path'
 
 import { faker } from '@faker-js/faker'
 
 import { parseXliff } from '@/features/parser/sdlxliffParser'
-import type { ParsedSegment } from '@/features/parser/types'
 import { processFile } from '@/features/pipeline/engine/ruleEngine'
 import type { RuleCheckResult, SegmentRecord } from '@/features/pipeline/engine/types'
+import { buildSegmentRecordFromParsed } from '@/test/factories'
 
 // ── File Paths ──
+// NOTE: process.env used directly — @/lib/env unavailable in Vitest Node test process
 
 const GOLDEN_CORPUS_BASE = process.env['GOLDEN_CORPUS_PATH']
   ? path.resolve(process.cwd(), process.env['GOLDEN_CORPUS_PATH'])
@@ -60,29 +49,6 @@ function discoverSdlxliffFiles(dir: string): string[] {
     }
   }
   return files
-}
-
-function toSegmentRecord(
-  seg: ParsedSegment,
-  ids: { fileId: string; projectId: string; tenantId: string },
-): SegmentRecord {
-  return {
-    id: faker.string.uuid(),
-    fileId: ids.fileId,
-    projectId: ids.projectId,
-    tenantId: ids.tenantId,
-    segmentNumber: seg.segmentNumber,
-    sourceText: seg.sourceText,
-    targetText: seg.targetText,
-    sourceLang: seg.sourceLang,
-    targetLang: seg.targetLang,
-    wordCount: seg.wordCount,
-    confirmationState: seg.confirmationState,
-    matchPercentage: seg.matchPercentage,
-    translatorComment: seg.translatorComment,
-    inlineTags: seg.inlineTags,
-    createdAt: new Date(),
-  }
 }
 
 // ── Test Suite ──
@@ -118,7 +84,7 @@ describe.skipIf(!hasCleanCorpus())('Clean Corpus False Positive Baseline (AC6)',
 
       const fileId = faker.string.uuid()
       const segments = result.data.segments.map((seg) =>
-        toSegmentRecord(seg, { fileId, projectId, tenantId }),
+        buildSegmentRecordFromParsed(seg, { fileId, projectId, tenantId }),
       )
 
       const findings = await processFile(segments, [], new Set(), [])

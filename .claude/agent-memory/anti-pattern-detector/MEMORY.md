@@ -12,6 +12,9 @@
 - Story 3.2b5: 2026-03-02 — 2C + 3H + 2M + 2L. SERVICE_ROLE_KEY + process.env in e2e/helpers/pipeline-admin.ts (CRITICAL); console.log in 2 E2E specs (HIGH); empty .catch() in FileUploadZone (HIGH); bare `string` for status in FileRow/ScoreRow (HIGH); parsingStartedRef not reset on uploadedFiles change (MEDIUM Guardrail #12); hardcoded 'tenant-id' non-UUID in test (MEDIUM); ../types relative import (LOW); unnecessary 'use client' on UploadProgressList (LOW).
 - Story 3.2b6: 2026-03-02 — 0C + 1H + 1M + 3L. useState(budgetAlertThresholdPct) without sync useEffect in AiBudgetCard (HIGH Guardrail #12 recurring — 5th occurrence); bare `string` for processingMode/status in ProjectSettings.Project type (MEDIUM); ./LanguagePairConfigTable relative import (LOW); 'use client' in hook file useFileUpload.ts (LOW); hardcoded test UUID constant (LOW informational).
 - Story 2.7 parity E2E (2026-03-02) — 0C + 2H + 3M + 2L. bare `string` for severity/category in ComparisonFinding type (HIGH Guardrail #3 — 6th occurrence); process.env without comment in e2e/parity-comparison.spec.ts (HIGH); useState(fileId??) without sync useEffect in ReportMissingCheckDialog (MEDIUM Guardrail #12 — 6th occurrence); SERVICE_ROLE_KEY in spec without comment (MEDIUM); bare string propagated to test MockCompareResult type (MEDIUM); CHECK_TYPES missing `as const` (LOW); seedFinding inline in spec instead of e2e/helpers/ (LOW).
+- TD-E2E-009 fix (2026-03-02) — 0C + 1H + 0M + 1L. RESOLVED: adminHeaders deduplication done correctly. supabase-admin.ts = single source of truth; pipeline-admin.ts re-exports from it; all 4 specs import from supabase-admin.ts. Remaining: process.env in supabase-admin.ts:7-10 without exception comment (HIGH — matches documented exception pattern but comment missing); re-export in pipeline-admin.ts:12 is a minor barrel-export concern (LOW — acceptable for thin helper-to-helper re-export).
+- TD Quick-Fix Sprint (2026-03-02) — 0C + 1H + 4M + 3L. console.warn in glossary-matching-real-data.test.ts (HIGH — 5 instances, test file exception BUT must document; Playwright-equivalent: not applicable for Vitest — pino not importable in Node; use process.stderr.write like other test files); process.env in 3 integration test files (MEDIUM — test infra exception same as e2e/supabase-admin.ts, comment missing); inline segment construction in tag-gap-diagnostic.test.ts lines 194-210 (MEDIUM — missed migration to buildSegmentRecordFromParsed, 6 other files migrated); dead import `import type { ParsedSegment }` in 6 integration test files (LOW — imported but only used via .map(seg =>) type inference; verifiable); missing `export type UpdateModelPinningInput` in pipelineSchema.ts line 49 (LOW — updateModelPinningSchema infers input type but type is not exported unlike other 4 schemas); local UpdateResult type duplication in 2 action files (LOW — should use ActionResult from @/types/actionResult.ts).
+- TD quick-fix batch (2026-03-02) — 0C + 5H + 3M + 1L. console.warn ×5 in glossary-matching-real-data.test.ts without exception comment (HIGH); process.env in 3 integration test files without exception comment (HIGH); inline segment object construction not migrated in tag-gap-diagnostic.test.ts (HIGH — partial migration, 6/7 files migrated); missing UpdateModelPinningInput type export in pipelineSchema.ts (HIGH); Guardrail #5 inArray guard absent in getFilesWordCount.action.ts (MEDIUM — Zod .min(1) covers this but not explicit guard); missing blank line before local type in 2 action files (MEDIUM); unused ParsedSegment import in 6 integration test files after factory migration (MEDIUM).
 
 ## Recurring Violations by Category
 
@@ -45,11 +48,35 @@
 - `src/lib/logger.ts:9` — pino level config; acceptable NODE_ENV check
 - NEW (Story 3.1): `Redis.fromEnv()` in `ratelimit.ts:7` — Upstash convenience bypasses @/lib/env. Fix: `new Redis({ url: env.UPSTASH_REDIS_REST_URL, token: env.UPSTASH_REDIS_REST_TOKEN })`
 - E2E helper files (e.g., `e2e/helpers/pipeline-admin.ts`) — Playwright Node process, @/lib/env unavailable. Pattern matches proxy.ts exception. MUST add explanatory comment. Flag HIGH until documented.
+- `e2e/helpers/supabase-admin.ts` (lines 7-10) — same Playwright exception as pipeline-admin.ts but MISSING the explanatory comment block. Flag HIGH. pipeline-admin.ts already has the comment; supabase-admin.ts needs the same pattern (file-level JSDoc or inline NOTE comment).
 
 ### Relative Imports (LOW)
 
 - Rule: no paths going up MORE than one level. Same-dir `./` and one-level `../` within same feature = LOW (not blocked)
 - Seen consistently across all stories in action files and helpers
+
+### console.warn in Vitest Test Files (HIGH — requires exception comment)
+
+- `console.warn` in Vitest integration test files = same exception pattern as E2E/error.tsx
+- Vitest cannot import pino (server-only) + @/lib/logger is vi.mocked in setup.ts
+- MUST add: `// NOTE: console.warn acceptable in Vitest test files — @/lib/logger is vi.mocked in setup.ts`
+- Without comment = HIGH violation (consistent with e2e/helpers pattern)
+- Seen in: glossary-matching-real-data.test.ts (5 instances, 2026-03-02)
+
+### process.env in Integration Test Files (HIGH — requires exception comment)
+
+- GOLDEN_CORPUS_PATH is CI-only path hint — not a production secret, not in @/lib/env
+- Integration test files run in Vitest Node.js process (not Next.js app) — same exception as proxy.ts
+- MUST add: `// NOTE: process.env used directly — GOLDEN_CORPUS_PATH is a CI-only test path hint, not a production secret. @/lib/env is not available in Vitest Node process.`
+- Without comment = HIGH violation
+- Seen in: golden-corpus-parity.test.ts, clean-corpus-baseline.test.ts, tier2-multilang-parity.test.ts (2026-03-02)
+
+### Partial Factory Migration (HIGH)
+
+- When `buildSegmentRecordFromParsed()` is introduced for deduplication, ALL files that have inline segment construction must be migrated
+- Partial migration (some files done, some not) = HIGH inconsistency violation
+- Scan ALL integration test files for `result.data.segments.map((seg) => ({` pattern after any factory addition
+- tag-gap-diagnostic.test.ts missed migration in TD quick-fix batch (2026-03-02)
 
 ### Hardcoded Test IDs (MEDIUM)
 

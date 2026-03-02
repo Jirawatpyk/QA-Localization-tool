@@ -4,6 +4,9 @@ import type { FindingStatus } from '@/types/finding'
 export const PROCESSING_MODES = ['economy', 'thorough'] as const
 export type ProcessingMode = (typeof PROCESSING_MODES)[number]
 
+export const PIPELINE_LAYERS = ['L2', 'L3'] as const
+export type PipelineLayer = (typeof PIPELINE_LAYERS)[number]
+
 // Inngest event data types — canonical source for both client.ts schemas and pipeline types.ts
 export type PipelineFileEventData = {
   fileId: string

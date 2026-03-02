@@ -13,18 +13,6 @@
  * server-only + side-effect modules are mocked so findTermInText (pure) can be tested.
  */
 
-// Mock server-only and side-effect modules — findTermInText is pure and never calls them
-vi.mock('server-only', () => ({}))
-vi.mock('@/features/audit/actions/writeAuditLog', () => ({
-  writeAuditLog: vi.fn().mockResolvedValue(undefined),
-}))
-vi.mock('@/lib/logger', () => ({
-  logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() },
-}))
-vi.mock('@/lib/cache/glossaryCache', () => ({
-  getCachedGlossaryTerms: vi.fn().mockResolvedValue([]),
-}))
-
 import { existsSync, readFileSync } from 'fs'
 import path from 'path'
 
@@ -103,10 +91,8 @@ describe.skipIf(!hasCorpus())('Glossary Matching Engine — Annotated Corpus', (
       const fnRate = failures.length / cases.length
 
       if (failures.length > 0) {
-        console.warn(
-          'Thai false negatives:',
-          failures.map((c) => c.note),
-        )
+        // NOTE: process.stderr.write used — pino not importable in Vitest Node process
+        process.stderr.write(`Thai false negatives: ${failures.map((c) => c.note).join(', ')}\n`)
       }
 
       expect(fnRate).toBeLessThan(0.05)
@@ -133,8 +119,9 @@ describe.skipIf(!hasCorpus())('Glossary Matching Engine — Annotated Corpus', (
         // Log confidence for observability — not a hard assertion (ICU may vary)
         const actual = results[0]?.confidence
         if (actual !== tc.expectedConfidence) {
-          console.warn(
-            `[th] confidence mismatch for "${tc.term}": expected=${tc.expectedConfidence} actual=${actual} (ICU version difference) | ${tc.note}`,
+          // NOTE: process.stderr.write used — pino not importable in Vitest Node process
+          process.stderr.write(
+            `[th] confidence mismatch for "${tc.term}": expected=${tc.expectedConfidence} actual=${actual} (ICU version difference) | ${tc.note}\n`,
           )
         }
       }
@@ -153,9 +140,9 @@ describe.skipIf(!hasCorpus())('Glossary Matching Engine — Annotated Corpus', (
       const fnRate = failures.length / cases.length
 
       if (failures.length > 0) {
-        console.warn(
-          'Japanese false negatives:',
-          failures.map((c) => c.note),
+        // NOTE: process.stderr.write used — pino not importable in Vitest Node process
+        process.stderr.write(
+          `Japanese false negatives: ${failures.map((c) => c.note).join(', ')}\n`,
         )
       }
 
@@ -193,10 +180,8 @@ describe.skipIf(!hasCorpus())('Glossary Matching Engine — Annotated Corpus', (
       const fnRate = failures.length / cases.length
 
       if (failures.length > 0) {
-        console.warn(
-          'Chinese false negatives:',
-          failures.map((c) => c.note),
-        )
+        // NOTE: process.stderr.write used — pino not importable in Vitest Node process
+        process.stderr.write(`Chinese false negatives: ${failures.map((c) => c.note).join(', ')}\n`)
       }
 
       expect(fnRate).toBeLessThan(0.05)
@@ -236,9 +221,9 @@ describe.skipIf(!hasCorpus())('Glossary Matching Engine — Annotated Corpus', (
       const fnRate = failures.length / cases.length
 
       if (failures.length > 0) {
-        console.warn(
-          'European false negatives:',
-          failures.map((c) => c.note),
+        // NOTE: process.stderr.write used — pino not importable in Vitest Node process
+        process.stderr.write(
+          `European false negatives: ${failures.map((c) => c.note).join(', ')}\n`,
         )
       }
 

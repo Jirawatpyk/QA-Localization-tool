@@ -7,34 +7,32 @@ import { and, eq } from 'drizzle-orm'
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { projects } from '@/db/schema/projects'
+import { getProjectAiBudgetSchema } from '@/features/pipeline/validation/pipelineSchema'
 import { checkProjectBudget } from '@/lib/ai/budget'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
+import type { ActionResult } from '@/types/actionResult'
 
-type GetProjectAiBudgetInput = {
-  projectId: string
+type AiBudgetData = {
+  usedBudgetUsd: number
+  monthlyBudgetUsd: number | null
+  budgetAlertThresholdPct: number
+  remainingBudgetUsd: number
 }
-
-type GetProjectAiBudgetResult =
-  | {
-      success: true
-      data: {
-        usedBudgetUsd: number
-        monthlyBudgetUsd: number | null
-        budgetAlertThresholdPct: number
-        remainingBudgetUsd: number
-      }
-    }
-  | { success: false; code: string; error: string }
 
 /**
  * Get current month AI spend vs. project budget for the AiBudgetCard component.
  *
  * Delegates to checkProjectBudget (DRY) + adds budgetAlertThresholdPct from project.
  */
-export async function getProjectAiBudget(
-  input: GetProjectAiBudgetInput,
-): Promise<GetProjectAiBudgetResult> {
+export async function getProjectAiBudget(input: unknown): Promise<ActionResult<AiBudgetData>> {
+  // Validate input
+  const parsed = getProjectAiBudgetSchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, code: 'INVALID_INPUT', error: parsed.error.message }
+  }
+  const { projectId } = parsed.data
+
   // Auth — all roles can view budget
   let currentUser
   try {
@@ -42,8 +40,6 @@ export async function getProjectAiBudget(
   } catch {
     return { success: false, code: 'FORBIDDEN', error: 'Insufficient permissions' }
   }
-
-  const { projectId } = input
 
   try {
     // Step 1: Get project alert threshold (only field not in checkProjectBudget)

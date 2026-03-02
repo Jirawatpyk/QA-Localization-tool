@@ -8,43 +8,30 @@ import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { projects } from '@/db/schema/projects'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
+import { updateBudgetAlertThresholdSchema } from '@/features/pipeline/validation/pipelineSchema'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
-
-type UpdateBudgetAlertThresholdInput = {
-  projectId: string
-  thresholdPct: number // 1-100
-}
-
-type UpdateBudgetAlertThresholdResult =
-  | { success: true }
-  | { success: false; code: string; error: string }
+import type { ActionResult } from '@/types/actionResult'
 
 /**
  * Update budget alert threshold percentage for a project (Admin/PM only).
  *
  * Stored in projects.budget_alert_threshold_pct (default 80%).
  */
-export async function updateBudgetAlertThreshold(
-  input: UpdateBudgetAlertThresholdInput,
-): Promise<UpdateBudgetAlertThresholdResult> {
+export async function updateBudgetAlertThreshold(input: unknown): Promise<ActionResult<undefined>> {
+  // Validate input (Zod enforces int 1-100)
+  const parsed = updateBudgetAlertThresholdSchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, code: 'INVALID_INPUT', error: parsed.error.message }
+  }
+  const { projectId, thresholdPct } = parsed.data
+
   // Auth — admin or pm only
   let currentUser
   try {
     currentUser = await requireRole('admin', 'write')
   } catch {
     return { success: false, code: 'FORBIDDEN', error: 'Insufficient permissions' }
-  }
-
-  const { projectId, thresholdPct } = input
-
-  // Validate range: 1-100 (integer)
-  if (!Number.isInteger(thresholdPct) || thresholdPct < 1 || thresholdPct > 100) {
-    return {
-      success: false,
-      code: 'INVALID_INPUT',
-      error: 'Threshold must be an integer between 1 and 100',
-    }
   }
 
   try {
@@ -75,7 +62,7 @@ export async function updateBudgetAlertThreshold(
       )
     }
 
-    return { success: true }
+    return { success: true, data: undefined }
   } catch (err) {
     logger.error({ err, projectId }, 'Failed to update budget alert threshold')
     return { success: false, code: 'INTERNAL_ERROR', error: 'Failed to update threshold' }

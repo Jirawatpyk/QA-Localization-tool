@@ -14,6 +14,7 @@ import type {
 import type { AppNotification, DashboardData, RecentFileRow } from '@/features/dashboard/types'
 import type { ParityComparisonResult, XbenchFinding } from '@/features/parity/types'
 import type { ExcelPreview } from '@/features/parser/actions/previewExcelColumns.action'
+import type { ParsedSegment } from '@/features/parser/types'
 import type { ExcelColumnMapping } from '@/features/parser/validation/excelMappingSchema'
 import type { ContributingFinding } from '@/features/scoring/types'
 import type { BatchRecord, UploadFileResult } from '@/features/upload/types'
@@ -447,6 +448,33 @@ export function buildFindingChangedEvent(
     triggeredBy: faker.string.uuid(),
     timestamp: new Date().toISOString(),
     ...overrides,
+  }
+}
+
+/**
+ * Converts a ParsedSegment (from parser output) into a SegmentRecord (DB row shape).
+ * Shared across integration tests — extracted from 6 duplicated copies (TD-TEST-002).
+ */
+export function buildSegmentRecordFromParsed(
+  seg: ParsedSegment,
+  ids: { fileId: string; projectId: string; tenantId: string },
+): SegmentRecord {
+  return {
+    id: faker.string.uuid(),
+    fileId: ids.fileId,
+    projectId: ids.projectId,
+    tenantId: ids.tenantId,
+    segmentNumber: seg.segmentNumber,
+    sourceText: seg.sourceText,
+    targetText: seg.targetText,
+    sourceLang: seg.sourceLang,
+    targetLang: seg.targetLang,
+    wordCount: seg.wordCount,
+    confirmationState: seg.confirmationState,
+    matchPercentage: seg.matchPercentage,
+    translatorComment: seg.translatorComment,
+    inlineTags: seg.inlineTags,
+    createdAt: new Date(),
   }
 }
 

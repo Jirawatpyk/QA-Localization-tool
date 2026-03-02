@@ -17,7 +17,8 @@
 - `story-3-2a-findings.md` — Story 3.2a AI Provider Integration CR R1 (1C/3H/5M/5L)
 - `story-3-2b-findings.md` — Story 3.2b L2 Batch Processing & Pipeline Extension CR R1-R2 (R2: 0C/4H/5M/4L)
 - `story-3-2b5-findings.md` — Story 3.2b5 Upload-Pipeline Wiring CR R1 (0C/3H/5M/4L)
-- `story-3-2b6-findings.md` — Story 3.2b6 Orphan Wiring Cleanup CR R1 (0C/3H/5M/4L)
+- `story-3-2b6-findings.md` — Story 3.2b6 Orphan Wiring Cleanup CR R1-R2 (R1: 0C/4H/5M/4L)
+- `story-td-sprint-findings.md` — TD Quick-Fix Sprint CR R1 (0C/3H/5M/4L)
 
 ## Recurring Anti-Patterns (check EVERY review)
 
@@ -165,6 +166,19 @@
 - Root cause: ATDD DA-1 recommended adding it without verifying domain
 - **Check during review:** When comparing `table.status` to literal, verify literal is in that table's status domain
 - Lesson: Cast Drizzle varchar selects to their union type — compiler catches invalid comparisons
+
+### 34. Inline Result Type Instead of ActionResult<T> (TD Sprint)
+
+- `updateBudgetAlertThreshold` + `updateModelPinning` define inline `UpdateResult` type
+- Project standard: ALL Server Actions return `ActionResult<T>`
+- Fix: `Promise<ActionResult<undefined>>` + `return { success: true, data: undefined }`
+- **Check during review:** Every server action file must import + use `ActionResult<T>` from `@/types/actionResult`
+
+### 35. Unused Imports After Refactor (TD Sprint)
+
+- After extracting shared helper (buildSegmentRecordFromParsed), 5 files retained unused `ParsedSegment` import
+- Pattern: refactor extracts logic into helper but leaves old imports behind
+- **Check during review:** After any extraction refactor, grep for the old type/function name across all call sites
 
 ## CAS Guard Pattern (ESTABLISHED)
 

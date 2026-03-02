@@ -1,7 +1,7 @@
 # Tech Debt Tracker
 
 **Created:** 2026-02-25 (post Story 2.7 CR R4)
-**Last Verified:** 2026-03-01
+**Last Verified:** 2026-03-02 (Guardrail #23 compliance sweep)
 **Source:** Cross-referenced from agent memory (anti-pattern-detector, code-quality-analyzer, tenant-isolation-checker, testing-qa-expert, inngest-function-validator)
 
 ---
@@ -28,10 +28,9 @@
 ### TD-DB-002: Missing composite index on files(tenant_id, project_id)
 - **Severity:** Low
 - **Risk:** Performance only — queries filtering by both columns use sequential scan
-- **Mitigation:** Data volume is small in current phase
-- **Fix:** Add migration with composite index
+- **Fix:** Added `index('idx_files_tenant_project').on(table.tenantId, table.projectId)` to Drizzle schema
 - **Origin:** Story 2.1, flagged by code-quality-analyzer
-- **Status:** DEFERRED (address when data grows, Epic 3-4)
+- **Status:** RESOLVED (2026-03-02 — Guardrail #23 quick fix, run `db:generate` + `db:migrate` to apply)
 
 ### TD-DB-003: idx_findings_file_layer in migration but not in Drizzle schema
 - **Severity:** Low
@@ -46,7 +45,7 @@
 - **Mitigation:** fileId + segmentNumber used as proxy identifier
 - **Fix:** Design decision needed — add column or use composite key
 - **Origin:** Story 2.2, flagged by code-quality-analyzer
-- **Status:** DEFERRED (needs design decision, arch review)
+- **Status:** DEFERRED → **Epic 5 — Language Intelligence & Non-Native Support** (cross-file analysis requires stable segment identity; arch decision = use composite key `fileId+segmentNumber` as FK, NOT add new column)
 
 ---
 
@@ -112,24 +111,24 @@
 - **Severity:** Medium
 - **Risk:** If `SegmentRecord` type changes, must update 6 identical copies
 - **Files:** `golden-corpus-parity.test.ts`, `clean-corpus-baseline.test.ts`, `tier2-multilang-parity.test.ts`, `golden-corpus-diagnostic.test.ts`, `parity-helpers-real-data.test.ts`, `rule-engine-golden-corpus.test.ts`
-- **Fix:** Extract `buildSegmentRecordFromParsed()` to `src/test/factories.ts`
+- **Fix:** Extracted `buildSegmentRecordFromParsed()` to `src/test/factories.ts`, all 6 files import from shared factory
 - **Origin:** Story 2.10, flagged by code-quality-analyzer
-- **Status:** DEFERRED (fix when creating shared integration test infrastructure, early Epic 3)
+- **Status:** RESOLVED (2026-03-02 — Guardrail #23 quick fix)
 
 ### TD-TEST-003: Integration test DRY — mock block duplicated 4+ files
 - **Severity:** Medium
 - **Risk:** Adding a new mock (e.g., new server-only module) requires updating 4+ files
 - **Files:** All integration test files using `vi.mock('server-only')` + `writeAuditLog` + `logger` + `glossaryCache`
-- **Fix:** Create `src/__tests__/integration/setup.ts` as shared `setupFiles` in vitest config
+- **Fix:** Created `src/__tests__/integration/setup.ts` as shared `setupFiles` in vitest config. Removed duplicated mock blocks from 8 integration test files
 - **Origin:** Story 2.10, flagged by code-quality-analyzer
-- **Status:** DEFERRED (fix when creating shared integration test infrastructure, early Epic 3)
+- **Status:** RESOLVED (2026-03-02 — Guardrail #23 quick fix)
 
 ### TD-TEST-004: computePerFindingParity() called 3x with same data
 - **Severity:** Low
 - **Risk:** O(N*M) matching repeated needlessly in `golden-corpus-parity.test.ts`
-- **Fix:** Compute once in `beforeAll`, store in suite-level variable
+- **Fix:** Added lazy-cached `getPerFindingParity()` wrapper — computes once, returns cached result on subsequent calls
 - **Origin:** Story 2.10, flagged by code-quality-analyzer
-- **Status:** DEFERRED (quick refactor, do with TD-TEST-002/003)
+- **Status:** RESOLVED (2026-03-02 — Guardrail #23 quick fix)
 
 ### TD-TEST-005: Low-priority test gaps (carry-over)
 - **Severity:** Low
@@ -170,15 +169,15 @@
 - **Mitigation:** Current upload flow always creates a batch, so value is always populated
 - **Fix:** Change `uploadBatchId: string` → `uploadBatchId: string | null` in `PipelineFileEventData`, update all consumers to handle null
 - **Origin:** Story 2.6, identified during Story 3.2b validation
-- **Status:** DEFERRED (no current code path sends null; fix when adding single-file upload, Epic 4+)
+- **Status:** DEFERRED → **Epic 6 — Batch Processing & Team Collaboration** (single-file upload use case lives here; no current code path sends null)
 
 ### TD-PATTERN-001: Server Actions missing Zod input schemas (4 files)
 - **Severity:** Low
 - **Risk:** Pattern inconsistency only — all 4 actions validate input via manual checks (not Zod)
 - **Files:** `getFilesWordCount.action.ts`, `getProjectAiBudget.action.ts`, `updateBudgetAlertThreshold.action.ts`, `updateModelPinning.action.ts`
-- **Fix:** Add Zod schemas + `.safeParse()` to match `startProcessing.action.ts` pattern — do all 4 together as batch chore
+- **Fix:** Added Zod schemas to `pipelineSchema.ts`, all 4 actions now accept `input: unknown` + `.safeParse()`. Manual checks removed where Zod covers them
 - **Origin:** Story 3.1 CR R1, flagged by code-quality-analyzer (L1 finding)
-- **Status:** DEFERRED (batch chore, Epic 4 — no correctness or security risk)
+- **Status:** RESOLVED (2026-03-02 — Guardrail #23 quick fix)
 
 ---
 
@@ -190,7 +189,7 @@
 - **Files:** `src/lib/ai/costs.ts`, `src/lib/ai/providers.ts`, `src/lib/ai/client.ts`
 - **Fix:** Extract shared `detectProvider(modelId): string` to `src/lib/ai/models.ts` and import from all 3 files
 - **Origin:** Story 3.2a, flagged by code-quality-analyzer (H3)
-- **Status:** DEFERRED (refactor scope, Epic 3 cleanup or Story 3.4)
+- **Status:** DEFERRED → **Story 3.4 — AI Resilience** (fallback chain refactor is natural scope for provider dedup; extract `detectProvider()` as prerequisite)
 
 ---
 
@@ -203,7 +202,7 @@
 - **Mitigation:** Render-time state reset (`if (pathname !== prevPathname) setEntities({})`) clears stale data on route change, but in-flight fetch can still resolve after
 - **Fix:** Add `AbortController` to `fetchEntities()` with cleanup in `useEffect` return
 - **Origin:** Story 3.0.5 CR R1, flagged by code-quality-analyzer (M3)
-- **Status:** DEFERRED (low risk — breadcrumb is non-critical UI, Epic 4 when review routes add real DB queries)
+- **Status:** DEFERRED → **Epic 4 — Review & Decision Workflow** (breadcrumb entity queries needed when review routes `projects/[id]/review/[sessionId]` add real DB lookups)
 
 ### TD-UX-002: truncateSegments shows only first+last, loses context
 - **Severity:** Low
@@ -212,7 +211,7 @@
 - **Current:** `[first, ellipsis, last]`
 - **Better:** `[first, ellipsis, secondToLast, last]`
 - **Origin:** Story 3.0.5 CR R1, flagged by code-quality-analyzer (M5)
-- **Status:** DEFERRED (UX refinement, Epic 4 when review routes create 5+ segment paths)
+- **Status:** DEFERRED → **Epic 4 — Review & Decision Workflow** (review routes `projects/[id]/review/[sessionId]/findings/[findingId]` create 5+ segment paths that trigger this issue)
 
 ---
 
@@ -225,7 +224,7 @@
 - **Mitigation:** Inngest `concurrency: { key: projectId, limit: 5 }` reduces (but doesn't eliminate) window. Batch completion is also eventually caught by polling/manual trigger
 - **Fix:** Use DB-level atomic check: `UPDATE upload_batches SET status='completed' WHERE id=? AND (SELECT count(*) FROM files WHERE batch_id=? AND status NOT IN ('l2_completed','l3_completed','failed')) = 0 RETURNING *` — if RETURNING is empty, another invocation already completed the batch
 - **Origin:** Story 2.6 design, identified during Story 3.2b validation (mode-aware terminal status makes race window wider)
-- **Status:** DEFERRED (low probability with current concurrency limits; fix in Story 3.4 resilience or Epic 4)
+- **Status:** DEFERRED → **Story 3.4 — AI Resilience, Fallback, Retry & Partial Results** (atomic batch completion check is core resilience requirement; fix with DB-level UPDATE...RETURNING pattern)
 
 ### TD-PIPE-002: Missing error-chunk cost logging in runL3ForFile
 - **Severity:** Medium
@@ -312,10 +311,10 @@
 ### TD-UX-003: File selection UI before processing — all files auto-selected
 - **Severity:** Low
 - **Risk:** User ไม่สามารถเลือก/ยกเลิกไฟล์ที่ parse แล้วก่อนเริ่ม processing — ทุกไฟล์ถูก select อัตโนมัติ ถ้า upload ผิดไฟล์ต้อง cancel ทั้ง batch
-- **File:** `src/features/upload/components/UploadPageClient.tsx` (Story 3.2b5 จะ wire ProcessingModeDialog → fileIds = all parsed files)
+- **File:** `src/features/upload/components/UploadPageClient.tsx` (Story 3.2b5 wired ProcessingModeDialog → fileIds = all parsed files)
 - **Fix:** เพิ่ม checkbox per file ให้ user เลือก/ยกเลิกก่อนกด "Start Processing" — filter `fileIds` ก่อนส่งให้ `ProcessingModeDialog`
 - **Origin:** Story 3.2b5 scope boundary, identified during story review (2026-03-02)
-- **Status:** DEFERRED → ไม่มี story รองรับ — ควรสร้างเป็น story ย่อยตอน Epic 4 หรือ 3.2c
+- **Status:** DEFERRED → **Epic 4 — Review & Decision Workflow** (file selection is pre-review UX; create story "4.x: File Selection Before Processing" during Epic 4 sprint planning)
 
 ### ~~TD-E2E-008: Pipeline E2E tests skipped in CI — no Inngest/AI infra~~
 - **Status:** RESOLVED (2026-03-02) — All secrets wired (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `INNGEST_*`, `UPSTASH_*`). Inngest dev server added as background service in `e2e-gate.yml`. `INNGEST_DEV_URL` env var set. Skip condition `!process.env.INNGEST_DEV_URL` now passes in CI. Pipeline E2E runs fully.

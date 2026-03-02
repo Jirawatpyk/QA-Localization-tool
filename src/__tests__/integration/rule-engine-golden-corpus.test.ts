@@ -22,18 +22,6 @@
  *   - Our glossary matcher uses Intl.Segmenter boundary validation (may differ)
  */
 
-// ── Mocks (server-only + side-effect modules) ──
-vi.mock('server-only', () => ({}))
-vi.mock('@/features/audit/actions/writeAuditLog', () => ({
-  writeAuditLog: vi.fn().mockResolvedValue(undefined),
-}))
-vi.mock('@/lib/logger', () => ({
-  logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() },
-}))
-vi.mock('@/lib/cache/glossaryCache', () => ({
-  getCachedGlossaryTerms: vi.fn().mockResolvedValue([]),
-}))
-
 import { existsSync, readFileSync } from 'fs'
 import path from 'path'
 
@@ -42,13 +30,13 @@ import ExcelJS from 'exceljs'
 
 import { mapXbenchCategory } from '@/features/parity/helpers/xbenchCategoryMapper'
 import { parseXliff } from '@/features/parser/sdlxliffParser'
-import type { ParsedSegment } from '@/features/parser/types'
 import { processFile } from '@/features/pipeline/engine/ruleEngine'
 import type {
   GlossaryTermRecord,
   RuleCheckResult,
   SegmentRecord,
 } from '@/features/pipeline/engine/types'
+import { buildSegmentRecordFromParsed } from '@/test/factories'
 
 // ── File Paths ──
 
@@ -122,30 +110,6 @@ function getCellText(cell: ExcelJS.Cell): string {
       .trim()
   }
   return String(value).trim()
-}
-
-/** Convert ParsedSegment → SegmentRecord (bridge parser → engine) */
-function toSegmentRecord(
-  seg: ParsedSegment,
-  ids: { fileId: string; projectId: string; tenantId: string },
-): SegmentRecord {
-  return {
-    id: faker.string.uuid(),
-    fileId: ids.fileId,
-    projectId: ids.projectId,
-    tenantId: ids.tenantId,
-    segmentNumber: seg.segmentNumber,
-    sourceText: seg.sourceText,
-    targetText: seg.targetText,
-    sourceLang: seg.sourceLang,
-    targetLang: seg.targetLang,
-    wordCount: seg.wordCount,
-    confirmationState: seg.confirmationState,
-    matchPercentage: seg.matchPercentage,
-    translatorComment: seg.translatorComment,
-    inlineTags: seg.inlineTags,
-    createdAt: new Date(),
-  }
 }
 
 /** Parse Xbench QA report xlsx → structured findings + glossary terms */
@@ -255,7 +219,7 @@ describe.skipIf(!hasGoldenCorpus())('Golden Corpus — Real Data Smoke Test', ()
 
       const fileId = faker.string.uuid()
       const segments = result.data.segments.map((seg) =>
-        toSegmentRecord(seg, { fileId, projectId, tenantId }),
+        buildSegmentRecordFromParsed(seg, { fileId, projectId, tenantId }),
       )
 
       parsedFiles.push({
@@ -508,7 +472,7 @@ describe.skipIf(!hasGoldenCorpus())('Golden Corpus — Clean Files (0 findings e
 
       const fileId = faker.string.uuid()
       const segments = result.data.segments.map((seg) =>
-        toSegmentRecord(seg, { fileId, projectId, tenantId }),
+        buildSegmentRecordFromParsed(seg, { fileId, projectId, tenantId }),
       )
 
       const findings = await processFile(segments, [], new Set(), [])

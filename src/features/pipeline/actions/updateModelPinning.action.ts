@@ -8,17 +8,11 @@ import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { projects } from '@/db/schema/projects'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
+import { updateModelPinningSchema } from '@/features/pipeline/validation/pipelineSchema'
 import { ALL_AVAILABLE_MODELS } from '@/lib/ai/models'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
-
-type UpdateModelPinningInput = {
-  projectId: string
-  layer: 'L2' | 'L3'
-  model: string | null // null = clear pin, use system default
-}
-
-type UpdateModelPinningResult = { success: true } | { success: false; code: string; error: string }
+import type { ActionResult } from '@/types/actionResult'
 
 /**
  * Update pinned AI model version for a project (Admin only).
@@ -26,9 +20,14 @@ type UpdateModelPinningResult = { success: true } | { success: false; code: stri
  * Validates model ID against AVAILABLE_MODELS allowlist,
  * updates projects.l2_pinned_model or l3_pinned_model, writes audit log.
  */
-export async function updateModelPinning(
-  input: UpdateModelPinningInput,
-): Promise<UpdateModelPinningResult> {
+export async function updateModelPinning(input: unknown): Promise<ActionResult<undefined>> {
+  // Validate input
+  const parsed = updateModelPinningSchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, code: 'INVALID_INPUT', error: parsed.error.message }
+  }
+  const { projectId, layer, model } = parsed.data
+
   // Auth — admin-only
   let currentUser
   try {
@@ -36,8 +35,6 @@ export async function updateModelPinning(
   } catch {
     return { success: false, code: 'FORBIDDEN', error: 'Insufficient permissions' }
   }
-
-  const { projectId, layer, model } = input
 
   // Validate model against allowlist (null = clear)
   if (model !== null && !ALL_AVAILABLE_MODELS.has(model)) {
@@ -79,7 +76,7 @@ export async function updateModelPinning(
       logger.error({ err: auditErr, projectId }, 'Audit log failed for model pin (non-fatal)')
     }
 
-    return { success: true }
+    return { success: true, data: undefined }
   } catch (err) {
     logger.error({ err, projectId }, 'Failed to update model pinning')
     return { success: false, code: 'INTERNAL_ERROR', error: 'Failed to update model' }

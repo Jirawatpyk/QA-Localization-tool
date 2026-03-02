@@ -4,18 +4,6 @@
  * Run: npx vitest run --project integration src/__tests__/integration/golden-corpus-diagnostic.test.ts
  */
 
-// ── Mocks (server-only + side-effect modules) ──
-vi.mock('server-only', () => ({}))
-vi.mock('@/features/audit/actions/writeAuditLog', () => ({
-  writeAuditLog: vi.fn().mockResolvedValue(undefined),
-}))
-vi.mock('@/lib/logger', () => ({
-  logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() },
-}))
-vi.mock('@/lib/cache/glossaryCache', () => ({
-  getCachedGlossaryTerms: vi.fn().mockResolvedValue([]),
-}))
-
 import { existsSync, readFileSync } from 'fs'
 import path from 'path'
 
@@ -23,13 +11,13 @@ import { faker } from '@faker-js/faker'
 import ExcelJS from 'exceljs'
 
 import { parseXliff } from '@/features/parser/sdlxliffParser'
-import type { ParsedSegment } from '@/features/parser/types'
 import { processFile } from '@/features/pipeline/engine/ruleEngine'
 import type {
   GlossaryTermRecord,
   RuleCheckResult,
   SegmentRecord,
 } from '@/features/pipeline/engine/types'
+import { buildSegmentRecordFromParsed } from '@/test/factories'
 
 // ── File Paths ──
 
@@ -81,30 +69,6 @@ function getCellText(cell: ExcelJS.Cell): string {
       .trim()
   }
   return String(value).trim()
-}
-
-/** Convert ParsedSegment → SegmentRecord (bridge parser → engine) */
-function toSegmentRecord(
-  seg: ParsedSegment,
-  ids: { fileId: string; projectId: string; tenantId: string },
-): SegmentRecord {
-  return {
-    id: faker.string.uuid(),
-    fileId: ids.fileId,
-    projectId: ids.projectId,
-    tenantId: ids.tenantId,
-    segmentNumber: seg.segmentNumber,
-    sourceText: seg.sourceText,
-    targetText: seg.targetText,
-    sourceLang: seg.sourceLang,
-    targetLang: seg.targetLang,
-    wordCount: seg.wordCount,
-    confirmationState: seg.confirmationState,
-    matchPercentage: seg.matchPercentage,
-    translatorComment: seg.translatorComment,
-    inlineTags: seg.inlineTags,
-    createdAt: new Date(),
-  }
 }
 
 /** Parse Xbench QA report xlsx → structured findings + glossary terms */
@@ -213,7 +177,7 @@ describe.skipIf(!hasGoldenCorpus())('Golden Corpus Diagnostic Report', () => {
 
       const fileId = faker.string.uuid()
       const segments = result.data.segments.map((seg) =>
-        toSegmentRecord(seg, { fileId, projectId, tenantId }),
+        buildSegmentRecordFromParsed(seg, { fileId, projectId, tenantId }),
       )
 
       parsedFiles.push({
