@@ -332,9 +332,9 @@
 - **Severity:** Low
 - **File:** `e2e/parity-comparison.spec.ts`
 - **Risk:** ATDD checklist defines T3.4 (Report Missing Check dialog submit) and T3.5 (validation errors). Story 3.2b6 replaced these 2 tests with different P2 tests (color styling, Compare button visibility) because ReportMissingCheckDialog is out-of-scope (may be wired in Epic 4). If dialog is wired later, E2E coverage must be added.
-- **Fix:** Add T3.4 + T3.5 E2E tests when ReportMissingCheckDialog is mounted in a page (Epic 4 candidate).
+- **Fix:** Mount ReportMissingCheckDialog in parity page + add T3.4/T3.5 E2E tests. Page + component + action ทั้งหมดมีอยู่แล้ว — แค่ wire เข้าด้วยกัน.
 - **Origin:** Story 3.2b6, flagged by testing-qa-expert CR R1 scan (2026-03-02)
-- **Status:** DEFERRED → fix when dialog is wired (Epic 4+)
+- **Status:** DEFERRED → fix before Epic 4 (Epic 3 cleanup story or standalone wiring story)
 
 ### TD-PROCESS-001: E2E bypass rule — must create tech debt entry
 - **Severity:** Low (process rule, not code bug)
