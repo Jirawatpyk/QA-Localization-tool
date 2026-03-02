@@ -123,7 +123,14 @@ export function useFileUpload({ projectId }: UseFileUploadOptions): UseFileUploa
     if (result.ok) {
       const body = result.data as { success: boolean; data?: { files?: UploadFileResult[] } }
       const fileResult = body?.data?.files?.[0] ?? null
-      updateFileProgress(fileId, { percent: 100, status: 'uploaded', etaSeconds: null })
+      // Sync client fileId with server DB fileId so UploadProgressList can match parse status
+      const resolvedFileId = fileResult?.fileId ?? fileId
+      updateFileProgress(fileId, {
+        fileId: resolvedFileId,
+        percent: 100,
+        status: 'uploaded',
+        etaSeconds: null,
+      })
       return fileResult
     }
 
