@@ -726,6 +726,85 @@ describe('scoreFile', () => {
     )
   })
 
+  // ── ATDD P0: layerCompleted override (Story 3.2b AC4, FM-1) ──
+
+  it('[P0] should use input.layerCompleted=L1L2 over prev layerCompleted=L1', async () => {
+    const previousScore = { ...mockNewScore, layerCompleted: 'L1' }
+    dbState.returnValues = [
+      mockSegments,
+      [],
+      [previousScore],
+      [],
+      [{ ...mockNewScore, layerCompleted: 'L1L2' }],
+    ]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      layerCompleted: 'L1L2',
+    })
+
+    // Assert: INSERT values must contain layerCompleted: 'L1L2' from input,
+    // NOT 'L1' from prev score
+    expect(dbState.valuesCaptures).toContainEqual(
+      expect.objectContaining({ layerCompleted: 'L1L2' }),
+    )
+  })
+
+  it('[P0] should fall back to prev.layerCompleted when input.layerCompleted is undefined', async () => {
+    const previousScore = { ...mockNewScore, layerCompleted: 'L1L2' }
+    dbState.returnValues = [
+      mockSegments,
+      [],
+      [previousScore],
+      [],
+      [{ ...mockNewScore, layerCompleted: 'L1L2' }],
+    ]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      // No layerCompleted — verify fallback chain
+    })
+
+    // Assert: INSERT values must contain layerCompleted: 'L1L2' from prev score
+    expect(dbState.valuesCaptures).toContainEqual(
+      expect.objectContaining({ layerCompleted: 'L1L2' }),
+    )
+  })
+
+  it('[P0] should use input.layerCompleted=L1L2L3 over prev layerCompleted=L1L2', async () => {
+    const previousScore = { ...mockNewScore, layerCompleted: 'L1L2' }
+    dbState.returnValues = [
+      mockSegments,
+      [],
+      [previousScore],
+      [],
+      [{ ...mockNewScore, layerCompleted: 'L1L2L3' }],
+    ]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      layerCompleted: 'L1L2L3',
+    })
+
+    // Assert: INSERT values must contain layerCompleted: 'L1L2L3' from input,
+    // NOT 'L1L2' from prev score
+    expect(dbState.valuesCaptures).toContainEqual(
+      expect.objectContaining({ layerCompleted: 'L1L2L3' }),
+    )
+  })
+
   it('should handle recalculation with 0 contributing findings (score=100)', async () => {
     mockCalculateMqmScore.mockReturnValue({
       mqmScore: 100,

@@ -4,6 +4,8 @@ import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { files } from '@/db/schema/files'
 import { runL1ForFile } from '@/features/pipeline/helpers/runL1ForFile'
+import { runL2ForFile } from '@/features/pipeline/helpers/runL2ForFile'
+import { runL3ForFile } from '@/features/pipeline/helpers/runL3ForFile'
 import { scoreFile } from '@/features/scoring/helpers/scoreFile'
 import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
@@ -28,14 +30,46 @@ const handlerFn = async ({
     runL1ForFile({ fileId, projectId, tenantId, userId }),
   )
 
-  // Step 2: Calculate MQM score — L1 only at this pipeline stage
-  const scoreResult = await step.run(`score-${fileId}`, () =>
+  // Step 2: Calculate interim L1 score — visible immediately per FR15
+  await step.run(`score-l1-${fileId}`, () =>
     scoreFile({ fileId, projectId, tenantId, userId, layerFilter: 'L1' }),
   )
 
-  // Step 3: Check if batch is complete (all files l1_completed or failed)
+  // Step 3: Run L2 AI screening
+  // Guardrail #21: chunk-level iteration is handled inside runL2ForFile —
+  // one Inngest step per file, not per chunk (Architecture Decision from Prep P4)
+  const l2Result = await step.run(`l2-screening-${fileId}`, () =>
+    runL2ForFile({ fileId, projectId, tenantId, userId }),
+  )
+
+  // Step 4: Recalculate score with ALL layers: L1 + L2
+  const l2ScoreResult = await step.run(`score-l1l2-${fileId}`, () =>
+    scoreFile({ fileId, projectId, tenantId, userId, layerCompleted: 'L1L2' }),
+  )
+
+  // Steps 5-6: Thorough mode — run L3 deep analysis + final score
+  let l3Result: { findingCount: number; partialFailure: boolean } | null = null
+  let finalScoreResult = l2ScoreResult
+
+  if (mode === 'thorough') {
+    // provisional L3 — Story 3.3 will add selective-segment filtering
+    const l3Raw = await step.run(`l3-analysis-${fileId}`, () =>
+      runL3ForFile({ fileId, projectId, tenantId, userId }),
+    )
+    l3Result = { findingCount: l3Raw.findingCount, partialFailure: l3Raw.partialFailure }
+
+    finalScoreResult = await step.run(`score-all-${fileId}`, () =>
+      scoreFile({ fileId, projectId, tenantId, userId, layerCompleted: 'L1L2L3' }),
+    )
+  }
+
+  // Step 7: Check if batch is complete — mode-aware terminal status
   // Guard: files.batchId is nullable — skip for non-batch uploads
   if (uploadBatchId) {
+    // Type-safe terminal status based on processing mode
+    const terminalStatus: 'l2_completed' | 'l3_completed' =
+      mode === 'thorough' ? 'l3_completed' : 'l2_completed'
+
     const batchComplete = await step.run(`check-batch-${fileId}`, async () => {
       const batchFiles = await db
         .select({ id: files.id, status: files.status })
@@ -49,7 +83,7 @@ const handlerFn = async ({
         )
 
       const allCompleted = batchFiles.every(
-        (f) => f.status === 'l1_completed' || f.status === 'failed',
+        (f) => f.status === terminalStatus || f.status === 'failed',
       )
 
       return { allCompleted, fileCount: batchFiles.length }
@@ -71,9 +105,12 @@ const handlerFn = async ({
 
   return {
     fileId,
-    findingCount: l1Result.findingCount,
-    mqmScore: scoreResult.mqmScore,
-    layerCompleted: 'L1' as const,
+    l1FindingCount: l1Result.findingCount,
+    l2FindingCount: l2Result.findingCount,
+    l3FindingCount: l3Result ? l3Result.findingCount : (null as number | null),
+    mqmScore: finalScoreResult.mqmScore,
+    layerCompleted: (mode === 'thorough' ? 'L1L2L3' : 'L1L2') as 'L1L2' | 'L1L2L3',
+    l2PartialFailure: l2Result.partialFailure,
   }
 }
 
@@ -111,9 +148,7 @@ export const processFilePipeline = Object.assign(
       concurrency: [{ key: 'event.data.projectId', limit: 1 }],
       // onFailureFn registered here so Inngest runtime calls it after all retries exhausted.
       // Also exposed via Object.assign below for direct unit testing.
-      // onFailureFn type doesn't match Inngest's FailureEventPayload<T> generic; scoped cast.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      onFailure: onFailureFn as any,
+      onFailure: onFailureFn,
     },
     { event: 'pipeline.process-file' as const },
     handlerFn,

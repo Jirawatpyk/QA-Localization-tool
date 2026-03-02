@@ -24,6 +24,8 @@ type ScoreFileInput = {
   userId: string
   /** Filter findings to a specific layer. undefined = all layers (review context). */
   layerFilter?: DetectedByLayer | undefined
+  /** Override persisted layerCompleted value. Used by pipeline after L2/L3 completes. */
+  layerCompleted?: 'L1' | 'L1L2' | 'L1L2L3' | undefined
 }
 
 type ScoreFileResult = {
@@ -52,6 +54,7 @@ export async function scoreFile({
   tenantId,
   userId,
   layerFilter,
+  layerCompleted: layerCompletedOverride,
 }: ScoreFileInput): Promise<ScoreFileResult> {
   // Load all segments for word count SUM
   // Include ALL segments (even ApprovedSignOff) per MQM standard and Xbench parity
@@ -102,9 +105,9 @@ export async function scoreFile({
   const penaltyWeights = await loadPenaltyWeights(tenantId)
 
   // Calculate MQM score (pure function)
-  // Cast severity + status from string to typed union — DB constraint guarantees valid values
   const scoreResult = calculateMqmScore(
-    findingRows as unknown as ContributingFinding[],
+    // @ts-expect-error Drizzle returns string but DB CHECK constraint guarantees Severity/FindingStatus values
+    findingRows,
     totalWords,
     penaltyWeights,
   )
@@ -131,8 +134,8 @@ export async function scoreFile({
       .from(scores)
       .where(and(eq(scores.fileId, fileId), withTenant(scores.tenantId, tenantId)))
 
-    // Preserve existing layerCompleted from previous score row, or default based on layerFilter
-    const layerCompleted = prev?.layerCompleted ?? layerFilter ?? 'L1'
+    // Override MUST be checked FIRST — after L2/L3 completes, prev has stale 'L1'
+    const layerCompleted = layerCompletedOverride ?? prev?.layerCompleted ?? layerFilter ?? 'L1'
 
     // Delete existing score (if any)
     await tx
