@@ -197,7 +197,7 @@ describe('UploadPageClient', () => {
     })
 
     render(<UploadPageClient projectId={VALID_PROJECT_ID} />)
-    expect(screen.getByRole('dialog')).not.toBeNull()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 
   it('should show ColumnMappingDialog when an xlsx file upload completes (6.1)', async () => {
@@ -226,8 +226,8 @@ describe('UploadPageClient', () => {
 
     render(<UploadPageClient projectId={VALID_PROJECT_ID} />)
     await waitFor(() => {
-      expect(screen.getByTestId('column-mapping-dialog')).toBeTruthy()
-      expect(screen.getByText('data.xlsx')).toBeTruthy()
+      expect(screen.getByTestId('column-mapping-dialog')).toBeInTheDocument()
+      expect(screen.getByText('data.xlsx')).toBeInTheDocument()
     })
   })
 
@@ -259,7 +259,7 @@ describe('UploadPageClient', () => {
     render(<UploadPageClient projectId={VALID_PROJECT_ID} />)
 
     // Dialog is visible
-    expect(screen.getByTestId('column-mapping-dialog')).toBeTruthy()
+    expect(screen.getByTestId('column-mapping-dialog')).toBeInTheDocument()
 
     // Click Confirm (mock returns segmentCount=5)
     await userEvent.click(screen.getByRole('button', { name: 'Confirm' }))
@@ -299,7 +299,7 @@ describe('UploadPageClient', () => {
     const { toast } = await import('sonner')
     render(<UploadPageClient projectId={VALID_PROJECT_ID} />)
 
-    expect(screen.getByTestId('column-mapping-dialog')).toBeTruthy()
+    expect(screen.getByTestId('column-mapping-dialog')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
 
@@ -522,7 +522,7 @@ describe('UploadPageClient', () => {
     render(<UploadPageClient projectId={VALID_PROJECT_ID} />)
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /start processing/i })).toBeTruthy()
+      expect(screen.getByRole('button', { name: /start processing/i })).toBeInTheDocument()
     })
   })
 
@@ -590,13 +590,13 @@ describe('UploadPageClient', () => {
     render(<UploadPageClient projectId={VALID_PROJECT_ID} />)
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /start processing/i })).toBeTruthy()
+      expect(screen.getByRole('button', { name: /start processing/i })).toBeInTheDocument()
     })
 
     await userEvent.click(screen.getByRole('button', { name: /start processing/i }))
 
     await waitFor(() => {
-      expect(screen.getByTestId('processing-mode-dialog')).toBeTruthy()
+      expect(screen.getByTestId('processing-mode-dialog')).toBeInTheDocument()
       expect(screen.getByTestId('dialog-file-count').textContent).toContain('1 files')
       expect(screen.getByTestId('dialog-project-id').textContent).toContain(VALID_PROJECT_ID)
     })
@@ -624,14 +624,14 @@ describe('UploadPageClient', () => {
 
     // Wait for parse + button
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /start processing/i })).toBeTruthy()
+      expect(screen.getByRole('button', { name: /start processing/i })).toBeInTheDocument()
     })
 
     // Open dialog
     await userEvent.click(screen.getByRole('button', { name: /start processing/i }))
 
     await waitFor(() => {
-      expect(screen.getByTestId('processing-mode-dialog')).toBeTruthy()
+      expect(screen.getByTestId('processing-mode-dialog')).toBeInTheDocument()
     })
 
     // Click Start in the dialog mock
@@ -663,7 +663,7 @@ describe('UploadPageClient', () => {
 
     // ColumnMappingDialog should be shown for Excel
     await waitFor(() => {
-      expect(screen.getByTestId('column-mapping-dialog')).toBeTruthy()
+      expect(screen.getByTestId('column-mapping-dialog')).toBeInTheDocument()
     })
 
     // Confirm mapping (mock returns segmentCount=5)
@@ -671,7 +671,7 @@ describe('UploadPageClient', () => {
 
     // After confirm, "Start Processing" button should appear (Excel now in parsedFiles)
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /start processing/i })).toBeTruthy()
+      expect(screen.getByRole('button', { name: /start processing/i })).toBeInTheDocument()
     })
   })
 
@@ -707,7 +707,7 @@ describe('UploadPageClient', () => {
     render(<UploadPageClient projectId={VALID_PROJECT_ID} />)
 
     await waitFor(() => {
-      expect(screen.getByText(/parsing/i)).toBeTruthy()
+      expect(screen.getByText(/parsing/i)).toBeInTheDocument()
     })
   })
 
@@ -743,7 +743,7 @@ describe('UploadPageClient', () => {
     render(<UploadPageClient projectId={VALID_PROJECT_ID} />)
 
     await waitFor(() => {
-      expect(screen.getByText('Parsed (42 segments)')).toBeTruthy()
+      expect(screen.getByText('Parsed (42 segments)')).toBeInTheDocument()
     })
   })
 
@@ -776,7 +776,7 @@ describe('UploadPageClient', () => {
     render(<UploadPageClient projectId={VALID_PROJECT_ID} />)
 
     await waitFor(() => {
-      expect(screen.getByText(/parse failed/i)).toBeTruthy()
+      expect(screen.getByText(/parse failed/i)).toBeInTheDocument()
     })
   })
 
@@ -809,7 +809,7 @@ describe('UploadPageClient', () => {
       expect(mockParseFile).toHaveBeenCalledWith('sdlxliff-id')
       // Excel should show ColumnMappingDialog (not auto-parse)
       expect(mockParseFile).not.toHaveBeenCalledWith('xlsx-id')
-      expect(screen.getByTestId('column-mapping-dialog')).toBeTruthy()
+      expect(screen.getByTestId('column-mapping-dialog')).toBeInTheDocument()
     })
   })
 
@@ -843,8 +843,8 @@ describe('UploadPageClient', () => {
     await waitFor(() => {
       expect(mockParseFile).toHaveBeenCalledWith('file-1')
     })
-    // Sequential guard: only first file parsed at this point (stable outside waitFor — CR R1 H1)
-    expect(mockParseFile).toHaveBeenCalledTimes(1)
+    // Sequential guard: file-2 must NOT have started while file-1 is still parsing (CR R2 H1)
+    expect(mockParseFile).not.toHaveBeenCalledWith('file-2')
 
     // Resolve first parse
     resolveFirst!({ success: true, data: { segmentCount: 10, fileId: 'file-1' } })

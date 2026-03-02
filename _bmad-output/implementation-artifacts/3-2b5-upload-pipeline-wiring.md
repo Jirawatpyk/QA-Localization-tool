@@ -1,6 +1,6 @@
 # Story 3.2b5: Upload-to-Pipeline Wiring (Auto-Parse + ProcessingModeDialog)
 
-Status: review
+Status: done
 
 ## Story
 

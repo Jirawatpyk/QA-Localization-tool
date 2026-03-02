@@ -62,7 +62,7 @@ export async function queryFileByName(
   fileName: string,
 ): Promise<FileRow | null> {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/files?project_id=eq.${projectId}&file_name=eq.${encodeURIComponent(fileName)}&select=id,status,file_name,project_id,tenant_id&order=created_at.desc&limit=1`,
+    `${SUPABASE_URL}/rest/v1/files?project_id=eq.${projectId}&file_name=eq.${encodeURIComponent(fileName)}&select=id,status,file_name,project_id,tenant_id&order=created_at.desc,id.desc&limit=1`,
     { headers: adminHeaders() },
   )
   const data = (await res.json()) as FileRow[]

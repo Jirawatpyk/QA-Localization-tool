@@ -130,8 +130,9 @@ test.describe.serial('Pipeline to Findings', () => {
 
     expect(score).not.toBeNull()
     expect(score!.layer_completed).toBe('L1L2')
-    // Score status should be 'calculated' or 'auto_passed' (few segments → may auto-pass)
-    expect(['calculated', 'auto_passed', 'na']).toContain(score!.status)
+    // Score status: 'calculated' or 'auto_passed' (few segments → may auto-pass)
+    // 'na' excluded — fixture has segments (total_words > 0), scoring must run (CR R2 L2)
+    expect(['calculated', 'auto_passed']).toContain(score!.status)
     expect(score!.mqm_score).toBeGreaterThanOrEqual(0)
     expect(score!.total_words).toBeGreaterThan(0)
   })

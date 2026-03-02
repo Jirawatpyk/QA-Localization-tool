@@ -101,13 +101,12 @@ export async function assertUploadProgress(page: Page, filename: string): Promis
   const fileRow = page.getByTestId(`upload-row-${filename}`)
   await expect(fileRow).toBeVisible()
 
-  // NOTE: Progress bar may complete before Playwright can assert it (fast upload / small fixture).
+  // Wait for upload to complete: progress bar disappears when upload finishes.
   // After auto-parse wiring (Story 3.2b5), status transitions rapidly:
-  //   uploading → "Uploaded" → "Parsing..." → "Parsed (N segments)"
-  // We skip the progressbar assertion and go straight to the reliable success state.
-  await expect(fileRow.getByTestId('upload-status-success')).toBeVisible({
-    timeout: 30_000,
-  })
+  //   uploading (progressbar) → "Uploaded" → "Parsing..." → "Parsed (N segments)"
+  // We wait for progress bar removal as the reliable "upload done" signal.
+  // Callers assert the terminal parse state (/parsed.*segments/i) separately.
+  await expect(fileRow.getByRole('progressbar')).toHaveCount(0, { timeout: 30_000 })
 }
 
 /**
@@ -257,7 +256,7 @@ export const FIXTURE_FILES = {
   /** Standard XLIFF 1.2 */
   xliff12: path.join(FIXTURES_DIR, 'xliff', 'standard.xliff'),
   /** Excel bilingual format */
-  excelBilingual: path.join(FIXTURES_DIR, 'excel', 'bilingual.xlsx'),
+  excelBilingual: path.join(FIXTURES_DIR, 'excel', 'bilingual-sample.xlsx'),
   /** Text file — should be rejected (wrong format) */
   invalidFormat: path.join(FIXTURES_DIR, 'invalid', 'not-a-translation-file.txt'),
 } as const
