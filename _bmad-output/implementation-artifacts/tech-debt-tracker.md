@@ -320,13 +320,13 @@
 ### ~~TD-E2E-008: Pipeline E2E tests skipped in CI — no Inngest/AI infra~~
 - **Status:** RESOLVED (2026-03-02) — All secrets wired (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `INNGEST_*`, `UPSTASH_*`). Inngest dev server added as background service in `e2e-gate.yml`. `INNGEST_DEV_URL` env var set. Skip condition `!process.env.INNGEST_DEV_URL` now passes in CI. Pipeline E2E runs fully.
 
-### TD-E2E-009: `adminHeaders()` + env constants duplicated across 4 E2E specs
+### ~~TD-E2E-009: `adminHeaders()` + env constants duplicated across 4 E2E specs~~
 - **Severity:** Low
 - **Files:** `e2e/parity-comparison.spec.ts`, `e2e/batch-summary.spec.ts`, `e2e/file-history.spec.ts`, `e2e/budget-threshold.spec.ts`
 - **Risk:** DRY violation — `adminHeaders()`, `SUPABASE_URL`, `SERVICE_ROLE_KEY`, `ANON_KEY` copy-pasted in each spec + `pipeline-admin.ts` helper (5 places total). Header structure change requires editing all files.
 - **Fix:** Export `adminHeaders()` + env constants from `e2e/helpers/pipeline-admin.ts` (already exists), import in all specs.
 - **Origin:** Story 3.2b6, flagged by code-quality-analyzer pre-CR scan (2026-03-02)
-- **Status:** DEFERRED → fix in next E2E infra cleanup story
+- **Status:** RESOLVED (2026-03-02) — exported `SUPABASE_URL` + `adminHeaders()` from `supabase-admin.ts` (single source of truth), `pipeline-admin.ts` re-exports from it, all 4 specs import from `supabase-admin.ts` instead of declaring locally. Removed 4 duplicate `adminHeaders()` + 12 duplicate env constants.
 
 ### ~~TD-E2E-010: ATDD P2 parity scenarios T3.4/T3.5 absent — ReportMissingCheckDialog~~
 - **Status:** RESOLVED (2026-03-02) — ReportMissingCheckDialog mounted in ParityComparisonView with "Report Missing Check" button + dialog state. T3.4 (dialog submit) and T3.5 (validation errors) E2E tests added to `parity-comparison.spec.ts`. ParityComparisonView.test.tsx updated with mock. Type-check + 15 parity component tests pass.

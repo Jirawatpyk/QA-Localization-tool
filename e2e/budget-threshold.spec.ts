@@ -1,7 +1,13 @@
 import { test, expect } from '@playwright/test'
 
 import { cleanupTestProject } from './helpers/pipeline-admin'
-import { createTestProject, getUserInfo, signupOrLogin } from './helpers/supabase-admin'
+import {
+  SUPABASE_URL,
+  adminHeaders,
+  createTestProject,
+  getUserInfo,
+  signupOrLogin,
+} from './helpers/supabase-admin'
 
 /**
  * Story 3.2b6 — Budget Alert Threshold Editing (E2E)
@@ -19,23 +25,11 @@ import { createTestProject, getUserInfo, signupOrLogin } from './helpers/supabas
  *   /projects/[projectId]/settings — ProjectSettings → AI Configuration → AiBudgetCard
  */
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-
 // Ephemeral admin user — auto-cleaned by global-teardown
 const TEST_EMAIL = `e2e-budget-${Date.now()}@test.local`
 
 let projectId: string
 let tenantId: string
-
-function adminHeaders(): Record<string, string> {
-  return {
-    Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
-    apikey: ANON_KEY,
-    'Content-Type': 'application/json',
-  }
-}
 
 /** Query budgetAlertThresholdPct from DB via PostgREST (admin bypass). */
 async function queryBudgetThresholdPct(pId: string): Promise<number | null> {

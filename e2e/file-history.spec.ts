@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test'
 
 import { cleanupTestProject } from './helpers/pipeline-admin'
 import {
+  SUPABASE_URL,
+  adminHeaders,
   createTestProject,
   getUserInfo,
   setUserMetadata,
@@ -18,22 +20,10 @@ import {
  *   /projects/[projectId]/files — File History table
  */
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-
 const TEST_EMAIL = `e2e-filehist-${Date.now()}@test.local`
 
 let projectId: string
 let tenantId: string
-
-function adminHeaders(): Record<string, string> {
-  return {
-    Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
-    apikey: ANON_KEY,
-    'Content-Type': 'application/json',
-  }
-}
 
 type SeedFileStatus =
   | 'pending'

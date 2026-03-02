@@ -4,12 +4,12 @@
  */
 import type { Page } from '@playwright/test'
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD || 'TestPassword123!'
 
-function adminHeaders(): Record<string, string> {
+export function adminHeaders(): Record<string, string> {
   return {
     Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
     apikey: ANON_KEY,

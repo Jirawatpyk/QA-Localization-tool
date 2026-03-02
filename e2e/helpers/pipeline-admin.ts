@@ -7,17 +7,9 @@
  * context (not Next.js runtime), so @/lib/env is not available.
  */
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+import { SUPABASE_URL, adminHeaders } from './supabase-admin'
 
-function adminHeaders(): Record<string, string> {
-  return {
-    Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
-    apikey: ANON_KEY,
-    'Content-Type': 'application/json',
-  }
-}
+export { SUPABASE_URL, adminHeaders }
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

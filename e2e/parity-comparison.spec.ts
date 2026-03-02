@@ -4,6 +4,8 @@ import { test, expect } from '@playwright/test'
 
 import { cleanupTestProject } from './helpers/pipeline-admin'
 import {
+  SUPABASE_URL,
+  adminHeaders,
   createTestProject,
   getUserInfo,
   setUserMetadata,
@@ -20,11 +22,6 @@ import {
  *   /projects/[projectId]/parity — ParityComparisonView
  */
 
-// E2E runs in Node (Playwright worker) — process.env access is safe here (not client bundle)
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-
 const TEST_EMAIL = `e2e-parity-${Date.now()}@test.local`
 
 let projectId: string
@@ -33,14 +30,6 @@ let tenantId: string
 const FIXTURES_DIR = path.resolve(__dirname, 'fixtures')
 const XBENCH_REPORT_FIXTURE = path.join(FIXTURES_DIR, 'excel', 'bilingual-sample.xlsx')
 const INVALID_FILE_FIXTURE = path.join(FIXTURES_DIR, 'sdlxliff', 'minimal.sdlxliff')
-
-function adminHeaders(): Record<string, string> {
-  return {
-    Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
-    apikey: ANON_KEY,
-    'Content-Type': 'application/json',
-  }
-}
 
 async function seedFinding(
   pId: string,
