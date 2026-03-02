@@ -9,6 +9,7 @@ import {
 import {
   cleanupTestProject,
   pollFileStatus,
+  pollScoreLayer,
   queryFileByName,
   queryFindingsCount,
   queryScore,
@@ -140,7 +141,11 @@ test.describe.serial('Pipeline to Findings', () => {
 
   // ── Assert: Score ────────────────────────────────────────────────────────
   test('[P0] verify score with layerCompleted=L1L2', async () => {
-    test.setTimeout(15_000)
+    test.setTimeout(60_000)
+
+    // Poll for score to reach L1L2 — scoring step (Step 4) runs AFTER
+    // file status reaches l2_completed, so there's a timing gap.
+    await pollScoreLayer(fileId, 'L1L2', 30_000)
 
     const score = await queryScore(fileId)
 

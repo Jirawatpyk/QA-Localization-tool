@@ -392,38 +392,33 @@ test.describe.serial('Story 3.2b7 — Taxonomy Mapping Reorder', () => {
     const firstRowName = await firstRowCells.nth(1).textContent()
     const thirdRowName = await thirdRowCells.nth(1).textContent()
 
-    // When: Admin reorders the first data row down 2 positions via mouse drag.
-    // NOTE: @dnd-kit KeyboardSensor's ArrowDown doesn't trigger sortableKeyboardCoordinates
-    //       in headless Chromium. PointerSensor with mouse events works reliably.
-    //       PointerSensor activationConstraint: { distance: 8 } requires 8px movement.
+    // When: Admin reorders the first data row down 2 positions via keyboard.
+    // NOTE: Mouse drag is unreliable in headless CI — @dnd-kit CSS transforms shift row
+    //       positions during drag, making pre-calculated bounding boxes incorrect.
+    //       Keyboard reorder via KeyboardSensor is deterministic: Space to start/end,
+    //       ArrowDown to move position. No dependency on pixel coordinates.
     const dragHandle = rows.nth(1).getByTestId('drag-handle')
-    const targetRow = rows.nth(3)
 
-    // Hover ensures Playwright targets the correct element coordinates
-    await dragHandle.hover()
-    const handleBox = await dragHandle.boundingBox()
-    const targetBox = await targetRow.boundingBox()
-    expect(handleBox).toBeTruthy()
-    expect(targetBox).toBeTruthy()
+    // Step 1: Focus the drag handle button (KeyboardSensor listens on the activator)
+    await dragHandle.focus()
+    await page.waitForTimeout(300)
 
-    const cx = handleBox!.x + handleBox!.width / 2
-    const startY = handleBox!.y + handleBox!.height / 2
-    const endY = targetBox!.y + targetBox!.height + 5 // below target row
+    // Step 2: Activate drag mode — Space triggers KeyboardSensor.handleKeyDown()
+    // which calls event.preventDefault() and starts the drag interaction.
+    await dragHandle.press('Space')
+    // Wait for sensor activation — KeyboardSensor attaches a document-level
+    // keydown listener AFTER activation; ArrowDown won't work until it's ready.
+    await page.waitForTimeout(1000)
 
-    // Mouse down on drag handle
-    await page.mouse.down()
-    await page.waitForTimeout(200)
+    // Step 3: Move down 2 positions (row 1 → row 3)
+    // sortableKeyboardCoordinates maps ArrowDown to move-next in vertical list
+    await page.keyboard.press('ArrowDown')
+    await page.waitForTimeout(500)
+    await page.keyboard.press('ArrowDown')
+    await page.waitForTimeout(500)
 
-    // Move past 8px activation threshold in small steps
-    await page.mouse.move(cx, startY + 20, { steps: 10 })
-    await page.waitForTimeout(500) // Wait for PointerSensor activation
-
-    // Move to below the third row
-    await page.mouse.move(cx, endY, { steps: 30 })
-    await page.waitForTimeout(500) // Wait for dragOver to register
-
-    // Release to drop
-    await page.mouse.up()
+    // Step 4: Confirm drop — Space ends the drag and fires onDragEnd
+    await page.keyboard.press('Space')
 
     // Then: Success toast appears confirming the reorder was saved
     await expect(page.getByText('Mappings reordered')).toBeVisible({ timeout: 15000 })

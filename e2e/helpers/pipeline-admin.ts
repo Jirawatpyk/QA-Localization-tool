@@ -136,6 +136,33 @@ export async function pollFileStatus(
   )
 }
 
+/**
+ * Poll a score's layer_completed until it reaches the target, with timeout.
+ * Use after pollFileStatus — scoring step runs AFTER file status update.
+ */
+export async function pollScoreLayer(
+  fileId: string,
+  targetLayer: string,
+  timeoutMs: number = 30_000,
+  pollIntervalMs: number = 2_000,
+): Promise<void> {
+  const start = Date.now()
+  let lastLayer = ''
+
+  while (Date.now() - start < timeoutMs) {
+    const score = await queryScore(fileId)
+    lastLayer = score?.layer_completed ?? ''
+
+    if (lastLayer === targetLayer) return
+
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
+  }
+
+  throw new Error(
+    `Timed out after ${timeoutMs}ms waiting for score layer_completed='${targetLayer}'. Last: '${lastLayer}'`,
+  )
+}
+
 // ── Cleanup ──────────────────────────────────────────────────────────────────
 
 /**

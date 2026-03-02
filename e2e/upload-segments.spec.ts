@@ -13,6 +13,7 @@ import {
   queryFindingsCount,
   queryScore,
   pollFileStatus,
+  pollScoreLayer,
 } from './helpers/pipeline-admin'
 import {
   signupOrLogin,
@@ -161,6 +162,9 @@ test.describe.serial('Upload to Pipeline Wiring', () => {
     // Verify findings exist (L1 + L2)
     const totalFindings = await queryFindingsCount(fileRecord!.id)
     expect(totalFindings).toBeGreaterThanOrEqual(0)
+
+    // Poll for score to reach L1L2 — scoring step runs AFTER file status update
+    await pollScoreLayer(fileRecord!.id, 'L1L2', 30_000)
 
     // Verify score was calculated with L1L2 layer
     const score = await queryScore(fileRecord!.id)

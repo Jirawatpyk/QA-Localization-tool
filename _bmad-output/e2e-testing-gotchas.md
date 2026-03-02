@@ -257,6 +257,54 @@ falls back to signup only if needed.
 
 ---
 
+## 9. @dnd-kit Drag Reorder — Playwright Pattern
+
+### Problem
+Mouse-based drag (`page.mouse`) is **unreliable in headless CI** for @dnd-kit:
+- @dnd-kit uses CSS transforms to shift rows during drag animation — bounding boxes
+  captured before drag start become stale, causing `closestCenter` collision detection
+  to resolve the wrong `over` target.
+- `hover()` moves the real browser pointer but does NOT update Playwright's internal mouse
+  coordinate state.
+- `handleDragEnd` sees `over = null` or `active.id === over.id` → returns early (no reorder).
+
+### Symptom
+```
+// Toast never appears after mouse drag in headless Chromium CI:
+// → await expect(page.getByText('Mappings reordered')).toBeVisible() FAILS (timeout)
+```
+
+### Fix — Use keyboard reorder (recommended for CI)
+```typescript
+const dragHandle = rows.nth(1).getByTestId('drag-handle')
+
+// Step 1: Focus the drag handle (KeyboardSensor listens on the activator element)
+await dragHandle.focus()
+await page.waitForTimeout(300)
+
+// Step 2: Activate drag — Space triggers KeyboardSensor.handleKeyDown()
+await dragHandle.press('Space')
+await page.waitForTimeout(1000) // Wait for document-level listener attachment
+
+// Step 3: Move down N positions — ArrowDown via sortableKeyboardCoordinates
+await page.keyboard.press('ArrowDown')
+await page.waitForTimeout(500)
+await page.keyboard.press('ArrowDown')
+await page.waitForTimeout(500)
+
+// Step 4: Confirm drop — Space fires onDragEnd with correct active + over
+await page.keyboard.press('Space')
+```
+
+### Key Rules
+- **Prefer keyboard over mouse** for @dnd-kit E2E in headless CI — deterministic, no pixel dependency
+- Wait ≥1000ms after `press('Space')` before ArrowDown — KeyboardSensor needs time to attach document listener
+- Wait ≥500ms between ArrowDown presses — @dnd-kit needs time to update `over` state
+- Component must have `KeyboardSensor` in `useSensors()` + `sortableKeyboardCoordinates`
+- The drag handle must spread both `{...attributes}` (tabIndex) and `{...listeners}` (onKeyDown)
+
+---
+
 ## Quick Reference
 
 | Gotcha | Fix |
@@ -269,3 +317,4 @@ falls back to signup only if needed.
 | `router.refresh()` doubles DOM | `waitForLoadState('networkidle')` + `.first()` |
 | Dialog doesn't show item name | Verify dialog content before asserting |
 | Auth tests timing out | `test.setTimeout(120_000)` |
+| @dnd-kit drag not triggering onDragEnd | Use keyboard reorder: `focus()` → `press('Space')` → `ArrowDown` × N → `press('Space')` |
