@@ -75,15 +75,20 @@ export function AiBudgetCard({
     const prevValue = savedValue
 
     startTransition(async () => {
-      const result = await updateBudgetAlertThreshold({
-        projectId: pId,
-        thresholdPct: newValue,
-      })
-      if (result.success) {
-        toast.success('Threshold updated')
-        setSavedValue(newValue)
-      } else {
-        toast.error(result.error)
+      try {
+        const result = await updateBudgetAlertThreshold({
+          projectId: pId,
+          thresholdPct: newValue,
+        })
+        if (result.success) {
+          toast.success('Threshold updated')
+          setSavedValue(newValue)
+        } else {
+          toast.error(result.error)
+          setThresholdValue(prevValue)
+        }
+      } catch {
+        toast.error('Failed to update threshold')
         setThresholdValue(prevValue)
       }
     })

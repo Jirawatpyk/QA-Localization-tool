@@ -46,15 +46,24 @@ async function seedBatch(pId: string, tId: string, fileCount: number): Promise<s
   })
   if (!res.ok) throw new Error(`Failed to seed batch: ${res.status} ${await res.text()}`)
   const data = (await res.json()) as Array<{ id: string }>
+  if (!data || data.length === 0) throw new Error(`Seed batch returned empty for project ${pId}`)
   return data[0].id
 }
+
+type SeedFileStatus =
+  | 'pending'
+  | 'parsed'
+  | 'l1_completed'
+  | 'l2_completed'
+  | 'l3_completed'
+  | 'failed'
 
 async function seedFile(
   pId: string,
   tId: string,
   bId: string,
   name: string,
-  status: string,
+  status: SeedFileStatus,
 ): Promise<string> {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/files`, {
     method: 'POST',
@@ -72,6 +81,7 @@ async function seedFile(
   })
   if (!res.ok) throw new Error(`Failed to seed file: ${res.status} ${await res.text()}`)
   const data = (await res.json()) as Array<{ id: string }>
+  if (!data || data.length === 0) throw new Error(`Seed file returned empty: ${name}`)
   return data[0].id
 }
 

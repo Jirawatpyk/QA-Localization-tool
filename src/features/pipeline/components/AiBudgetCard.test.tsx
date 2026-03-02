@@ -66,7 +66,6 @@ describe('AiBudgetCard', () => {
     const spendText = screen.getByTestId('ai-budget-spend')
     expect(spendText.textContent).toContain('12.40')
     expect(spendText.textContent).toContain('50.00')
-    // RED: formatted spend display not yet created
   })
 
   it("should show 'No budget limit set' text when budget is null (unlimited)", async () => {
@@ -77,7 +76,6 @@ describe('AiBudgetCard', () => {
     expect(screen.getByText(/No budget limit set/i)).toBeTruthy()
     // Progress bar should NOT be shown when unlimited
     expect(screen.queryByTestId('ai-budget-progress')).toBeNull()
-    // RED: unlimited state not yet implemented
   })
 
   // ── P1: Additional states ──
@@ -88,7 +86,6 @@ describe('AiBudgetCard', () => {
 
     const statusBadge = screen.getByTestId('ai-budget-status')
     expect(statusBadge.textContent).toContain('Budget exceeded')
-    // RED: over-budget status text not yet implemented
   })
 
   // ── P1-BV: Boundary value tests (Epic 2 retro A2 mandate) ──
@@ -110,12 +107,6 @@ describe('AiBudgetCard', () => {
     // 80% — exactly at threshold → warning (yellow)
     expect(progressBar.getAttribute('data-status')).toBe('warning')
   })
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // Story 3.2b6: Threshold Editing (ATDD — TDD RED PHASE)
-  // All tests use it.skip() — they will FAIL until AiBudgetCard is modified
-  // to accept projectId + canEditThreshold props with "use client" + state
-  // ══════════════════════════════════════════════════════════════════════════
 
   describe('Threshold Editing (Story 3.2b6)', () => {
     beforeEach(() => {
@@ -441,6 +432,115 @@ describe('AiBudgetCard', () => {
       )
 
       expect((input as HTMLInputElement).value).toBe('65')
+    })
+
+    // CR R1 M2a — isPending disabled state
+    it('[P1] should disable threshold input while save is in progress', async () => {
+      let resolveAction!: (v: MockUpdateResult) => void
+      mockUpdateBudgetAlertThreshold.mockImplementation(
+        () =>
+          new Promise<MockUpdateResult>((resolve) => {
+            resolveAction = resolve
+          }),
+      )
+      const user = userEvent.setup()
+      const { AiBudgetCard } = await import('./AiBudgetCard')
+      render(
+        <AiBudgetCard
+          usedBudgetUsd={50}
+          monthlyBudgetUsd={200}
+          budgetAlertThresholdPct={80}
+          projectId={TEST_PROJECT_ID}
+          canEditThreshold={true}
+        />,
+      )
+
+      const input = screen.getByRole('spinbutton', { name: /alert threshold/i })
+      await user.clear(input)
+      await user.type(input, '75')
+      await user.tab()
+
+      await waitFor(() => expect(input).toBeDisabled())
+      resolveAction({ success: true })
+      await waitFor(() => expect(input).not.toBeDisabled())
+    })
+
+    // CR R1 M2b — same-value no-op guard
+    it('[P1] should NOT call action when threshold is blurred without changing value', async () => {
+      const user = userEvent.setup()
+      const { AiBudgetCard } = await import('./AiBudgetCard')
+      render(
+        <AiBudgetCard
+          usedBudgetUsd={50}
+          monthlyBudgetUsd={200}
+          budgetAlertThresholdPct={80}
+          projectId={TEST_PROJECT_ID}
+          canEditThreshold={true}
+        />,
+      )
+
+      const input = screen.getByRole('spinbutton', { name: /alert threshold/i })
+      await user.click(input)
+      await user.tab()
+
+      expect(mockUpdateBudgetAlertThreshold).not.toHaveBeenCalled()
+    })
+
+    // CR R1 M2c — T1.5 marker position assertion
+    it('[P0] should update progress bar status after successful threshold save', async () => {
+      mockUpdateBudgetAlertThreshold.mockResolvedValue({ success: true })
+      const user = userEvent.setup()
+      const { AiBudgetCard } = await import('./AiBudgetCard')
+      render(
+        <AiBudgetCard
+          usedBudgetUsd={50}
+          monthlyBudgetUsd={200}
+          budgetAlertThresholdPct={80}
+          projectId={TEST_PROJECT_ID}
+          canEditThreshold={true}
+        />,
+      )
+
+      // Initially: 25% usage (50/200), threshold 80 → status = 'ok'
+      const progressBar = screen.getByTestId('ai-budget-progress')
+      expect(progressBar.getAttribute('data-status')).toBe('ok')
+
+      // Change threshold to 20 → 25% usage ≥ 20% threshold → status should become 'warning'
+      const input = screen.getByRole('spinbutton', { name: /alert threshold/i })
+      await user.clear(input)
+      await user.type(input, '20')
+      await user.tab()
+
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith('Threshold updated')
+      })
+      expect(progressBar.getAttribute('data-status')).toBe('warning')
+    })
+
+    // CR R1 M1 — try-catch covers unexpected throw
+    it('[P1] should show toast.error and revert when action throws unexpected error', async () => {
+      mockUpdateBudgetAlertThreshold.mockRejectedValue(new Error('Network failure'))
+      const user = userEvent.setup()
+      const { AiBudgetCard } = await import('./AiBudgetCard')
+      render(
+        <AiBudgetCard
+          usedBudgetUsd={50}
+          monthlyBudgetUsd={200}
+          budgetAlertThresholdPct={80}
+          projectId={TEST_PROJECT_ID}
+          canEditThreshold={true}
+        />,
+      )
+
+      const input = screen.getByRole('spinbutton', { name: /alert threshold/i })
+      await user.clear(input)
+      await user.type(input, '60')
+      await user.tab()
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith('Failed to update threshold')
+      })
+      expect((input as HTMLInputElement).value).toBe('80')
     })
 
     // T1.12 — P1: Unlimited budget hides threshold input

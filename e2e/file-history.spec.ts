@@ -30,7 +30,20 @@ function adminHeaders(): Record<string, string> {
   }
 }
 
-async function seedFile(pId: string, tId: string, name: string, status: string): Promise<string> {
+type SeedFileStatus =
+  | 'pending'
+  | 'parsed'
+  | 'l1_completed'
+  | 'l2_completed'
+  | 'l3_completed'
+  | 'failed'
+
+async function seedFile(
+  pId: string,
+  tId: string,
+  name: string,
+  status: SeedFileStatus,
+): Promise<string> {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/files`, {
     method: 'POST',
     headers: { ...adminHeaders(), Prefer: 'return=representation' },
@@ -49,6 +62,7 @@ async function seedFile(pId: string, tId: string, name: string, status: string):
     throw new Error(`Failed to seed file ${name}: ${res.status} ${text}`)
   }
   const data = (await res.json()) as Array<{ id: string }>
+  if (!data || data.length === 0) throw new Error(`Seed file returned empty: ${name}`)
   return data[0].id
 }
 
@@ -131,18 +145,16 @@ test.describe('File History Page (Story 2.7)', () => {
     const failedFilter = page.getByRole('button', { name: /Failed/i })
     if (await failedFilter.isVisible()) {
       await failedFilter.click()
-      await page.waitForLoadState('networkidle')
-      const filteredRows = page.getByRole('table').getByRole('row')
-      const filteredCount = await filteredRows.count()
-      expect(filteredCount).toBeLessThanOrEqual(totalCount)
+      // Wait for filter to apply — expect header + 1 failed file = 2 rows
+      await expect(page.getByRole('table').getByRole('row')).toHaveCount(2, { timeout: 5_000 })
     }
 
     // Reset filter
     await allFilter.click()
-    await page.waitForLoadState('networkidle')
-    const resetRows = page.getByRole('table').getByRole('row')
-    const resetCount = await resetRows.count()
-    expect(resetCount).toBe(totalCount)
+    // Wait for all rows to reappear
+    await expect(page.getByRole('table').getByRole('row')).toHaveCount(totalCount, {
+      timeout: 5_000,
+    })
   })
 
   test('[P2] should display last reviewer name for reviewed files', async ({ page }) => {
@@ -159,7 +171,7 @@ test.describe('File History Page (Story 2.7)', () => {
     if (rowCount > 0) {
       for (let i = 0; i < Math.min(rowCount, 3); i++) {
         const row = dataRows.nth(i)
-        const reviewerCell = row.getByTestId('file-history-reviewer').or(row.locator('td').nth(4))
+        const reviewerCell = row.locator('td').nth(4)
         await expect(reviewerCell).toBeVisible()
       }
     }
@@ -184,7 +196,6 @@ test.describe('File History Page (Story 2.7)', () => {
       await expect(nextButton).toBeVisible()
 
       await nextButton.click()
-      await page.waitForLoadState('networkidle')
 
       const secondPageRows = table
         .getByRole('row')

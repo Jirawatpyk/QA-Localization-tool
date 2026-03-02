@@ -1,6 +1,6 @@
 # Story 3.2b6: Orphan Wiring Cleanup (Budget Threshold UI + Dead Code + Parity E2E)
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -265,19 +265,22 @@ Claude Opus 4.6 (claude-opus-4-6)
 4. **Task 4 (Unskip unit tests):** All 20 AiBudgetCard unit tests unskipped + 2 new tests added (prop sync, invalid revert). Total: 22 tests passing.
 5. **Task 5 (Budget threshold E2E):** Unskipped 2 tests in `budget-threshold.spec.ts`.
 6. **Pre-CR fixes:** H1 (useState prop sync → useEffect), H2 (invalid input revert → setThresholdValue(savedValue)), L3 (unused type removed).
+7. **CR R1 fixes (10 findings: 0C/1H/5M/4L):** H1 (stale RED comments removed), M1 (try-catch in startTransition), M2 (4 new tests: isPending, no-op guard, marker assertion, unexpected throw), M3 (TD-E2E-010 for T3.4/T3.5), M4 (data[0] guards in E2E seeds), M5 (page.tsx added to File List), L1 (networkidle→toHaveCount), L2 (td.nth fallback removed), L3 (signupOrLogin overhead noted in TD-E2E-009 scope), L4 (SeedFileStatus type).
 
 ### File List
 
 **Modified:**
-- `src/features/pipeline/components/AiBudgetCard.tsx` — added threshold editing UI + useEffect sync + invalid revert
-- `src/features/pipeline/components/AiBudgetCard.test.tsx` — unskipped 20 tests + added 2 new (prop sync, invalid revert), removed unused type
+- `src/features/pipeline/components/AiBudgetCard.tsx` — added threshold editing UI + useEffect sync + invalid revert + try-catch in startTransition (CR R1 M1)
+- `src/features/pipeline/components/AiBudgetCard.test.tsx` — unskipped 20 tests + added 6 new (prop sync, invalid revert, isPending disabled, no-op guard, marker assertion, unexpected throw). Removed stale RED comments (CR R1 H1)
 - `src/features/project/components/ProjectSettings.tsx` — wired projectId + canEditThreshold props
+- `src/app/(app)/projects/[projectId]/settings/page.tsx` — added ProcessingMode + status type casts for ProjectSettings props
 - `src/features/upload/validation/uploadSchemas.ts` — removed getUploadedFilesSchema
 - `e2e/parity-comparison.spec.ts` — complete rewrite with PostgREST seeding (6 tests)
-- `e2e/batch-summary.spec.ts` — complete rewrite with PostgREST seeding (7 tests)
-- `e2e/file-history.spec.ts` — complete rewrite with PostgREST seeding (5 tests)
+- `e2e/batch-summary.spec.ts` — complete rewrite with PostgREST seeding (7 tests), added data[0] guards + SeedFileStatus type (CR R1 M4/L4)
+- `e2e/file-history.spec.ts` — complete rewrite with PostgREST seeding (5 tests), replaced networkidle + removed td.nth fallback + SeedFileStatus type (CR R1 L1/L2/L4)
 - `e2e/budget-threshold.spec.ts` — unskipped 2 tests
-- `_bmad-output/implementation-artifacts/tech-debt-tracker.md` — 5 TDs resolved
+- `_bmad-output/implementation-artifacts/tech-debt-tracker.md` — 5 TDs resolved + TD-E2E-010 created (CR R1 M3)
 
 **Deleted:**
 - `src/features/upload/actions/getUploadedFiles.action.ts` — dead code (TD-ORPHAN-003)
+- `src/features/upload/actions/getUploadedFiles.action.test.ts` — dead code test (TD-ORPHAN-003)
