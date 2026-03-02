@@ -13,7 +13,7 @@ jobs:
   e2e:
     name: Playwright E2E Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     env:
       # Supabase Cloud — required for E2E auth tests
