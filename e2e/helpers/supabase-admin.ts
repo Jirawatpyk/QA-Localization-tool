@@ -1,6 +1,9 @@
 /**
  * Supabase Admin API helpers for E2E tests.
  * Uses service_role key to bypass RLS and manage test data via PostgREST.
+ *
+ * NOTE: process.env is used directly because E2E helpers run in the Playwright
+ * Node.js context (not Next.js runtime), so @/lib/env is not available.
  */
 import type { Page } from '@playwright/test'
 

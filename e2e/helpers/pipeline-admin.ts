@@ -2,14 +2,10 @@
  * Pipeline E2E Admin Helpers — PostgREST queries for pipeline assertions.
  *
  * Uses service_role key to bypass RLS and query pipeline state (files, findings, scores).
- *
- * NOTE: process.env is used directly here because this runs in the Playwright Node.js
- * context (not Next.js runtime), so @/lib/env is not available.
+ * Env constants and adminHeaders() are imported from supabase-admin.ts (single source of truth).
  */
 
 import { SUPABASE_URL, adminHeaders } from './supabase-admin'
-
-export { SUPABASE_URL, adminHeaders }
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
