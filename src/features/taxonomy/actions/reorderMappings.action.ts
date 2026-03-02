@@ -10,6 +10,7 @@ import { taxonomyDefinitions } from '@/db/schema/taxonomyDefinitions'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { reorderMappingsSchema } from '@/features/taxonomy/validation/taxonomySchemas'
 import { requireRole } from '@/lib/auth/requireRole'
+import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
 
 export async function reorderMappings(input: unknown): Promise<ActionResult<{ updated: number }>> {
@@ -63,8 +64,9 @@ export async function reorderMappings(input: unknown): Promise<ActionResult<{ up
       action: 'taxonomy_definition.reordered',
       newValue: { order: parsed.data },
     })
-  } catch {
-    // Non-fatal: DB transaction succeeded — audit is defense-in-depth
+  } catch (auditErr) {
+    // Non-fatal: DB transaction succeeded — audit is defense-in-depth (Guardrail #2)
+    logger.error({ err: auditErr }, 'Audit log failed after taxonomy reorder')
   }
 
   revalidateTag('taxonomy', 'minutes')

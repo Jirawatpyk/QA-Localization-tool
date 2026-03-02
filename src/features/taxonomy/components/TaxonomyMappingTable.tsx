@@ -362,6 +362,11 @@ export function TaxonomyMappingTable({
     if (newOrder) onReorder?.(newOrder)
   }
 
+  // CR R2 M2 fix: reset DragOverlay when user cancels (e.g. Escape key)
+  function handleDragCancel() {
+    setActiveDragId(null)
+  }
+
   function getCellProps(mapping: TaxonomyMapping): MappingCellsProps {
     return {
       mapping,
@@ -448,6 +453,7 @@ export function TaxonomyMappingTable({
           collisionDetection={closestCenter}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
         >
           {tableElement}
           <DragOverlay>

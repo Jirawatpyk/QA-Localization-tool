@@ -55,6 +55,17 @@ vi.mock('@/features/audit/actions/writeAuditLog', () => ({
   writeAuditLog: (...args: unknown[]) => mockWriteAuditLog(...args),
 }))
 
+// CR R2 M3 fix: mock logger for audit error path (Guardrail #2)
+const mockLoggerError = vi.fn()
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    warn: vi.fn(),
+    info: vi.fn(),
+    error: (...args: unknown[]) => mockLoggerError(...args),
+    debug: vi.fn(),
+  },
+}))
+
 describe('reorderMappings', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -216,6 +227,11 @@ describe('reorderMappings', () => {
     }
     // Audit was attempted
     expect(mockWriteAuditLog).toHaveBeenCalledTimes(1)
+    // CR R2 M3 fix: logger.error called when audit fails (Guardrail #2, pino arg order)
+    expect(mockLoggerError).toHaveBeenCalledWith(
+      expect.objectContaining({ err: expect.any(Error) }),
+      'Audit log failed after taxonomy reorder',
+    )
     // revalidateTag still called
     expect(mockRevalidateTag).toHaveBeenCalledWith('taxonomy', 'minutes')
   })

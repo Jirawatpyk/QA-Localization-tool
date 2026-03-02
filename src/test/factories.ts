@@ -17,7 +17,6 @@ import type { ExcelPreview } from '@/features/parser/actions/previewExcelColumns
 import type { ParsedSegment } from '@/features/parser/types'
 import type { ExcelColumnMapping } from '@/features/parser/validation/excelMappingSchema'
 import type { ContributingFinding } from '@/features/scoring/types'
-import type { TaxonomyMapping } from '@/features/taxonomy/types'
 import type { BatchRecord, UploadFileResult } from '@/features/upload/types'
 import type { Finding } from '@/types/finding'
 import type { FindingChangedEventData, ProcessingMode, PipelineRun } from '@/types/pipeline'
@@ -577,21 +576,4 @@ export function buildPerfSegments(count: number): SegmentRecord[] {
   }
 
   return segments
-}
-
-export function buildTaxonomyMapping(overrides?: Partial<TaxonomyMapping>): TaxonomyMapping {
-  return {
-    id: faker.string.uuid(),
-    internalName: faker.word.noun(),
-    category: faker.word.noun(),
-    parentCategory: null,
-    severity: 'minor',
-    description: faker.lorem.sentence(),
-    isCustom: false,
-    isActive: true,
-    displayOrder: 0,
-    createdAt: new Date('2026-03-01T00:00:00Z'),
-    updatedAt: new Date('2026-03-01T00:00:00Z'),
-    ...overrides,
-  }
 }

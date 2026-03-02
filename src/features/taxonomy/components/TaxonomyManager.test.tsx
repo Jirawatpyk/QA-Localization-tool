@@ -102,14 +102,17 @@ describe('TaxonomyManager — Reorder', () => {
     expect(screen.getByText('3 mappings')).toBeInTheDocument()
   })
 
-  // [P0] Verify handleReorder calls reorderMappings action via toast.promise
-  // CR R1 M1: test the action wiring even though DnD can't complete in jsdom
-  it('[P0] should wire reorderMappings action through toast.promise', async () => {
+  // [P0] Verify keyboard DnD attempt does not crash + aria wiring is correct.
+  // jsdom limitation: @dnd-kit sensors need getBoundingClientRect (returns 0s in jsdom)
+  // → handleReorder never fires → toast.promise never called.
+  // Actual reorder wiring covered by:
+  //   - computeNewOrder pure function (TaxonomyMappingTable.test.tsx)
+  //   - E2E keyboard DnD (taxonomy-admin.spec.ts)
+  it('[P0] should not crash on keyboard DnD attempt and confirm toast.promise is NOT called (jsdom limitation)', async () => {
     const { toast } = await import('sonner')
     const { TaxonomyManager } = await import('./TaxonomyManager')
     render(<TaxonomyManager initialMappings={MOCK_MAPPINGS} isAdmin={true} />)
 
-    // Attempt keyboard DnD to trigger handleReorder
     const handles = screen.getAllByTestId('drag-handle')
     const firstHandle = handles[0]!
     firstHandle.focus()
@@ -117,16 +120,12 @@ describe('TaxonomyManager — Reorder', () => {
     fireEvent.keyDown(firstHandle, { key: 'ArrowDown', code: 'ArrowDown' })
     fireEvent.keyDown(firstHandle, { key: ' ', code: 'Space' })
 
-    // If keyboard sensor completed the DnD cycle, toast.promise should be called
-    // with the reorderMappings action + success/error callbacks (which handle revert)
+    // CR R2 M1 fix: assert unconditionally — DnD doesn't complete in jsdom
     const mockToast = vi.mocked(toast.promise)
-    if (mockToast.mock.calls.length > 0) {
-      const [, opts] = mockToast.mock.calls[0]!
-      expect(opts).toHaveProperty('success')
-      expect(opts).toHaveProperty('error')
-      expect(opts).toHaveProperty('loading', 'Reordering...')
-    }
-    // Full optimistic revert verified via E2E: taxonomy-admin.spec.ts
+    expect(mockToast).not.toHaveBeenCalled()
+
+    // Component should still render correctly after keyboard attempt
+    expect(screen.getAllByTestId('drag-handle')).toHaveLength(3)
   })
 
   // [P0] Non-admin should NOT see drag handles

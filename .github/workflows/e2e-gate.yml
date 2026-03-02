@@ -73,22 +73,30 @@ jobs:
           timeout 120 bash -c 'until curl -sf http://localhost:3000 > /dev/null 2>&1; do sleep 1; done'
           echo "Next.js is ready"
 
+      - name: Pre-warm Inngest API route
+        run: |
+          # Next.js dev mode uses on-demand compilation — the /api/inngest route
+          # must be compiled BEFORE Inngest CLI tries to autodiscover functions.
+          echo "Pre-warming /api/inngest route (triggers Next.js compilation)..."
+          timeout 60 bash -c 'until curl -sf http://localhost:3000/api/inngest > /dev/null 2>&1; do sleep 2; done'
+          echo "Inngest API route compiled successfully"
+
       - name: Start Inngest dev server
         run: |
-          npx inngest-cli@latest dev -u http://localhost:3000/api/inngest &
+          npx inngest-cli dev -u http://localhost:3000/api/inngest &
           echo "Waiting for Inngest dev server on port 8288..."
-          timeout 30 bash -c 'until curl -sf http://localhost:8288 > /dev/null 2>&1; do sleep 1; done'
+          timeout 60 bash -c 'until curl -sf http://localhost:8288 > /dev/null 2>&1; do sleep 1; done'
           echo "Inngest dev server is ready"
 
-      - name: Sync Inngest functions
+      - name: Sync and verify Inngest functions
         run: |
-          # Trigger function sync by PUT'ing to the serve endpoint (same as Inngest SDK handshake)
-          echo "Triggering Inngest function sync..."
-          curl -sf -X PUT http://localhost:3000/api/inngest 2>&1 || true
+          # PUT triggers SDK handshake — Inngest discovers all registered functions
+          echo "Triggering Inngest function sync (attempt 1)..."
+          curl -v -X PUT http://localhost:3000/api/inngest 2>&1 || echo "WARN: PUT attempt 1 failed"
+          sleep 5
+          echo "Triggering Inngest function sync (attempt 2)..."
+          curl -v -X PUT http://localhost:3000/api/inngest 2>&1 || echo "WARN: PUT attempt 2 failed"
           sleep 3
-          # Retry sync to ensure functions are registered
-          curl -sf -X PUT http://localhost:3000/api/inngest 2>&1 || true
-          sleep 2
           echo "Inngest function sync complete"
 
       - name: Run E2E tests

@@ -140,9 +140,10 @@ import { reorderMappings } from '@/features/taxonomy/actions/reorderMappings.act
 function handleReorder(newOrder: { id: string; displayOrder: number }[]) {
   const previous = mappings  // snapshot for revert
   // Optimistic: reorder local state immediately
+  const orderMap = new Map(newOrder.map((o) => [o.id, o.displayOrder]))
   const reordered = [...mappings].sort((a, b) => {
-    const aOrder = newOrder.find(o => o.id === a.id)?.displayOrder ?? a.displayOrder
-    const bOrder = newOrder.find(o => o.id === b.id)?.displayOrder ?? b.displayOrder
+    const aOrder = orderMap.get(a.id) ?? a.displayOrder
+    const bOrder = orderMap.get(b.id) ?? b.displayOrder
     return aOrder - bOrder
   })
   setMappings(reordered)
@@ -152,13 +153,13 @@ function handleReorder(newOrder: { id: string; displayOrder: number }[]) {
       loading: 'Reordering...',
       success: (result) => {
         if (!result.success) {
-          setMappings(previous)  // revert
+          // CR R1 M3 fix: don't revert here — throwing triggers `error` callback which reverts
           throw new Error(result.error)
         }
         return 'Mappings reordered'
       },
       error: (err: unknown) => {
-        setMappings(previous)  // revert
+        setMappings(previous)  // revert on any error (including thrown from success)
         return err instanceof Error ? err.message : 'Failed to reorder'
       },
     })
@@ -322,7 +323,7 @@ Add `data-testid="drag-handle"` to each `GripVertical` icon for E2E targeting.
 | H1 | High | Vacuous test assertions — `if (mock.calls.length > 0)` never executes in jsdom | Extracted `computeNewOrder` pure function, replaced with direct tests |
 | H2 | High | `writeAuditLog` crash after successful DB transaction causes UI/DB state mismatch | Wrapped in try-catch per Guardrail #2 + moved `parsed.data[0]` guard before transaction |
 | M1 | Med | TaxonomyManager.test.tsx missing optimistic revert test coverage | Added toast.promise wiring test + E2E coverage comments |
-| M2 | Med | Test data duplication — 3 copies of MOCK_MAPPINGS across test files | Added `buildTaxonomyMapping` factory, deduplicated to shared file-level constant |
+| M2 | Med | Test data duplication — 3 copies of MOCK_MAPPINGS across test files | Deduplicated to shared file-level inline constant (factory import causes faker ~6MB timeout) |
 | M3 | Med | Double `setMappings(previous)` — success callback reverts then throws → error callback reverts again | Removed revert from success callback (error callback handles it) |
 | M4 | Med | Story doc task 6.5 unchecked + Dev Agent Record incomplete | Marked 6.5 done, updated test counts, added CR R1 section |
 | L1 | Low | `parsed.data[0]` guard after `db.transaction()` — wrong fail-fast order | Moved guard before transaction block |
@@ -346,3 +347,17 @@ Add `data-testid="drag-handle"` to each `GripVertical` icon for E2E targeting.
 | `src/features/taxonomy/validation/taxonomySchemas.ts` | .refine() for duplicate IDs |
 | `src/app/(app)/admin/taxonomy/page.tsx` | isAdmin={true} prop |
 | `e2e/taxonomy-admin.spec.ts` | Activated 2 E2E tests for Story 3.2b7 reorder |
+
+### CR R2 Findings & Fixes (2026-03-02)
+
+| ID | Sev | Finding | Fix |
+|----|-----|---------|-----|
+| H1 | ~~High~~ | `revalidateTag('taxonomy', 'minutes')` two-arg form | **FALSE POSITIVE** — Next.js 16 `revalidateTag(tag, profile)` takes 2 args. Consistent with all actions in codebase. Already documented in R1 Decision #1. |
+| M1 | Med | Vacuous conditional `if (mockToast.mock.calls.length > 0)` body never executes | Replaced with unconditional `expect(mockToast).not.toHaveBeenCalled()` + honest test name |
+| M2 | Med | Missing `onDragCancel` handler on `<DndContext>` — Escape leaves stale DragOverlay | Added `handleDragCancel` to reset `activeDragId` |
+| M3 | Med | Empty `catch {}` in audit try-catch — Guardrail #2 requires `logger.error()` | Added `logger.error('Audit log failed after taxonomy reorder', { error })` + test assertion |
+| L1 | Low | Dead `buildTaxonomyMapping` export in `factories.ts` — unused after M2 revision | Removed function + unused `TaxonomyMapping` import |
+| L2 | Low | Story File List missing `factories.ts` | Resolved by L1 — dead code removed, no net change to factories.ts |
+| L3 | Low | Optimistic revert snippet in Dev Notes stale (showed double `setMappings`) | Updated to match actual code (Map-based sort + single revert in error callback) |
+
+**Result:** 0C (1 false positive) / 0H / 3M / 3L → ALL FIXED in-round
