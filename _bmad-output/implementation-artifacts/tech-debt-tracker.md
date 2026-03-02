@@ -342,13 +342,8 @@
 - **Origin:** Story 3.2b5 scope boundary, identified during story review (2026-03-02)
 - **Status:** DEFERRED → ไม่มี story รองรับ — ควรสร้างเป็น story ย่อยตอน Epic 4 หรือ 3.2c
 
-### TD-E2E-008: Pipeline E2E tests skipped in CI — no Inngest/AI infra
-- **Severity:** Medium
-- **Files:** `e2e/pipeline-findings.spec.ts` (entire suite), `e2e/upload-segments.spec.ts` (P2 test)
-- **Risk:** Full pipeline E2E (upload → parse → L1 → L2 → findings → score) only runs locally, not in CI. Integration regressions not caught until manual local run.
-- **Fix:** Wire CI pipeline infra: Inngest dev server in GitHub Actions + real/mock OpenAI API key, then remove `test.skip()` conditions
-- **Origin:** Story 3.2b5, CI failure investigation (2026-03-02)
-- **Status:** OPEN → fix when CI pipeline infra story is created (Epic 3 or later)
+### ~~TD-E2E-008: Pipeline E2E tests skipped in CI — no Inngest/AI infra~~
+- **Status:** RESOLVED (2026-03-02) — All secrets wired (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `INNGEST_*`, `UPSTASH_*`). Inngest dev server added as background service in `e2e-gate.yml`. `INNGEST_DEV_URL` env var set. Skip condition `!process.env.INNGEST_DEV_URL` now passes in CI. Pipeline E2E runs fully.
 
 ### TD-PROCESS-001: E2E bypass rule — must create tech debt entry
 - **Severity:** Low (process rule, not code bug)
