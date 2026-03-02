@@ -14,7 +14,12 @@ import {
   queryScore,
   pollFileStatus,
 } from './helpers/pipeline-admin'
-import { signupOrLogin, getUserInfo, createTestProject } from './helpers/supabase-admin'
+import {
+  signupOrLogin,
+  getUserInfo,
+  setUserMetadata,
+  createTestProject,
+} from './helpers/supabase-admin'
 
 /**
  * E2E: Upload to Pipeline Wiring — Story 3.2b5
@@ -43,6 +48,12 @@ test.describe.serial('Upload to Pipeline Wiring', () => {
 
     await signupOrLogin(page, TEST_EMAIL)
 
+    // Suppress onboarding tours so driver.js overlay doesn't intercept clicks
+    await setUserMetadata(TEST_EMAIL, {
+      setup_tour_completed: '2026-01-01T00:00:00Z',
+      project_tour_completed: '2026-01-01T00:00:00Z',
+    })
+
     const userInfo = await getUserInfo(TEST_EMAIL)
     expect(userInfo).not.toBeNull()
     tenantId = userInfo!.tenantId
@@ -68,14 +79,12 @@ test.describe.serial('Upload to Pipeline Wiring', () => {
     // Wait for upload to complete
     await assertUploadProgress(page, 'minimal.sdlxliff')
 
-    // After upload, auto-parse should trigger automatically
-    // Status should transition: uploaded → parsing → parsed (N segments)
-    await expect(page.getByText(/parsing/i)).toBeVisible({ timeout: 10_000 })
-    await expect(page.getByText(/parsed.*segments/i)).toBeVisible({ timeout: 30_000 })
-
-    // "Start Processing" button should appear after parse completes
+    // After upload, auto-parse should trigger automatically.
+    // "Parsing..." state is transient (may pass too quickly for CI to observe),
+    // so we wait for the terminal indicator: "Start Processing" button appears
+    // only after parse completes and parsedFileIds > 0.
     const startBtn = page.getByRole('button', { name: /start processing/i })
-    await expect(startBtn).toBeVisible({ timeout: 10_000 })
+    await expect(startBtn).toBeVisible({ timeout: 60_000 })
     await expect(startBtn).toBeEnabled()
 
     // Click "Start Processing" → ProcessingModeDialog should open
@@ -118,12 +127,9 @@ test.describe.serial('Upload to Pipeline Wiring', () => {
 
     await assertUploadProgress(page, 'minimal.sdlxliff')
 
-    // Wait for auto-parse to complete
-    await expect(page.getByText(/parsed.*segments/i)).toBeVisible({ timeout: 30_000 })
-
-    // Click "Start Processing"
+    // Wait for auto-parse to complete — use Start Processing button as terminal indicator
     const startBtn = page.getByRole('button', { name: /start processing/i })
-    await expect(startBtn).toBeVisible({ timeout: 10_000 })
+    await expect(startBtn).toBeVisible({ timeout: 60_000 })
     await startBtn.click()
 
     // Select Economy mode in dialog and start

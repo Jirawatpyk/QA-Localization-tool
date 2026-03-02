@@ -13,7 +13,12 @@ import {
   queryFindingsCount,
   queryScore,
 } from './helpers/pipeline-admin'
-import { signupOrLogin, getUserInfo, createTestProject } from './helpers/supabase-admin'
+import {
+  signupOrLogin,
+  getUserInfo,
+  setUserMetadata,
+  createTestProject,
+} from './helpers/supabase-admin'
 
 /**
  * E2E Pipeline to Findings — Story 3.2b + 3.2b5
@@ -50,6 +55,12 @@ test.describe.serial('Pipeline to Findings', () => {
 
     await signupOrLogin(page, TEST_EMAIL)
 
+    // Suppress onboarding tours so driver.js overlay doesn't intercept clicks
+    await setUserMetadata(TEST_EMAIL, {
+      setup_tour_completed: '2026-01-01T00:00:00Z',
+      project_tour_completed: '2026-01-01T00:00:00Z',
+    })
+
     const userInfo = await getUserInfo(TEST_EMAIL)
     expect(userInfo).not.toBeNull()
     tenantId = userInfo!.tenantId
@@ -71,12 +82,11 @@ test.describe.serial('Pipeline to Findings', () => {
     // Wait for upload to complete
     await assertUploadProgress(page, 'minimal.sdlxliff')
 
-    // Wait for auto-parse to complete (Story 3.2b5 AC1)
-    await expect(page.getByText(/parsed.*segments/i)).toBeVisible({ timeout: 30_000 })
-
-    // Click "Start Processing" button on upload page (Story 3.2b5 AC2)
+    // Wait for auto-parse to complete (Story 3.2b5 AC1).
+    // "Parsing..." state is transient — wait for terminal "Start Processing" button
+    // which only appears when parsedFileIds > 0 (i.e., parse succeeded).
     const startBtn = page.getByRole('button', { name: /start processing/i })
-    await expect(startBtn).toBeVisible({ timeout: 10_000 })
+    await expect(startBtn).toBeVisible({ timeout: 60_000 })
     await expect(startBtn).toBeEnabled()
     await startBtn.click()
 

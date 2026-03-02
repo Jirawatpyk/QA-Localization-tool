@@ -1,7 +1,12 @@
 import { test, expect } from '@playwright/test'
 
 import { cleanupTestProject } from './helpers/pipeline-admin'
-import { createTestProject, getUserInfo, signupOrLogin } from './helpers/supabase-admin'
+import {
+  createTestProject,
+  getUserInfo,
+  setUserMetadata,
+  signupOrLogin,
+} from './helpers/supabase-admin'
 
 /**
  * Story 2.7 — Batch Summary Page (E2E)
@@ -122,6 +127,12 @@ test.describe('Batch Summary Page (Story 2.7)', () => {
 
     await signupOrLogin(page, TEST_EMAIL)
 
+    // Suppress onboarding tours so driver.js overlay doesn't intercept clicks
+    await setUserMetadata(TEST_EMAIL, {
+      setup_tour_completed: '2026-01-01T00:00:00Z',
+      project_tour_completed: '2026-01-01T00:00:00Z',
+    })
+
     const userInfo = await getUserInfo(TEST_EMAIL)
     expect(userInfo).not.toBeNull()
     tenantId = userInfo!.tenantId
@@ -199,9 +210,8 @@ test.describe('Batch Summary Page (Story 2.7)', () => {
 
     await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/batches`))
 
-    // Batch list should show the seeded batch
-    const batchContent = page.getByText(/Batch/i).or(page.getByText(/No batches/i))
-    await expect(batchContent).toBeVisible({ timeout: 10_000 })
+    // Batch list should show the seeded batch (use heading to avoid matching breadcrumb/nav/card)
+    await expect(page.getByRole('heading', { name: 'Batches' })).toBeVisible({ timeout: 10_000 })
   })
 
   test('[P2] should display file cards with filename, score badge, status, and severity counts', async ({

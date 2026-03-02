@@ -266,6 +266,8 @@ Claude Opus 4.6 (claude-opus-4-6)
 5. **Task 5 (Budget threshold E2E):** Unskipped 2 tests in `budget-threshold.spec.ts`.
 6. **Pre-CR fixes:** H1 (useState prop sync → useEffect), H2 (invalid input revert → setThresholdValue(savedValue)), L3 (unused type removed).
 7. **CR R1 fixes (10 findings: 0C/1H/5M/4L):** H1 (stale RED comments removed), M1 (try-catch in startTransition), M2 (4 new tests: isPending, no-op guard, marker assertion, unexpected throw), M3 (TD-E2E-010 for T3.4/T3.5), M4 (data[0] guards in E2E seeds), M5 (page.tsx added to File List), L1 (networkidle→toHaveCount), L2 (td.nth fallback removed), L3 (signupOrLogin overhead noted in TD-E2E-009 scope), L4 (SeedFileStatus type).
+8. **Post-story quick fix (TD-E2E-010 + TD-CODE-004 + anti-pattern H1):** Wired `ReportMissingCheckDialog` into `ParityComparisonView` with button + state. Added E2E T3.4 (dialog submit) + T3.5 (validation errors). Created `ParitySeverity` union type + `toParitySeverity()` coercion helper. Replaced bare `string` severity across entire parity module (parityComparator, compareWithXbench, generateParityReport, ParityResultsTable, integration test). Fixed `L1FindingContext` bare strings in `runL2ForFile.ts` → `FindingSeverity`/`DetectedByLayer`. Resolved TD-E2E-010, TD-CODE-004 in tech-debt-tracker.
+9. **Quick fix CR R1 (6+pre-existing: 0C/1H/3M/2L):** H1 (E2E T3.4 wait for listbox), M1 (toParitySeverity 15 unit tests), M2 (dialog button wiring tests), M3 (L1FindingContext cast safety comment), L1 (dialog close timeout), L2 (trivial severity tolerance test). Pre-existing: `ParityFinding.severity` → `ParitySeverity`, `ParityResultsTable` + test severity → `ParitySeverity`.
 
 ### File List
 
@@ -279,7 +281,20 @@ Claude Opus 4.6 (claude-opus-4-6)
 - `e2e/batch-summary.spec.ts` — complete rewrite with PostgREST seeding (7 tests), added data[0] guards + SeedFileStatus type (CR R1 M4/L4)
 - `e2e/file-history.spec.ts` — complete rewrite with PostgREST seeding (5 tests), replaced networkidle + removed td.nth fallback + SeedFileStatus type (CR R1 L1/L2/L4)
 - `e2e/budget-threshold.spec.ts` — unskipped 2 tests
-- `_bmad-output/implementation-artifacts/tech-debt-tracker.md` — 5 TDs resolved + TD-E2E-010 created (CR R1 M3)
+- `_bmad-output/implementation-artifacts/tech-debt-tracker.md` — 5 TDs resolved + TD-E2E-010 created (CR R1 M3), TD-E2E-010 + TD-CODE-004 resolved (quick fix)
+- `src/features/parity/types.ts` — added `ParitySeverity` union type, `toParitySeverity()` helper, `ParityFinding.severity` → `ParitySeverity` (quick fix)
+- `src/features/parity/types.test.ts` — NEW: 15 dedicated unit tests for `toParitySeverity()` (quick fix CR M1)
+- `src/features/parity/helpers/parityComparator.ts` — all severity types → `ParitySeverity` (quick fix)
+- `src/features/parity/helpers/parityComparator.test.ts` — severity types → `ParitySeverity`, added trivial tolerance test (quick fix CR L2)
+- `src/features/parity/actions/compareWithXbench.action.ts` — `toParitySeverity()` coercion, removed local validator (quick fix)
+- `src/features/parity/actions/generateParityReport.action.ts` — `toParitySeverity()` coercion, result type → `ParitySeverity` (quick fix)
+- `src/features/parity/components/ParityComparisonView.tsx` — mounted `ReportMissingCheckDialog` + button + state (quick fix TD-E2E-010)
+- `src/features/parity/components/ParityComparisonView.test.tsx` — mock for dialog, button wiring tests, severity → `ParitySeverity` (quick fix + CR M2)
+- `src/features/parity/components/ReportMissingCheckDialog.tsx` — `fileId` type fix for `exactOptionalPropertyTypes` (quick fix)
+- `src/features/parity/components/ParityResultsTable.tsx` — severity → `ParitySeverity` (quick fix CR pre-existing)
+- `src/features/parity/components/ParityResultsTable.test.tsx` — severity → `ParitySeverity` (quick fix CR pre-existing)
+- `src/features/pipeline/helpers/runL2ForFile.ts` — `L1FindingContext` → `FindingSeverity`/`DetectedByLayer` + safety comment (quick fix TD-CODE-004 + CR M3)
+- `src/__tests__/integration/parity-helpers-real-data.test.ts` — `toParitySeverity()` coercion at boundary (quick fix)
 
 **Deleted:**
 - `src/features/upload/actions/getUploadedFiles.action.ts` — dead code (TD-ORPHAN-003)

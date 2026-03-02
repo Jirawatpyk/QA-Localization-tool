@@ -1,7 +1,12 @@
 import { test, expect } from '@playwright/test'
 
 import { cleanupTestProject } from './helpers/pipeline-admin'
-import { createTestProject, getUserInfo, signupOrLogin } from './helpers/supabase-admin'
+import {
+  createTestProject,
+  getUserInfo,
+  setUserMetadata,
+  signupOrLogin,
+} from './helpers/supabase-admin'
 
 /**
  * Story 2.7 — File History Page (E2E)
@@ -73,6 +78,12 @@ test.describe('File History Page (Story 2.7)', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
+
+    // Suppress onboarding tours so driver.js overlay doesn't intercept clicks
+    await setUserMetadata(TEST_EMAIL, {
+      setup_tour_completed: '2026-01-01T00:00:00Z',
+      project_tour_completed: '2026-01-01T00:00:00Z',
+    })
 
     const userInfo = await getUserInfo(TEST_EMAIL)
     expect(userInfo).not.toBeNull()
