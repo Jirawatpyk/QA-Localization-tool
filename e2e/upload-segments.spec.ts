@@ -5,6 +5,7 @@ import {
   gotoProjectUpload,
   uploadSingleFile,
   assertUploadProgress,
+  confirmDuplicateRerun,
 } from './helpers/fileUpload'
 import {
   cleanupTestProject,
@@ -93,8 +94,16 @@ test.describe.serial('Upload to Pipeline Wiring', () => {
     // Navigate to upload page
     await gotoProjectUpload(page, projectId)
 
-    // Upload SDLXLIFF
+    // Upload SDLXLIFF (same fixture as P1 → duplicate dialog expected)
     await uploadSingleFile(page, FIXTURE_FILES.sdlxliffMinimal)
+
+    // Handle duplicate detection dialog from P1's prior upload (CR R1 H2)
+    const dupDialog = page.getByRole('dialog')
+    const isDuplicate = await dupDialog.isVisible({ timeout: 5_000 }).catch(() => false)
+    if (isDuplicate) {
+      await confirmDuplicateRerun(page)
+    }
+
     await assertUploadProgress(page, 'minimal.sdlxliff')
 
     // Wait for auto-parse to complete

@@ -258,6 +258,14 @@ All 5 tasks completed. Key implementation decisions:
 - **data-testid additions:** `file-input` on FileUploadZone input, `upload-row-{filename}` on UploadProgressList rows, `upload-status-success` on success states
 - **Tech debt resolved:** TD-E2E-001, TD-E2E-002, TD-E2E-006 marked RESOLVED
 
+### Pre-CR Scan Results (3-agent sweep)
+
+| Agent | Result | Notes |
+|-------|--------|-------|
+| anti-pattern-detector | 0 violations | No guardrail violations found |
+| tenant-isolation-checker | N/A | No DB queries in scope (wiring only) |
+| code-quality-analyzer | 0C / 3H / 5M / 4L | See `.claude/agent-memory/code-quality-analyzer/story-3-2b5-findings.md` |
+
 ### File List
 
 **Modified:**
@@ -267,6 +275,10 @@ All 5 tasks completed. Key implementation decisions:
 - `src/features/upload/components/UploadPageClient.test.tsx` — activated 18 ATDD stubs (26/26 pass)
 - `e2e/upload-segments.spec.ts` — unskipped Tests #19 and #20
 - `e2e/pipeline-findings.spec.ts` — replaced PostgREST/Inngest bypass with real UI flow
+- `e2e/helpers/fileUpload.ts` — added `assertUploadProgress`, `confirmDuplicateRerun` helpers, FIXTURE_FILES
+- `e2e/helpers/pipeline-admin.ts` — added `queryFileByName`, `queryFindingsCount`, `queryScore`, `pollFileStatus`
+- `src/components/layout/actions/getBreadcrumbEntities.action.ts` — breadcrumb entity lookup
+- `src/features/batch/actions/getFileHistory.action.ts` — file history query
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — status → in-progress
 - `_bmad-output/implementation-artifacts/tech-debt-tracker.md` — 3 items RESOLVED
 - `_bmad-output/implementation-artifacts/3-2b5-upload-pipeline-wiring.md` — task checkmarks + dev record

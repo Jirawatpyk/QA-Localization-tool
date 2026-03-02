@@ -91,6 +91,7 @@ import type { UploadFileResult } from '../types'
 import { UploadPageClient } from './UploadPageClient'
 
 const VALID_PROJECT_ID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
+const DEFAULT_FILE_ID = 'f1e2d3c4-b5a6-4f7e-8d9c-0a1b2c3d4e5f'
 
 function makeFile(name: string): File {
   return new File(['content'], name, { type: 'application/xml' })
@@ -114,7 +115,7 @@ beforeEach(() => {
 
 function makeUploadedFile(overrides: Partial<UploadFileResult> = {}): UploadFileResult {
   return {
-    fileId: VALID_PROJECT_ID, // reuse constant for valid UUID
+    fileId: DEFAULT_FILE_ID,
     fileName: 'report.sdlxliff',
     fileSizeBytes: 2048,
     fileType: 'sdlxliff',
@@ -345,7 +346,6 @@ describe('UploadPageClient', () => {
   // --- AC1: Auto-Parse Tests (6 tests) ---
 
   it('should call parseFile automatically when SDLXLIFF file upload completes', async () => {
-    // RED: parseFile auto-trigger not wired in UploadPageClient
     vi.mocked(useFileUpload).mockReturnValue({
       progress: [],
       largeFileWarnings: [],
@@ -372,7 +372,6 @@ describe('UploadPageClient', () => {
   })
 
   it('should call parseFile automatically when XLIFF file upload completes', async () => {
-    // RED: parseFile auto-trigger not wired in UploadPageClient
     vi.mocked(useFileUpload).mockReturnValue({
       progress: [],
       largeFileWarnings: [],
@@ -395,7 +394,6 @@ describe('UploadPageClient', () => {
   })
 
   it('should NOT call parseFile for Excel file (uses ColumnMappingDialog instead)', async () => {
-    // RED: auto-parse routing logic not implemented
     vi.mocked(useFileUpload).mockReturnValue({
       progress: [],
       largeFileWarnings: [],
@@ -419,7 +417,6 @@ describe('UploadPageClient', () => {
   })
 
   it('should NOT re-trigger parseFile for a file that was already parsed', async () => {
-    // RED: idempotency guard (dismissedParseIds / parsedFiles) not implemented
     const mockReturn = {
       progress: [],
       largeFileWarnings: [],
@@ -456,7 +453,6 @@ describe('UploadPageClient', () => {
   })
 
   it('should show success toast with segment count after parse completes', async () => {
-    // RED: parse success handler not wired
     mockParseFile.mockResolvedValue({
       success: true,
       data: { segmentCount: 127, fileId: 'sdlxliff-id' },
@@ -482,7 +478,6 @@ describe('UploadPageClient', () => {
   })
 
   it('should show error toast when parseFile fails (no crash)', async () => {
-    // RED: parse error handler not wired
     mockParseFile.mockResolvedValue({ success: false, error: 'Invalid XML structure' })
 
     vi.mocked(useFileUpload).mockReturnValue({
@@ -507,7 +502,6 @@ describe('UploadPageClient', () => {
   // --- AC2: ProcessingModeDialog Tests (6 tests) ---
 
   it('should show "Start Processing" button after file is parsed', async () => {
-    // RED: Start Processing button not rendered in UploadPageClient
     mockParseFile.mockResolvedValue({
       success: true,
       data: { segmentCount: 42, fileId: 'sdlxliff-id' },
@@ -533,7 +527,6 @@ describe('UploadPageClient', () => {
   })
 
   it('should NOT show "Start Processing" button when no files are parsed', () => {
-    // RED: Start Processing button not implemented
     vi.mocked(useFileUpload).mockReturnValue({
       progress: [],
       largeFileWarnings: [],
@@ -552,7 +545,6 @@ describe('UploadPageClient', () => {
   })
 
   it('should disable "Start Processing" button while uploading', async () => {
-    // RED: Start Processing button not implemented
     mockParseFile.mockResolvedValue({
       success: true,
       data: { segmentCount: 42, fileId: 'sdlxliff-id' },
@@ -573,13 +565,11 @@ describe('UploadPageClient', () => {
     render(<UploadPageClient projectId={VALID_PROJECT_ID} />)
 
     await waitFor(() => {
-      const btn = screen.getByRole('button', { name: /start processing/i })
-      expect(btn.hasAttribute('disabled')).toBe(true)
+      expect(screen.getByRole('button', { name: /start processing/i })).toBeDisabled()
     })
   })
 
   it('should open ProcessingModeDialog with correct fileIds when button clicked', async () => {
-    // RED: ProcessingModeDialog not mounted in UploadPageClient
     mockParseFile.mockResolvedValue({
       success: true,
       data: { segmentCount: 42, fileId: 'sdlxliff-id' },
@@ -612,8 +602,7 @@ describe('UploadPageClient', () => {
     })
   })
 
-  it('should close dialog and show toast after processing starts', async () => {
-    // RED: ProcessingModeDialog onStartProcessing callback not wired
+  it('should close dialog and reset state after processing starts', async () => {
     mockParseFile.mockResolvedValue({
       success: true,
       data: { segmentCount: 42, fileId: 'sdlxliff-id' },
@@ -649,13 +638,13 @@ describe('UploadPageClient', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Start' }))
 
     await waitFor(() => {
+      // Dialog closes after onStartProcessing callback
+      // NOTE: toast.success is shown by ProcessingModeDialog internally (tested in ProcessingModeDialog.test.tsx)
       expect(screen.queryByTestId('processing-mode-dialog')).toBeNull()
-      expect(toast.success).toHaveBeenCalled()
     })
   })
 
   it('should count Excel file in parsedFiles after ColumnMappingDialog confirms', async () => {
-    // RED: handleColumnMappingSuccess does not add to parsedFiles map
     vi.mocked(useFileUpload).mockReturnValue({
       progress: [],
       largeFileWarnings: [],
@@ -689,7 +678,6 @@ describe('UploadPageClient', () => {
   // --- AC3: Upload Progress Parse Status Tests (3 tests) ---
 
   it('should show "Parsing..." status while parse is in progress', async () => {
-    // RED: parse status not displayed in UploadProgressList
     // Make parseFile hang (never resolve)
     mockParseFile.mockReturnValue(new Promise(() => {}))
 
@@ -724,7 +712,6 @@ describe('UploadPageClient', () => {
   })
 
   it('should show "Parsed (N segments)" after parse completes', async () => {
-    // RED: parsed status not displayed in UploadProgressList
     mockParseFile.mockResolvedValue({
       success: true,
       data: { segmentCount: 42, fileId: 'sdlxliff-id' },
@@ -756,12 +743,11 @@ describe('UploadPageClient', () => {
     render(<UploadPageClient projectId={VALID_PROJECT_ID} />)
 
     await waitFor(() => {
-      expect(screen.getByText(/parsed.*42.*segments/i)).toBeTruthy()
+      expect(screen.getByText('Parsed (42 segments)')).toBeTruthy()
     })
   })
 
   it('should show "Parse failed" when parse fails', async () => {
-    // RED: parse failed status not displayed in UploadProgressList
     mockParseFile.mockResolvedValue({ success: false, error: 'Invalid XML' })
 
     vi.mocked(useFileUpload).mockReturnValue({
@@ -797,7 +783,6 @@ describe('UploadPageClient', () => {
   // --- AC4: Boundary Tests (3 tests) ---
 
   it('should auto-parse SDLXLIFF and show ColumnMappingDialog for Excel in mixed upload', async () => {
-    // RED: auto-parse routing for mixed file types not implemented
     vi.mocked(useFileUpload).mockReturnValue({
       progress: [],
       largeFileWarnings: [],
@@ -829,7 +814,6 @@ describe('UploadPageClient', () => {
   })
 
   it('should parse multiple SDLXLIFF files sequentially', async () => {
-    // RED: sequential auto-parse not implemented
     let resolveFirst: (v: unknown) => void
     const firstPromise = new Promise((r) => {
       resolveFirst = r
@@ -858,8 +842,9 @@ describe('UploadPageClient', () => {
     // First file should start parsing
     await waitFor(() => {
       expect(mockParseFile).toHaveBeenCalledWith('file-1')
-      expect(mockParseFile).toHaveBeenCalledTimes(1) // sequential — only first
     })
+    // Sequential guard: only first file parsed at this point (stable outside waitFor — CR R1 H1)
+    expect(mockParseFile).toHaveBeenCalledTimes(1)
 
     // Resolve first parse
     resolveFirst!({ success: true, data: { segmentCount: 10, fileId: 'file-1' } })
@@ -871,8 +856,10 @@ describe('UploadPageClient', () => {
     })
   })
 
-  it('should not render "Start Processing" button when zero files are parsed', () => {
-    // RED: Start Processing button logic not implemented
+  it('should not render "Start Processing" button when zero files are parsed', async () => {
+    // Set never-resolving mock BEFORE configuring uploadedFiles to avoid act() warning (CR R1 L1)
+    mockParseFile.mockReturnValue(new Promise(() => {}))
+
     vi.mocked(useFileUpload).mockReturnValue({
       progress: [],
       largeFileWarnings: [],
@@ -885,11 +872,11 @@ describe('UploadPageClient', () => {
       reset: vi.fn(),
     })
 
-    // Note: parseFile hasn't resolved yet → parsedFiles is empty
-    mockParseFile.mockReturnValue(new Promise(() => {})) // never resolves
-
     render(<UploadPageClient projectId={VALID_PROJECT_ID} />)
 
-    expect(screen.queryByRole('button', { name: /start processing/i })).toBeNull()
+    // Flush microtask queue so useEffect setState settles before assertion
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /start processing/i })).toBeNull()
+    })
   })
 })

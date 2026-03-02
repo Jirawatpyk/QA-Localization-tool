@@ -157,9 +157,12 @@ test.describe.serial('Pipeline to Findings', () => {
     await page.goto(`/projects/${projectId}/files`)
     await page.waitForLoadState('networkidle')
 
-    // The file should appear in the table with its terminal status
+    // The file should appear in the table with a terminal pipeline status
     const fileRow = page.getByText('minimal.sdlxliff')
     await expect(fileRow).toBeVisible({ timeout: 10_000 })
+
+    // Verify terminal status is displayed (economy mode = l2_completed)
+    await expect(page.getByText(/l2.completed|completed/i)).toBeVisible({ timeout: 10_000 })
   })
 
   // ── Cleanup ──────────────────────────────────────────────────────────────

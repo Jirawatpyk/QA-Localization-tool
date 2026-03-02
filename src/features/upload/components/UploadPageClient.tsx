@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
+import { Button } from '@/components/ui/button'
 import { parseFile } from '@/features/parser/actions/parseFile.action'
 import { ProcessingModeDialog } from '@/features/pipeline/components/ProcessingModeDialog'
 import { createBatch } from '@/features/upload/actions/createBatch.action'
@@ -152,12 +153,12 @@ export function UploadPageClient({ projectId }: UploadPageClientProps) {
   function handleStartProcessing() {
     setShowProcessingDialog(false)
     // Reset parse state so "Start Processing" button disappears (prevents double-submit)
+    // NOTE: ProcessingModeDialog already shows toast.success — do NOT duplicate here (CR R1 H3)
     setParsedFiles(new Map())
     setParsingFileIds(new Set())
     setParseFailedFileIds(new Set())
     setDismissedParseIds(new Set())
     parsingStartedRef.current = new Set()
-    toast.success('Processing started')
   }
 
   return (
@@ -208,14 +209,13 @@ export function UploadPageClient({ projectId }: UploadPageClientProps) {
 
       {/* Start Processing button — visible when files parsed, disabled during upload/parsing */}
       {parsedFileIds.length > 0 && (
-        <button
-          type="button"
-          className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
+        <Button
+          className="w-full"
           disabled={isUploading || parsingFileIds.size > 0}
           onClick={() => setShowProcessingDialog(true)}
         >
           Start Processing ({parsedFileIds.length} files)
-        </button>
+        </Button>
       )}
 
       {/* ProcessingModeDialog — mounted always, controlled by showProcessingDialog */}

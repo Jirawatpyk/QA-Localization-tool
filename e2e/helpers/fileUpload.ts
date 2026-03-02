@@ -98,14 +98,13 @@ export async function uploadMultipleFiles(
  * @param filename  The filename as shown in the UI upload list
  */
 export async function assertUploadProgress(page: Page, filename: string): Promise<void> {
-  // Progress bar should be visible for this file
   const fileRow = page.getByTestId(`upload-row-${filename}`)
   await expect(fileRow).toBeVisible()
 
-  const progressBar = fileRow.getByRole('progressbar')
-  await expect(progressBar).toBeVisible()
-
-  // Wait for upload to complete (progress bar disappears or shows success)
+  // NOTE: Progress bar may complete before Playwright can assert it (fast upload / small fixture).
+  // After auto-parse wiring (Story 3.2b5), status transitions rapidly:
+  //   uploading → "Uploaded" → "Parsing..." → "Parsed (N segments)"
+  // We skip the progressbar assertion and go straight to the reliable success state.
   await expect(fileRow.getByTestId('upload-status-success')).toBeVisible({
     timeout: 30_000,
   })
