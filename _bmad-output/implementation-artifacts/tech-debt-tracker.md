@@ -107,13 +107,13 @@
 - **Origin:** Story 2.4, flagged by code-quality-analyzer + testing-qa-expert
 - **Status:** RESOLVED (2026-02-25 — all 15 files migrated, 1457 tests pass)
 
-### TD-TEST-002: Integration test DRY — toSegmentRecord() duplicated 6x
+### TD-TEST-002: Integration test DRY — toSegmentRecord() duplicated 7x
 - **Severity:** Medium
-- **Risk:** If `SegmentRecord` type changes, must update 6 identical copies
-- **Files:** `golden-corpus-parity.test.ts`, `clean-corpus-baseline.test.ts`, `tier2-multilang-parity.test.ts`, `golden-corpus-diagnostic.test.ts`, `parity-helpers-real-data.test.ts`, `rule-engine-golden-corpus.test.ts`
-- **Fix:** Extracted `buildSegmentRecordFromParsed()` to `src/test/factories.ts`, all 6 files import from shared factory
-- **Origin:** Story 2.10, flagged by code-quality-analyzer
-- **Status:** RESOLVED (2026-03-02 — Guardrail #23 quick fix)
+- **Risk:** If `SegmentRecord` type changes, must update 7 identical copies
+- **Files:** `golden-corpus-parity.test.ts`, `clean-corpus-baseline.test.ts`, `tier2-multilang-parity.test.ts`, `golden-corpus-diagnostic.test.ts`, `parity-helpers-real-data.test.ts`, `rule-engine-golden-corpus.test.ts`, `tag-gap-diagnostic.test.ts`
+- **Fix:** Extracted `buildSegmentRecordFromParsed()` to `src/test/factories.ts`, all 7 files import from shared factory. Also removed stale `import type { ParsedSegment }` from 6 files (dead import after migration)
+- **Origin:** Story 2.10, flagged by code-quality-analyzer + pre-CR anti-pattern-detector
+- **Status:** RESOLVED (2026-03-02 — Guardrail #23 quick fix + pre-CR cleanup)
 
 ### TD-TEST-003: Integration test DRY — mock block duplicated 4+ files
 - **Severity:** Medium
@@ -175,9 +175,9 @@
 - **Severity:** Low
 - **Risk:** Pattern inconsistency only — all 4 actions validate input via manual checks (not Zod)
 - **Files:** `getFilesWordCount.action.ts`, `getProjectAiBudget.action.ts`, `updateBudgetAlertThreshold.action.ts`, `updateModelPinning.action.ts`
-- **Fix:** Added Zod schemas to `pipelineSchema.ts`, all 4 actions now accept `input: unknown` + `.safeParse()`. Manual checks removed where Zod covers them
-- **Origin:** Story 3.1 CR R1, flagged by code-quality-analyzer (L1 finding)
-- **Status:** RESOLVED (2026-03-02 — Guardrail #23 quick fix)
+- **Fix:** Added Zod schemas to `pipelineSchema.ts`, all 4 actions now accept `input: unknown` + `.safeParse()`. Manual checks removed where Zod covers them. Also: unified local `UpdateResult` type → `ActionResult<undefined>` (2 files), added `PIPELINE_LAYERS` constant to `@/types/pipeline.ts`, added `UpdateModelPinningInput` exported type, used `z.enum(PIPELINE_LAYERS)` instead of hardcoded `['L2', 'L3']`
+- **Origin:** Story 3.1 CR R1, flagged by code-quality-analyzer (L1 finding) + pre-CR agents (H3, L1)
+- **Status:** RESOLVED (2026-03-02 — Guardrail #23 quick fix + pre-CR cleanup)
 
 ---
 
@@ -277,6 +277,22 @@
 - **Fix:** Implement when Epic 4 review infrastructure is built
 - **Origin:** Epic 1 skeleton, identified during full scan (2026-03-02)
 - **Status:** DEFERRED → fix in **Epic 4** (review infrastructure)
+
+### TD-CODE-006: console.warn in glossary-matching-real-data.test.ts
+- **Severity:** Low
+- **File:** `src/__tests__/integration/glossary-matching-real-data.test.ts` — 5 instances
+- **Risk:** Anti-pattern #4 (no `console.log/warn/error`) — test infra cannot import `pino`, but `console.warn` violates CLAUDE.md rule
+- **Fix:** Replaced all 5 `console.warn()` with `process.stderr.write()` + `// NOTE: process.stderr.write used — pino not importable in Vitest Node process` comment
+- **Origin:** Story 2.10, flagged by anti-pattern-detector pre-CR scan (2026-03-02)
+- **Status:** RESOLVED (2026-03-02 — pre-CR cleanup)
+
+### TD-CODE-007: TaxonomyMappingTable aria-disabled duplication (TS2783)
+- **Severity:** Low
+- **File:** `src/features/taxonomy/components/TaxonomyMappingTable.tsx:286-287`
+- **Risk:** TypeScript error — `aria-disabled` and `aria-roledescription` set explicitly before `{...attributes}` spread from dnd-kit, which overwrites them
+- **Fix:** Moved `{...attributes}` spread before explicit `aria-disabled` and `aria-roledescription` so explicit values win
+- **Origin:** Story 3.2b7 (in-progress), fixed during TD sprint pre-commit gate (2026-03-02)
+- **Status:** RESOLVED (2026-03-02 — pre-commit gate fix)
 
 ### TD-ORPHAN-001: reorderMappings action has no UI consumer
 - **Severity:** Medium

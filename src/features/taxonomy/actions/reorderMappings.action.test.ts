@@ -14,12 +14,26 @@ const mockCurrentUser = {
   role: 'admin' as const,
 }
 
+// Transaction mock chain — action now uses db.transaction()
+const mockTxUpdateWhere = vi.fn().mockResolvedValue([])
+const mockTxSet = vi.fn().mockReturnValue({ where: mockTxUpdateWhere })
+const mockTxUpdate = vi.fn().mockReturnValue({ set: mockTxSet })
+
+const mockTransaction = vi.fn(async (cb: (tx: unknown) => Promise<unknown>) => {
+  await cb({ update: (...args: unknown[]) => mockTxUpdate(...args) })
+})
+
+// Direct db.update mock (should NOT be called — action uses transaction)
 const mockUpdateWhere = vi.fn().mockResolvedValue([])
 const mockSet = vi.fn().mockReturnValue({ where: mockUpdateWhere })
 const mockUpdate = vi.fn().mockReturnValue({ set: mockSet })
 
 vi.mock('@/db/client', () => ({
-  db: { update: (...args: unknown[]) => mockUpdate(...args) },
+  db: {
+    update: (...args: unknown[]) => mockUpdate(...args),
+    transaction: (...args: unknown[]) =>
+      mockTransaction(...(args as [(tx: unknown) => Promise<unknown>])),
+  },
 }))
 
 vi.mock('@/db/schema/taxonomyDefinitions', () => ({
@@ -58,7 +72,10 @@ describe('reorderMappings', () => {
     if (result.success) {
       expect(result.data.updated).toBe(2)
     }
-    expect(mockUpdate).toHaveBeenCalledTimes(2)
+    // Updates happen inside transaction, not via direct db.update
+    expect(mockTransaction).toHaveBeenCalledTimes(1)
+    expect(mockTxUpdate).toHaveBeenCalledTimes(2)
+    expect(mockUpdate).not.toHaveBeenCalled()
   })
 
   it('should return FORBIDDEN for non-admin', async () => {
@@ -93,11 +110,13 @@ describe('reorderMappings', () => {
     }
   })
 
-  it('should call revalidateTag("taxonomy")', async () => {
+  // [P1] revalidateTag called with correct Next.js 16 signature (Story 3.2b7)
+  it('[P1] should call revalidateTag("taxonomy", "minutes") with two arguments', async () => {
     const { reorderMappings } = await import('./reorderMappings.action')
     await reorderMappings([{ id: UUID_A, displayOrder: 0 }])
 
     expect(mockRevalidateTag).toHaveBeenCalledWith('taxonomy', 'minutes')
+    expect(mockRevalidateTag).toHaveBeenCalledTimes(1)
   })
 
   it('should write audit log with taxonomy_definition.reordered action', async () => {
@@ -122,5 +141,58 @@ describe('reorderMappings', () => {
         },
       }),
     )
+  })
+
+  // [P0] Transaction wrapping for atomic reorder (Story 3.2b7 — Guardrail #6)
+  it('[P0] should wrap all updates in a database transaction', async () => {
+    const { reorderMappings } = await import('./reorderMappings.action')
+    await reorderMappings([
+      { id: UUID_A, displayOrder: 0 },
+      { id: UUID_B, displayOrder: 1 },
+    ])
+
+    // db.transaction should have been called exactly once
+    expect(mockTransaction).toHaveBeenCalledTimes(1)
+    // tx.update called for each item inside the transaction
+    expect(mockTxUpdate).toHaveBeenCalledTimes(2)
+    // Direct db.update should NOT have been called
+    expect(mockUpdate).not.toHaveBeenCalled()
+  })
+
+  // [P1] Duplicate ID validation (Story 3.2b7 — Guardrail #7)
+  it('[P1] should return VALIDATION_ERROR for duplicate IDs', async () => {
+    const { reorderMappings } = await import('./reorderMappings.action')
+    const result = await reorderMappings([
+      { id: UUID_A, displayOrder: 0 },
+      { id: UUID_A, displayOrder: 1 }, // Duplicate ID
+    ])
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('VALIDATION_ERROR')
+      expect(result.error).toContain('Duplicate')
+    }
+    // db operations should NOT have been called (validation fails before DB access)
+    expect(mockTransaction).not.toHaveBeenCalled()
+    expect(mockUpdate).not.toHaveBeenCalled()
+  })
+
+  // [H1 fix] Transaction failure returns UPDATE_FAILED ActionResult
+  it('should return UPDATE_FAILED when transaction throws', async () => {
+    mockTransaction.mockRejectedValueOnce(new Error('Connection lost'))
+
+    const { reorderMappings } = await import('./reorderMappings.action')
+    const result = await reorderMappings([
+      { id: UUID_A, displayOrder: 0 },
+      { id: UUID_B, displayOrder: 1 },
+    ])
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('UPDATE_FAILED')
+      expect(result.error).toBe('Connection lost')
+    }
+    // Audit log should NOT be called on failure
+    expect(mockWriteAuditLog).not.toHaveBeenCalled()
   })
 })

@@ -28,6 +28,7 @@ export const reorderMappingsSchema = z
     }),
   )
   .min(1, 'At least one mapping required')
+  .refine((items) => new Set(items.map((i) => i.id)).size === items.length, 'Duplicate IDs')
 
 export type CreateMappingInput = z.infer<typeof createMappingSchema>
 export type UpdateMappingInput = z.infer<typeof updateMappingSchema>

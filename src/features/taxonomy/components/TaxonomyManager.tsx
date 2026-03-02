@@ -5,17 +5,20 @@ import { toast } from 'sonner'
 
 import { createMapping } from '@/features/taxonomy/actions/createMapping.action'
 import { deleteMapping } from '@/features/taxonomy/actions/deleteMapping.action'
+import { reorderMappings } from '@/features/taxonomy/actions/reorderMappings.action'
 import { updateMapping } from '@/features/taxonomy/actions/updateMapping.action'
 import type { TaxonomyMapping } from '@/features/taxonomy/types'
+import type { Severity } from '@/features/taxonomy/validation/taxonomySchemas'
 
 import { AddMappingDialog } from './AddMappingDialog'
 import { TaxonomyMappingTable } from './TaxonomyMappingTable'
 
 type Props = {
   initialMappings: TaxonomyMapping[]
+  isAdmin?: boolean | undefined
 }
 
-export function TaxonomyManager({ initialMappings }: Props) {
+export function TaxonomyManager({ initialMappings, isAdmin }: Props) {
   const [mappings, setMappings] = useState<TaxonomyMapping[]>(initialMappings)
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [, startTransition] = useTransition()
@@ -51,7 +54,7 @@ export function TaxonomyManager({ initialMappings }: Props) {
       internalName: string
       category: string
       parentCategory: string
-      severity: string
+      severity: Severity
       description: string
     },
   ) {
@@ -61,8 +64,8 @@ export function TaxonomyManager({ initialMappings }: Props) {
           internalName: fields.internalName || undefined,
           category: fields.category,
           parentCategory: fields.parentCategory || null,
-          severity: fields.severity as 'critical' | 'major' | 'minor',
-          description: fields.description, // send as-is; empty → schema min(1) → error toast
+          severity: fields.severity,
+          description: fields.description,
         }),
         {
           loading: 'Saving...',
@@ -91,6 +94,35 @@ export function TaxonomyManager({ initialMappings }: Props) {
     })
   }
 
+  function handleReorder(newOrder: { id: string; displayOrder: number }[]) {
+    const previous = mappings
+    // Optimistic: reorder local state immediately
+    const orderMap = new Map(newOrder.map((o) => [o.id, o.displayOrder]))
+    const reordered = [...mappings].sort((a, b) => {
+      const aOrder = orderMap.get(a.id) ?? a.displayOrder
+      const bOrder = orderMap.get(b.id) ?? b.displayOrder
+      return aOrder - bOrder
+    })
+    setMappings(reordered)
+
+    startTransition(() => {
+      toast.promise(reorderMappings(newOrder), {
+        loading: 'Reordering...',
+        success: (result) => {
+          if (!result.success) {
+            setMappings(previous)
+            throw new Error(result.error)
+          }
+          return 'Mappings reordered'
+        },
+        error: (err: unknown) => {
+          setMappings(previous)
+          return err instanceof Error ? err.message : 'Failed to reorder'
+        },
+      })
+    })
+  }
+
   return (
     <div className="space-y-4">
       <TaxonomyMappingTable
@@ -98,6 +130,8 @@ export function TaxonomyManager({ initialMappings }: Props) {
         onUpdate={handleUpdate}
         onDelete={handleDelete}
         onAdd={handleAdd}
+        canReorder={isAdmin}
+        onReorder={handleReorder}
       />
 
       <AddMappingDialog

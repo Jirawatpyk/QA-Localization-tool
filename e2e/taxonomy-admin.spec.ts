@@ -21,6 +21,8 @@ import { TEST_PASSWORD } from './helpers/supabase-admin'
  */
 
 // Fixed email — reused across runs to avoid accumulating test users in the DB
+// NOTE: process.env used directly — E2E spec runs in Playwright Node.js context,
+// not Next.js runtime. @/lib/env is not available here.
 const TEST_EMAIL = process.env.E2E_TAX16_EMAIL ?? 'e2e-tax16@test.local'
 // Unique names scoped to this run — avoids conflicts from prior incomplete runs
 const E2E_MAPPING_NAME = `E2E Test ${Date.now()}`
@@ -357,5 +359,77 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     await expect(
       page.getByRole('cell', { name: 'Capitalization', exact: true }).first(),
     ).toBeVisible()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Story 3.2b7 — Taxonomy Mapping Reorder
+// ---------------------------------------------------------------------------
+
+test.describe.serial('Story 3.2b7 — Taxonomy Mapping Reorder', () => {
+  test('[setup] login as admin user', async ({ page }) => {
+    // Reuse login helper — ensures admin session for the serial block
+    await login(page)
+    await page.goto('/admin/taxonomy')
+    await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 10000 })
+  })
+
+  test('[P0] AC1 — should reorder taxonomy mapping via drag-and-drop and persist after reload', async ({
+    page,
+  }) => {
+    // Given: Admin is on /admin/taxonomy with mapping table loaded
+    await login(page)
+    await page.goto('/admin/taxonomy')
+    await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 10000 })
+
+    // Capture the internalName text of the first data row BEFORE reorder
+    // Row nth(0) = header, nth(1) = first data row, nth(3) = third data row
+    const table = page.getByTestId('taxonomy-mapping-table')
+    const rows = table.getByRole('row')
+    const firstRowCells = rows.nth(1).getByRole('cell')
+    const thirdRowCells = rows.nth(3).getByRole('cell')
+    // Column 0 = drag handle, Column 1 = QA Cosmetic Term (with canReorder enabled)
+    const firstRowName = await firstRowCells.nth(1).textContent()
+    const thirdRowName = await thirdRowCells.nth(1).textContent()
+
+    // When: Admin drags the first data row's drag handle to the third row position
+    // NOTE: @dnd-kit uses pointer events (NOT HTML5 drag API) — must simulate
+    //       full mouse event sequence: move → mousedown → move in steps → mouseup
+    const dragHandle = rows.nth(1).getByTestId('drag-handle')
+    const targetRow = rows.nth(3)
+
+    const handleBox = await dragHandle.boundingBox()
+    const targetBox = await targetRow.boundingBox()
+    if (!handleBox || !targetBox) throw new Error('Drag handle or target row not visible')
+
+    // Pointer sequence: position cursor → press → drag in 10 incremental steps → release
+    await page.mouse.move(handleBox!.x + handleBox!.width / 2, handleBox!.y + handleBox!.height / 2)
+    await page.mouse.down()
+    // Move in small increments to trigger @dnd-kit's onDragMove detection
+    await page.mouse.move(
+      targetBox!.x + targetBox!.width / 2,
+      targetBox!.y + targetBox!.height / 2,
+      { steps: 10 },
+    )
+    await page.mouse.up()
+
+    // Then: Success toast appears confirming the reorder was saved
+    await expect(page.getByText('Mappings reordered')).toBeVisible({ timeout: 10000 })
+
+    // And: After page reload, the new order persists (server action saved to DB)
+    await page.reload()
+    await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 10000 })
+
+    // Verify: the row that was originally first should no longer be in position 1
+    // and the row that was originally third should no longer be in position 3
+    const reloadedRows = table.getByRole('row')
+    // Column 1 = QA Cosmetic Term (column 0 = drag handle)
+    const newFirstRowName = await reloadedRows.nth(1).getByRole('cell').nth(1).textContent()
+    const newThirdRowName = await reloadedRows.nth(3).getByRole('cell').nth(1).textContent()
+
+    // After dragging row 1 → position 3: the original first row name should now
+    // appear at position 3, and the original third row name should have shifted up
+    expect(newThirdRowName).toContain(firstRowName!.trim())
+    expect(newFirstRowName).not.toBe(firstRowName)
   })
 })

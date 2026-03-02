@@ -25,21 +25,37 @@ export async function reorderMappings(input: unknown): Promise<ActionResult<{ up
     return { success: false, code: 'VALIDATION_ERROR', error: parsed.error.message }
   }
 
-  // Update each mapping's display_order in sequence
-  for (const { id, displayOrder } of parsed.data) {
-    await db
-      .update(taxonomyDefinitions)
-      .set({ displayOrder, updatedAt: new Date() })
-      .where(eq(taxonomyDefinitions.id, id))
+  // Atomic batch update — all display_order changes in a single transaction (Guardrail #6)
+  // NOTE: taxonomyDefinitions has no tenant_id — shared reference data per ERD 1.9.
+  // withTenant() is not applicable. Access control enforced by requireRole('admin', 'write').
+  try {
+    await db.transaction(async (tx) => {
+      for (const { id, displayOrder } of parsed.data) {
+        await tx
+          .update(taxonomyDefinitions)
+          .set({ displayOrder, updatedAt: new Date() })
+          .where(eq(taxonomyDefinitions.id, id))
+      }
+    })
+  } catch (err) {
+    return {
+      success: false,
+      code: 'UPDATE_FAILED',
+      error: err instanceof Error ? err.message : 'Failed to reorder mappings',
+    }
   }
 
-  // Audit log: single entry recording the full new order (FR54)
+  // Guardrail #4: guard array[0] access (schema enforces .min(1) but defense-in-depth)
+  const firstItem = parsed.data[0]
+  if (!firstItem) {
+    return { success: false, code: 'VALIDATION_ERROR', error: 'Empty reorder list' }
+  }
 
   await writeAuditLog({
     tenantId: currentUser.tenantId,
     userId: currentUser.id,
     entityType: 'taxonomy_definition',
-    entityId: parsed.data[0]!.id,
+    entityId: firstItem.id,
     action: 'taxonomy_definition.reordered',
     newValue: { order: parsed.data },
   })

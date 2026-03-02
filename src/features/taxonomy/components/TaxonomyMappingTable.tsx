@@ -95,6 +95,7 @@ type MappingCellsProps = {
   onSaveEdit: (id: string) => void
   onCancelEdit: () => void
   onDeleteRequest: (id: string) => void
+  readOnly?: boolean | undefined
 }
 
 function MappingCells({
@@ -106,6 +107,7 @@ function MappingCells({
   onSaveEdit,
   onCancelEdit,
   onDeleteRequest,
+  readOnly,
 }: MappingCellsProps) {
   return (
     <>
@@ -196,39 +198,43 @@ function MappingCells({
         )}
       </TableCell>
 
-      {/* actions */}
-      <TableCell>
-        {isEditing ? (
-          <div className="flex gap-1">
-            <Button size="sm" className="h-7 text-xs" onClick={() => onSaveEdit(mapping.id)}>
-              Save
-            </Button>
-            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onCancelEdit}>
-              Cancel
-            </Button>
-          </div>
-        ) : (
-          <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={() => onStartEdit(mapping)}
-            >
-              Edit
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-error hover:text-error h-7 text-xs"
-              onClick={() => onDeleteRequest(mapping.id)}
-              aria-label={`Delete mapping: ${mapping.internalName ?? mapping.category}`}
-            >
-              Delete
-            </Button>
-          </div>
-        )}
-      </TableCell>
+      {/* actions — hidden in readOnly mode (DragOverlay) */}
+      {readOnly ? (
+        <TableCell />
+      ) : (
+        <TableCell>
+          {isEditing ? (
+            <div className="flex gap-1">
+              <Button size="sm" className="h-7 text-xs" onClick={() => onSaveEdit(mapping.id)}>
+                Save
+              </Button>
+              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onCancelEdit}>
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => onStartEdit(mapping)}
+              >
+                Edit
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-error hover:text-error h-7 text-xs"
+                onClick={() => onDeleteRequest(mapping.id)}
+                aria-label={`Delete mapping: ${mapping.internalName ?? mapping.category}`}
+              >
+                Delete
+              </Button>
+            </div>
+          )}
+        </TableCell>
+      )}
     </>
   )
 }
@@ -288,8 +294,11 @@ export function TaxonomyMappingTable({
 
   const isDragDisabled = editingId !== null
 
+  // Hooks must be called unconditionally (Rules of Hooks) even when canReorder=false
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
@@ -335,6 +344,7 @@ export function TaxonomyMappingTable({
 
     const oldIndex = mappings.findIndex((m) => m.id === active.id)
     const newIndex = mappings.findIndex((m) => m.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return // stale data guard
     const reordered = arrayMove(mappings, oldIndex, newIndex)
     const newOrder = reordered.map((m, i) => ({ id: m.id, displayOrder: i }))
     onReorder?.(newOrder)
@@ -436,22 +446,7 @@ export function TaxonomyMappingTable({
                     <TableCell className="w-8">
                       <GripVertical className="h-4 w-4 text-text-secondary" />
                     </TableCell>
-                    <TableCell>
-                      {activeDragMapping.internalName ?? activeDragMapping.category}
-                    </TableCell>
-                    <TableCell>{activeDragMapping.category}</TableCell>
-                    <TableCell>{activeDragMapping.parentCategory ?? '—'}</TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${SEVERITY_CLASSES[activeDragMapping.severity ?? 'minor'] ?? SEVERITY_CLASSES['minor']}`}
-                      >
-                        {activeDragMapping.severity ?? 'minor'}
-                      </span>
-                    </TableCell>
-                    <TableCell className="max-w-[260px] truncate">
-                      {activeDragMapping.description}
-                    </TableCell>
-                    <TableCell />
+                    <MappingCells {...getCellProps(activeDragMapping)} readOnly />
                   </TableRow>
                 </TableBody>
               </Table>

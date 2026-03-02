@@ -25,7 +25,7 @@ export default async function TaxonomyPage() {
     <>
       <PageHeader title="Taxonomy Mapping" />
       <CompactLayout>
-        <TaxonomyManager initialMappings={mappings} />
+        <TaxonomyManager initialMappings={mappings} isAdmin={true} />
       </CompactLayout>
     </>
   )
