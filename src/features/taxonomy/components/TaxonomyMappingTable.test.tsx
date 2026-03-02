@@ -135,3 +135,257 @@ describe('TaxonomyMappingTable — Severity Badge Colors', () => {
     expect(criticalBadge.className).toMatch(/text-white/)
   })
 })
+
+// ---------------------------------------------------------------------------
+// Story 3.2b7 — Drag-and-Drop Reorder (ATDD RED stubs)
+// ---------------------------------------------------------------------------
+describe('TaxonomyMappingTable — Drag-and-Drop Reorder', () => {
+  const mockOnUpdate = vi.fn()
+  const mockOnDelete = vi.fn()
+  const mockOnAdd = vi.fn()
+  const mockOnReorder = vi.fn()
+
+  const MOCK_MAPPINGS: TaxonomyMapping[] = [
+    {
+      id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c81',
+      internalName: 'terminology',
+      category: 'accuracy',
+      parentCategory: null,
+      severity: 'critical',
+      description: 'Critical terminology error',
+      isCustom: false,
+      isActive: true,
+      displayOrder: 0,
+      createdAt: new Date('2026-03-01T00:00:00Z'),
+      updatedAt: new Date('2026-03-01T00:00:00Z'),
+    },
+    {
+      id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c82',
+      internalName: 'mistranslation',
+      category: 'accuracy',
+      parentCategory: null,
+      severity: 'major',
+      description: 'Major mistranslation',
+      isCustom: false,
+      isActive: true,
+      displayOrder: 1,
+      createdAt: new Date('2026-03-01T00:00:00Z'),
+      updatedAt: new Date('2026-03-01T00:00:00Z'),
+    },
+    {
+      id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c83',
+      internalName: 'style',
+      category: 'fluency',
+      parentCategory: null,
+      severity: 'minor',
+      description: 'Minor style issue',
+      isCustom: false,
+      isActive: true,
+      displayOrder: 2,
+      createdAt: new Date('2026-03-01T00:00:00Z'),
+      updatedAt: new Date('2026-03-01T00:00:00Z'),
+    },
+  ]
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  // 1. [P0] Drag handles visible when canReorder={true}
+  it.skip('[P0] should render drag handles (GripVertical icons) when canReorder={true}', async () => {
+    // WHAT: When canReorder prop is true and onReorder is provided, each table row
+    //   should render a drag handle element (data-testid="drag-handle") with a GripVertical
+    //   icon from lucide-react, enabling @dnd-kit sortable reorder.
+    // WHY WILL FAIL: The TaxonomyMappingTable Props type does not include `canReorder` or
+    //   `onReorder` props. Passing them will cause a TS error at compile time and the component
+    //   does not render any drag handle elements or integrate @dnd-kit.
+
+    const { TaxonomyMappingTable } = await import('./TaxonomyMappingTable')
+    render(
+      <TaxonomyMappingTable
+        mappings={MOCK_MAPPINGS}
+        onUpdate={mockOnUpdate}
+        onDelete={mockOnDelete}
+        onAdd={mockOnAdd}
+        // @ts-expect-error -- canReorder prop does not exist yet (RED phase)
+        canReorder={true}
+        onReorder={mockOnReorder}
+      />,
+    )
+
+    const dragHandles = screen.getAllByTestId('drag-handle')
+    expect(dragHandles).toHaveLength(MOCK_MAPPINGS.length)
+  })
+
+  // 2. [P0] Drag handles hidden when canReorder={false}
+  it.skip('[P0] should NOT render drag handles when canReorder={false}', async () => {
+    // WHAT: When canReorder is false (or omitted), no drag handles should be rendered.
+    //   This preserves the existing table layout for non-admin users who cannot reorder.
+    // WHY WILL FAIL: The TaxonomyMappingTable Props type does not include `canReorder`.
+    //   Even if it did, the component currently never renders drag handle elements.
+
+    const { TaxonomyMappingTable } = await import('./TaxonomyMappingTable')
+    render(
+      <TaxonomyMappingTable
+        mappings={MOCK_MAPPINGS}
+        onUpdate={mockOnUpdate}
+        onDelete={mockOnDelete}
+        onAdd={mockOnAdd}
+        // @ts-expect-error -- canReorder prop does not exist yet (RED phase)
+        canReorder={false}
+      />,
+    )
+
+    const dragHandles = screen.queryAllByTestId('drag-handle')
+    expect(dragHandles).toHaveLength(0)
+  })
+
+  // 3. [P0] onReorder called with [{id, displayOrder}] after drag end
+  it.skip('[P0] should call onReorder with [{id, displayOrder}] after drag end', async () => {
+    // WHAT: After a @dnd-kit DragEnd event where user drags the first item to the third
+    //   position, the onReorder callback should be called with an array of ALL mapping items
+    //   with their new displayOrder values reflecting the reordered positions.
+    // WHY WILL FAIL: TaxonomyMappingTable does not accept onReorder prop, does not wrap
+    //   content in @dnd-kit DndContext, and has no onDragEnd handler. The DndContext import
+    //   and useSortable hooks are not yet integrated.
+
+    const { TaxonomyMappingTable } = await import('./TaxonomyMappingTable')
+
+    // We need to simulate @dnd-kit DragEnd. In the implementation, DndContext wraps the
+    // table and fires onDragEnd. We'll import DndContext to fire events programmatically.
+    // For RED phase, this import will also fail since the component doesn't use DndContext yet.
+    render(
+      <TaxonomyMappingTable
+        mappings={MOCK_MAPPINGS}
+        onUpdate={mockOnUpdate}
+        onDelete={mockOnDelete}
+        onAdd={mockOnAdd}
+        // @ts-expect-error -- canReorder prop does not exist yet (RED phase)
+        canReorder={true}
+        onReorder={mockOnReorder}
+      />,
+    )
+
+    // Simulate drag: move first item (displayOrder=0) to third position (displayOrder=2)
+    // In GREEN phase, this will use @dnd-kit test utilities or fire keyboard events
+    // on the drag handle to pick up, move, and drop.
+    // For now, we just assert the callback shape after the drag interaction.
+    const dragHandles = screen.getAllByTestId('drag-handle')
+    expect(dragHandles.length).toBeGreaterThan(0)
+
+    // After drag end, onReorder should be called with the full reordered array
+    // Expected new order: mistranslation(0), style(1), terminology(2)
+    expect(mockOnReorder).toHaveBeenCalledWith([
+      { id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c82', displayOrder: 0 },
+      { id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c83', displayOrder: 1 },
+      { id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c81', displayOrder: 2 },
+    ])
+  })
+
+  // 4. [P1] Drag disabled during inline edit mode
+  it.skip('[P1] should disable drag when editingId is set (inline edit mode)', async () => {
+    // WHAT: When a row is in edit mode (user clicked Edit button), drag handles should be
+    //   visually disabled and non-interactive to prevent conflicting interactions.
+    //   This prevents accidental reorder while user is editing field values.
+    // WHY WILL FAIL: No DnD integration exists in the component. The `useSortable` hook
+    //   is not used, so there's no `disabled` prop to control. The component has no
+    //   mechanism to communicate editingId state to @dnd-kit sensors.
+
+    const { TaxonomyMappingTable } = await import('./TaxonomyMappingTable')
+    const { fireEvent } = await import('@testing-library/react')
+
+    render(
+      <TaxonomyMappingTable
+        mappings={MOCK_MAPPINGS}
+        onUpdate={mockOnUpdate}
+        onDelete={mockOnDelete}
+        onAdd={mockOnAdd}
+        // @ts-expect-error -- canReorder prop does not exist yet (RED phase)
+        canReorder={true}
+        onReorder={mockOnReorder}
+      />,
+    )
+
+    // Click Edit on first row to enter edit mode
+    const editButtons = screen.getAllByText('Edit')
+    fireEvent.click(editButtons[0]!)
+
+    // While editing, drag handles should be disabled (aria-disabled or pointer-events-none)
+    const dragHandles = screen.getAllByTestId('drag-handle')
+    for (const handle of dragHandles) {
+      expect(handle).toHaveAttribute('aria-disabled', 'true')
+    }
+  })
+
+  // 5. [P1] Keyboard reorder: Space to pick, Arrow to move, Space to drop
+  it.skip('[P1] should support keyboard reorder: Space to pick, Arrow to move, Space to drop', async () => {
+    // WHAT: @dnd-kit KeyboardSensor allows accessible reorder via keyboard:
+    //   Space/Enter = pick up, ArrowDown/ArrowUp = move within list, Space/Enter = drop.
+    //   After this keyboard sequence, onReorder should be called with the new order.
+    // WHY WILL FAIL: No @dnd-kit KeyboardSensor is configured. The component does not
+    //   wrap content in DndContext with sensors=[KeyboardSensor]. No drag handles exist
+    //   that can receive keyboard focus and events.
+
+    const { TaxonomyMappingTable } = await import('./TaxonomyMappingTable')
+    const { fireEvent } = await import('@testing-library/react')
+
+    render(
+      <TaxonomyMappingTable
+        mappings={MOCK_MAPPINGS}
+        onUpdate={mockOnUpdate}
+        onDelete={mockOnDelete}
+        onAdd={mockOnAdd}
+        // @ts-expect-error -- canReorder prop does not exist yet (RED phase)
+        canReorder={true}
+        onReorder={mockOnReorder}
+      />,
+    )
+
+    const dragHandles = screen.getAllByTestId('drag-handle')
+    const firstHandle = dragHandles[0]!
+
+    // Focus the first drag handle
+    firstHandle.focus()
+
+    // Space = pick up
+    fireEvent.keyDown(firstHandle, { key: ' ', code: 'Space' })
+    // ArrowDown = move down one position
+    fireEvent.keyDown(firstHandle, { key: 'ArrowDown', code: 'ArrowDown' })
+    // Space = drop
+    fireEvent.keyDown(firstHandle, { key: ' ', code: 'Space' })
+
+    // onReorder should have been called after the drop
+    expect(mockOnReorder).toHaveBeenCalledTimes(1)
+    expect(mockOnReorder).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ id: expect.any(String), displayOrder: expect.any(Number) }),
+      ]),
+    )
+  })
+
+  // 6. [P0] Empty state colSpan should be 7 when canReorder={true}
+  it.skip('[P0] should update colSpan to 7 on empty state when canReorder={true}', async () => {
+    // WHAT: When canReorder is true, a new "drag handle" column is added to the table header,
+    //   increasing total columns from 6 to 7. The empty-state "No mappings found" cell must
+    //   use colSpan={7} to span the full width correctly.
+    // WHY WILL FAIL: The canReorder prop does not exist. The empty state cell at line 270
+    //   of TaxonomyMappingTable.tsx has colSpan={6} hardcoded. No drag handle column exists.
+
+    const { TaxonomyMappingTable } = await import('./TaxonomyMappingTable')
+    render(
+      <TaxonomyMappingTable
+        mappings={[]}
+        onUpdate={mockOnUpdate}
+        onDelete={mockOnDelete}
+        onAdd={mockOnAdd}
+        // @ts-expect-error -- canReorder prop does not exist yet (RED phase)
+        canReorder={true}
+        onReorder={mockOnReorder}
+      />,
+    )
+
+    const emptyCell = screen.getByText('No mappings found. Add one to get started.')
+    // The parent <td> should have colSpan=7 (6 original columns + 1 drag handle column)
+    expect(emptyCell.closest('td')).toHaveAttribute('colspan', '7')
+  })
+})
