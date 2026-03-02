@@ -38,11 +38,10 @@ let tenantId: string
 let fileId: string
 
 test.describe.serial('Pipeline to Findings', () => {
-  // TODO(TD-E2E-008): Skip in CI — requires Inngest dev server + OpenAI API key for full pipeline
+  // TODO(TD-E2E-008): Skip when no Inngest dev server — pipeline needs event orchestration
   test.skip(
-    process.env.INNGEST_EVENT_KEY === 'ci-placeholder' ||
-      process.env.OPENAI_API_KEY === 'ci-placeholder',
-    'Requires Inngest + AI infrastructure (not available in CI)',
+    !process.env.INNGEST_DEV_URL,
+    'Requires Inngest dev server (set INNGEST_DEV_URL=http://localhost:8288 to enable)',
   )
 
   // ── Setup: Auth + Project ────────────────────────────────────────────────

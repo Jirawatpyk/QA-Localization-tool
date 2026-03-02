@@ -29,13 +29,13 @@ jobs:
       # Story 2.8 project tour test personas (required for project-tour.spec.ts)
       E2E_PROJECT_TOUR_EMAIL: ${{ secrets.E2E_PROJECT_TOUR_EMAIL }}
       E2E_PROJECT_TOUR_RETURNING_EMAIL: ${{ secrets.E2E_PROJECT_TOUR_RETURNING_EMAIL }}
-      # Placeholders for env.ts Zod validation (not used in auth E2E tests)
-      INNGEST_EVENT_KEY: ci-placeholder
-      INNGEST_SIGNING_KEY: ci-placeholder
-      OPENAI_API_KEY: ci-placeholder
-      ANTHROPIC_API_KEY: ci-placeholder
-      UPSTASH_REDIS_REST_URL: http://localhost:6379
-      UPSTASH_REDIS_REST_TOKEN: ci-placeholder
+      # Pipeline + AI keys (real secrets for pipeline E2E tests)
+      INNGEST_EVENT_KEY: ${{ secrets.INNGEST_EVENT_KEY }}
+      INNGEST_SIGNING_KEY: ${{ secrets.INNGEST_SIGNING_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
 
     steps:
       - name: Checkout
