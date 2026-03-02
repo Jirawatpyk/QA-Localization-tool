@@ -1,17 +1,26 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }))
 
+// Mock server action for threshold editing tests (Story 3.2b6)
+type MockUpdateResult = { success: true } | { success: false; code: string; error: string }
+
+const mockUpdateBudgetAlertThreshold = vi.fn<(..._args: unknown[]) => Promise<MockUpdateResult>>(
+  async () => ({ success: true }),
+)
+
+vi.mock('@/features/pipeline/actions/updateBudgetAlertThreshold.action', () => ({
+  updateBudgetAlertThreshold: (...args: unknown[]) => mockUpdateBudgetAlertThreshold(...args),
+}))
+
 // ── Test data helpers ──
 
-type _AiBudgetCardProps = {
-  usedBudgetUsd: number
-  monthlyBudgetUsd: number | null
-  budgetAlertThresholdPct?: number // default 80
-}
+const TEST_PROJECT_ID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
 
 describe('AiBudgetCard', () => {
   beforeEach(() => {
@@ -100,5 +109,355 @@ describe('AiBudgetCard', () => {
     const progressBar = screen.getByTestId('ai-budget-progress')
     // 80% — exactly at threshold → warning (yellow)
     expect(progressBar.getAttribute('data-status')).toBe('warning')
+  })
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Story 3.2b6: Threshold Editing (ATDD — TDD RED PHASE)
+  // All tests use it.skip() — they will FAIL until AiBudgetCard is modified
+  // to accept projectId + canEditThreshold props with "use client" + state
+  // ══════════════════════════════════════════════════════════════════════════
+
+  describe('Threshold Editing (Story 3.2b6)', () => {
+    beforeEach(() => {
+      vi.clearAllMocks()
+    })
+
+    // T1.1 — P0: Admin sees threshold input
+    it('[P0] should render threshold input when canEditThreshold is true', async () => {
+      const { AiBudgetCard } = await import('./AiBudgetCard')
+      render(
+        <AiBudgetCard
+          usedBudgetUsd={50}
+          monthlyBudgetUsd={200}
+          budgetAlertThresholdPct={80}
+          projectId={TEST_PROJECT_ID}
+          canEditThreshold={true}
+        />,
+      )
+
+      const input = screen.getByRole('spinbutton', { name: /alert threshold/i })
+      expect(input).toBeTruthy()
+      expect((input as HTMLInputElement).value).toBe('80')
+    })
+
+    // T1.2 — P0: Non-Admin sees read-only text
+    it('[P0] should render read-only threshold text when canEditThreshold is false', async () => {
+      const { AiBudgetCard } = await import('./AiBudgetCard')
+      render(
+        <AiBudgetCard
+          usedBudgetUsd={50}
+          monthlyBudgetUsd={200}
+          budgetAlertThresholdPct={80}
+          projectId={TEST_PROJECT_ID}
+          canEditThreshold={false}
+        />,
+      )
+
+      expect(screen.getByText(/Alert at 80%/i)).toBeTruthy()
+      expect(screen.queryByRole('spinbutton')).toBeNull()
+    })
+
+    // T1.3 — P0: Blur triggers save
+    it('[P0] should call updateBudgetAlertThreshold with projectId and thresholdPct on blur', async () => {
+      const user = userEvent.setup()
+      const { AiBudgetCard } = await import('./AiBudgetCard')
+      render(
+        <AiBudgetCard
+          usedBudgetUsd={50}
+          monthlyBudgetUsd={200}
+          budgetAlertThresholdPct={80}
+          projectId={TEST_PROJECT_ID}
+          canEditThreshold={true}
+        />,
+      )
+
+      const input = screen.getByRole('spinbutton', { name: /alert threshold/i })
+      await user.clear(input)
+      await user.type(input, '75')
+      await user.tab() // triggers blur
+
+      await waitFor(() => {
+        expect(mockUpdateBudgetAlertThreshold).toHaveBeenCalledWith({
+          projectId: TEST_PROJECT_ID,
+          thresholdPct: 75,
+        })
+      })
+    })
+
+    // T1.4 — P1: Enter key triggers save
+    it('[P1] should call updateBudgetAlertThreshold when Enter key is pressed', async () => {
+      const user = userEvent.setup()
+      const { AiBudgetCard } = await import('./AiBudgetCard')
+      render(
+        <AiBudgetCard
+          usedBudgetUsd={50}
+          monthlyBudgetUsd={200}
+          budgetAlertThresholdPct={80}
+          projectId={TEST_PROJECT_ID}
+          canEditThreshold={true}
+        />,
+      )
+
+      const input = screen.getByRole('spinbutton', { name: /alert threshold/i })
+      await user.clear(input)
+      await user.type(input, '90')
+      await user.keyboard('{Enter}')
+
+      await waitFor(() => {
+        expect(mockUpdateBudgetAlertThreshold).toHaveBeenCalledWith({
+          projectId: TEST_PROJECT_ID,
+          thresholdPct: 90,
+        })
+      })
+    })
+
+    // T1.5 — P0: Success toast
+    it('[P0] should show toast.success on successful save', async () => {
+      mockUpdateBudgetAlertThreshold.mockResolvedValue({ success: true })
+      const user = userEvent.setup()
+      const { AiBudgetCard } = await import('./AiBudgetCard')
+      render(
+        <AiBudgetCard
+          usedBudgetUsd={50}
+          monthlyBudgetUsd={200}
+          budgetAlertThresholdPct={80}
+          projectId={TEST_PROJECT_ID}
+          canEditThreshold={true}
+        />,
+      )
+
+      const input = screen.getByRole('spinbutton', { name: /alert threshold/i })
+      await user.clear(input)
+      await user.type(input, '75')
+      await user.tab()
+
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith('Threshold updated')
+      })
+    })
+
+    // T1.6 — P0: Error toast + revert
+    it('[P0] should show toast.error and revert input on action failure', async () => {
+      mockUpdateBudgetAlertThreshold.mockResolvedValue({
+        success: false,
+        code: 'FORBIDDEN',
+        error: 'Insufficient permissions',
+      })
+      const user = userEvent.setup()
+      const { AiBudgetCard } = await import('./AiBudgetCard')
+      render(
+        <AiBudgetCard
+          usedBudgetUsd={50}
+          monthlyBudgetUsd={200}
+          budgetAlertThresholdPct={80}
+          projectId={TEST_PROJECT_ID}
+          canEditThreshold={true}
+        />,
+      )
+
+      const input = screen.getByRole('spinbutton', { name: /alert threshold/i })
+      await user.clear(input)
+      await user.type(input, '60')
+      await user.tab()
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith('Insufficient permissions')
+      })
+      // Input must revert to original value (80), not rejected value (60)
+      expect((input as HTMLInputElement).value).toBe('80')
+    })
+
+    // T1.7 — P1-BV: Reject 0 (below min)
+    it('[P1-BV] should NOT call action when threshold is 0 (below min boundary)', async () => {
+      const user = userEvent.setup()
+      const { AiBudgetCard } = await import('./AiBudgetCard')
+      render(
+        <AiBudgetCard
+          usedBudgetUsd={50}
+          monthlyBudgetUsd={200}
+          budgetAlertThresholdPct={80}
+          projectId={TEST_PROJECT_ID}
+          canEditThreshold={true}
+        />,
+      )
+
+      const input = screen.getByRole('spinbutton', { name: /alert threshold/i })
+      await user.clear(input)
+      await user.type(input, '0')
+      await user.tab()
+
+      expect(mockUpdateBudgetAlertThreshold).not.toHaveBeenCalled()
+    })
+
+    // T1.8 — P1-BV: Accept 1 (at min)
+    it('[P1-BV] should call action when threshold is 1 (at min boundary)', async () => {
+      mockUpdateBudgetAlertThreshold.mockResolvedValue({ success: true })
+      const user = userEvent.setup()
+      const { AiBudgetCard } = await import('./AiBudgetCard')
+      render(
+        <AiBudgetCard
+          usedBudgetUsd={50}
+          monthlyBudgetUsd={200}
+          budgetAlertThresholdPct={80}
+          projectId={TEST_PROJECT_ID}
+          canEditThreshold={true}
+        />,
+      )
+
+      const input = screen.getByRole('spinbutton', { name: /alert threshold/i })
+      await user.clear(input)
+      await user.type(input, '1')
+      await user.tab()
+
+      await waitFor(() => {
+        expect(mockUpdateBudgetAlertThreshold).toHaveBeenCalledWith({
+          projectId: TEST_PROJECT_ID,
+          thresholdPct: 1,
+        })
+      })
+    })
+
+    // T1.9 — P1-BV: Accept 100 (at max)
+    it('[P1-BV] should call action when threshold is 100 (at max boundary)', async () => {
+      mockUpdateBudgetAlertThreshold.mockResolvedValue({ success: true })
+      const user = userEvent.setup()
+      const { AiBudgetCard } = await import('./AiBudgetCard')
+      render(
+        <AiBudgetCard
+          usedBudgetUsd={50}
+          monthlyBudgetUsd={200}
+          budgetAlertThresholdPct={80}
+          projectId={TEST_PROJECT_ID}
+          canEditThreshold={true}
+        />,
+      )
+
+      const input = screen.getByRole('spinbutton', { name: /alert threshold/i })
+      await user.clear(input)
+      await user.type(input, '100')
+      await user.tab()
+
+      await waitFor(() => {
+        expect(mockUpdateBudgetAlertThreshold).toHaveBeenCalledWith({
+          projectId: TEST_PROJECT_ID,
+          thresholdPct: 100,
+        })
+      })
+    })
+
+    // T1.10 — P1-BV: Reject 101 (above max)
+    it('[P1-BV] should NOT call action when threshold is 101 (above max boundary)', async () => {
+      const user = userEvent.setup()
+      const { AiBudgetCard } = await import('./AiBudgetCard')
+      render(
+        <AiBudgetCard
+          usedBudgetUsd={50}
+          monthlyBudgetUsd={200}
+          budgetAlertThresholdPct={80}
+          projectId={TEST_PROJECT_ID}
+          canEditThreshold={true}
+        />,
+      )
+
+      const input = screen.getByRole('spinbutton', { name: /alert threshold/i })
+      await user.clear(input)
+      await user.type(input, '101')
+      await user.tab()
+
+      expect(mockUpdateBudgetAlertThreshold).not.toHaveBeenCalled()
+    })
+
+    // T1.11 — P1-BV: Reject non-integer (50.5)
+    it('[P1-BV] should NOT call action when threshold is non-integer (50.5)', async () => {
+      const user = userEvent.setup()
+      const { AiBudgetCard } = await import('./AiBudgetCard')
+      render(
+        <AiBudgetCard
+          usedBudgetUsd={50}
+          monthlyBudgetUsd={200}
+          budgetAlertThresholdPct={80}
+          projectId={TEST_PROJECT_ID}
+          canEditThreshold={true}
+        />,
+      )
+
+      const input = screen.getByRole('spinbutton', { name: /alert threshold/i })
+      await user.clear(input)
+      await user.type(input, '50.5')
+      await user.tab()
+
+      expect(mockUpdateBudgetAlertThreshold).not.toHaveBeenCalled()
+    })
+
+    // T1.12a — P1: Invalid input reverts to saved value on blur
+    it('[P1] should revert input to saved value when invalid threshold is entered and blurred', async () => {
+      const user = userEvent.setup()
+      const { AiBudgetCard } = await import('./AiBudgetCard')
+      render(
+        <AiBudgetCard
+          usedBudgetUsd={50}
+          monthlyBudgetUsd={200}
+          budgetAlertThresholdPct={80}
+          projectId={TEST_PROJECT_ID}
+          canEditThreshold={true}
+        />,
+      )
+
+      const input = screen.getByRole('spinbutton', { name: /alert threshold/i })
+      await user.clear(input)
+      // Don't type anything — leave empty (NaN scenario)
+      await user.tab()
+
+      expect(mockUpdateBudgetAlertThreshold).not.toHaveBeenCalled()
+      // Should revert to saved value (80), not stay empty
+      expect((input as HTMLInputElement).value).toBe('80')
+    })
+
+    // T1.12b — P1: Prop change syncs internal state
+    it('[P1] should sync threshold state when budgetAlertThresholdPct prop changes', async () => {
+      const { AiBudgetCard } = await import('./AiBudgetCard')
+      const { rerender } = render(
+        <AiBudgetCard
+          usedBudgetUsd={50}
+          monthlyBudgetUsd={200}
+          budgetAlertThresholdPct={80}
+          projectId={TEST_PROJECT_ID}
+          canEditThreshold={true}
+        />,
+      )
+
+      const input = screen.getByRole('spinbutton', { name: /alert threshold/i })
+      expect((input as HTMLInputElement).value).toBe('80')
+
+      // Parent re-renders with updated threshold (e.g., from server re-fetch)
+      rerender(
+        <AiBudgetCard
+          usedBudgetUsd={50}
+          monthlyBudgetUsd={200}
+          budgetAlertThresholdPct={65}
+          projectId={TEST_PROJECT_ID}
+          canEditThreshold={true}
+        />,
+      )
+
+      expect((input as HTMLInputElement).value).toBe('65')
+    })
+
+    // T1.12 — P1: Unlimited budget hides threshold input
+    it('[P1] should NOT render threshold input when monthlyBudgetUsd is null (unlimited)', async () => {
+      const { AiBudgetCard } = await import('./AiBudgetCard')
+      render(
+        <AiBudgetCard
+          usedBudgetUsd={25}
+          monthlyBudgetUsd={null}
+          budgetAlertThresholdPct={80}
+          projectId={TEST_PROJECT_ID}
+          canEditThreshold={true}
+        />,
+      )
+
+      expect(screen.queryByRole('spinbutton')).toBeNull()
+      expect(screen.getByTestId('ai-budget-unlimited')).toBeTruthy()
+    })
   })
 })

@@ -9,6 +9,7 @@ import { projects } from '@/db/schema/projects'
 import { getProjectAiBudget } from '@/features/pipeline/actions/getProjectAiBudget.action'
 import { ProjectSettings } from '@/features/project/components/ProjectSettings'
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
+import type { ProcessingMode } from '@/types/pipeline'
 
 export default async function ProjectSettingsPage({
   params,
@@ -52,7 +53,11 @@ export default async function ProjectSettingsPage({
   return (
     <CompactLayout>
       <ProjectSettings
-        project={project}
+        project={{
+          ...project,
+          processingMode: project.processingMode as ProcessingMode,
+          status: project.status as 'draft' | 'processing' | 'reviewed' | 'completed',
+        }}
         languagePairConfigs={configs}
         isAdmin={currentUser.role === 'admin'}
         budgetData={budgetData}

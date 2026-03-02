@@ -14,8 +14,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { AiBudgetCard } from '@/features/pipeline/components/AiBudgetCard'
 import { ModelPinningSettings } from '@/features/pipeline/components/ModelPinningSettings'
 import { updateProject } from '@/features/project/actions/updateProject.action'
+import type { ProcessingMode } from '@/types/pipeline'
 
 import { LanguagePairConfigTable } from './LanguagePairConfigTable'
+
+type ProjectStatus = 'draft' | 'processing' | 'reviewed' | 'completed'
 
 type Project = {
   id: string
@@ -23,8 +26,8 @@ type Project = {
   description: string | null
   sourceLang: string
   targetLangs: string[]
-  processingMode: string
-  status: string
+  processingMode: ProcessingMode
+  status: ProjectStatus
   autoPassThreshold: number
   aiBudgetMonthlyUsd: string | null
   budgetAlertThresholdPct: number
@@ -129,7 +132,10 @@ export function ProjectSettings({
 
             <div className="space-y-2">
               <Label>Processing Mode</Label>
-              <RadioGroup value={processingMode} onValueChange={setProcessingMode}>
+              <RadioGroup
+                value={processingMode}
+                onValueChange={(v) => setProcessingMode(v as ProcessingMode)}
+              >
                 <div className="flex items-start gap-2">
                   <RadioGroupItem value="economy" id="settings-economy" />
                   <Label htmlFor="settings-economy" className="font-normal">
@@ -193,6 +199,8 @@ export function ProjectSettings({
               usedBudgetUsd={budgetData.usedBudgetUsd}
               monthlyBudgetUsd={budgetData.monthlyBudgetUsd}
               budgetAlertThresholdPct={budgetData.budgetAlertThresholdPct}
+              projectId={project.id}
+              canEditThreshold={isAdmin}
             />
             <ModelPinningSettings
               projectId={project.id}

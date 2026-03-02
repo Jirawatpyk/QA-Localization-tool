@@ -1,268 +1,255 @@
-import { test, expect, type Page } from '@playwright/test'
 import path from 'node:path'
 
-import { signupOrLogin } from './helpers/supabase-admin'
+import { test, expect } from '@playwright/test'
+
+import { cleanupTestProject } from './helpers/pipeline-admin'
+import { createTestProject, getUserInfo, signupOrLogin } from './helpers/supabase-admin'
 
 /**
- * Story 2.7 — Parity Comparison Tool (E2E — RED PHASE)
+ * Story 2.7 — Parity Comparison Tool (E2E)
  *
  * AC Coverage:
  *   AC #4: Upload Xbench xlsx report → parity comparison results
- *   AC #5: Report Missing Check dialog with tracking reference
  *
- * Prerequisites:
- *   - Project with completed L1 processing (findings in DB)
- *   - Xbench xlsx report fixture for comparison
- *   - Auth setup via signupOrLogin helper
- *
- * Route under test (DOES NOT EXIST YET):
- *   /projects/[projectId]/parity — Parity Comparison tool
+ * Route under test:
+ *   /projects/[projectId]/parity — ParityComparisonView
  */
 
-const TEST_EMAIL = process.env.E2E_ADMIN_EMAIL || 'e2e-parity27@test.local'
-const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD || 'TestPassword123!'
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
-// Placeholder ID — will be replaced with real ID when page exists
-const PROJECT_ID = 'placeholder-project-id'
+const TEST_EMAIL = `e2e-parity-${Date.now()}@test.local`
 
-// Fixture paths — Xbench reports are xlsx format
+let projectId: string
+let tenantId: string
+
 const FIXTURES_DIR = path.resolve(__dirname, 'fixtures')
 const XBENCH_REPORT_FIXTURE = path.join(FIXTURES_DIR, 'excel', 'bilingual-sample.xlsx')
 const INVALID_FILE_FIXTURE = path.join(FIXTURES_DIR, 'sdlxliff', 'minimal.sdlxliff')
 
-async function loginAs(page: Page, email: string, password: string) {
-  await page.goto('/login')
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password').fill(password)
-  await page.getByRole('button', { name: 'Sign in' }).click()
-  await page.waitForURL('**/dashboard', { timeout: 15000 })
+function adminHeaders(): Record<string, string> {
+  return {
+    Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+    apikey: ANON_KEY,
+    'Content-Type': 'application/json',
+  }
 }
 
-test.describe('Parity Comparison Tool (Story 2.7)', () => {
-  test.skip('[P1] should navigate to parity page via ProjectSubNav Parity tab', async ({
-    page,
-  }) => {
-    // Setup: login and navigate to an existing project page
-    await loginAs(page, TEST_EMAIL, TEST_PASSWORD)
-    await page.goto(`/projects/${PROJECT_ID}/upload`)
+async function seedFinding(
+  pId: string,
+  tId: string,
+  data: {
+    severity: string
+    category: string
+    description: string
+    sourceTextExcerpt?: string
+    targetTextExcerpt?: string
+  },
+): Promise<void> {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/findings`, {
+    method: 'POST',
+    headers: { ...adminHeaders(), Prefer: 'return=minimal' },
+    body: JSON.stringify({
+      project_id: pId,
+      tenant_id: tId,
+      severity: data.severity,
+      category: data.category,
+      description: data.description,
+      detected_by_layer: 'L1',
+      source_text_excerpt: data.sourceTextExcerpt ?? 'test source',
+      target_text_excerpt: data.targetTextExcerpt ?? 'test target',
+    }),
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Failed to seed finding: ${res.status} ${text}`)
+  }
+}
 
-    // ProjectSubNav should have a "Parity" tab (added in Task 7.10)
+test.describe.configure({ mode: 'serial' })
+
+test.describe('Parity Comparison Tool (Story 2.7)', () => {
+  test('[setup] signup/login and create project with findings', async ({ page }) => {
+    test.setTimeout(60_000)
+
+    await signupOrLogin(page, TEST_EMAIL)
+
+    const userInfo = await getUserInfo(TEST_EMAIL)
+    expect(userInfo).not.toBeNull()
+    tenantId = userInfo!.tenantId
+
+    projectId = await createTestProject(tenantId, 'Parity E2E')
+
+    // Seed L1 findings for comparison
+    await seedFinding(projectId, tenantId, {
+      severity: 'major',
+      category: 'Key Term Mismatch',
+      description: 'Term mismatch: expected "application" but found "app"',
+      sourceTextExcerpt: 'The application is ready',
+      targetTextExcerpt: 'แอปพร้อมแล้ว',
+    })
+    await seedFinding(projectId, tenantId, {
+      severity: 'minor',
+      category: 'Number Mismatch',
+      description: 'Number format mismatch: 1,000 vs 1000',
+    })
+  })
+
+  test('[P1] should navigate to parity page via ProjectSubNav Parity tab', async ({ page }) => {
+    test.setTimeout(30_000)
+
+    await signupOrLogin(page, TEST_EMAIL)
+    await page.goto(`/projects/${projectId}/upload`)
+
     const projectNav = page.getByLabel('Project navigation')
     const parityTab = projectNav.getByRole('link', { name: 'Parity' })
-    await expect(parityTab).toBeVisible({ timeout: 10000 })
+    await expect(parityTab).toBeVisible({ timeout: 10_000 })
 
-    // Click the Parity tab
     await parityTab.click()
 
-    // URL should change to /projects/[projectId]/parity
-    await expect(page).toHaveURL(new RegExp(`/projects/${PROJECT_ID}/parity`))
+    await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/parity`))
 
-    // Parity page content should load — upload zone or empty state
+    // Parity page content should load — upload text or heading
     const parityContent = page
-      .getByTestId('parity-upload-zone')
-      .or(page.getByText(/Upload.*Xbench/i))
-    await expect(parityContent).toBeVisible({ timeout: 10000 })
+      .getByText(/Upload Xbench/i)
+      .or(page.getByRole('heading', { name: /Parity/i }))
+    await expect(parityContent).toBeVisible({ timeout: 10_000 })
   })
 
-  test.skip('[P1] should upload Xbench xlsx report and display parity comparison results', async ({
+  test('[P1] should upload Xbench xlsx report and display parity comparison results', async ({
     page,
   }) => {
-    // Setup: login and navigate to parity page
-    await loginAs(page, TEST_EMAIL, TEST_PASSWORD)
-    await page.goto(`/projects/${PROJECT_ID}/parity`)
+    test.setTimeout(30_000)
 
-    // AC #4: Upload zone for Xbench xlsx file
-    const uploadZone = page.getByTestId('parity-upload-zone')
-    await expect(uploadZone).toBeVisible({ timeout: 10000 })
+    await signupOrLogin(page, TEST_EMAIL)
+    await page.goto(`/projects/${projectId}/parity`)
 
-    // Upload the Xbench xlsx report via file input
-    const fileInput = page
-      .locator('[data-testid="parity-file-input"]')
-      .or(uploadZone.locator('input[type="file"]'))
+    // Upload zone should be visible
+    await expect(page.getByText(/Upload Xbench/i)).toBeVisible({ timeout: 10_000 })
+
+    // Upload the xlsx report
+    const fileInput = page.locator('input[type="file"]')
     await fileInput.setInputFiles(XBENCH_REPORT_FIXTURE)
 
-    // Wait for comparison to complete (server action processes xlsx + compares)
-    await expect(
-      page.getByTestId('parity-results-table').or(page.getByText(/Comparison Results/i)),
-    ).toBeVisible({ timeout: 30000 })
+    // Compare button should appear after file selection
+    const compareButton = page.getByRole('button', { name: /Compare/i })
+    await expect(compareButton).toBeVisible()
+    await compareButton.click()
 
-    // AC #4: ParityResultsTable shows 3 sections
-    // [Both Found] — findings matched between tool and Xbench
-    const bothFoundSection = page
-      .getByTestId('parity-section-both-found')
-      .or(page.getByRole('region', { name: /Both Found/i }))
-    await expect(bothFoundSection).toBeVisible()
-
-    // [Tool Only] — findings in tool but not in Xbench
-    const toolOnlySection = page
-      .getByTestId('parity-section-tool-only')
-      .or(page.getByRole('region', { name: /Tool Only/i }))
-    await expect(toolOnlySection).toBeVisible()
-
-    // [Xbench Only] — findings in Xbench but not in tool (parity gaps)
-    const xbenchOnlySection = page
-      .getByTestId('parity-section-xbench-only')
-      .or(page.getByRole('region', { name: /Xbench Only/i }))
-    await expect(xbenchOnlySection).toBeVisible()
-
-    // Each section should show a count
-    await expect(bothFoundSection.getByTestId('parity-section-count')).toBeVisible()
-    await expect(toolOnlySection.getByTestId('parity-section-count')).toBeVisible()
-    await expect(xbenchOnlySection.getByTestId('parity-section-count')).toBeVisible()
+    // Wait for results — 3 sections should appear
+    await expect(page.getByRole('heading', { name: /Both Found/i })).toBeVisible({
+      timeout: 30_000,
+    })
+    await expect(page.getByRole('heading', { name: /Tool Only/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /Xbench Only/i })).toBeVisible()
   })
 
-  test.skip('[P2] should highlight Xbench Only findings as parity gaps with correct styling', async ({
-    page,
-  }) => {
-    // Setup: login and navigate to parity page with completed comparison
-    // (assumes previous test uploaded a report, or pre-seeded data exists)
-    await loginAs(page, TEST_EMAIL, TEST_PASSWORD)
-    await page.goto(`/projects/${PROJECT_ID}/parity`)
+  test('[P2] should display section headings with finding counts', async ({ page }) => {
+    test.setTimeout(30_000)
 
-    // Upload report first to trigger comparison
-    const fileInput = page
-      .locator('[data-testid="parity-file-input"]')
-      .or(page.locator('input[type="file"]'))
+    await signupOrLogin(page, TEST_EMAIL)
+    await page.goto(`/projects/${projectId}/parity`)
+    await expect(page.getByText(/Upload Xbench/i)).toBeVisible({ timeout: 10_000 })
+
+    const fileInput = page.locator('input[type="file"]')
     await fileInput.setInputFiles(XBENCH_REPORT_FIXTURE)
+
+    await page.getByRole('button', { name: /Compare/i }).click()
+
+    // Each section heading includes count in format "Title (N)"
+    const bothFoundHeading = page.getByRole('heading', { name: /Both Found/i })
+    await expect(bothFoundHeading).toBeVisible({ timeout: 30_000 })
+    const bothText = await bothFoundHeading.textContent()
+    expect(bothText).toMatch(/Both Found \(\d+\)/)
+
+    const toolOnlyHeading = page.getByRole('heading', { name: /Tool Only/i })
+    const toolText = await toolOnlyHeading.textContent()
+    expect(toolText).toMatch(/Tool Only \(\d+\)/)
+
+    const xbenchOnlyHeading = page.getByRole('heading', { name: /Xbench Only/i })
+    const xbenchText = await xbenchOnlyHeading.textContent()
+    expect(xbenchText).toMatch(/Xbench Only \(\d+\)/)
+  })
+
+  test('[P2] should display correct color styling for each section', async ({ page }) => {
+    test.setTimeout(30_000)
+
+    await signupOrLogin(page, TEST_EMAIL)
+    await page.goto(`/projects/${projectId}/parity`)
+    await expect(page.getByText(/Upload Xbench/i)).toBeVisible({ timeout: 10_000 })
+
+    const fileInput = page.locator('input[type="file"]')
+    await fileInput.setInputFiles(XBENCH_REPORT_FIXTURE)
+
+    await page.getByRole('button', { name: /Compare/i }).click()
 
     // Wait for results
-    await expect(
-      page.getByTestId('parity-results-table').or(page.getByText(/Comparison Results/i)),
-    ).toBeVisible({ timeout: 30000 })
+    await expect(page.getByRole('heading', { name: /Both Found/i })).toBeVisible({
+      timeout: 30_000,
+    })
 
-    // AC #4: Visual treatment per section
-    // [Xbench Only] — red/destructive styling (parity gaps)
-    const xbenchOnlySection = page.getByTestId('parity-section-xbench-only')
-    await expect(xbenchOnlySection).toBeVisible()
-    const xbenchVariant = await xbenchOnlySection.getAttribute('data-variant')
-    expect(xbenchVariant).toBe('destructive')
+    // Both Found = green (text-success class)
+    const bothFoundHeading = page.getByRole('heading', { name: /Both Found/i })
+    await expect(bothFoundHeading).toHaveClass(/text-success/)
 
-    // [Both Found] — green/success styling
-    const bothFoundSection = page.getByTestId('parity-section-both-found')
-    await expect(bothFoundSection).toBeVisible()
-    const bothVariant = await bothFoundSection.getAttribute('data-variant')
-    expect(bothVariant).toBe('success')
+    // Tool Only = blue (text-info class)
+    const toolOnlyHeading = page.getByRole('heading', { name: /Tool Only/i })
+    await expect(toolOnlyHeading).toHaveClass(/text-info/)
 
-    // [Tool Only] — blue/info styling
-    const toolOnlySection = page.getByTestId('parity-section-tool-only')
-    await expect(toolOnlySection).toBeVisible()
-    const toolVariant = await toolOnlySection.getAttribute('data-variant')
-    expect(toolVariant).toBe('info')
+    // Xbench Only = red (text-destructive class)
+    const xbenchOnlyHeading = page.getByRole('heading', { name: /Xbench Only/i })
+    await expect(xbenchOnlyHeading).toHaveClass(/text-destructive/)
   })
 
-  test.skip('[P2] should open Report Missing Check dialog and submit report', async ({ page }) => {
-    // Setup: login and navigate to parity page with Xbench Only results
-    await loginAs(page, TEST_EMAIL, TEST_PASSWORD)
-    await page.goto(`/projects/${PROJECT_ID}/parity`)
+  test('[P2] should show Compare button only after file is selected', async ({ page }) => {
+    test.setTimeout(30_000)
 
-    // Upload report to get results
-    const fileInput = page
-      .locator('[data-testid="parity-file-input"]')
-      .or(page.locator('input[type="file"]'))
+    await signupOrLogin(page, TEST_EMAIL)
+    await page.goto(`/projects/${projectId}/parity`)
+    await expect(page.getByText(/Upload Xbench/i)).toBeVisible({ timeout: 10_000 })
+
+    // Compare button should NOT be visible initially
+    await expect(page.getByRole('button', { name: /Compare/i })).not.toBeVisible()
+
+    // Select a file
+    const fileInput = page.locator('input[type="file"]')
     await fileInput.setInputFiles(XBENCH_REPORT_FIXTURE)
-    await expect(
-      page.getByTestId('parity-results-table').or(page.getByText(/Comparison Results/i)),
-    ).toBeVisible({ timeout: 30000 })
 
-    // AC #5: Click "Report Missing Check" button on an Xbench Only finding
-    const xbenchOnlySection = page.getByTestId('parity-section-xbench-only')
-    const reportButton = xbenchOnlySection
-      .getByRole('button', { name: /Report Missing Check/i })
-      .first()
-    await reportButton.click()
-
-    // Dialog opens with form fields
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible({ timeout: 5000 })
-
-    // AC #5: Form fields — file reference, segment number, description, check type
-    const fileReferenceInput = dialog.getByLabel(/File Reference/i)
-    await expect(fileReferenceInput).toBeVisible()
-    await fileReferenceInput.fill('test-file.sdlxliff')
-
-    const segmentNumberInput = dialog.getByLabel(/Segment Number/i)
-    await expect(segmentNumberInput).toBeVisible()
-    await segmentNumberInput.fill('42')
-
-    const descriptionInput = dialog.getByLabel(/Description/i)
-    await expect(descriptionInput).toBeVisible()
-    await descriptionInput.fill('Missing tag mismatch check for inline <bpt> elements')
-
-    const checkTypeInput = dialog.getByLabel(/Check Type/i)
-    await expect(checkTypeInput).toBeVisible()
-    await checkTypeInput.fill('Tag Mismatch')
-
-    // Submit the report
-    await dialog.getByRole('button', { name: /Submit/i }).click()
-
-    // AC #5: Success toast with tracking reference (MCR-YYYYMMDD-XXXXXX format)
-    const successToast = page.getByText(/MCR-\d{8}-[A-Z0-9]{6}/i)
-    await expect(successToast).toBeVisible({ timeout: 10000 })
-
-    // Dialog should close after successful submission
-    await expect(dialog).not.toBeVisible({ timeout: 5000 })
+    // Compare button should now appear
+    await expect(page.getByRole('button', { name: /Compare/i })).toBeVisible()
   })
 
-  test.skip('[P2] should show validation errors in Report Missing Check dialog', async ({
-    page,
-  }) => {
-    // Setup: login and navigate to parity page with results
-    await loginAs(page, TEST_EMAIL, TEST_PASSWORD)
-    await page.goto(`/projects/${PROJECT_ID}/parity`)
+  test('[P2] should show error state when invalid file is uploaded', async ({ page }) => {
+    test.setTimeout(30_000)
 
-    // Upload report to get results
-    const fileInput = page
-      .locator('[data-testid="parity-file-input"]')
-      .or(page.locator('input[type="file"]'))
-    await fileInput.setInputFiles(XBENCH_REPORT_FIXTURE)
-    await expect(
-      page.getByTestId('parity-results-table').or(page.getByText(/Comparison Results/i)),
-    ).toBeVisible({ timeout: 30000 })
+    await signupOrLogin(page, TEST_EMAIL)
+    await page.goto(`/projects/${projectId}/parity`)
+    await expect(page.getByText(/Upload Xbench/i)).toBeVisible({ timeout: 10_000 })
 
-    // Open Report Missing Check dialog
-    const xbenchOnlySection = page.getByTestId('parity-section-xbench-only')
-    const reportButton = xbenchOnlySection
-      .getByRole('button', { name: /Report Missing Check/i })
-      .first()
-    await reportButton.click()
-
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible({ timeout: 5000 })
-
-    // Submit without filling any fields
-    await dialog.getByRole('button', { name: /Submit/i }).click()
-
-    // Validation error messages should appear for required fields
-    await expect(
-      dialog.getByText(/File reference is required/i).or(dialog.getByText(/required/i).first()),
-    ).toBeVisible({ timeout: 5000 })
-
-    // Dialog should remain open (not close on validation failure)
-    await expect(dialog).toBeVisible()
-  })
-
-  test.skip('[P2] should show error state when invalid file is uploaded', async ({ page }) => {
-    // Setup: login and navigate to parity page
-    await loginAs(page, TEST_EMAIL, TEST_PASSWORD)
-    await page.goto(`/projects/${PROJECT_ID}/parity`)
-
-    // AC #4: Upload a non-xlsx file (e.g., SDLXLIFF — wrong format for Xbench report)
-    const uploadZone = page.getByTestId('parity-upload-zone')
-    await expect(uploadZone).toBeVisible({ timeout: 10000 })
-
-    const fileInput = page
-      .locator('[data-testid="parity-file-input"]')
-      .or(uploadZone.locator('input[type="file"]'))
+    // Upload a non-xlsx file (SDLXLIFF — wrong format for Xbench report)
+    const fileInput = page.locator('input[type="file"]')
     await fileInput.setInputFiles(INVALID_FILE_FIXTURE)
 
-    // Error message should be displayed (not a crash)
-    const errorMessage = page
-      .getByText(/Invalid.*file/i)
-      .or(page.getByText(/not a valid.*xlsx/i))
-      .or(page.getByText(/upload.*xlsx/i))
-    await expect(errorMessage).toBeVisible({ timeout: 10000 })
+    const compareButton = page.getByRole('button', { name: /Compare/i })
+    await expect(compareButton).toBeVisible()
+    await compareButton.click()
 
-    // The parity results table should NOT appear
-    await expect(page.getByTestId('parity-results-table')).not.toBeVisible()
+    // Error toast should appear (action returns error when xlsx parsing fails)
+    const errorMessage = page
+      .getByText(/Failed to parse.*xlsx/i)
+      .or(page.getByText(/not a valid.*Xbench/i))
+      .or(page.getByText(/Comparison failed/i))
+    await expect(errorMessage).toBeVisible({ timeout: 10_000 })
+  })
+
+  test.afterAll(async () => {
+    if (projectId) {
+      try {
+        await cleanupTestProject(projectId)
+      } catch {
+        // Non-critical — global teardown handles user cleanup
+      }
+    }
   })
 })

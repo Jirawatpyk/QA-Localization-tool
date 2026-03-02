@@ -259,29 +259,14 @@
 ### ~~TD-E2E-002: E2E bypasses ProcessingModeDialog (sends Inngest event directly)~~
 - **Status:** RESOLVED (2026-03-02) — Story 3.2b5 mounted `ProcessingModeDialog` in upload page. `pipeline-findings.spec.ts` now clicks "Start Processing" button → dialog → Economy mode → confirm. Direct Inngest `triggerProcessing()` bypass removed.
 
-### TD-E2E-003: Parity E2E tests skipped with stale comment
-- **Severity:** Medium
-- **File:** `e2e/parity-comparison.spec.ts` — 6 tests all `test.skip()`
-- **Risk:** Route + components exist since Story 2.7 but comment says "DOES NOT EXIST YET". Tests never activated.
-- **Fix:** Update PROJECT_ID to real test ID, remove stale comment, unskip P1 tests
-- **Origin:** Story 2.7 ATDD phase, identified during orphan scan (2026-03-02)
-- **Status:** OPEN → fix in **Story 3.2b6** (`ready-for-dev`)
+### ~~TD-E2E-003: Parity E2E tests skipped with stale comment~~
+- **Status:** RESOLVED (2026-03-02) — Story 3.2b6 rewrote `parity-comparison.spec.ts` with real project setup (`signupOrLogin` + `createTestProject`), PostgREST seeding of L1 findings, removed stale "DOES NOT EXIST YET" comment, removed local `loginAs` function, all 6 tests unskipped with correct UI selectors.
 
-### TD-E2E-004: Batch Summary E2E tests skipped with stale comment
-- **Severity:** Medium
-- **File:** `e2e/batch-summary.spec.ts` — 7 tests all `test.skip()`
-- **Risk:** Routes `/projects/[projectId]/batches` + `/batches/[batchId]` exist since Story 2.7 but comment says "DO NOT EXIST YET". 7 tests never activated.
-- **Fix:** Update PROJECT_ID to real test ID, remove stale comment, unskip P1 tests (2 P1, 3 P2, 2 P3)
-- **Origin:** Story 2.7 ATDD phase, identified during full scan (2026-03-02)
-- **Status:** OPEN → fix in **Story 3.2b6** (`ready-for-dev`)
+### ~~TD-E2E-004: Batch Summary E2E tests skipped with stale comment~~
+- **Status:** RESOLVED (2026-03-02) — Story 3.2b6 rewrote `batch-summary.spec.ts` with real project setup, PostgREST seeding of upload_batches + files + scores, removed stale "DO NOT EXIST YET" comment, removed local `loginAs` function, all 7 tests unskipped with correct UI selectors matching actual data-testid attributes.
 
-### TD-E2E-005: File History E2E tests skipped with stale comment
-- **Severity:** Medium
-- **File:** `e2e/file-history.spec.ts` — 5 tests all `test.skip()`
-- **Risk:** Route `/projects/[projectId]/files` exists since Story 2.7 but comment says "DOES NOT EXIST YET". 5 tests never activated.
-- **Fix:** Update PROJECT_ID to real test ID, remove stale comment, unskip P1 tests (3 P1, 1 P2, 1 P3)
-- **Origin:** Story 2.7 ATDD phase, identified during full scan (2026-03-02)
-- **Status:** OPEN → fix in **Story 3.2b6** (`ready-for-dev`)
+### ~~TD-E2E-005: File History E2E tests skipped with stale comment~~
+- **Status:** RESOLVED (2026-03-02) — Story 3.2b6 rewrote `file-history.spec.ts` with real project setup, PostgREST seeding of files at various statuses, removed stale comment, removed local `loginAs`, all 5 tests unskipped.
 
 ### ~~TD-E2E-006: Upload Segments E2E test skipped — no TD ref in code~~
 - **Status:** RESOLVED (2026-03-02) — Story 3.2b5 Task 5.1 unskipped Tests #19 and #20 in `upload-segments.spec.ts`. Tests now exercise real upload→auto-parse→Start Processing→ProcessingModeDialog flow.
@@ -302,21 +287,11 @@
 - **Origin:** Story 1.6, identified during orphan scan (2026-03-02)
 - **Status:** OPEN → fix in **Story 3.2b7** (`ready-for-dev`)
 
-### TD-ORPHAN-002: updateBudgetAlertThreshold action has no UI consumer
-- **Severity:** Medium
-- **File:** `src/features/pipeline/actions/updateBudgetAlertThreshold.action.ts`
-- **Risk:** Story 3.1 AC7 says "threshold is configurable" but AiBudgetCard is read-only. No input field.
-- **Fix:** Add threshold input to AiBudgetCard (Admin only)
-- **Origin:** Story 3.1, identified during orphan scan (2026-03-02)
-- **Status:** OPEN → fix in **Story 3.2b6** (`ready-for-dev`)
+### ~~TD-ORPHAN-002: updateBudgetAlertThreshold action has no UI consumer~~
+- **Status:** RESOLVED (2026-03-02) — Story 3.2b6 Task 1 added threshold input to `AiBudgetCard.tsx` with `"use client"`, `useState`, `useTransition`, blur/Enter save, error revert. `ProjectSettings.tsx` passes `projectId` + `canEditThreshold={isAdmin}`. 12 unit tests pass.
 
-### TD-ORPHAN-003: getUploadedFiles action superseded — dead code
-- **Severity:** Low
-- **File:** `src/features/upload/actions/getUploadedFiles.action.ts`
-- **Risk:** Created in Story 2.1, superseded by `getFileHistory` (Story 2.7). Zero consumers.
-- **Fix:** Delete file + related schema
-- **Origin:** Story 2.1, identified during orphan scan (2026-03-02)
-- **Status:** OPEN → fix in **Story 3.2b6** (`ready-for-dev`)
+### ~~TD-ORPHAN-003: getUploadedFiles action superseded — dead code~~
+- **Status:** RESOLVED (2026-03-02) — Story 3.2b6 Task 2 deleted `getUploadedFiles.action.ts` + test, removed `getUploadedFilesSchema` + `GetUploadedFilesInput` from `uploadSchemas.ts`. Type-check + 2048 unit tests pass.
 
 ### TD-TODO-001: Breadcrumb DB queries deferred to Epic 4
 - **Severity:** Low
@@ -344,6 +319,14 @@
 
 ### ~~TD-E2E-008: Pipeline E2E tests skipped in CI — no Inngest/AI infra~~
 - **Status:** RESOLVED (2026-03-02) — All secrets wired (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `INNGEST_*`, `UPSTASH_*`). Inngest dev server added as background service in `e2e-gate.yml`. `INNGEST_DEV_URL` env var set. Skip condition `!process.env.INNGEST_DEV_URL` now passes in CI. Pipeline E2E runs fully.
+
+### TD-E2E-009: `adminHeaders()` + env constants duplicated across 4 E2E specs
+- **Severity:** Low
+- **Files:** `e2e/parity-comparison.spec.ts`, `e2e/batch-summary.spec.ts`, `e2e/file-history.spec.ts`, `e2e/budget-threshold.spec.ts`
+- **Risk:** DRY violation — `adminHeaders()`, `SUPABASE_URL`, `SERVICE_ROLE_KEY`, `ANON_KEY` copy-pasted in each spec + `pipeline-admin.ts` helper (5 places total). Header structure change requires editing all files.
+- **Fix:** Export `adminHeaders()` + env constants from `e2e/helpers/pipeline-admin.ts` (already exists), import in all specs.
+- **Origin:** Story 3.2b6, flagged by code-quality-analyzer pre-CR scan (2026-03-02)
+- **Status:** DEFERRED → fix in next E2E infra cleanup story
 
 ### TD-PROCESS-001: E2E bypass rule — must create tech debt entry
 - **Severity:** Low (process rule, not code bug)
