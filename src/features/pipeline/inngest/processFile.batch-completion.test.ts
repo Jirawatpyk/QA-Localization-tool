@@ -81,7 +81,6 @@ vi.mock('@/db/helpers/withTenant', () => ({
 vi.mock('drizzle-orm', () => ({
   and: vi.fn((...args: unknown[]) => args),
   eq: vi.fn((...args: unknown[]) => args),
-  inArray: vi.fn((...args: unknown[]) => args),
 }))
 
 vi.mock('@/db/schema/files', () => ({
@@ -212,11 +211,8 @@ describe('processFile - batch completion step', () => {
       step: mockStep,
     })
 
-    // Should NOT emit batch-completed
-    expect(mockStep.sendEvent).not.toHaveBeenCalledWith(
-      expect.stringContaining('batch-completed'),
-      expect.anything(),
-    )
+    // Should NOT emit batch-completed — sendEvent not called at all
+    expect(mockStep.sendEvent).not.toHaveBeenCalled()
   })
 
   it('[P0] should skip batch completion entirely when uploadBatchId is undefined', async () => {

@@ -458,14 +458,15 @@ claude-opus-4-6 (Amelia Dev Agent)
 | 2026-03-01 | Initial implementation — all 5 tasks complete | Story 3.2b dev-story |
 | 2026-03-01 | Removed `auto_passed` from batch terminal states | Pre-CR C1 finding: not in `DbFileStatus`, dead code |
 | 2026-03-01 | Added thorough+batch combined test (7 steps) | Pre-CR H4 finding: missing test coverage |
-| 2026-03-02 | CR R1 fixes — 9 findings (0C/1H/4M/4L) | See CR R1 section below |
+| 2026-03-02 | CR R1 fixes — 9 findings (0C/1H/4M/4L) | See CR R1 section |
+| 2026-03-02 | CR R2 fixes — 6 findings (0C/0H/3M/3L) | See CR R2 section |
 
 ### Test Results
 
-- `processFile.test.ts`: **37 passed**, 1 skipped (P2)
-- `scoreFile.test.ts`: **30 passed**
+- `processFile.test.ts`: **38 passed**, 1 skipped (P2)
+- `scoreFile.test.ts`: **31 passed**
 - `processFile.batch-completion.test.ts`: **5 passed**
-- **Total (3 files):** 72 tests, 71 passed, 1 skipped
+- **Total (3 files):** 74 tests, 73 passed, 1 skipped
 - Lint: clean
 - Type-check: clean
 
@@ -483,10 +484,10 @@ claude-opus-4-6 (Amelia Dev Agent)
 
 ### ATDD Compliance
 
-- P0: 15/15 passing (14 original + 1 CR R1 H1 negative test)
+- P0: 17/17 passing (14 original + 1 CR R1 H1 + 1 CR R2 M1 + 1 CR R2 M3)
 - P1: 8/8 passing (7 original + 1 CR R1 strengthened assertion)
 - P2: 1/3 skipped (2 unskipped during impl, 1 deferred per ATDD lifecycle)
-- Total: 71 passing, 1 skipped
+- Total: 73 passing, 1 skipped
 
 ### CR R1 Review (2026-03-02)
 
@@ -508,7 +509,25 @@ claude-opus-4-6 (Amelia Dev Agent)
 
 **Disputed finding:** Testing-QA agent H1 (`auto_passed` in batch terminal) = FALSE POSITIVE — `auto_passed` is `scores.status`, not `files.status` (`DbFileStatus`). Dev Pre-CR C1 was correct.
 
+### CR R2 Review (2026-03-02)
+
+**Reviewer:** Amelia (Dev Agent, claude-opus-4-6) — adversarial CR
+**Round:** R2 | **R1 Fixes:** ALL 9 VERIFIED ✅
+**Findings:** 0C + 0H + 3M + 3L = 6
+**Sub-agents:** code-quality-analyzer + testing-qa-expert
+**Exit Criteria:** 0C + 0H → PASS ✅
+
+| ID | Sev | Finding | Fix |
+|----|-----|---------|-----|
+| M1 | MED | Missing thorough-mode return shape test (l3FindingCount: number, layerCompleted: L1L2L3) | Added P0 test in processFile.test.ts |
+| M2 | MED | Vacuous negative `not.toHaveBeenCalledWith(...)` in batch-completion test | Changed to `not.toHaveBeenCalled()` |
+| M3 | MED | Final `'L1'` fallback in scoreFile chain untested | Added P0 test in scoreFile.test.ts |
+| L1 | LOW | `l3Result` captures unused `partialFailure` field | Removed from struct type + assignment |
+| L2 | LOW | Dead `inArray` mock in batch-completion test | Removed |
+| L3 | LOW | Thorough-batch sendEvent assertion omits data payload | Strengthened with full payload |
+
 ### Change Log
 - 2026-03-01: Story created by SM (Bob) — ready-for-dev
 - 2026-03-01: Validation pass — applied 7C + 10E + 4O improvements (all categories)
 - 2026-03-02: CR R1 fixes — 9 findings (0C/1H/4M/4L), story done
+- 2026-03-02: CR R2 fixes — 6 findings (0C/0H/3M/3L), all fixed

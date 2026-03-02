@@ -831,6 +831,30 @@ describe('scoreFile', () => {
     )
   })
 
+  it('[P0] should fall back to L1 when override, prev, and layerFilter are all undefined', async () => {
+    // No previous score: slot 2 returns [undefined] (destructures to prev = undefined)
+    // No layerCompleted override, no layerFilter → final fallback: 'L1'
+    dbState.returnValues = [
+      mockSegments,
+      [],
+      [undefined],
+      [],
+      [{ ...mockNewScore, layerCompleted: 'L1' }],
+    ]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      // No layerCompleted, no layerFilter — exercises the ?? 'L1' final fallback
+    })
+
+    // Assert: INSERT values must contain layerCompleted: 'L1' from final fallback
+    expect(dbState.valuesCaptures).toContainEqual(expect.objectContaining({ layerCompleted: 'L1' }))
+  })
+
   it('should handle recalculation with 0 contributing findings (score=100)', async () => {
     mockCalculateMqmScore.mockReturnValue({
       mqmScore: 100,

@@ -16,29 +16,27 @@
 - H3: score-l1l2 call design correct but comment could be clearer
 - H4: No test for thorough + batch combined — FIXED in R2 (7-step test added)
 
-## R2 Result: 0C / 4H / 5M / 4L
+## R2 Result: 0C / 4H / 5M / 2L
 
 ### High (R2)
 
-- H1: f.status comparison uses bare `string` — no DbFileStatus cast (anti-pattern #33)
-- H2: Unnecessary `null as number | null` cast on l3FindingCount return
-- H3: Unnecessary `as 'L1L2' | 'L1L2L3'` cast on layerCompleted return
-- H4: layerFilter used as fallback for layerCompleted — semantic coupling
+- H1: f.status comparison uses bare `string` — no DbFileStatus cast (anti-pattern #33) [processFile.ts:85-87]
+- H2: No test for thorough mode return shape (l3FindingCount=number, layerCompleted=L1L2L3) [processFile.test.ts]
+- H3: Mock drift in batch-completion.test.ts — L2/L3 inline vi.fn not typed as L2Result/L3Result [processFile.batch-completion.test.ts:37-65]
+- H4: layerFilter used as fallback for layerCompleted — semantic coupling undocumented [scoreFile.ts:138]
 
 ### Medium (R2)
 
-- M1: Unused type import `ContributingFinding` in scoreFile.ts
-- M2: Test duplication between processFile.test.ts and processFile.batch-completion.test.ts
-- M3: Mock drift in batch-completion.test.ts — L2/L3 shapes don't match L2Result/L3Result
-- M4: Inconsistent uploadBatchId defaults between test files
-- M5: L1 score layerFilter='L1' redundant but undocumented
+- M1: Unused type import `ContributingFinding` in scoreFile.ts line 16
+- M2: Test duplication between processFile.test.ts and processFile.batch-completion.test.ts (3 overlapping tests)
+- M3: Inconsistent uploadBatchId defaults — '' in processFile.test.ts vs VALID_UUID in batch-completion.test.ts
+- M4: `status: 'calculated' as string` in hoisted mock loses type safety [processFile.test.ts:32]
+- M5: l3Result.partialFailure extracted but never used in return value (dead data) [processFile.ts:51,59]
 
 ### Low (R2)
 
-- L1: @ts-expect-error needs upstream ref
-- L2: faker.string.uuid() in buildPipelineEvent defaults
-- L3: it.skip has TD-TEST-005 — verified OK
-- L4: PipelineBatchCompletedEventData uses // not /\*\* \*/
+- L1: `as const` cast on layerCompleted return unnecessary — TS infers literal from ternary [processFile.ts:112]
+- L2: it.skip has TD-TEST-005 — verified OK
 
 ## Key Patterns (R2)
 
@@ -49,3 +47,9 @@
 - onFailure preserves findings from previous layers
 - withTenant on every query verified
 - Inngest config complete (retries, onFailure, Object.assign, route.ts registered)
+
+## Exit Criteria
+
+- **Recommended:** Fix H1 (DbFileStatus cast) + H2 (thorough return shape test) → story can pass
+- **Nice-to-have:** H3 (mock drift), H4 (layerFilter comment), M1-M5
+- **R1 Critical VERIFIED FIXED**

@@ -936,6 +936,39 @@ describe('processFilePipeline', () => {
     })
   })
 
+  // ── P0: Thorough return shape — l3FindingCount is number, layerCompleted L1L2L3 ──
+
+  it('[P0] should return l3FindingCount as number and layerCompleted L1L2L3 in thorough mode', async () => {
+    const mockStep = createMockStep()
+    const eventData = buildPipelineEvent({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      mode: 'thorough',
+    })
+
+    const { processFilePipeline } = await import('./processFile')
+    const result = (await (
+      processFilePipeline as { handler: (...args: unknown[]) => Promise<unknown> }
+    ).handler({
+      event: { data: eventData },
+      step: mockStep,
+    })) as Record<string, unknown>
+
+    expect(result).toMatchObject({
+      fileId: VALID_FILE_ID,
+      l1FindingCount: expect.any(Number),
+      l2FindingCount: expect.any(Number),
+      l3FindingCount: expect.any(Number),
+      mqmScore: expect.any(Number),
+      layerCompleted: 'L1L2L3',
+      l2PartialFailure: expect.any(Boolean),
+    })
+    // l3FindingCount must be a number (not null) in thorough mode
+    expect(result.l3FindingCount).not.toBeNull()
+  })
+
   // ── P1: l3FindingCount strict null (#18) ──
 
   it('[P1] should return l3FindingCount as strictly null in economy mode', async () => {
@@ -1134,7 +1167,16 @@ describe('processFilePipeline', () => {
     // Batch should fire — both files are terminal for thorough mode
     expect(mockStep.sendEvent).toHaveBeenCalledWith(
       expect.stringContaining('batch-completed'),
-      expect.objectContaining({ name: 'pipeline.batch-completed' }),
+      expect.objectContaining({
+        name: 'pipeline.batch-completed',
+        data: expect.objectContaining({
+          batchId: 'f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c',
+          projectId: VALID_PROJECT_ID,
+          tenantId: VALID_TENANT_ID,
+          mode: 'thorough',
+          userId: VALID_USER_ID,
+        }),
+      }),
     )
   })
 

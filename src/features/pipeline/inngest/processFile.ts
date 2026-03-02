@@ -48,7 +48,7 @@ const handlerFn = async ({
   )
 
   // Steps 5-6: Thorough mode — run L3 deep analysis + final score
-  let l3Result: { findingCount: number; partialFailure: boolean } | null = null
+  let l3Result: { findingCount: number } | null = null
   let finalScoreResult = l2ScoreResult
 
   if (mode === 'thorough') {
@@ -56,7 +56,7 @@ const handlerFn = async ({
     const l3Raw = await step.run(`l3-analysis-${fileId}`, () =>
       runL3ForFile({ fileId, projectId, tenantId, userId }),
     )
-    l3Result = { findingCount: l3Raw.findingCount, partialFailure: l3Raw.partialFailure }
+    l3Result = { findingCount: l3Raw.findingCount }
 
     finalScoreResult = await step.run(`score-all-${fileId}`, () =>
       scoreFile({ fileId, projectId, tenantId, userId, layerCompleted: 'L1L2L3' }),
