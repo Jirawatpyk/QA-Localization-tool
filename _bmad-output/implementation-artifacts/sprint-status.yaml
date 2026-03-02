@@ -94,7 +94,7 @@ development_status:
   # Story 3.1b: UX polish follow-on to 3.1a — empty state, sortable table, model breakdown, tooltip/aria
   3-1b-ai-dashboard-ux-polish: done
   3-2a-ai-provider-integration-structured-output: done
-  3-2b-l2-batch-processing-pipeline-extension: review
+  3-2b-l2-batch-processing-pipeline-extension: done
   # Story 3.2b5: Upload-to-Pipeline Wiring — auto-parse SDLXLIFF/XLIFF + mount ProcessingModeDialog
   # Dependencies: Story 2.1, 2.2, 2.3, 2.6 (all done). Blocks: Story 3.2c
   3-2b5-upload-pipeline-wiring: done

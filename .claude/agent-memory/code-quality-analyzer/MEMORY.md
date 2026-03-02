@@ -15,7 +15,9 @@
 - `story-3-1b-findings.md` — Story 3.1b AI Dashboard UX Polish CR R1 (0C/2H/5M/6L)
 - `story-3-0-5-findings.md` — Story 3.0.5 UX Foundation Gap Fix CR R1 (0C/1H/5M/8L)
 - `story-3-2a-findings.md` — Story 3.2a AI Provider Integration CR R1 (1C/3H/5M/5L)
-- `story-3-2b-findings.md` — Story 3.2b L2 Batch Processing & Pipeline Extension CR R1 (1C/4H/3M/4L)
+- `story-3-2b-findings.md` — Story 3.2b L2 Batch Processing & Pipeline Extension CR R1-R2 (R2: 0C/4H/5M/4L)
+- `story-3-2b5-findings.md` — Story 3.2b5 Upload-Pipeline Wiring CR R1 (0C/3H/5M/4L)
+- `story-3-2b6-findings.md` — Story 3.2b6 Orphan Wiring Cleanup CR R1 (0C/3H/5M/4L)
 
 ## Recurring Anti-Patterns (check EVERY review)
 

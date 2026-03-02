@@ -36,13 +36,31 @@ vi.mock('@/features/pipeline/helpers/runL1ForFile', () => ({
 // Mock L2/L3 helpers to prevent transitive server-only import (ai/client.ts → server-only)
 vi.mock('@/features/pipeline/helpers/runL2ForFile', () => ({
   runL2ForFile: vi.fn((..._args: unknown[]) =>
-    Promise.resolve({ findingCount: 0, chunksProcessed: 1, partialFailure: false }),
+    Promise.resolve({
+      findingCount: 0,
+      duration: 200,
+      aiModel: 'gpt-4o-mini',
+      chunksTotal: 1,
+      chunksSucceeded: 1,
+      chunksFailed: 0,
+      partialFailure: false,
+      totalUsage: { inputTokens: 1000, outputTokens: 500, estimatedCostUsd: 0.001 },
+    }),
   ),
 }))
 
 vi.mock('@/features/pipeline/helpers/runL3ForFile', () => ({
   runL3ForFile: vi.fn((..._args: unknown[]) =>
-    Promise.resolve({ findingCount: 0, chunksProcessed: 1, partialFailure: false }),
+    Promise.resolve({
+      findingCount: 0,
+      duration: 500,
+      aiModel: 'claude-sonnet-4-5-20250929',
+      chunksTotal: 1,
+      chunksSucceeded: 1,
+      chunksFailed: 0,
+      partialFailure: false,
+      totalUsage: { inputTokens: 2000, outputTokens: 800, estimatedCostUsd: 0.015 },
+    }),
   ),
 }))
 

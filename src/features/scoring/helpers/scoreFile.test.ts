@@ -805,6 +805,32 @@ describe('scoreFile', () => {
     )
   })
 
+  it('[P0] should use input.layerCompleted=L1L2 when prev score is undefined (first-ever score)', async () => {
+    // No previous score: slot 2 returns [undefined] (destructures to prev = undefined)
+    dbState.returnValues = [
+      mockSegments,
+      [],
+      [undefined],
+      [],
+      [{ ...mockNewScore, layerCompleted: 'L1L2' }],
+    ]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      layerCompleted: 'L1L2',
+    })
+
+    // Assert: override 'L1L2' used even when prev is undefined
+    // Tests the prev?.layerCompleted optional chaining path
+    expect(dbState.valuesCaptures).toContainEqual(
+      expect.objectContaining({ layerCompleted: 'L1L2' }),
+    )
+  })
+
   it('should handle recalculation with 0 contributing findings (score=100)', async () => {
     mockCalculateMqmScore.mockReturnValue({
       mqmScore: 100,

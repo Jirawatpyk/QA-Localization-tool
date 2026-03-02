@@ -1,6 +1,6 @@
 # Story 3.2b: L2 Batch Processing & Pipeline Extension
 
-Status: review
+Status: done
 
 ## Story
 
@@ -446,9 +446,10 @@ claude-opus-4-6 (Amelia Dev Agent)
 |------|------------|---------------|
 | `src/features/pipeline/inngest/processFile.ts` | MODIFIED | ~80 lines (L2/L3 steps, batch logic, return shape) |
 | `src/features/scoring/helpers/scoreFile.ts` | MODIFIED | 2 lines (type + derivation) |
-| `src/types/pipeline.ts` | MODIFIED | 1 line (comment update) |
-| `src/features/pipeline/inngest/processFile.test.ts` | MODIFIED | ~600 lines (updated existing + 21 new ATDD tests) |
-| `src/features/scoring/helpers/scoreFile.test.ts` | MODIFIED | ~60 lines (3 new P0 tests) |
+| `src/types/pipeline.ts` | MODIFIED | 1 line (comment → TSDoc) |
+| `src/features/pipeline/inngest/processFile.test.ts` | MODIFIED | ~650 lines (updated existing + 21 ATDD + 2 CR R1 tests) |
+| `src/features/scoring/helpers/scoreFile.test.ts` | MODIFIED | ~80 lines (3 P0 + 1 CR R1 test) |
+| `src/features/pipeline/inngest/processFile.batch-completion.test.ts` | MODIFIED | ~10 lines (L2/L3 mock shape fix) |
 
 ### Change Log
 
@@ -457,12 +458,14 @@ claude-opus-4-6 (Amelia Dev Agent)
 | 2026-03-01 | Initial implementation — all 5 tasks complete | Story 3.2b dev-story |
 | 2026-03-01 | Removed `auto_passed` from batch terminal states | Pre-CR C1 finding: not in `DbFileStatus`, dead code |
 | 2026-03-01 | Added thorough+batch combined test (7 steps) | Pre-CR H4 finding: missing test coverage |
+| 2026-03-02 | CR R1 fixes — 9 findings (0C/1H/4M/4L) | See CR R1 section below |
 
 ### Test Results
 
-- `processFile.test.ts`: **33 passed**, 3 skipped (P2)
-- `scoreFile.test.ts`: **29 passed**
-- Full suite: 2015+ passed, 7 failed (pre-existing in taxonomy/dashboard), 3 skipped
+- `processFile.test.ts`: **37 passed**, 1 skipped (P2)
+- `scoreFile.test.ts`: **30 passed**
+- `processFile.batch-completion.test.ts`: **5 passed**
+- **Total (3 files):** 72 tests, 71 passed, 1 skipped
 - Lint: clean
 - Type-check: clean
 
@@ -480,11 +483,32 @@ claude-opus-4-6 (Amelia Dev Agent)
 
 ### ATDD Compliance
 
-- P0: 14/14 passing
-- P1: 7/7 passing (6 original + 1 new H4 thorough+batch test)
-- P2: 3/3 skipped (deferred per ATDD lifecycle)
-- Total: 33 passing, 3 skipped
+- P0: 15/15 passing (14 original + 1 CR R1 H1 negative test)
+- P1: 8/8 passing (7 original + 1 CR R1 strengthened assertion)
+- P2: 1/3 skipped (2 unskipped during impl, 1 deferred per ATDD lifecycle)
+- Total: 71 passing, 1 skipped
+
+### CR R1 Review (2026-03-02)
+
+**Reviewer:** Amelia (Dev Agent, claude-opus-4-6) — adversarial CR
+**Round:** R1 | **Findings:** 0C + 1H + 4M + 4L = 9 (< 10 target ✅)
+**Sub-agents:** code-quality-analyzer + testing-qa-expert
+
+| ID | Sev | Finding | Fix |
+|----|-----|---------|-----|
+| H1 | HIGH | Missing negative test: thorough batch should NOT fire when siblings only l2_completed | Added P0 test in processFile.test.ts |
+| M1 | MED | processFile.batch-completion.test.ts not in File List + stale test counts | Updated File List + Test Results |
+| M2 | MED | Mock drift: batch-completion L2/L3 mocks used wrong field name `chunksProcessed` | Fixed to match L2Result/L3Result types |
+| M3 | MED | scoreFile override tests all had prev=defined — prev=undefined path untested | Added P0 test in scoreFile.test.ts |
+| M4 | MED | Skipped P2 test missing TODO(TD-XXX) ref + tautological assertion | Added TODO(TD-TEST-005) + clarified assertion |
+| L1 | LOW | Redundant type assertions `null as number\|null` and `as 'L1L2'\|'L1L2L3'` | Simplified to `as const` |
+| L2 | LOW | P0 batch test used bare `.toHaveBeenCalled()` | Strengthened with event name assertion |
+| L3 | LOW | Test name didn't mention layerFilter assertion | Renamed test |
+| L4 | LOW | `PipelineBatchCompletedEventData` used `//` comment not `/** */` TSDoc | Changed to TSDoc |
+
+**Disputed finding:** Testing-QA agent H1 (`auto_passed` in batch terminal) = FALSE POSITIVE — `auto_passed` is `scores.status`, not `files.status` (`DbFileStatus`). Dev Pre-CR C1 was correct.
 
 ### Change Log
 - 2026-03-01: Story created by SM (Bob) — ready-for-dev
 - 2026-03-01: Validation pass — applied 7C + 10E + 4O improvements (all categories)
+- 2026-03-02: CR R1 fixes — 9 findings (0C/1H/4M/4L), story done

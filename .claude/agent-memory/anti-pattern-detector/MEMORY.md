@@ -10,6 +10,7 @@
 - Story 3.2a: 2026-03-01 — 0C + 0H + 2M + 2L. CLEAN on all 14 anti-patterns and Guardrails #16-22. See story-3-2a-findings.md for details.
 - Story 3.2b: 2026-03-02 — 0C + 1H + 1M + 0L. `as any` on onFailure cast in processFile.ts (eslint-disabled, still violation — fix: use @ts-expect-error); `as unknown as ContributingFinding[]` in scoreFile.ts line 110 (double assertion — fix: @ts-expect-error with DB constraint comment).
 - Story 3.2b5: 2026-03-02 — 2C + 3H + 2M + 2L. SERVICE_ROLE_KEY + process.env in e2e/helpers/pipeline-admin.ts (CRITICAL); console.log in 2 E2E specs (HIGH); empty .catch() in FileUploadZone (HIGH); bare `string` for status in FileRow/ScoreRow (HIGH); parsingStartedRef not reset on uploadedFiles change (MEDIUM Guardrail #12); hardcoded 'tenant-id' non-UUID in test (MEDIUM); ../types relative import (LOW); unnecessary 'use client' on UploadProgressList (LOW).
+- Story 3.2b6: 2026-03-02 — 0C + 1H + 1M + 3L. useState(budgetAlertThresholdPct) without sync useEffect in AiBudgetCard (HIGH Guardrail #12 recurring — 5th occurrence); bare `string` for processingMode/status in ProjectSettings.Project type (MEDIUM); ./LanguagePairConfigTable relative import (LOW); 'use client' in hook file useFileUpload.ts (LOW); hardcoded test UUID constant (LOW informational).
 
 ## Recurring Violations by Category
 
@@ -94,13 +95,15 @@
 - Story 3.1a: `AiUsageDashboard.tsx` — `useState<Period>(selectedDays)` without sync useEffect. BUT: `selectedDays` comes from RSC searchParams (URL-driven), page re-renders on URL change, so `activePeriod` diverges only if parent changes the prop without navigation. Flag MEDIUM — pattern is risky even if current usage is safe.
 - Story 3.1b: `AiSpendByProjectTable.tsx` — `useState<SortCol>('cost')` + `useState<SortDir>('desc')` not reset when `projects` prop changes. When period filter changes (7d→30d→90d), sort state persists from previous period. Fix: `useEffect(() => { setSortCol('cost'); setSortDir('desc') }, [projects])`. MEDIUM recurring Guardrail #12 violation.
 - Story 3.2b5: `UploadPageClient.tsx` — `useRef<Set<string>>(new Set())` (`parsingStartedRef`) accumulates fileIds across upload cycles. If user re-uploads same file after reset, ref still contains old fileId → auto-parse silently blocked. Fix: reset ref in useEffect when uploadedFiles becomes empty.
+- Story 3.2b6: `AiBudgetCard.tsx` — `useState(budgetAlertThresholdPct)` × 2 (`thresholdValue` + `savedValue`) without sync useEffect. If parent re-renders with new prop value, both states remain stale → user could Save stale value. Fix: `useEffect(() => { setThresholdValue(p); setSavedValue(p) }, [budgetAlertThresholdPct])`. HIGH (5th occurrence of this pattern).
 - Pattern to check: any component with `useState(propValue)` where prop can change
 - EXTENDED pattern: `useRef` that accumulates keys/IDs from props — same risk as useState without sync
 
-### 'use client' on Pure Display Components (LOW)
+### 'use client' in Hook Files (LOW)
 
 - Components with no hooks, no browser APIs, and no event handlers do NOT need `'use client'`
-- Story 3.1: `AiBudgetCard.tsx` is pure display, declared `'use client'` unnecessarily
+- Story 3.1: `AiBudgetCard.tsx` is pure display, declared `'use client'` unnecessarily (now fixed — Story 3.2b6 added hooks/interactivity, `'use client'` now correct on component)
+- Story 3.2b6: `useFileUpload.ts` (hook file, `.ts` not `.tsx`) has `'use client'` directive — hooks in .ts files don't need `'use client'`; boundary is set at the Client Component that consumes them. LOW, not functional bug.
 
 ## Allowlist: Valid Design Tokens (confirmed in tokens.css / globals.css)
 

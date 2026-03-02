@@ -962,7 +962,7 @@ describe('processFilePipeline', () => {
 
   // ── P1: scoreFile backward compat — no layerCompleted in L1 score call (#19) ──
 
-  it('[P1] should NOT pass layerCompleted to scoreFile in first call (L1 score)', async () => {
+  it('[P1] should pass layerFilter L1 but NOT layerCompleted to scoreFile in first call', async () => {
     const mockStep = createMockStep()
     const eventData = buildPipelineEvent({
       fileId: VALID_FILE_ID,
@@ -989,8 +989,10 @@ describe('processFilePipeline', () => {
   })
 
   // ── P2: auto_passed propagation (#20) ──
+  // TODO(TD-TEST-005): handler return shape doesn't include status — test needs
+  // Story 3.2c to add auto_passed awareness to pipeline return or batch logic
 
-  it.skip('[P2] should propagate auto_passed status from scoreFile in return value', async () => {
+  it.skip('[P2] should propagate auto_passed mqmScore from scoreFile in return value', async () => {
     mockScoreFile.mockResolvedValue({
       scoreId: 'e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a5b',
       fileId: VALID_FILE_ID,
@@ -1021,7 +1023,10 @@ describe('processFilePipeline', () => {
       step: mockStep,
     })) as Record<string, unknown>
 
+    // Handler return doesn't expose score.status (only mqmScore) — auto_passed
+    // propagation to batch/UI deferred to Story 3.2c
     expect(result).toHaveProperty('mqmScore', 100)
+    expect(result).toHaveProperty('layerCompleted', 'L1L2')
   })
 
   // ── P2: Performance sanity (#21) ──
@@ -1127,7 +1132,42 @@ describe('processFilePipeline', () => {
     })
 
     // Batch should fire — both files are terminal for thorough mode
-    expect(mockStep.sendEvent).toHaveBeenCalled()
+    expect(mockStep.sendEvent).toHaveBeenCalledWith(
+      expect.stringContaining('batch-completed'),
+      expect.objectContaining({ name: 'pipeline.batch-completed' }),
+    )
+  })
+
+  // ── H1: Negative test — thorough mode must NOT fire when siblings only at l2_completed ──
+
+  it('[P0] should NOT fire batch in thorough mode when siblings are only l2_completed', async () => {
+    const mockStep = createMockStep()
+    const VALID_BATCH_ID = 'f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c'
+    const eventData = buildPipelineEvent({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      mode: 'thorough',
+      uploadBatchId: VALID_BATCH_ID,
+    })
+
+    // Siblings at l2_completed — NOT terminal for thorough mode (must be l3_completed)
+    dbState.returnValues = [
+      [
+        { id: VALID_FILE_ID, status: 'l2_completed' },
+        { id: 'e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a5b', status: 'l2_completed' },
+      ],
+    ]
+
+    const { processFilePipeline } = await import('./processFile')
+    await (processFilePipeline as { handler: (...args: unknown[]) => unknown }).handler({
+      event: { data: eventData },
+      step: mockStep,
+    })
+
+    // l2_completed is NOT terminal for thorough mode — batch must NOT fire
+    expect(mockStep.sendEvent).not.toHaveBeenCalled()
   })
 
   // ── Boundary: thorough + batch combined = 7 steps ──

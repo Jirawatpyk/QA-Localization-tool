@@ -107,9 +107,9 @@ const handlerFn = async ({
     fileId,
     l1FindingCount: l1Result.findingCount,
     l2FindingCount: l2Result.findingCount,
-    l3FindingCount: l3Result ? l3Result.findingCount : (null as number | null),
+    l3FindingCount: l3Result ? l3Result.findingCount : null,
     mqmScore: finalScoreResult.mqmScore,
-    layerCompleted: (mode === 'thorough' ? 'L1L2L3' : 'L1L2') as 'L1L2' | 'L1L2L3',
+    layerCompleted: mode === 'thorough' ? ('L1L2L3' as const) : ('L1L2' as const),
     l2PartialFailure: l2Result.partialFailure,
   }
 }
