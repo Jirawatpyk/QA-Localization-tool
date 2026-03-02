@@ -25,7 +25,7 @@ export type DrizzleMockState = {
   setCaptures: unknown[]
   /** Captures arguments passed to `.values()` chainable */
   valuesCaptures: unknown[]
-  /** When non-null, `.then()` rejects at this callIndex (error injection) */
+  /** When non-null, `.then()` and `.returning()` reject at this callIndex (error injection) */
   throwAtCallIndex: number | null
 }
 

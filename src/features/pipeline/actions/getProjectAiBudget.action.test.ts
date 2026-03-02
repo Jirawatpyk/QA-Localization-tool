@@ -208,5 +208,6 @@ describe('getProjectAiBudget', () => {
     expect(result.success).toBe(false)
     if (result.success) return
     expect(result.code).toBe('INVALID_INPUT')
+    expect(dbState.callIndex).toBe(0)
   })
 })

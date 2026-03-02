@@ -53,6 +53,12 @@ describe('buildSegmentRecordFromParsed', () => {
     expect(result.id).not.toBe('mrk-42')
   })
 
+  it('should not leak parser-level segmentId into SegmentRecord', () => {
+    const result = buildSegmentRecordFromParsed(mockParsedSegment, ids)
+
+    expect(result).not.toHaveProperty('segmentId')
+  })
+
   it('should generate unique ids across calls', () => {
     const result1 = buildSegmentRecordFromParsed(mockParsedSegment, ids)
     const result2 = buildSegmentRecordFromParsed(mockParsedSegment, ids)

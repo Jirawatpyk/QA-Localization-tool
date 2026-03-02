@@ -268,5 +268,11 @@ describe('updateModelPinning', () => {
     expect(result.success).toBe(false)
     if (result.success) return
     expect(result.code).toBe('INTERNAL_ERROR')
+
+    const { logger } = await import('@/lib/logger')
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ err: expect.any(Error) }),
+      expect.stringContaining('model pinning'),
+    )
   })
 })
