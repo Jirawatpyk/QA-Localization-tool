@@ -83,7 +83,7 @@
 - **Mitigation:** Internal type only (not exported); values come from DB which already constrains them
 - **Fix:** Change to `severity: 'critical' | 'major' | 'minor'` and `detectedByLayer: DetectedByLayer` (import from `@/types/finding`)
 - **Origin:** Story 3.2a CR R2, flagged as M1/M2 (optional fix)
-- **Status:** DEFERRED (low risk — internal type, fix during next runL2ForFile touch)
+- **Status:** RESOLVED (2026-03-02) — changed to `severity: FindingSeverity`, `detectedByLayer: DetectedByLayer` with imports from `@/types/finding`
 
 ### TD-CODE-003: getFileHistory fetches ALL files + JS filter/paginate
 - **Severity:** Medium
@@ -328,13 +328,8 @@
 - **Origin:** Story 3.2b6, flagged by code-quality-analyzer pre-CR scan (2026-03-02)
 - **Status:** DEFERRED → fix in next E2E infra cleanup story
 
-### TD-E2E-010: ATDD P2 parity scenarios T3.4/T3.5 absent — ReportMissingCheckDialog
-- **Severity:** Low
-- **File:** `e2e/parity-comparison.spec.ts`
-- **Risk:** ATDD checklist defines T3.4 (Report Missing Check dialog submit) and T3.5 (validation errors). Story 3.2b6 replaced these 2 tests with different P2 tests (color styling, Compare button visibility) because ReportMissingCheckDialog is out-of-scope (may be wired in Epic 4). If dialog is wired later, E2E coverage must be added.
-- **Fix:** Mount ReportMissingCheckDialog in parity page + add T3.4/T3.5 E2E tests. Page + component + action ทั้งหมดมีอยู่แล้ว — แค่ wire เข้าด้วยกัน.
-- **Origin:** Story 3.2b6, flagged by testing-qa-expert CR R1 scan (2026-03-02)
-- **Status:** DEFERRED → fix before Epic 4 (Epic 3 cleanup story or standalone wiring story)
+### ~~TD-E2E-010: ATDD P2 parity scenarios T3.4/T3.5 absent — ReportMissingCheckDialog~~
+- **Status:** RESOLVED (2026-03-02) — ReportMissingCheckDialog mounted in ParityComparisonView with "Report Missing Check" button + dialog state. T3.4 (dialog submit) and T3.5 (validation errors) E2E tests added to `parity-comparison.spec.ts`. ParityComparisonView.test.tsx updated with mock. Type-check + 15 parity component tests pass.
 
 ### TD-PROCESS-001: E2E bypass rule — must create tech debt entry
 - **Severity:** Low (process rule, not code bug)

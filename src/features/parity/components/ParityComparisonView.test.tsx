@@ -19,6 +19,11 @@ vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }))
 
+// Mock ReportMissingCheckDialog (imports server-only via action)
+vi.mock('./ReportMissingCheckDialog', () => ({
+  ReportMissingCheckDialog: vi.fn(() => null),
+}))
+
 // Mock the comparison action (imports 'server-only')
 type MockCompareResult =
   | {

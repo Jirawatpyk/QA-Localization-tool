@@ -12,6 +12,8 @@ import { projects } from '@/db/schema/projects'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { compareFindings } from '@/features/parity/helpers/parityComparator'
 import { parseXbenchReport } from '@/features/parity/helpers/xbenchReportParser'
+import { toParitySeverity } from '@/features/parity/types'
+import type { ParitySeverity } from '@/features/parity/types'
 import { generateParityReportSchema } from '@/features/parity/validation/paritySchemas'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
@@ -20,18 +22,18 @@ import type { ActionResult } from '@/types/actionResult'
 
 type ParityReportResult = {
   reportId: string
-  bothFound: Array<{ xbenchCategory: string; toolCategory: string; severity: string }>
+  bothFound: Array<{ xbenchCategory: string; toolCategory: string; severity: ParitySeverity }>
   toolOnly: Array<{
     sourceTextExcerpt: string | null
     targetTextExcerpt: string | null
     category: string
-    severity: string
+    severity: ParitySeverity
   }>
   xbenchOnly: Array<{
     sourceText: string
     targetText: string
     category: string
-    severity: string
+    severity: ParitySeverity
   }>
   toolFindingCount: number
   xbenchFindingCount: number
@@ -80,12 +82,15 @@ export async function generateParityReport(
     // Compare xbench findings with tool findings
     // When fileId is provided, filter to that file; otherwise compare all project findings
     const comparisonResult = compareFindings(
-      xbenchResult.findings,
+      xbenchResult.findings.map((f) => ({
+        ...f,
+        severity: toParitySeverity(f.severity),
+      })),
       toolFindings.map((f) => ({
         sourceTextExcerpt: f.sourceTextExcerpt,
         targetTextExcerpt: f.targetTextExcerpt,
         category: f.category,
-        severity: f.severity,
+        severity: toParitySeverity(f.severity),
         fileId: f.fileId ?? null,
         segmentId: f.segmentId ?? null,
       })),

@@ -15,6 +15,7 @@ import { createTestProject, getUserInfo, signupOrLogin } from './helpers/supabas
  *   /projects/[projectId]/parity — ParityComparisonView
  */
 
+// E2E runs in Node (Playwright worker) — process.env access is safe here (not client bundle)
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
@@ -110,11 +111,10 @@ test.describe('Parity Comparison Tool (Story 2.7)', () => {
 
     await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/parity`))
 
-    // Parity page content should load — upload text or heading
-    const parityContent = page
-      .getByText(/Upload Xbench/i)
-      .or(page.getByRole('heading', { name: /Parity/i }))
-    await expect(parityContent).toBeVisible({ timeout: 10_000 })
+    // Parity page content should load (use specific heading to avoid strict mode from .or())
+    await expect(page.getByRole('heading', { name: /Xbench Parity Comparison/i })).toBeVisible({
+      timeout: 10_000,
+    })
   })
 
   test('[P1] should upload Xbench xlsx report and display parity comparison results', async ({
@@ -241,6 +241,67 @@ test.describe('Parity Comparison Tool (Story 2.7)', () => {
       .or(page.getByText(/not a valid.*Xbench/i))
       .or(page.getByText(/Comparison failed/i))
     await expect(errorMessage).toBeVisible({ timeout: 10_000 })
+  })
+
+  test('[P2] should submit Report Missing Check dialog successfully (T3.4)', async ({ page }) => {
+    test.setTimeout(30_000)
+
+    await signupOrLogin(page, TEST_EMAIL)
+    await page.goto(`/projects/${projectId}/parity`)
+    await expect(page.getByText(/Upload Xbench/i)).toBeVisible({ timeout: 10_000 })
+
+    // Click "Report Missing Check" button
+    await page.getByRole('button', { name: /Report Missing Check/i }).click()
+
+    // Dialog should open
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible({ timeout: 5_000 })
+
+    // Fill in the form
+    await dialog.locator('#fileReference').fill('test-file.sdlxliff')
+    await dialog.locator('#segmentNumber').fill('42')
+    await dialog.locator('#description').fill('Missing consistency check for repeated terms')
+
+    // Select Check Type via custom dropdown
+    await dialog.locator('#checkType').click()
+    await dialog.getByRole('option', { name: 'Consistency' }).click()
+
+    // Submit
+    await dialog.getByRole('button', { name: /Submit Report/i }).click()
+
+    // Success toast should appear with tracking reference
+    await expect(page.getByText(/Report submitted.*MCR-/i)).toBeVisible({ timeout: 10_000 })
+
+    // Dialog should close after success
+    await expect(dialog).not.toBeVisible()
+  })
+
+  test('[P2] should show validation errors in Report Missing Check dialog (T3.5)', async ({
+    page,
+  }) => {
+    test.setTimeout(30_000)
+
+    await signupOrLogin(page, TEST_EMAIL)
+    await page.goto(`/projects/${projectId}/parity`)
+    await expect(page.getByText(/Upload Xbench/i)).toBeVisible({ timeout: 10_000 })
+
+    // Click "Report Missing Check" button
+    await page.getByRole('button', { name: /Report Missing Check/i }).click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible({ timeout: 5_000 })
+
+    // Submit without filling any fields
+    await dialog.getByRole('button', { name: /Submit Report/i }).click()
+
+    // Validation errors should appear
+    await expect(dialog.getByText(/File Reference is required/i)).toBeVisible()
+    await expect(dialog.getByText(/Segment Number is required/i)).toBeVisible()
+    await expect(dialog.getByText(/Description is required/i)).toBeVisible()
+    await expect(dialog.getByText(/Check Type is required/i)).toBeVisible()
+
+    // Dialog should remain open
+    await expect(dialog).toBeVisible()
   })
 
   test.afterAll(async () => {

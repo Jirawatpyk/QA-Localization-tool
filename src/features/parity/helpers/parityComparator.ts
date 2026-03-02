@@ -1,11 +1,12 @@
 import { mapXbenchToToolCategory } from '@/features/parity/helpers/xbenchCategoryMapper'
+import type { ParitySeverity } from '@/features/parity/types'
 import { logger } from '@/lib/logger'
 
 type XbenchFinding = {
   sourceText: string
   targetText: string
   category: string
-  severity: string
+  severity: ParitySeverity
   fileName: string
   segmentNumber: number
 }
@@ -14,7 +15,7 @@ type ToolFinding = {
   sourceTextExcerpt: string | null
   targetTextExcerpt: string | null
   category: string
-  severity: string
+  severity: ParitySeverity
   fileId: string | null
   segmentId: string | null
 }
@@ -22,7 +23,7 @@ type ToolFinding = {
 type MatchedFinding = {
   xbenchCategory: string
   toolCategory: string
-  severity: string
+  severity: ParitySeverity
 }
 
 type ComparisonResult = {
@@ -32,16 +33,20 @@ type ComparisonResult = {
 }
 
 // Severity levels ordered for tolerance comparison
-const SEVERITY_LEVELS: Record<string, number> = {
+const SEVERITY_LEVELS: Record<ParitySeverity, number> = {
   critical: 3,
   major: 2,
   minor: 1,
   trivial: 0,
 }
 
-function severityWithinTolerance(severity1: string, severity2: string, tolerance: number): boolean {
-  const level1 = SEVERITY_LEVELS[severity1.toLowerCase()] ?? -1
-  const level2 = SEVERITY_LEVELS[severity2.toLowerCase()] ?? -1
+function severityWithinTolerance(
+  severity1: ParitySeverity,
+  severity2: ParitySeverity,
+  tolerance: number,
+): boolean {
+  const level1 = SEVERITY_LEVELS[severity1] ?? -1
+  const level2 = SEVERITY_LEVELS[severity2] ?? -1
   if (level1 < 0 || level2 < 0) return false
   return Math.abs(level1 - level2) <= tolerance
 }

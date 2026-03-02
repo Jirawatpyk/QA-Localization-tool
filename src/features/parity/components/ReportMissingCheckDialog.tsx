@@ -7,7 +7,7 @@ import { reportMissingCheck } from '@/features/parity/actions/reportMissingCheck
 
 type ReportMissingCheckDialogProps = {
   projectId: string
-  fileId?: string
+  fileId?: string | undefined
   open?: boolean
   onOpenChange?: (open: boolean) => void
 }

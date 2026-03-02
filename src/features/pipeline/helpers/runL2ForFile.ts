@@ -26,6 +26,7 @@ import type { AIUsageRecord, ChunkResult } from '@/lib/ai/types'
 import { getConfigForModel } from '@/lib/ai/types'
 import { logger } from '@/lib/logger'
 import { aiL2ProjectLimiter } from '@/lib/ratelimit'
+import type { DetectedByLayer, FindingSeverity } from '@/types/finding'
 
 // ── Types ──
 
@@ -75,9 +76,9 @@ type L1FindingContext = {
   id: string
   segmentId: string | null
   category: string
-  severity: string
+  severity: FindingSeverity
   description: string
-  detectedByLayer: string
+  detectedByLayer: DetectedByLayer
 }
 
 // ── Language Pair Derivation ──
@@ -178,7 +179,7 @@ export async function runL2ForFile({
       .orderBy(segments.segmentNumber)
 
     // Step 4: Load L1 findings for context (L2 avoids duplicating L1 issues)
-    const l1FindingRows: L1FindingContext[] = await db
+    const l1FindingRows = (await db
       .select({
         id: findings.id,
         segmentId: findings.segmentId,
@@ -194,7 +195,7 @@ export async function runL2ForFile({
           eq(findings.fileId, fileId),
           eq(findings.detectedByLayer, 'L1'),
         ),
-      )
+      )) as L1FindingContext[]
 
     // Step 4b: Load glossary terms via JOIN through glossaries table
     // glossary_terms has NO projectId/tenantId — must JOIN via glossaries

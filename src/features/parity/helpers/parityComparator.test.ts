@@ -13,22 +13,22 @@ vi.mock('@/features/parity/helpers/xbenchCategoryMapper', () => ({
   mapXbenchToToolCategory: vi.fn((category: string) => category.toLowerCase().trim()),
 }))
 
-// Type: represents a parsed Xbench finding
+import type { ParitySeverity } from '@/features/parity/types'
+
 type XbenchFinding = {
   sourceText: string
   targetText: string
   category: string
-  severity: string
+  severity: ParitySeverity
   fileName: string
   segmentNumber: number
 }
 
-// Type: represents a tool-generated finding
 type ToolFinding = {
   sourceTextExcerpt: string | null
   targetTextExcerpt: string | null
   category: string
-  severity: string
+  severity: ParitySeverity
   fileId: string | null
   segmentId: string | null
 }

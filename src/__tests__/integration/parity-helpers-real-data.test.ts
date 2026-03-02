@@ -28,6 +28,7 @@ import { faker } from '@faker-js/faker'
 import { compareFindings } from '@/features/parity/helpers/parityComparator'
 import { mapXbenchCategory } from '@/features/parity/helpers/xbenchCategoryMapper'
 import { parseXbenchReport } from '@/features/parity/helpers/xbenchReportParser'
+import { toParitySeverity } from '@/features/parity/types'
 import { parseXliff } from '@/features/parser/sdlxliffParser'
 import type { ParsedSegment } from '@/features/parser/types'
 import { processFile } from '@/features/pipeline/engine/ruleEngine'
@@ -186,7 +187,7 @@ describe.skipIf(!hasGoldenCorpus())('Parity Helpers — Real Data', () => {
         sourceText: f.sourceText,
         targetText: f.targetText,
         category: f.category, // raw Xbench category — compareFindings maps internally
-        severity: f.severity,
+        severity: toParitySeverity(f.severity),
         fileName: f.fileName,
         segmentNumber: f.segmentNumber,
       }))
@@ -195,7 +196,7 @@ describe.skipIf(!hasGoldenCorpus())('Parity Helpers — Real Data', () => {
         sourceTextExcerpt: f.sourceExcerpt ?? null,
         targetTextExcerpt: f.targetExcerpt ?? null,
         category: f.category,
-        severity: f.severity,
+        severity: toParitySeverity(f.severity),
         fileId,
         segmentId: f.segmentId,
       }))
@@ -275,7 +276,7 @@ describe.skipIf(!hasGoldenCorpus())('Parity Helpers — Real Data', () => {
           sourceText: f.sourceText,
           targetText: f.targetText,
           category: f.category,
-          severity: f.severity,
+          severity: toParitySeverity(f.severity),
           fileName: f.fileName,
           segmentNumber: f.segmentNumber,
         }))
@@ -284,7 +285,7 @@ describe.skipIf(!hasGoldenCorpus())('Parity Helpers — Real Data', () => {
           sourceTextExcerpt: f.sourceExcerpt ?? null,
           targetTextExcerpt: f.targetExcerpt ?? null,
           category: f.category,
-          severity: f.severity,
+          severity: toParitySeverity(f.severity),
           fileId,
           segmentId: f.segmentId,
         }))

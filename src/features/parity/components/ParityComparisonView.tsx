@@ -4,14 +4,16 @@ import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { compareWithXbench } from '@/features/parity/actions/compareWithXbench.action'
+import type { ParitySeverity } from '@/features/parity/types'
 
 import { ParityResultsTable } from './ParityResultsTable'
+import { ReportMissingCheckDialog } from './ReportMissingCheckDialog'
 
 type ComparisonFinding = {
   id: string
   description: string
   segmentNumber: number
-  severity: string
+  severity: ParitySeverity
   category: string
 }
 
@@ -30,6 +32,7 @@ export function ParityComparisonView({ projectId, fileId }: ParityComparisonView
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<CompareResult | null>(null)
+  const [reportDialogOpen, setReportDialogOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,6 +90,21 @@ export function ParityComparisonView({ projectId, fileId }: ParityComparisonView
       )}
 
       {results && <ParityResultsTable results={results} />}
+
+      <button
+        type="button"
+        onClick={() => setReportDialogOpen(true)}
+        className="rounded-md border px-4 py-2 text-sm"
+      >
+        Report Missing Check
+      </button>
+
+      <ReportMissingCheckDialog
+        projectId={projectId}
+        fileId={fileId}
+        open={reportDialogOpen}
+        onOpenChange={setReportDialogOpen}
+      />
     </div>
   )
 }

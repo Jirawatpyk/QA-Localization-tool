@@ -10,6 +10,8 @@ import { findings } from '@/db/schema/findings'
 import { projects } from '@/db/schema/projects'
 import { compareFindings } from '@/features/parity/helpers/parityComparator'
 import { parseXbenchReport } from '@/features/parity/helpers/xbenchReportParser'
+import { toParitySeverity } from '@/features/parity/types'
+import type { ParitySeverity } from '@/features/parity/types'
 import { compareWithXbenchSchema } from '@/features/parity/validation/paritySchemas'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
@@ -19,7 +21,7 @@ type ComparisonFinding = {
   id: string
   description: string
   segmentNumber: number
-  severity: string
+  severity: ParitySeverity
   category: string
 }
 
@@ -67,12 +69,15 @@ export async function compareWithXbench(input: unknown): Promise<ActionResult<Co
       .where(and(withTenant(findings.tenantId, user.tenantId), eq(findings.projectId, projectId)))
 
     const comparisonResult = compareFindings(
-      xbenchResult.findings,
+      xbenchResult.findings.map((f) => ({
+        ...f,
+        severity: toParitySeverity(f.severity),
+      })),
       toolFindings.map((f) => ({
         sourceTextExcerpt: f.sourceTextExcerpt,
         targetTextExcerpt: f.targetTextExcerpt,
         category: f.category,
-        severity: f.severity,
+        severity: toParitySeverity(f.severity),
         fileId: f.fileId ?? null,
         segmentId: f.segmentId ?? null,
       })),
@@ -86,7 +91,7 @@ export async function compareWithXbench(input: unknown): Promise<ActionResult<Co
         xbenchCategory?: string
         toolCategory?: string
         category?: string
-        severity?: string
+        severity?: ParitySeverity
         segmentNumber?: number
       },
       idx: number,
