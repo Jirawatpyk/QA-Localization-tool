@@ -96,12 +96,12 @@ test.describe('File History Page (Story 2.7)', () => {
     const table = page.getByRole('table')
     await expect(table).toBeVisible({ timeout: 10_000 })
 
-    // Column headers
-    await expect(page.getByRole('columnheader', { name: /Filename/i })).toBeVisible()
-    await expect(page.getByRole('columnheader', { name: /Upload Date/i })).toBeVisible()
-    await expect(page.getByRole('columnheader', { name: /Status/i })).toBeVisible()
-    await expect(page.getByRole('columnheader', { name: /Score/i })).toBeVisible()
-    await expect(page.getByRole('columnheader', { name: /Last Reviewer/i })).toBeVisible()
+    // Column headers (must match actual FileHistoryTable column text)
+    await expect(page.getByRole('columnheader', { name: /^File$/i })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: /^Date$/i })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: /^Status$/i })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: /^Score$/i })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: /^Reviewer$/i })).toBeVisible()
 
     // Data rows (header + 4 seeded files)
     const rows = table.getByRole('row')

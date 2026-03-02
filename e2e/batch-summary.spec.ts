@@ -175,10 +175,10 @@ test.describe('Batch Summary Page (Story 2.7)', () => {
     const header = page.getByTestId('batch-summary-header')
     await expect(header).toBeVisible({ timeout: 10_000 })
 
-    // Stats cards
-    await expect(page.getByText(/Total Files/i)).toBeVisible()
-    await expect(page.getByText(/Passed/i)).toBeVisible()
-    await expect(page.getByText(/Needs? Review/i)).toBeVisible()
+    // Stats cards (scoped to header to avoid matching mobile summary text)
+    await expect(header.getByText(/Total Files/i)).toBeVisible()
+    await expect(header.getByText(/Passed/i)).toBeVisible()
+    await expect(header.getByText(/Needs? Review/i)).toBeVisible()
 
     // Two groups exist
     await expect(page.getByRole('heading', { name: /Recommended Pass/i })).toBeVisible()
@@ -283,10 +283,11 @@ test.describe('Batch Summary Page (Story 2.7)', () => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.goto(`/projects/${projectId}/batches/${batchId}`)
 
-    // Summary header should be visible
-    await expect(page.getByText(/Total Files/i)).toBeVisible({ timeout: 10_000 })
-    await expect(page.getByText(/Passed/i)).toBeVisible()
-    await expect(page.getByText(/Needs? Review/i)).toBeVisible()
+    // Summary header should be visible (scoped to header to avoid matching mobile summary text)
+    const header = page.getByTestId('batch-summary-header')
+    await expect(header.getByText(/Total Files/i)).toBeVisible({ timeout: 10_000 })
+    await expect(header.getByText(/Passed/i)).toBeVisible()
+    await expect(header.getByText(/Needs? Review/i)).toBeVisible()
 
     // Grid with file cards should be hidden on mobile (hidden md:grid)
     const grid = page.getByTestId('batch-summary-grid')
