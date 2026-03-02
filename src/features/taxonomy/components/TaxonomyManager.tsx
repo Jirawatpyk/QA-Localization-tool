@@ -110,7 +110,7 @@ export function TaxonomyManager({ initialMappings, isAdmin }: Props) {
         loading: 'Reordering...',
         success: (result) => {
           if (!result.success) {
-            setMappings(previous)
+            // CR R1 M3 fix: don't revert here — throwing triggers `error` callback which reverts
             throw new Error(result.error)
           }
           return 'Mappings reordered'

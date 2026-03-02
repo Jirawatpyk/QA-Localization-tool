@@ -25,6 +25,13 @@ export async function reorderMappings(input: unknown): Promise<ActionResult<{ up
     return { success: false, code: 'VALIDATION_ERROR', error: parsed.error.message }
   }
 
+  // Guardrail #4: guard array[0] access (schema enforces .min(1) but defense-in-depth)
+  // CR R1 L1 fix: moved before transaction for correct fail-fast ordering
+  const firstItem = parsed.data[0]
+  if (!firstItem) {
+    return { success: false, code: 'VALIDATION_ERROR', error: 'Empty reorder list' }
+  }
+
   // Atomic batch update — all display_order changes in a single transaction (Guardrail #6)
   // NOTE: taxonomyDefinitions has no tenant_id — shared reference data per ERD 1.9.
   // withTenant() is not applicable. Access control enforced by requireRole('admin', 'write').
@@ -45,20 +52,20 @@ export async function reorderMappings(input: unknown): Promise<ActionResult<{ up
     }
   }
 
-  // Guardrail #4: guard array[0] access (schema enforces .min(1) but defense-in-depth)
-  const firstItem = parsed.data[0]
-  if (!firstItem) {
-    return { success: false, code: 'VALIDATION_ERROR', error: 'Empty reorder list' }
+  // CR R1 H2 fix: Guardrail #2 error-path — audit failure after successful DB update
+  // must not crash the action or trigger optimistic revert in the caller
+  try {
+    await writeAuditLog({
+      tenantId: currentUser.tenantId,
+      userId: currentUser.id,
+      entityType: 'taxonomy_definition',
+      entityId: firstItem.id,
+      action: 'taxonomy_definition.reordered',
+      newValue: { order: parsed.data },
+    })
+  } catch {
+    // Non-fatal: DB transaction succeeded — audit is defense-in-depth
   }
-
-  await writeAuditLog({
-    tenantId: currentUser.tenantId,
-    userId: currentUser.id,
-    entityType: 'taxonomy_definition',
-    entityId: firstItem.id,
-    action: 'taxonomy_definition.reordered',
-    newValue: { order: parsed.data },
-  })
 
   revalidateTag('taxonomy', 'minutes')
 

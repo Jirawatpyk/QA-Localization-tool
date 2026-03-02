@@ -55,6 +55,22 @@ import { severityValues } from '@/features/taxonomy/validation/taxonomySchemas'
 
 type ReorderItem = { id: string; displayOrder: number }
 
+/**
+ * Pure function: compute new display order after reorder.
+ * Extracted for direct unit testing (jsdom cannot trigger @dnd-kit DragEnd events).
+ */
+export function computeNewOrder(
+  mappings: TaxonomyMapping[],
+  activeId: string,
+  overId: string,
+): ReorderItem[] | null {
+  const oldIndex = mappings.findIndex((m) => m.id === activeId)
+  const newIndex = mappings.findIndex((m) => m.id === overId)
+  if (oldIndex === -1 || newIndex === -1) return null
+  const reordered = arrayMove(mappings, oldIndex, newIndex)
+  return reordered.map((m, i) => ({ id: m.id, displayOrder: i }))
+}
+
 type UpdateFields = {
   internalName: string
   category: string
@@ -342,12 +358,8 @@ export function TaxonomyMappingTable({
     setActiveDragId(null)
     if (!over || active.id === over.id) return
 
-    const oldIndex = mappings.findIndex((m) => m.id === active.id)
-    const newIndex = mappings.findIndex((m) => m.id === over.id)
-    if (oldIndex === -1 || newIndex === -1) return // stale data guard
-    const reordered = arrayMove(mappings, oldIndex, newIndex)
-    const newOrder = reordered.map((m, i) => ({ id: m.id, displayOrder: i }))
-    onReorder?.(newOrder)
+    const newOrder = computeNewOrder(mappings, String(active.id), String(over.id))
+    if (newOrder) onReorder?.(newOrder)
   }
 
   function getCellProps(mapping: TaxonomyMapping): MappingCellsProps {

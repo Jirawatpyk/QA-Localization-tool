@@ -4,52 +4,55 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { TaxonomyMapping } from '@/features/taxonomy/types'
 
+// CR R1 M2 fix: file-level shared MOCK_MAPPINGS (dedup from 2 copies per describe block)
+// NOTE: inline objects intentional — factory import pulls in @faker-js/faker (~6MB),
+// causing 15s timeout in full suite (164 files) due to module resolution overhead.
+const MOCK_MAPPINGS: TaxonomyMapping[] = [
+  {
+    id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c81',
+    internalName: 'terminology',
+    category: 'accuracy',
+    parentCategory: null,
+    severity: 'critical',
+    description: 'Critical terminology error',
+    isCustom: false,
+    isActive: true,
+    displayOrder: 0,
+    createdAt: new Date('2026-03-01T00:00:00Z'),
+    updatedAt: new Date('2026-03-01T00:00:00Z'),
+  },
+  {
+    id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c82',
+    internalName: 'mistranslation',
+    category: 'accuracy',
+    parentCategory: null,
+    severity: 'major',
+    description: 'Major mistranslation',
+    isCustom: false,
+    isActive: true,
+    displayOrder: 1,
+    createdAt: new Date('2026-03-01T00:00:00Z'),
+    updatedAt: new Date('2026-03-01T00:00:00Z'),
+  },
+  {
+    id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c83',
+    internalName: 'style',
+    category: 'fluency',
+    parentCategory: null,
+    severity: 'minor',
+    description: 'Minor style issue',
+    isCustom: false,
+    isActive: true,
+    displayOrder: 2,
+    createdAt: new Date('2026-03-01T00:00:00Z'),
+    updatedAt: new Date('2026-03-01T00:00:00Z'),
+  },
+]
+
 describe('TaxonomyMappingTable — Severity Badge Colors', () => {
   const mockOnUpdate = vi.fn()
   const mockOnDelete = vi.fn()
   const mockOnAdd = vi.fn()
-
-  const MOCK_MAPPINGS: TaxonomyMapping[] = [
-    {
-      id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c81',
-      internalName: 'terminology',
-      category: 'accuracy',
-      parentCategory: null,
-      severity: 'critical',
-      description: 'Critical terminology error',
-      isCustom: false,
-      isActive: true,
-      displayOrder: 0,
-      createdAt: new Date('2026-03-01T00:00:00Z'),
-      updatedAt: new Date('2026-03-01T00:00:00Z'),
-    },
-    {
-      id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c82',
-      internalName: 'mistranslation',
-      category: 'accuracy',
-      parentCategory: null,
-      severity: 'major',
-      description: 'Major mistranslation',
-      isCustom: false,
-      isActive: true,
-      displayOrder: 1,
-      createdAt: new Date('2026-03-01T00:00:00Z'),
-      updatedAt: new Date('2026-03-01T00:00:00Z'),
-    },
-    {
-      id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c83',
-      internalName: 'style',
-      category: 'fluency',
-      parentCategory: null,
-      severity: 'minor',
-      description: 'Minor style issue',
-      isCustom: false,
-      isActive: true,
-      displayOrder: 2,
-      createdAt: new Date('2026-03-01T00:00:00Z'),
-      updatedAt: new Date('2026-03-01T00:00:00Z'),
-    },
-  ]
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -115,48 +118,6 @@ describe('TaxonomyMappingTable — Drag-and-Drop Reorder', () => {
   const mockOnAdd = vi.fn()
   const mockOnReorder = vi.fn()
 
-  const MOCK_MAPPINGS: TaxonomyMapping[] = [
-    {
-      id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c81',
-      internalName: 'terminology',
-      category: 'accuracy',
-      parentCategory: null,
-      severity: 'critical',
-      description: 'Critical terminology error',
-      isCustom: false,
-      isActive: true,
-      displayOrder: 0,
-      createdAt: new Date('2026-03-01T00:00:00Z'),
-      updatedAt: new Date('2026-03-01T00:00:00Z'),
-    },
-    {
-      id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c82',
-      internalName: 'mistranslation',
-      category: 'accuracy',
-      parentCategory: null,
-      severity: 'major',
-      description: 'Major mistranslation',
-      isCustom: false,
-      isActive: true,
-      displayOrder: 1,
-      createdAt: new Date('2026-03-01T00:00:00Z'),
-      updatedAt: new Date('2026-03-01T00:00:00Z'),
-    },
-    {
-      id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c83',
-      internalName: 'style',
-      category: 'fluency',
-      parentCategory: null,
-      severity: 'minor',
-      description: 'Minor style issue',
-      isCustom: false,
-      isActive: true,
-      displayOrder: 2,
-      createdAt: new Date('2026-03-01T00:00:00Z'),
-      updatedAt: new Date('2026-03-01T00:00:00Z'),
-    },
-  ]
-
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -196,59 +157,34 @@ describe('TaxonomyMappingTable — Drag-and-Drop Reorder', () => {
     expect(dragHandles).toHaveLength(0)
   })
 
-  // 3. [P0] onReorder called with [{id, displayOrder}] after drag end
-  // Intent preserved: verify onReorder callback receives correct data shape after reorder.
-  // Adapted: use handleDragEnd by simulating DndContext onDragEnd via internal event dispatch.
-  // Since @dnd-kit pointer/keyboard sensors don't work in jsdom (no getBoundingClientRect),
-  // we test the handler logic by importing and invoking handleDragEnd's result indirectly.
-  it('[P0] should call onReorder with [{id, displayOrder}] after drag end', async () => {
-    const { TaxonomyMappingTable } = await import('./TaxonomyMappingTable')
+  // 3. [P0] computeNewOrder produces correct [{id, displayOrder}] after reorder
+  // CR R1 H1 fix: extracted handleDragEnd logic into pure function computeNewOrder()
+  // so we can test directly without relying on @dnd-kit sensors (which need getBoundingClientRect).
+  it('[P0] should produce correct [{id, displayOrder}] via computeNewOrder (first → last)', async () => {
+    const { computeNewOrder } = await import('./TaxonomyMappingTable')
 
-    render(
-      <TaxonomyMappingTable
-        mappings={MOCK_MAPPINGS}
-        onUpdate={mockOnUpdate}
-        onDelete={mockOnDelete}
-        onAdd={mockOnAdd}
-        canReorder={true}
-        onReorder={mockOnReorder}
-      />,
-    )
+    const result = computeNewOrder(MOCK_MAPPINGS, MOCK_MAPPINGS[0]!.id, MOCK_MAPPINGS[2]!.id)
 
-    // Verify drag handles exist (prerequisite for DnD interaction)
-    const dragHandles = screen.getAllByTestId('drag-handle')
-    expect(dragHandles.length).toBeGreaterThan(0)
-
-    // @dnd-kit's DndContext exposes onDragEnd which our component handles.
-    // Since jsdom doesn't support getBoundingClientRect for pointer simulation,
-    // we test the equivalent by directly verifying the component's wiring:
-    // The component's handleDragEnd computes arrayMove + maps to [{id, displayOrder}]
-    // and calls onReorder. We verify this via keyboard activation.
-    const firstHandle = dragHandles[0]!
-    firstHandle.focus()
-
-    // @dnd-kit keyboard sensor: Space activates, ArrowDown moves, Space drops
-    fireEvent.keyDown(firstHandle, { key: ' ', code: 'Space' })
-    fireEvent.keyDown(firstHandle, { key: 'ArrowDown', code: 'ArrowDown' })
-    fireEvent.keyDown(firstHandle, { key: ' ', code: 'Space' })
-
-    // If keyboard sensor works in jsdom, onReorder should be called
-    // If not (due to missing getBoundingClientRect), we at least verified drag handles render
-    if (mockOnReorder.mock.calls.length > 0) {
-      // Verify the data shape: array of {id, displayOrder}
-      const callArgs = mockOnReorder.mock.calls[0]![0] as Array<{
-        id: string
-        displayOrder: number
-      }>
-      expect(callArgs).toHaveLength(MOCK_MAPPINGS.length)
-      for (const item of callArgs) {
-        expect(item).toHaveProperty('id')
-        expect(item).toHaveProperty('displayOrder')
-        expect(typeof item.id).toBe('string')
-        expect(typeof item.displayOrder).toBe('number')
-      }
+    expect(result).not.toBeNull()
+    expect(result).toHaveLength(3)
+    // After dragging first (terminology) to last (style) position:
+    // mistranslation moves to 0, style moves to 1, terminology moves to 2
+    expect(result![0]!.id).toBe(MOCK_MAPPINGS[1]!.id) // mistranslation
+    expect(result![1]!.id).toBe(MOCK_MAPPINGS[2]!.id) // style
+    expect(result![2]!.id).toBe(MOCK_MAPPINGS[0]!.id) // terminology
+    for (const item of result!) {
+      expect(typeof item.id).toBe('string')
+      expect(typeof item.displayOrder).toBe('number')
     }
-    // The full integration is verified via E2E test (taxonomy-admin.spec.ts)
+    result!.forEach((item, i) => expect(item.displayOrder).toBe(i))
+  })
+
+  // [P0] computeNewOrder returns null for unknown IDs (stale data guard)
+  it('[P0] should return null from computeNewOrder when activeId not found', async () => {
+    const { computeNewOrder } = await import('./TaxonomyMappingTable')
+
+    const result = computeNewOrder(MOCK_MAPPINGS, 'non-existent-id', MOCK_MAPPINGS[1]!.id)
+    expect(result).toBeNull()
   })
 
   // 4. [P1] Drag disabled during inline edit mode
@@ -295,28 +231,10 @@ describe('TaxonomyMappingTable — Drag-and-Drop Reorder', () => {
     const dragHandles = screen.getAllByTestId('drag-handle')
     const firstHandle = dragHandles[0]!
 
-    // Verify keyboard accessibility attributes
+    // Verify keyboard accessibility attributes — confirms KeyboardSensor is wired
     expect(firstHandle).toHaveAttribute('aria-roledescription', 'sortable')
-
-    // Focus the first drag handle
-    firstHandle.focus()
-
-    // @dnd-kit keyboard sensor sequence: Space → ArrowDown → Space
-    fireEvent.keyDown(firstHandle, { key: ' ', code: 'Space' })
-    fireEvent.keyDown(firstHandle, { key: 'ArrowDown', code: 'ArrowDown' })
-    fireEvent.keyDown(firstHandle, { key: ' ', code: 'Space' })
-
-    // Verify onReorder was called (if keyboard sensor works in jsdom)
-    // At minimum, we verify the keyboard sensor is properly configured
-    // by checking the aria-roledescription attribute above
-    if (mockOnReorder.mock.calls.length > 0) {
-      expect(mockOnReorder).toHaveBeenCalledTimes(1)
-      expect(mockOnReorder).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({ id: expect.any(String), displayOrder: expect.any(Number) }),
-        ]),
-      )
-    }
+    // CR R1 H1 fix: keyboard DnD integration tested via computeNewOrder pure function (test #3)
+    // and E2E keyboard sequence (taxonomy-admin.spec.ts). Sensor wiring verified by aria attributes.
   })
 
   // 6. [P0] Empty state colSpan should be 7 when canReorder={true}

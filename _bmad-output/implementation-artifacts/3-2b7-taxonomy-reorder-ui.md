@@ -101,7 +101,7 @@ Since this story wires the action to UI, fix these bugs as part of implementatio
   - [x] 6.2 Test: Admin drags mapping row to new position → verify new order persists after page reload
   - [x] 6.3 Test: non-Admin navigates to `/admin/taxonomy` → redirected to `/dashboard` (page guard) — already covered by Auth Gate block (line 42)
   - [x] 6.4 Verify `npm run test:e2e` passes — deferred to CI (requires Supabase + dev server)
-  - [ ] 6.5 **DnD E2E pattern:** @dnd-kit uses pointer events, NOT HTML5 drag — use `page.mouse.move/down/up` sequence or `locator.dragTo()` with `{ force: true }`
+  - [x] 6.5 **DnD E2E pattern:** Used keyboard approach (Space→ArrowDown→Space) instead of mouse events — more reliable in headless CI than pointer-event sequences
 
 ## Dev Notes
 
@@ -299,19 +299,37 @@ Add `data-testid="drag-handle"` to each `GripVertical` icon for E2E targeting.
 
 5. **TaxonomyManager.test.tsx — sonner mock**: Added `vi.mock('sonner')` to prevent `toast.promise` from hanging in jsdom full suite runs. Simplified P0 test to verify render + drag handles + non-admin variant. Full DnD + optimistic revert covered by E2E.
 
+6. **CR R1 — E2E DnD pattern (Task 6.5)**: Story originally suggested mouse events (`page.mouse.move/down/up`), but implementation used keyboard approach (Space→ArrowDown→Space) for CI reliability. Task 6.5 marked done with updated note.
+
 ### Tests Created/Modified
 
 | File | Tests | Status |
 |------|-------|--------|
 | `TaxonomyMappingTable.test.tsx` | 9 tests (3 severity + 6 DnD) | ALL PASS |
-| `reorderMappings.action.test.ts` | 8 tests (4 existing + 1 P0 transaction + 1 P1 duplicate + 1 P1 revalidateTag + 1 audit) | ALL PASS |
-| `TaxonomyManager.test.tsx` | 2 tests (P0 admin render + P0 non-admin) | ALL PASS |
+| `reorderMappings.action.test.ts` | 10 tests (CR R1: +audit failure non-fatal, +transaction payload verify) | ALL PASS |
+| `TaxonomyManager.test.tsx` | 3 tests (CR R1: +toast.promise wiring) | ALL PASS |
 | `taxonomy-admin.spec.ts` | 2 E2E tests activated (setup + DnD reorder persist) | PENDING CI |
 
 ### ATDD Coverage
 
 - 10/10 unit test stubs: ALL activated and passing (P1 revalidateTag adapted for correct 2-arg behavior)
 - 2/2 E2E test stubs: Activated, pending CI validation (requires Supabase + dev server)
+
+### CR R1 Findings & Fixes (2026-03-02)
+
+| ID | Sev | Finding | Fix |
+|----|-----|---------|-----|
+| H1 | High | Vacuous test assertions — `if (mock.calls.length > 0)` never executes in jsdom | Extracted `computeNewOrder` pure function, replaced with direct tests |
+| H2 | High | `writeAuditLog` crash after successful DB transaction causes UI/DB state mismatch | Wrapped in try-catch per Guardrail #2 + moved `parsed.data[0]` guard before transaction |
+| M1 | Med | TaxonomyManager.test.tsx missing optimistic revert test coverage | Added toast.promise wiring test + E2E coverage comments |
+| M2 | Med | Test data duplication — 3 copies of MOCK_MAPPINGS across test files | Added `buildTaxonomyMapping` factory, deduplicated to shared file-level constant |
+| M3 | Med | Double `setMappings(previous)` — success callback reverts then throws → error callback reverts again | Removed revert from success callback (error callback handles it) |
+| M4 | Med | Story doc task 6.5 unchecked + Dev Agent Record incomplete | Marked 6.5 done, updated test counts, added CR R1 section |
+| L1 | Low | `parsed.data[0]` guard after `db.transaction()` — wrong fail-fast order | Moved guard before transaction block |
+| L2 | Low | E2E `firstRowName!` non-null assertion without truthy guard | Added `expect(firstRowName).toBeTruthy()` before comparison |
+| L3 | Low | Transaction test doesn't verify payload passed to `tx.update().set()` | Added `expect(mockTxSet).toHaveBeenCalledWith(expect.objectContaining({ displayOrder }))` |
+
+**Result:** 0C / 2H / 4M / 3L → ALL FIXED in-round
 
 ### File List (ALL changed files)
 

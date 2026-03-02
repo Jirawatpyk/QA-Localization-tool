@@ -157,6 +157,9 @@ describe('reorderMappings', () => {
     expect(mockTxUpdate).toHaveBeenCalledTimes(2)
     // Direct db.update should NOT have been called
     expect(mockUpdate).not.toHaveBeenCalled()
+    // CR R1 L3 fix: verify payload passed to tx.update().set()
+    expect(mockTxSet).toHaveBeenCalledWith(expect.objectContaining({ displayOrder: 0 }))
+    expect(mockTxSet).toHaveBeenCalledWith(expect.objectContaining({ displayOrder: 1 }))
   })
 
   // [P1] Duplicate ID validation (Story 3.2b7 — Guardrail #7)
@@ -194,5 +197,26 @@ describe('reorderMappings', () => {
     }
     // Audit log should NOT be called on failure
     expect(mockWriteAuditLog).not.toHaveBeenCalled()
+  })
+
+  // CR R1 H2 fix: audit log failure is non-fatal after successful DB update (Guardrail #2)
+  it('should return success even when audit log throws', async () => {
+    mockWriteAuditLog.mockRejectedValueOnce(new Error('Audit DB timeout'))
+
+    const { reorderMappings } = await import('./reorderMappings.action')
+    const result = await reorderMappings([
+      { id: UUID_A, displayOrder: 0 },
+      { id: UUID_B, displayOrder: 1 },
+    ])
+
+    // DB transaction succeeded — action should still return success
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.updated).toBe(2)
+    }
+    // Audit was attempted
+    expect(mockWriteAuditLog).toHaveBeenCalledTimes(1)
+    // revalidateTag still called
+    expect(mockRevalidateTag).toHaveBeenCalledWith('taxonomy', 'minutes')
   })
 })
