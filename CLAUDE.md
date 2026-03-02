@@ -166,17 +166,23 @@ Each feature module contains: `components/`, `actions/` (Server Actions), `hooks
 
 - **Unit tests** co-located next to source: `mqmCalculator.test.ts`
 - **RLS tests** in `src/db/__tests__/rls/`: cross-tenant isolation tests (require Supabase CLI)
-- **E2E** in `e2e/`: 4 critical paths only (upload→segments, pipeline→findings, review→score, auth→tenant)
+- **E2E strategy:** Full (ทุก scenario) สำหรับ critical flows + Smoke (1 happy path) สำหรับ UI page ที่เหลือ — runs on e2e-gate via GitHub Actions
+  - **Full E2E (5 critical flows):** upload→parse→pipeline→findings→score, review→accept/reject→score recalculate, auth→login→tenant isolation, budget→threshold→cost control, taxonomy→mapping→reorder
+  - **Smoke E2E:** ทุก UI page ที่ไม่ใช่ critical flow → 1 happy path (page โหลด → action หลัก → ผลลัพธ์ถูก)
+- **E2E per story (MANDATORY):** ถ้า story สร้างหรือแก้ UI page → ต้องมี E2E test (full ถ้าอยู่ใน critical flow, smoke ถ้าไม่ใช่). ห้าม `test.skip()` หรือ bypass UI flow (seed ผ่าน PostgREST, เรียก Inngest API ตรง, skip dialog) ค้างโดยไม่มี TD entry — ถ้า defer/bypass ต้องลง `tech-debt-tracker.md` ทันทีพร้อม TD ID + story ที่จะแก้ + ใส่ `// TODO(TD-XXX): wire real UI flow` ในโค้ด. (Epic 3 Party Mode Retro)
 - **Test data** via factory functions in `src/test/factories.ts` — never hardcode
 - **Naming:** `describe("{Unit}")` → `it("should {behavior} when {condition}")`
 - **CI gates:** quality-gate (every PR: lint→type-check→tests→build), e2e-gate (merge to main), chaos-test (weekly)
 - **Boundary value tests (MANDATORY):** Every AC with numeric thresholds/limits MUST have explicit boundary tests (at, below, above, zero). ATDD step-03 enforces this. (Epic 2 Retro A2)
 - **CR round target: ≤2 per story.** Epic 2 averaged 2.9. If R3+ needed → mini-retro on root cause. Pre-CR quality scan (3 agents) should prevent most findings from reaching CR. (Epic 2 Retro A3)
+- **Tech Debt tracking (MANDATORY):** ทุกครั้งที่ defer scope, ใช้ workaround, skip test, bypass flow, ทิ้ง TODO/FIXME, หรือตัดสินใจไม่ทำอะไรที่ควรทำ → ลง `_bmad-output/implementation-artifacts/tech-debt-tracker.md` **ทันที** พร้อม: TD ID, date, story ID, phase (CS/DS/CR/ATDD/impl), description, severity, status (DEFERRED/OPEN), และ story ที่จะแก้ (ถ้ารู้). ใช้ได้ทุก phase — Create Story, ATDD, implementation, Code Review, retro. **ห้ามรอ retrospective. ห้ามทิ้ง comment ลอยโดยไม่มี TD entry.**
+- **TODO/FIXME format (MANDATORY):** ห้ามเขียน TODO/FIXME ลอยโดยไม่มี ref — ต้องเป็น `// TODO(TD-XXX): description` หรือ `// TODO(story-X.X): description` เสมอ. ถ้ายังไม่มี TD → สร้าง TD entry ก่อนแล้วใส่ ref. Comment ที่บอก "ยังไม่มี" / "จะทำทีหลัง" / "not yet" ก็ต้องมี ref เช่นกัน.
+- **Orphan component scan (epic sign-off):** Before epic retrospective, scan for components that are exported but never imported in any `src/app/` page. Orphan = integration gap. (Epic 3 Party Mode Retro)
 
 ## Pre-Story Checklist (MANDATORY — SM + Dev Lead)
 
 **Run BEFORE locking Acceptance Criteria on any story:**
-→ `_bmad-output/architecture-assumption-checklist.md` (8 sections, 22 checkboxes)
+→ `_bmad-output/architecture-assumption-checklist.md` (9 sections, 25 checkboxes)
 
 This checklist was created from Epic 1 retrospective learnings. Top 5 red flags:
 
@@ -187,6 +193,8 @@ This checklist was created from Epic 1 retrospective learnings. Top 5 red flags:
 | Story uses Radix Select in E2E test (not native `<select>`)      | S3 + S5       |
 | Story assumes columns exist that haven't been added yet          | S2: DB Schema |
 | Story scope bleeds into future stories without explicit deferral | S8: Scope     |
+| Story creates component/dialog but no story mounts it in a page  | S9: Journey   |
+| E2E test bypasses UI flow without tech debt tracker entry        | S9: Journey   |
 
 ## Key Planning Documents
 

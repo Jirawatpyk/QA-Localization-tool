@@ -104,6 +104,23 @@ New `projects` columns: `aiBudgetMonthlyUsd`, `budgetAlertThresholdPct`, `l2Pinn
 
 Feature gap (not security): `runL2ForFile.ts` + `runL3ForFile.ts` call `getModelForLayer` (static),
 not `getModelForLayerWithFallback` (per-project pinned). Pinning is not yet applied at runtime.
+NOTE: Resolved in Story 3.2a — `runL2ForFile.ts` now calls `getModelForLayerWithFallback()` correctly.
+
+### Story 3.2a Audit Results (AI Provider Integration / L2 Real Implementation — 2026-03-01)
+
+**Result: 0C/0H/0M/0L — SECURE (full pass, 2 primary files + 2 indirect deps).**
+
+Files: `src/features/pipeline/helpers/runL2ForFile.ts`, `src/lib/ai/costs.ts`,
+`src/lib/ai/budget.ts` (indirect), `src/lib/ai/providers.ts` (indirect).
+
+Key patterns confirmed:
+
+- INNER JOIN `glossaryTerms` → `glossaries` with `withTenant(glossaries.tenantId)` in WHERE is correct (glossaryTerms has no tenant_id; INNER JOIN eliminates any row whose parent glossary fails the tenant filter). Matches established pattern from glossaryCache.ts.
+- `taxonomyDefinitions` SELECT correctly omits withTenant() — global table, no tenant_id column (ERD 1.9).
+- Atomic DELETE+INSERT transaction (Step 9): DELETE scoped by `withTenant() + fileId + layer='L2'` (no over-broad delete); INSERT sets tenantId in values object directly.
+- Rollback path (catch block) also applies `withTenant()` on the status-to-failed UPDATE — both happy path and error path are isolated.
+- `logAIUsage()` INSERT in `costs.ts`: `tenantId` flows from `AIUsageRecord` parameter (set by runL2ForFile from its own typed parameter); INSERT sets value directly — correct.
+- Feature gap from Story 3.1 resolved: `runL2ForFile.ts` now calls `getModelForLayerWithFallback()`.
 
 ### Story 3.0.5 Audit Results (UX Foundation Gap Fix — 2026-03-01)
 
@@ -125,6 +142,26 @@ are created. MUST use `getCurrentUser()`/`requireRole()` for tenantId (not from 
 `withTenant(projects.tenantId, tenantId)` for project name lookup and
 `withTenant(reviewSessions.tenantId, tenantId)` for session name lookup. Input `projectId`/`sessionId`
 are URL-sourced and must be treated as untrusted.
+
+### Story 3.2b5 Audit Results (Upload-Pipeline Wiring — 2026-03-02)
+
+**Result: 0C/0H/0M/0L — SECURE (full pass, 11 files).**
+
+Files: `UploadPageClient.tsx`, `UploadProgressList.tsx`, `FileUploadZone.tsx`,
+`parseFile.action.ts`, `createBatch.action.ts`, `ProcessingModeDialog.tsx`,
+`getFilesWordCount.action.ts`, `startProcessing.action.ts`, `getFileHistory.action.ts`,
+`processFile.ts` (Inngest), `e2e/pipeline-findings.spec.ts`, `e2e/upload-segments.spec.ts`,
+`e2e/helpers/pipeline-admin.ts`.
+
+Pure client-side wiring story — no new DB query paths introduced.
+Key confirmed patterns:
+
+- `parseFile(fileId)`: client passes only UUID; action resolves tenantId from requireRole(); fileId verified via withTenant() before CAS mutation.
+- `createBatch({ projectId })`: projectId from client is verified via withTenant() ownership SELECT before INSERT; tenantId in INSERT values from session only.
+- `startProcessing({ fileIds, projectId, mode })`: all client inputs validated against session tenantId via withTenant() before Inngest dispatch; tenantId injected into event payload from session (not client).
+- `getFileHistory` LEFT JOIN scores: withTenant on `files` (driving table) in WHERE; withTenant on `scores` (joined table) in JOIN condition — canonical pattern confirmed again.
+- `processFile.ts` batch check query: 3-way AND filter (withTenant + projectId + batchId) — correct.
+- `service_role` in `e2e/helpers/pipeline-admin.ts`: intentional and correct — E2E test infra only, never imported by src/ application code.
 
 ## Key Patterns to Watch
 

@@ -139,7 +139,9 @@
       "Bash(do echo:*)",
       "mcp__claude_ai_Context7__resolve-library-id",
       "mcp__claude_ai_Context7__query-docs",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres npm run:*)",
+      "Bash(rm:*)"
     ]
   }
 }

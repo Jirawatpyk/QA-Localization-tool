@@ -212,16 +212,28 @@ export async function cancelDuplicateRerun(page: Page): Promise<void> {
  * Wait for a file's processing status to reach a target state.
  * The UI should reflect the status via Supabase Realtime or polling.
  *
- * Status progression: uploaded → parsing → parsed (or failed)
+ * Status progression:
+ *   uploaded → parsing → parsed → l1_processing → l1_completed
+ *   → l2_processing → l2_completed → l3_processing → l3_completed
+ *   (or failed at any stage)
  *
  * @param filename      The filename as displayed in the UI
- * @param targetStatus  The status to wait for: 'parsing' | 'parsed' | 'failed'
+ * @param targetStatus  The status to wait for
  * @param timeout       Max wait in ms (default 60s — parsing can be slow for large files)
  */
 export async function waitForFileStatus(
   page: Page,
   filename: string,
-  targetStatus: 'parsing' | 'parsed' | 'failed',
+  targetStatus:
+    | 'parsing'
+    | 'parsed'
+    | 'l1_processing'
+    | 'l1_completed'
+    | 'l2_processing'
+    | 'l2_completed'
+    | 'l3_processing'
+    | 'l3_completed'
+    | 'failed',
   timeout = 60_000,
 ): Promise<void> {
   const fileRow = page.getByTestId(`upload-row-${filename}`)

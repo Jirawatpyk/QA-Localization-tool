@@ -1,6 +1,6 @@
 # Inngest Function Validator — Memory
 
-## Codebase State (as of Story 3.0, 2026-02-27)
+## Codebase State (as of Story 3.2b, 2026-03-02)
 
 ### Inngest Infrastructure
 
@@ -79,7 +79,29 @@ await Promise.all(fileIds.map((fileId) => step.sendEvent({ name: 'pipeline.proce
 
 **step.run IDs include fileId (deterministic):**
 
-- `l1-rules-${fileId}` and `score-${fileId}` — collision-free
+- `l1-rules-${fileId}`, `score-l1-${fileId}`, `l2-screening-${fileId}`, `score-l1l2-${fileId}`, `l3-analysis-${fileId}`, `score-all-${fileId}`, `check-batch-${fileId}` — all collision-free
+- Each step ID carries `fileId` — safe for fan-out concurrency (1 step.run per file invocation)
+
+**processFile.ts Step 4 score call — layerFilter vs layerCompleted asymmetry (by design):**
+
+- Step 2 (`score-l1-${fileId}`): `layerFilter: 'L1'` — scores only L1 findings (interim, FR15)
+- Step 4 (`score-l1l2-${fileId}`): `layerCompleted: 'L1L2'` — NO layerFilter (scores ALL findings after L2 done)
+- Step 6 thorough (`score-all-${fileId}`): `layerCompleted: 'L1L2L3'` — NO layerFilter (scores ALL findings)
+- This is intentional: `layerFilter` scopes which findings to consider; `layerCompleted` stamps the persisted record
+- NOT a violation
+
+**processFile.ts — `uploadBatchId` always string in type, but guarded with `if (uploadBatchId)`:**
+
+- `PipelineFileEventData.uploadBatchId: string` (non-optional in type)
+- `processBatch.ts` always populates it from `PipelineBatchEventData.uploadBatchId`
+- The `if (uploadBatchId)` guard is defensive — handles potential empty-string edge case
+- NOT a type violation; guard is safe (empty string is falsy)
+
+**processFile.ts — `step.sendEvent` uses single-event form (not array):**
+
+- Line 96–105: `step.sendEvent('batch-completed-${uploadBatchId}', { name: ..., data: ... })`
+- This is the SINGLE event form — correct for sending one event. Array form used by processBatch for fan-out.
+- Both forms are valid Inngest v3 API. No violation.
 
 ### Known Design Decisions (not violations)
 
@@ -128,9 +150,25 @@ await Promise.all(fileIds.map((fileId) => step.sendEvent({ name: 'pipeline.proce
 - This is NOT a violation of Rule 1 — the try-catch is in the helper function body, not wrapping `step.run()` itself
 - Rule 1 only forbids try-catch INSIDE step.run callback
 
+**runL2ForFile.ts and runL3ForFile.ts — try-catch inside helper is NOT a Rule 1 violation:**
+
+- Both helpers have outer `try { ... } catch(err) { rollback + rethrow }` structure
+- The helper IS the body of `step.run()` — it is called AS the step body, not wrapping `step.run()`
+- Rule 1 forbids `step.run('id', async () => { try { ... } catch { swallow } })` — swallowing errors
+- These helpers RETHROW — Inngest still sees the error and can retry. Correct pattern.
+- The inner per-chunk try-catch (in the chunk loop) is also correct: only re-throws retriable errors, accumulates non-retriable failures (partial failure tolerance per Guardrail #21)
+
+**runL3ForFile.ts — missing logAIUsage for error chunks:**
+
+- Unlike runL2ForFile.ts which logs `status: 'error'` usage records for failed chunks, runL3ForFile.ts does NOT log error-status usage records (the `logAIUsage(errorRecord)` call is absent from the L3 chunk catch block)
+- This is a MEDIUM gap: cost tracking completeness for L3 is weaker than L2
+- Does NOT affect correctness — just observability
+
 ### Helper Files (importable from Inngest — no 'use server')
 
 - `src/features/pipeline/helpers/runL1ForFile.ts` — L1 rule engine runner
+- `src/features/pipeline/helpers/runL2ForFile.ts` — L2 AI screening runner (Story 3.2a)
+- `src/features/pipeline/helpers/runL3ForFile.ts` — L3 deep AI analysis runner (Story 3.2b)
 - `src/features/scoring/helpers/scoreFile.ts` — MQM score calculator + persister
 
 ### Server Actions (NOT callable from Inngest)

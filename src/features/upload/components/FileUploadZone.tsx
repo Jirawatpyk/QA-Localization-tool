@@ -102,6 +102,7 @@ export function FileUploadZone({
           onChange={handleInputChange}
           aria-hidden="true"
           tabIndex={-1}
+          data-testid="file-input"
         />
 
         <div className="flex flex-col items-center gap-3">

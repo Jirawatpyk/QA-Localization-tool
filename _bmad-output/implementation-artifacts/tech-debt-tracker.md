@@ -227,6 +227,128 @@
 - **Origin:** Story 2.6 design, identified during Story 3.2b validation (mode-aware terminal status makes race window wider)
 - **Status:** DEFERRED (low probability with current concurrency limits; fix in Story 3.4 resilience or Epic 4)
 
+### TD-PIPE-002: Missing error-chunk cost logging in runL3ForFile
+- **Severity:** Medium
+- **File:** `src/features/pipeline/helpers/runL3ForFile.ts` — catch block in chunk loop (~line 239-258)
+- **Risk:** Failed L3 chunks are not logged to `ai_usage_logs` with `status: 'error'`, causing cost tracking gap. L2 (`runL2ForFile.ts`) correctly logs error records for failed chunks per AC4 pattern, but L3 omits this
+- **Fix:** Add `logAIUsage(errorRecord)` in the catch block of L3 chunk loop, matching the L2 pattern (lines ~309-326 in runL2ForFile.ts)
+- **Origin:** Prep P4 (runL3ForFile template), identified during Story 3.2b pre-CR inngest-function-validator scan
+- **Status:** DEFERRED → fix in **Story 3.3** (runL3ForFile.ts is "DO NOT TOUCH" in 3.2b; Story 3.3 modifies it for selective-segment filtering)
+
+### TD-TEST-005: P2 skipped test — auto_passed propagation from scoreFile
+- **Severity:** Low
+- **File:** `src/features/pipeline/inngest/processFile.test.ts` — line 982
+- **Risk:** `auto_passed` status from scoreFile return value not tested in pipeline return shape. Requires file-level auto-pass flow that doesn't exist yet
+- **Fix:** Remove `it.skip` and implement when file-level auto-pass is built
+- **Origin:** Story 3.2b ATDD P2 #20, identified during dev-story
+- **Status:** DEFERRED → fix in **Epic 7** (auto-pass & trust automation)
+
+### ~~TD-TEST-006: P2 skipped test — pipeline mock-based performance sanity~~
+- **Status:** RESOLVED (2026-03-02) — `it.skip` removed, test passing. Mock-based handler completes < 1s (sanity check). Real E2E perf test still needed in Story 3.4+
+
+### ~~TD-TEST-007: P2 skipped test — mode undefined defaults to economy~~
+- **Status:** RESOLVED (2026-03-02) — `it.skip` removed, test passing. Defense-in-depth confirmed: `mode === 'thorough'` guard correctly falls through to economy behavior when mode is undefined
+
+---
+
+## Category 9: E2E Bypass Gaps (Epic 2 Retro — Party Mode 2026-03-02)
+
+### ~~TD-E2E-001: E2E bypasses SDLXLIFF auto-parse (seeds via PostgREST)~~
+- **Status:** RESOLVED (2026-03-02) — Story 3.2b5 wired auto-parse in `UploadPageClient.tsx`. `pipeline-findings.spec.ts` now uses real upload→auto-parse flow via `uploadSingleFile()` + `assertUploadProgress()`. PostgREST `insertTestFile`/`insertTestSegments` bypass removed.
+
+### ~~TD-E2E-002: E2E bypasses ProcessingModeDialog (sends Inngest event directly)~~
+- **Status:** RESOLVED (2026-03-02) — Story 3.2b5 mounted `ProcessingModeDialog` in upload page. `pipeline-findings.spec.ts` now clicks "Start Processing" button → dialog → Economy mode → confirm. Direct Inngest `triggerProcessing()` bypass removed.
+
+### TD-E2E-003: Parity E2E tests skipped with stale comment
+- **Severity:** Medium
+- **File:** `e2e/parity-comparison.spec.ts` — 6 tests all `test.skip()`
+- **Risk:** Route + components exist since Story 2.7 but comment says "DOES NOT EXIST YET". Tests never activated.
+- **Fix:** Update PROJECT_ID to real test ID, remove stale comment, unskip P1 tests
+- **Origin:** Story 2.7 ATDD phase, identified during orphan scan (2026-03-02)
+- **Status:** OPEN → fix in **Story 3.2b6** (`ready-for-dev`)
+
+### TD-E2E-004: Batch Summary E2E tests skipped with stale comment
+- **Severity:** Medium
+- **File:** `e2e/batch-summary.spec.ts` — 7 tests all `test.skip()`
+- **Risk:** Routes `/projects/[projectId]/batches` + `/batches/[batchId]` exist since Story 2.7 but comment says "DO NOT EXIST YET". 7 tests never activated.
+- **Fix:** Update PROJECT_ID to real test ID, remove stale comment, unskip P1 tests (2 P1, 3 P2, 2 P3)
+- **Origin:** Story 2.7 ATDD phase, identified during full scan (2026-03-02)
+- **Status:** OPEN → fix in **Story 3.2b6** (`ready-for-dev`)
+
+### TD-E2E-005: File History E2E tests skipped with stale comment
+- **Severity:** Medium
+- **File:** `e2e/file-history.spec.ts` — 5 tests all `test.skip()`
+- **Risk:** Route `/projects/[projectId]/files` exists since Story 2.7 but comment says "DOES NOT EXIST YET". 5 tests never activated.
+- **Fix:** Update PROJECT_ID to real test ID, remove stale comment, unskip P1 tests (3 P1, 1 P2, 1 P3)
+- **Origin:** Story 2.7 ATDD phase, identified during full scan (2026-03-02)
+- **Status:** OPEN → fix in **Story 3.2b6** (`ready-for-dev`)
+
+### ~~TD-E2E-006: Upload Segments E2E test skipped — no TD ref in code~~
+- **Status:** RESOLVED (2026-03-02) — Story 3.2b5 Task 5.1 unskipped Tests #19 and #20 in `upload-segments.spec.ts`. Tests now exercise real upload→auto-parse→Start Processing→ProcessingModeDialog flow.
+
+### TD-E2E-007: Review Score E2E test skipped — no TD ref in code
+- **Severity:** Low
+- **File:** `e2e/review-score.spec.ts` — 1 test `test.skip()`, comment says "populated in Epic 4"
+- **Risk:** Review panel doesn't exist yet (Epic 4) — legitimate skip but no TD entry
+- **Fix:** Implement when Epic 4 review infrastructure is built
+- **Origin:** Epic 1 skeleton, identified during full scan (2026-03-02)
+- **Status:** DEFERRED → fix in **Epic 4** (review infrastructure)
+
+### TD-ORPHAN-001: reorderMappings action has no UI consumer
+- **Severity:** Medium
+- **File:** `src/features/taxonomy/actions/reorderMappings.action.ts`
+- **Risk:** Action created in Story 1.6 with full logic (audit, validation) but TaxonomyMappingTable has no drag-and-drop reorder
+- **Fix:** Add @dnd-kit drag-and-drop to TaxonomyMappingTable
+- **Origin:** Story 1.6, identified during orphan scan (2026-03-02)
+- **Status:** OPEN → fix in **Story 3.2b7** (`ready-for-dev`)
+
+### TD-ORPHAN-002: updateBudgetAlertThreshold action has no UI consumer
+- **Severity:** Medium
+- **File:** `src/features/pipeline/actions/updateBudgetAlertThreshold.action.ts`
+- **Risk:** Story 3.1 AC7 says "threshold is configurable" but AiBudgetCard is read-only. No input field.
+- **Fix:** Add threshold input to AiBudgetCard (Admin only)
+- **Origin:** Story 3.1, identified during orphan scan (2026-03-02)
+- **Status:** OPEN → fix in **Story 3.2b6** (`ready-for-dev`)
+
+### TD-ORPHAN-003: getUploadedFiles action superseded — dead code
+- **Severity:** Low
+- **File:** `src/features/upload/actions/getUploadedFiles.action.ts`
+- **Risk:** Created in Story 2.1, superseded by `getFileHistory` (Story 2.7). Zero consumers.
+- **Fix:** Delete file + related schema
+- **Origin:** Story 2.1, identified during orphan scan (2026-03-02)
+- **Status:** OPEN → fix in **Story 3.2b6** (`ready-for-dev`)
+
+### TD-TODO-001: Breadcrumb DB queries deferred to Epic 4
+- **Severity:** Low
+- **Risk:** `getBreadcrumbEntities` returns hardcoded null for review session/finding names — breadcrumb shows IDs instead of names on review pages
+- **File:** `src/components/layout/actions/getBreadcrumbEntities.action.ts:24`
+- **Fix:** Implement DB queries with `withTenant()` when review routes are created (Epic 4)
+- **Origin:** Story 3.0, identified during TODO scan (2026-03-02)
+- **Status:** DEFERRED → fix in **Epic 4** (review infrastructure)
+
+### TD-TODO-002: getFileHistory reviewer name deferred to Epic 4
+- **Severity:** Low
+- **Risk:** `lastReviewerName` always null — file history doesn't show who last reviewed
+- **File:** `src/features/batch/actions/getFileHistory.action.ts:95`
+- **Fix:** Join `reviewActions` + `users` tables for actual reviewer name
+- **Origin:** Story 2.7, identified during TODO scan (2026-03-02)
+- **Status:** DEFERRED → fix in **Epic 4** (review actions)
+
+### TD-UX-003: File selection UI before processing — all files auto-selected
+- **Severity:** Low
+- **Risk:** User ไม่สามารถเลือก/ยกเลิกไฟล์ที่ parse แล้วก่อนเริ่ม processing — ทุกไฟล์ถูก select อัตโนมัติ ถ้า upload ผิดไฟล์ต้อง cancel ทั้ง batch
+- **File:** `src/features/upload/components/UploadPageClient.tsx` (Story 3.2b5 จะ wire ProcessingModeDialog → fileIds = all parsed files)
+- **Fix:** เพิ่ม checkbox per file ให้ user เลือก/ยกเลิกก่อนกด "Start Processing" — filter `fileIds` ก่อนส่งให้ `ProcessingModeDialog`
+- **Origin:** Story 3.2b5 scope boundary, identified during story review (2026-03-02)
+- **Status:** DEFERRED → ไม่มี story รองรับ — ควรสร้างเป็น story ย่อยตอน Epic 4 หรือ 3.2c
+
+### TD-PROCESS-001: E2E bypass rule — must create tech debt entry
+- **Severity:** Low (process rule, not code bug)
+- **Risk:** E2E workarounds that bypass UI flow hide integration gaps — discovered late (gap persisted across 6+ stories)
+- **Fix:** Added Section 9 (J3) to `architecture-assumption-checklist.md`: every E2E bypass → mandatory tech-debt-tracker entry + `// TODO(story-X.X)` comment
+- **Origin:** Epic 3 party-mode review (2026-03-02) — root cause analysis of TD-E2E-001/002
+- **Status:** RESOLVED (2026-03-02 — checklist updated with S9 J3)
+
 ---
 
 ## Resolved Items (for historical reference)

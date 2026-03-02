@@ -14,6 +14,8 @@
 - `story-3-1a-findings.md` — Story 3.1a AI Usage Dashboard CR R1-R2 (R2: 0C/3H/5M/4L)
 - `story-3-1b-findings.md` — Story 3.1b AI Dashboard UX Polish CR R1 (0C/2H/5M/6L)
 - `story-3-0-5-findings.md` — Story 3.0.5 UX Foundation Gap Fix CR R1 (0C/1H/5M/8L)
+- `story-3-2a-findings.md` — Story 3.2a AI Provider Integration CR R1 (1C/3H/5M/5L)
+- `story-3-2b-findings.md` — Story 3.2b L2 Batch Processing & Pipeline Extension CR R1 (1C/4H/3M/4L)
 
 ## Recurring Anti-Patterns (check EVERY review)
 
@@ -109,10 +111,12 @@
 - ModelPinningSettings custom dropdown: no click-outside, no keyboard nav
 - **STATUS:** FIXED in CR R1 code — useEffect click-outside handler added
 
-### 26. Feature Infrastructure Created But Not Wired (Story 3.1)
+### 26. Feature Infrastructure Created But Not Wired (Story 3.1 → 3.2a)
 
 - providers.ts getModelForLayerWithFallback() exists
-- **STATUS:** PARTIALLY FIXED — runL2/L3 now call getModelForLayerWithFallback but only use primary, ignoring fallbacks
+- **STATUS:** STILL OPEN in 3.2a — resolveHealthyModel() built + tested but NOT called from runL2ForFile
+- runL2/L3 call getModelForLayerWithFallback but only use `.primary`, ignoring `.fallbacks`
+- checkProviderHealth() built but not integrated into pipeline flow
 
 ### 27. UTC vs Local Time in Date Calculations (Story 3.1)
 
@@ -138,6 +142,27 @@
 - `formatter={(v) => [formatted, '']}` — empty string replaces Line's `name` prop in tooltip
 - In multi-series charts (L2/L3 breakdown), labels become indistinguishable
 - Fix: return just formatted value (not array), or pass name through: `[formatted, name]`
+
+### 31. Prompt-Schema Field Name Mismatch (Story 3.2a)
+
+- Prompt OUTPUT_FORMAT tells AI to produce `suggestedFix`
+- Zod schema expects `suggestion` — AI response rejected or field lost
+- Fix: ONE name everywhere (suggestedFix — matches DB column + L3 schema + prompt)
+- **Check during review:** For every AI structured output schema, verify field names match prompt instructions
+
+### 32. Duplicated Provider Detection Logic (Story 3.2a)
+
+- `deriveProvider()` in costs.ts = `getProviderForModel()` in providers.ts = prefix logic in client.ts
+- Adding a new provider requires edits in 3 files
+- Fix: single `deriveProviderFromModelId()` in types.ts, imported everywhere
+
+### 33. Cross-Domain Status Value Contamination (Story 3.2b)
+
+- `auto_passed` exists in `scores.status` but NOT in `files.status` (`DbFileStatus`)
+- processFile batch check used `f.status === 'auto_passed'` — always false, dead code
+- Root cause: ATDD DA-1 recommended adding it without verifying domain
+- **Check during review:** When comparing `table.status` to literal, verify literal is in that table's status domain
+- Lesson: Cast Drizzle varchar selects to their union type — compiler catches invalid comparisons
 
 ## CAS Guard Pattern (ESTABLISHED)
 

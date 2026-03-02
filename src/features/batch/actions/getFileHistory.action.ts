@@ -92,7 +92,7 @@ export async function getFileHistory(input: unknown): Promise<ActionResult<FileH
     // Map to include lastReviewerName (null until Epic 4 implements review actions)
     const mappedFiles = filtered.map((f) => ({
       ...f,
-      lastReviewerName: null as string | null, // TODO: Epic 4 — join reviewActions + users for actual reviewer name
+      lastReviewerName: null as string | null, // TODO(TD-TODO-002): Epic 4 — join reviewActions + users for actual reviewer name
     }))
 
     // Pagination

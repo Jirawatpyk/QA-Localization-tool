@@ -94,7 +94,15 @@ development_status:
   # Story 3.1b: UX polish follow-on to 3.1a — empty state, sortable table, model breakdown, tooltip/aria
   3-1b-ai-dashboard-ux-polish: done
   3-2a-ai-provider-integration-structured-output: done
-  3-2b-l2-batch-processing-pipeline-extension: backlog
+  3-2b-l2-batch-processing-pipeline-extension: review
+  # Story 3.2b5: Upload-to-Pipeline Wiring — auto-parse SDLXLIFF/XLIFF + mount ProcessingModeDialog
+  # Dependencies: Story 2.1, 2.2, 2.3, 2.6 (all done). Blocks: Story 3.2c
+  3-2b5-upload-pipeline-wiring: review
+  # Story 3.2b6: Orphan Wiring Cleanup — budget threshold UI + delete dead code + unskip parity E2E
+  3-2b6-orphan-wiring-cleanup: ready-for-dev
+  # Story 3.2b7: Taxonomy Reorder UI — drag-and-drop for taxonomy mappings (@dnd-kit)
+  # Dependencies: Story 1.6 (done). Independent of pipeline stories.
+  3-2b7-taxonomy-reorder-ui: ready-for-dev
   3-2c-l2-results-display-score-update: backlog
   3-3-ai-layer-3-deep-contextual-analysis: backlog
   3-4-ai-resilience-fallback-retry-partial-results: backlog

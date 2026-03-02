@@ -146,6 +146,22 @@
 
 ---
 
+## SECTION 9: User Journey Completeness (Epic 2 Retro — Party Mode 2026-03-02)
+
+- [ ] **J1** — Does this story create a component, action, or dialog that must be mounted/called from another component?
+  - If YES: verify the mounting/calling site is included in THIS story's tasks — or an explicit follow-up story is created
+  - Red flag: Story 2.6 created `ProcessingModeDialog` but no story mounted it in a page
+
+- [ ] **J2** — Trace the user journey this story contributes to (e.g., upload → parse → pipeline → review). Is every step covered by a completed or planned story?
+  - If there is a "handoff gap" between stories: create an integration story or add wiring task to this story
+  - Red flag: SDLXLIFF auto-parse had no trigger because Story 2.1 deferred to 2.6, Story 2.6 deferred to "future"
+
+- [ ] **J3** — If E2E tests for this story must bypass UI flow (seed data, call API directly), is a tech debt entry created?
+  - MANDATORY: every E2E bypass → `tech-debt-tracker.md` entry + `// TODO(story-X.X)` comment in test
+  - Red flag: `pipeline-findings.spec.ts` bypassed both auto-parse and ProcessingModeDialog — only comments, no tracker entry
+
+---
+
 ## SIGN-OFF
 
 ```
@@ -153,7 +169,7 @@ Story: ___________________________
 Date:  ___________________________
 Reviewed by: Charlie + ___________
 
-Sections passed:  [ ] 1  [ ] 2  [ ] 3  [ ] 4  [ ] 5  [ ] 6  [ ] 7  [ ] 8
+Sections passed:  [ ] 1  [ ] 2  [ ] 3  [ ] 4  [ ] 5  [ ] 6  [ ] 7  [ ] 8  [ ] 9
 Issues found: ____________________
 AC revised: [ ] Yes  [ ] No — AC LOCKED ✅
 ```
@@ -169,3 +185,5 @@ AC revised: [ ] Yes  [ ] No — AC LOCKED ✅
 | Story uses Radix Select in E2E test | Section 3 + 5 |
 | Story assumes columns exist that haven't been added | Section 2 |
 | Story scope bleeds into future stories without explicit deferral note | Section 8 |
+| Story creates component/dialog but no story mounts it in a page | Section 9 |
+| E2E test bypasses UI flow without tech debt tracker entry | Section 9 |

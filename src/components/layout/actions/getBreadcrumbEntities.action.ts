@@ -21,7 +21,7 @@ export async function getBreadcrumbEntities(
 
   const result: BreadcrumbEntities = {}
 
-  // TODO: Implement DB queries with withTenant() when review routes are created (Epic 4)
+  // TODO(TD-TODO-001): Implement DB queries with withTenant() when review routes are created (Epic 4)
   // For now, return raw IDs as display names — tests mock this entirely
   if (parsed.data.projectId) {
     result.projectName = parsed.data.projectId

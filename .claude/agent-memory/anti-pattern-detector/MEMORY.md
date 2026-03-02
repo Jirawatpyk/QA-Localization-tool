@@ -7,6 +7,9 @@
 - Story 3.1a: 2026-02-28 — 3M + 1L. Inline palette in STATUS_COLORS (bg-green-500, bg-yellow-500, bg-red-500), useState(prop) without sync useEffect, `interface` vs `type` in pre-existing types.ts (legacy), relative `../` imports within feature (LOW).
 - Story 3.1b: 2026-02-28 — 1M + 1L. useState sort state not reset on projects prop change (Guardrail #12 recurring), interface vs type alias in 4 component files (LOW).
 - Story 3.0.5: 2026-03-01 — 1H + 2M + 3L. Missing `import 'server-only'` in getBreadcrumbEntities.action.ts (HIGH); bare `string` for severity in UpdateFields/EditDraft in TaxonomyMappingTable (MEDIUM); bare `string` for status in getStatusVariant function signature in RecentFilesTable (MEDIUM); `interface` vs `type` in app-header.tsx + RecentFilesTable.tsx (LOW); Server Action in `src/components/layout/actions/` instead of feature module (LOW); empty `.catch(() => {})` without non-critical comment in AppBreadcrumb (LOW).
+- Story 3.2a: 2026-03-01 — 0C + 0H + 2M + 2L. CLEAN on all 14 anti-patterns and Guardrails #16-22. See story-3-2a-findings.md for details.
+- Story 3.2b: 2026-03-02 — 0C + 1H + 1M + 0L. `as any` on onFailure cast in processFile.ts (eslint-disabled, still violation — fix: use @ts-expect-error); `as unknown as ContributingFinding[]` in scoreFile.ts line 110 (double assertion — fix: @ts-expect-error with DB constraint comment).
+- Story 3.2b5: 2026-03-02 — 2C + 3H + 2M + 2L. SERVICE_ROLE_KEY + process.env in e2e/helpers/pipeline-admin.ts (CRITICAL); console.log in 2 E2E specs (HIGH); empty .catch() in FileUploadZone (HIGH); bare `string` for status in FileRow/ScoreRow (HIGH); parsingStartedRef not reset on uploadedFiles change (MEDIUM Guardrail #12); hardcoded 'tenant-id' non-UUID in test (MEDIUM); ../types relative import (LOW); unnecessary 'use client' on UploadProgressList (LOW).
 
 ## Recurring Violations by Category
 
@@ -31,6 +34,7 @@
 
 - `'use client'` error boundary components cannot use pino (server-only) — documented exception
 - `src/app/(app)/error.tsx:14`, `src/app/error.tsx:14` — known violations, cannot fix without client-safe logger
+- E2E spec files (Playwright Node process) cannot import pino either — same exception as error.tsx. Must add comment. Playwright-idiomatic alternative: `test.info().annotations.push(...)`. Seen in: pipeline-findings.spec.ts (4 instances), upload-segments.spec.ts (1 instance).
 
 ### process.env Direct Access (HIGH — with documented exceptions)
 
@@ -38,6 +42,7 @@
 - `src/proxy.ts:53,64-65` — proxy runs before app init; env.ts Proxy may not be ready
 - `src/lib/logger.ts:9` — pino level config; acceptable NODE_ENV check
 - NEW (Story 3.1): `Redis.fromEnv()` in `ratelimit.ts:7` — Upstash convenience bypasses @/lib/env. Fix: `new Redis({ url: env.UPSTASH_REDIS_REST_URL, token: env.UPSTASH_REDIS_REST_TOKEN })`
+- E2E helper files (e.g., `e2e/helpers/pipeline-admin.ts`) — Playwright Node process, @/lib/env unavailable. Pattern matches proxy.ts exception. MUST add explanatory comment. Flag HIGH until documented.
 
 ### Relative Imports (LOW)
 
@@ -88,7 +93,9 @@
 - Story 3.1: `ModelPinningSettings.tsx` — `ModelSelect` uses `useState(currentModel)` without sync effect
 - Story 3.1a: `AiUsageDashboard.tsx` — `useState<Period>(selectedDays)` without sync useEffect. BUT: `selectedDays` comes from RSC searchParams (URL-driven), page re-renders on URL change, so `activePeriod` diverges only if parent changes the prop without navigation. Flag MEDIUM — pattern is risky even if current usage is safe.
 - Story 3.1b: `AiSpendByProjectTable.tsx` — `useState<SortCol>('cost')` + `useState<SortDir>('desc')` not reset when `projects` prop changes. When period filter changes (7d→30d→90d), sort state persists from previous period. Fix: `useEffect(() => { setSortCol('cost'); setSortDir('desc') }, [projects])`. MEDIUM recurring Guardrail #12 violation.
+- Story 3.2b5: `UploadPageClient.tsx` — `useRef<Set<string>>(new Set())` (`parsingStartedRef`) accumulates fileIds across upload cycles. If user re-uploads same file after reset, ref still contains old fileId → auto-parse silently blocked. Fix: reset ref in useEffect when uploadedFiles becomes empty.
 - Pattern to check: any component with `useState(propValue)` where prop can change
+- EXTENDED pattern: `useRef` that accumulates keys/IDs from props — same risk as useState without sync
 
 ### 'use client' on Pure Display Components (LOW)
 
