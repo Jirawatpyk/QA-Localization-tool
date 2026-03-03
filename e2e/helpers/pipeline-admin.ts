@@ -52,11 +52,11 @@ type ScoreRow = {
 /**
  * Query a file's current status by file ID.
  */
-export async function queryFileStatus(fileId: string): Promise<string> {
+export async function queryFileStatus(fileId: string): Promise<SeedFileStatus> {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/files?id=eq.${fileId}&select=status`, {
     headers: adminHeaders(),
   })
-  const data = (await res.json()) as Array<{ status: string }>
+  const data = (await res.json()) as Array<{ status: SeedFileStatus }>
   if (!data || data.length === 0) throw new Error(`File ${fileId} not found`)
   return data[0].status
 }

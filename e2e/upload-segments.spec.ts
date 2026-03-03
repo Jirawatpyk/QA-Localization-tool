@@ -178,8 +178,9 @@ test.describe.serial('Upload to Pipeline Wiring', () => {
     if (projectId) {
       try {
         await cleanupTestProject(projectId)
-      } catch {
+      } catch (err) {
         // Non-critical — global teardown will clean up the user
+        console.warn(`[cleanup] Failed to clean project ${projectId}:`, err)
       }
     }
   })

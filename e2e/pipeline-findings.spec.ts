@@ -184,7 +184,7 @@ test.describe.serial('Pipeline to Findings', () => {
     await expect(fileRow).toBeVisible({ timeout: 10_000 })
 
     // Verify terminal status is displayed (economy mode = l2_completed)
-    await expect(page.getByText(/l2.completed|completed/i)).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText('l2_completed')).toBeVisible({ timeout: 10_000 })
   })
 
   // ── Cleanup ──────────────────────────────────────────────────────────────
@@ -192,8 +192,9 @@ test.describe.serial('Pipeline to Findings', () => {
     if (projectId) {
       try {
         await cleanupTestProject(projectId)
-      } catch {
+      } catch (err) {
         // Non-critical — global teardown will clean up the user
+        console.warn(`[cleanup] Failed to clean project ${projectId}:`, err)
       }
     }
   })
