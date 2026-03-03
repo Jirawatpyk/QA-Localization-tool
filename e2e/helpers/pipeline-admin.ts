@@ -166,12 +166,9 @@ export async function pollScoreLayer(
 
     if (lastLayer === targetLayer) return
 
-    // Fail-fast: score finalized with wrong layer — won't change anymore
-    if (score && score.status === 'calculated' && score.layer_completed !== targetLayer) {
-      throw new Error(
-        `Score reached 'calculated' with layer '${score.layer_completed}' instead of '${targetLayer}'`,
-      )
-    }
+    // NOTE: Do NOT fail-fast on calculated+L1 — L2 scoring recalculates the same
+    // score row to L1L2 after L2 processing completes. The score status transitions:
+    // calculated+L1 → calculating+L1 → calculated+L1L2
 
     await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
   }

@@ -23,14 +23,6 @@ export function TaxonomyManager({ initialMappings, isAdmin }: Props) {
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [, startTransition] = useTransition()
 
-  // Sync when RSC re-renders with new data (e.g., after revalidateTag)
-  // React 19 pattern: adjust state when prop changes (no useEffect needed)
-  const [prevMappings, setPrevMappings] = useState(initialMappings)
-  if (initialMappings !== prevMappings) {
-    setPrevMappings(initialMappings)
-    setMappings(initialMappings)
-  }
-
   function handleAdd() {
     setShowAddDialog(true)
   }

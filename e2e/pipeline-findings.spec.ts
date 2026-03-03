@@ -183,8 +183,8 @@ test.describe.serial('Pipeline to Findings', () => {
     const fileRow = page.getByText('minimal.sdlxliff')
     await expect(fileRow).toBeVisible({ timeout: 10_000 })
 
-    // Verify terminal status is displayed (economy mode = l2_completed)
-    await expect(page.getByText('l2_completed')).toBeVisible({ timeout: 10_000 })
+    // Verify terminal status is displayed (economy mode = l2_completed → "L2 Completed" in UI)
+    await expect(page.getByText(/L2 Completed/i)).toBeVisible({ timeout: 10_000 })
   })
 
   // ── Cleanup ──────────────────────────────────────────────────────────────
