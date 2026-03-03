@@ -421,7 +421,8 @@ test.describe.serial('Story 3.2b7 — Taxonomy Mapping Reorder', () => {
     await page.keyboard.press('Space')
 
     // Then: Success toast appears confirming the reorder was saved
-    await expect(page.getByText('Mappings reordered')).toBeVisible({ timeout: 15000 })
+    // 30s timeout: server action runs 37 UPDATEs in transaction via cloud DB with network latency
+    await expect(page.getByText('Mappings reordered')).toBeVisible({ timeout: 30_000 })
 
     // And: After page reload, the new order persists (server action saved to DB)
     await page.reload()

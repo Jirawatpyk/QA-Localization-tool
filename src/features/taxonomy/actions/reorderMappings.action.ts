@@ -36,14 +36,19 @@ export async function reorderMappings(input: unknown): Promise<ActionResult<{ up
   // Atomic batch update — all display_order changes in a single transaction (Guardrail #6)
   // NOTE: taxonomyDefinitions has no tenant_id — shared reference data per ERD 1.9.
   // withTenant() is not applicable. Access control enforced by requireRole('admin', 'write').
+  // Pipeline all UPDATEs concurrently within the transaction — reduces latency from
+  // N × RTT (sequential) to ~1 × RTT (pipelined) for cloud DB with high network latency.
   try {
+    const now = new Date()
     await db.transaction(async (tx) => {
-      for (const { id, displayOrder } of parsed.data) {
-        await tx
-          .update(taxonomyDefinitions)
-          .set({ displayOrder, updatedAt: new Date() })
-          .where(eq(taxonomyDefinitions.id, id))
-      }
+      await Promise.all(
+        parsed.data.map(({ id, displayOrder }) =>
+          tx
+            .update(taxonomyDefinitions)
+            .set({ displayOrder, updatedAt: now })
+            .where(eq(taxonomyDefinitions.id, id)),
+        ),
+      )
     })
   } catch (err) {
     return {
