@@ -40,7 +40,7 @@ type RunL2Input = {
 export type L2MappedFinding = {
   segmentId: string
   category: string
-  severity: 'critical' | 'major' | 'minor'
+  severity: FindingSeverity
   confidence: number
   description: string
   suggestedFix: string | null
@@ -246,6 +246,8 @@ export async function runL2ForFile({
     const chunkResults: ChunkResult<L2Output>[] = []
     const usageRecords: AIUsageRecord[] = []
     const config = getConfigForModel(modelId, 'L2')
+    // M3 fix: cache outside loop — deriveLanguagePair is pure (same result every call)
+    const languagePair = deriveLanguagePair(segmentRows)
 
     for (const chunk of chunks) {
       const chunkStart = performance.now()
@@ -268,7 +270,6 @@ export async function runL2ForFile({
 
         // Cost tracking (Guardrail #19)
         const cost = estimateCost(modelId, 'L2', result.usage)
-        const languagePair = deriveLanguagePair(segmentRows)
         const record: AIUsageRecord = {
           tenantId,
           projectId,
@@ -310,7 +311,6 @@ export async function runL2ForFile({
         )
 
         // AC4: Log failed chunk with status 'error' for cost tracking completeness
-        const languagePair = deriveLanguagePair(segmentRows)
         const errorRecord: AIUsageRecord = {
           tenantId,
           projectId,

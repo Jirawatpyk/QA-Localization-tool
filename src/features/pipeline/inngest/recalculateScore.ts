@@ -96,8 +96,7 @@ export const recalculateScore = Object.assign(
   inngest.createFunction(
     {
       ...fnConfig,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      onFailure: onFailureFn as any,
+      onFailure: onFailureFn,
     },
     { event: TRIGGER_EVENT },
     handlerFn,

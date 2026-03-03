@@ -2,6 +2,8 @@
 // Pure data types passed INTO prompt builders (no DB imports)
 // DB queries happen in runL2ForFile / runL3ForFile, then pass data here.
 
+import type { DetectedByLayer, FindingSeverity } from '@/types/finding'
+
 export type PromptSegment = {
   id: string
   sourceText: string
@@ -15,9 +17,9 @@ export type PriorFinding = {
   id: string
   segmentId: string | null
   category: string
-  severity: string
+  severity: FindingSeverity
   description: string
-  detectedByLayer: string
+  detectedByLayer: DetectedByLayer
 }
 
 export type GlossaryTermContext = {
@@ -29,7 +31,7 @@ export type GlossaryTermContext = {
 export type TaxonomyCategoryContext = {
   category: string
   parentCategory: string | null
-  severity: string | null
+  severity: string | null // varchar column — Drizzle infers string
   description: string
 }
 
@@ -38,7 +40,7 @@ export type ProjectContext = {
   description: string | null
   sourceLang: string
   targetLangs: string[]
-  processingMode: string
+  processingMode: string // varchar column — Drizzle infers string
 }
 
 export type L2PromptInput = {

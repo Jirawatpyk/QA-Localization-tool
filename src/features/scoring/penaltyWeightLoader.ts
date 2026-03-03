@@ -32,27 +32,23 @@ export async function loadPenaltyWeights(tenantId: string): Promise<PenaltyWeigh
     .where(or(eq(severityConfigs.tenantId, tenantId), isNull(severityConfigs.tenantId)))
 
   // Build resolved weights per severity using priority: tenant-specific > system default > hardcoded
-  const resolved: Partial<PenaltyWeights> = {}
+  // M7 fix: Map lookup instead of 6x Array.find() (O(1) per severity instead of O(n))
+  const tenantMap = new Map<string, number>()
+  const systemMap = new Map<string, number>()
+  for (const r of rows) {
+    if (r.tenantId === tenantId) {
+      tenantMap.set(r.severity, r.penaltyWeight)
+    } else if (r.tenantId === null) {
+      systemMap.set(r.severity, r.penaltyWeight)
+    }
+  }
 
+  const resolved: Partial<PenaltyWeights> = {}
   const severities: SeverityKey[] = ['critical', 'major', 'minor']
 
   for (const severity of severities) {
-    // Prefer tenant-specific row
-    const tenantRow = rows.find((r) => r.tenantId === tenantId && r.severity === severity)
-    if (tenantRow) {
-      resolved[severity] = tenantRow.penaltyWeight
-      continue
-    }
-
-    // Fall back to system default row (tenantId IS NULL)
-    const systemRow = rows.find((r) => r.tenantId === null && r.severity === severity)
-    if (systemRow) {
-      resolved[severity] = systemRow.penaltyWeight
-      continue
-    }
-
-    // Fall back to hardcoded default
-    resolved[severity] = DEFAULT_PENALTY_WEIGHTS[severity]
+    resolved[severity] =
+      tenantMap.get(severity) ?? systemMap.get(severity) ?? DEFAULT_PENALTY_WEIGHTS[severity]
   }
 
   return {

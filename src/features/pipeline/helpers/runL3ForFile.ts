@@ -19,6 +19,7 @@ import type { AIUsageRecord, ChunkResult } from '@/lib/ai/types'
 import { getConfigForModel } from '@/lib/ai/types'
 import { logger } from '@/lib/logger'
 import { aiL3ProjectLimiter } from '@/lib/ratelimit'
+import type { DetectedByLayer, FindingSeverity } from '@/types/finding'
 
 import { chunkSegments } from './chunkSegments'
 
@@ -34,7 +35,7 @@ type RunL3Input = {
 export type L3Finding = {
   segmentId: string
   category: string
-  severity: 'critical' | 'major' | 'minor'
+  severity: FindingSeverity
   confidence: number
   description: string
   suggestedFix: string | null
@@ -91,9 +92,9 @@ type PriorFindingContext = {
   id: string
   segmentId: string | null
   category: string
-  severity: string
+  severity: FindingSeverity
   description: string
-  detectedByLayer: string
+  detectedByLayer: DetectedByLayer
 }
 
 // ── Main Function ──
@@ -176,7 +177,9 @@ export async function runL3ForFile({
       .orderBy(segments.segmentNumber)
 
     // Step 4: Load L1 + L2 findings for context (L3 avoids duplicating both)
-    const priorFindings: PriorFindingContext[] = await db
+    // SAFETY: WHERE limits to L1/L2 findings which have valid FindingSeverity and DetectedByLayer values
+    // Drizzle infers varchar → string, cast is safe within this domain
+    const priorFindings = (await db
       .select({
         id: findings.id,
         segmentId: findings.segmentId,
@@ -186,7 +189,9 @@ export async function runL3ForFile({
         detectedByLayer: findings.detectedByLayer,
       })
       .from(findings)
-      .where(and(withTenant(findings.tenantId, tenantId), eq(findings.fileId, fileId)))
+      .where(
+        and(withTenant(findings.tenantId, tenantId), eq(findings.fileId, fileId)),
+      )) as PriorFindingContext[]
 
     // Step 5: Chunk segments (Guardrail #21)
     const chunks = chunkSegments(segmentRows)
@@ -247,6 +252,25 @@ export async function runL3ForFile({
           { err: error, fileId, chunkIndex: chunk.chunkIndex, aiErrorKind: kind },
           'L3 chunk failed (non-retriable — continuing with remaining chunks)',
         )
+
+        // H3 fix: Log failed chunk usage for cost tracking completeness (parity with runL2ForFile)
+        const errorRecord: AIUsageRecord = {
+          tenantId,
+          projectId,
+          fileId,
+          model: modelId,
+          layer: 'L3',
+          inputTokens: 0,
+          outputTokens: 0,
+          estimatedCostUsd: 0,
+          chunkIndex: chunk.chunkIndex,
+          durationMs: Math.round(performance.now() - chunkStart),
+          languagePair: null,
+          status: 'error',
+        }
+        logAIUsage(errorRecord).catch(() => {
+          /* non-critical — DB failure already logged inside logAIUsage */
+        })
 
         chunkResults.push({
           chunkIndex: chunk.chunkIndex,

@@ -63,8 +63,7 @@ export const processBatch = Object.assign(
     {
       id: 'process-batch-pipeline',
       retries: 3,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      onFailure: onFailureBatchFn as any,
+      onFailure: onFailureBatchFn,
     },
     { event: 'pipeline.batch-started' as const },
     handlerFn,

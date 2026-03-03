@@ -76,8 +76,7 @@ export const batchComplete = Object.assign(
       retries: 3,
       concurrency: [{ key: 'event.data.projectId', limit: 1 }],
       // H3: Add onFailure for error visibility (parity with processFilePipeline + processBatch)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      onFailure: onFailureFn as any,
+      onFailure: onFailureFn,
     },
     { event: 'pipeline.batch-completed' },
     handlerFn,

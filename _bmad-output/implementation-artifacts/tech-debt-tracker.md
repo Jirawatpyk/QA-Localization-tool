@@ -226,13 +226,24 @@
 - **Origin:** Story 2.6 design, identified during Story 3.2b validation (mode-aware terminal status makes race window wider)
 - **Status:** DEFERRED → **Story 3.4 — AI Resilience, Fallback, Retry & Partial Results** (atomic batch completion check is core resilience requirement; fix with DB-level UPDATE...RETURNING pattern)
 
-### TD-PIPE-002: Missing error-chunk cost logging in runL3ForFile
+### ~~TD-PIPE-002: Missing error-chunk cost logging in runL3ForFile~~
+- **Status:** RESOLVED (2026-03-03) — Added `logAIUsage(errorRecord)` in L3 catch block, matching L2 pattern (H3 fix in CI bug-fix CR round)
+
+### TD-PIPE-003: L3 buildL3Prompt is inline — should use shared prompt builder
 - **Severity:** Medium
-- **File:** `src/features/pipeline/helpers/runL3ForFile.ts` — catch block in chunk loop (~line 239-258)
-- **Risk:** Failed L3 chunks are not logged to `ai_usage_logs` with `status: 'error'`, causing cost tracking gap. L2 (`runL2ForFile.ts`) correctly logs error records for failed chunks per AC4 pattern, but L3 omits this
-- **Fix:** Add `logAIUsage(errorRecord)` in the catch block of L3 chunk loop, matching the L2 pattern (lines ~309-326 in runL2ForFile.ts)
-- **Origin:** Prep P4 (runL3ForFile template), identified during Story 3.2b pre-CR inngest-function-validator scan
-- **Status:** DEFERRED → fix in **Story 3.3** (runL3ForFile.ts is "DO NOT TOUCH" in 3.2b; Story 3.3 modifies it for selective-segment filtering)
+- **File:** `src/features/pipeline/helpers/runL3ForFile.ts` — `buildL3Prompt()` at bottom of file
+- **Risk:** L3 prompt builder is a local function inside runL3ForFile.ts instead of using the shared `src/features/pipeline/prompts/` module pattern (like L2 uses `buildL2Prompt` from `prompts/build-l2-prompt.ts`). This makes prompt versioning, testing, and evaluation framework integration harder for L3
+- **Fix:** Extract `buildL3Prompt()` to `src/features/pipeline/prompts/build-l3-prompt.ts` following L2 pattern, with proper prompt context types and module integration
+- **Origin:** Story 3.2b CR scan, identified by code-quality-analyzer
+- **Status:** DEFERRED → **Story 3.3** (L3 selective-segment filtering will modify the prompt builder anyway — refactor at that point)
+
+### TD-PIPE-004: AI fallback chain resolved but not consumed
+- **Severity:** Low
+- **File:** `src/features/pipeline/helpers/runL2ForFile.ts` (~line 157), `runL3ForFile.ts` (~line 155)
+- **Risk:** `getModelForLayerWithFallback()` returns `{ primary, fallbacks }` but only `primary` is used. If primary model fails, the fallback chain is never tried — the error propagates to Inngest retry instead. This means fallback models add no value currently
+- **Fix:** Implement retry loop: try primary → on non-retriable failure → try fallback[0] → fallback[1] → etc. Log model switch for observability
+- **Origin:** Story 3.2b CR scan, identified by code-quality-analyzer
+- **Status:** DEFERRED → **Story 3.4 — AI Resilience, Fallback, Retry & Partial Results** (fallback chain consumption is a core resilience feature)
 
 ### TD-TEST-005: P2 skipped test — auto_passed propagation from scoreFile
 - **Severity:** Low

@@ -173,7 +173,7 @@ export async function crossFileConsistency(
       severity: 'minor' as const, // H3: AC#7 says minor, not major
       description,
       detectedByLayer: 'L1' as const,
-      status: 'open' as const,
+      status: 'pending' as const,
       scope: 'cross-file' as const,
       relatedFileIds: inconsistency.relatedFileIds,
       // M2: Add source/target excerpts for UI display
