@@ -223,4 +223,68 @@ describe('getFileReviewData', () => {
       expect(result.data.findings).toEqual([])
     }
   })
+
+  // ── P1: Score fallback when no score record exists ──
+
+  it('[P1] should return default score when no score record exists', async () => {
+    const fileId = 'c3d4e5f6-a1b2-4c1d-ae2f-5a6b7c8d9e0f'
+    const projectId = 'd4e5f6a1-b2c3-4d1e-bf3a-6b7c8d9e0f1a'
+
+    dbState.returnValues = [
+      [buildFile({ fileId })],
+      [],
+      [], // no score
+      [{ l2ConfidenceMin: 70, processingMode: 'economy' }],
+    ]
+
+    const result = await getFileReviewData({ fileId, projectId })
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.score.mqmScore).toBeNull()
+      expect(result.data.score.status).toBe('na')
+      expect(result.data.score.layerCompleted).toBeNull()
+      expect(result.data.score.criticalCount).toBe(0)
+      expect(result.data.score.majorCount).toBe(0)
+      expect(result.data.score.minorCount).toBe(0)
+    }
+  })
+
+  // ── P1: Config fallback when no language pair config exists ──
+
+  it('[P1] should return economy mode and null l2ConfidenceMin when no config record', async () => {
+    const fileId = 'c3d4e5f6-a1b2-4c1d-ae2f-5a6b7c8d9e0f'
+    const projectId = 'd4e5f6a1-b2c3-4d1e-bf3a-6b7c8d9e0f1a'
+
+    dbState.returnValues = [
+      [buildFile({ fileId })],
+      [],
+      [buildScoreRecord({ fileId, tenantId: mockTenantId })],
+      [], // no config
+    ]
+
+    const result = await getFileReviewData({ fileId, projectId })
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.processingMode).toBe('economy')
+      expect(result.data.l2ConfidenceMin).toBeNull()
+    }
+  })
+
+  // ── P1: Error handling — DB throws ──
+
+  it('[P1] should return INTERNAL_ERROR when DB query throws', async () => {
+    const fileId = 'c3d4e5f6-a1b2-4c1d-ae2f-5a6b7c8d9e0f'
+    const projectId = 'd4e5f6a1-b2c3-4d1e-bf3a-6b7c8d9e0f1a'
+
+    dbState.throwAtCallIndex = 0
+
+    const result = await getFileReviewData({ fileId, projectId })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('INTERNAL_ERROR')
+    }
+  })
 })
