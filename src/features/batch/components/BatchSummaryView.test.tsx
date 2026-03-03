@@ -193,6 +193,54 @@ describe('BatchSummaryView', () => {
     expect(screen.queryByTestId('mock-card-f1-uuid-0001-0001-000000000001')).toBeNull()
   })
 
+  // ── P1: Cross-file findings (TD-TEST-005) ──
+
+  it('[P1] should render cross-file issues section when crossFileFindings provided', () => {
+    const crossFileFindings = [
+      {
+        id: 'cf-001',
+        description: 'Inconsistent translation of "Submit"',
+        sourceTextExcerpt: 'Submit button',
+        relatedFileIds: ['f1-uuid-0001-0001-000000000001', 'f2-uuid-0002-0002-000000000002'],
+      },
+      {
+        id: 'cf-002',
+        description: 'Number format mismatch across files',
+        sourceTextExcerpt: null,
+        relatedFileIds: ['f1-uuid-0001-0001-000000000001', 'f3-uuid-0003-0003-000000000003'],
+      },
+    ]
+
+    render(
+      <BatchSummaryView
+        projectId={PROJECT_ID}
+        passedFiles={passedFiles}
+        reviewFiles={reviewFiles}
+        crossFileFindings={crossFileFindings}
+      />,
+    )
+
+    expect(screen.getByTestId('cross-file-issues')).toBeTruthy()
+    expect(screen.getByText(/2 inconsistencies found/i)).toBeTruthy()
+    expect(screen.getByText(/Inconsistent translation of "Submit"/)).toBeTruthy()
+    expect(screen.getByText(/Number format mismatch/)).toBeTruthy()
+    // Both findings have 2 relatedFileIds → 2 elements with "Affects 2 files"
+    expect(screen.getAllByText(/Affects 2 files/)).toHaveLength(2)
+  })
+
+  it('[P1] should not render cross-file section when crossFileFindings is empty', () => {
+    render(
+      <BatchSummaryView
+        projectId={PROJECT_ID}
+        passedFiles={passedFiles}
+        reviewFiles={reviewFiles}
+        crossFileFindings={[]}
+      />,
+    )
+
+    expect(screen.queryByTestId('cross-file-issues')).toBeNull()
+  })
+
   // ── Story 3.1: AI cost summary line (EXTEND) ──
 
   it('[P0] should render AI cost summary line when aiCostSummary prop is provided', () => {

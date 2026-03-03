@@ -130,15 +130,15 @@
 - **Origin:** Story 2.10, flagged by code-quality-analyzer
 - **Status:** RESOLVED (2026-03-02 — Guardrail #23 quick fix)
 
-### TD-TEST-005: Low-priority test gaps (carry-over)
+### ~~TD-TEST-005: Low-priority test gaps (carry-over)~~
 - **Severity:** Low
 - **Items:**
-  - `BatchSummaryView.test.tsx` — `crossFileFindings` prop untested
-  - `FileHistoryTable.test.tsx` — `processedAt` vs `createdAt` type mismatch
-  - `xbenchReportParser` — null worksheet path untested
-  - `batchComplete.test.ts` — `vi.resetModules()` inside `it()` body
+  - ~~`BatchSummaryView.test.tsx` — `crossFileFindings` prop untested~~ → RESOLVED (2026-03-03 — 2 tests added: render + empty)
+  - ~~`FileHistoryTable.test.tsx` — `processedAt` vs `createdAt` type mismatch~~ → ACCEPTED (naming-only: `FileHistoryPageClient.tsx:50` maps `createdAt→processedAt` at client layer, not a bug)
+  - ~~`xbenchReportParser` — null worksheet path untested~~ → RESOLVED (test already exists at `xbenchReportParser.test.ts:485-489`: `'should throw when xlsx has no worksheet'`)
+  - ~~`batchComplete.test.ts` — `vi.resetModules()` inside `it()` body~~ → ACCEPTED (intentional pattern: re-imports module-level `createFunction` to test different configs)
 - **Origin:** Story 2.7 CR R1-R4, flagged by testing-qa-expert
-- **Status:** ACCEPTED (low priority, no production risk)
+- **Status:** RESOLVED (2026-03-03 — all 4 sub-items verified: 2 resolved, 2 accepted)
 
 ---
 
