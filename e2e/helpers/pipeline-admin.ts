@@ -9,17 +9,28 @@ import { SUPABASE_URL, adminHeaders } from './supabase-admin'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+// Aligned with DbFileStatus in src/types/pipeline.ts
 export type SeedFileStatus =
-  | 'pending'
+  | 'uploaded'
+  | 'parsing'
   | 'parsed'
+  | 'l1_processing'
   | 'l1_completed'
+  | 'l2_processing'
   | 'l2_completed'
+  | 'l3_processing'
   | 'l3_completed'
   | 'failed'
 
+// Aligned with scores.layer_completed column (varchar(10))
+type ScoreLayerCompleted = 'L1' | 'L1L2' | 'L1L2L3'
+
+// Aligned with ScoreStatus in src/types/finding.ts
+type ScoreStatus = 'calculating' | 'calculated' | 'partial' | 'overridden' | 'auto_passed' | 'na'
+
 type FileRow = {
   id: string
-  status: string
+  status: SeedFileStatus
   file_name: string
   project_id: string
   tenant_id: string
@@ -28,8 +39,8 @@ type FileRow = {
 type ScoreRow = {
   id: string
   mqm_score: number
-  layer_completed: string
-  status: string
+  layer_completed: ScoreLayerCompleted
+  status: ScoreStatus
   total_words: number
   critical_count: number
   major_count: number
@@ -112,7 +123,7 @@ export async function queryScore(fileId: string): Promise<ScoreRow | null> {
  */
 export async function pollFileStatus(
   fileId: string,
-  targetStatus: string,
+  targetStatus: SeedFileStatus,
   timeoutMs: number = 180_000,
   pollIntervalMs: number = 3_000,
 ): Promise<void> {
@@ -142,7 +153,7 @@ export async function pollFileStatus(
  */
 export async function pollScoreLayer(
   fileId: string,
-  targetLayer: string,
+  targetLayer: ScoreLayerCompleted,
   timeoutMs: number = 30_000,
   pollIntervalMs: number = 2_000,
 ): Promise<void> {
@@ -154,6 +165,13 @@ export async function pollScoreLayer(
     lastLayer = score?.layer_completed ?? ''
 
     if (lastLayer === targetLayer) return
+
+    // Fail-fast: score finalized with wrong layer — won't change anymore
+    if (score && score.status === 'calculated' && score.layer_completed !== targetLayer) {
+      throw new Error(
+        `Score reached 'calculated' with layer '${score.layer_completed}' instead of '${targetLayer}'`,
+      )
+    }
 
     await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
   }

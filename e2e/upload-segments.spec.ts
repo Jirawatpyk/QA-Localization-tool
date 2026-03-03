@@ -146,7 +146,7 @@ test.describe.serial('Upload to Pipeline Wiring', () => {
     }
 
     // Click the confirm/start button in the dialog
-    const confirmBtn = dialog.getByRole('button', { name: /start|confirm|begin/i })
+    const confirmBtn = dialog.getByRole('button', { name: 'Start Processing', exact: true })
     await confirmBtn.click()
 
     // Dialog should close after confirming

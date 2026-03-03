@@ -94,7 +94,8 @@ export async function proxy(request: NextRequest) {
   }
 
   // Authenticated user trying to access auth pages — redirect to dashboard
-  if (isPublicRoute && pathname !== '/callback') {
+  // Exclude /api/* routes — they handle auth internally (e.g., /api/inngest webhook)
+  if (isPublicRoute && pathname !== '/callback' && !pathname.startsWith('/api/')) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
