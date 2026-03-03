@@ -319,4 +319,165 @@ describe('useFindingsSubscription', () => {
     expect(mockFrom).toHaveBeenCalledWith('findings')
     expect(mockEq).toHaveBeenCalledWith('file_id', 'file-abc')
   })
+
+  // ── P1: SUBSCRIBED stops polling ──
+
+  it('[P1] should stop polling when channel transitions to SUBSCRIBED', async () => {
+    renderHook(() => useFindingsSubscription('file-abc'))
+
+    const subscribeCallback = mockChannel.subscribe.mock.calls[0]![0] as (status: string) => void
+
+    // Start polling first
+    act(() => {
+      subscribeCallback('CHANNEL_ERROR')
+    })
+    await vi.advanceTimersByTimeAsync(0)
+
+    // Then SUBSCRIBED should stop polling
+    act(() => {
+      subscribeCallback('SUBSCRIBED')
+    })
+
+    mockFrom.mockClear()
+    await vi.advanceTimersByTimeAsync(60_000)
+    // No more polling calls after SUBSCRIBED
+    expect(mockFrom).not.toHaveBeenCalled()
+  })
+
+  // ── P1: INSERT with invalid data is ignored ──
+
+  it('[P1] should ignore INSERT event with invalid severity', async () => {
+    renderHook(() => useFindingsSubscription('file-abc'))
+
+    const insertCall = mockChannel.on.mock.calls.find(
+      (call: unknown[]) => (call[1] as Record<string, unknown>)?.event === 'INSERT',
+    )
+    const onInsertHandler = insertCall![2] as (payload: { new: Record<string, unknown> }) => void
+
+    await act(async () => {
+      onInsertHandler({ new: { id: 'bad-finding', severity: 'invalid_severity' } })
+    })
+
+    expect(useReviewStore.getState().findingsMap.has('bad-finding')).toBe(false)
+  })
+
+  // ── P1: INSERT with missing id is ignored ──
+
+  it('[P1] should ignore INSERT event with missing id', async () => {
+    renderHook(() => useFindingsSubscription('file-abc'))
+
+    const insertCall = mockChannel.on.mock.calls.find(
+      (call: unknown[]) => (call[1] as Record<string, unknown>)?.event === 'INSERT',
+    )
+    const onInsertHandler = insertCall![2] as (payload: { new: Record<string, unknown> }) => void
+
+    const sizeBefore = useReviewStore.getState().findingsMap.size
+    await act(async () => {
+      onInsertHandler({ new: { severity: 'major' } })
+    })
+
+    expect(useReviewStore.getState().findingsMap.size).toBe(sizeBefore)
+  })
+
+  // ── P1: DELETE with missing id is ignored ──
+
+  it('[P1] should ignore DELETE event with missing id', () => {
+    useReviewStore.getState().setFinding('finding-keep', {
+      id: 'finding-keep',
+      tenantId: '',
+      projectId: '',
+      sessionId: '',
+      segmentId: '',
+      severity: 'major',
+      category: '',
+      status: 'pending',
+      description: '',
+      createdAt: '',
+      updatedAt: '',
+      fileId: 'file-abc',
+      detectedByLayer: 'L1',
+      aiModel: null,
+      aiConfidence: null,
+      suggestedFix: null,
+      sourceTextExcerpt: null,
+      targetTextExcerpt: null,
+      segmentCount: 1,
+      scope: 'per-file',
+      reviewSessionId: null,
+      relatedFileIds: null,
+    })
+
+    renderHook(() => useFindingsSubscription('file-abc'))
+
+    const deleteCall = mockChannel.on.mock.calls.find(
+      (call: unknown[]) => (call[1] as Record<string, unknown>)?.event === 'DELETE',
+    )
+    const onDeleteHandler = deleteCall![2] as (payload: { old: Record<string, unknown> }) => void
+
+    act(() => {
+      onDeleteHandler({ old: { id: 123 } }) // non-string id
+    })
+
+    expect(useReviewStore.getState().findingsMap.has('finding-keep')).toBe(true)
+  })
+
+  // ── P1: UPDATE with invalid data is ignored ──
+
+  it('[P1] should ignore UPDATE event with invalid severity', () => {
+    renderHook(() => useFindingsSubscription('file-abc'))
+
+    const updateCall = mockChannel.on.mock.calls.find(
+      (call: unknown[]) => (call[1] as Record<string, unknown>)?.event === 'UPDATE',
+    )
+    const onUpdateHandler = updateCall![2] as (payload: { new: Record<string, unknown> }) => void
+
+    const setFindingSpy = vi.spyOn(useReviewStore.getState(), 'setFinding')
+
+    act(() => {
+      onUpdateHandler({ new: { id: 'bad', severity: 999 } })
+    })
+
+    expect(setFindingSpy).not.toHaveBeenCalled()
+    setFindingSpy.mockRestore()
+  })
+
+  // ── P1: mapRowToFinding with fallback values for non-string fields ──
+
+  it('[P1] should map row with non-string optional fields to Finding with defaults', async () => {
+    renderHook(() => useFindingsSubscription('file-abc'))
+
+    const insertCall = mockChannel.on.mock.calls.find(
+      (call: unknown[]) => (call[1] as Record<string, unknown>)?.event === 'INSERT',
+    )
+    const onInsertHandler = insertCall![2] as (payload: { new: Record<string, unknown> }) => void
+
+    // Minimal valid data + numeric/null for optional fields
+    await act(async () => {
+      onInsertHandler({
+        new: {
+          id: 'finding-defaults',
+          severity: 'minor',
+          category: 123, // non-string → fallback ''
+          description: null, // non-string → fallback ''
+          detected_by_layer: 'INVALID', // invalid → fallback 'L1'
+          status: 'INVALID_STATUS', // invalid → fallback 'pending'
+          ai_confidence: 'not-a-number', // non-number → fallback null
+          segment_count: 'string', // non-number → fallback 1
+          scope: 123, // non-string → fallback 'per-file'
+          related_file_ids: 'not-array', // non-array → fallback null
+        },
+      })
+    })
+
+    const finding = useReviewStore.getState().findingsMap.get('finding-defaults')
+    expect(finding).toBeDefined()
+    expect(finding!.category).toBe('')
+    expect(finding!.description).toBe('')
+    expect(finding!.detectedByLayer).toBe('L1')
+    expect(finding!.status).toBe('pending')
+    expect(finding!.aiConfidence).toBeNull()
+    expect(finding!.segmentCount).toBe(1)
+    expect(finding!.scope).toBe('per-file')
+    expect(finding!.relatedFileIds).toBeNull()
+  })
 })
