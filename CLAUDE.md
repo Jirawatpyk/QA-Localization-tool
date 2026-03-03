@@ -146,6 +146,7 @@ Each feature module contains: `components/`, `actions/` (Server Actions), `hooks
 21. **AI chunks in Inngest: one `step.run()` per chunk** — chunk segments at 30K chars. Each chunk = separate deterministic step ID: `l2-chunk-${fileId}-${i}`. Failed chunk logs error + continues (don't fail entire layer). Collect partial results. Return `{ findingCount, chunksProcessed, partialFailure }`
 22. **AI budget guard before layer** — check tenant AI quota BEFORE making any AI calls. If budget exhausted → `throw new NonRetriableError('AI quota exhausted')`. Log remaining quota after each call. Pattern: `checkTenantBudget(tenantId)` → `{ hasQuota, remainingTokens }`
 23. **Tech Debt: quick fix ห้าม DEFER** — TD ที่เป็น quick fix (< 2 ชม.) → **แก้ทันที ห้าม DEFER** ถ้าเจอระหว่าง CR/impl ให้แก้ในรอบเดียวกัน. TD ที่ต้องรอ feature (code ที่จะใช้ยังไม่มี) → DEFER ได้ แต่ต้องระบุ **Story ID** (e.g., "Story 3.4") หรือ **Epic + scope** (e.g., "Epic 4 — review infrastructure") ชัดเจน. Vague references เช่น "Epic 3-4", "early Epic 3", "Epic 4+" = **FORBIDDEN** → CR High finding. (Epic 3 Party Mode Retro)
+24. **CR fix → E2E mandatory** — CR fix ที่แก้ `"use client"` component, E2E helper (`e2e/helpers/*`), หรือ E2E spec → **ต้อง run E2E locally ก่อน push** (`npx playwright test <spec>`). Unit test จับ race condition ข้าม component+server action+RSC cache ไม่ได้ — เฉพาะ E2E ที่จะเจอ (Epic 3 CR Retro — prop sync + pollScoreLayer bugs)
 
 ## Naming Conventions
 
