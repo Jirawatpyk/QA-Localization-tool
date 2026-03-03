@@ -94,6 +94,64 @@ describe('useFindingsSubscription', () => {
     expect(useReviewStore.getState().findingsMap.has('finding-1')).toBe(true)
   })
 
+  // ── P0: UPDATE syncs finding in store (accept/reject status change) ──
+
+  it('[P0] should update finding in findingsMap on UPDATE event', async () => {
+    // Pre-populate a finding
+    useReviewStore.getState().setFinding('finding-update-1', {
+      id: 'finding-update-1',
+      tenantId: '',
+      projectId: '',
+      sessionId: '',
+      segmentId: 'seg-1',
+      severity: 'major',
+      category: 'accuracy',
+      status: 'pending',
+      description: 'Original description',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      fileId: 'file-abc',
+      detectedByLayer: 'L2',
+      aiModel: null,
+      aiConfidence: 85,
+      suggestedFix: null,
+      sourceTextExcerpt: null,
+      targetTextExcerpt: null,
+      segmentCount: 1,
+      scope: 'per-file',
+      reviewSessionId: null,
+      relatedFileIds: null,
+    })
+
+    renderHook(() => useFindingsSubscription('file-abc'))
+
+    // Get the UPDATE handler
+    const updateCall = mockChannel.on.mock.calls.find(
+      (call: unknown[]) => (call[1] as Record<string, unknown>)?.event === 'UPDATE',
+    )
+    expect(updateCall).toBeDefined()
+    const onUpdateHandler = updateCall![2] as (payload: { new: Record<string, unknown> }) => void
+
+    act(() => {
+      onUpdateHandler({
+        new: {
+          id: 'finding-update-1',
+          severity: 'major',
+          category: 'accuracy',
+          description: 'Original description',
+          detected_by_layer: 'L2',
+          ai_confidence: 85,
+          status: 'accepted',
+          file_id: 'file-abc',
+        },
+      })
+    })
+
+    const updated = useReviewStore.getState().findingsMap.get('finding-update-1')
+    expect(updated).toBeDefined()
+    expect(updated!.status).toBe('accepted')
+  })
+
   // ── P0: DELETE removes finding from store ──
 
   it('[P0] should remove finding from findingsMap on DELETE event', () => {
@@ -149,8 +207,9 @@ describe('useFindingsSubscription', () => {
     )
     const onInsertHandler = insertCall![2] as (payload: { new: Record<string, unknown> }) => void
 
-    // Track setFindings calls to verify batching
+    // Track batch vs individual calls to verify batching
     const setFindingsSpy = vi.spyOn(useReviewStore.getState(), 'setFindings')
+    const setFindingSpy = vi.spyOn(useReviewStore.getState(), 'setFinding')
 
     // Fire 5 INSERT events synchronously then flush microtask with async act()
     await act(async () => {
@@ -170,9 +229,9 @@ describe('useFindingsSubscription', () => {
       }
     })
 
-    // async act() flushes queueMicrotask — verify single batch setFindings call
-    // (individual setFinding would produce 5 calls; batched produces 1 setFindings call)
+    // Batched: single setFindings (plural) call, NO individual setFinding calls
     expect(setFindingsSpy).toHaveBeenCalledTimes(1)
+    expect(setFindingSpy).not.toHaveBeenCalled()
 
     // All 5 findings should be in the store
     const map = useReviewStore.getState().findingsMap
@@ -181,6 +240,7 @@ describe('useFindingsSubscription', () => {
     expect(map.has('finding-4')).toBe(true)
 
     setFindingsSpy.mockRestore()
+    setFindingSpy.mockRestore()
   })
 
   // ── P0: INSERT+DELETE re-process idempotency (T7.7) ──

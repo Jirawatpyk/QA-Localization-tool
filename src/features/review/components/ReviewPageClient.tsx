@@ -9,7 +9,7 @@ import { ReviewProgress } from '@/features/review/components/ReviewProgress'
 import { useFindingsSubscription } from '@/features/review/hooks/use-findings-subscription'
 import { useScoreSubscription } from '@/features/review/hooks/use-score-subscription'
 import { useReviewStore } from '@/features/review/stores/review.store'
-import type { Finding, FindingStatus, LayerCompleted, ScoreBadgeState } from '@/types/finding'
+import type { Finding, LayerCompleted, ScoreBadgeState } from '@/types/finding'
 
 type ReviewPageClientProps = {
   fileId: string
@@ -45,7 +45,7 @@ export function ReviewPageClient({ fileId, projectId, initialData }: ReviewPageC
         tenantId: '',
         projectId,
         sessionId: '',
-        status: f.status as FindingStatus,
+        status: f.status,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         fileId,

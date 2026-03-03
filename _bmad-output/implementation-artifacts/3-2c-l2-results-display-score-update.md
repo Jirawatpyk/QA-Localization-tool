@@ -381,7 +381,7 @@ Recent commits focus on Story 3.2b7 (taxonomy reorder) CR fixes and pipeline E2E
 - **CSS animation gap:** `animate-fade-in` referenced in FindingListItem but not defined → added to `animations.css`. `animate-spin-parent` on ReviewProgress was phantom class → removed (spinner is on child SVG via built-in `animate-spin`)
 - **Score subscription bug fix (from Story 3.0 note):** `useScoreSubscription` listened for `UPDATE` but `scoreFile()` does DELETE+INSERT → changed to `INSERT` event
 - **M6 languagePairConfigs targetLang:** JOIN matches `sourceLang` only — sufficient for `l2ConfidenceMin` lookup. Multi-target-lang matching is Epic 4+ scope
-- **DoD gate:** 85/85 review tests pass, TypeScript clean, lint 0 errors, all P0+P1 ATDD tests green
+- **DoD gate:** 92/92 review tests pass (10 files), TypeScript clean, lint 0 errors, all P0+P1 ATDD tests green. CR R2: 0C/0H after fixes
 
 ### CR R1 Fix Summary (2026-03-03)
 - **H2: Burst batching** — Implemented `queueMicrotask` + `InsertBuffer` pattern in `useFindingsSubscription`. N simultaneous INSERT events → 1 `setFindings()` call. Tests use `await act(async () => ...)` to flush microtasks
@@ -397,6 +397,16 @@ Recent commits focus on Story 3.2b7 (taxonomy reorder) CR fixes and pipeline E2E
 - **L4: Stale comments** — Removed "TDD RED PHASE" comments from 5 test files
 - **Bonus:** Removed unused `scoreStatus` Zustand selector (lint warning fix + unnecessary re-render prevention)
 
+### CR R2 Fix Summary (2026-03-03)
+- **H1: Stale score subscription test** — Renamed `use-score-subscription.test.ts:52` from `'should subscribe to scores table filtered by fileId'` to `'should subscribe to INSERT (primary) and UPDATE (secondary) on scores table'`. Asserts both INSERT (primary, AC6 bug fix) and UPDATE (secondary safety net)
+- **H2: Missing UPDATE handler test** — Added `[P0] should update finding in findingsMap on UPDATE event` test to `use-findings-subscription.test.ts`. Verifies accept/reject status sync via Realtime UPDATE
+- **M1: FileReviewData status type** — Changed `findings[].status: string` → `FindingStatus` in `getFileReviewData.action.ts:32`. Added `FindingStatus` import. Removed redundant `as FindingStatus` cast in `ReviewPageClient.tsx`
+- **M2: mapRowToFinding runtime validation** — Added `isValidSeverity()`, `isValidStatus()`, `isValidLayer()` validators using const Sets (consistent with `use-score-subscription.ts` `isValidScoreStatus()` pattern). Invalid Realtime payloads now rejected/defaulted instead of blindly cast
+- **L1: Fragile DOM assertion** — Changed `innerHTML.toMatch(/animate-spin/)` → `querySelector('.animate-spin')` in `ReviewProgress.test.tsx`
+- **L2: Two-component test** — Removed ConfidenceBadge render from ScoreBadge boundary test (already covered in `ConfidenceBadge.test.tsx`). Removed unused import
+- **L3: useReducedMotion reactive** — Added `addEventListener('change', handler)` to respond to system preference changes (previously only checked at mount time)
+- **L4: Batch spy assertion** — Added `setFindingSpy` (singular) negative assertion to burst batch test, proving INSERT events use batch `setFindings` (plural) not individual `setFinding` calls
+
 ### File List
 
 **New files (created):**
@@ -410,11 +420,11 @@ Recent commits focus on Story 3.2b7 (taxonomy reorder) CR fixes and pipeline E2E
 - `src/features/review/components/ReviewProgress.test.tsx` — 7 tests (6 + CR R1: L2 pending)
 - `src/features/review/components/FindingListItem.tsx` — Single finding row (read-only)
 - `src/features/review/components/FindingListItem.test.tsx` — 7 tests (6 + CR R1: source/target excerpts)
-- `src/features/review/components/ScoreBadge.boundary.test.tsx` — 6 boundary tests
+- `src/features/review/components/ScoreBadge.boundary.test.tsx` — 6 boundary tests (CR R2: removed ConfidenceBadge conflation from last test)
 - `src/features/review/actions/getFileReviewData.action.ts` — Server Action (file + findings + score + config)
 - `src/features/review/actions/getFileReviewData.action.test.ts` — 6 tests (5 + CR R1: processingMode)
-- `src/features/review/hooks/use-findings-subscription.ts` — Realtime findings hook + polling fallback
-- `src/features/review/hooks/use-findings-subscription.test.ts` — 7 tests (6 + CR R1: re-process idempotency)
+- `src/features/review/hooks/use-findings-subscription.ts` — Realtime findings hook + polling fallback + runtime validators
+- `src/features/review/hooks/use-findings-subscription.test.ts` — 8 tests (6 + CR R1: re-process idempotency + CR R2: UPDATE handler)
 - `supabase/migrations/00019_story_3_2c_realtime.sql` — Enable Realtime for scores + findings tables
 - `e2e/review-findings.spec.ts` — E2E critical flow (upload → pipeline → review page)
 

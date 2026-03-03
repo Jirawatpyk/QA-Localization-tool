@@ -2,7 +2,25 @@ import { useCallback, useEffect, useRef } from 'react'
 
 import { useReviewStore } from '@/features/review/stores/review.store'
 import { createBrowserClient } from '@/lib/supabase/client'
+import { FINDING_STATUSES } from '@/types/finding'
 import type { DetectedByLayer, Finding, FindingSeverity, FindingStatus } from '@/types/finding'
+
+// ── Runtime validators (consistent with use-score-subscription.ts isValidScoreStatus pattern) ──
+const SEVERITY_VALUES = new Set<string>(['critical', 'major', 'minor'])
+const STATUS_VALUES = new Set<string>(FINDING_STATUSES)
+const LAYER_VALUES = new Set<string>(['L1', 'L2', 'L3'])
+
+function isValidSeverity(value: string): value is FindingSeverity {
+  return SEVERITY_VALUES.has(value)
+}
+
+function isValidStatus(value: string): value is FindingStatus {
+  return STATUS_VALUES.has(value)
+}
+
+function isValidLayer(value: string): value is DetectedByLayer {
+  return LAYER_VALUES.has(value)
+}
 
 // ── Burst batching — collect INSERT events and flush as single state update via queueMicrotask ──
 type InsertBuffer = {
@@ -15,8 +33,14 @@ const MAX_POLL_INTERVAL = 60000
 
 function mapRowToFinding(row: Record<string, unknown>): Finding | null {
   const id = typeof row.id === 'string' ? row.id : null
-  const severity = typeof row.severity === 'string' ? row.severity : null
-  if (!id || !severity) return null
+  const rawSeverity = typeof row.severity === 'string' ? row.severity : null
+  if (!id || !rawSeverity || !isValidSeverity(rawSeverity)) return null
+
+  const rawStatus = typeof row.status === 'string' ? row.status : 'pending'
+  const status: FindingStatus = isValidStatus(rawStatus) ? rawStatus : 'pending'
+
+  const rawLayer = typeof row.detected_by_layer === 'string' ? row.detected_by_layer : 'L1'
+  const detectedByLayer: DetectedByLayer = isValidLayer(rawLayer) ? rawLayer : 'L1'
 
   return {
     id,
@@ -24,16 +48,14 @@ function mapRowToFinding(row: Record<string, unknown>): Finding | null {
     projectId: typeof row.project_id === 'string' ? row.project_id : '',
     sessionId: typeof row.review_session_id === 'string' ? row.review_session_id : '',
     segmentId: typeof row.segment_id === 'string' ? row.segment_id : '',
-    severity: severity as FindingSeverity,
+    severity: rawSeverity,
     category: typeof row.category === 'string' ? row.category : '',
-    status: (typeof row.status === 'string' ? row.status : 'pending') as FindingStatus,
+    status,
     description: typeof row.description === 'string' ? row.description : '',
     createdAt: typeof row.created_at === 'string' ? row.created_at : new Date().toISOString(),
     updatedAt: typeof row.updated_at === 'string' ? row.updated_at : new Date().toISOString(),
     fileId: typeof row.file_id === 'string' ? row.file_id : null,
-    detectedByLayer: (typeof row.detected_by_layer === 'string'
-      ? row.detected_by_layer
-      : 'L1') as DetectedByLayer,
+    detectedByLayer,
     aiModel: typeof row.ai_model === 'string' ? row.ai_model : null,
     aiConfidence: typeof row.ai_confidence === 'number' ? row.ai_confidence : null,
     suggestedFix: typeof row.suggested_fix === 'string' ? row.suggested_fix : null,

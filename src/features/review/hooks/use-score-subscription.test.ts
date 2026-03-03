@@ -49,10 +49,24 @@ describe('useScoreSubscription', () => {
 
   // ── P0: Subscription Setup ──
 
-  it('should subscribe to scores table filtered by fileId', () => {
+  it('should subscribe to INSERT (primary) and UPDATE (secondary) on scores table', () => {
     renderHook(() => useScoreSubscription('file-123'))
 
     expect(mockSupabase.channel).toHaveBeenCalledWith('scores:file-123')
+
+    // INSERT is primary — scoreFile uses DELETE+INSERT lifecycle (AC6 bug fix)
+    expect(mockChannel.on).toHaveBeenCalledWith(
+      'postgres_changes',
+      expect.objectContaining({
+        event: 'INSERT',
+        schema: 'public',
+        table: 'scores',
+        filter: 'file_id=eq.file-123',
+      }),
+      expect.any(Function),
+    )
+
+    // UPDATE is secondary safety net for backward compatibility
     expect(mockChannel.on).toHaveBeenCalledWith(
       'postgres_changes',
       expect.objectContaining({
@@ -63,6 +77,7 @@ describe('useScoreSubscription', () => {
       }),
       expect.any(Function),
     )
+
     expect(mockChannel.subscribe).toHaveBeenCalled()
   })
 

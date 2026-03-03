@@ -37,7 +37,7 @@ describe('ReviewProgress', () => {
     )
 
     const l2Status = screen.getByTestId('layer-status-L2')
-    expect(l2Status.innerHTML).toMatch(/animate-spin/i)
+    expect(l2Status.querySelector('.animate-spin')).not.toBeNull()
   })
 
   it('[P0] should show checkmark for L2 when layerCompleted includes L2', () => {

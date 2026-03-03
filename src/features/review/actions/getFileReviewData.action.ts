@@ -14,7 +14,13 @@ import { scores } from '@/db/schema/scores'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
-import type { DetectedByLayer, FindingSeverity, LayerCompleted, ScoreStatus } from '@/types/finding'
+import type {
+  DetectedByLayer,
+  FindingSeverity,
+  FindingStatus,
+  LayerCompleted,
+  ScoreStatus,
+} from '@/types/finding'
 import type { DbFileStatus, ProcessingMode } from '@/types/pipeline'
 
 export type FileReviewData = {
@@ -29,7 +35,7 @@ export type FileReviewData = {
     severity: FindingSeverity
     category: string
     description: string
-    status: string
+    status: FindingStatus
     detectedByLayer: DetectedByLayer
     aiConfidence: number | null
     aiModel: string | null

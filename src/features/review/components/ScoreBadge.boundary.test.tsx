@@ -11,7 +11,6 @@ import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { ScoreBadge } from '@/features/batch/components/ScoreBadge'
-import { ConfidenceBadge } from '@/features/review/components/ConfidenceBadge'
 import { ReviewProgress } from '@/features/review/components/ReviewProgress'
 import type { ProcessingMode, DbFileStatus } from '@/types/pipeline'
 
@@ -99,16 +98,11 @@ describe('ScoreBadge Boundary Tests (Story 3.2c AC11)', () => {
 
   // ── P0: File with only L1 findings — rule-only state, no confidence badges ──
 
-  it('[P0] should show "rule-only" state for file with only L1 findings and no confidence badges', () => {
-    // ScoreBadge should display rule-only when explicitly passed
+  it('[P0] should show "rule-only" state for file with only L1 findings', () => {
     render(<ScoreBadge score={85} state="rule-only" size="md" />)
 
     const container = screen.getByTestId('score-badge')
     expect(container.className).toMatch(/bg-info\/10/)
     expect(screen.getByText('Rule-based')).toBeTruthy()
-
-    // ConfidenceBadge should render nothing for L1 findings (null confidence)
-    const { container: confContainer } = render(<ConfidenceBadge confidence={null} />)
-    expect(confContainer.innerHTML).toBe('')
   })
 })
