@@ -1,0 +1,202 @@
+'use server'
+
+import 'server-only'
+
+import { and, eq } from 'drizzle-orm'
+
+import { db } from '@/db/client'
+import { withTenant } from '@/db/helpers/withTenant'
+import { files } from '@/db/schema/files'
+import { findings } from '@/db/schema/findings'
+import { languagePairConfigs } from '@/db/schema/languagePairConfigs'
+import { projects } from '@/db/schema/projects'
+import { scores } from '@/db/schema/scores'
+import { requireRole } from '@/lib/auth/requireRole'
+import { logger } from '@/lib/logger'
+import type { ActionResult } from '@/types/actionResult'
+import type { DetectedByLayer, FindingSeverity, LayerCompleted, ScoreStatus } from '@/types/finding'
+import type { DbFileStatus, ProcessingMode } from '@/types/pipeline'
+
+export type FileReviewData = {
+  file: {
+    fileId: string
+    fileName: string
+    status: DbFileStatus
+  }
+  findings: Array<{
+    id: string
+    segmentId: string
+    severity: FindingSeverity
+    category: string
+    description: string
+    status: string
+    detectedByLayer: DetectedByLayer
+    aiConfidence: number | null
+    aiModel: string | null
+    suggestedFix: string | null
+    sourceTextExcerpt: string | null
+    targetTextExcerpt: string | null
+    segmentCount: number
+    scope: 'per-file' | 'cross-file'
+  }>
+  score: {
+    mqmScore: number | null
+    status: ScoreStatus
+    layerCompleted: LayerCompleted | null
+    criticalCount: number
+    majorCount: number
+    minorCount: number
+  }
+  processingMode: ProcessingMode
+  l2ConfidenceMin: number | null
+}
+
+const SEVERITY_PRIORITY: Record<string, number> = {
+  critical: 1,
+  major: 2,
+  minor: 3,
+}
+
+function sortFindings(items: FileReviewData['findings']): FileReviewData['findings'] {
+  return [...items].sort((a, b) => {
+    const severityDiff =
+      (SEVERITY_PRIORITY[a.severity] ?? 99) - (SEVERITY_PRIORITY[b.severity] ?? 99)
+    if (severityDiff !== 0) return severityDiff
+
+    // aiConfidence DESC NULLS LAST
+    if (a.aiConfidence === null && b.aiConfidence === null) return 0
+    if (a.aiConfidence === null) return 1
+    if (b.aiConfidence === null) return -1
+    return b.aiConfidence - a.aiConfidence
+  })
+}
+
+type GetFileReviewDataInput = {
+  fileId: string
+  projectId: string
+}
+
+export async function getFileReviewData(
+  input: GetFileReviewDataInput,
+): Promise<ActionResult<FileReviewData>> {
+  const { fileId, projectId } = input
+
+  try {
+    const currentUser = await requireRole('qa_reviewer')
+    const tenantId = currentUser.tenantId
+
+    // Q1: Get file metadata
+    const fileRows = await db
+      .select({
+        fileId: files.id,
+        fileName: files.fileName,
+        status: files.status,
+      })
+      .from(files)
+      .where(
+        and(
+          withTenant(files.tenantId, tenantId),
+          eq(files.id, fileId),
+          eq(files.projectId, projectId),
+        ),
+      )
+
+    if (fileRows.length === 0) {
+      return { success: false, error: 'File not found', code: 'NOT_FOUND' }
+    }
+
+    const file = fileRows[0]!
+
+    // Q2: Get ALL findings for file (all layers)
+    const findingRows = await db
+      .select({
+        id: findings.id,
+        segmentId: findings.segmentId,
+        severity: findings.severity,
+        category: findings.category,
+        description: findings.description,
+        status: findings.status,
+        detectedByLayer: findings.detectedByLayer,
+        aiConfidence: findings.aiConfidence,
+        aiModel: findings.aiModel,
+        suggestedFix: findings.suggestedFix,
+        sourceTextExcerpt: findings.sourceTextExcerpt,
+        targetTextExcerpt: findings.targetTextExcerpt,
+        segmentCount: findings.segmentCount,
+        scope: findings.scope,
+      })
+      .from(findings)
+      .where(
+        and(
+          withTenant(findings.tenantId, tenantId),
+          eq(findings.fileId, fileId),
+          eq(findings.projectId, projectId),
+        ),
+      )
+
+    // Q3: Get score for file
+    const scoreRows = await db
+      .select({
+        mqmScore: scores.mqmScore,
+        status: scores.status,
+        layerCompleted: scores.layerCompleted,
+        criticalCount: scores.criticalCount,
+        majorCount: scores.majorCount,
+        minorCount: scores.minorCount,
+      })
+      .from(scores)
+      .where(
+        and(
+          withTenant(scores.tenantId, tenantId),
+          eq(scores.fileId, fileId),
+          eq(scores.projectId, projectId),
+        ),
+      )
+
+    const score = scoreRows[0] ?? {
+      mqmScore: null,
+      status: 'na' as ScoreStatus,
+      layerCompleted: null,
+      criticalCount: 0,
+      majorCount: 0,
+      minorCount: 0,
+    }
+
+    // Q4: Get project processingMode + language pair l2ConfidenceMin
+    const configRows = await db
+      .select({
+        processingMode: projects.processingMode,
+        l2ConfidenceMin: languagePairConfigs.l2ConfidenceMin,
+      })
+      .from(projects)
+      .leftJoin(
+        languagePairConfigs,
+        and(
+          withTenant(languagePairConfigs.tenantId, tenantId),
+          eq(languagePairConfigs.sourceLang, projects.sourceLang),
+        ),
+      )
+      .where(and(withTenant(projects.tenantId, tenantId), eq(projects.id, projectId)))
+
+    const config = configRows[0]
+    const processingMode = (config?.processingMode ?? 'economy') as ProcessingMode
+    const l2ConfidenceMin = config?.l2ConfidenceMin ?? null
+
+    // Sort findings: severity priority (critical→major→minor), then aiConfidence DESC NULLS LAST
+    const sortedFindings = sortFindings(findingRows as FileReviewData['findings'])
+
+    return {
+      success: true,
+      data: {
+        file: file as FileReviewData['file'],
+        findings: sortedFindings,
+        score: score as FileReviewData['score'],
+        processingMode,
+        l2ConfidenceMin,
+      },
+    }
+  } catch (err) {
+    logger.error({ err, fileId, projectId }, 'getFileReviewData failed')
+    return { success: false, error: 'Failed to fetch file review data', code: 'INTERNAL_ERROR' }
+  }
+}

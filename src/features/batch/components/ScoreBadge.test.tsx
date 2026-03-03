@@ -2,6 +2,8 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type { ScoreBadgeState } from '@/types/finding'
+
 import { ScoreBadge } from './ScoreBadge'
 
 // Helper to mock prefers-reduced-motion
@@ -353,6 +355,38 @@ describe('ScoreBadge', () => {
       // Should auto-derive review state (70 <= 88 < 95)
       const container = screen.getByTestId('score-badge')
       expect(container.className).toMatch(/status-pending/)
+    })
+  })
+
+  // -- Story 3.2c AC1: New 'ai-screened' state (3 tests) --
+
+  describe('Story 3.2c AC1: AI Screened State', () => {
+    it('[P0] should render purple "AI Screened" badge when state=ai-screened', () => {
+      render(<ScoreBadge score={85} state="ai-screened" size="md" />)
+
+      const container = screen.getByTestId('score-badge')
+      expect(container.className).toMatch(/ai-screened/)
+      expect(screen.getByText('AI Screened')).toBeTruthy()
+    })
+
+    it('[P1] should render blue "Rule-based" when state=rule-only (backward compat)', () => {
+      render(<ScoreBadge score={92} state="rule-only" size="md" />)
+
+      const container = screen.getByTestId('score-badge')
+      expect(container.className).toMatch(/bg-info\/10/)
+      expect(container.className).toMatch(/text-info/)
+      expect(screen.getByText('Rule-based')).toBeTruthy()
+    })
+
+    it('[P0] should not change deriveState logic — score-based only, no layerCompleted dependency', () => {
+      // deriveState uses score + criticalCount only
+      // Passing ai-screened as explicit state should work regardless of score
+      render(<ScoreBadge score={50} state="ai-screened" size="md" />)
+
+      const container = screen.getByTestId('score-badge')
+      // Explicit state overrides derivation — should NOT show 'fail' despite score=50
+      expect(container.className).not.toMatch(/status-fail/)
+      expect(screen.getByText('AI Screened')).toBeTruthy()
     })
   })
 })

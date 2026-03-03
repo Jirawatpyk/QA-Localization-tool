@@ -3,6 +3,22 @@
   transition: width 200ms ease-out;
 }
 
+/* Finding fade-in animation (AC7: new findings from Realtime) */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility animate-fade-in {
+  animation: fade-in 200ms ease-out;
+}
+
 /* Score change morph animations */
 @keyframes score-slide-up {
   from {

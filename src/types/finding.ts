@@ -32,9 +32,12 @@ export const SCORE_STATUSES = [
 
 export type ScoreStatus = (typeof SCORE_STATUSES)[number]
 
+// Layer completion tracking (matches scores.layer_completed DB column)
+export type LayerCompleted = 'L1' | 'L1L2' | 'L1L2L3'
+
 // ScoreBadge visual states (NOT the DB lifecycle type — that's ScoreStatus above)
 // These represent the visual appearance of the score badge in the UI
-export type ScoreBadgeState = 'pass' | 'review' | 'fail' | 'analyzing' | 'rule-only'
+export type ScoreBadgeState = 'pass' | 'review' | 'fail' | 'analyzing' | 'rule-only' | 'ai-screened'
 export type ScoreBadgeSize = 'sm' | 'md' | 'lg'
 
 export type Finding = {
@@ -46,8 +49,19 @@ export type Finding = {
   severity: FindingSeverity
   category: string
   status: FindingStatus
-  source: string
   description: string
   createdAt: string
   updatedAt: string
+  // DB-aligned fields (Story 3.2c AC3)
+  fileId: string | null
+  detectedByLayer: DetectedByLayer
+  aiModel: string | null
+  aiConfidence: number | null
+  suggestedFix: string | null
+  sourceTextExcerpt: string | null
+  targetTextExcerpt: string | null
+  segmentCount: number
+  scope: 'per-file' | 'cross-file'
+  reviewSessionId: string | null
+  relatedFileIds: string[] | null
 }

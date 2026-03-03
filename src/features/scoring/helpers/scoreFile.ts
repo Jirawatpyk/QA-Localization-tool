@@ -15,7 +15,7 @@ import { calculateMqmScore } from '@/features/scoring/mqmCalculator'
 import { loadPenaltyWeights } from '@/features/scoring/penaltyWeightLoader'
 import type { ContributingFinding } from '@/features/scoring/types'
 import { logger } from '@/lib/logger'
-import type { DetectedByLayer } from '@/types/finding'
+import type { DetectedByLayer, LayerCompleted } from '@/types/finding'
 
 type ScoreFileInput = {
   fileId: string
@@ -25,7 +25,7 @@ type ScoreFileInput = {
   /** Filter findings to a specific layer. undefined = all layers (review context). */
   layerFilter?: DetectedByLayer | undefined
   /** Override persisted layerCompleted value. Used by pipeline after L2/L3 completes. */
-  layerCompleted?: 'L1' | 'L1L2' | 'L1L2L3' | undefined
+  layerCompleted?: LayerCompleted | undefined
 }
 
 type ScoreFileResult = {

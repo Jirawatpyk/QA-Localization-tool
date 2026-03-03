@@ -17,6 +17,7 @@ const STATE_LABELS: Record<ScoreBadgeState, string> = {
   fail: 'Fail',
   analyzing: 'Analyzing...',
   'rule-only': 'Rule-based',
+  'ai-screened': 'AI Screened',
 }
 
 const STATE_CLASSES: Record<ScoreBadgeState, string> = {
@@ -25,6 +26,7 @@ const STATE_CLASSES: Record<ScoreBadgeState, string> = {
   fail: 'bg-status-fail/10 text-status-fail border-status-fail/20',
   analyzing: 'bg-status-analyzing/10 text-status-analyzing border-status-analyzing/20',
   'rule-only': 'bg-info/10 text-info border-info/20',
+  'ai-screened': 'bg-status-ai-screened/10 text-status-ai-screened border-status-ai-screened/20',
 }
 
 const MUTED_CLASSES = 'bg-muted text-muted-foreground border-muted'

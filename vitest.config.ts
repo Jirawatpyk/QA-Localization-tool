@@ -12,6 +12,15 @@ export default defineConfig({
   },
   test: {
     globals: true,
+    coverage: {
+      provider: 'v8',
+      thresholds: {
+        lines: 90,
+        statements: 89,
+        branches: 82,
+        functions: 80,
+      },
+    },
     projects: [
       {
         extends: true,

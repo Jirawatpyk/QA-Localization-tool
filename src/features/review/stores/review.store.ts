@@ -7,6 +7,7 @@ import type {
   Finding,
   FindingSeverity,
   FindingStatus,
+  LayerCompleted,
   ScoreStatus,
 } from '@/types/finding'
 
@@ -59,8 +60,13 @@ const createFindingsSlice = (
 type ScoreSlice = {
   currentScore: number | null
   scoreStatus: ScoreStatus
+  layerCompleted: LayerCompleted | null
   isRecalculating: boolean
-  updateScore: (score: number, status: ScoreStatus) => void
+  updateScore: (
+    score: number,
+    status: ScoreStatus,
+    layerCompleted?: LayerCompleted | null | undefined,
+  ) => void
   setRecalculating: () => void
 }
 
@@ -69,9 +75,15 @@ const createScoreSlice = (
 ): ScoreSlice => ({
   currentScore: null,
   scoreStatus: 'na',
+  layerCompleted: null,
   isRecalculating: false,
-  updateScore: (score, status) =>
-    set({ currentScore: score, scoreStatus: status, isRecalculating: false }),
+  updateScore: (score, status, layerCompleted) =>
+    set({
+      currentScore: score,
+      scoreStatus: status,
+      isRecalculating: false,
+      ...(layerCompleted !== undefined ? { layerCompleted } : {}),
+    }),
   setRecalculating: () => set({ isRecalculating: true, scoreStatus: 'calculating' }),
 })
 
@@ -140,6 +152,7 @@ export const useReviewStore = create<ReviewState>()((set, _get) => {
         filterState: { severity: null, status: null, layer: null },
         currentScore: null,
         scoreStatus: 'na',
+        layerCompleted: null,
         isRecalculating: false,
         selectedIds: new Set(),
         selectionMode: 'single',

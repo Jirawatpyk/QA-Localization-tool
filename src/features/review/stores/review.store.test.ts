@@ -182,4 +182,29 @@ describe('useReviewStore', () => {
     useReviewStore.getState().resetForFile('third-file')
     expect(useReviewStore.getState().currentFileId).toBe('third-file')
   })
+
+  // ── Story 3.2c AC6: layerCompleted tracking ──
+
+  it('[P0] should update layerCompleted field via updateScore(score, status, layerCompleted)', () => {
+    useReviewStore.getState().updateScore(85, 'calculated', 'L1L2')
+    const state = useReviewStore.getState()
+    expect(state.currentScore).toBe(85)
+    expect(state.scoreStatus).toBe('calculated')
+    expect(state.layerCompleted).toBe('L1L2')
+  })
+
+  it('[P0] should have layerCompleted field that defaults to null', () => {
+    const state = useReviewStore.getState()
+    expect(state.layerCompleted).toBeNull()
+  })
+
+  it('[P1] should reset layerCompleted to null via resetForFile()', () => {
+    // Set layerCompleted first
+    useReviewStore.getState().updateScore(90, 'calculated', 'L1L2L3')
+    expect(useReviewStore.getState().layerCompleted).toBe('L1L2L3')
+
+    // Reset should clear it
+    useReviewStore.getState().resetForFile('new-file')
+    expect(useReviewStore.getState().layerCompleted).toBeNull()
+  })
 })

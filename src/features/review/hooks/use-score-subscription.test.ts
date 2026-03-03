@@ -121,7 +121,7 @@ describe('useScoreSubscription', () => {
     // First poll fires immediately, then schedules next at 5s
     await vi.advanceTimersByTimeAsync(0)
     expect(mockFrom).toHaveBeenCalledWith('scores')
-    expect(mockSelect).toHaveBeenCalledWith('mqm_score, status')
+    expect(mockSelect).toHaveBeenCalledWith('mqm_score, status, layer_completed')
     expect(mockEq).toHaveBeenCalledWith('file_id', 'file-123')
 
     // Verify store updated from poll data
@@ -239,5 +239,64 @@ describe('useScoreSubscription', () => {
     // 6th poll should also be 60s (not 120s)
     await vi.advanceTimersByTimeAsync(60000)
     expect(mockFrom.mock.calls.length).toBeGreaterThan(callsAfterCap)
+  })
+
+  // ── Story 3.2c AC6: BUG FIX — INSERT event + layerCompleted ──
+
+  it('[P0] should subscribe to INSERT event (not UPDATE) — BUG FIX for score lifecycle', () => {
+    renderHook(() => useScoreSubscription('file-123'))
+
+    // Verify that at least one .on() call uses INSERT event
+    const insertCall = mockChannel.on.mock.calls.find(
+      (call: unknown[]) => (call[1] as Record<string, unknown>)?.event === 'INSERT',
+    )
+    expect(insertCall).toBeDefined()
+    expect(insertCall![1]).toEqual(
+      expect.objectContaining({
+        event: 'INSERT',
+        schema: 'public',
+        table: 'scores',
+        filter: 'file_id=eq.file-123',
+      }),
+    )
+  })
+
+  it('[P0] should pass layer_completed from Realtime INSERT payload to updateScore', () => {
+    renderHook(() => useScoreSubscription('file-123'))
+
+    // Find the INSERT handler
+    const insertCall = mockChannel.on.mock.calls.find(
+      (call: unknown[]) => (call[1] as Record<string, unknown>)?.event === 'INSERT',
+    )
+    const onInsertHandler = insertCall![2] as (payload: { new: Record<string, unknown> }) => void
+
+    act(() => {
+      onInsertHandler({
+        new: {
+          mqm_score: 88.5,
+          status: 'calculated',
+          layer_completed: 'L1L2',
+        },
+      })
+    })
+
+    const state = useReviewStore.getState()
+    expect(state.currentScore).toBe(88.5)
+    expect(state.scoreStatus).toBe('calculated')
+    // layerCompleted should be updated via the extended updateScore signature
+    expect(state.layerCompleted).toBe('L1L2')
+  })
+
+  it('[P0] should include layer_completed in polling fallback select', async () => {
+    renderHook(() => useScoreSubscription('file-123'))
+
+    const subscribeCallback = mockChannel.subscribe.mock.calls[0]![0] as (status: string) => void
+    act(() => {
+      subscribeCallback('CHANNEL_ERROR')
+    })
+
+    await vi.advanceTimersByTimeAsync(0)
+    // Verify polling select includes layer_completed column
+    expect(mockSelect).toHaveBeenCalledWith(expect.stringContaining('layer_completed'))
   })
 })

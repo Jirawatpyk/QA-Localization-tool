@@ -1,11 +1,9 @@
-'use client'
-
 import { useCallback, useEffect, useRef } from 'react'
 
 import { useReviewStore } from '@/features/review/stores/review.store'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { SCORE_STATUSES } from '@/types/finding'
-import type { ScoreStatus } from '@/types/finding'
+import type { LayerCompleted, ScoreStatus } from '@/types/finding'
 
 const INITIAL_POLL_INTERVAL = 5000
 const MAX_POLL_INTERVAL = 60000
@@ -48,11 +46,15 @@ export function useScoreSubscription(fileId: string) {
         try {
           const { data } = await supabase
             .from('scores')
-            .select('mqm_score, status')
+            .select('mqm_score, status, layer_completed')
             .eq('file_id', fileId)
             .single()
           if (data && isValidScoreStatus(data.status)) {
-            useReviewStore.getState().updateScore(data.mqm_score, data.status)
+            const layerCompleted =
+              typeof data.layer_completed === 'string'
+                ? (data.layer_completed as LayerCompleted)
+                : null
+            useReviewStore.getState().updateScore(data.mqm_score, data.status, layerCompleted)
           }
         } catch {
           // Polling errors are non-fatal — next poll will retry
@@ -78,16 +80,28 @@ export function useScoreSubscription(fileId: string) {
     const supabase = createBrowserClient()
     supabaseRef.current = supabase
 
-    const handleScoreUpdate = (payload: { new: Record<string, unknown> }) => {
+    const handleScoreChange = (payload: { new: Record<string, unknown> }) => {
       const row = payload.new
       const mqm_score = typeof row.mqm_score === 'number' ? row.mqm_score : null
       const status = typeof row.status === 'string' ? row.status : null
       if (mqm_score === null || status === null || !isValidScoreStatus(status)) return
-      useReviewStore.getState().updateScore(mqm_score, status)
+      const layerCompleted =
+        typeof row.layer_completed === 'string' ? (row.layer_completed as LayerCompleted) : null
+      useReviewStore.getState().updateScore(mqm_score, status, layerCompleted)
     }
 
     const channel = supabase
       .channel(`scores:${fileId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'scores',
+          filter: `file_id=eq.${fileId}`,
+        },
+        handleScoreChange,
+      )
       .on(
         'postgres_changes',
         {
@@ -96,7 +110,7 @@ export function useScoreSubscription(fileId: string) {
           table: 'scores',
           filter: `file_id=eq.${fileId}`,
         },
-        handleScoreUpdate,
+        handleScoreChange,
       )
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR') {
