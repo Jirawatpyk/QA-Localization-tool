@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 import type { AiProjectSpend } from '@/features/dashboard/types'
 
-interface AiSpendByProjectTableProps {
+type AiSpendByProjectTableProps = {
   projects: AiProjectSpend[]
 }
 

@@ -13,7 +13,7 @@ import {
 
 import type { AiModelSpend } from '@/features/dashboard/types'
 
-interface AiSpendByModelChartProps {
+type AiSpendByModelChartProps = {
   data: AiModelSpend[]
 }
 

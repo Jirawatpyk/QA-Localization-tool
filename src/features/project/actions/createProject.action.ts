@@ -9,14 +9,16 @@ import { projects } from '@/db/schema/projects'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { createProjectSchema } from '@/features/project/validation/projectSchemas'
 import { requireRole } from '@/lib/auth/requireRole'
+import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
+import type { ProcessingMode } from '@/types/pipeline'
 
 type ProjectResult = {
   id: string
   name: string
   sourceLang: string
   targetLangs: string[]
-  processingMode: string
+  processingMode: ProcessingMode
 }
 
 export async function createProject(input: unknown): Promise<ActionResult<ProjectResult>> {
@@ -50,14 +52,21 @@ export async function createProject(input: unknown): Promise<ActionResult<Projec
     return { success: false, code: 'CREATE_FAILED', error: 'Failed to create project' }
   }
 
-  await writeAuditLog({
-    tenantId: currentUser.tenantId,
-    userId: currentUser.id,
-    entityType: 'project',
-    entityId: project.id,
-    action: 'project.created',
-    newValue: { name, sourceLang, targetLangs, processingMode },
-  })
+  try {
+    await writeAuditLog({
+      tenantId: currentUser.tenantId,
+      userId: currentUser.id,
+      entityType: 'project',
+      entityId: project.id,
+      action: 'project.created',
+      newValue: { name, sourceLang, targetLangs, processingMode },
+    })
+  } catch (auditErr) {
+    logger.error(
+      { err: auditErr, projectId: project.id },
+      'Audit log failed for project creation (non-fatal)',
+    )
+  }
 
   revalidatePath('/projects')
 
@@ -68,7 +77,7 @@ export async function createProject(input: unknown): Promise<ActionResult<Projec
       name: project.name,
       sourceLang: project.sourceLang,
       targetLangs: project.targetLangs,
-      processingMode: project.processingMode,
+      processingMode: project.processingMode as ProcessingMode,
     },
   }
 }

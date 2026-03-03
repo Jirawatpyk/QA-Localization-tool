@@ -66,7 +66,13 @@ export async function compareWithXbench(input: unknown): Promise<ActionResult<Co
     const toolFindings = await db
       .select()
       .from(findings)
-      .where(and(withTenant(findings.tenantId, user.tenantId), eq(findings.projectId, projectId)))
+      .where(
+        and(
+          withTenant(findings.tenantId, user.tenantId),
+          eq(findings.projectId, projectId),
+          fileId ? eq(findings.fileId, fileId) : undefined,
+        ),
+      )
 
     const comparisonResult = compareFindings(
       xbenchResult.findings.map((f) => ({

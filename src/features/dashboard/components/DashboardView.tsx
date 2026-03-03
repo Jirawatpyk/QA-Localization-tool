@@ -7,7 +7,7 @@ import type { UserMetadata } from '@/features/onboarding/types'
 import { DashboardMetricCards } from './DashboardMetricCards'
 import { RecentFilesTable } from './RecentFilesTable'
 
-interface DashboardViewProps {
+type DashboardViewProps = {
   data: DashboardData
   userMetadata: UserMetadata | null
   userId: string

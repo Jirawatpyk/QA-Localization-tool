@@ -11,6 +11,7 @@ import { reviewActions } from '@/db/schema/reviewActions'
 import { scores } from '@/db/schema/scores'
 import type { DashboardData, RecentFileRow } from '@/features/dashboard/types'
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
+import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
 import type { DbFileStatus } from '@/types/pipeline'
 
@@ -20,67 +21,78 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
     return { success: false, code: 'UNAUTHORIZED', error: 'Not authenticated' }
   }
 
-  const tenantId = currentUser.tenantId
-  // Recent files: LEFT JOIN files → scores → projects, filter by tenantId, ORDER BY created_at DESC, LIMIT 10
-  const recentFilesRows = await db
-    .select({
-      id: files.id,
-      fileName: files.fileName,
-      projectId: files.projectId,
-      projectName: projects.name,
-      status: files.status,
-      createdAt: files.createdAt,
-      mqmScore: scores.mqmScore,
-    })
-    .from(files)
-    .innerJoin(
-      projects,
-      and(eq(files.projectId, projects.id), withTenant(projects.tenantId, tenantId)),
-    )
-    .leftJoin(scores, and(eq(scores.fileId, files.id), withTenant(scores.tenantId, tenantId)))
-    .where(withTenant(files.tenantId, tenantId))
-    .orderBy(desc(files.createdAt))
-    .limit(10)
+  try {
+    const tenantId = currentUser.tenantId
+    // Recent files: LEFT JOIN files → scores → projects, filter by tenantId, ORDER BY created_at DESC, LIMIT 10
+    const recentFilesRows = await db
+      .select({
+        id: files.id,
+        fileName: files.fileName,
+        projectId: files.projectId,
+        projectName: projects.name,
+        status: files.status,
+        createdAt: files.createdAt,
+        mqmScore: scores.mqmScore,
+      })
+      .from(files)
+      .innerJoin(
+        projects,
+        and(eq(files.projectId, projects.id), withTenant(projects.tenantId, tenantId)),
+      )
+      .leftJoin(scores, and(eq(scores.fileId, files.id), withTenant(scores.tenantId, tenantId)))
+      .where(withTenant(files.tenantId, tenantId))
+      .orderBy(desc(files.createdAt))
+      .limit(10)
 
-  const recentFiles: RecentFileRow[] = recentFilesRows.map((row) => ({
-    id: row.id,
-    fileName: row.fileName,
-    projectId: row.projectId,
-    projectName: row.projectName,
-    status: row.status as DbFileStatus,
-    createdAt: row.createdAt.toISOString(),
-    mqmScore: row.mqmScore ?? null,
-    findingsCount: 0, // populated in future stories when findings are queryable
-  }))
+    // SAFETY: Drizzle infers varchar → string; DB CHECK constraint guarantees valid DbFileStatus
+    const recentFiles: RecentFileRow[] = recentFilesRows.map((row) => ({
+      id: row.id,
+      fileName: row.fileName,
+      projectId: row.projectId,
+      projectName: row.projectName,
+      status: row.status as DbFileStatus,
+      createdAt: row.createdAt.toISOString(),
+      mqmScore: row.mqmScore ?? null,
+      findingsCount: 0, // TODO(TD-DASH-001): wire findingsCount from findings COUNT query
+    }))
 
-  // Pending reviews: COUNT files WHERE status = 'parsed' AND no score record yet
-  const pendingResult = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(files)
-    .leftJoin(scores, eq(scores.fileId, files.id))
-    .where(and(withTenant(files.tenantId, tenantId), eq(files.status, 'parsed'), isNull(scores.id)))
+    // Pending reviews: COUNT files WHERE status = 'parsed' AND no score record yet
+    const pendingResult = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(files)
+      .leftJoin(scores, and(eq(scores.fileId, files.id), withTenant(scores.tenantId, tenantId)))
+      .where(
+        and(withTenant(files.tenantId, tenantId), eq(files.status, 'parsed'), isNull(scores.id)),
+      )
 
-  const pendingReviewsCount = pendingResult[0]?.count ?? 0
+    const pendingReviewsCount = pendingResult[0]?.count ?? 0
 
-  // Team activity: COUNT review_actions WHERE tenantId AND created_at > 7 days ago
-  const sevenDaysAgo = new Date()
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    // Team activity: COUNT review_actions WHERE tenantId AND created_at > 7 days ago
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
-  const activityResult = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(reviewActions)
-    .where(
-      and(withTenant(reviewActions.tenantId, tenantId), gte(reviewActions.createdAt, sevenDaysAgo)),
-    )
+    const activityResult = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(reviewActions)
+      .where(
+        and(
+          withTenant(reviewActions.tenantId, tenantId),
+          gte(reviewActions.createdAt, sevenDaysAgo),
+        ),
+      )
 
-  const teamActivityCount = activityResult[0]?.count ?? 0
+    const teamActivityCount = activityResult[0]?.count ?? 0
 
-  return {
-    success: true,
-    data: {
-      recentFiles,
-      pendingReviewsCount,
-      teamActivityCount,
-    },
+    return {
+      success: true,
+      data: {
+        recentFiles,
+        pendingReviewsCount,
+        teamActivityCount,
+      },
+    }
+  } catch (err) {
+    logger.error({ err }, 'getDashboardData failed')
+    return { success: false, code: 'INTERNAL_ERROR', error: 'Failed to load dashboard data' }
   }
 }

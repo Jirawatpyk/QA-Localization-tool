@@ -31,7 +31,7 @@ type LanguagePairConfig = {
   l2ConfidenceMin: number
   l3ConfidenceMin: number
   mutedCategories: string[] | null
-  wordSegmenter: string
+  wordSegmenter: 'intl' | 'space'
   createdAt: Date
   updatedAt: Date
 }
@@ -47,7 +47,7 @@ type RowState = {
   autoPassThreshold: number
   l2ConfidenceMin: number
   l3ConfidenceMin: number
-  wordSegmenter: string
+  wordSegmenter: 'intl' | 'space'
 }
 
 const CJK_THAI_CODES = ['th', 'ja', 'ko', 'zh', 'zh-Hant']
@@ -177,7 +177,7 @@ function ConfigRow({ projectId, sourceLang, targetLang, existing }: ConfigRowPro
       <TableCell>
         <Select
           value={state.wordSegmenter}
-          onValueChange={(v) => setState((s) => ({ ...s, wordSegmenter: v }))}
+          onValueChange={(v) => setState((s) => ({ ...s, wordSegmenter: v as 'intl' | 'space' }))}
         >
           <SelectTrigger
             className="w-24"

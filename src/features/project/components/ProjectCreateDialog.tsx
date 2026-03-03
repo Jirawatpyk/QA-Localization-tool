@@ -40,6 +40,9 @@ export function ProjectCreateDialog({ open, onOpenChange }: ProjectCreateDialogP
   const [targetLangs, setTargetLangs] = useState<string[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
 
+  // Guardrail #11: reset form state on dialog re-open via key-based remount
+  const [formResetKey, setFormResetKey] = useState(0)
+
   function toggleTargetLang(code: string) {
     setTargetLangs((prev) =>
       prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code],
@@ -89,8 +92,14 @@ export function ProjectCreateDialog({ open, onOpenChange }: ProjectCreateDialogP
   const availableTargetLangs = COMMON_LANGUAGES.filter((lang) => lang.code !== sourceLang)
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent aria-label="Create new project">
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (next) setFormResetKey((k) => k + 1)
+        onOpenChange(next)
+      }}
+    >
+      <DialogContent key={formResetKey} aria-label="Create new project">
         <DialogHeader>
           <DialogTitle>Create Project</DialogTitle>
           <DialogDescription>Set up a new localization QA project.</DialogDescription>

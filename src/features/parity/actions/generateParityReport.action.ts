@@ -77,7 +77,13 @@ export async function generateParityReport(
     const toolFindings = await db
       .select()
       .from(findings)
-      .where(and(withTenant(findings.tenantId, user.tenantId), eq(findings.projectId, projectId)))
+      .where(
+        and(
+          withTenant(findings.tenantId, user.tenantId),
+          eq(findings.projectId, projectId),
+          fileId ? eq(findings.fileId, fileId) : undefined,
+        ),
+      )
 
     // Compare xbench findings with tool findings
     // When fileId is provided, filter to that file; otherwise compare all project findings

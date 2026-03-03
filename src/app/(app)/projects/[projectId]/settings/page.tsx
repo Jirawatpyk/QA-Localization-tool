@@ -58,7 +58,10 @@ export default async function ProjectSettingsPage({
           processingMode: project.processingMode as ProcessingMode,
           status: project.status as 'draft' | 'processing' | 'reviewed' | 'completed',
         }}
-        languagePairConfigs={configs}
+        languagePairConfigs={configs.map((c) => ({
+          ...c,
+          wordSegmenter: c.wordSegmenter as 'intl' | 'space',
+        }))}
         isAdmin={currentUser.role === 'admin'}
         budgetData={budgetData}
       />

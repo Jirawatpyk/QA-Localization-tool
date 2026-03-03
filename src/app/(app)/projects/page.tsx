@@ -47,7 +47,13 @@ export default async function ProjectsPage() {
     <>
       <PageHeader title="Projects" />
       <CompactLayout>
-        <ProjectList projects={projectList} userRole={currentUser.role} />
+        <ProjectList
+          projects={projectList.map((p) => ({
+            ...p,
+            processingMode: p.processingMode as 'economy' | 'thorough',
+          }))}
+          userRole={currentUser.role}
+        />
       </CompactLayout>
     </>
   )

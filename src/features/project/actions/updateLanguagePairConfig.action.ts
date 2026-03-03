@@ -11,6 +11,7 @@ import { languagePairConfigs } from '@/db/schema/languagePairConfigs'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { updateLanguagePairConfigSchema } from '@/features/project/validation/projectSchemas'
 import { requireRole } from '@/lib/auth/requireRole'
+import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
 
 type LanguagePairConfigResult = {
@@ -20,7 +21,7 @@ type LanguagePairConfigResult = {
   autoPassThreshold: number
   l2ConfidenceMin: number
   l3ConfidenceMin: number
-  wordSegmenter: string
+  wordSegmenter: 'intl' | 'space'
 }
 
 export async function updateLanguagePairConfig(
@@ -40,6 +41,9 @@ export async function updateLanguagePairConfig(
 
   const { projectId, sourceLang, targetLang, ...configFields } = parsed.data
 
+  // NOTE: language_pair_configs is tenant-wide (no projectId column by design).
+  // Updating config for e.g. en→th applies to ALL projects under the same tenant.
+  // projectId is used only for revalidatePath(), not for query filtering.
   const [existing] = await db
     .select()
     .from(languagePairConfigs)
@@ -91,31 +95,38 @@ export async function updateLanguagePairConfig(
     resultRow = inserted
   }
 
-  await writeAuditLog({
-    tenantId: currentUser.tenantId,
-    userId: currentUser.id,
-    entityType: 'language_pair_config',
-    entityId: resultRow.id,
-    action: existing ? 'language_pair_config.updated' : 'language_pair_config.created',
-    ...(existing
-      ? {
-          oldValue: {
-            autoPassThreshold: existing.autoPassThreshold,
-            l2ConfidenceMin: existing.l2ConfidenceMin,
-            l3ConfidenceMin: existing.l3ConfidenceMin,
-            wordSegmenter: existing.wordSegmenter,
-          },
-        }
-      : {}),
-    newValue: {
-      sourceLang: resultRow.sourceLang,
-      targetLang: resultRow.targetLang,
-      autoPassThreshold: resultRow.autoPassThreshold,
-      l2ConfidenceMin: resultRow.l2ConfidenceMin,
-      l3ConfidenceMin: resultRow.l3ConfidenceMin,
-      wordSegmenter: resultRow.wordSegmenter,
-    },
-  })
+  try {
+    await writeAuditLog({
+      tenantId: currentUser.tenantId,
+      userId: currentUser.id,
+      entityType: 'language_pair_config',
+      entityId: resultRow.id,
+      action: existing ? 'language_pair_config.updated' : 'language_pair_config.created',
+      ...(existing
+        ? {
+            oldValue: {
+              autoPassThreshold: existing.autoPassThreshold,
+              l2ConfidenceMin: existing.l2ConfidenceMin,
+              l3ConfidenceMin: existing.l3ConfidenceMin,
+              wordSegmenter: existing.wordSegmenter,
+            },
+          }
+        : {}),
+      newValue: {
+        sourceLang: resultRow.sourceLang,
+        targetLang: resultRow.targetLang,
+        autoPassThreshold: resultRow.autoPassThreshold,
+        l2ConfidenceMin: resultRow.l2ConfidenceMin,
+        l3ConfidenceMin: resultRow.l3ConfidenceMin,
+        wordSegmenter: resultRow.wordSegmenter,
+      },
+    })
+  } catch (auditErr) {
+    logger.error(
+      { err: auditErr, configId: resultRow.id },
+      'Audit log failed for language pair config (non-fatal)',
+    )
+  }
 
   revalidatePath(`/projects/${projectId}/settings`)
 
@@ -128,7 +139,7 @@ export async function updateLanguagePairConfig(
       autoPassThreshold: resultRow.autoPassThreshold,
       l2ConfidenceMin: resultRow.l2ConfidenceMin,
       l3ConfidenceMin: resultRow.l3ConfidenceMin,
-      wordSegmenter: resultRow.wordSegmenter,
+      wordSegmenter: resultRow.wordSegmenter as 'intl' | 'space',
     },
   }
 }

@@ -1,5 +1,3 @@
-'use client'
-
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -9,7 +7,7 @@ import type { AppNotification } from '@/features/dashboard/types'
 import { createBrowserClient } from '@/lib/supabase/client'
 
 /** Raw Supabase Realtime payload uses snake_case DB column names */
-interface RawNotificationPayload {
+type RawNotificationPayload = {
   id: string
   tenant_id: string
   user_id: string
@@ -50,7 +48,9 @@ export function useNotifications(userId: string, tenantId: string) {
         toast.error('Failed to load notifications')
       }
     }
-    void fetchInitial()
+    fetchInitial().catch(() => {
+      // Non-critical: toast.error shown for result.success=false inside fetchInitial
+    })
   }, [userId])
 
   // Subscribe to Supabase Realtime for new notifications

@@ -14,7 +14,7 @@ import {
 
 import type { AiSpendTrendPoint } from '@/features/dashboard/types'
 
-interface AiSpendTrendChartProps {
+type AiSpendTrendChartProps = {
   data: AiSpendTrendPoint[]
 }
 

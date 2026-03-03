@@ -13,11 +13,12 @@ import { updateProjectSchema } from '@/features/project/validation/projectSchema
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
+import type { ProcessingMode } from '@/types/pipeline'
 
 type ProjectResult = {
   id: string
   name: string
-  processingMode: string
+  processingMode: ProcessingMode
   autoPassThreshold: number
 }
 
@@ -93,7 +94,7 @@ export async function updateProject(
     data: {
       id: updated.id,
       name: updated.name,
-      processingMode: updated.processingMode,
+      processingMode: updated.processingMode as ProcessingMode,
       autoPassThreshold: updated.autoPassThreshold,
     },
   }

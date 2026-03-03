@@ -2,7 +2,7 @@ import { FileText, Clock, Shield, Users } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-interface DashboardMetricCardsProps {
+type DashboardMetricCardsProps = {
   recentFilesCount: number
   pendingReviewsCount: number
   teamActivityCount: number

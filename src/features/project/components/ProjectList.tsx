@@ -5,6 +5,7 @@ import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import type { AppRole } from '@/lib/auth/getCurrentUser'
+import type { ProcessingMode } from '@/types/pipeline'
 
 import { ProjectCard } from './ProjectCard'
 import { ProjectCreateDialog } from './ProjectCreateDialog'
@@ -15,8 +16,8 @@ export type ProjectWithFileCount = {
   description: string | null
   sourceLang: string
   targetLangs: string[]
-  processingMode: string
-  status: string
+  processingMode: ProcessingMode
+  status: string // Drizzle varchar → string; no ProjectStatus union defined yet
   autoPassThreshold: number
   createdAt: Date
   updatedAt: Date

@@ -20,7 +20,7 @@ import { AiUsageSummaryCards } from './AiUsageSummaryCards'
 const PERIOD_OPTIONS = [7, 30, 90] as const
 type Period = (typeof PERIOD_OPTIONS)[number]
 
-interface AiUsageDashboardProps {
+type AiUsageDashboardProps = {
   summary: AiUsageSummary
   projects: AiProjectSpend[]
   modelSpend: AiModelSpend[]

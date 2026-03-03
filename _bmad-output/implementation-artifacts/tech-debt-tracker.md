@@ -406,3 +406,39 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Low
 - **Description:** `getBatchSummary.action.ts:53` and `getFileHistory.action.ts:53` use hardcoded `?? 95` fallback for auto_pass_threshold. Should import from `@/features/scoring/constants` for single source of truth.
 - **Status:** DEFERRED → Story 3.4 (scoring constants consolidation)
+
+---
+
+## CR Sprint — parity/dashboard/project (2026-03-03)
+
+### TD-DASH-001: Dashboard findingsCount hardcoded to 0
+- **Date:** 2026-03-03
+- **Story:** Story 3.2b (Dashboard feature)
+- **Phase:** CR
+- **Severity:** Medium
+- **Description:** `getDashboardData.action.ts` returns `findingsCount: 0` as placeholder. Should query actual `COUNT(*)` from findings table with tenant filter.
+- **Status:** DEFERRED → Story 3.4 (scoring/findings dashboard wiring)
+
+### TD-DASH-002: 5 AI-related actions missing ActionResult<T> return type
+- **Date:** 2026-03-03
+- **Story:** Story 3.2b (AI Usage Dashboard)
+- **Phase:** CR
+- **Severity:** Medium
+- **Description:** `getAiUsageSummary`, `getAiSpendByProject`, `getAiSpendByModel`, `getAiSpendTrend`, `exportAiUsage` actions return raw objects instead of `ActionResult<T>`. Should standardize for consistency.
+- **Status:** DEFERRED → Story 3.4 (AI dashboard hardening)
+
+### TD-DASH-003: Realtime notification payload lacks Zod validation
+- **Date:** 2026-03-03
+- **Story:** Story 3.2b (Notifications)
+- **Phase:** CR
+- **Severity:** Medium
+- **Description:** `useNotifications.ts` casts Realtime payload via `as RawNotificationPayload` without runtime validation. Should add a Zod schema to validate incoming data from Supabase Realtime channel.
+- **Status:** DEFERRED → Epic 4 (Review & Notification hardening)
+
+### TD-PARITY-001: Redundant in-memory filter after query fileId fix
+- **Date:** 2026-03-03
+- **Story:** Story 2.10 (Parity Verification)
+- **Phase:** CR
+- **Severity:** Low
+- **Description:** `generateParityReport.action.ts` L121-123 still filters findings in-memory by fileId after query was fixed to include fileId filter. The in-memory filter is now redundant but harmless (defense-in-depth).
+- **Status:** ACCEPTED — defense-in-depth, no action needed

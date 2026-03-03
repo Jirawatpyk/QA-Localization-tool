@@ -44,7 +44,7 @@ type LanguagePairConfig = {
   l2ConfidenceMin: number
   l3ConfidenceMin: number
   mutedCategories: string[] | null
-  wordSegmenter: string
+  wordSegmenter: 'intl' | 'space'
   createdAt: Date
   updatedAt: Date
 }

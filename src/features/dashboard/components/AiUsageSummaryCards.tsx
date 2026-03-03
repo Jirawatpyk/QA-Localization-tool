@@ -1,6 +1,6 @@
 import type { AiUsageSummary } from '@/features/dashboard/types'
 
-interface AiUsageSummaryCardsProps {
+type AiUsageSummaryCardsProps = {
   summary: AiUsageSummary
 }
 

@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useNotifications } from '@/features/dashboard/hooks/useNotifications'
 
-interface NotificationDropdownProps {
+type NotificationDropdownProps = {
   userId: string
   tenantId: string
 }
