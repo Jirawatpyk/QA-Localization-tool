@@ -44,6 +44,17 @@ docs/test-data/Golden-Test-Mona/
 .claude/settings.local.json
 .playwright-mcp/
 
+# Playwright report/traces (downloaded from CI or local runs)
+/index.html
+/trace/
+/ci-traces-latest/
+pipeline-findings-*/
+taxonomy-admin-*/
+upload-segments-*/
+
+# Greptile MCP cache
+/data/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
