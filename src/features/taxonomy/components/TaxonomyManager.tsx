@@ -23,6 +23,14 @@ export function TaxonomyManager({ initialMappings, isAdmin }: Props) {
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [, startTransition] = useTransition()
 
+  // Sync when RSC re-renders with new data (e.g., after revalidateTag)
+  // React 19 pattern: adjust state when prop changes (no useEffect needed)
+  const [prevMappings, setPrevMappings] = useState(initialMappings)
+  if (initialMappings !== prevMappings) {
+    setPrevMappings(initialMappings)
+    setMappings(initialMappings)
+  }
+
   function handleAdd() {
     setShowAddDialog(true)
   }
@@ -31,7 +39,7 @@ export function TaxonomyManager({ initialMappings, isAdmin }: Props) {
     category: string
     parentCategory?: string | null
     internalName: string
-    severity: 'critical' | 'major' | 'minor'
+    severity: Severity
     description: string
   }) {
     startTransition(() => {
@@ -61,7 +69,7 @@ export function TaxonomyManager({ initialMappings, isAdmin }: Props) {
     startTransition(() => {
       toast.promise(
         updateMapping(id, {
-          internalName: fields.internalName || undefined,
+          internalName: fields.internalName,
           category: fields.category,
           parentCategory: fields.parentCategory || null,
           severity: fields.severity,

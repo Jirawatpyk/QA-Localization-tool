@@ -44,18 +44,17 @@ export async function updateMapping(
     return { success: false, code: 'NOT_FOUND', error: 'Mapping not found' }
   }
 
-  const updateValues: Record<string, unknown> = {
+  const updateValues: Partial<typeof taxonomyDefinitions.$inferInsert> = {
     updatedAt: new Date(),
   }
 
-  if (parsed.data.category !== undefined) updateValues['category'] = parsed.data.category
+  if (parsed.data.category !== undefined) updateValues.category = parsed.data.category
   if (parsed.data.parentCategory !== undefined)
-    updateValues['parentCategory'] = parsed.data.parentCategory
-  if (parsed.data.internalName !== undefined)
-    updateValues['internalName'] = parsed.data.internalName
-  if (parsed.data.severity !== undefined) updateValues['severity'] = parsed.data.severity
-  if (parsed.data.description !== undefined) updateValues['description'] = parsed.data.description
-  if (parsed.data.isActive !== undefined) updateValues['isActive'] = parsed.data.isActive
+    updateValues.parentCategory = parsed.data.parentCategory
+  if (parsed.data.internalName !== undefined) updateValues.internalName = parsed.data.internalName
+  if (parsed.data.severity !== undefined) updateValues.severity = parsed.data.severity
+  if (parsed.data.description !== undefined) updateValues.description = parsed.data.description
+  if (parsed.data.isActive !== undefined) updateValues.isActive = parsed.data.isActive
 
   const [updated] = await db
     .update(taxonomyDefinitions)
@@ -66,6 +65,8 @@ export async function updateMapping(
   if (!updated) {
     return { success: false, code: 'UPDATE_FAILED', error: 'Failed to update mapping' }
   }
+
+  const { updatedAt: _, ...auditNewValue } = updateValues
 
   await writeAuditLog({
     tenantId: currentUser.tenantId,
@@ -80,7 +81,7 @@ export async function updateMapping(
       severity: existing.severity,
       description: existing.description,
     },
-    newValue: (({ updatedAt: _omit, ...rest }) => rest)(updateValues),
+    newValue: auditNewValue,
   })
 
   revalidateTag('taxonomy', 'minutes')

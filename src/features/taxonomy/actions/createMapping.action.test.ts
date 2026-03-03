@@ -39,8 +39,15 @@ const mockReturning = vi.fn().mockResolvedValue([mockCreated])
 const mockValues = vi.fn().mockReturnValue({ returning: mockReturning })
 const mockInsert = vi.fn().mockReturnValue({ values: mockValues })
 
+// Mock for db.select({ max: sql`...` }).from(taxonomyDefinitions) → max displayOrder
+const mockSelectFrom = vi.fn().mockResolvedValue([{ max: 36 }])
+const mockSelect = vi.fn().mockReturnValue({ from: mockSelectFrom })
+
 vi.mock('@/db/client', () => ({
-  db: { insert: (...args: unknown[]) => mockInsert(...args) },
+  db: {
+    insert: (...args: unknown[]) => mockInsert(...args),
+    select: (...args: unknown[]) => mockSelect(...args),
+  },
 }))
 
 vi.mock('@/db/schema/taxonomyDefinitions', () => ({
@@ -149,5 +156,23 @@ describe('createMapping', () => {
     await createMapping(validInput)
 
     expect(mockValues).toHaveBeenCalledWith(expect.objectContaining({ isCustom: true }))
+  })
+
+  it('should set displayOrder = max + 1', async () => {
+    mockSelectFrom.mockResolvedValue([{ max: 36 }])
+
+    const { createMapping } = await import('./createMapping.action')
+    await createMapping(validInput)
+
+    expect(mockValues).toHaveBeenCalledWith(expect.objectContaining({ displayOrder: 37 }))
+  })
+
+  it('should set displayOrder = 0 when no existing mappings', async () => {
+    mockSelectFrom.mockResolvedValue([{ max: -1 }])
+
+    const { createMapping } = await import('./createMapping.action')
+    await createMapping(validInput)
+
+    expect(mockValues).toHaveBeenCalledWith(expect.objectContaining({ displayOrder: 0 }))
   })
 })

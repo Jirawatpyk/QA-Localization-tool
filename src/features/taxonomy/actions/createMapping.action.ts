@@ -2,6 +2,7 @@
 
 import 'server-only'
 
+import { sql } from 'drizzle-orm'
 import { revalidateTag } from 'next/cache'
 
 import { db } from '@/db/client'
@@ -25,6 +26,11 @@ export async function createMapping(input: unknown): Promise<ActionResult<Taxono
     return { success: false, code: 'VALIDATION_ERROR', error: parsed.error.message }
   }
 
+  // Assign displayOrder = max + 1 so new mappings appear at the end
+  const [maxRow] = await db
+    .select({ max: sql<number>`COALESCE(MAX(${taxonomyDefinitions.displayOrder}), -1)` })
+    .from(taxonomyDefinitions)
+
   const [created] = await db
     .insert(taxonomyDefinitions)
     .values({
@@ -34,6 +40,7 @@ export async function createMapping(input: unknown): Promise<ActionResult<Taxono
       severity: parsed.data.severity,
       description: parsed.data.description,
       isCustom: true, // admin-created entries are custom (seed data uses isCustom: false)
+      displayOrder: (maxRow?.max ?? -1) + 1,
     })
     .returning()
 

@@ -48,6 +48,16 @@ const EMPTY_FORM = {
 export function AddMappingDialog({ open, onOpenChange, onSubmit }: Props) {
   const [form, setForm] = useState(EMPTY_FORM)
 
+  // Guardrail #11: reset form state on re-open (cancel → re-open clears stale draft)
+  // React 19 pattern: adjust state when prop changes (no useEffect needed)
+  const [prevOpen, setPrevOpen] = useState(false)
+  if (open && !prevOpen) {
+    setForm(EMPTY_FORM)
+  }
+  if (open !== prevOpen) {
+    setPrevOpen(open)
+  }
+
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     onSubmit({
