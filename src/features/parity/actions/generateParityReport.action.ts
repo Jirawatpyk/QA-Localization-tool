@@ -123,10 +123,8 @@ export async function generateParityReport(
       logger.error({ err: storageErr, storagePath }, 'Non-fatal: storage upload exception')
     }
 
-    // H2: Count filtered findings (matching the fileId scope used by compareFindings)
-    const relevantToolFindingCount = fileId
-      ? toolFindings.filter((f) => f.fileId === fileId).length
-      : toolFindings.length
+    // Query already pre-filters by fileId (L84), so toolFindings.length is the correct count
+    const relevantToolFindingCount = toolFindings.length
 
     // Persist report
     const [report] = await db

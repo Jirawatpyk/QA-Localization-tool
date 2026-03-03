@@ -12,6 +12,7 @@ import { projects } from '@/db/schema/projects'
 import { scores } from '@/db/schema/scores'
 import type { CrossFileFindingSummary, FileInBatch } from '@/features/batch/types'
 import { getBatchSummarySchema } from '@/features/batch/validation/batchSchemas'
+import { DEFAULT_AUTO_PASS_THRESHOLD } from '@/features/scoring/constants'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
@@ -47,7 +48,7 @@ export async function getBatchSummary(input: unknown): Promise<ActionResult<Batc
       .from(projects)
       .where(and(withTenant(projects.tenantId, tenantId), eq(projects.id, projectId)))
 
-    const threshold = project?.autoPassThreshold ?? 95
+    const threshold = project?.autoPassThreshold ?? DEFAULT_AUTO_PASS_THRESHOLD
 
     // Query 2: Files in batch with scores (filter L1 scores only)
     const filesWithScores = await db

@@ -11,6 +11,7 @@ import { projects } from '@/db/schema/projects'
 import { scores } from '@/db/schema/scores'
 import { FILE_HISTORY_PAGE_SIZE } from '@/features/batch/types'
 import { getFileHistorySchema } from '@/features/batch/validation/batchSchemas'
+import { DEFAULT_AUTO_PASS_THRESHOLD } from '@/features/scoring/constants'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
@@ -49,7 +50,7 @@ export async function getFileHistory(input: unknown): Promise<ActionResult<FileH
       .from(projects)
       .where(and(withTenant(projects.tenantId, tenantId), eq(projects.id, projectId)))
 
-    const threshold = project?.autoPassThreshold ?? 95
+    const threshold = project?.autoPassThreshold ?? DEFAULT_AUTO_PASS_THRESHOLD
 
     // Query 2: Files with scores (hard cap to prevent unbounded memory on large projects)
     const QUERY_HARD_CAP = 10_000

@@ -15,6 +15,9 @@ export const CONTRIBUTING_STATUSES: ReadonlySet<FindingStatus> = new Set<Finding
   're_accepted',
 ])
 
+// Default project auto-pass threshold (matches DB column default in projects.auto_pass_threshold)
+export const DEFAULT_AUTO_PASS_THRESHOLD = 95
+
 // New language pair protocol thresholds (AC #6)
 export const NEW_PAIR_FILE_THRESHOLD = 50
 

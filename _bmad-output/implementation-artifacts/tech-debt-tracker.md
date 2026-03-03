@@ -187,9 +187,9 @@
 - **Severity:** Low
 - **Risk:** If a new provider is added, detection logic must be updated in 3 places
 - **Files:** `src/lib/ai/costs.ts`, `src/lib/ai/providers.ts`, `src/lib/ai/client.ts`
-- **Fix:** Extract shared `detectProvider(modelId): string` to `src/lib/ai/models.ts` and import from all 3 files
+- **Fix:** `deriveProviderFromModelId()` already extracted to `types.ts` — `costs.ts` + `providers.ts` import from it. Refactored `client.ts:getModelById()` to use it via switch/case instead of duplicating prefix checks.
 - **Origin:** Story 3.2a, flagged by code-quality-analyzer (H3)
-- **Status:** DEFERRED → **Story 3.4 — AI Resilience** (fallback chain refactor is natural scope for provider dedup; extract `detectProvider()` as prerequisite)
+- **Status:** RESOLVED — all 3 files now use single `deriveProviderFromModelId()` from `types.ts` (commit 2026-03-03)
 
 ---
 
@@ -309,9 +309,9 @@
 - **Severity:** Medium
 - **File:** `src/features/taxonomy/actions/reorderMappings.action.ts`
 - **Risk:** Action created in Story 1.6 with full logic (audit, validation) but TaxonomyMappingTable has no drag-and-drop reorder
-- **Fix:** Add @dnd-kit drag-and-drop to TaxonomyMappingTable
+- **Fix:** Story 3.2b7 added @dnd-kit to TaxonomyManager → `reorderMappings` imported at `TaxonomyManager.tsx:8` + called on drag-end
 - **Origin:** Story 1.6, identified during orphan scan (2026-03-02)
-- **Status:** OPEN → fix in **Story 3.2b7** (`ready-for-dev`)
+- **Status:** RESOLVED (Story 3.2b7 — verified: `TaxonomyManager.tsx` imports + calls `reorderMappings` on drag-end, test mock exists)
 
 ### ~~TD-ORPHAN-002: updateBudgetAlertThreshold action has no UI consumer~~
 - **Status:** RESOLVED (2026-03-02) — Story 3.2b6 Task 1 added threshold input to `AiBudgetCard.tsx` with `"use client"`, `useState`, `useTransition`, blur/Enter save, error revert. `ProjectSettings.tsx` passes `projectId` + `canEditThreshold={isAdmin}`. 12 unit tests pass.
@@ -405,7 +405,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Phase:** CR
 - **Severity:** Low
 - **Description:** `getBatchSummary.action.ts:53` and `getFileHistory.action.ts:53` use hardcoded `?? 95` fallback for auto_pass_threshold. Should import from `@/features/scoring/constants` for single source of truth.
-- **Status:** DEFERRED → Story 3.4 (scoring constants consolidation)
+- **Status:** RESOLVED — added `DEFAULT_AUTO_PASS_THRESHOLD = 95` to scoring constants, both actions import it (commit 2026-03-03)
 
 ---
 
@@ -441,4 +441,4 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Phase:** CR
 - **Severity:** Low
 - **Description:** `generateParityReport.action.ts` L121-123 still filters findings in-memory by fileId after query was fixed to include fileId filter. The in-memory filter is now redundant but harmless (defense-in-depth).
-- **Status:** ACCEPTED — defense-in-depth, no action needed
+- **Status:** RESOLVED — removed redundant filter, query pre-filters (commit 2026-03-03)

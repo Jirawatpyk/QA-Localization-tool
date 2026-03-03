@@ -5,6 +5,8 @@ import { google } from '@ai-sdk/google'
 import { openai } from '@ai-sdk/openai'
 import { customProvider } from 'ai'
 
+import { deriveProviderFromModelId } from './types'
+
 /**
  * Unified AI provider for the QA pipeline.
  *
@@ -52,9 +54,15 @@ export function getModelForLayer(layer: 'L2' | 'L3') {
  *   const result = await generateText({ model, ... })
  */
 export function getModelById(modelId: string) {
-  if (modelId.startsWith('gpt-') || modelId.startsWith('o1-') || modelId.startsWith('o3-'))
-    return openai(modelId)
-  if (modelId.startsWith('claude-')) return anthropic(modelId)
-  if (modelId.startsWith('gemini-')) return google(modelId)
-  throw new Error(`Unsupported model provider for: ${modelId}`)
+  const provider = deriveProviderFromModelId(modelId)
+  switch (provider) {
+    case 'openai':
+      return openai(modelId)
+    case 'anthropic':
+      return anthropic(modelId)
+    case 'google':
+      return google(modelId)
+    default:
+      throw new Error(`Unsupported model provider for: ${modelId}`)
+  }
 }
