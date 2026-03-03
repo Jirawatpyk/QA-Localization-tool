@@ -386,3 +386,23 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 | TD-TEST-001: Drizzle mock DRY | 2.4 | `createDrizzleMock()` shared utility, 15 files migrated |
 | TD-TENANT-001: Realtime tenant filter | 1.7 | Already implemented at `useNotifications.ts:66` |
 | TD-CODE-005: RecentFileRow.status bare string | 3.0.5 | `DbFileStatus` union type, `status: DbFileStatus`, cast in action, `getStatusVariant` fixed |
+
+---
+
+## CR Sprint — batch/scoring/upload (2026-03-03)
+
+### TD-BATCH-001: File history pagination happens in application layer
+- **Date:** 2026-03-03
+- **Story:** Story 3.0.5 (Batch feature)
+- **Phase:** CR
+- **Severity:** Medium
+- **Description:** `getFileHistory.action.ts` fetches up to 10K files with QUERY_HARD_CAP then filters and paginates in JavaScript. Should use SQL LIMIT/OFFSET + WHERE for server-side pagination to reduce memory usage on large projects.
+- **Status:** DEFERRED → Epic 5 (Dashboard & Reporting — performance optimization)
+
+### TD-BATCH-002: Hardcoded auto_pass_threshold fallback (95)
+- **Date:** 2026-03-03
+- **Story:** Story 3.0.5 (Batch feature)
+- **Phase:** CR
+- **Severity:** Low
+- **Description:** `getBatchSummary.action.ts:53` and `getFileHistory.action.ts:53` use hardcoded `?? 95` fallback for auto_pass_threshold. Should import from `@/features/scoring/constants` for single source of truth.
+- **Status:** DEFERRED → Story 3.4 (scoring constants consolidation)

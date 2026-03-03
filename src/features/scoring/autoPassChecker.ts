@@ -30,33 +30,37 @@ type AutoPassInput = {
 export async function checkAutoPass(input: AutoPassInput): Promise<AutoPassResult> {
   const { mqmScore, criticalCount, projectId, tenantId, sourceLang, targetLang } = input
 
-  // Load language pair config for this tenant+source+target
-  const [langConfig] = await db
-    .select({ autoPassThreshold: languagePairConfigs.autoPassThreshold })
-    .from(languagePairConfigs)
-    .where(
-      and(
-        withTenant(languagePairConfigs.tenantId, tenantId),
-        eq(languagePairConfigs.sourceLang, sourceLang),
-        eq(languagePairConfigs.targetLang, targetLang),
+  // L1 fix: Run independent queries in parallel (reduces latency ~50%)
+  const [langConfigRows, countRows] = await Promise.all([
+    // Load language pair config for this tenant+source+target
+    db
+      .select({ autoPassThreshold: languagePairConfigs.autoPassThreshold })
+      .from(languagePairConfigs)
+      .where(
+        and(
+          withTenant(languagePairConfigs.tenantId, tenantId),
+          eq(languagePairConfigs.sourceLang, sourceLang),
+          eq(languagePairConfigs.targetLang, targetLang),
+        ),
+      )
+      .limit(1),
+    // Count distinct scored files for this language pair within the project+tenant
+    db
+      .select({ count: sql<number>`count(distinct ${scores.fileId})` })
+      .from(scores)
+      .innerJoin(segments, eq(scores.fileId, segments.fileId))
+      .where(
+        and(
+          eq(scores.projectId, projectId),
+          eq(segments.sourceLang, sourceLang),
+          eq(segments.targetLang, targetLang),
+          withTenant(scores.tenantId, tenantId),
+          withTenant(segments.tenantId, tenantId), // defense-in-depth on JOIN
+        ),
       ),
-    )
-    .limit(1)
-
-  // Count distinct scored files for this language pair within the project+tenant
-  const [countResult] = await db
-    .select({ count: sql<number>`count(distinct ${scores.fileId})` })
-    .from(scores)
-    .innerJoin(segments, eq(scores.fileId, segments.fileId))
-    .where(
-      and(
-        eq(scores.projectId, projectId),
-        eq(segments.sourceLang, sourceLang),
-        eq(segments.targetLang, targetLang),
-        withTenant(scores.tenantId, tenantId),
-        withTenant(segments.tenantId, tenantId), // defense-in-depth on JOIN
-      ),
-    )
+  ])
+  const [langConfig] = langConfigRows
+  const [countResult] = countRows
 
   const fileCount = Number(countResult?.count ?? 0)
   const isNewPair = !langConfig

@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 
+import type { DbFileStatus } from '@/types/pipeline'
+
 import { formatFileStatus } from '../helpers/formatFileStatus'
 
 import { ScoreBadge } from './ScoreBadge'
@@ -9,7 +11,7 @@ import { ScoreBadge } from './ScoreBadge'
 type FileCardData = {
   fileId: string
   fileName: string
-  status: string
+  status: DbFileStatus
   mqmScore: number | null
   criticalCount: number
   majorCount: number

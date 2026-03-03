@@ -105,9 +105,9 @@ export async function scoreFile({
   const penaltyWeights = await loadPenaltyWeights(tenantId)
 
   // Calculate MQM score (pure function)
+  // SAFETY: Drizzle returns varchar → string but DB CHECK constraints guarantee valid Severity/FindingStatus values
   const scoreResult = calculateMqmScore(
-    // @ts-expect-error Drizzle returns string but DB CHECK constraint guarantees Severity/FindingStatus values
-    findingRows,
+    findingRows as ContributingFinding[],
     totalWords,
     penaltyWeights,
   )

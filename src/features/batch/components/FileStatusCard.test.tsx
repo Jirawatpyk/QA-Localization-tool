@@ -19,13 +19,15 @@ vi.mock('next/link', () => ({
   )),
 }))
 
+import type { DbFileStatus } from '@/types/pipeline'
+
 import { FileStatusCard } from './FileStatusCard'
 
-// Type for file status card props (component not yet created)
+// Type for file status card props (aligned with FileStatusCard component)
 type FileCardData = {
   fileId: string
   fileName: string
-  status: 'auto_passed' | 'needs_review' | 'failed'
+  status: DbFileStatus
   mqmScore: number | null
   criticalCount: number
   majorCount: number
@@ -37,7 +39,7 @@ const PROJECT_ID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
 const defaultFile: FileCardData = {
   fileId: 'b2c3d4e5-f6a1-4b2c-9d3e-4f5a6b7c8d9e',
   fileName: 'chapter1.sdlxliff',
-  status: 'needs_review',
+  status: 'l2_completed',
   mqmScore: 82.5,
   criticalCount: 1,
   majorCount: 3,
@@ -64,7 +66,7 @@ describe('FileStatusCard', () => {
     expect(screen.getByTestId('mock-score-badge').textContent).toBe('82.5')
 
     // Status badge
-    expect(screen.getByText(/Needs Review/i)).toBeTruthy()
+    expect(screen.getByText(/L2 Completed/i)).toBeTruthy()
 
     // Severity counts visible via data-severity attributes
     const card = screen.getByRole('link')

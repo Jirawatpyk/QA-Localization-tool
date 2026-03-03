@@ -3,6 +3,7 @@ import { render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { buildFile, buildScoreRecord } from '@/test/factories'
+import type { DbFileStatus } from '@/types/pipeline'
 
 import { BatchSummaryView } from './BatchSummaryView'
 
@@ -23,11 +24,11 @@ vi.mock('./FileStatusCard', () => ({
   )),
 }))
 
-// Minimal type for batch summary file items (component not yet created)
+// Batch file item type aligned with component's BatchFileItem (uses DbFileStatus)
 type BatchFileItem = {
   fileId: string
   fileName: string
-  status: 'auto_passed' | 'needs_review' | 'failed'
+  status: DbFileStatus
   mqmScore: number | null
   criticalCount: number
   majorCount: number
@@ -40,7 +41,7 @@ function buildBatchFileItem(overrides?: Partial<BatchFileItem>): BatchFileItem {
   return {
     fileId: file.fileId,
     fileName: file.fileName,
-    status: 'auto_passed',
+    status: 'l1_completed' as DbFileStatus,
     mqmScore: score.mqmScore,
     criticalCount: score.criticalCount,
     majorCount: score.majorCount,
@@ -55,13 +56,13 @@ const passedFiles: BatchFileItem[] = [
   buildBatchFileItem({
     fileId: 'f1-uuid-0001-0001-000000000001',
     fileName: 'intro.sdlxliff',
-    status: 'auto_passed',
+    status: 'l1_completed',
     mqmScore: 97.5,
   }),
   buildBatchFileItem({
     fileId: 'f2-uuid-0002-0002-000000000002',
     fileName: 'chapter1.xlf',
-    status: 'auto_passed',
+    status: 'l1_completed',
     mqmScore: 96.0,
   }),
 ]
@@ -70,7 +71,7 @@ const reviewFiles: BatchFileItem[] = [
   buildBatchFileItem({
     fileId: 'f3-uuid-0003-0003-000000000003',
     fileName: 'glossary.xlsx',
-    status: 'needs_review',
+    status: 'l2_completed',
     mqmScore: 78.3,
     criticalCount: 1,
     majorCount: 3,

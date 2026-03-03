@@ -10,6 +10,7 @@ import { projects } from '@/db/schema/projects'
 import { uploadBatches } from '@/db/schema/uploadBatches'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { requireRole } from '@/lib/auth/requireRole'
+import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
 
 import type { BatchRecord } from '../types'
@@ -65,8 +66,8 @@ export async function createBatch(input: unknown): Promise<ActionResult<BatchRec
       action: 'upload_batch.created',
       newValue: { projectId, fileCount },
     })
-  } catch {
-    // audit failure is non-fatal; batch record was already created
+  } catch (auditErr) {
+    logger.error({ err: auditErr, batchId: batch.id }, 'Audit log write failed for upload batch')
   }
 
   return {

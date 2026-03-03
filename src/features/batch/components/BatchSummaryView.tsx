@@ -1,6 +1,7 @@
 'use client'
 
 import type { CrossFileFindingSummary } from '@/features/batch/types'
+import type { DbFileStatus } from '@/types/pipeline'
 
 import { BatchSummaryHeader } from './BatchSummaryHeader'
 import { FileStatusCard } from './FileStatusCard'
@@ -8,7 +9,7 @@ import { FileStatusCard } from './FileStatusCard'
 type BatchFileItem = {
   fileId: string
   fileName: string
-  status: string
+  status: DbFileStatus
   mqmScore: number | null
   criticalCount: number
   majorCount: number

@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 
 import { getFileHistory } from '@/features/batch/actions/getFileHistory.action'
+import type { DbFileStatus } from '@/types/pipeline'
 
 import { FileHistoryTable } from './FileHistoryTable'
 
@@ -12,7 +13,7 @@ type FileRow = {
   fileId: string
   fileName: string
   processedAt: string
-  status: string
+  status: DbFileStatus
   mqmScore: number | null
   reviewerName: string | null
 }
@@ -26,6 +27,13 @@ export function FileHistoryPageClient({ projectId, initialFiles }: FileHistoryPa
   const [filter, setFilter] = useState<FileHistoryFilter>('all')
   const [files, setFiles] = useState<FileRow[]>(initialFiles)
   const [isPending, startTransition] = useTransition()
+
+  // Sync when RSC re-renders with new data (React 19 prop-change pattern)
+  const [prevFiles, setPrevFiles] = useState(initialFiles)
+  if (initialFiles !== prevFiles) {
+    setPrevFiles(initialFiles)
+    setFiles(initialFiles)
+  }
 
   const handleFilterChange = (newFilter: FileHistoryFilter) => {
     setFilter(newFilter)

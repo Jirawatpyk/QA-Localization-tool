@@ -3,6 +3,7 @@
 import { useState } from 'react'
 
 import { FILE_HISTORY_PAGE_SIZE } from '@/features/batch/types'
+import type { DbFileStatus } from '@/types/pipeline'
 
 import { formatFileStatus } from '../helpers/formatFileStatus'
 
@@ -12,7 +13,7 @@ type FileHistoryRow = {
   fileId: string
   fileName: string
   processedAt: string
-  status: string
+  status: DbFileStatus
   mqmScore: number | null
   reviewerName: string | null
 }

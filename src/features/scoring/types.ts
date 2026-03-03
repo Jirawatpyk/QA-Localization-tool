@@ -23,11 +23,6 @@ export type AutoPassResult =
   | { eligible: true; rationale: string; isNewPair: boolean; fileCount: number }
   | { eligible: false; rationale: string; isNewPair: boolean; fileCount: number }
 
-export type ScoreInput = {
-  fileId: string
-  projectId: string
-}
-
 // Minimal shape needed for scoring (subset of DB finding columns)
 export type ContributingFinding = {
   severity: Severity

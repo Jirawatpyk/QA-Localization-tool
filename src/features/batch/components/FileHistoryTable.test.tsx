@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { buildFile, buildScoreRecord } from '@/test/factories'
+import type { DbFileStatus } from '@/types/pipeline'
 
 import { FileHistoryTable } from './FileHistoryTable'
 
@@ -14,12 +15,12 @@ vi.mock('./ScoreBadge', () => ({
   )),
 }))
 
-// Type for file history row (component not yet created)
+// Type for file history row (aligned with FileHistoryPageClient)
 type FileHistoryRow = {
   fileId: string
   fileName: string
   processedAt: string // ISO 8601
-  status: 'auto_passed' | 'needs_review' | 'failed'
+  status: DbFileStatus
   mqmScore: number | null
   reviewerName: string | null
 }
@@ -33,7 +34,7 @@ function buildFileHistoryRow(overrides?: Partial<FileHistoryRow>): FileHistoryRo
     fileId: file.fileId,
     fileName: file.fileName,
     processedAt: new Date().toISOString(),
-    status: 'auto_passed',
+    status: 'l1_completed',
     mqmScore: score.mqmScore,
     reviewerName: null,
     ...overrides,
@@ -44,14 +45,14 @@ const sampleRows: FileHistoryRow[] = [
   buildFileHistoryRow({
     fileId: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
     fileName: 'intro.sdlxliff',
-    status: 'auto_passed',
+    status: 'l1_completed',
     mqmScore: 97.5,
     reviewerName: null,
   }),
   buildFileHistoryRow({
     fileId: 'b2c3d4e5-f6a1-4b2c-9d3e-4f5a6b7c8d9e',
     fileName: 'chapter1.xlf',
-    status: 'needs_review',
+    status: 'l2_completed',
     mqmScore: 78.3,
     reviewerName: 'Alice',
   }),
@@ -118,7 +119,7 @@ describe('FileHistoryTable', () => {
 
     // First file row
     expect(within(rows[1]!).getByText('intro.sdlxliff')).toBeTruthy()
-    expect(within(rows[1]!).getByText(/Passed/i)).toBeTruthy()
+    expect(within(rows[1]!).getByText(/L1 Completed/i)).toBeTruthy()
 
     // Second file row
     expect(within(rows[2]!).getByText('chapter1.xlf')).toBeTruthy()

@@ -15,6 +15,7 @@ import { getBatchSummarySchema } from '@/features/batch/validation/batchSchemas'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
+import type { DbFileStatus } from '@/types/pipeline'
 
 type BatchSummaryResult = {
   batchId: string
@@ -85,11 +86,13 @@ export async function getBatchSummary(input: unknown): Promise<ActionResult<Batc
 
     for (const f of filesWithScores) {
       const isPass = f.mqmScore !== null && f.mqmScore >= threshold && (f.criticalCount ?? 0) === 0
+      // SAFETY: Drizzle infers varchar → string; DB CHECK constraint guarantees valid DbFileStatus
+      const typed = f as FileInBatch & { status: DbFileStatus }
 
       if (isPass) {
-        recommendedPass.push(f)
+        recommendedPass.push(typed)
       } else {
-        needsReview.push(f)
+        needsReview.push(typed)
       }
     }
 
@@ -147,7 +150,9 @@ export async function getBatchSummary(input: unknown): Promise<ActionResult<Batc
       id: f.id,
       description: f.description,
       sourceTextExcerpt: f.sourceTextExcerpt,
-      relatedFileIds: (f.relatedFileIds as string[]) ?? [],
+      relatedFileIds: Array.isArray(f.relatedFileIds)
+        ? (f.relatedFileIds as unknown[]).filter((id): id is string => typeof id === 'string')
+        : [],
     }))
 
     return {

@@ -1,19 +1,17 @@
+import type { ScoreStatus } from '@/types/finding'
+import type { DbFileStatus } from '@/types/pipeline'
+
 export type FileInBatch = {
   fileId: string
   fileName: string
-  status: string
+  status: DbFileStatus
   createdAt: Date
   updatedAt: Date
   mqmScore: number | null
-  scoreStatus: string | null
+  scoreStatus: ScoreStatus | null
   criticalCount: number | null
   majorCount: number | null
   minorCount: number | null
-}
-
-export type BatchFileGroup = {
-  recommendedPass: FileInBatch[]
-  needsReview: FileInBatch[]
 }
 
 export type BatchSummaryData = {
@@ -39,12 +37,12 @@ export type FileHistoryRow = {
   id: string
   fileName: string
   uploadDate: Date
-  processingStatus: string
+  processingStatus: DbFileStatus
   mqmScore: number | null
-  scoreStatus: string | null
+  scoreStatus: ScoreStatus | null
   criticalCount: number | null
   lastReviewerName: string | null
-  decisionStatus: string | null
+  decisionStatus: string | null // TODO(story-4.x): define union type when review decisions are built
 }
 
 export const FILE_HISTORY_PAGE_SIZE = 50

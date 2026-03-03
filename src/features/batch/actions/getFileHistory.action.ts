@@ -14,13 +14,14 @@ import { getFileHistorySchema } from '@/features/batch/validation/batchSchemas'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
+import type { DbFileStatus } from '@/types/pipeline'
 
 type FileHistoryEntry = {
   fileId: string
   fileName: string
   mqmScore: number | null
   criticalCount: number | null
-  status: string
+  status: DbFileStatus
   createdAt: Date
   lastReviewerName: string | null
 }
@@ -90,8 +91,10 @@ export async function getFileHistory(input: unknown): Promise<ActionResult<FileH
     })
 
     // Map to include lastReviewerName (null until Epic 4 implements review actions)
-    const mappedFiles = filtered.map((f) => ({
+    // SAFETY: Drizzle infers varchar → string; DB CHECK constraint guarantees valid DbFileStatus
+    const mappedFiles: FileHistoryEntry[] = filtered.map((f) => ({
       ...f,
+      status: f.status as DbFileStatus,
       lastReviewerName: null as string | null, // TODO(TD-TODO-002): Epic 4 — join reviewActions + users for actual reviewer name
     }))
 
