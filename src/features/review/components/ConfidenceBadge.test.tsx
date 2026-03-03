@@ -1,9 +1,6 @@
 /**
  * ATDD Tests — Story 3.2c: L2 Results Display & Score Update
  * AC2: Confidence badge with color-coded levels
- *
- * TDD RED PHASE — all tests are `it.skip()`.
- * Dev removes `.skip` and makes tests pass during implementation.
  */
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
@@ -80,5 +77,13 @@ describe('ConfidenceBadge', () => {
     const badge = screen.getByTestId('confidence-badge')
     expect(badge).toHaveTextContent('Low')
     expect(badge.className).toMatch(/error|low/i)
+  })
+
+  it('[P1] should not render l2ConfidenceMin warning when threshold is null', () => {
+    render(<ConfidenceBadge confidence={50} l2ConfidenceMin={null} />)
+
+    // Even though confidence is low, no "Below threshold" warning when threshold is null
+    expect(screen.queryByText(/below threshold/i)).toBeNull()
+    expect(screen.queryByTestId('confidence-warning')).toBeNull()
   })
 })

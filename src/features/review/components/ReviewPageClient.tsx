@@ -9,7 +9,7 @@ import { ReviewProgress } from '@/features/review/components/ReviewProgress'
 import { useFindingsSubscription } from '@/features/review/hooks/use-findings-subscription'
 import { useScoreSubscription } from '@/features/review/hooks/use-score-subscription'
 import { useReviewStore } from '@/features/review/stores/review.store'
-import type { Finding, LayerCompleted, ScoreBadgeState } from '@/types/finding'
+import type { Finding, FindingStatus, LayerCompleted, ScoreBadgeState } from '@/types/finding'
 
 type ReviewPageClientProps = {
   fileId: string
@@ -31,7 +31,6 @@ export function ReviewPageClient({ fileId, projectId, initialData }: ReviewPageC
   const setFinding = useReviewStore((s) => s.setFinding)
   const findingsMap = useReviewStore((s) => s.findingsMap)
   const currentScore = useReviewStore((s) => s.currentScore)
-  const scoreStatus = useReviewStore((s) => s.scoreStatus)
   const layerCompleted = useReviewStore((s) => s.layerCompleted)
   const updateScore = useReviewStore((s) => s.updateScore)
 
@@ -39,10 +38,21 @@ export function ReviewPageClient({ fileId, projectId, initialData }: ReviewPageC
   useEffect(() => {
     resetForFile(fileId)
 
-    // Populate initial findings
+    // Populate initial findings — map server action subset to full Finding type
     for (const f of initialData.findings) {
-      // Action returns display subset; store accepts full Finding — safe since UI uses subset fields
-      setFinding(f.id, f as unknown as Finding)
+      const finding: Finding = {
+        ...f,
+        tenantId: '',
+        projectId,
+        sessionId: '',
+        status: f.status as FindingStatus,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        fileId,
+        reviewSessionId: null,
+        relatedFileIds: null,
+      }
+      setFinding(f.id, finding)
     }
 
     // Populate initial score
@@ -105,7 +115,7 @@ export function ReviewPageClient({ fileId, projectId, initialData }: ReviewPageC
       />
 
       {/* Finding count summary */}
-      <div className="flex gap-4 text-sm">
+      <div data-testid="finding-count-summary" className="flex gap-4 text-sm">
         <span className="text-severity-critical font-medium">
           Critical: {severityCounts.critical}
         </span>
@@ -115,7 +125,7 @@ export function ReviewPageClient({ fileId, projectId, initialData }: ReviewPageC
       </div>
 
       {/* Findings list */}
-      <div className="space-y-2">
+      <div data-testid="finding-list" className="space-y-2">
         {sortedFindings.length === 0 ? (
           <p className="text-muted-foreground text-sm py-4">No findings for this file.</p>
         ) : (

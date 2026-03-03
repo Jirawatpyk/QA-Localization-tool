@@ -1,34 +1,49 @@
-# Story 3.2b6 — Orphan Wiring Cleanup CR R1
+# Story 3.2b6 -- Orphan Wiring Cleanup CR R1-R2
 
-**Date:** 2026-03-02
+## CR R1 (2026-03-02 -- initial E2E + seed helpers)
+
 **Findings:** 0C / 3H / 5M / 4L
-**Verdict:** Minor cleanup story — no critical issues
+**Verdict:** Minor cleanup story -- no critical issues
 
-## Key Findings
+### Key Findings R1
 
-### H1: DRY Violation — adminHeaders() + seed functions duplicated across 4 E2E spec files
+- H1: DRY Violation -- adminHeaders() + seed functions duplicated across 4 E2E spec files
+- H2: Unguarded `data[0].id` in E2E seed functions
+- H3: Stale `// RED:` comments in AiBudgetCard.test.tsx
+- M2: No try-catch in startTransition async callback
+- Pattern: E2E PostgREST seeding (seed DB via PostgREST in `[setup]` test)
 
-- `adminHeaders()`, env vars, `seedFile()`, `seedFinding()`, `seedBatch()`, `seedScore()` copy-pasted
-- `pipeline-admin.ts` already has `adminHeaders()` — not reused
-- Tech debt: extract to `e2e/helpers/seed-helpers.ts`
+## CR R2 (2026-03-02 -- ParitySeverity migration + dialog wiring + L1FindingContext fix)
 
-### H2: Unguarded `data[0].id` in E2E seed functions
+**Commit:** f896793
+**Findings:** 0C / 4H / 5M / 4L
 
-- PostgREST can return `200 []` even with `Prefer: return=representation` (RLS edge case)
-- Crash with unhelpful error message
+### High Findings R2
 
-### H3: Stale `// RED:` comments in AiBudgetCard.test.tsx
+#### H1-H3: Incomplete ParitySeverity Migration
 
-- Lines 69, 80, 91, 116-117 — all features implemented, comments outdated
-- 1-minute fix
+- `types.ts` XbenchFinding.severity + ParityFinding.severity still `string`
+- `ParityResultsTable.tsx` local ParityFinding type still `string`
+- `ParityComparisonView.test.tsx` MockCompareResult severity fields still `string`
+- Root cause: migration done in comparator + actions but NOT in shared types/components/tests
 
-### M2: No try-catch in startTransition async callback
+#### H4: Unsafe `as L1FindingContext[]` cast in runL2ForFile.ts:198
 
-- If `updateBudgetAlertThreshold` throws (not returns error), Error Boundary catches it
-- Better: catch + toast.error + revert
+- Drizzle infers varchar as `string`, cast to `FindingSeverity` union bypasses compiler
+- WHERE clause guarantees safety but pattern is brittle if domain changes
+- Recommend: `.map()` with explicit cast + safety comment
 
-### Pattern: E2E PostgREST seeding
+### Medium Findings R2
 
-- This story established pattern: seed DB data via PostgREST in `[setup]` test
-- Much faster than upload+parse+process flow
-- Trades: loses E2E coverage of upload-parse path, gains speed + Inngest independence
+- M1: VALID_PARITY_SEVERITIES not exported, not derived from `as const` array (SSOT drift risk)
+- M2: ComparisonFinding type duplicated in 3 files (action, view, results table)
+- M3: xbenchReportParser.ts severity:string acceptable (raw input) but needs JSDoc
+- M4: "Report Missing Check" button always visible, even before comparison
+- M5: Custom dropdown missing keyboard navigation (Arrow keys, Enter)
+
+### Positive Patterns R2
+
+- toParitySeverity() helper: good defensive coercion (.toLowerCase().trim() + fallback 'minor')
+- withTenant() used correctly on all queries
+- Audit log pattern correct (try-catch + logger.error for non-fatal)
+- Dialog wiring correct (open + onOpenChange + state reset on useEffect)

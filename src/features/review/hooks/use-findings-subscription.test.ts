@@ -1,9 +1,6 @@
 /**
  * ATDD Tests — Story 3.2c: L2 Results Display & Score Update
  * AC7: New Realtime findings subscription hook
- *
- * TDD RED PHASE — all tests are `it.skip()`.
- * Dev removes `.skip` and makes tests pass during implementation.
  */
 import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -68,7 +65,7 @@ describe('useFindingsSubscription', () => {
 
   // ── P0: INSERT adds finding to store ──
 
-  it('[P0] should add finding to findingsMap on INSERT event', () => {
+  it('[P0] should add finding to findingsMap on INSERT event', async () => {
     renderHook(() => useFindingsSubscription('file-abc'))
 
     // Get the INSERT handler from the .on() call
@@ -78,7 +75,8 @@ describe('useFindingsSubscription', () => {
     const onInsertHandler = insertCall![2] as (payload: { new: Record<string, unknown> }) => void
 
     const newFinding = buildDbFinding({ fileId: 'file-abc' })
-    act(() => {
+    // Use async act() to flush queueMicrotask batch buffer
+    await act(async () => {
       onInsertHandler({
         new: {
           id: 'finding-1',
@@ -141,9 +139,9 @@ describe('useFindingsSubscription', () => {
     expect(useReviewStore.getState().findingsMap.has('finding-1')).toBe(false)
   })
 
-  // ── P0: Burst INSERT batching ──
+  // ── P0: Burst INSERT batching via queueMicrotask ──
 
-  it('[P0] should batch burst INSERT events into single state update', () => {
+  it('[P0] should batch burst INSERT events into single state update via queueMicrotask', async () => {
     renderHook(() => useFindingsSubscription('file-abc'))
 
     const insertCall = mockChannel.on.mock.calls.find(
@@ -151,8 +149,11 @@ describe('useFindingsSubscription', () => {
     )
     const onInsertHandler = insertCall![2] as (payload: { new: Record<string, unknown> }) => void
 
-    // Fire 5 INSERT events rapidly (simulating L2 burst)
-    act(() => {
+    // Track setFindings calls to verify batching
+    const setFindingsSpy = vi.spyOn(useReviewStore.getState(), 'setFindings')
+
+    // Fire 5 INSERT events synchronously then flush microtask with async act()
+    await act(async () => {
       for (let i = 0; i < 5; i++) {
         onInsertHandler({
           new: {
@@ -169,11 +170,67 @@ describe('useFindingsSubscription', () => {
       }
     })
 
+    // async act() flushes queueMicrotask — verify single batch setFindings call
+    // (individual setFinding would produce 5 calls; batched produces 1 setFindings call)
+    expect(setFindingsSpy).toHaveBeenCalledTimes(1)
+
     // All 5 findings should be in the store
     const map = useReviewStore.getState().findingsMap
     expect(map.size).toBeGreaterThanOrEqual(5)
     expect(map.has('finding-0')).toBe(true)
     expect(map.has('finding-4')).toBe(true)
+
+    setFindingsSpy.mockRestore()
+  })
+
+  // ── P0: INSERT+DELETE re-process idempotency (T7.7) ──
+
+  it('[P0] should handle INSERT+DELETE+INSERT for re-process idempotency', async () => {
+    renderHook(() => useFindingsSubscription('file-abc'))
+
+    const insertCall = mockChannel.on.mock.calls.find(
+      (call: unknown[]) => (call[1] as Record<string, unknown>)?.event === 'INSERT',
+    )
+    const deleteCall = mockChannel.on.mock.calls.find(
+      (call: unknown[]) => (call[1] as Record<string, unknown>)?.event === 'DELETE',
+    )
+    const onInsertHandler = insertCall![2] as (payload: { new: Record<string, unknown> }) => void
+    const onDeleteHandler = deleteCall![2] as (payload: { old: Record<string, unknown> }) => void
+
+    const findingPayload = {
+      id: 'finding-reprocess',
+      severity: 'major',
+      category: 'accuracy',
+      description: 'Original finding',
+      detected_by_layer: 'L2',
+      ai_confidence: 80,
+      status: 'pending',
+      file_id: 'file-abc',
+    }
+
+    // Step 1: INSERT original finding (async act to flush queueMicrotask)
+    await act(async () => {
+      onInsertHandler({ new: findingPayload })
+    })
+    expect(useReviewStore.getState().findingsMap.has('finding-reprocess')).toBe(true)
+
+    // Step 2: DELETE (re-process clears findings) — DELETE is synchronous, no batch buffer
+    act(() => {
+      onDeleteHandler({ old: { id: 'finding-reprocess' } })
+    })
+    expect(useReviewStore.getState().findingsMap.has('finding-reprocess')).toBe(false)
+
+    // Step 3: INSERT again (re-process creates new findings)
+    await act(async () => {
+      onInsertHandler({
+        new: { ...findingPayload, description: 'Re-processed finding', ai_confidence: 90 },
+      })
+    })
+
+    const reprocessed = useReviewStore.getState().findingsMap.get('finding-reprocess')
+    expect(reprocessed).toBeDefined()
+    expect(reprocessed!.description).toBe('Re-processed finding')
+    expect(reprocessed!.aiConfidence).toBe(90)
   })
 
   // ── P1: Cleanup on unmount ──

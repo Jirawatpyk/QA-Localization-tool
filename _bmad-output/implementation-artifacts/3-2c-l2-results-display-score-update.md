@@ -122,22 +122,22 @@ So that I can begin reviewing AI findings immediately and track score progressio
   - [x] 7.9 Unit tests: happy path, file not found, empty findings, tenant isolation
 
 - [x] **Task 8: Review page route** (AC: #4)
-  - [ ] 8.1 Create `src/app/(app)/projects/[projectId]/review/[fileId]/page.tsx` — RSC page, `export const dynamic = 'force-dynamic'`
-  - [ ] 8.2 Create `src/features/review/components/ReviewPageClient.tsx` — `'use client'` entry component
-  - [ ] 8.3 Server page calls `getFileReviewData()` with params, passes to client
-  - [ ] 8.4 Client component: ScoreBadge (md), ReviewProgress, finding count summary, FindingListItem list
-  - [ ] 8.5 Wire `useScoreSubscription(fileId)` for real-time score updates
-  - [ ] 8.6 Wire `useFindingsSubscription(fileId)` for real-time finding arrival (Task 9)
-  - [ ] 8.7 Wire `useReviewStore` — `resetForFile(fileId)` on mount, populate `findingsMap`
-  - [ ] 8.8 Map store's `layerCompleted` to ScoreBadge `state` prop: `'L1'` → `'rule-only'`, contains `'L2'` → `'ai-screened'`, no layer info → derive from score
-  - [ ] 8.9 Add Breadcrumb entries: Projects → [Project Name] → Review → [File Name]
+  - [x] 8.1 Create `src/app/(app)/projects/[projectId]/review/[fileId]/page.tsx` — RSC page, `export const dynamic = 'force-dynamic'`
+  - [x] 8.2 Create `src/features/review/components/ReviewPageClient.tsx` — `'use client'` entry component
+  - [x] 8.3 Server page calls `getFileReviewData()` with params, passes to client
+  - [x] 8.4 Client component: ScoreBadge (md), ReviewProgress, finding count summary, FindingListItem list
+  - [x] 8.5 Wire `useScoreSubscription(fileId)` for real-time score updates
+  - [x] 8.6 Wire `useFindingsSubscription(fileId)` for real-time finding arrival (Task 9)
+  - [x] 8.7 Wire `useReviewStore` — `resetForFile(fileId)` on mount, populate `findingsMap`
+  - [x] 8.8 Map store's `layerCompleted` to ScoreBadge `state` prop: `'L1'` → `'rule-only'`, contains `'L2'` → `'ai-screened'`, no layer info → derive from score
+  - [x] 8.9 Add Breadcrumb entries: Projects → [Project Name] → Review → [File Name]
 
 - [x] **Task 9: Real-time subscriptions** (AC: #6, #7)
-  - [ ] 9.1 **FIX BUG in `useScoreSubscription`:** Change Realtime event from `'UPDATE'` to `'INSERT'` — `scoreFile()` does atomic DELETE+INSERT (not UPDATE), so `'UPDATE'` events never fire. This is a latent bug from Story 3.0 (masked because pipeline E2E uses `pollScoreLayer()` direct DB query, not Realtime). Also extract `layer_completed` from Realtime INSERT payload
-  - [ ] 9.2 **FIX polling fallback:** Change `.select('mqm_score, status')` to `.select('mqm_score, status, layer_completed')` — currently polling does NOT return `layer_completed`
-  - [ ] 9.3 Update `ScoreSlice.updateScore` signature: `(score: number, status: ScoreStatus, layerCompleted: LayerCompleted | null) => void`
-  - [ ] 9.4 Add `layerCompleted: LayerCompleted | null` field to `ScoreSlice`, reset to `null` in `resetForFile()`
-  - [ ] 9.5 Create `useFindingsSubscription(fileId)` hook in `src/features/review/hooks/use-findings-subscription.ts`:
+  - [x] 9.1 **FIX BUG in `useScoreSubscription`:** Change Realtime event from `'UPDATE'` to `'INSERT'` — `scoreFile()` does atomic DELETE+INSERT (not UPDATE), so `'UPDATE'` events never fire. This is a latent bug from Story 3.0 (masked because pipeline E2E uses `pollScoreLayer()` direct DB query, not Realtime). Also extract `layer_completed` from Realtime INSERT payload
+  - [x] 9.2 **FIX polling fallback:** Change `.select('mqm_score, status')` to `.select('mqm_score, status, layer_completed')` — currently polling does NOT return `layer_completed`
+  - [x] 9.3 Update `ScoreSlice.updateScore` signature: `(score: number, status: ScoreStatus, layerCompleted: LayerCompleted | null) => void`
+  - [x] 9.4 Add `layerCompleted: LayerCompleted | null` field to `ScoreSlice`, reset to `null` in `resetForFile()`
+  - [x] 9.5 Create `useFindingsSubscription(fileId)` hook in `src/features/review/hooks/use-findings-subscription.ts`:
     - Subscribe to `findings` table Realtime: `postgres_changes` → INSERT + DELETE, filter `file_id=eq.${fileId}`
     - On INSERT: add finding to `useReviewStore.findingsMap`
     - On DELETE: remove findings from store (handles idempotent re-process: `runL2ForFile` does DELETE old L2 findings + INSERT new ones)
@@ -383,24 +383,38 @@ Recent commits focus on Story 3.2b7 (taxonomy reorder) CR fixes and pipeline E2E
 - **M6 languagePairConfigs targetLang:** JOIN matches `sourceLang` only — sufficient for `l2ConfidenceMin` lookup. Multi-target-lang matching is Epic 4+ scope
 - **DoD gate:** 85/85 review tests pass, TypeScript clean, lint 0 errors, all P0+P1 ATDD tests green
 
+### CR R1 Fix Summary (2026-03-03)
+- **H2: Burst batching** — Implemented `queueMicrotask` + `InsertBuffer` pattern in `useFindingsSubscription`. N simultaneous INSERT events → 1 `setFindings()` call. Tests use `await act(async () => ...)` to flush microtasks
+- **H3: Unsafe cast** — Replaced `as unknown as Finding` with explicit field mapping in `ReviewPageClient.tsx`. All missing fields (`tenantId`, `projectId`, `sessionId`, `createdAt`, `updatedAt`, `fileId`, `reviewSessionId`, `relatedFileIds`) now explicitly set
+- **H4: Missing P0 tests** — Added T5.6 (processingMode assertion), T7.7 (INSERT+DELETE+INSERT re-process idempotency), T8.7 (L2 pending state), T9.7 (source/target excerpts in expanded state)
+- **M2: Q4 JOIN targetLang** — Added `// TODO(TD-REVIEW-001)` comment, TD entry in tracker. Deferred to Epic 5
+- **M3: Missing data-testids** — Added `finding-count-summary` and `finding-list` data-testids to ReviewPageClient
+- **M5: withTenant verification** — Replaced callIndex check with `mockWithTenant.toHaveBeenCalledTimes(5)` + tenantId arg verification loop
+- **M6: UPDATE handler** — Added UPDATE event subscription to `useFindingsSubscription` channel
+- **L1: Missing P1 tests** — Added null threshold test (ConfidenceBadge), design token test (LayerBadge)
+- **L2: useReducedMotion cache** — Changed to `useState` lazy initializer (no `window.matchMedia` call per render)
+- **L3: E2E networkidle** — Removed all 6 `waitForLoadState('networkidle')` from review-findings.spec.ts
+- **L4: Stale comments** — Removed "TDD RED PHASE" comments from 5 test files
+- **Bonus:** Removed unused `scoreStatus` Zustand selector (lint warning fix + unnecessary re-render prevention)
+
 ### File List
 
 **New files (created):**
 - `src/app/(app)/projects/[projectId]/review/[fileId]/page.tsx` — RSC review page
 - `src/features/review/components/ReviewPageClient.tsx` — Client entry component
 - `src/features/review/components/ConfidenceBadge.tsx` — Confidence indicator (High/Medium/Low)
-- `src/features/review/components/ConfidenceBadge.test.tsx` — 9 tests
+- `src/features/review/components/ConfidenceBadge.test.tsx` — 10 tests (9 + CR R1: null threshold)
 - `src/features/review/components/LayerBadge.tsx` — Rule vs AI indicator
-- `src/features/review/components/LayerBadge.test.tsx` — 3 tests
+- `src/features/review/components/LayerBadge.test.tsx` — 4 tests (3 + CR R1: design token)
 - `src/features/review/components/ReviewProgress.tsx` — Layer completion status (L1/L2/L3)
-- `src/features/review/components/ReviewProgress.test.tsx` — 6 tests
+- `src/features/review/components/ReviewProgress.test.tsx` — 7 tests (6 + CR R1: L2 pending)
 - `src/features/review/components/FindingListItem.tsx` — Single finding row (read-only)
-- `src/features/review/components/FindingListItem.test.tsx` — 6 tests
+- `src/features/review/components/FindingListItem.test.tsx` — 7 tests (6 + CR R1: source/target excerpts)
 - `src/features/review/components/ScoreBadge.boundary.test.tsx` — 6 boundary tests
 - `src/features/review/actions/getFileReviewData.action.ts` — Server Action (file + findings + score + config)
-- `src/features/review/actions/getFileReviewData.action.test.ts` — 5 tests
+- `src/features/review/actions/getFileReviewData.action.test.ts` — 6 tests (5 + CR R1: processingMode)
 - `src/features/review/hooks/use-findings-subscription.ts` — Realtime findings hook + polling fallback
-- `src/features/review/hooks/use-findings-subscription.test.ts` — 6 tests
+- `src/features/review/hooks/use-findings-subscription.test.ts` — 7 tests (6 + CR R1: re-process idempotency)
 - `supabase/migrations/00019_story_3_2c_realtime.sql` — Enable Realtime for scores + findings tables
 - `e2e/review-findings.spec.ts` — E2E critical flow (upload → pipeline → review page)
 

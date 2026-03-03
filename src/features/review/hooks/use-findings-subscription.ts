@@ -4,6 +4,12 @@ import { useReviewStore } from '@/features/review/stores/review.store'
 import { createBrowserClient } from '@/lib/supabase/client'
 import type { DetectedByLayer, Finding, FindingSeverity, FindingStatus } from '@/types/finding'
 
+// ── Burst batching — collect INSERT events and flush as single state update via queueMicrotask ──
+type InsertBuffer = {
+  findings: Finding[]
+  scheduled: boolean
+}
+
 const INITIAL_POLL_INTERVAL = 5000
 const MAX_POLL_INTERVAL = 60000
 
@@ -49,6 +55,7 @@ export function useFindingsSubscription(fileId: string) {
   const pollIntervalRef = useRef(INITIAL_POLL_INTERVAL)
   const isPollingRef = useRef(false)
   const supabaseRef = useRef<ReturnType<typeof createBrowserClient> | null>(null)
+  const insertBufferRef = useRef<InsertBuffer>({ findings: [], scheduled: false })
 
   const stopPolling = useCallback(() => {
     isPollingRef.current = false
@@ -105,7 +112,33 @@ export function useFindingsSubscription(fileId: string) {
     const supabase = createBrowserClient()
     supabaseRef.current = supabase
 
+    // Flush buffered INSERT findings as a single state update (AC7 burst batching)
+    const flushInsertBuffer = () => {
+      const buf = insertBufferRef.current
+      const batch = buf.findings
+      buf.findings = []
+      buf.scheduled = false
+      if (batch.length === 0) return
+      const store = useReviewStore.getState()
+      const newMap = new Map(store.findingsMap)
+      for (const f of batch) {
+        newMap.set(f.id, f)
+      }
+      store.setFindings(newMap)
+    }
+
     const handleInsert = (payload: { new: Record<string, unknown> }) => {
+      const finding = mapRowToFinding(payload.new)
+      if (!finding) return
+      const buf = insertBufferRef.current
+      buf.findings.push(finding)
+      if (!buf.scheduled) {
+        buf.scheduled = true
+        queueMicrotask(flushInsertBuffer)
+      }
+    }
+
+    const handleUpdate = (payload: { new: Record<string, unknown> }) => {
       const finding = mapRowToFinding(payload.new)
       if (finding) {
         useReviewStore.getState().setFinding(finding.id, finding)
@@ -130,6 +163,16 @@ export function useFindingsSubscription(fileId: string) {
           filter: `file_id=eq.${fileId}`,
         },
         handleInsert,
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'findings',
+          filter: `file_id=eq.${fileId}`,
+        },
+        handleUpdate,
       )
       .on(
         'postgres_changes',

@@ -36,8 +36,11 @@ function truncate(text: string, maxLength: number): string {
 }
 
 function useReducedMotion(): boolean {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const [reduced] = useState(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  })
+  return reduced
 }
 
 export function FindingListItem({ finding, isNew, l2ConfidenceMin }: FindingListItemProps) {

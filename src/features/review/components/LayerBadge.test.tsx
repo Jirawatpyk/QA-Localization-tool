@@ -1,9 +1,6 @@
 /**
  * ATDD Tests — Story 3.2c: L2 Results Display & Score Update
  * AC9: Layer indicator (Rule vs AI)
- *
- * TDD RED PHASE — all tests are `it.skip()`.
- * Dev removes `.skip` and makes tests pass during implementation.
  */
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
@@ -35,5 +32,13 @@ describe('LayerBadge', () => {
     const badge = screen.getByTestId('layer-badge')
     expect(badge).toHaveTextContent('AI')
     expect(badge.className).toMatch(/purple|ai/i)
+  })
+
+  it('[P1] should use design token color (status-ai-screened) for AI badge', () => {
+    render(<LayerBadge layer="L2" />)
+
+    const badge = screen.getByTestId('layer-badge')
+    // Class should reference the design token (--color-status-ai-screened) via utility class
+    expect(badge.className).toMatch(/status-ai-screened/)
   })
 })

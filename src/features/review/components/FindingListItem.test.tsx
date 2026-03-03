@@ -1,9 +1,6 @@
 /**
  * ATDD Tests — Story 3.2c: L2 Results Display & Score Update
  * AC9: Individual finding display row
- *
- * TDD RED PHASE — all tests are `it.skip()`.
- * Dev removes `.skip` and makes tests pass during implementation.
  */
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
@@ -55,6 +52,28 @@ describe('FindingListItem', () => {
     expect(screen.getByText(/Missing translation for key term/i)).toBeTruthy()
     // Confidence badge (88%)
     expect(screen.getByTestId('confidence-badge')).toBeTruthy()
+  })
+
+  // ── P0: Source/target excerpts in expanded state (T9.7) ──
+
+  it('[P0] should show source/target excerpts in expanded state', () => {
+    const finding = buildFindingForUI({
+      description: 'A'.repeat(150),
+      sourceTextExcerpt: 'The source segment text',
+      targetTextExcerpt: 'The target segment text',
+    })
+
+    render(<FindingListItem finding={finding} />)
+
+    // Expand the detail area
+    const toggleButton = screen.getByRole('button', { name: /expand|detail|more/i })
+    fireEvent.click(toggleButton)
+
+    const detail = screen.getByTestId('finding-detail')
+    expect(detail.textContent).toContain('The source segment text')
+    expect(detail.textContent).toContain('The target segment text')
+    expect(detail.textContent).toContain('Source:')
+    expect(detail.textContent).toContain('Target:')
   })
 
   // ── P1: Truncation ──

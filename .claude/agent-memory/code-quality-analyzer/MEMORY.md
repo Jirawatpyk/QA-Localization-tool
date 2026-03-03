@@ -18,7 +18,11 @@
 - `story-3-2b-findings.md` — Story 3.2b L2 Batch Processing & Pipeline Extension CR R1-R2 (R2: 0C/4H/5M/4L)
 - `story-3-2b5-findings.md` — Story 3.2b5 Upload-Pipeline Wiring CR R1 (0C/3H/5M/4L)
 - `story-3-2b6-findings.md` — Story 3.2b6 Orphan Wiring Cleanup CR R1-R2 (R1: 0C/4H/5M/4L)
-- `story-td-sprint-findings.md` — TD Quick-Fix Sprint CR R1 (0C/3H/5M/4L)
+- `story-td-sprint-findings.md` — TD Quick-Fix Sprint CR R1-R2 (R1: 0C/3H/5M/4L)
+- `story-3-2b7-findings.md` — Story 3.2b7 Taxonomy Reorder UI CR R1-R2 (R2: 0C/0H/3M/5L)
+- `pipeline-deep-review-findings.md` — Pipeline Deep Review (3C/8H/8M) 2026-03-03
+- `cross-feature-review-findings.md` — Cross-Feature Review: parity/dashboard/project (0C/7H/9M/8L) 2026-03-03
+- `story-3-2c-findings.md` — Story 3.2c L2 Results Display & Score Update CR R1-R2 (R2: 0C/5H/8M/5L)
 
 ## Recurring Anti-Patterns (check EVERY review)
 
@@ -180,6 +184,39 @@
 - Pattern: refactor extracts logic into helper but leaves old imports behind
 - **Check during review:** After any extraction refactor, grep for the old type/function name across all call sites
 
+### 36. Bare `z.string()` in Model/Enum Schemas (TD Sprint)
+
+- `model: z.string().nullable()` accepts empty string, whitespace, arbitrarily long strings
+- Even with defense-in-depth allowlist check downstream, Zod should be first line of defense
+- Fix: `.min(1).max(100).trim()` for model IDs, or better: `z.enum([...models]).nullable()`
+- **Check during review:** Every `z.string()` for a bounded-domain field should have `.min(1)` at minimum
+
+### 37. Misleading Constant Names (TD Sprint)
+
+- `PIPELINE_LAYERS = ['L2', 'L3']` implies all layers but excludes L1 (by design — L1 has no AI model)
+- Fix: prefix with domain: `AI_PIPELINE_LAYERS` or `MODEL_PINNABLE_LAYERS`
+- **Check during review:** Constants named `ALL_*` or plural noun should be truly exhaustive
+
+### 38. Missing onDragCancel in @dnd-kit DndContext (Story 3.2b7)
+
+> NOTE: Anti-patterns 38+ near end of file may be truncated from system prompt (200-line limit).
+> See `pipeline-deep-review-findings.md` for 3C/8H/8M findings from 2026-03-03 deep review.
+> Key new patterns: Invalid finding status 'open', L3 inline prompt not using shared builder,
+> fallback chain unused, L3 missing error chunk logging, store type mismatch with DbFileStatus.
+
+- DndContext has onDragStart + onDragEnd but no onDragCancel
+- Escape key fires onDragCancel (not onDragEnd) -- activeDragId state not reset
+- DragOverlay stays visible until next render
+- Fix: add `onDragCancel={() => setActiveDragId(null)}`
+- **Check during review:** Every DndContext with DragOverlay must have onDragCancel handler
+
+### 39. Vacuous Conditional Test Assertions (Story 3.2b7 R1-R2)
+
+- `if (mock.calls.length > 0) { expect(...) }` -- assertions never execute if lib can't fire events in jsdom
+- Pattern recurs with @dnd-kit (getBoundingClientRect = 0 in jsdom)
+- Fix: extract pure function and test directly, or use `it.skipIf` with explicit reason
+- **Check during review:** Search for `if.*mock.*calls.*length.*>.*0` in test files
+
 ## CAS Guard Pattern (ESTABLISHED)
 
 - All status-transition actions: atomic `UPDATE WHERE status='expected' RETURNING`
@@ -213,7 +250,7 @@
 ## Missing DB Constraints (accumulated — last verified 2026-02-26)
 
 - ✅ RESOLVED: UNIQUE on segments(file_id, segment_number) — added to Drizzle schema + migration 0007 applied
-- ⚠️ OPEN: No composite index on files(tenant_id, project_id) — perf only, low priority (DEFERRED to Epic 3-4)
+- ✅ RESOLVED: Composite index `idx_files_tenant_project(tenant_id, project_id)` added in TD Sprint — note: column order (tenant, project) may not be optimal for project-first queries
 - ℹ️ BY DESIGN: scores.fileId is nullable (project-level aggregates) — UNIQUE not appropriate
 - ✅ RESOLVED: idx_findings_file_layer — added to Drizzle schema + migration 0007 applied
 - ⚠️ OPEN: segmentId NOT persisted to DB (Stories 2.2-2.3, design decision needed)

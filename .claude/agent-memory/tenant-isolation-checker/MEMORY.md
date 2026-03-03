@@ -143,25 +143,127 @@ are created. MUST use `getCurrentUser()`/`requireRole()` for tenantId (not from 
 `withTenant(reviewSessions.tenantId, tenantId)` for session name lookup. Input `projectId`/`sessionId`
 are URL-sourced and must be treated as untrusted.
 
-### Story 3.2b5 Audit Results (Upload-Pipeline Wiring — 2026-03-02)
+### CI Fix Commits Audit Results (reorderMappings + proxy + pipeline-admin — 2026-03-03)
 
-**Result: 0C/0H/0M/0L — SECURE (full pass, 11 files).**
+**Result: 0C/0H/0M/1L — SECURE.**
 
-Files: `UploadPageClient.tsx`, `UploadProgressList.tsx`, `FileUploadZone.tsx`,
-`parseFile.action.ts`, `createBatch.action.ts`, `ProcessingModeDialog.tsx`,
-`getFilesWordCount.action.ts`, `startProcessing.action.ts`, `getFileHistory.action.ts`,
-`processFile.ts` (Inngest), `e2e/pipeline-findings.spec.ts`, `e2e/upload-segments.spec.ts`,
-`e2e/helpers/pipeline-admin.ts`.
+Files:
 
-Pure client-side wiring story — no new DB query paths introduced.
+- `src/features/taxonomy/actions/reorderMappings.action.ts` — global table (taxonomyDefinitions), no tenant_id column. withTenant() correctly absent. Access control via requireRole('admin','write') (M3 write path: DB-verified role with tenantId-scoped userRoles query). Audit log includes tenantId from currentUser. Transaction + Promise.all pattern confirmed correct for parallel UPDATE within transaction.
+- `src/proxy.ts` — no DB queries. tenantId extracted from JWT claims only (not from URL/headers). Passed to downstream via response header x-tenant-id (not used for data access decisions). No data returned to user, no isolation risk.
+- `e2e/helpers/pipeline-admin.ts` — service_role used correctly. Confirmed: zero imports from src/ application code (grepped). PostgREST queries filter by projectId/fileId (owned by test tenant). Intentional E2E test infra use of service_role per established pattern.
+
+LOW finding: `revalidateTag('taxonomy', 'minutes')` at L77 passes two arguments. Next.js `revalidateTag()` accepts one string; second arg is silently ignored. Same pattern in createMapping, deleteMapping, updateMapping actions. Not a security issue — functional bug only (cache invalidation still fires on correct tag).
+
+NOTE: `pipeline-admin.ts` was already audited in Story 3.2b5 — re-verified here, still PASS. No new queries added across the 3 CI fix commits.
+
+### Taxonomy Feature Full Deep-Dive Audit (2026-03-03)
+
+**Result: 0C/0H/0M/4L — SECURE (10 files).**
+
+Files: `createMapping.action.ts`, `deleteMapping.action.ts`, `getTaxonomyMappings.action.ts`,
+`updateMapping.action.ts`, `reorderMappings.action.ts`, `taxonomyCache.ts`,
+`admin/taxonomy/page.tsx`, `TaxonomyManager.tsx`, `TaxonomyMappingTable.tsx`,
+`AddMappingDialog.tsx`, `taxonomySeed.ts`.
+
 Key confirmed patterns:
 
-- `parseFile(fileId)`: client passes only UUID; action resolves tenantId from requireRole(); fileId verified via withTenant() before CAS mutation.
-- `createBatch({ projectId })`: projectId from client is verified via withTenant() ownership SELECT before INSERT; tenantId in INSERT values from session only.
-- `startProcessing({ fileIds, projectId, mode })`: all client inputs validated against session tenantId via withTenant() before Inngest dispatch; tenantId injected into event payload from session (not client).
-- `getFileHistory` LEFT JOIN scores: withTenant on `files` (driving table) in WHERE; withTenant on `scores` (joined table) in JOIN condition — canonical pattern confirmed again.
-- `processFile.ts` batch check query: 3-way AND filter (withTenant + projectId + batchId) — correct.
-- `service_role` in `e2e/helpers/pipeline-admin.ts`: intentional and correct — E2E test infra only, never imported by src/ application code.
+- Every action calls `requireRole('admin', 'write')` — M3 write path enforced on all mutations.
+- `getTaxonomyMappings` uses `requireRole('admin', 'read')` — read path enforced.
+- No action accepts `tenantId` from client — all audit logs use `currentUser.tenantId` from session.
+- `taxonomyDefinitions` has NO `tenant_id` (confirmed in schema) — `withTenant()` correctly absent from ALL taxonomy queries. This is the documented exception per ERD 1.9.
+- `admin/taxonomy/page.tsx`: auth guard via `getCurrentUser()` + role check before `getCachedTaxonomyMappings()`.
+- `getCachedTaxonomyMappings()` is a flat shared cache — correct by design since data is global.
+- No client component passes `tenantId` to server actions.
+
+4 LOW findings — all pre-existing, no new issues:
+
+- 3x `revalidateTag('taxonomy', 'minutes')` two-argument calls (functional no-op second arg) — createMapping, deleteMapping, updateMapping, reorderMappings. Already in MEMORY.md from CI Fix Commits audit.
+- 1x `AddMappingDialog` missing `useEffect` reset on re-open (Guardrail #11 UX bug, zero security risk).
+
+### Pipeline & Scoring Full Deep-Dive Audit (2026-03-03)
+
+**Result: 0C/0H/0M/0L — SECURE (full pass, 23 files).**
+
+Scope: `src/features/pipeline/helpers/` (runL1/L2/L3ForFile, crossFileConsistency, chunkSegments),
+`src/features/pipeline/inngest/` (processFile, processBatch, batchComplete, recalculateScore),
+`src/features/pipeline/actions/` (all 5 actions), `src/features/pipeline/engine/ruleEngine.ts`,
+`src/features/scoring/helpers/scoreFile.ts`, `src/features/scoring/actions/calculateScore.action.ts`,
+`src/features/scoring/autoPassChecker.ts`, `src/features/scoring/penaltyWeightLoader.ts`,
+`src/lib/ai/budget.ts`, `src/lib/ai/costs.ts`, `src/lib/ai/providers.ts`,
+`src/lib/cache/glossaryCache.ts`, `src/app/api/inngest/route.ts`.
+
+Key invariants confirmed across all files:
+
+- Tenant ID chain unbroken: `requireRole()` → `inngest.send(tenantId)` → `event.data.tenantId` → typed parameter → every DB query.
+- withTenant() on every SELECT/UPDATE/DELETE on every tenant-scoped table.
+- JOIN defense-in-depth: withTenant() applied to BOTH sides of every JOIN on tenant-scoped tables.
+- Error paths (catch/rollback) also apply withTenant() — neither happy nor error path can mutate another tenant's records.
+- Atomic DELETE+INSERT transactions: DELETE always scoped to `withTenant() + fileId + layer` — no over-broad delete.
+- AI segment ID validation: AI-returned segmentIds validated against tenant-scoped segmentIdSet before INSERT. Prevents cross-tenant hallucinated IDs.
+- `ruleEngine.ts` (processFile): pure in-memory function, zero DB calls, no isolation concern.
+- `route.ts`: only registers Inngest functions, no DB access, no service_role.
+
+### Parity + Dashboard + Project Feature Deep-Dive Audit (2026-03-03)
+
+**Result: 0C/1H/1M/0L — AT RISK. 2 findings require fixes.**
+
+Scope: `src/features/parity/actions/` (3 files), `src/features/dashboard/actions/` (8 files),
+`src/features/project/actions/` (3 files). 14 source files total.
+
+**HIGH finding:** `getDashboardData.action.ts` L60 — `scores` LEFT JOIN has NO `withTenant()` on
+`scores.tenantId` in the JOIN condition. `scores` is tenant-scoped (has tenantId column). The
+`files` driving table is correctly filtered in WHERE via `withTenant(files.tenantId)`, BUT the
+`scores` JOIN condition only has `eq(scores.fileId, files.id)`. An attacker who manipulates
+`scores.fileId` to collide with a cross-tenant file ID (theoretically, FK prevents this at DB
+level, but app-level defense-in-depth requires the filter). Per Guardrail #14 / established
+LEFT JOIN rule: withTenant() must appear on BOTH sides. Query must be:
+`.leftJoin(scores, and(eq(scores.fileId, files.id), withTenant(scores.tenantId, tenantId)))`
+
+**MEDIUM finding:** `compareWithXbench.action.ts` L66-69 — findings query has `withTenant()` on
+`findings.tenantId` BUT does NOT filter by `fileId`. When a `fileId` is provided in the input,
+the query fetches ALL findings for the project (across ALL files). The actual file-scoping is
+delegated to `compareFindings()` in memory. This is not a data-leakage bug (no cross-tenant
+data visible since tenantId filter is present) but it DOES violate Guardrail #14 asymmetric
+filter rule and loads more data than necessary. Parallel query in `generateParityReport.action.ts`
+L77-80 has the same issue. Recommend: `fileId ? and(withTenant(...), eq(findings.projectId, projectId), eq(findings.fileId, fileId)) : and(withTenant(...), eq(findings.projectId, projectId))`
+
+PASS files:
+
+- `compareWithXbench.action.ts` — tenantId from requireRole(); project ownership verified first
+- `generateParityReport.action.ts` — same pattern; INSERT sets tenantId from session; audit logged
+- `reportMissingCheck.action.ts` — project ownership verified; INSERT sets tenantId from session; audit logged
+- `getNotifications.action.ts` — withTenant() + userId filter; PASS
+- `markNotificationRead.action.ts` — withTenant() + userId filter on both branches; PASS
+- `getAiUsageSummary.action.ts` — withTenant(); PASS
+- `getAiUsageByProject.action.ts` — withTenant() on projects (WHERE) + aiUsageLogs (JOIN); PASS
+- `getAiSpendByModel.action.ts` — withTenant(); PASS
+- `getAiSpendTrend.action.ts` — withTenant(); PASS
+- `exportAiUsage.action.ts` — withTenant() on aiUsageLogs (WHERE) + projects (JOIN); PASS
+- `createProject.action.ts` — INSERT with tenantId from requireRole(); PASS
+- `updateProject.action.ts` — withTenant() on SELECT + UPDATE; PASS
+- `updateLanguagePairConfig.action.ts` — withTenant() on SELECT, UPDATE, INSERT; PASS
+
+### Story 3.2b5 Audit Results (Upload-Pipeline Wiring — 2026-03-02)
+
+**Result: 0C/0H/0M/0L — SECURE (full pass, 11 files).** See `patterns.md` § "Story 3.1" for detail.
+
+### Story 3.2c Audit Results (L2 Results Display + Score Update — 2026-03-03)
+
+**Result: 0C/0H/4M/3L — AT RISK (3 files).** See `patterns.md` § "Story 3.2c" for full detail.
+
+Files: `getFileReviewData.action.ts`, `use-score-subscription.ts`, `use-findings-subscription.ts`.
+
+Open findings requiring fixes:
+
+- MEDIUM x4: Q4 LEFT JOIN uses cross-column `eq()` instead of `withTenant()` on joined table; both polling fallbacks (scores + findings) have no `.eq('tenant_id', tenantId)` defense-in-depth; scores + findings tables not added to `supabase_realtime` publication (channels are dead code).
+- LOW x3: `(fileId, projectId)` pair not cross-validated in Q1; Realtime channel missing compound tenant filter; `mapRowToFinding()` does not validate `tenant_id` of returned rows.
+
+New patterns discovered:
+
+- Tables must be explicitly published via `ALTER PUBLICATION supabase_realtime ADD TABLE {t};`
+- Polling fallback PostgREST queries MUST include `.eq('tenant_id', tenantId)` per project convention
+- Canonical LEFT JOIN: enrichment table filter in JOIN condition = `withTenant(col, tenantId)` literal, NOT cross-column `eq(col, drivingTable.col)`
 
 ## Key Patterns to Watch
 

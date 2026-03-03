@@ -142,7 +142,12 @@
       "Bash(mv:*)",
       "Bash(DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres npm run:*)",
       "Bash(rm:*)",
-      "Bash(do:*)"
+      "Bash(do:*)",
+      "Bash(gh run:*)",
+      "Bash(npm view:*)",
+      "Bash(npx dotenv-cli:*)",
+      "Bash(PGPASSWORD=gyO7XXkkpPkHobtD psql:*)",
+      "Bash(export:*)"
     ]
   }
 }

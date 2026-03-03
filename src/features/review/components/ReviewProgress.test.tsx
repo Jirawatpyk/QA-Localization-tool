@@ -1,9 +1,6 @@
 /**
  * ATDD Tests — Story 3.2c: L2 Results Display & Score Update
  * AC8: Pipeline layer completion status
- *
- * TDD RED PHASE — all tests are `it.skip()`.
- * Dev removes `.skip` and makes tests pass during implementation.
  */
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
@@ -54,6 +51,25 @@ describe('ReviewProgress', () => {
 
     const l2Status = screen.getByTestId('layer-status-L2')
     expect(l2Status).toHaveTextContent(/complete|✓|check/i)
+  })
+
+  // ── P0: L2 pending (T8.7) ──
+
+  it('[P0] should show L2 pending when layerCompleted is L1 only', () => {
+    render(
+      <ReviewProgress
+        fileStatus={'l1_completed' as DbFileStatus}
+        layerCompleted="L1"
+        processingMode={'economy' as ProcessingMode}
+      />,
+    )
+
+    const l2Status = screen.getByTestId('layer-status-L2')
+    // Pending state renders a circle indicator (not a checkmark, not a spinner)
+    expect(l2Status.innerHTML).not.toMatch(/animate-spin/i)
+    expect(l2Status).not.toHaveTextContent(/complete|✓|check/i)
+    // Should NOT have data-completed attribute
+    expect(l2Status.getAttribute('data-completed')).toBeNull()
   })
 
   // ── P0: L3 economy mode ──

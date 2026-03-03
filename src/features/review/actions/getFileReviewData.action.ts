@@ -163,6 +163,9 @@ export async function getFileReviewData(
     }
 
     // Q4: Get project processingMode + language pair l2ConfidenceMin
+    // TODO(TD-REVIEW-001): JOIN matches sourceLang only — projects.targetLangs is a JSONB array,
+    // so a proper match requires file-level target language metadata (not yet available).
+    // For single-target-language projects this is correct; multi-target may return wrong config.
     const configRows = await db
       .select({
         processingMode: projects.processingMode,

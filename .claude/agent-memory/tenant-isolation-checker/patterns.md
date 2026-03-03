@@ -161,3 +161,82 @@ Not a security concern. Legacy compat stub; callers should migrate to `checkProj
 - `runL2ForFile.ts` — CAS UPDATE, segments SELECT, findings SELECT, findings DELETE (in tx), findings INSERT (values), file UPDATE, rollback UPDATE: all use `withTenant()` or explicit tenantId. PASS.
 - `runL3ForFile.ts` — same 12-step pattern as runL2; all 7 DB ops confirmed. PASS.
 - `startProcessing.action.ts` — files SELECT: 3-way filter (`withTenant` + projectId + inArray). projects UPDATE: `withTenant()`. tenantId injected into Inngest payload. PASS.
+
+## Story 3.2c — L2 Results Display + Score Update (2026-03-03)
+
+**Audit date:** 2026-03-03
+**Result:** 0 Critical / 0 High / 4 Medium / 3 Low — AT RISK
+
+### Files Audited
+
+- `src/features/review/actions/getFileReviewData.action.ts` — 4 Drizzle queries. ISSUES FOUND (see below).
+- `src/features/review/hooks/use-score-subscription.ts` — Realtime + polling fallback. ISSUES FOUND.
+- `src/features/review/hooks/use-findings-subscription.ts` — Realtime + polling fallback. ISSUES FOUND.
+
+### `getFileReviewData.action.ts` — Q1/Q2/Q3 PASS, Q4 MEDIUM + LOW
+
+**Q1 (files):** `withTenant(files.tenantId, tenantId)` + `eq(files.id, fileId)`. Early-exit guard at L100-102. PASS.
+**Q2 (findings):** `withTenant(findings.tenantId, tenantId)` + `eq(findings.fileId, fileId)`. PASS.
+**Q3 (scores):** `withTenant(scores.tenantId, tenantId)` + `eq(scores.fileId, fileId)`. PASS.
+
+**MEDIUM — Q4 LEFT JOIN convention deviation (L157-162):**
+The JOIN condition uses `eq(languagePairConfigs.tenantId, projects.tenantId)` (cross-column equality)
+instead of `withTenant(languagePairConfigs.tenantId, tenantId)` (independent literal guard).
+Functionally safe because `projects` is already constrained to tenantId in WHERE. BUT violates the
+established canonical LEFT JOIN pattern (Story 3.1a: both sides must use `withTenant()` independently).
+Fix: replace `eq(languagePairConfigs.tenantId, projects.tenantId)` with `withTenant(languagePairConfigs.tenantId, tenantId)`.
+
+**LOW — (fileId, projectId) pair not cross-validated:**
+`projectId` is accepted from the caller without verifying that `fileId.projectId == projectId`.
+Q4 uses the caller-supplied `projectId` to SELECT from `projects` with `withTenant()`. If caller
+supplies their own `fileId` but another tenant's `projectId`, Q4 would attempt to fetch that
+project's config — blocked only by RLS (Drizzle bypasses RLS). The fix is to add `eq(files.projectId, projectId)`
+to Q1's WHERE clause to tie the pair together at the first query.
+
+### `use-score-subscription.ts` — 3 findings
+
+**MEDIUM — Polling fallback has no `.eq('tenant_id', tenantId)` (L49-56):**
+Query: `.from('scores').select(...).eq('file_id', fileId).single()`
+Relies entirely on RLS for tenant isolation. No application-level defense-in-depth.
+The `useNotifications` hook (which set the project convention) adds `.eq('user_id', userId).eq('tenant_id', tenantId)`.
+Fix: accept `tenantId` as parameter and add `.eq('tenant_id', tenantId)` to the polling query.
+
+**MEDIUM — Scores table not in `supabase_realtime` publication:**
+No migration adds `scores` to `ALTER PUBLICATION supabase_realtime ADD TABLE scores`.
+Only `user_roles` has been explicitly published (migration 00009). The Realtime channel subscribes
+silently but never fires — polling fallback is the permanent active path.
+Fix: add migration `ALTER PUBLICATION supabase_realtime ADD TABLE scores;`
+
+**LOW — No compound tenant filter on Realtime channel:**
+Channel uses only `filter: 'file_id=eq.${fileId}'`. Convention (per `useNotifications` verified 2026-02-26)
+is to include `tenant_id=eq.${tenantId}` as a compound filter. Not a data leak risk (RLS is the real guard)
+but inconsistent with established pattern. Fix: accept `tenantId` as parameter, use compound filter.
+
+### `use-findings-subscription.ts` — 3 findings (same structural issues)
+
+**MEDIUM — Polling fallback has no `.eq('tenant_id', tenantId)` (L73-77):**
+Query: `.from('findings').select('*').eq('file_id', fileId)`. Same single-guard-RLS-only pattern.
+Also uses `select('*')` which returns all columns. Fix: `.eq('tenant_id', tenantId)` + narrower select.
+
+**MEDIUM — Findings table not in `supabase_realtime` publication:**
+Same as scores — no migration publishes `findings`. INSERT and DELETE channels are dead code.
+Fix: `ALTER PUBLICATION supabase_realtime ADD TABLE findings;`
+
+**LOW — `mapRowToFinding()` does not validate `tenant_id` of returned rows (L13-42):**
+`row.tenant_id` is mapped directly into the `Finding` object without comparing to the expected tenant.
+If RLS fails, a cross-tenant row would be silently stored in the Zustand store.
+Fix: add `expectedTenantId` parameter and return `null` if `row.tenant_id !== expectedTenantId`.
+
+### Key New Pattern: Supabase Realtime Publication Gap
+
+Tables MUST be added to `supabase_realtime` publication explicitly or channels silently never fire.
+The pattern is `ALTER PUBLICATION supabase_realtime ADD TABLE {tablename};` in a migration file.
+So far only `user_roles` has been explicitly published. Scores and findings need migrations.
+When auditing new Realtime hooks, ALWAYS check for a corresponding migration that publishes the table.
+
+### Key New Pattern: Polling-Path Defense-in-Depth Expectation
+
+Project convention (established by `useNotifications.ts` L66, verified 2026-02-26):
+Supabase PostgREST queries in polling fallbacks MUST include both a primary filter AND
+`.eq('tenant_id', tenantId)` as defense-in-depth. RLS is the primary guard, but application-level
+filters are mandatory per convention. When new hooks use polling, flag if `tenant_id` filter absent.

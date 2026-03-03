@@ -137,7 +137,6 @@ test.describe.serial('Review Findings — Story 3.2c', () => {
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
     await page.goto(`/projects/${projectId}/review/${fileId}`)
-    await page.waitForLoadState('networkidle')
 
     // ScoreBadge should be visible with a computed score
     const scoreBadge = page.getByTestId('score-badge')
@@ -165,7 +164,6 @@ test.describe.serial('Review Findings — Story 3.2c', () => {
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
     await page.goto(`/projects/${projectId}/review/${fileId}`)
-    await page.waitForLoadState('networkidle')
 
     if (l2Count > 0) {
       // At least one finding should have a confidence badge
@@ -185,7 +183,6 @@ test.describe.serial('Review Findings — Story 3.2c', () => {
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
     await page.goto(`/projects/${projectId}/review/${fileId}`)
-    await page.waitForLoadState('networkidle')
 
     // Score badge should be visible
     const scoreBadge = page.getByTestId('score-badge')
@@ -207,7 +204,6 @@ test.describe.serial('Review Findings — Story 3.2c', () => {
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
     await page.goto(`/projects/${projectId}/review/${fileId}`)
-    await page.waitForLoadState('networkidle')
 
     // ReviewProgress component should be visible
     const reviewProgress = page.getByTestId('review-progress')
@@ -238,7 +234,6 @@ test.describe.serial('Review Findings — Story 3.2c', () => {
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
     await page.goto(`/projects/${projectId}/review/${fileId}`)
-    await page.waitForLoadState('networkidle')
 
     if (totalFindings > 0) {
       // Each finding item should display which layer detected it
@@ -262,7 +257,6 @@ test.describe.serial('Review Findings — Story 3.2c', () => {
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
     await page.goto(`/projects/${projectId}/review/${fileId}`)
-    await page.waitForLoadState('networkidle')
 
     // Score badge should contain the actual MQM score from DB
     const scoreBadge = page.getByTestId('score-badge')

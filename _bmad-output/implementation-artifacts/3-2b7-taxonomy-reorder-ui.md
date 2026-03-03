@@ -1,6 +1,6 @@
 # Story 3.2b7: Taxonomy Mapping Reorder UI
 
-Status: ready-for-review
+Status: done
 
 ## Story
 

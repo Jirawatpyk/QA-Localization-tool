@@ -442,3 +442,18 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Low
 - **Description:** `generateParityReport.action.ts` L121-123 still filters findings in-memory by fileId after query was fixed to include fileId filter. The in-memory filter is now redundant but harmless (defense-in-depth).
 - **Status:** RESOLVED — removed redundant filter, query pre-filters (commit 2026-03-03)
+
+---
+
+## CR Sprint — Story 3.2c (2026-03-03)
+
+### TD-REVIEW-001: getFileReviewData Q4 JOIN matches sourceLang only
+- **Date:** 2026-03-03
+- **Story:** Story 3.2c (L2 Results Display & Score Update)
+- **Phase:** CR R1
+- **Severity:** Medium
+- **File:** `src/features/review/actions/getFileReviewData.action.ts` — Q4 language_pair_configs JOIN
+- **Description:** Q4 query JOINs `language_pair_configs` on `sourceLang` only. `projects.targetLangs` is a JSONB array (`jsonb('target_langs').$type<string[]>()`), not a single column — proper fix requires either JSONB containment query (`?| operator`) or file-level target language metadata (which doesn't exist yet). For single-target-lang projects (current majority), result is correct
+- **Mitigation:** Most projects currently have a single target language, so `sourceLang`-only match returns correct `l2ConfidenceMin`. Multi-target returns null (safe default — no "Below threshold" warning)
+- **Fix:** When file-level target language metadata is added (Epic 5 multi-lang support), JOIN on both source + target
+- **Status:** DEFERRED → **Epic 5 — Language Intelligence & Non-Native Support** (multi-target-lang file metadata needed)
