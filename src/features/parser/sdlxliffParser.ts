@@ -37,6 +37,7 @@ function buildParser(): XMLParser {
     textNodeName: '#text',
     cdataPropName: '__cdata',
     allowBooleanAttributes: true,
+    processEntities: false,
     isArray: (name: string) =>
       [
         'trans-unit',
@@ -57,6 +58,15 @@ function buildParser(): XMLParser {
   })
 }
 
+// DOCTYPE/ENTITY declarations are forbidden in SDLXLIFF/XLIFF files.
+// Their presence indicates XXE or Billion Laughs attack payloads.
+const DOCTYPE_PATTERN = /<!DOCTYPE/i
+const ENTITY_PATTERN = /<!ENTITY/i
+
+function containsDoctypeOrEntity(xml: string): boolean {
+  return DOCTYPE_PATTERN.test(xml) || ENTITY_PATTERN.test(xml)
+}
+
 // ============================================================
 // Public parse function
 // ============================================================
@@ -74,6 +84,18 @@ export function parseXliff(
   _fileType: 'sdlxliff' | 'xliff' = 'xliff', // content detection used for result; param reserved for future format divergence
   fileSizeBytes?: number,
 ): ParseOutcome {
+  // Security: reject DOCTYPE/ENTITY declarations (XXE + Billion Laughs prevention)
+  if (containsDoctypeOrEntity(xmlContent)) {
+    return {
+      success: false,
+      error: {
+        code: 'INVALID_XML',
+        message: 'Invalid file format — DOCTYPE declarations are not allowed in XLIFF files',
+        details: 'XML contains DOCTYPE or ENTITY declaration (potential XXE attack)',
+      },
+    }
+  }
+
   // 5.10 — 15MB size guard (defense-in-depth)
   const byteSize = fileSizeBytes ?? Buffer.byteLength(xmlContent, 'utf8')
   if (byteSize > MAX_PARSE_SIZE_BYTES) {

@@ -39,6 +39,11 @@ export const XLIFF_STATE_MAP: Readonly<Record<XliffState, ConfirmationState>> = 
 // Maximum file size allowed for parsing (defense-in-depth, separate from upload guard)
 export const MAX_PARSE_SIZE_BYTES = 15 * 1024 * 1024 // 15MB
 
+// Maximum decompressed xlsx size (zip bomb guard). 15MB compressed at 100:1 ratio
+// could decompress to 1.5GB. We allow up to 100MB decompressed as a safe limit
+// for legitimate large translation files.
+export const MAX_EXCEL_DECOMPRESSED_BYTES = 100 * 1024 * 1024 // 100MB
+
 // Number of segments to insert per DB batch (memory efficiency)
 export const SEGMENT_BATCH_SIZE = 100
 

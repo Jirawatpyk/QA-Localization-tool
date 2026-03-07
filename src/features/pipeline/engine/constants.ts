@@ -47,10 +47,12 @@ export const CHECK_SEVERITY_DEFAULTS: Readonly<Record<string, Severity>> = {
 // NOTE: %% (literal percent escape) is intentionally excluded — not a placeholder
 export const PLACEHOLDER_PATTERNS: readonly RegExp[] = [
   /\{(\d+)\}/g, // {0}, {1}
+  /\{[a-zA-Z_]\w*\}/g, // {variable_name}, {count}, {user_id}
   /%[sd@f]/g, // %s, %d, %f, %@
   /%\d+\$[sd]/g, // %1$s, %2$d (positional)
   /\{\{[\w.]+\}\}/g, // {{varName}}, {{var.name}}
   /\$\{[\w.]+\}/g, // ${name}, ${var.name}
+  /<xliff:g[^>]*>.*?<\/xliff:g>/g, // <xliff:g id="x">value</xliff:g> (Android)
 ] as const
 
 // URL extraction regex

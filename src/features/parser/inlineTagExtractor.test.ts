@@ -222,6 +222,46 @@ describe('extractInlineTags', () => {
     })
   })
 
+  describe('depth limit — stack overflow prevention (R-003)', () => {
+    it('should reject XML nested deeper than 50 levels', () => {
+      // Build 51-level deep nested g tags
+      let inner: Record<string, unknown>[] = [textNode('deep')]
+      for (let i = 51; i >= 1; i--) {
+        inner = [tagNode('g', String(i), inner)]
+      }
+      const result = extractInlineTags(inner)
+      expect(result.success).toBe(false)
+      if (result.success) return
+      expect(result.error.code).toBe('TAG_MISMATCH')
+      expect(result.error.message).toContain('nesting too deep')
+    })
+
+    it('should accept XML at exactly 50 levels deep', () => {
+      // Build exactly 50-level deep nested g tags (depth 0..49 = 50 calls)
+      let inner: Record<string, unknown>[] = [textNode('ok')]
+      for (let i = 50; i >= 1; i--) {
+        inner = [tagNode('g', String(i), inner)]
+      }
+      const result = extractInlineTags(inner)
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.plainText).toBe('ok')
+      expect(result.tags).toHaveLength(50)
+    })
+
+    it('should reject deeply nested non-inline tags (div > span > ... > text)', () => {
+      // Non-inline tags also recurse via walkNodes — depth guard applies
+      let inner: Record<string, unknown>[] = [textNode('content')]
+      for (let i = 52; i >= 1; i--) {
+        inner = [{ [`div${i}`]: inner }]
+      }
+      const result = extractInlineTags(inner)
+      expect(result.success).toBe(false)
+      if (result.success) return
+      expect(result.error.message).toContain('nesting too deep')
+    })
+  })
+
   describe('tag with no id attribute — fallback to tags.length (M11)', () => {
     it('should use String(tags.length) as id when tag has no @_id attribute (M11)', () => {
       // tag with no @_id, no @_mid → fallback to String(tags.length) at time of processing

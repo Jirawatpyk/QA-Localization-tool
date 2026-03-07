@@ -198,6 +198,55 @@ describe('checkPlaceholderConsistency', () => {
     expect(result!.description).toContain('missing')
   })
 
+  // ── R-006: Named variable placeholders {name} ──
+
+  it('should return null when {variable_name} placeholder matches', () => {
+    const segment = buildSegment({
+      sourceText: 'Hello {user_name}',
+      targetText: 'สวัสดี {user_name}',
+    })
+    expect(checkPlaceholderConsistency(segment, ctx)).toBeNull()
+  })
+
+  it('should flag missing {variable_name} in target', () => {
+    const segment = buildSegment({
+      sourceText: 'Welcome {firstName}!',
+      targetText: 'ยินดีต้อนรับ!',
+    })
+    const result = checkPlaceholderConsistency(segment, ctx)
+    expect(result).not.toBeNull()
+    expect(result!.description).toContain('{firstName}')
+    expect(result!.description).toContain('missing')
+  })
+
+  it('should handle multiple named variable placeholders', () => {
+    const segment = buildSegment({
+      sourceText: '{user} bought {count} items',
+      targetText: '{user} ซื้อ {count} รายการ',
+    })
+    expect(checkPlaceholderConsistency(segment, ctx)).toBeNull()
+  })
+
+  // ── R-006: xliff:g placeholders (Android) ──
+
+  it('should return null when <xliff:g> placeholder matches', () => {
+    const segment = buildSegment({
+      sourceText: 'Hello <xliff:g id="name">World</xliff:g>',
+      targetText: 'สวัสดี <xliff:g id="name">World</xliff:g>',
+    })
+    expect(checkPlaceholderConsistency(segment, ctx)).toBeNull()
+  })
+
+  it('should flag missing <xliff:g> in target', () => {
+    const segment = buildSegment({
+      sourceText: 'Size: <xliff:g id="size">100MB</xliff:g>',
+      targetText: 'ขนาด: 100MB',
+    })
+    const result = checkPlaceholderConsistency(segment, ctx)
+    expect(result).not.toBeNull()
+    expect(result!.description).toContain('missing')
+  })
+
   // ── C1: Duplicate placeholder counting ──
 
   it('should flag when source has {0} twice but target has it once', () => {

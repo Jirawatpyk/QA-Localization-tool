@@ -6,7 +6,7 @@ import type { RuleCheckResult, SegmentCheckContext, SegmentRecord } from '../typ
  * Placeholders in source must all appear in target with the same count.
  * Extra placeholders in target (not in source) are also flagged.
  *
- * Supported patterns: {0}, %s, %d, %f, %@, %1$s, %2$d, {{var}}, ${name}
+ * Supported patterns: {0}, {name}, %s, %d, %f, %@, %1$s, %2$d, {{var}}, ${name}, <xliff:g>
  * Literal %% is excluded (escaped percent).
  */
 export function checkPlaceholderConsistency(

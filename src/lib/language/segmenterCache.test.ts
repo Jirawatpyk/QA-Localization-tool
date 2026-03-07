@@ -40,6 +40,58 @@ describe('getSegmenter', () => {
   })
 })
 
+describe('golden segmenter — ICU version drift detection (R-005)', () => {
+  // These golden values are pinned to Node 20 full-ICU.
+  // If word counts change, it means ICU was updated — review impact before updating golden values.
+
+  const goldenCases: Array<{ locale: string; text: string; expectedWords: number; label: string }> =
+    [
+      { locale: 'th', text: 'สวัสดีครับ', expectedWords: 2, label: 'Thai greeting' },
+      { locale: 'th', text: 'โรงพยาบาล', expectedWords: 2, label: 'Thai compound word' },
+      {
+        locale: 'th',
+        text: 'ฉันชอบกินข้าวผัด',
+        expectedWords: 5,
+        label: 'Thai sentence',
+      },
+      {
+        locale: 'th',
+        text: 'คลิกที่นี่เพื่อดำเนินการต่อ',
+        expectedWords: 7,
+        label: 'Thai UI string',
+      },
+      { locale: 'ja', text: '東京タワー', expectedWords: 1, label: 'Japanese compound' },
+      {
+        locale: 'ja',
+        text: 'これはテストです',
+        expectedWords: 4,
+        label: 'Japanese sentence',
+      },
+      { locale: 'zh', text: '你好世界', expectedWords: 2, label: 'Chinese hello world' },
+      {
+        locale: 'zh',
+        text: '请点击此处继续',
+        expectedWords: 6,
+        label: 'Chinese UI string',
+      },
+      { locale: 'ko', text: '안녕하세요', expectedWords: 1, label: 'Korean greeting' },
+      {
+        locale: 'ko',
+        text: '서울특별시',
+        expectedWords: 1,
+        label: 'Korean city name',
+      },
+    ]
+
+  for (const { locale, text, expectedWords, label } of goldenCases) {
+    it(`should segment "${label}" (${locale}) into ${expectedWords} words`, () => {
+      const segmenter = getSegmenter(locale)
+      const words = Array.from(segmenter.segment(text)).filter((s) => s.isWordLike)
+      expect(words.length).toBe(expectedWords)
+    })
+  }
+})
+
 describe('isNoSpaceLanguage', () => {
   it('should return true for Thai (th)', () => {
     expect(isNoSpaceLanguage('th')).toBe(true)

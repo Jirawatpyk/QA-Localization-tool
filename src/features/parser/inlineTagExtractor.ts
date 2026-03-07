@@ -5,6 +5,10 @@ import type { InlineTag, InlineTagType, ParserError } from './types'
 // Public API accepts Record<string, unknown>[] for flexibility
 type XmlNode = Record<string, unknown>
 
+// Maximum recursion depth for walkNodes — prevents stack overflow on
+// maliciously nested XML (e.g., 1000+ levels of <g> tags)
+const MAX_WALK_DEPTH = 50
+
 type ExtractResult =
   | { success: true; plainText: string; tags: InlineTag[] }
   | { success: false; error: ParserError }
@@ -25,7 +29,7 @@ export function extractInlineTags(nodes: XmlNode[]): ExtractResult {
   // Track paired tags: bpt/bx need matching ept/ex
   const openPaired = new Map<string, 'bpt' | 'bx'>()
 
-  const result = walkNodes(nodes, tags, openPaired, '')
+  const result = walkNodes(nodes, tags, openPaired, '', 0)
   if (!result.success) return result
 
   // Validate all paired tags are closed
@@ -51,7 +55,19 @@ function walkNodes(
   tags: InlineTag[],
   openPaired: Map<string, 'bpt' | 'bx'>,
   currentText: string,
+  depth: number,
 ): WalkResult {
+  if (depth > MAX_WALK_DEPTH) {
+    return {
+      success: false,
+      error: {
+        code: 'TAG_MISMATCH',
+        message: `XML nesting too deep (>${MAX_WALK_DEPTH} levels)`,
+        details: 'Possible malicious nesting or malformed XML structure',
+      },
+    }
+  }
+
   let text = currentText
 
   for (const node of nodes) {
@@ -71,7 +87,7 @@ function walkNodes(
     if (!isInlineTagType(tagName)) {
       const children = asNodeArray(node[tagName])
       if (children.length > 0) {
-        const innerResult = walkNodes(children, tags, openPaired, text)
+        const innerResult = walkNodes(children, tags, openPaired, text, depth + 1)
         if (!innerResult.success) return innerResult
         text = innerResult.plainText
       }
@@ -94,7 +110,7 @@ function walkNodes(
         }
         tags.push(tag)
         if (children.length > 0) {
-          const innerResult = walkNodes(children, tags, openPaired, text)
+          const innerResult = walkNodes(children, tags, openPaired, text, depth + 1)
           if (!innerResult.success) return innerResult
           text = innerResult.plainText
         }
