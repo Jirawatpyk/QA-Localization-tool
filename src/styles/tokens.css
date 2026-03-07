@@ -39,6 +39,7 @@
   --color-status-fail: #ef4444;
   --color-status-analyzing: #4f46e5;
   --color-status-ai-screened: #8b5cf6;
+  --color-status-deep-analyzed: #d97706;
 
   /* Layout */
   --sidebar-width: 240px;

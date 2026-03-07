@@ -37,7 +37,14 @@ export type LayerCompleted = 'L1' | 'L1L2' | 'L1L2L3'
 
 // ScoreBadge visual states (NOT the DB lifecycle type — that's ScoreStatus above)
 // These represent the visual appearance of the score badge in the UI
-export type ScoreBadgeState = 'pass' | 'review' | 'fail' | 'analyzing' | 'rule-only' | 'ai-screened'
+export type ScoreBadgeState =
+  | 'pass'
+  | 'review'
+  | 'fail'
+  | 'analyzing'
+  | 'rule-only'
+  | 'ai-screened'
+  | 'deep-analyzed'
 export type ScoreBadgeSize = 'sm' | 'md' | 'lg'
 
 export type Finding = {

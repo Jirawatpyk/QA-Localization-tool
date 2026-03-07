@@ -105,7 +105,7 @@ development_status:
   3-2b7-taxonomy-reorder-ui: done
   # Story 3.2c: L2 Results Display & Score Update — review page, Realtime subscriptions, findings/score display
   3-2c-l2-results-display-score-update: done
-  3-3-ai-layer-3-deep-contextual-analysis: ready-for-dev
+  3-3-ai-layer-3-deep-contextual-analysis: review
   3-4-ai-resilience-fallback-retry-partial-results: backlog
   3-5-score-lifecycle-confidence-display: backlog
   epic-3-retrospective: optional

@@ -256,8 +256,14 @@ export async function runL2ForFile({
           segments: chunk.segments,
           l1Findings: l1FindingRows,
           glossaryTerms: glossaryRows,
-          taxonomyCategories: taxonomyRows,
-          project: projectRow,
+          taxonomyCategories: taxonomyRows.map((t) => ({
+            ...t,
+            severity: t.severity as FindingSeverity | null,
+          })),
+          project: {
+            ...projectRow,
+            processingMode: projectRow.processingMode as 'economy' | 'thorough',
+          },
         })
 
         const result = await generateText({

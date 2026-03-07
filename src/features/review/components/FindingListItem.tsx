@@ -30,6 +30,13 @@ const SEVERITY_CLASSES: Record<FindingSeverity, string> = {
   minor: 'bg-severity-minor/10 text-severity-minor border-severity-minor/20',
 }
 
+const L3_CONFIRMED_MARKER = '[L3 Confirmed]'
+const L3_DISAGREES_MARKER = '[L3 Disagrees]'
+
+function stripL3Markers(text: string): string {
+  return text.replace(L3_CONFIRMED_MARKER, '').replace(L3_DISAGREES_MARKER, '').trim()
+}
+
 function truncate(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text
   return text.slice(0, maxLength) + '...'
@@ -54,8 +61,12 @@ export function FindingListItem({ finding, isNew, l2ConfidenceMin }: FindingList
   const [expanded, setExpanded] = useState(false)
   const reducedMotion = useReducedMotion()
 
+  const l3Confirmed = finding.description.includes(L3_CONFIRMED_MARKER)
+  const l3Disagrees = finding.description.includes(L3_DISAGREES_MARKER)
+  const cleanDescription = stripL3Markers(finding.description)
+
   const hasDetail =
-    finding.description.length > 100 ||
+    cleanDescription.length > 100 ||
     finding.sourceTextExcerpt !== null ||
     finding.targetTextExcerpt !== null ||
     finding.suggestedFix !== null
@@ -82,10 +93,28 @@ export function FindingListItem({ finding, isNew, l2ConfidenceMin }: FindingList
         {/* Layer badge */}
         <LayerBadge layer={finding.detectedByLayer} />
 
-        {/* Description (truncated) */}
+        {/* Description (truncated, markers stripped) */}
         <span data-testid="finding-description" className="text-sm flex-1 min-w-0">
-          {truncate(finding.description, 100)}
+          {truncate(cleanDescription, 100)}
         </span>
+
+        {/* L3 confirm/contradict badges */}
+        {l3Confirmed && (
+          <span
+            data-testid="l3-confirm-badge"
+            className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium bg-status-pass/10 text-status-pass border border-status-pass/20"
+          >
+            Confirmed by L3
+          </span>
+        )}
+        {l3Disagrees && (
+          <span
+            data-testid="l3-disagree-badge"
+            className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium bg-warning/10 text-warning border border-warning/20"
+          >
+            L3 disagrees
+          </span>
+        )}
 
         {/* Confidence badge */}
         <ConfidenceBadge confidence={finding.aiConfidence} l2ConfidenceMin={l2ConfidenceMin} />
@@ -107,9 +136,7 @@ export function FindingListItem({ finding, isNew, l2ConfidenceMin }: FindingList
       {/* Expanded detail area */}
       {expanded && (
         <div data-testid="finding-detail" className="mt-2 pt-2 border-t text-sm space-y-1">
-          {finding.description.length > 100 && (
-            <p className="text-foreground">{finding.description}</p>
-          )}
+          {cleanDescription.length > 100 && <p className="text-foreground">{cleanDescription}</p>}
           {finding.sourceTextExcerpt !== null && (
             <p className="text-muted-foreground">
               <span className="font-medium">Source:</span> {finding.sourceTextExcerpt}

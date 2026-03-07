@@ -31,7 +31,7 @@ export type GlossaryTermContext = {
 export type TaxonomyCategoryContext = {
   category: string
   parentCategory: string | null
-  severity: string | null // varchar column — Drizzle infers string
+  severity: FindingSeverity | null
   description: string
 }
 
@@ -40,7 +40,7 @@ export type ProjectContext = {
   description: string | null
   sourceLang: string
   targetLangs: string[]
-  processingMode: string // varchar column — Drizzle infers string
+  processingMode: 'economy' | 'thorough'
 }
 
 export type L2PromptInput = {
@@ -51,10 +51,17 @@ export type L2PromptInput = {
   project: ProjectContext
 }
 
+export type SurroundingSegmentContext = {
+  previous: PromptSegment[]
+  current: PromptSegment
+  next: PromptSegment[]
+}
+
 export type L3PromptInput = {
   segments: PromptSegment[]
   priorFindings: PriorFinding[]
   glossaryTerms: GlossaryTermContext[]
   taxonomyCategories: TaxonomyCategoryContext[]
   project: ProjectContext
+  surroundingContext?: SurroundingSegmentContext[] | undefined
 }

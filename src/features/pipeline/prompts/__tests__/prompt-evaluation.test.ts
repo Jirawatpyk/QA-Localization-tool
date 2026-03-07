@@ -9,7 +9,12 @@ import {
 } from '../evaluation/golden-segments'
 import { evaluateFindings } from '../evaluation/scoring'
 import type { ActualFinding } from '../evaluation/types'
-import type { L2PromptInput, L3PromptInput, ProjectContext } from '../types'
+import type {
+  L2PromptInput,
+  L3PromptInput,
+  ProjectContext,
+  TaxonomyCategoryContext,
+} from '../types'
 
 // ── Shared test data ──
 
@@ -27,7 +32,7 @@ const testGlossary = [
   { sourceTerm: 'Save', targetTerm: 'บันทึก', caseSensitive: false },
 ]
 
-const testTaxonomy = [
+const testTaxonomy: TaxonomyCategoryContext[] = [
   {
     category: 'accuracy',
     parentCategory: null,

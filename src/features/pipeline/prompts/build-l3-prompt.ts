@@ -3,7 +3,7 @@ import { formatFewShotExamples } from './few-shot-examples'
 import { formatGlossaryContext } from './glossary-context'
 import { getLanguageInstructions } from './language-instructions'
 import { formatTaxonomyContext } from './taxonomy-context'
-import type { L3PromptInput, PriorFinding, PromptSegment } from './types'
+import type { L3PromptInput, PriorFinding, PromptSegment, SurroundingSegmentContext } from './types'
 
 /**
  * Build the complete L3 deep AI analysis prompt.
@@ -49,6 +49,9 @@ export function buildL3Prompt(input: L3PromptInput): string {
 
     // 10. Segments
     formatSegments(input.segments),
+
+    // 10b. Surrounding context (L3 only — ±2 segments for each flagged segment)
+    input.surroundingContext ? formatSurroundingContext(input.surroundingContext) : '',
 
     // 11. Prior findings (L1 + L2) with dedup context
     formatPriorFindings(input.priorFindings),
@@ -124,6 +127,36 @@ function formatSegments(segments: PromptSegment[]): string {
     .join('\n\n')
 
   return `## Segments to Analyze (${segments.length} segments)\n\n${text}`
+}
+
+function formatSurroundingContext(contexts: SurroundingSegmentContext[]): string {
+  if (contexts.length === 0) return ''
+
+  const entries = contexts.map((ctx) => {
+    const prevText =
+      ctx.previous.length > 0
+        ? ctx.previous
+            .map((s) => `    [${s.id}] Source: ${s.sourceText} | Target: ${s.targetText}`)
+            .join('\n')
+        : '    (none — start of file)'
+
+    const nextText =
+      ctx.next.length > 0
+        ? ctx.next
+            .map((s) => `    [${s.id}] Source: ${s.sourceText} | Target: ${s.targetText}`)
+            .join('\n')
+        : '    (none — end of file)'
+
+    return `Segment [${ctx.current.id}] (#${ctx.current.segmentNumber}) with context:
+  Previous segments:
+${prevText}
+  Current:
+    [${ctx.current.id}] Source: ${ctx.current.sourceText} | Target: ${ctx.current.targetText}
+  Next segments:
+${nextText}`
+  })
+
+  return `## Surrounding Context (±2 segments per flagged segment)\n\n${entries.join('\n\n')}`
 }
 
 function formatPriorFindings(priorFindings: PriorFinding[]): string {

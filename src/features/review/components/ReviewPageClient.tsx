@@ -9,7 +9,7 @@ import { ReviewProgress } from '@/features/review/components/ReviewProgress'
 import { useFindingsSubscription } from '@/features/review/hooks/use-findings-subscription'
 import { useScoreSubscription } from '@/features/review/hooks/use-score-subscription'
 import { useReviewStore } from '@/features/review/stores/review.store'
-import type { Finding, LayerCompleted, ScoreBadgeState } from '@/types/finding'
+import type { Finding, FindingSeverity, LayerCompleted, ScoreBadgeState } from '@/types/finding'
 
 type ReviewPageClientProps = {
   fileId: string
@@ -20,11 +20,12 @@ type ReviewPageClientProps = {
 function deriveScoreBadgeState(layerCompleted: LayerCompleted | null): ScoreBadgeState | undefined {
   if (!layerCompleted) return undefined
   if (layerCompleted === 'L1') return 'rule-only'
-  if (layerCompleted === 'L1L2' || layerCompleted === 'L1L2L3') return 'ai-screened'
+  if (layerCompleted === 'L1L2') return 'ai-screened'
+  if (layerCompleted === 'L1L2L3') return 'deep-analyzed'
   return undefined
 }
 
-const SEVERITY_ORDER: Record<string, number> = { critical: 0, major: 1, minor: 2 }
+const SEVERITY_ORDER: Record<FindingSeverity, number> = { critical: 0, major: 1, minor: 2 }
 
 export function ReviewPageClient({ fileId, projectId, initialData }: ReviewPageClientProps) {
   const resetForFile = useReviewStore((s) => s.resetForFile)

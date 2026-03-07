@@ -229,13 +229,8 @@
 ### ~~TD-PIPE-002: Missing error-chunk cost logging in runL3ForFile~~
 - **Status:** RESOLVED (2026-03-03) — Added `logAIUsage(errorRecord)` in L3 catch block, matching L2 pattern (H3 fix in CI bug-fix CR round)
 
-### TD-PIPE-003: L3 buildL3Prompt is inline — should use shared prompt builder
-- **Severity:** Medium
-- **File:** `src/features/pipeline/helpers/runL3ForFile.ts` — `buildL3Prompt()` at bottom of file
-- **Risk:** L3 prompt builder is a local function inside runL3ForFile.ts instead of using the shared `src/features/pipeline/prompts/` module pattern (like L2 uses `buildL2Prompt` from `prompts/build-l2-prompt.ts`). This makes prompt versioning, testing, and evaluation framework integration harder for L3
-- **Fix:** Extract `buildL3Prompt()` to `src/features/pipeline/prompts/build-l3-prompt.ts` following L2 pattern, with proper prompt context types and module integration
-- **Origin:** Story 3.2b CR scan, identified by code-quality-analyzer
-- **Status:** DEFERRED → **Story 3.3** (L3 selective-segment filtering will modify the prompt builder anyway — refactor at that point)
+### ~~TD-PIPE-003: L3 buildL3Prompt is inline — should use shared prompt builder~~
+- **Status:** RESOLVED (2026-03-07) — Inline `buildL3Prompt` deleted from runL3ForFile.ts, replaced with shared `buildL3Prompt` from `src/features/pipeline/prompts/build-l3-prompt.ts` (Story 3.3 Task 5)
 
 ### TD-PIPE-004: AI fallback chain resolved but not consumed
 - **Severity:** Low

@@ -51,6 +51,8 @@ vi.mock('@/db/helpers/withTenant', () => ({
 vi.mock('drizzle-orm', () => ({
   and: vi.fn((...args: unknown[]) => args),
   eq: vi.fn((...args: unknown[]) => args),
+  max: vi.fn((...args: unknown[]) => args),
+  count: vi.fn(() => 'count'),
 }))
 
 vi.mock('@/db/schema/files', () => ({
@@ -80,7 +82,54 @@ vi.mock('@/db/schema/findings', () => ({
     category: 'category',
     severity: 'severity',
     description: 'description',
+    aiConfidence: 'ai_confidence',
   },
+}))
+vi.mock('@/db/schema/languagePairConfigs', () => ({
+  languagePairConfigs: {
+    tenantId: 'tenant_id',
+    sourceLang: 'source_lang',
+    targetLang: 'target_lang',
+    l3ConfidenceMin: 'l3_confidence_min',
+  },
+}))
+vi.mock('@/db/schema/glossaries', () => ({
+  glossaries: {
+    id: 'id',
+    tenantId: 'tenant_id',
+    projectId: 'project_id',
+  },
+}))
+vi.mock('@/db/schema/glossaryTerms', () => ({
+  glossaryTerms: {
+    glossaryId: 'glossary_id',
+    sourceTerm: 'source_term',
+    targetTerm: 'target_term',
+    caseSensitive: 'case_sensitive',
+  },
+}))
+vi.mock('@/db/schema/taxonomyDefinitions', () => ({
+  taxonomyDefinitions: {
+    category: 'category',
+    parentCategory: 'parent_category',
+    severity: 'severity',
+    description: 'description',
+    isActive: 'is_active',
+  },
+}))
+vi.mock('@/db/schema/projects', () => ({
+  projects: {
+    id: 'id',
+    tenantId: 'tenant_id',
+    name: 'name',
+    description: 'description',
+    sourceLang: 'source_lang',
+    targetLangs: 'target_langs',
+    processingMode: 'processing_mode',
+  },
+}))
+vi.mock('@/features/pipeline/prompts/build-l3-prompt', () => ({
+  buildL3Prompt: vi.fn(() => 'mock-l3-prompt'),
 }))
 
 // ── Test constants ──
@@ -95,6 +144,42 @@ const mockFile = {
   projectId: VALID_PROJECT_ID,
   tenantId: VALID_TENANT_ID,
   status: 'l3_processing',
+}
+
+// Helper: build standard DB return values with all context queries
+// CAS(0), segments(1), priorFindings(2), l2Stats(3), langConfig(4),
+// glossary(5), taxonomy(6), project(7), ...rest (txDelete, txInsert, statusUpdate)
+function buildDbReturns(
+  overrides: {
+    file?: unknown[]
+    segments?: unknown[]
+    priorFindings?: unknown[]
+    l2Stats?: unknown[]
+    langConfig?: unknown[]
+    glossary?: unknown[]
+    taxonomy?: unknown[]
+    project?: unknown[]
+    rest?: unknown[][]
+  } = {},
+) {
+  const defaultProject = {
+    name: 'Test',
+    description: null,
+    sourceLang: 'en',
+    targetLangs: ['th'],
+    processingMode: 'thorough',
+  }
+  return [
+    overrides.file ?? [mockFile],
+    overrides.segments ?? [buildSegmentRow()],
+    overrides.priorFindings ?? [],
+    overrides.l2Stats ?? [{ segmentId: VALID_SEGMENT_ID, maxConfidence: 80, findingCount: 1 }],
+    overrides.langConfig ?? [{ l3ConfidenceMin: 50 }],
+    overrides.glossary ?? [],
+    overrides.taxonomy ?? [],
+    overrides.project ?? [defaultProject],
+    ...(overrides.rest ?? [[], []]),
+  ]
 }
 
 describe('runL3ForFile', () => {
@@ -120,8 +205,7 @@ describe('runL3ForFile', () => {
   it('should run L3 deep analysis and return finding count', async () => {
     mockGenerateText.mockResolvedValue(buildL3Response([{ segmentId: VALID_SEGMENT_ID }]))
 
-    // CAS(0), segments(1), priorFindings(2), txDelete(3), txInsert(4), statusUpdate(5)
-    dbState.returnValues = [[mockFile], [buildSegmentRow()], [], [], [], []]
+    dbState.returnValues = buildDbReturns({ rest: [[], [], []] })
 
     const { runL3ForFile } = await import('./runL3ForFile')
     const result = await runL3ForFile({
@@ -135,8 +219,7 @@ describe('runL3ForFile', () => {
   })
 
   it('should transition status: l2_completed → l3_processing → l3_completed', async () => {
-    // CAS(0), segments(1), priorFindings(2), txDelete(3), statusUpdate(4)
-    dbState.returnValues = [[mockFile], [buildSegmentRow()], [], [], []]
+    dbState.returnValues = buildDbReturns()
 
     const { runL3ForFile } = await import('./runL3ForFile')
     await runL3ForFile({
@@ -164,7 +247,7 @@ describe('runL3ForFile', () => {
   })
 
   it('should use L3 model (claude-sonnet)', async () => {
-    dbState.returnValues = [[mockFile], [buildSegmentRow()], [], [], []]
+    dbState.returnValues = buildDbReturns()
 
     const { runL3ForFile } = await import('./runL3ForFile')
     await runL3ForFile({
@@ -202,8 +285,7 @@ describe('runL3ForFile', () => {
       },
     ]
 
-    // CAS(0), segments(1), priorFindings(2), txDelete(3), statusUpdate(4)
-    dbState.returnValues = [[mockFile], [buildSegmentRow()], priorFindings, [], []]
+    dbState.returnValues = buildDbReturns({ priorFindings })
 
     const { runL3ForFile } = await import('./runL3ForFile')
     await runL3ForFile({
@@ -217,7 +299,7 @@ describe('runL3ForFile', () => {
   })
 
   it('should log AI usage with L3 model info', async () => {
-    dbState.returnValues = [[mockFile], [buildSegmentRow()], [], [], []]
+    dbState.returnValues = buildDbReturns()
 
     const { runL3ForFile } = await import('./runL3ForFile')
     await runL3ForFile({
@@ -237,8 +319,9 @@ describe('runL3ForFile', () => {
   // ── P1: Partial failure + error handling ──
 
   it('should handle partial failure across chunks', async () => {
+    const seg1Id = faker.string.uuid()
     const seg1 = buildSegmentRow({
-      id: faker.string.uuid(),
+      id: seg1Id,
       sourceText: 'a'.repeat(20000),
       targetText: 'b'.repeat(11000),
     })
@@ -255,8 +338,14 @@ describe('runL3ForFile', () => {
 
     mockClassifyAIError.mockReturnValue('content_filter')
 
-    // CAS(0), segments(1), priorFindings(2), txDelete(3), txInsert(4), statusUpdate(5)
-    dbState.returnValues = [[mockFile], [seg1, seg2], [], [], [], []]
+    dbState.returnValues = buildDbReturns({
+      segments: [seg1, seg2],
+      l2Stats: [
+        { segmentId: seg1Id, maxConfidence: 80, findingCount: 1 },
+        { segmentId: seg2Id, maxConfidence: 60, findingCount: 1 },
+      ],
+      rest: [[], [], []],
+    })
 
     const { runL3ForFile } = await import('./runL3ForFile')
     const result = await runL3ForFile({
@@ -274,7 +363,7 @@ describe('runL3ForFile', () => {
     mockGenerateText.mockRejectedValue(new Error('ETIMEDOUT'))
     mockClassifyAIError.mockReturnValue('timeout')
 
-    dbState.returnValues = [[mockFile], [buildSegmentRow()], []]
+    dbState.returnValues = buildDbReturns()
 
     const { runL3ForFile } = await import('./runL3ForFile')
 
@@ -289,7 +378,7 @@ describe('runL3ForFile', () => {
 
   it('should roll back file status to failed on error', async () => {
     mockCheckProjectBudget.mockRejectedValue(new Error('DB down'))
-    dbState.returnValues = [[mockFile], []]
+    dbState.returnValues = [[mockFile], [], []]
 
     const { runL3ForFile } = await import('./runL3ForFile')
 
@@ -305,7 +394,7 @@ describe('runL3ForFile', () => {
   })
 
   it('should write audit log with L3 metadata', async () => {
-    dbState.returnValues = [[mockFile], [buildSegmentRow()], [], [], []]
+    dbState.returnValues = buildDbReturns()
 
     const { runL3ForFile } = await import('./runL3ForFile')
     await runL3ForFile({
@@ -337,8 +426,7 @@ describe('runL3ForFile', () => {
       ]),
     )
 
-    // CAS(0), segments(1), priorFindings(2), txDelete(3), txInsert(4), statusUpdate(5)
-    dbState.returnValues = [[mockFile], [buildSegmentRow()], [], [], [], []]
+    dbState.returnValues = buildDbReturns({ rest: [[], [], []] })
 
     const { runL3ForFile } = await import('./runL3ForFile')
     const result = await runL3ForFile({
@@ -348,12 +436,10 @@ describe('runL3ForFile', () => {
     })
 
     expect(result.findingCount).toBe(1)
-    // The DB insert includes rationale appended to description
-    // (verified by the fact that findingCount = 1 means the insert was prepared)
   })
 
   it('should handle zero findings from deep analysis', async () => {
-    dbState.returnValues = [[mockFile], [buildSegmentRow()], [], [], []]
+    dbState.returnValues = buildDbReturns()
 
     const { runL3ForFile } = await import('./runL3ForFile')
     const result = await runL3ForFile({
@@ -370,7 +456,7 @@ describe('runL3ForFile', () => {
   // NOTE: Redundant stubs deleted (budget exhausted → equivalent active test, happy path → line 115)
 
   it('should call checkProjectBudget before making AI API call', async () => {
-    dbState.returnValues = [[mockFile], [buildSegmentRow()], [], [], [], []]
+    dbState.returnValues = buildDbReturns()
 
     const { runL3ForFile } = await import('./runL3ForFile')
     await runL3ForFile({
