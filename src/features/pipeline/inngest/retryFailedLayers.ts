@@ -89,18 +89,19 @@ const handlerFn = async ({ event, step }: { event: RetryEvent; step: StepApi }) 
   try {
     // Step 2: Retry L2 if requested
     if (retryL2) {
-      // Reset file status to l1_completed before L2 retry
-      await step.run(`reset-status-l2-${fileId}`, async () => {
+      // Reset + L2 in same step: CAS guard in runL2ForFile expects 'l1_completed'.
+      // If L2 fails, runL2ForFile catch sets status to 'failed'. On Inngest retry,
+      // memoized steps are replayed from cache (NOT re-executed). If reset and L2
+      // were separate steps, the reset would NOT re-execute on retry, leaving status
+      // as 'failed' → CAS guard always fails. Merging ensures reset runs on every retry.
+      await step.run(`retry-l2-${fileId}`, async () => {
         await db
           .update(files)
           .set({ status: 'l1_completed', updatedAt: new Date() })
           .where(and(withTenant(files.tenantId, tenantId), eq(files.id, fileId)))
-      })
 
-      // Run L2
-      await step.run(`retry-l2-${fileId}`, () =>
-        runL2ForFile({ fileId, projectId, tenantId, userId }),
-      )
+        return runL2ForFile({ fileId, projectId, tenantId, userId })
+      })
 
       // Score after L2
       await step.run(`score-retry-l2-${fileId}`, () =>
@@ -112,18 +113,15 @@ const handlerFn = async ({ event, step }: { event: RetryEvent; step: StepApi }) 
 
     // Step 3: Retry L3 if requested
     if (retryL3) {
-      // Reset file status to l2_completed before L3 retry
-      await step.run(`reset-status-l3-${fileId}`, async () => {
+      // Same pattern as L2: merge reset + L3 into one step for retry safety
+      await step.run(`retry-l3-${fileId}`, async () => {
         await db
           .update(files)
           .set({ status: 'l2_completed', updatedAt: new Date() })
           .where(and(withTenant(files.tenantId, tenantId), eq(files.id, fileId)))
-      })
 
-      // Run L3
-      await step.run(`retry-l3-${fileId}`, () =>
-        runL3ForFile({ fileId, projectId, tenantId, userId }),
-      )
+        return runL3ForFile({ fileId, projectId, tenantId, userId })
+      })
 
       // Score after L3
       await step.run(`score-retry-l3-${fileId}`, () =>
