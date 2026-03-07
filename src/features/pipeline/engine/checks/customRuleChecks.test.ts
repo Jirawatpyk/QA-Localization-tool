@@ -124,4 +124,14 @@ describe('checkCustomRules', () => {
     // 501 > 500 → skipped → no result
     expect(results).toEqual([])
   })
+
+  // ── P0-03: ReDoS defense tests ──
+
+  it('should gracefully skip regex that throws during execution', () => {
+    // regex.test() wrapped in try-catch — any V8 error is caught and skipped
+    const segment = buildSegment({ targetText: 'test' })
+    const rules = [makeCustomRule('(?:', 'Broken group')]
+    const results = checkCustomRules(segment, rules, ctx)
+    expect(results).toEqual([]) // invalid regex → skipped
+  })
 })

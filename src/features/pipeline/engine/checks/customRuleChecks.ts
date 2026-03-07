@@ -44,16 +44,24 @@ export function checkCustomRules(
       continue
     }
 
-    if (regex.test(segment.targetText)) {
-      results.push({
-        segmentId: segment.id,
-        category: 'custom_rule',
-        severity: 'major', // configurable severity could be added later
-        description: rule.reason,
-        suggestedFix: null,
-        sourceExcerpt: segment.sourceText,
-        targetExcerpt: segment.targetText,
-      })
+    try {
+      if (regex.test(segment.targetText)) {
+        results.push({
+          segmentId: segment.id,
+          category: 'custom_rule',
+          severity: 'major', // configurable severity could be added later
+          description: rule.reason,
+          suggestedFix: null,
+          sourceExcerpt: segment.sourceText,
+          targetExcerpt: segment.targetText,
+        })
+      }
+    } catch {
+      // V8 may throw when regexp backtracking limit is exceeded — skip gracefully
+      logger.warn(
+        { pattern: rule.pattern, ruleId: rule.id },
+        'Regex execution failed (possible ReDoS) — skipped',
+      )
     }
   }
 
