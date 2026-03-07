@@ -120,6 +120,27 @@ describe('RecentFilesTable — ScoreBadge Integration', () => {
     expect(badge.className).toMatch(/destructive/)
   })
 
+  // T26 [P1] ai_partial status should render secondary badge variant
+  it('[P1] should render ai_partial status with secondary badge variant', async () => {
+    const aiPartialFile: RecentFileRow = {
+      id: 'f5a6b7c8-d9e0-4f5a-ab6b-7c8d9e0f1a2b',
+      fileName: 'partial-file.sdlxliff',
+      projectId: 'b2c3d4e5-f6a7-4b2c-9d3e-4f5a6b7c8d9e',
+      projectName: 'Test Project',
+      status: 'ai_partial',
+      createdAt: '2026-03-01T06:00:00Z',
+      mqmScore: 95.0,
+      findingsCount: 2,
+    }
+
+    const { RecentFilesTable } = await import('./RecentFilesTable')
+    render(<RecentFilesTable files={[aiPartialFile]} />)
+
+    const badge = screen.getByText('ai_partial')
+    expect(badge).toBeTruthy()
+    expect(badge.className).toMatch(/secondary/)
+  })
+
   // 7.4 [P1] Processing statuses should render secondary badge variant
   it('[P1] should render processing statuses with secondary badge variant', async () => {
     const processingFile: RecentFileRow = {
@@ -139,5 +160,18 @@ describe('RecentFilesTable — ScoreBadge Integration', () => {
     const badge = screen.getByText('l2_processing')
     expect(badge).toBeTruthy()
     expect(badge.className).toMatch(/secondary/)
+  })
+
+  // F12 [P1] Empty files array: shows empty state, no table rendered
+  it('[P1] should show empty state and hide table when files is empty', async () => {
+    const { RecentFilesTable } = await import('./RecentFilesTable')
+    render(<RecentFilesTable files={[]} />)
+
+    // Empty state element must be present
+    expect(screen.getByTestId('recent-files-empty')).toBeTruthy()
+    // "No files uploaded" text should be visible (partial match via regex)
+    expect(screen.getByText(/No files uploaded/i)).toBeTruthy()
+    // The data table itself must NOT be rendered
+    expect(screen.queryByTestId('dashboard-recent-files-table')).toBeNull()
   })
 })

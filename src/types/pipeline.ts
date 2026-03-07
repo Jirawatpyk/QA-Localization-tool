@@ -62,7 +62,7 @@ export type DbFileStatus =
   | 'failed'
 
 /** File statuses that indicate L1 has been completed (partial results exist) */
-export const L1_COMPLETED_STATUSES: ReadonlySet<string> = new Set([
+export const L1_COMPLETED_STATUSES: ReadonlySet<DbFileStatus> = new Set<DbFileStatus>([
   'l1_completed',
   'l2_processing',
   'l2_completed',

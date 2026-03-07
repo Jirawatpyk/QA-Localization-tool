@@ -113,19 +113,33 @@ export async function retryAiAnalysis(input: unknown): Promise<ActionResult<Retr
     }
   }
 
-  // ── Query score for layerCompleted ──
+  // ── Query score for layerCompleted (Guardrail #14: symmetric projectId filter) ──
   const scoreRows = await db
     .select({
       layerCompleted: scores.layerCompleted,
     })
     .from(scores)
-    .where(and(withTenant(scores.tenantId, tenantId), eq(scores.fileId, fileId)))
+    .where(
+      and(
+        withTenant(scores.tenantId, tenantId),
+        eq(scores.fileId, fileId),
+        eq(scores.projectId, projectId),
+      ),
+    )
 
   if (scoreRows.length === 0) {
     return { success: false, code: 'NOT_FOUND', error: 'Score record not found for file' }
   }
 
   const score = scoreRows[0]!
+  const VALID_LAYERS: ReadonlySet<string> = new Set<LayerCompleted>(['L1', 'L1L2', 'L1L2L3'])
+  if (!VALID_LAYERS.has(score.layerCompleted)) {
+    return {
+      success: false,
+      code: 'INVALID_STATUS',
+      error: `Unexpected layerCompleted value: ${score.layerCompleted}`,
+    }
+  }
   const layerCompleted = score.layerCompleted as LayerCompleted
 
   // ── Query project for processingMode ──
@@ -141,6 +155,14 @@ export async function retryAiAnalysis(input: unknown): Promise<ActionResult<Retr
   }
 
   const project = projectRows[0]!
+  const VALID_MODES: ReadonlySet<string> = new Set<ProcessingMode>(['economy', 'thorough'])
+  if (!VALID_MODES.has(project.processingMode)) {
+    return {
+      success: false,
+      code: 'INVALID_STATUS',
+      error: `Unexpected processingMode value: ${project.processingMode}`,
+    }
+  }
   const mode = project.processingMode as ProcessingMode
 
   // ── Budget check (G22: before any state change) ──

@@ -443,14 +443,37 @@ Claude Opus 4.6
 ### Completion Notes List
 
 - All 13 tasks complete, all subtasks checked
-- **190 test files, 2434 tests pass, 0 failures, 1 skipped (pre-existing P2)**
+- **195 test files, 2507 tests pass, 4 failures (all pre-existing), 1 skipped (pre-existing P2)**
+- **Story 3.4 specific: 113 tests across 11 test files — ALL PASS**
 - **E2E: 5/5 pass** (`e2e/pipeline-resilience.spec.ts` — setup, partial badge, retry button, click retry → score update, fallback badge)
-- **Type-check: 0 errors**
+- **Type-check: 0 Story 3.4 errors** (2 pre-existing in `qualityGateP2P3.test.ts`)
 - Pre-CR findings fixed: event naming (slash→dot), `string[]`→`PipelineLayer[]`, `PRIMARY_MODELS` key type, cross-project validation guard, `'use server'` directive, Zod validation, `L1_COMPLETED_STATUSES` DRY extraction, `createMockStep()` typed, E2E exception comments
 - TD-DASH-001/002 re-targeted from "Story 3.4" → "Epic 4" (dashboard scope, not resilience)
 - TD-E2E-011 created for chaos-test deferred E2E
 - TD-PIPE-001 (atomic batch completion), TD-PIPE-004 (fallback chain consumption), TD-PIPE-005 (L3 chunk failure silent data loss) all RESOLVED
 - `use-score-subscription.test.ts` pre-existing type error fixed (mockSingle nullable union)
+
+### CR R1 Fixes Applied (2026-03-07)
+
+**0C / 5H / 6M / 4L = 15 findings → 14 fixed, 1 false positive (H1)**
+
+| ID | Sev | Fix |
+|----|-----|-----|
+| H1 | High | **False positive** — `completed_at` already in `0000_aberrant_avengers.sql` |
+| H2 | High | Added `eq(scores.projectId, projectId)` — Guardrail #14 asymmetric filter |
+| H3 | High | `L1_COMPLETED_STATUSES: ReadonlySet<DbFileStatus>` (was `ReadonlySet<string>`) |
+| H4 | High | T04: verify `toHaveBeenCalledTimes(2)` for chain exhaustion |
+| H5 | High | Added T05b: auth error + empty fallbacks → NonRetriableError |
+| M1 | Med | Story file list updated with 12 CR fix files |
+| M2 | Med | `seedAiPartialFile()` now inserts L2 fallback finding for T80 |
+| M3 | Med | Audit log writes `'score.partial'` (was `'score.calculated'`) |
+| M4 | Med | Runtime validation guards before `as` casts (layerCompleted, mode) |
+| M5 | Med | Extracted `deriveLanguagePair.ts` shared helper (was duplicated) |
+| M6 | Med | Added T26 (RecentFilesTable ai_partial) + T73 (scoring failure ≠ ai_partial) |
+| L1 | Low | `finalScoreResult?.mqmScore ?? 0` — safe optional chaining |
+| L2 | Low | `terminalStatus: DbFileStatus[]` with boundary cast |
+| L3 | Low | N/A — could not locate `void asyncFn()` in Story 3.4 files |
+| L4 | Low | Added concurrent retry race condition test |
 
 ### Decisions Made
 
@@ -464,16 +487,17 @@ Claude Opus 4.6
 **New files (Story 3.4):**
 | File | Purpose |
 |------|---------|
+| `src/features/pipeline/helpers/deriveLanguagePair.ts` | Shared helper extracted from runL2/runL3 (CR R1 M5 fix) |
 | `src/lib/ai/fallbackRunner.ts` | `callWithFallback()` utility — primary→fallback chain with error classification |
-| `src/lib/ai/fallbackRunner.test.ts` | 10 tests: all error scenarios, chain exhaustion |
+| `src/lib/ai/fallbackRunner.test.ts` | 17 tests: all error scenarios, chain exhaustion, auth+empty fallbacks |
 | `src/lib/ai/types.test.ts` | AI type tests (AIErrorKind, deriveProviderFromModelId) |
 | `src/features/pipeline/actions/retryAiAnalysis.action.ts` | Server action: retry failed AI layers |
 | `src/features/pipeline/actions/retryAiAnalysis.action.test.ts` | 15 tests: validation, auth, layer detection, dispatch |
 | `src/features/pipeline/inngest/retryFailedLayers.ts` | Inngest function: re-run failed L2/L3 layers |
-| `src/features/pipeline/inngest/retryFailedLayers.test.ts` | 14 tests: retry L2/L3, re-failure, onFailure |
+| `src/features/pipeline/inngest/retryFailedLayers.test.ts` | 15 tests: retry L2/L3, re-failure, onFailure, concurrency race |
 | `src/features/pipeline/helpers/runL2ForFile.story34.test.ts` | 5 tests: L2 fallback chain wiring |
 | `src/features/pipeline/helpers/runL3ForFile.story34.test.ts` | 5 tests: L3 fallback chain wiring |
-| `src/features/pipeline/inngest/processFile.story34.test.ts` | 23 tests: partial results, onFailure, batch completion |
+| `src/features/pipeline/inngest/processFile.story34.test.ts` | 24 tests: partial results, onFailure, batch completion, T73 scoring failure |
 | `src/features/scoring/helpers/scoreFile.story34.test.ts` | 5 tests: partial score status |
 | `src/features/batch/components/ScoreBadge.story34.test.tsx` | 3 tests: partial state rendering |
 | `src/features/review/components/FindingListItem.story34.test.tsx` | 5 tests: fallback badge detection |
@@ -516,3 +540,19 @@ Claude Opus 4.6
 | `src/lib/ai/costs.test.ts` | `LanguageModelUsage` helper |
 | `src/lib/ai/providers.test.ts` | Updated for fallback chain changes |
 | `src/features/review/hooks/use-score-subscription.test.ts` | Fixed nullable union type for mockSingle |
+
+**CR R1 fix files:**
+| File | Change |
+|------|--------|
+| `src/features/pipeline/helpers/deriveLanguagePair.ts` | NEW: extracted shared helper (was duplicated in runL2/runL3) |
+| `src/features/pipeline/actions/retryAiAnalysis.action.ts` | H2: added `eq(scores.projectId)`, M4: runtime validation for layerCompleted/mode casts |
+| `src/types/pipeline.ts` | H3: `L1_COMPLETED_STATUSES` typed `ReadonlySet<DbFileStatus>` |
+| `src/features/pipeline/inngest/processFile.ts` | L1: safe `?.mqmScore ?? 0`, L2: `DbFileStatus[]` for terminalStatus |
+| `src/features/scoring/helpers/scoreFile.ts` | M3: audit action `'score.partial'` for partial scores |
+| `src/features/pipeline/helpers/runL2ForFile.ts` | M5: import shared `deriveLanguagePair` |
+| `src/features/pipeline/helpers/runL3ForFile.ts` | M5: import shared `deriveLanguagePair` |
+| `src/lib/ai/fallbackRunner.test.ts` | H4: verify chain exhaustion callTimes, H5: auth error empty fallbacks test |
+| `src/features/dashboard/components/RecentFilesTable.test.tsx` | M6/T26: ai_partial status variant test |
+| `src/features/pipeline/inngest/processFile.story34.test.ts` | M6/T73: scoring failure ≠ ai_partial test |
+| `src/features/pipeline/inngest/retryFailedLayers.test.ts` | L4: concurrent retry race condition test |
+| `e2e/helpers/pipeline-admin.ts` | M2: seed L2 fallback finding for T80 |

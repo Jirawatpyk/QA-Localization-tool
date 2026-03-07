@@ -11,7 +11,7 @@ import { scoreFile } from '@/features/scoring/helpers/scoreFile'
 import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
 import type { LayerCompleted } from '@/types/finding'
-import { L1_COMPLETED_STATUSES } from '@/types/pipeline'
+import { L1_COMPLETED_STATUSES, type DbFileStatus, type PipelineLayer } from '@/types/pipeline'
 
 import type { PipelineFileEventData } from './types'
 
@@ -27,7 +27,7 @@ const handlerFn = async ({
   }
 }) => {
   const { fileId, projectId, tenantId, userId, mode, uploadBatchId } = event.data
-  const failedLayers: string[] = []
+  const failedLayers: PipelineLayer[] = []
 
   // Step 1: Run L1 rule engine (deterministic checks, Xbench parity)
   const l1Result = await step.run(`l1-rules-${fileId}`, () =>
@@ -51,7 +51,7 @@ const handlerFn = async ({
   }
 
   // Step 4: Recalculate score — depends on L2 outcome
-  let finalScoreResult: Awaited<ReturnType<typeof scoreFile>>
+  let finalScoreResult: Awaited<ReturnType<typeof scoreFile>> | undefined
   let layerCompleted: LayerCompleted = 'L1'
   let l3Result: { findingCount: number } | null = null
 
@@ -110,7 +110,7 @@ const handlerFn = async ({
   // Guard: files.batchId is nullable — skip for non-batch uploads
   if (uploadBatchId) {
     // Terminal statuses include ai_partial (AC5) and failed
-    const terminalStatus: string[] =
+    const terminalStatus: DbFileStatus[] =
       mode === 'thorough'
         ? ['l3_completed', 'ai_partial', 'failed']
         : ['l2_completed', 'ai_partial', 'failed']
@@ -128,7 +128,8 @@ const handlerFn = async ({
         )
 
       const allCompleted =
-        batchFiles.length > 0 && batchFiles.every((f) => terminalStatus.includes(f.status))
+        batchFiles.length > 0 &&
+        batchFiles.every((f) => terminalStatus.includes(f.status as DbFileStatus))
 
       if (!allCompleted) return { allCompleted: false, fileCount: batchFiles.length }
 
@@ -168,7 +169,7 @@ const handlerFn = async ({
     l1FindingCount: l1Result.findingCount,
     l2FindingCount: l2Result ? l2Result.findingCount : null,
     l3FindingCount: l3Result ? l3Result.findingCount : null,
-    mqmScore: finalScoreResult!.mqmScore,
+    mqmScore: finalScoreResult?.mqmScore ?? 0,
     layerCompleted,
     l2PartialFailure: l2Result?.partialFailure ?? false,
     aiPartial,
@@ -196,7 +197,8 @@ const onFailureFn = async ({
       .from(files)
       .where(and(withTenant(files.tenantId, tenantId), eq(files.id, fileId)))
 
-    const hasPartialResults = currentFile && L1_COMPLETED_STATUSES.has(currentFile.status)
+    const hasPartialResults =
+      currentFile && L1_COMPLETED_STATUSES.has(currentFile.status as DbFileStatus)
     const newStatus = hasPartialResults ? 'ai_partial' : 'failed'
 
     await db

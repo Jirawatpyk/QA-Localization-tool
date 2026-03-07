@@ -11,7 +11,12 @@ import { scoreFile } from '@/features/scoring/helpers/scoreFile'
 import { checkProjectBudget } from '@/lib/ai/budget'
 import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
-import { L1_COMPLETED_STATUSES, type PipelineLayer, type ProcessingMode } from '@/types/pipeline'
+import {
+  L1_COMPLETED_STATUSES,
+  type DbFileStatus,
+  type PipelineLayer,
+  type ProcessingMode,
+} from '@/types/pipeline'
 
 // ── Config ──
 
@@ -199,7 +204,7 @@ const onFailureFn = async ({ event }: { event: OnFailureEvent; step: StepApi }) 
       return
     }
 
-    const hasPartialResults = L1_COMPLETED_STATUSES.has(currentFile.status)
+    const hasPartialResults = L1_COMPLETED_STATUSES.has(currentFile.status as DbFileStatus)
 
     if (hasPartialResults) {
       // Set ai_partial — don't set 'failed' since partial results exist

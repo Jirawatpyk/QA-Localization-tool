@@ -881,6 +881,195 @@ describe('scoreFile', () => {
 
   // ── TA: Coverage Gap Tests ──
 
+  // B2 [P1]: single segment — rows[0]! access + totalWords from 1 segment
+  it('[P1] should handle single segment file (boundary: 1 row)', async () => {
+    const singleSegment = [{ wordCount: 200, sourceLang: 'en-US', targetLang: 'ja-JP' }]
+    dbState.returnValues = [singleSegment, [], [undefined], [], [mockNewScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    const result = await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    expect(mockCalculateMqmScore).toHaveBeenCalledWith(expect.any(Array), 200, expect.any(Object))
+    expect(result.scoreId).toBeDefined()
+  })
+
+  // B3 [P2]: totalWords=0 — all segments have wordCount=0
+  it('[P2] should pass totalWords=0 to calculator when all segments have zero words', async () => {
+    const zeroWordSegments = [
+      { wordCount: 0, sourceLang: 'en-US', targetLang: 'th-TH' },
+      { wordCount: 0, sourceLang: 'en-US', targetLang: 'th-TH' },
+    ]
+    dbState.returnValues = [zeroWordSegments, [], [undefined], [], [mockNewScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    expect(mockCalculateMqmScore).toHaveBeenCalledWith(expect.any(Array), 0, expect.any(Object))
+  })
+
+  // B8 [P2]: exactly 1 finding (boundary between 0 and many)
+  it('[P2] should handle exactly 1 finding', async () => {
+    const oneFinding = [{ severity: 'major', status: 'open', segmentCount: 1 }]
+    dbState.returnValues = [mockSegments, oneFinding, [undefined], [], [mockNewScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    const result = await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    expect(mockCalculateMqmScore).toHaveBeenCalledWith(oneFinding, 1000, expect.any(Object))
+    expect(result.scoreId).toBeDefined()
+  })
+
+  // F14 [P1]: scoreStatus='partial' skips auto-pass entirely
+  it('[P1] should skip checkAutoPass when scoreStatus is partial', async () => {
+    const partialScore = { ...mockNewScore, status: 'partial', autoPassRationale: null }
+    dbState.returnValues = [mockSegments, [], [undefined], [], [partialScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    const result = await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      scoreStatus: 'partial',
+    })
+
+    expect(result.status).toBe('partial')
+    expect(mockCheckAutoPass).not.toHaveBeenCalled()
+  })
+
+  // F15 [P1]: scoreStatus='partial' → audit action = 'score.partial'
+  it('[P1] should write audit log with action score.partial when scoreStatus is partial', async () => {
+    const partialScore = { ...mockNewScore, status: 'partial', autoPassRationale: null }
+    dbState.returnValues = [mockSegments, [], [undefined], [], [partialScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      scoreStatus: 'partial',
+    })
+
+    expect(mockWriteAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'score.partial' }),
+    )
+  })
+
+  // F19 [P1]: layerCompleted falls back to layerFilter (position 3 in chain)
+  it('[P1] should use layerFilter as layerCompleted when override and prev are both undefined', async () => {
+    dbState.returnValues = [
+      mockSegments,
+      [],
+      [undefined],
+      [],
+      [{ ...mockNewScore, layerCompleted: 'L2' }],
+    ]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      layerFilter: 'L2',
+    })
+
+    expect(dbState.valuesCaptures).toContainEqual(expect.objectContaining({ layerCompleted: 'L2' }))
+  })
+
+  // F16 [P2]: graduation dedup guard prevents duplicate notification
+  it('[P2] should skip graduation insert when dedup check finds existing notification', async () => {
+    mockCheckAutoPass.mockResolvedValue({
+      eligible: true,
+      rationale: 'Graduated',
+      isNewPair: true,
+      fileCount: 50,
+    })
+    const autoScore = { ...mockNewScore, status: 'auto_passed' }
+    dbState.returnValues = [
+      mockSegments,
+      [],
+      [undefined],
+      [],
+      [autoScore],
+      [{ id: 'existing-notif' }],
+    ]
+
+    const { scoreFile } = await import('./scoreFile')
+    const result = await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    expect(result.status).toBe('auto_passed')
+    expect(dbState.callIndex).toBe(6)
+  })
+
+  // F17 [P2]: no admin users → skip notification insert
+  it('[P2] should skip graduation insert when no admin users found', async () => {
+    mockCheckAutoPass.mockResolvedValue({
+      eligible: true,
+      rationale: 'Graduated',
+      isNewPair: true,
+      fileCount: 50,
+    })
+    const autoScore = { ...mockNewScore, status: 'auto_passed' }
+    dbState.returnValues = [mockSegments, [], [undefined], [], [autoScore], [], []]
+
+    const { scoreFile } = await import('./scoreFile')
+    const result = await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    expect(result.status).toBe('auto_passed')
+    expect(dbState.callIndex).toBe(7)
+  })
+
+  // F18 [P2]: graduation notification failure is non-fatal
+  it('[P2] should not fail when graduation notification throws', async () => {
+    mockCheckAutoPass.mockResolvedValue({
+      eligible: true,
+      rationale: 'Graduated',
+      isNewPair: true,
+      fileCount: 50,
+    })
+    const autoScore = { ...mockNewScore, status: 'auto_passed' }
+    dbState.returnValues = [mockSegments, [], [undefined], [], [autoScore]]
+    dbState.throwAtCallIndex = 5
+
+    const { scoreFile } = await import('./scoreFile')
+    const result = await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    expect(result.status).toBe('auto_passed')
+    expect(result.scoreId).toBeDefined()
+  })
+
   // Gap #6 [P2]: status='na' overrides auto-pass eligible + autoPassRationale null
   it('[P2] should set status=na even when autoPass returns eligible', async () => {
     mockCalculateMqmScore.mockReturnValue({

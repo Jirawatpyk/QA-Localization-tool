@@ -136,8 +136,11 @@ export async function pollFileStatus(
 
     if (lastStatus === targetStatus) return
 
-    if (lastStatus === 'failed') {
-      throw new Error(`File ${fileId} reached 'failed' status while waiting for '${targetStatus}'`)
+    // Fail fast on terminal statuses that won't progress further
+    if (lastStatus === 'failed' || lastStatus === 'ai_partial') {
+      throw new Error(
+        `File ${fileId} reached '${lastStatus}' status while waiting for '${targetStatus}'`,
+      )
     }
 
     await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
@@ -205,7 +208,8 @@ export async function seedAiPartialFile(projectId: string, tenantId: string): Pr
     throw new Error(`Failed to seed file: ${fileRes.status} ${text}`)
   }
   const fileData = (await fileRes.json()) as Array<{ id: string }>
-  const fileId = fileData[0].id
+  if (fileData.length === 0) throw new Error('seedAiPartialFile: no file returned from POST')
+  const fileId = fileData[0]!.id
 
   // 2. Insert a segment (required for L2 retry to have data to process)
   const segRes = await fetch(`${SUPABASE_URL}/rest/v1/segments`, {
@@ -228,7 +232,7 @@ export async function seedAiPartialFile(projectId: string, tenantId: string): Pr
     throw new Error(`Failed to seed segment: ${segRes.status} ${text}`)
   }
 
-  // 3. Insert L1 finding (so review page has something to display)
+  // 3a. Insert L1 finding (so review page has something to display)
   const findingRes = await fetch(`${SUPABASE_URL}/rest/v1/findings`, {
     method: 'POST',
     headers: { ...adminHeaders(), Prefer: 'return=minimal' },
@@ -246,6 +250,28 @@ export async function seedAiPartialFile(projectId: string, tenantId: string): Pr
   if (!findingRes.ok) {
     const text = await findingRes.text()
     throw new Error(`Failed to seed finding: ${findingRes.status} ${text}`)
+  }
+
+  // 3b. Insert L2 finding with fallback model (for T80 fallback badge test)
+  const fallbackFindingRes = await fetch(`${SUPABASE_URL}/rest/v1/findings`, {
+    method: 'POST',
+    headers: { ...adminHeaders(), Prefer: 'return=minimal' },
+    body: JSON.stringify({
+      file_id: fileId,
+      project_id: projectId,
+      tenant_id: tenantId,
+      severity: 'major',
+      category: 'Terminology',
+      description: 'Inconsistent term translation (fallback model)',
+      detected_by_layer: 'L2',
+      ai_model: 'gemini-2.0-flash',
+      ai_confidence: 75,
+      status: 'pending',
+    }),
+  })
+  if (!fallbackFindingRes.ok) {
+    const text = await fallbackFindingRes.text()
+    throw new Error(`Failed to seed fallback finding: ${fallbackFindingRes.status} ${text}`)
   }
 
   // 3. Insert partial score (L1 only, status=partial)

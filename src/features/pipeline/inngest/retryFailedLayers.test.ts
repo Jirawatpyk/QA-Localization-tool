@@ -4,6 +4,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import type { L2Result } from '@/features/pipeline/helpers/runL2ForFile'
 import type { L3Result } from '@/features/pipeline/helpers/runL3ForFile'
+import type { ScoreStatus } from '@/types/finding'
+import type { PipelineLayer } from '@/types/pipeline'
 
 // ── Hoisted mocks ──
 const { mockRunL2ForFile, mockRunL3ForFile, mockScoreFile, dbState, dbMockModule } = vi.hoisted(
@@ -46,7 +48,7 @@ const { mockRunL2ForFile, mockRunL3ForFile, mockScoreFile, dbState, dbMockModule
           criticalCount: 0,
           majorCount: 1,
           minorCount: 1,
-          status: 'calculated' as string,
+          status: 'calculated' as ScoreStatus,
           autoPassRationale: null as string | null,
         }),
       ),
@@ -133,7 +135,7 @@ function buildRetryEvent(overrides?: Record<string, unknown>) {
       projectId: VALID_PROJECT_ID,
       tenantId: VALID_TENANT_ID,
       userId: VALID_USER_ID,
-      layersToRetry: ['L2'] as string[],
+      layersToRetry: ['L2'] as PipelineLayer[],
       mode: 'economy' as 'economy' | 'thorough',
       ...overrides,
     },
@@ -370,6 +372,18 @@ describe('retryFailedLayers Inngest function (Story 3.4)', () => {
         (s) => s.status === 'failed',
       )
       expect(failedUpdate).toBeUndefined()
+    })
+  })
+
+  describe('concurrent retry race condition', () => {
+    // L4
+    it('[P1] should have concurrency key on projectId to prevent parallel retries', async () => {
+      const { retryFailedLayersConfig } = await import('./retryFailedLayers')
+
+      // Concurrent retries on the same project would race on file status.
+      // The concurrency config ensures only 1 retry runs per project at a time.
+      expect(retryFailedLayersConfig.concurrency.key).toContain('projectId')
+      expect(retryFailedLayersConfig.concurrency.limit).toBe(1)
     })
   })
 

@@ -15,6 +15,7 @@ import { taxonomyDefinitions } from '@/db/schema/taxonomyDefinitions'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { FINDING_BATCH_SIZE, MAX_EXCERPT_LENGTH } from '@/features/pipeline/engine/constants'
 import { chunkSegments } from '@/features/pipeline/helpers/chunkSegments'
+import { deriveLanguagePair } from '@/features/pipeline/helpers/deriveLanguagePair'
 import { buildL3Prompt as buildL3PromptShared } from '@/features/pipeline/prompts/build-l3-prompt'
 import type { SurroundingSegmentContext } from '@/features/pipeline/prompts/types'
 import { l3OutputSchema } from '@/features/pipeline/schemas/l3-output'
@@ -81,19 +82,6 @@ type PriorFindingContext = {
   description: string
   detectedByLayer: DetectedByLayer
   aiConfidence: number | null
-}
-
-// ── Helpers ──
-
-/**
- * Derive language pair string from segment rows.
- * Returns "sourceLang→targetLang" (e.g. "en→th") or null if unavailable.
- */
-function deriveLanguagePair(segmentRows: SegmentRow[]): string | null {
-  if (segmentRows.length === 0) return null
-  const first = segmentRows[0]!
-  if (!first.sourceLang || !first.targetLang) return null
-  return `${first.sourceLang}→${first.targetLang}`
 }
 
 // ── Main Function ──

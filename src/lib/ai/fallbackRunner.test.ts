@@ -131,6 +131,10 @@ describe('callWithFallback', () => {
     const chain = { primary: 'gpt-4o-mini', fallbacks: ['gemini-2.0-flash'] }
 
     await expect(callWithFallback(chain, modelFn)).rejects.toThrow(MockNonRetriableError)
+    // Verify both primary and fallback were tried before throwing
+    expect(modelFn).toHaveBeenCalledTimes(2)
+    expect(modelFn).toHaveBeenNthCalledWith(1, 'gpt-4o-mini')
+    expect(modelFn).toHaveBeenNthCalledWith(2, 'gemini-2.0-flash')
   })
 
   // T05
@@ -142,6 +146,19 @@ describe('callWithFallback', () => {
     const chain = { primary: 'gpt-4o-mini', fallbacks: [] }
 
     await expect(callWithFallback(chain, modelFn)).rejects.toThrow(rateLimitErr)
+    expect(modelFn).toHaveBeenCalledTimes(1)
+  })
+
+  // T05b — H5: auth error with empty fallbacks → NonRetriableError (not retriable)
+  it('[P0] should throw NonRetriableError when primary fails with auth error and no fallbacks', async () => {
+    const { callWithFallback } = await import('./fallbackRunner')
+
+    const authErr = makeAuthError()
+    const modelFn = vi.fn((..._args: unknown[]) => Promise.reject(authErr))
+    const chain = { primary: 'gpt-4o-mini', fallbacks: [] }
+
+    // Auth error with no fallbacks: exhausted immediately → NonRetriableError
+    await expect(callWithFallback(chain, modelFn)).rejects.toThrow(MockNonRetriableError)
     expect(modelFn).toHaveBeenCalledTimes(1)
   })
 
@@ -312,5 +329,40 @@ describe('callWithFallback', () => {
     // The original chain object must not be mutated
     expect(chain.fallbacks).toEqual(chainCopy.fallbacks)
     expect(chain.primary).toBe(chainCopy.primary)
+  })
+
+  // ── TA Gap R: 3-model chain ──
+  it('[P1] should try all 3 models when primary and first fallback fail with rate_limit', async () => {
+    const { callWithFallback } = await import('./fallbackRunner')
+
+    const rateLimitErr = makeRateLimitError()
+    let callCount = 0
+    const modelFn = vi.fn((..._args: unknown[]) => {
+      callCount++
+      if (callCount <= 2) return Promise.reject(rateLimitErr)
+      return Promise.resolve({ findings: [], usage: { inputTokens: 50, outputTokens: 20 } })
+    })
+    const chain = { primary: 'gpt-4o-mini', fallbacks: ['gemini-2.0-flash', 'gpt-4o'] }
+
+    const result = await callWithFallback(chain, modelFn)
+
+    expect(result.modelUsed).toBe('gpt-4o')
+    expect(result.fallbackUsed).toBe(true)
+    expect(modelFn).toHaveBeenCalledTimes(3)
+    expect(modelFn).toHaveBeenNthCalledWith(1, 'gpt-4o-mini')
+    expect(modelFn).toHaveBeenNthCalledWith(2, 'gemini-2.0-flash')
+    expect(modelFn).toHaveBeenNthCalledWith(3, 'gpt-4o')
+  })
+
+  // ── TA Gap S: Cascade through 3 models — all fail ──
+  it('[P2] should exhaust all 3 models and throw when all fail with auth error', async () => {
+    const { callWithFallback } = await import('./fallbackRunner')
+
+    const authErr = makeAuthError()
+    const modelFn = vi.fn((..._args: unknown[]) => Promise.reject(authErr))
+    const chain = { primary: 'gpt-4o-mini', fallbacks: ['gemini-2.0-flash', 'gpt-4o'] }
+
+    await expect(callWithFallback(chain, modelFn)).rejects.toThrow(MockNonRetriableError)
+    expect(modelFn).toHaveBeenCalledTimes(3)
   })
 })

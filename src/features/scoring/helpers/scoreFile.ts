@@ -187,7 +187,12 @@ export async function scoreFile({
       userId,
       entityType: 'score',
       entityId: newScore.id,
-      action: status === 'auto_passed' ? 'score.auto_passed' : 'score.calculated',
+      action:
+        status === 'auto_passed'
+          ? 'score.auto_passed'
+          : status === 'partial'
+            ? 'score.partial'
+            : 'score.calculated',
       ...(previousScore
         ? { oldValue: { mqmScore: previousScore.mqmScore, status: previousScore.status } }
         : {}),

@@ -4,7 +4,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import type { L2Result } from '@/features/pipeline/helpers/runL2ForFile'
 import type { L3Result } from '@/features/pipeline/helpers/runL3ForFile'
-import type { ProcessingMode } from '@/types/pipeline'
+import type { ScoreStatus } from '@/types/finding'
+import type { DbFileStatus, ProcessingMode } from '@/types/pipeline'
 
 // ── Hoisted mocks ──
 const {
@@ -30,7 +31,7 @@ const {
         criticalCount: 0,
         majorCount: 3,
         minorCount: 0,
-        status: 'calculated' as string,
+        status: 'calculated' as ScoreStatus,
         autoPassRationale: null as string | null,
       }),
     ),
@@ -353,19 +354,7 @@ describe('processFilePipeline — partial results (Story 3.4)', () => {
 
     // T25
     it('[P0] should use ai_partial as valid DbFileStatus value', async () => {
-      type DbFileStatus =
-        | 'uploaded'
-        | 'parsing'
-        | 'parsed'
-        | 'l1_processing'
-        | 'l1_completed'
-        | 'l2_processing'
-        | 'l2_completed'
-        | 'l3_processing'
-        | 'l3_completed'
-        | 'ai_partial'
-        | 'failed'
-
+      // Compile-time check: assignment fails if 'ai_partial' removed from canonical DbFileStatus
       const status: DbFileStatus = 'ai_partial'
       expect(status).toBe('ai_partial')
     })
@@ -750,6 +739,54 @@ describe('processFilePipeline — partial results (Story 3.4)', () => {
           failedLayers: expect.arrayContaining(['L2']),
         }),
       )
+    })
+  })
+
+  describe('scoring failure (FM-7)', () => {
+    // T73
+    it('[P1] should NOT set ai_partial when L2 succeeds but scoring throws', async () => {
+      const { processFilePipeline } = await import('./processFile')
+
+      // L2 succeeds, but scoring after L2 throws (DB failure, not AI failure)
+      mockScoreFile
+        .mockResolvedValueOnce({
+          scoreId: faker.string.uuid(),
+          fileId: VALID_FILE_ID,
+          mqmScore: 85,
+          npt: 15,
+          totalWords: 1000,
+          criticalCount: 0,
+          majorCount: 3,
+          minorCount: 0,
+          status: 'calculated',
+          autoPassRationale: null,
+        })
+        .mockRejectedValueOnce(new Error('Scoring DB connection failed'))
+
+      const step = createMockStep()
+      const event = {
+        data: buildPipelineEvent({
+          fileId: VALID_FILE_ID,
+          projectId: VALID_PROJECT_ID,
+          tenantId: VALID_TENANT_ID,
+          userId: VALID_USER_ID,
+        }),
+      }
+
+      // Scoring failure should propagate (NOT be caught as ai_partial)
+      // because this is a scoring bug, not an AI layer failure
+      await expect(
+        (processFilePipeline as { handler: (...args: unknown[]) => Promise<unknown> }).handler({
+          event,
+          step,
+        }),
+      ).rejects.toThrow('Scoring DB connection failed')
+
+      // ai_partial should NOT be set — scoring failure is NOT an AI failure
+      const aiPartialUpdate = (dbState.setCaptures as Record<string, unknown>[])?.find(
+        (s) => s.status === 'ai_partial',
+      )
+      expect(aiPartialUpdate).toBeUndefined()
     })
   })
 
