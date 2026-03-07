@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { ConfidenceBadge } from '@/features/review/components/ConfidenceBadge'
 import { LayerBadge } from '@/features/review/components/LayerBadge'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 import type { DetectedByLayer, FindingSeverity } from '@/types/finding'
 
 type FindingForDisplay = {
@@ -34,27 +35,12 @@ const L3_CONFIRMED_MARKER = '[L3 Confirmed]'
 const L3_DISAGREES_MARKER = '[L3 Disagrees]'
 
 function stripL3Markers(text: string): string {
-  return text.replace(L3_CONFIRMED_MARKER, '').replace(L3_DISAGREES_MARKER, '').trim()
+  return text.replaceAll(L3_CONFIRMED_MARKER, '').replaceAll(L3_DISAGREES_MARKER, '').trim()
 }
 
 function truncate(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text
   return text.slice(0, maxLength) + '...'
-}
-
-function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  })
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
-    const mql = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const handler = (e: MediaQueryListEvent) => setReduced(e.matches)
-    mql.addEventListener('change', handler)
-    return () => mql.removeEventListener('change', handler)
-  }, [])
-  return reduced
 }
 
 export function FindingListItem({ finding, isNew, l2ConfidenceMin }: FindingListItemProps) {

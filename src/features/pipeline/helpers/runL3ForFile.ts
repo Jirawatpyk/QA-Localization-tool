@@ -177,8 +177,9 @@ export async function runL3ForFile({
       .orderBy(segments.segmentNumber)
 
     // Step 4: Load L1 + L2 findings for context (L3 avoids duplicating both)
-    // SAFETY: WHERE limits to L1/L2 findings which have valid FindingSeverity and DetectedByLayer values
-    // Drizzle infers varchar → string, cast is safe within this domain
+    // SAFETY: WHERE limits by tenant+file+project. Drizzle infers varchar → string for severity/layer.
+    // Cast is safe: only valid FindingSeverity and DetectedByLayer values exist in DB (enforced by insert)
+    // L3 findings from previous runs are included but harmless — prompt builder filters to L1+L2 only
     const priorFindings = (await db
       .select({
         id: findings.id,
@@ -210,6 +211,7 @@ export async function runL3ForFile({
         and(
           withTenant(findings.tenantId, tenantId),
           eq(findings.fileId, fileId),
+          eq(findings.projectId, projectId),
           eq(findings.detectedByLayer, 'L2'),
         ),
       )
@@ -537,17 +539,17 @@ export async function runL3ForFile({
             )
             if (!matchedL2) continue
 
+            // Idempotent: skip both confidence boost and marker append on re-run
+            if (matchedL2.description.includes('[L3 Confirmed]')) continue
+
             const currentConfidence = matchedL2.aiConfidence ?? 0
             const newConfidence = Math.min(100, Math.round(currentConfidence * 1.1))
-            const descriptionUpdate = matchedL2.description.includes('[L3 Confirmed]')
-              ? matchedL2.description
-              : `${matchedL2.description}\n\n[L3 Confirmed]`
 
             await tx
               .update(findings)
               .set({
                 aiConfidence: newConfidence,
-                description: descriptionUpdate,
+                description: `${matchedL2.description}\n\n[L3 Confirmed]`,
               })
               .where(and(withTenant(findings.tenantId, tenantId), eq(findings.id, matchedL2.id)))
           }

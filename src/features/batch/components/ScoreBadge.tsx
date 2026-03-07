@@ -1,7 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 import type { ScoreBadgeSize, ScoreBadgeState } from '@/types/finding'
 
 type ScoreBadgeProps = {
@@ -54,25 +55,6 @@ function deriveState(
   if (score < 70) return 'fail'
   if (score >= 95 && (criticalCount ?? 0) === 0) return 'pass'
   return 'review'
-}
-
-function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(() => {
-    if (typeof window === 'undefined') return false
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  })
-
-  const handleChange = useCallback((e: MediaQueryListEvent) => {
-    setReduced(e.matches)
-  }, [])
-
-  useEffect(() => {
-    const mql = window.matchMedia('(prefers-reduced-motion: reduce)')
-    mql.addEventListener('change', handleChange)
-    return () => mql.removeEventListener('change', handleChange)
-  }, [handleChange])
-
-  return reduced
 }
 
 export function ScoreBadge({ score, state, size = 'sm', criticalCount }: ScoreBadgeProps) {

@@ -156,8 +156,10 @@ const defaultProject = {
   processingMode: 'thorough',
 }
 
-// DB call sequence: CAS(0), segments(1), priorFindings(2), l2Stats(3), langConfig(4),
-// glossary(5), taxonomy(6), project(7), ...rest
+// DB call sequence (matches runL3ForFile.ts execution order):
+// [0] CAS update (Step 1), [1] segments (Step 3), [2] priorFindings (Step 4),
+// [3] l2Stats (Step 3b), [4] langConfig (Step 3c), [5] glossary (Step 4c),
+// [6] taxonomy (Step 4d), [7] project (Step 4e), ...rest (tx + status updates)
 function buildDbReturns(
   overrides: {
     file?: unknown[]
@@ -325,7 +327,7 @@ describe('runL3ForFile — Story 3.3: Selective Filtering & Context', () => {
   // So l3ConfidenceMin is a secondary filter, not primary — all segments with L2 findings are included
   // These tests verify the threshold is queried but doesn't change the filtering behavior (by design)
 
-  it('[P1] U05: should query l3ConfidenceMin from language_pair_configs', async () => {
+  it('[P1] U05: should include segment at exact threshold (first OR condition: findingCount > 0 passes regardless)', async () => {
     const segId = faker.string.uuid()
     const seg = buildSegmentRow({ id: segId, segmentNumber: 1 })
 
@@ -346,7 +348,7 @@ describe('runL3ForFile — Story 3.3: Selective Filtering & Context', () => {
     expect(mockGenerateText).toHaveBeenCalledTimes(1)
   })
 
-  it('[P1] U06: should include segment below l3ConfidenceMin threshold', async () => {
+  it('[P1] U06: should include segment below l3ConfidenceMin (both OR conditions pass)', async () => {
     const segId = faker.string.uuid()
     const seg = buildSegmentRow({
       id: segId,
@@ -701,9 +703,12 @@ describe('runL3ForFile — Story 3.3: Selective Filtering & Context', () => {
     })
 
     expect(dbState.setCaptures).toContainEqual(expect.objectContaining({ aiConfidence: 100 }))
+    expect(dbState.setCaptures).toContainEqual(
+      expect.objectContaining({ description: expect.stringContaining('[L3 Confirmed]') }),
+    )
   })
 
-  it('[P1] U18: should NOT duplicate markers on idempotent re-run', async () => {
+  it('[P1] U18: should NOT duplicate markers or double-boost confidence on idempotent re-run', async () => {
     const segId = faker.string.uuid()
     const seg = buildSegmentRow({ id: segId, segmentNumber: 1 })
 
@@ -743,16 +748,18 @@ describe('runL3ForFile — Story 3.3: Selective Filtering & Context', () => {
       tenantId: VALID_TENANT_ID,
     })
 
-    // Description should NOT have duplicate markers
-    const descriptionUpdates = dbState.setCaptures.filter((c: unknown) => {
+    // Idempotent: no confirm/contradict updates should be emitted on re-run
+    // (production code skips entirely when [L3 Confirmed] already present)
+    const confirmContradictUpdates = dbState.setCaptures.filter((c: unknown) => {
       const obj = c as Record<string, unknown>
-      return typeof obj.description === 'string'
+      return (
+        'aiConfidence' in obj ||
+        (typeof obj.description === 'string' &&
+          (obj.description.includes('[L3 Confirmed]') ||
+            obj.description.includes('[L3 Disagrees]')))
+      )
     })
-    for (const update of descriptionUpdates) {
-      const desc = (update as Record<string, string>).description!
-      const markerCount = (desc.match(/\[L3 Confirmed\]/g) ?? []).length
-      expect(markerCount).toBeLessThanOrEqual(1)
-    }
+    expect(confirmContradictUpdates).toHaveLength(0)
   })
 
   it('[P1] U19: should match multiple L3 findings to same L2 segment independently', async () => {

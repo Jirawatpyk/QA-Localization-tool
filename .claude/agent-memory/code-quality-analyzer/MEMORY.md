@@ -23,6 +23,7 @@
 - `pipeline-deep-review-findings.md` — Pipeline Deep Review (3C/8H/8M) 2026-03-03
 - `cross-feature-review-findings.md` — Cross-Feature Review: parity/dashboard/project (0C/7H/9M/8L) 2026-03-03
 - `story-3-2c-findings.md` — Story 3.2c L2 Results Display & Score Update CR R1-R3 (R3: 0C/1H/3M/5L)
+- `story-3-3-findings.md` — Story 3.3 AI Layer 3 Deep Contextual Analysis CR R1 (0C/3H/5M/5L)
 
 ## Recurring Anti-Patterns (check EVERY review)
 

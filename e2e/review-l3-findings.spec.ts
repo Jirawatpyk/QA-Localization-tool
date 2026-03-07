@@ -50,8 +50,8 @@ let tenantId: string
 let fileId: string
 
 test.describe.serial('Review L3 Findings — Story 3.3', () => {
-  // TODO(TD-E2E-008): Skip when no Inngest dev server — pipeline needs event orchestration
-  test(
+  // Skip entire suite when no Inngest dev server (TD-E2E-008 resolved — secrets wired in CI)
+  test.skip(
     !process.env.INNGEST_DEV_URL,
     'Requires Inngest dev server (set INNGEST_DEV_URL=http://localhost:8288 to enable)',
   )

@@ -146,9 +146,10 @@ const mockFile = {
   status: 'l3_processing',
 }
 
-// Helper: build standard DB return values with all context queries
-// CAS(0), segments(1), priorFindings(2), l2Stats(3), langConfig(4),
-// glossary(5), taxonomy(6), project(7), ...rest (txDelete, txInsert, statusUpdate)
+// Helper: build standard DB return values matching runL3ForFile.ts execution order:
+// [0] CAS update (Step 1), [1] segments (Step 3), [2] priorFindings (Step 4),
+// [3] l2Stats (Step 3b), [4] langConfig (Step 3c), [5] glossary (Step 4c),
+// [6] taxonomy (Step 4d), [7] project (Step 4e), ...rest (txDelete, txInsert, statusUpdate)
 function buildDbReturns(
   overrides: {
     file?: unknown[]

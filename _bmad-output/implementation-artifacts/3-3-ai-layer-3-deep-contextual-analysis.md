@@ -417,12 +417,20 @@ None
 - Pre-CR scan: 1C+3H found and fixed (glossary tenant isolation, performance.now bug, projectId filter, chunk context filtering)
 - M2-M4 pre-existing issues fixed (bare string types narrowed, Guardrail #3)
 - TD-PIPE-003 resolved (inline buildL3Prompt → shared module)
+- **CR R1 (2026-03-07):** 13 findings (0C/3H/6M/4L) — all fixed in-place
+  - H1: Added missing `eq(findings.projectId, projectId)` to l2SegmentStats (Guardrail #14)
+  - H2: Fixed `test()` → `test.skip()` in E2E Playwright annotation
+  - H3: Changed `replace()` → `replaceAll()` in `stripL3Markers()`
+  - M2 (production bug): Fixed idempotent confirm — skip both confidence boost AND marker on re-run
+  - M5: Extracted `useReducedMotion` to `src/hooks/useReducedMotion.ts` (shared hook)
+  - M1/M3/M4/L1/L2: Test assertion + comment improvements
 
 ### File List
 
 **New:**
 - `src/features/pipeline/schemas/l3-output.ts`
 - `src/features/pipeline/schemas/l3-output.test.ts`
+- `src/hooks/useReducedMotion.ts` (CR R1 — shared hook extraction)
 - `src/features/batch/components/ScoreBadge.story33.test.tsx`
 - `src/features/review/components/FindingListItem.story33.test.tsx`
 - `src/features/review/components/ReviewPageClient.story33.test.tsx`

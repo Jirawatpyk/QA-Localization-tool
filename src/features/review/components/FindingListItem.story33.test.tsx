@@ -46,7 +46,7 @@ describe('FindingListItem — Story 3.3: L3 Confirm/Contradict Badges', () => {
     expect(confirmBadge).toBeTruthy()
     expect(confirmBadge.textContent).toMatch(/Confirmed by L3/i)
     // Badge should have green/success styling
-    expect(confirmBadge.className).toMatch(/status-pass|text-green|bg-green/)
+    expect(confirmBadge.className).toContain('text-status-pass')
   })
 
   it('[P1] U31: should render amber "L3 disagrees" badge when description contains [L3 Disagrees]', () => {
@@ -63,7 +63,7 @@ describe('FindingListItem — Story 3.3: L3 Confirm/Contradict Badges', () => {
     expect(disagreeBadge).toBeTruthy()
     expect(disagreeBadge.textContent).toMatch(/L3 disagrees/i)
     // Badge should have amber/warning styling
-    expect(disagreeBadge.className).toMatch(/status-pending|text-amber|bg-amber|text-warning/)
+    expect(disagreeBadge.className).toContain('text-warning')
   })
 
   it('[P1] U32: should strip [L3 Confirmed] and [L3 Disagrees] markers from visible description text', () => {
