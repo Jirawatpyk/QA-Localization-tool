@@ -22,7 +22,7 @@
 - `story-3-2b7-findings.md` — Story 3.2b7 Taxonomy Reorder UI CR R1-R2 (R2: 0C/0H/3M/5L)
 - `pipeline-deep-review-findings.md` — Pipeline Deep Review (3C/8H/8M) 2026-03-03
 - `cross-feature-review-findings.md` — Cross-Feature Review: parity/dashboard/project (0C/7H/9M/8L) 2026-03-03
-- `story-3-2c-findings.md` — Story 3.2c L2 Results Display & Score Update CR R1-R2 (R2: 0C/5H/8M/5L)
+- `story-3-2c-findings.md` — Story 3.2c L2 Results Display & Score Update CR R1-R3 (R3: 0C/1H/3M/5L)
 
 ## Recurring Anti-Patterns (check EVERY review)
 
@@ -216,6 +216,13 @@
 - Pattern recurs with @dnd-kit (getBoundingClientRect = 0 in jsdom)
 - Fix: extract pure function and test directly, or use `it.skipIf` with explicit reason
 - **Check during review:** Search for `if.*mock.*calls.*length.*>.*0` in test files
+
+### 40. queueMicrotask Buffer Race with Synchronous Handlers (Story 3.2c R3)
+
+- INSERT buffer uses queueMicrotask to batch; DELETE fires sync before flush
+- Flush re-adds deleted finding from stale buffer
+- Fix: track `deletedIds: Set<string>` in buffer; filter before flush
+- **Check during review:** Any deferred batch (queueMicrotask/setTimeout/requestAnimationFrame) that coexists with sync handlers on same data must coordinate deletions
 
 ## CAS Guard Pattern (ESTABLISHED)
 

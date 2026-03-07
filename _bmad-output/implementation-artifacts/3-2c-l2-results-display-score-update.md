@@ -1,6 +1,6 @@
 # Story 3.2c: L2 Results Display & Score Update
 
-Status: review
+Status: done
 
 ## Story
 

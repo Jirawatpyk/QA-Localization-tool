@@ -7,38 +7,48 @@
 **Result:** 0C / 5H / 8M / 5L
 (See git history for original R1 findings — many were fixed during implementation)
 
-## CR R2 (Post-implementation scan)
+## CR R2 (Pre-fix scan — original findings)
 
 **Date:** 2026-03-03
 **Files Reviewed:** 10 new + 8 modified
 **Result:** 0C / 5H / 8M / 5L
 
+### HIGH (all fixed in R1 fix commit)
+
+1. **H1: Missing UPDATE event in useFindingsSubscription** — FIXED: added handleUpdate handler
+2. **H2: languagePairConfigs JOIN missing targetLang** — DEFERRED: TODO(TD-REVIEW-001) added
+3. **H3: Unsafe `as unknown as Finding` cast** — FIXED: explicit Finding construction
+4. **H4: Duplicated severity sort** — ACCEPTED: server sort for initial load, client sort for realtime
+5. **H5: `findings.status: string` in FileReviewData** — STILL OPEN (see R3 M1)
+
+### MED (most fixed)
+
+1. **M1: Duplicated useReducedMotion** — FIXED: cached useState initializer
+   2-8: Various cast/validation issues — partially addressed
+
+## CR R3 (R1 fix verification — full analysis)
+
+**Date:** 2026-03-03
+**Files Reviewed:** 11 files changed in R1 fix commit
+**Result:** 0C / 1H / 3M / 5L — FAIL (1H must fix before merge)
+
 ### HIGH
 
-1. **H1: Missing UPDATE event in useFindingsSubscription** — only INSERT+DELETE. Accept/reject won't sync via Realtime.
-2. **H2: languagePairConfigs JOIN missing targetLang** — wrong l2ConfidenceMin for multi-target projects.
-3. **H3: Unsafe `as unknown as Finding` cast** — ReviewPageClient:45. Partial data stored as full Finding type.
-4. **H4: Duplicated severity sort + bare `Record<string, number>`** — server action + client both have same sort, bare string key.
-5. **H5: `findings.status: string` in FileReviewData** — Should be `FindingStatus` union (anti-pattern #3).
+1. **H1: INSERT batch buffer race condition with DELETE** — queueMicrotask defers flush; DELETE fires sync between buffer + flush; flush re-adds deleted finding. Fix: track `deletedIds` Set in buffer, filter before flush.
 
 ### MED
 
-1. **M1: Duplicated `useReducedMotion`** — sync (FindingListItem) vs reactive (ScoreBadge). Extract shared hook.
-2. **M2: Map identity → useMemo re-sort every insert** — O(n log n) per Realtime event.
-3. **M3: severityCounts no guard for unknown severity** — phantom key breaks Total display.
-4. **M4: L1L2L3 same badge as L1L2** — both "AI Screened".
-5. **M5: findingRows cast bypasses severity validation** — Drizzle varchar → union without runtime check.
-6. **M6: Realtime payload cast without validation** — findings subscription casts severity/status/layer without validator.
-7. **M7: console.warn in E2E cleanup** — acceptable for test code.
-8. **M8: file.status cast without DbFileStatus validation** — same pattern as M5.
+1. **M1: FileReviewData.findings[].status still `string`** — R1 H5 not fully fixed. Should be `FindingStatus`
+2. **M2: mapRowToFinding casts severity/status/layer without runtime validation** — inconsistent with use-score-subscription.ts which has `isValidScoreStatus()`
+3. **M3: projectId missing from useEffect deps** — ReviewPageClient line 66
 
 ### LOW
 
-1. processingMode cast without validation
-2. layerCompleted cast without validation
-3. isNew prop never true — fade-in animation dead code
-4. No Zod input validation for UUID params
-5. Default score object uses cast instead of type annotation
+1. No test for UPDATE handler (R1 H1 fix untested)
+2. DELETE test uses inline 23-line object instead of buildFinding() factory
+3. useReducedMotion doesn't listen for media query changes (acceptable for animation)
+4. matchMedia mock in FindingListItem.test.tsx leaks across tests (last test, no impact)
+5. eslint-disable for createDrizzleMock any cast (global type declaration missing)
 
 ## Patterns Confirmed (Both Rounds)
 
