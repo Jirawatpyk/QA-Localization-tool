@@ -17,7 +17,7 @@ type ScoreResult = {
   criticalCount: number
   majorCount: number
   minorCount: number
-  status: 'calculated' | 'na' | 'auto_passed'
+  status: 'calculated' | 'na' | 'auto_passed' | 'partial'
   autoPassRationale: string | null
 }
 

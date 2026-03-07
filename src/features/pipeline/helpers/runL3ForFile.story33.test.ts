@@ -36,6 +36,7 @@ vi.mock('ai', () => modules.ai)
 vi.mock('@/lib/ai/client', () => modules.aiClient)
 vi.mock('@/lib/ai/costs', () => modules.aiCosts)
 vi.mock('@/lib/ai/errors', () => modules.aiErrors)
+vi.mock('@/lib/ai/fallbackRunner', () => modules.aiFallbackRunner)
 vi.mock('@/lib/ai/budget', () => modules.aiBudget)
 vi.mock('@/lib/ai/types', () => modules.aiTypes)
 vi.mock('@/lib/ai/providers', () => modules.aiProviders)
@@ -195,6 +196,7 @@ describe('runL3ForFile — Story 3.3: Selective Filtering & Context', () => {
     dbState.callIndex = 0
     dbState.returnValues = []
     dbState.setCaptures = []
+    dbState.throwAtCallIndex = null
     mockGenerateText.mockResolvedValue(buildL3Response())
     mockCheckTenantBudget.mockResolvedValue(BUDGET_HAS_QUOTA)
     mockCheckProjectBudget.mockResolvedValue(BUDGET_HAS_QUOTA)
@@ -785,7 +787,7 @@ describe('runL3ForFile — Story 3.3: Selective Filtering & Context', () => {
       aiConfidence: 65,
     }
 
-    // L3 confirms accuracy, and separately has false_positive_review on fluency
+    // L3 confirms both accuracy and fluency independently (no false_positive_review conflict)
     mockGenerateText.mockResolvedValue(
       buildL3Response([
         {
@@ -796,9 +798,9 @@ describe('runL3ForFile — Story 3.3: Selective Filtering & Context', () => {
         },
         {
           segmentId: segId,
-          category: 'false_positive_review',
-          description: 'Fluency is acceptable',
-          rationale: 'Natural in colloquial Thai',
+          category: 'fluency',
+          description: 'Confirmed awkward phrasing',
+          rationale: 'Unnatural sentence structure',
         },
       ]),
     )
@@ -817,14 +819,10 @@ describe('runL3ForFile — Story 3.3: Selective Filtering & Context', () => {
       tenantId: VALID_TENANT_ID,
     })
 
-    // accuracy finding should be boosted: 70 * 1.1 = 77
+    // accuracy finding should be boosted: min(100, round(70 * 1.1)) = 77
     expect(dbState.setCaptures).toContainEqual(expect.objectContaining({ aiConfidence: 77 }))
-    // fluency finding should have [L3 Disagrees] marker
-    expect(dbState.setCaptures).toContainEqual(
-      expect.objectContaining({
-        description: expect.stringContaining('[L3 Disagrees]'),
-      }),
-    )
+    // fluency finding should be boosted: min(100, round(65 * 1.1)) = 72
+    expect(dbState.setCaptures).toContainEqual(expect.objectContaining({ aiConfidence: 72 }))
   })
 
   // ── AC7: languagePair wiring ──
@@ -858,6 +856,86 @@ describe('runL3ForFile — Story 3.3: Selective Filtering & Context', () => {
     )
   })
 
+  // ── AC: Error handling & validation ──
+
+  it('[P1] should drop L3 findings with invalid segmentId (not in file segments)', async () => {
+    const segId = faker.string.uuid()
+    const seg = buildSegmentRow({ id: segId, segmentNumber: 1 })
+
+    // L3 returns a finding with a segmentId that doesn't exist in the file
+    const bogusSegId = faker.string.uuid()
+    mockGenerateText.mockResolvedValue(
+      buildL3Response([
+        {
+          segmentId: bogusSegId,
+          category: 'accuracy',
+          description: 'Finding for non-existent segment',
+          rationale: 'Should be dropped',
+        },
+      ]),
+    )
+
+    dbState.returnValues = buildDbReturns({
+      segments: [seg],
+      l2Stats: [{ segmentId: segId, maxConfidence: 80, findingCount: 1 }],
+      rest: [[], []],
+    })
+
+    const { runL3ForFile } = await import('./runL3ForFile')
+    const result = await runL3ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    // Finding with bogus segmentId should be dropped — zero findings saved
+    expect(result.findingCount).toBe(0)
+  })
+
+  it('[P1] should use fallback project context when project row not found', async () => {
+    const segId = faker.string.uuid()
+    const seg = buildSegmentRow({ id: segId, segmentNumber: 1, sourceLang: 'ja', targetLang: 'en' })
+
+    dbState.returnValues = buildDbReturns({
+      segments: [seg],
+      l2Stats: [{ segmentId: segId, maxConfidence: 80, findingCount: 1 }],
+      project: [], // No project found — triggers fallback
+    })
+
+    const { runL3ForFile } = await import('./runL3ForFile')
+    await runL3ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    // Should still call buildL3Prompt with fallback project
+    expect(mockBuildL3Prompt).toHaveBeenCalledTimes(1)
+    const promptInput = mockBuildL3Prompt.mock.calls[0]?.[0] as {
+      project: { name: string; processingMode: string }
+    }
+    expect(promptInput.project.name).toBe('Unknown')
+    expect(promptInput.project.processingMode).toBe('thorough')
+  })
+
+  it('[P1] should throw and set file status to failed on unexpected error', async () => {
+    // CAS update succeeds, then segments query throws
+    dbState.returnValues = [[mockFile]]
+    dbState.throwAtCallIndex = 1
+
+    const { runL3ForFile } = await import('./runL3ForFile')
+    await expect(
+      runL3ForFile({
+        fileId: VALID_FILE_ID,
+        projectId: VALID_PROJECT_ID,
+        tenantId: VALID_TENANT_ID,
+      }),
+    ).rejects.toThrow()
+
+    // File status should be set to 'failed'
+    expect(dbState.setCaptures).toContainEqual(expect.objectContaining({ status: 'failed' }))
+  })
+
   it('[P2] U29: should set languagePair to null when segments have no language info', async () => {
     const segId = faker.string.uuid()
     const seg = buildSegmentRow({
@@ -886,5 +964,559 @@ describe('runL3ForFile — Story 3.3: Selective Filtering & Context', () => {
         layer: 'L3',
       }),
     )
+  })
+
+  // ── TA: Coverage Gap Tests (FMA + Pre-mortem + Red/Blue + Boundary) ──
+
+  // Gap A: CAS guard rejection
+  it('[P1] TA-A: should throw NonRetriableError when CAS guard fails (file not l2_completed)', async () => {
+    dbState.returnValues = [[]] // CAS update returns empty array
+
+    const { runL3ForFile } = await import('./runL3ForFile')
+    await expect(
+      runL3ForFile({
+        fileId: VALID_FILE_ID,
+        projectId: VALID_PROJECT_ID,
+        tenantId: VALID_TENANT_ID,
+      }),
+    ).rejects.toThrow('File not in l2_completed state')
+    expect(mockGenerateText).not.toHaveBeenCalled()
+  })
+
+  // Gap B: Rate limit rejection
+  it('[P1] TA-B: should throw retriable error and rollback to failed when rate limit rejects', async () => {
+    dbState.returnValues = [[mockFile], []] // CAS + rollback
+    mockAiL3Limit.mockResolvedValue({ success: false, limit: 50, remaining: 0, reset: 0 })
+
+    const { runL3ForFile } = await import('./runL3ForFile')
+    await expect(
+      runL3ForFile({
+        fileId: VALID_FILE_ID,
+        projectId: VALID_PROJECT_ID,
+        tenantId: VALID_TENANT_ID,
+      }),
+    ).rejects.toThrow('queue full')
+    expect(mockGenerateText).not.toHaveBeenCalled()
+    expect(dbState.setCaptures).toContainEqual(expect.objectContaining({ status: 'failed' }))
+  })
+
+  // Gap C: Budget exhaustion
+  it('[P1] TA-C: should throw NonRetriableError when budget exhausted', async () => {
+    dbState.returnValues = [[mockFile], []] // CAS + rollback
+    mockCheckProjectBudget.mockResolvedValue({ hasQuota: false, remainingBudgetUsd: 0 })
+
+    const { runL3ForFile } = await import('./runL3ForFile')
+    await expect(
+      runL3ForFile({
+        fileId: VALID_FILE_ID,
+        projectId: VALID_PROJECT_ID,
+        tenantId: VALID_TENANT_ID,
+      }),
+    ).rejects.toThrow('AI quota exhausted')
+    expect(mockGenerateText).not.toHaveBeenCalled()
+  })
+
+  // Gap F: NonRetriableError in chunk rethrown (not partial failure)
+  it('[P1] TA-F: should rethrow NonRetriableError from chunk processing (not partial failure)', async () => {
+    const segId = faker.string.uuid()
+    const seg = buildSegmentRow({ id: segId, segmentNumber: 1 })
+    dbState.returnValues = buildDbReturns({
+      segments: [seg],
+      l2Stats: [{ segmentId: segId, maxConfidence: 80, findingCount: 1 }],
+      rest: [[], []],
+    })
+    const { NonRetriableError: NRE } = await import('inngest')
+    mockGenerateText.mockRejectedValue(new NRE('Schema validation failed'))
+
+    const { runL3ForFile } = await import('./runL3ForFile')
+    await expect(
+      runL3ForFile({
+        fileId: VALID_FILE_ID,
+        projectId: VALID_PROJECT_ID,
+        tenantId: VALID_TENANT_ID,
+      }),
+    ).rejects.toThrow('Schema validation failed')
+  })
+
+  // Gap G: rate_limit classified error in chunk rethrown
+  it('[P1] TA-G: should rethrow rate_limit classified error from chunk processing', async () => {
+    const segId = faker.string.uuid()
+    const seg = buildSegmentRow({ id: segId, segmentNumber: 1 })
+    dbState.returnValues = buildDbReturns({
+      segments: [seg],
+      l2Stats: [{ segmentId: segId, maxConfidence: 80, findingCount: 1 }],
+      rest: [[], []],
+    })
+    mockGenerateText.mockRejectedValue(new Error('Rate limited by provider'))
+    mockClassifyAIError.mockReturnValue('rate_limit')
+
+    const { runL3ForFile } = await import('./runL3ForFile')
+    await expect(
+      runL3ForFile({
+        fileId: VALID_FILE_ID,
+        projectId: VALID_PROJECT_ID,
+        tenantId: VALID_TENANT_ID,
+      }),
+    ).rejects.toThrow('Rate limited by provider')
+  })
+
+  // Gap H+O: Non-retriable AI error → partial failure, status still l3_completed
+  it('[P1] TA-HO: should set partialFailure=true and status=l3_completed when chunk fails with unknown error', async () => {
+    const segId = faker.string.uuid()
+    const seg = buildSegmentRow({ id: segId, segmentNumber: 1 })
+    dbState.returnValues = buildDbReturns({
+      segments: [seg],
+      l2Stats: [{ segmentId: segId, maxConfidence: 80, findingCount: 1 }],
+      rest: [[], []],
+    })
+    mockGenerateText.mockRejectedValue(new Error('Content filter triggered'))
+    mockClassifyAIError.mockReturnValue('unknown')
+
+    const { runL3ForFile } = await import('./runL3ForFile')
+    const result = await runL3ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    expect(result.findingCount).toBe(0)
+    expect(result.partialFailure).toBe(true)
+    expect(result.chunksFailed).toBe(1)
+    expect(result.chunksSucceeded).toBe(0)
+    expect(dbState.setCaptures).toContainEqual(expect.objectContaining({ status: 'l3_completed' }))
+  })
+
+  // Gap Q: Both confirm + contradict on same L2 — contradict takes priority
+  it('[P1] TA-Q: should skip confirm and only contradict when L3 returns both for same segment', async () => {
+    const segId = faker.string.uuid()
+    const seg = buildSegmentRow({ id: segId, segmentNumber: 1 })
+    const l2FindingId = faker.string.uuid()
+    const l2Finding = {
+      id: l2FindingId,
+      segmentId: segId,
+      detectedByLayer: 'L2',
+      category: 'accuracy',
+      severity: 'major',
+      description: 'Mistranslation detected',
+      aiConfidence: 80,
+    }
+
+    mockGenerateText.mockResolvedValue(
+      buildL3Response([
+        {
+          segmentId: segId,
+          category: 'accuracy',
+          description: 'Confirmed issue',
+          rationale: 'Translation diverges from source',
+        },
+        {
+          segmentId: segId,
+          category: 'false_positive_review',
+          description: 'Actually acceptable in context',
+          rationale: 'Colloquial usage is valid',
+        },
+      ]),
+    )
+
+    dbState.returnValues = buildDbReturns({
+      segments: [seg],
+      priorFindings: [l2Finding],
+      l2Stats: [{ segmentId: segId, maxConfidence: 80, findingCount: 1 }],
+      rest: [[], [], [], [], []],
+    })
+
+    const { runL3ForFile } = await import('./runL3ForFile')
+    await runL3ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    // Contradict takes priority: [L3 Disagrees] marker applied
+    expect(dbState.setCaptures).toContainEqual(
+      expect.objectContaining({ description: expect.stringContaining('[L3 Disagrees]') }),
+    )
+    // Confirm skipped: no aiConfidence boost should occur
+    const boostCaptures = dbState.setCaptures.filter(
+      (c: unknown) => 'aiConfidence' in (c as Record<string, unknown>),
+    )
+    expect(boostCaptures).toHaveLength(0)
+  })
+
+  // Gap D: Null segmentId in l2Stats filtered out
+  it('[P2] TA-D: should filter out null segmentId from l2Stats (not crash or include)', async () => {
+    const segId = faker.string.uuid()
+    const seg = buildSegmentRow({ id: segId, segmentNumber: 1 })
+
+    dbState.returnValues = buildDbReturns({
+      segments: [seg],
+      l2Stats: [
+        { segmentId: null, maxConfidence: 90, findingCount: 1 },
+        { segmentId: segId, maxConfidence: 80, findingCount: 1 },
+      ],
+    })
+
+    const { runL3ForFile } = await import('./runL3ForFile')
+    await runL3ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    // Should still process — null segmentId row filtered, valid row used
+    expect(mockGenerateText).toHaveBeenCalledTimes(1)
+  })
+
+  // Gap I+J+U+V: Confidence clamping boundaries
+  it('[P2] TA-IJUV: should clamp L3 finding confidence: -5 to 0, 150 to 100 (not dropped)', async () => {
+    const segId = faker.string.uuid()
+    const seg = buildSegmentRow({ id: segId, segmentNumber: 1 })
+    dbState.valuesCaptures = []
+
+    mockGenerateText.mockResolvedValue(
+      buildL3Response([
+        {
+          segmentId: segId,
+          category: 'accuracy',
+          confidence: -5,
+          description: 'Negative',
+          rationale: 'Test',
+        },
+        {
+          segmentId: segId,
+          category: 'fluency',
+          confidence: 150,
+          description: 'Over max',
+          rationale: 'Test',
+        },
+      ]),
+    )
+
+    dbState.returnValues = buildDbReturns({
+      segments: [seg],
+      l2Stats: [{ segmentId: segId, maxConfidence: 80, findingCount: 1 }],
+      rest: [[], []],
+    })
+
+    const { runL3ForFile } = await import('./runL3ForFile')
+    const result = await runL3ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    // Findings should be included (clamped), not dropped
+    expect(result.findingCount).toBe(2)
+
+    // Verify clamped values via INSERT batch
+    const batch = dbState.valuesCaptures[0] as { aiConfidence: number }[]
+    expect(batch).toBeDefined()
+    const confidences = batch.map((f) => f.aiConfidence).sort((a, b) => a - b)
+    expect(confidences).toEqual([0, 100])
+  })
+
+  // Gap K: null aiConfidence confirm boost = 0
+  it('[P2] TA-K: should produce boost=0 when L2 aiConfidence is null (null ?? 0 * 1.1 = 0)', async () => {
+    const segId = faker.string.uuid()
+    const seg = buildSegmentRow({ id: segId, segmentNumber: 1 })
+    const l2Finding = {
+      id: faker.string.uuid(),
+      segmentId: segId,
+      detectedByLayer: 'L2',
+      category: 'accuracy',
+      severity: 'major',
+      description: 'Issue found',
+      aiConfidence: null,
+    }
+
+    mockGenerateText.mockResolvedValue(
+      buildL3Response([
+        {
+          segmentId: segId,
+          category: 'accuracy',
+          description: 'Confirmed',
+          rationale: 'Clearly wrong',
+        },
+      ]),
+    )
+
+    dbState.returnValues = buildDbReturns({
+      segments: [seg],
+      priorFindings: [l2Finding],
+      l2Stats: [{ segmentId: segId, maxConfidence: null, findingCount: 1 }],
+      rest: [[], [], [], []],
+    })
+
+    const { runL3ForFile } = await import('./runL3ForFile')
+    await runL3ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    // null aiConfidence → 0 via ?? → 0 * 1.1 = 0
+    expect(dbState.setCaptures).toContainEqual(expect.objectContaining({ aiConfidence: 0 }))
+    expect(dbState.setCaptures).toContainEqual(
+      expect.objectContaining({ description: expect.stringContaining('[L3 Confirmed]') }),
+    )
+  })
+
+  // Gap L: Idempotent [L3 Disagrees] re-run
+  it('[P2] TA-L: should NOT double-append [L3 Disagrees] on idempotent re-run', async () => {
+    const segId = faker.string.uuid()
+    const seg = buildSegmentRow({ id: segId, segmentNumber: 1 })
+    const l2Finding = {
+      id: faker.string.uuid(),
+      segmentId: segId,
+      detectedByLayer: 'L2',
+      category: 'accuracy',
+      severity: 'major',
+      description: 'Mistranslation\n\n[L3 Disagrees]',
+      aiConfidence: 80,
+    }
+
+    mockGenerateText.mockResolvedValue(
+      buildL3Response([
+        {
+          segmentId: segId,
+          category: 'false_positive_review',
+          description: 'Still disagrees',
+          rationale: 'Valid in context',
+        },
+      ]),
+    )
+
+    dbState.returnValues = buildDbReturns({
+      segments: [seg],
+      priorFindings: [l2Finding],
+      l2Stats: [{ segmentId: segId, maxConfidence: 80, findingCount: 1 }],
+      rest: [[], [], [], []],
+    })
+
+    const { runL3ForFile } = await import('./runL3ForFile')
+    await runL3ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    // Idempotent: no contradict update should occur (marker already present)
+    const contradictUpdates = dbState.setCaptures.filter((c: unknown) => {
+      const obj = c as Record<string, unknown>
+      return typeof obj.description === 'string' && obj.description.includes('[L3 Disagrees]')
+    })
+    expect(contradictUpdates).toHaveLength(0)
+  })
+
+  // Gap E+T: Single segment file surrounding context
+  it('[P2] TA-ET: should provide prev=[] next=[] for single-segment file', async () => {
+    const segId = faker.string.uuid()
+    const seg = buildSegmentRow({ id: segId, segmentNumber: 1 })
+
+    dbState.returnValues = buildDbReturns({
+      segments: [seg],
+      l2Stats: [{ segmentId: segId, maxConfidence: 80, findingCount: 1 }],
+    })
+
+    const { runL3ForFile } = await import('./runL3ForFile')
+    await runL3ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    const promptInput = mockBuildL3Prompt.mock.calls[0]?.[0] as {
+      surroundingContext: { previous: unknown[]; current: { id: string }; next: unknown[] }[]
+    }
+    const ctx = promptInput.surroundingContext[0]!
+    expect(ctx.previous).toHaveLength(0)
+    expect(ctx.current.id).toBe(segId)
+    expect(ctx.next).toHaveLength(0)
+  })
+
+  // Gap P: find() first match only
+  it('[P2] TA-P: should only confirm first L2 match when multiple L2 findings share segment+category', async () => {
+    const segId = faker.string.uuid()
+    const seg = buildSegmentRow({ id: segId, segmentNumber: 1 })
+
+    const l2Finding1 = {
+      id: faker.string.uuid(),
+      segmentId: segId,
+      detectedByLayer: 'L2',
+      category: 'accuracy',
+      severity: 'major',
+      description: 'First accuracy finding',
+      aiConfidence: 70,
+    }
+    const l2Finding2 = {
+      id: faker.string.uuid(),
+      segmentId: segId,
+      detectedByLayer: 'L2',
+      category: 'accuracy',
+      severity: 'minor',
+      description: 'Second accuracy finding',
+      aiConfidence: 60,
+    }
+
+    mockGenerateText.mockResolvedValue(
+      buildL3Response([
+        {
+          segmentId: segId,
+          category: 'accuracy',
+          description: 'Confirmed accuracy',
+          rationale: 'Clearly wrong',
+        },
+      ]),
+    )
+
+    dbState.returnValues = buildDbReturns({
+      segments: [seg],
+      priorFindings: [l2Finding1, l2Finding2],
+      l2Stats: [{ segmentId: segId, maxConfidence: 70, findingCount: 2 }],
+      rest: [[], [], [], []],
+    })
+
+    const { runL3ForFile } = await import('./runL3ForFile')
+    await runL3ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    // Only first L2 finding (70) gets boosted: 70 * 1.1 = 77
+    const boostCaptures = dbState.setCaptures.filter(
+      (c: unknown) => 'aiConfidence' in (c as Record<string, unknown>),
+    )
+    expect(boostCaptures).toHaveLength(1)
+    expect(boostCaptures[0]).toEqual(expect.objectContaining({ aiConfidence: 77 }))
+  })
+
+  // Gap S: Position N-1 surrounding context
+  it('[P2] TA-S: should provide 2 previous + 1 next for second-to-last segment (position N-1)', async () => {
+    const segIds = Array.from({ length: 5 }, () => faker.string.uuid())
+    const segs = segIds.map((id, i) =>
+      buildSegmentRow({ id, segmentNumber: i + 1, sourceText: `Segment ${i + 1}` }),
+    )
+
+    dbState.returnValues = buildDbReturns({
+      segments: segs,
+      l2Stats: [{ segmentId: segIds[3]!, maxConfidence: 80, findingCount: 1 }],
+    })
+
+    const { runL3ForFile } = await import('./runL3ForFile')
+    await runL3ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    const promptInput = mockBuildL3Prompt.mock.calls[0]?.[0] as {
+      surroundingContext: {
+        previous: { id: string }[]
+        current: { id: string }
+        next: { id: string }[]
+      }[]
+    }
+    const ctx = promptInput.surroundingContext[0]!
+    expect(ctx.previous).toHaveLength(2)
+    expect(ctx.previous.map((s) => s.id)).toEqual([segIds[1]!, segIds[2]!])
+    expect(ctx.current.id).toBe(segIds[3]!)
+    expect(ctx.next).toHaveLength(1)
+    expect(ctx.next[0]!.id).toBe(segIds[4]!)
+  })
+
+  // Gap W: Boost cap exact boundary
+  it('[P2] TA-W: should cap boost at exact boundary: aiConfidence=91 to 100, 90 to 99', async () => {
+    const segId = faker.string.uuid()
+    const seg = buildSegmentRow({ id: segId, segmentNumber: 1 })
+
+    const l2Finding90 = {
+      id: faker.string.uuid(),
+      segmentId: segId,
+      detectedByLayer: 'L2',
+      category: 'accuracy',
+      severity: 'major',
+      description: 'Issue at 90',
+      aiConfidence: 90,
+    }
+    const l2Finding91 = {
+      id: faker.string.uuid(),
+      segmentId: segId,
+      detectedByLayer: 'L2',
+      category: 'fluency',
+      severity: 'minor',
+      description: 'Issue at 91',
+      aiConfidence: 91,
+    }
+
+    mockGenerateText.mockResolvedValue(
+      buildL3Response([
+        { segmentId: segId, category: 'accuracy', description: 'Confirmed 90', rationale: 'Test' },
+        { segmentId: segId, category: 'fluency', description: 'Confirmed 91', rationale: 'Test' },
+      ]),
+    )
+
+    dbState.returnValues = buildDbReturns({
+      segments: [seg],
+      priorFindings: [l2Finding90, l2Finding91],
+      l2Stats: [{ segmentId: segId, maxConfidence: 91, findingCount: 2 }],
+      rest: [[], [], [], [], []],
+    })
+
+    const { runL3ForFile } = await import('./runL3ForFile')
+    await runL3ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    // 90 * 1.1 = 99 (below cap)
+    expect(dbState.setCaptures).toContainEqual(expect.objectContaining({ aiConfidence: 99 }))
+    // 91 * 1.1 = 100.1 → Math.round = 100 → min(100, 100) = 100
+    expect(dbState.setCaptures).toContainEqual(expect.objectContaining({ aiConfidence: 100 }))
+  })
+
+  // Gap M+X: Zero L3 findings → skip confirm/contradict
+  it('[P2] TA-MX: should skip confirm/contradict when L3 produces zero findings', async () => {
+    const segId = faker.string.uuid()
+    const seg = buildSegmentRow({ id: segId, segmentNumber: 1 })
+    const l2Finding = {
+      id: faker.string.uuid(),
+      segmentId: segId,
+      detectedByLayer: 'L2',
+      category: 'accuracy',
+      severity: 'major',
+      description: 'L2 issue (should remain unchanged)',
+      aiConfidence: 75,
+    }
+
+    mockGenerateText.mockResolvedValue(buildL3Response([]))
+
+    dbState.returnValues = buildDbReturns({
+      segments: [seg],
+      priorFindings: [l2Finding],
+      l2Stats: [{ segmentId: segId, maxConfidence: 75, findingCount: 1 }],
+      rest: [[], []],
+    })
+
+    const { runL3ForFile } = await import('./runL3ForFile')
+    const result = await runL3ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    expect(result.findingCount).toBe(0)
+    // No confirm/contradict updates should have been made
+    const confirmContradictUpdates = dbState.setCaptures.filter((c: unknown) => {
+      const obj = c as Record<string, unknown>
+      return (
+        'aiConfidence' in obj ||
+        (typeof obj.description === 'string' &&
+          (obj.description.includes('[L3 Confirmed]') ||
+            obj.description.includes('[L3 Disagrees]')))
+      )
+    })
+    expect(confirmContradictUpdates).toHaveLength(0)
   })
 })

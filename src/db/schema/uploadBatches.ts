@@ -14,5 +14,6 @@ export const uploadBatches = pgTable('upload_batches', {
     .references(() => tenants.id, { onDelete: 'restrict' }),
   fileCount: integer('file_count').notNull(),
   createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })

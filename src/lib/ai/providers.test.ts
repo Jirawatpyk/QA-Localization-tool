@@ -263,4 +263,55 @@ describe('fallback chain with health check integration', () => {
       expect.any(String),
     )
   })
+
+  // Gap #9 [P1]: All providers unhealthy → returns original chain
+  it('[P1] should return original chain when all providers are unhealthy', async () => {
+    mockGenerateText.mockRejectedValue(new Error('connection refused'))
+
+    const { buildFallbackChain, resolveHealthyModel } = await import('./providers')
+    const chain = buildFallbackChain('L2', null)
+    const resolved = await resolveHealthyModel(chain)
+
+    // Returns original chain as last resort
+    expect(resolved.primary).toBe(chain.primary)
+    expect(resolved.fallbacks).toEqual(chain.fallbacks)
+    // Should log error-level when all fail
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ primary: chain.primary }),
+      expect.stringContaining('All providers unhealthy'),
+    )
+  })
+})
+
+// ── TA: getModelForLayerWithFallback gap tests ──
+
+describe('getModelForLayerWithFallback — TA gap tests', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    dbState.callIndex = 0
+    dbState.returnValues = []
+  })
+
+  // Gap #10 [P1]: Project not found → falls back to system defaults
+  it('[P1] should fall back to system defaults when project is not found', async () => {
+    dbState.returnValues = [[]] // empty result
+
+    const { getModelForLayerWithFallback } = await import('./providers')
+    const chain = await getModelForLayerWithFallback('L2', VALID_PROJECT_ID, VALID_TENANT_ID)
+
+    expect(chain.primary).toBe('gpt-4o-mini')
+    expect(chain.fallbacks).toContain('gemini-2.0-flash')
+  })
+
+  // Gap #11 [P2]: L3 pinned model resolution
+  it('[P2] should read l3PinnedModel for L3 layer', async () => {
+    dbState.returnValues = [[{ l2PinnedModel: null, l3PinnedModel: 'gpt-4o' }]]
+
+    const { getModelForLayerWithFallback } = await import('./providers')
+    const chain = await getModelForLayerWithFallback('L3', VALID_PROJECT_ID, VALID_TENANT_ID)
+
+    expect(chain.primary).toBe('gpt-4o')
+    // System default should be in fallbacks when pinned overrides it
+    expect(chain.fallbacks).toContain('claude-sonnet-4-5-20250929')
+  })
 })

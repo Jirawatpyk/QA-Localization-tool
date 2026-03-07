@@ -26,6 +26,8 @@ type ScoreFileInput = {
   layerFilter?: DetectedByLayer | undefined
   /** Override persisted layerCompleted value. Used by pipeline after L2/L3 completes. */
   layerCompleted?: LayerCompleted | undefined
+  /** Set score status to 'partial' when pipeline failed after L1 (AC5). Skips auto-pass. */
+  scoreStatus?: 'partial' | undefined
 }
 
 type ScoreFileResult = {
@@ -37,7 +39,7 @@ type ScoreFileResult = {
   criticalCount: number
   majorCount: number
   minorCount: number
-  status: 'calculated' | 'na' | 'auto_passed'
+  status: 'calculated' | 'na' | 'auto_passed' | 'partial'
   autoPassRationale: string | null
 }
 
@@ -55,6 +57,7 @@ export async function scoreFile({
   userId,
   layerFilter,
   layerCompleted: layerCompletedOverride,
+  scoreStatus,
 }: ScoreFileInput): Promise<ScoreFileResult> {
   // Load all segments for word count SUM
   // Include ALL segments (even ApprovedSignOff) per MQM standard and Xbench parity
@@ -112,19 +115,25 @@ export async function scoreFile({
     penaltyWeights,
   )
 
-  // Check auto-pass eligibility
-  const autoPassResult = await checkAutoPass({
-    mqmScore: scoreResult.mqmScore,
-    criticalCount: scoreResult.criticalCount,
-    projectId,
-    tenantId,
-    sourceLang,
-    targetLang,
-  })
-
   // Determine final status
-  const status: 'na' | 'auto_passed' | 'calculated' =
-    scoreResult.status === 'na' ? 'na' : autoPassResult.eligible ? 'auto_passed' : 'calculated'
+  // When scoreStatus='partial' (AI pipeline failed), skip auto-pass — incomplete data
+  let status: 'na' | 'auto_passed' | 'calculated' | 'partial'
+  let autoPassResult: Awaited<ReturnType<typeof checkAutoPass>> | null = null
+
+  if (scoreStatus === 'partial') {
+    status = 'partial'
+  } else {
+    autoPassResult = await checkAutoPass({
+      mqmScore: scoreResult.mqmScore,
+      criticalCount: scoreResult.criticalCount,
+      projectId,
+      tenantId,
+      sourceLang,
+      targetLang,
+    })
+    status =
+      scoreResult.status === 'na' ? 'na' : autoPassResult.eligible ? 'auto_passed' : 'calculated'
+  }
 
   // Persist in transaction: load previous score → delete → insert (idempotent)
   const { newScore, previousScore } = await db.transaction(async (tx) => {
@@ -159,7 +168,8 @@ export async function scoreFile({
         status,
         // Only store rationale when file actually auto-passed (H2: prevents non-null rationale
         // being persisted when status='na' overrides auto-pass)
-        autoPassRationale: status === 'auto_passed' ? autoPassResult.rationale : null,
+        autoPassRationale:
+          status === 'auto_passed' && autoPassResult ? autoPassResult.rationale : null,
         calculatedAt: new Date(),
       })
       .returning()
@@ -190,7 +200,7 @@ export async function scoreFile({
   // Language pair graduation notification (file 51 for new pair)
   // Fires when fileCount === 50 (50 already scored = this is file 51, first eligible)
   // Non-fatal: wrap at call site so outer errors never suppress scoring result
-  if (autoPassResult.isNewPair && autoPassResult.fileCount === NEW_PAIR_FILE_THRESHOLD) {
+  if (autoPassResult?.isNewPair && autoPassResult.fileCount === NEW_PAIR_FILE_THRESHOLD) {
     try {
       await createGraduationNotification({
         tenantId,
@@ -215,7 +225,7 @@ export async function scoreFile({
     criticalCount: newScore.criticalCount,
     majorCount: newScore.majorCount,
     minorCount: newScore.minorCount,
-    status: newScore.status as 'calculated' | 'na' | 'auto_passed',
+    status: newScore.status as 'calculated' | 'na' | 'auto_passed' | 'partial',
     autoPassRationale: newScore.autoPassRationale ?? null,
   }
 }

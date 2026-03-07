@@ -45,6 +45,7 @@ export type ScoreBadgeState =
   | 'rule-only'
   | 'ai-screened'
   | 'deep-analyzed'
+  | 'partial'
 export type ScoreBadgeSize = 'sm' | 'md' | 'lg'
 
 export type Finding = {

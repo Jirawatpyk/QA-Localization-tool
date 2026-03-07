@@ -40,6 +40,7 @@ vi.mock('ai', () => modules.ai)
 vi.mock('@/lib/ai/client', () => modules.aiClient)
 vi.mock('@/lib/ai/costs', () => modules.aiCosts)
 vi.mock('@/lib/ai/errors', () => modules.aiErrors)
+vi.mock('@/lib/ai/fallbackRunner', () => modules.aiFallbackRunner)
 vi.mock('@/lib/ai/budget', () => modules.aiBudget)
 vi.mock('@/lib/ai/types', () => modules.aiTypes)
 vi.mock('@/lib/ai/providers', () => modules.aiProviders)
@@ -1045,5 +1046,167 @@ describe('runL2ForFile — Story 3.2a: Cost Tracking + languagePair (AC4)', () =
 
     // Should not crash even with empty language info
     expect(result).toBeDefined()
+  })
+})
+
+// ── Test Automation Expansion (TA) — Coverage Gaps ──
+
+describe('runL2ForFile — TA: Coverage Gap Tests', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    dbState.callIndex = 0
+    dbState.returnValues = []
+    dbState.setCaptures = []
+    mockGenerateText.mockResolvedValue(buildL2Response())
+    mockCheckProjectBudget.mockResolvedValue(BUDGET_HAS_QUOTA)
+    mockAiL2Limit.mockResolvedValue({ success: true, limit: 100, remaining: 99, reset: 0 })
+    mockClassifyAIError.mockReturnValue('unknown')
+    mockWriteAuditLog.mockResolvedValue(undefined)
+    mockBuildL2Prompt.mockReturnValue('mocked L2 prompt')
+    mockAggregateUsage.mockReturnValue({
+      inputTokens: 100,
+      outputTokens: 50,
+      estimatedCostUsd: 0.001,
+    })
+    mockGetModelForLayerWithFallback.mockResolvedValue({
+      primary: 'gpt-4o-mini',
+      fallbacks: [],
+    })
+  })
+
+  // Gap #1 [P1]: Project not found → NonRetriableError
+  it('[P1] should throw NonRetriableError when project is not found', async () => {
+    // CAS(0), segments(1), l1(2), glossary(3), taxonomy(4), project(5)=[], rollback(6)
+    dbState.returnValues = [[mockFile], [buildSegmentRow()], [], [], [], [], []]
+
+    const { runL2ForFile } = await import('./runL2ForFile')
+
+    await expect(
+      runL2ForFile({
+        fileId: VALID_FILE_ID,
+        projectId: VALID_PROJECT_ID,
+        tenantId: VALID_TENANT_ID,
+      }),
+    ).rejects.toThrow(/Project not found/)
+
+    // Should attempt rollback to 'failed'
+    expect(dbState.setCaptures).toContainEqual(expect.objectContaining({ status: 'failed' }))
+  })
+
+  // Gap #4 [P1]: Timeout error re-throw (retriable like rate_limit)
+  it('[P1] should re-throw timeout errors for Inngest retry', async () => {
+    const timeoutError = new Error('Request timed out')
+    mockGenerateText.mockRejectedValue(timeoutError)
+    mockClassifyAIError.mockReturnValue('timeout')
+
+    // CAS(0), segments(1), l1(2), glossary(3), taxonomy(4), project(5)
+    dbState.returnValues = [[mockFile], [buildSegmentRow()], [], [], [], [mockProject]]
+
+    const { runL2ForFile } = await import('./runL2ForFile')
+
+    await expect(
+      runL2ForFile({
+        fileId: VALID_FILE_ID,
+        projectId: VALID_PROJECT_ID,
+        tenantId: VALID_TENANT_ID,
+      }),
+    ).rejects.toThrow('Request timed out')
+
+    // AI should have been called once before timeout
+    expect(mockGenerateText).toHaveBeenCalledTimes(1)
+  })
+
+  // Gap #2 [P2]: No segments (empty file, no AI calls)
+  it('[P2] should handle zero segments gracefully (empty file, no AI calls)', async () => {
+    // CAS(0), segments(1)=[], l1(2), glossary(3), taxonomy(4), project(5), txDelete(6), statusUpdate(7)
+    dbState.returnValues = [[mockFile], [], [], [], [], [mockProject], [], []]
+
+    const { runL2ForFile } = await import('./runL2ForFile')
+    const result = await runL2ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    expect(result.findingCount).toBe(0)
+    expect(result.chunksTotal).toBe(0)
+    expect(result.chunksSucceeded).toBe(0)
+    expect(result.chunksFailed).toBe(0)
+    expect(result.partialFailure).toBe(false)
+    expect(mockGenerateText).not.toHaveBeenCalled()
+  })
+
+  // Gap #3 [P2]: Multiple chunks all succeed
+  it('[P2] should process multiple chunks successfully and aggregate findings', async () => {
+    const seg1Id = faker.string.uuid()
+    const seg2Id = faker.string.uuid()
+    const seg1 = buildSegmentRow({
+      id: seg1Id,
+      sourceText: 'a'.repeat(20000),
+      targetText: 'b'.repeat(11000),
+    })
+    const seg2 = buildSegmentRow({
+      id: seg2Id,
+      sourceText: 'c'.repeat(100),
+      targetText: 'd'.repeat(100),
+    })
+
+    mockGenerateText
+      .mockResolvedValueOnce(buildL2Response([{ segmentId: seg1Id }]))
+      .mockResolvedValueOnce(buildL2Response([{ segmentId: seg2Id }]))
+
+    // CAS(0), segments(1), l1(2), glossary(3), taxonomy(4), project(5), txDelete(6), txInsert(7), statusUpdate(8)
+    dbState.returnValues = [[mockFile], [seg1, seg2], [], [], [], [mockProject], [], [], []]
+
+    const { runL2ForFile } = await import('./runL2ForFile')
+    const result = await runL2ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    expect(result.chunksTotal).toBe(2)
+    expect(result.chunksSucceeded).toBe(2)
+    expect(result.chunksFailed).toBe(0)
+    expect(result.partialFailure).toBe(false)
+    expect(result.findingCount).toBe(2)
+    expect(mockGenerateText).toHaveBeenCalledTimes(2)
+  })
+
+  // Gap #5 [P2]: All chunks fail (non-retriable)
+  it('[P2] should complete with zero findings when all chunks fail (non-retriable)', async () => {
+    const seg1 = buildSegmentRow({
+      id: faker.string.uuid(),
+      sourceText: 'a'.repeat(20000),
+      targetText: 'b'.repeat(11000),
+    })
+    const seg2 = buildSegmentRow({
+      id: faker.string.uuid(),
+      sourceText: 'c'.repeat(100),
+      targetText: 'd'.repeat(100),
+    })
+
+    mockGenerateText
+      .mockRejectedValueOnce(new Error('schema mismatch'))
+      .mockRejectedValueOnce(new Error('content filter'))
+    mockClassifyAIError.mockReturnValue('schema_mismatch')
+
+    // CAS(0), segments(1), l1(2), glossary(3), taxonomy(4), project(5), txDelete(6), statusUpdate(7)
+    dbState.returnValues = [[mockFile], [seg1, seg2], [], [], [], [mockProject], [], []]
+
+    const { runL2ForFile } = await import('./runL2ForFile')
+    const result = await runL2ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    expect(result.chunksTotal).toBe(2)
+    expect(result.chunksSucceeded).toBe(0)
+    expect(result.chunksFailed).toBe(2)
+    expect(result.partialFailure).toBe(true)
+    expect(result.findingCount).toBe(0)
+    // Failed chunks still logged
+    expect(mockLogAIUsage).toHaveBeenCalledTimes(2)
   })
 })

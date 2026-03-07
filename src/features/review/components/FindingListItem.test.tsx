@@ -31,6 +31,7 @@ function buildFindingForUI(overrides?: Record<string, unknown>) {
     sourceTextExcerpt: dbFinding.sourceTextExcerpt ?? null,
     targetTextExcerpt: dbFinding.targetTextExcerpt ?? null,
     suggestedFix: dbFinding.suggestedFix ?? null,
+    aiModel: null,
   }
 }
 
@@ -169,5 +170,55 @@ describe('FindingListItem', () => {
 
     fireEvent.click(toggleButton)
     expect(toggleButton.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  // ── TA: Coverage Gap Tests ──
+
+  it('[P1] should NOT render expand button when hasDetail=false (short desc + all null excerpts)', () => {
+    const finding = buildFindingForUI({
+      description: 'Short description',
+      sourceTextExcerpt: null,
+      targetTextExcerpt: null,
+      suggestedFix: null,
+    })
+
+    render(<FindingListItem finding={finding} />)
+
+    // No expand/collapse button when there's no detail to show
+    expect(screen.queryByRole('button', { name: /expand|detail|more|collapse/i })).toBeNull()
+    // Full description shown inline (not truncated)
+    const descriptionEl = screen.getByTestId('finding-description')
+    expect(descriptionEl.textContent).toBe('Short description')
+  })
+
+  it('[P2] should NOT truncate at exactly 100 chars (boundary) and should truncate at 101', () => {
+    // At exactly 100 chars → no truncation
+    const exact100 = 'B'.repeat(100)
+    const finding100 = buildFindingForUI({
+      description: exact100,
+      sourceTextExcerpt: null,
+      targetTextExcerpt: null,
+      suggestedFix: null,
+    })
+
+    const { unmount } = render(<FindingListItem finding={finding100} />)
+    const desc100 = screen.getByTestId('finding-description')
+    expect(desc100.textContent).toBe(exact100)
+    expect(desc100.textContent).not.toMatch(/\.{3}$/)
+    unmount()
+
+    // At 101 chars → truncation to 100 + '...'
+    const chars101 = 'C'.repeat(101)
+    const finding101 = buildFindingForUI({
+      description: chars101,
+      sourceTextExcerpt: null,
+      targetTextExcerpt: null,
+      suggestedFix: null,
+    })
+
+    render(<FindingListItem finding={finding101} />)
+    const desc101 = screen.getByTestId('finding-description')
+    expect(desc101.textContent?.length).toBeLessThanOrEqual(103)
+    expect(desc101.textContent).toMatch(/\.{3}$/)
   })
 })

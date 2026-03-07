@@ -28,6 +28,7 @@ function buildL3FindingForUI(overrides?: Record<string, unknown>) {
     sourceTextExcerpt: dbFinding.sourceTextExcerpt ?? null,
     targetTextExcerpt: dbFinding.targetTextExcerpt ?? null,
     suggestedFix: dbFinding.suggestedFix ?? null,
+    aiModel: null,
   }
 }
 

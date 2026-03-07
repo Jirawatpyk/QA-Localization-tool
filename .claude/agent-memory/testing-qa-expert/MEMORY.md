@@ -18,6 +18,18 @@ the transform-time error. Fix: create a stub `.ts` file at the path with minimal
 Stub approach is preferred over workaround mocks — establishes API contract early.
 Example: `src/lib/ai/providers.ts` stub created during Story 3.1 ATDD phase.
 
+### Story 3.4 ATDD RED Phase Summary (2026-03-07)
+
+10 test files, 101 skipped tests total. All parse cleanly with 0 errors.
+New stub files created to prevent Vite transform-time failures:
+
+- `src/lib/ai/fallbackRunner.ts` — exports `callWithFallback<T>` + `FallbackRunnerResult<T>`
+- `src/features/pipeline/actions/retryAiAnalysis.action.ts` — exports `retryAiAnalysis`
+- `src/features/pipeline/inngest/retryFailedLayers.ts` — exports `retryFailedLayers` (Object.assign) + `retryFailedLayersConfig`
+
+Key pattern: `ActionResult` type is at `@/types/actionResult` (NOT `@/types/action`).
+`callWithFallback` mock in retryAiAnalysis test: mock `@/lib/ai/fallbackRunner` separately from `createAIMock()`.
+
 ### Story 3.2a CR Notes (2026-03-01)
 
 - `logAIUsage()` in `runL2ForFile.ts` is fire-and-forget: `logAIUsage(record).catch(() => {})` — tests that call `expect(mockLogAIUsage).toHaveBeenCalledWith(...)` PASS because mock resolves synchronously. This is correct behavior.

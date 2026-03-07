@@ -20,6 +20,7 @@ const STATE_LABELS: Record<ScoreBadgeState, string> = {
   'rule-only': 'Rule-based',
   'ai-screened': 'AI Screened',
   'deep-analyzed': 'Deep Analyzed',
+  partial: 'Partial',
 }
 
 const STATE_CLASSES: Record<ScoreBadgeState, string> = {
@@ -31,6 +32,7 @@ const STATE_CLASSES: Record<ScoreBadgeState, string> = {
   'ai-screened': 'bg-status-ai-screened/10 text-status-ai-screened border-status-ai-screened/20',
   'deep-analyzed':
     'bg-status-deep-analyzed/10 text-status-deep-analyzed border-status-deep-analyzed/20',
+  partial: 'bg-status-partial/10 text-status-partial border-status-partial/20',
 }
 
 const MUTED_CLASSES = 'bg-muted text-muted-foreground border-muted'

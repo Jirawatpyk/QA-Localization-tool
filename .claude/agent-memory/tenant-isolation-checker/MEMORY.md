@@ -181,6 +181,33 @@ Key confirmed patterns:
 - 3x `revalidateTag('taxonomy', 'minutes')` two-argument calls (functional no-op second arg) — createMapping, deleteMapping, updateMapping, reorderMappings. Already in MEMORY.md from CI Fix Commits audit.
 - 1x `AddMappingDialog` missing `useEffect` reset on re-open (Guardrail #11 UX bug, zero security risk).
 
+### Story 3.4 Audit Results (AI Resilience, Fallback, Retry, Partial Results — 2026-03-07)
+
+**Result: 0C/1H/0M/0L — AT RISK. 1 HIGH finding requires fix.**
+
+Files: `retryAiAnalysis.action.ts`, `retryFailedLayers.ts`, `processFile.ts` (changed),
+`runL2ForFile.ts` (changed), `runL3ForFile.ts` (changed), `scoreFile.ts` (changed).
+
+HIGH finding — `retryAiAnalysis.action.ts` L73-87 + L121-131:
+
+The action queries `files` by `fileId + withTenant(tenantId)` (correct cross-tenant guard). It
+also queries `projects` by `projectId + withTenant(tenantId)` (correct cross-tenant guard). BUT
+it never validates that `file.projectId === projectId` (the projectId received from the client).
+A user within the same tenant could pass `fileId` from project A and `projectId` from project B
+(both in their tenant). The action would: (1) read project B's processingMode, (2) inject project
+B's ID into the Inngest event, (3) retryFailedLayers would run L2/L3 with project B's context for
+file A's segments. This is within-tenant cross-project data contamination.
+
+Fix: after loading `file`, add `if (file.projectId !== projectId) return { success: false, code: 'NOT_FOUND', ... }`
+
+All other patterns in this story confirmed PASS:
+
+- `retryFailedLayers.ts`: tenantId from event.data; withTenant() on every files/projects query;
+  all status reset UPDATEs scoped; onFailure SELECT+UPDATE both scoped. PASS.
+- `processFile.ts` new batch completion path: `withTenant(files.tenantId)` on SELECT + `withTenant(uploadBatches.tenantId)` on UPDATE (confirmed uploadBatches.tenantId column exists in schema). PASS.
+- `runL2ForFile.ts`, `runL3ForFile.ts`: no new Story 3.4 queries. Prior audit (3.2a/3.3) confirmed. PASS.
+- `scoreFile.ts` new partial path: scores SELECT/DELETE/INSERT all scoped; `createGraduationNotification()`: dedup SELECT + userRoles SELECT both use withTenant(); notifications INSERT sets tenantId in values. PASS.
+
 ### Pipeline & Scoring Full Deep-Dive Audit (2026-03-03)
 
 **Result: 0C/0H/0M/0L — SECURE (full pass, 23 files).**

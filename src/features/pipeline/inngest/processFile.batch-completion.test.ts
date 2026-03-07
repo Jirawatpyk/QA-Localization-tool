@@ -81,6 +81,7 @@ vi.mock('@/db/helpers/withTenant', () => ({
 vi.mock('drizzle-orm', () => ({
   and: vi.fn((...args: unknown[]) => args),
   eq: vi.fn((...args: unknown[]) => args),
+  isNull: vi.fn((...args: unknown[]) => args),
 }))
 
 vi.mock('@/db/schema/files', () => ({
@@ -90,6 +91,14 @@ vi.mock('@/db/schema/files', () => ({
     status: 'status',
     batchId: 'batch_id',
     projectId: 'project_id',
+  },
+}))
+
+vi.mock('@/db/schema/uploadBatches', () => ({
+  uploadBatches: {
+    id: 'id',
+    tenantId: 'tenant_id',
+    completedAt: 'completed_at',
   },
 }))
 
@@ -171,7 +180,11 @@ describe('processFile - batch completion step', () => {
       { id: faker.string.uuid(), status: 'l2_completed', batchId: VALID_UPLOAD_BATCH_ID },
       { id: faker.string.uuid(), status: 'failed', batchId: VALID_UPLOAD_BATCH_ID },
     ]
-    dbState.returnValues = [siblingFiles]
+    // [0] sibling files query, [1] atomic UPDATE uploadBatches (completed_at sentinel)
+    dbState.returnValues = [
+      siblingFiles,
+      [{ id: VALID_UPLOAD_BATCH_ID, completedAt: new Date().toISOString() }],
+    ]
 
     const { processFilePipeline } = await import('./processFile')
     await (processFilePipeline as { handler: (...args: unknown[]) => unknown }).handler({
@@ -251,7 +264,11 @@ describe('processFile - batch completion step', () => {
     const siblingFiles = [
       { id: VALID_FILE_ID, status: 'l2_completed', batchId: VALID_UPLOAD_BATCH_ID },
     ]
-    dbState.returnValues = [siblingFiles]
+    // [0] sibling files query, [1] atomic UPDATE uploadBatches (completed_at sentinel)
+    dbState.returnValues = [
+      siblingFiles,
+      [{ id: VALID_UPLOAD_BATCH_ID, completedAt: new Date().toISOString() }],
+    ]
 
     const { processFilePipeline } = await import('./processFile')
     await (processFilePipeline as { handler: (...args: unknown[]) => unknown }).handler({

@@ -5,12 +5,19 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import type { ScoreBadgeState, LayerCompleted } from '@/types/finding'
 import type { FileReviewData } from '@/features/review/actions/getFileReviewData.action'
 
+vi.mock('server-only', () => ({}))
+
 // Mock dependencies before importing the component
 vi.mock('@/features/review/hooks/use-findings-subscription', () => ({
   useFindingsSubscription: vi.fn(),
 }))
 vi.mock('@/features/review/hooks/use-score-subscription', () => ({
   useScoreSubscription: vi.fn(),
+}))
+vi.mock('@/features/pipeline/actions/retryAiAnalysis.action', () => ({
+  retryAiAnalysis: vi.fn((..._args: unknown[]) =>
+    Promise.resolve({ success: true, data: { retriedLayers: [] } }),
+  ),
 }))
 vi.mock('@/features/review/stores/review.store', () => {
   const mockResetForFile = vi.fn()
@@ -24,6 +31,7 @@ vi.mock('@/features/review/stores/review.store', () => {
         findingsMap: new Map(),
         currentScore: null,
         layerCompleted: null,
+        scoreStatus: null,
         updateScore: mockUpdateScore,
       }),
     ),

@@ -1,4 +1,4 @@
-import { generateText, Output } from 'ai'
+import { Output, generateText } from 'ai'
 import { and, eq } from 'drizzle-orm'
 import { NonRetriableError } from 'inngest'
 
@@ -21,6 +21,7 @@ import { checkProjectBudget } from '@/lib/ai/budget'
 import { getModelById } from '@/lib/ai/client'
 import { aggregateUsage, estimateCost, logAIUsage } from '@/lib/ai/costs'
 import { classifyAIError } from '@/lib/ai/errors'
+import { callWithFallback } from '@/lib/ai/fallbackRunner'
 import { getModelForLayerWithFallback } from '@/lib/ai/providers'
 import type { AIUsageRecord, ChunkResult } from '@/lib/ai/types'
 import { getConfigForModel } from '@/lib/ai/types'
@@ -54,6 +55,7 @@ export type L2Result = {
   chunksSucceeded: number
   chunksFailed: number
   partialFailure: boolean
+  fallbackUsed: boolean
   totalUsage: {
     inputTokens: number
     outputTokens: number
@@ -154,10 +156,6 @@ export async function runL2ForFile({
       projectId,
       tenantId,
     )
-    if (fallbacks.length > 0) {
-      logger.info({ fileId, modelId, fallbacks }, 'L2 fallback chain available (not yet consumed)')
-    }
-
     // Step 3: Load segments (withTenant on every query)
     const segmentRows: SegmentRow[] = await db
       .select({
@@ -241,13 +239,15 @@ export async function runL2ForFile({
     // Step 5: Chunk segments (Guardrail #21)
     const chunks = chunkSegments(segmentRows)
 
-    // Step 6: Process each chunk with AI (partial failure tolerance)
+    // Step 6: Process each chunk with AI (partial failure tolerance + fallback chain)
     const startTime = performance.now()
     const chunkResults: ChunkResult<L2Output>[] = []
     const usageRecords: AIUsageRecord[] = []
     const config = getConfigForModel(modelId, 'L2')
     // M3 fix: cache outside loop — deriveLanguagePair is pure (same result every call)
     const languagePair = deriveLanguagePair(segmentRows)
+    const chunkActualModel = new Map<number, string>()
+    let anyFallbackUsed = false
 
     for (const chunk of chunks) {
       const chunkStart = performance.now()
@@ -266,21 +266,28 @@ export async function runL2ForFile({
           },
         })
 
-        const result = await generateText({
-          model: getModelById(modelId),
-          output: Output.object({ schema: l2OutputSchema }),
-          temperature: config.temperature,
-          maxOutputTokens: config.maxOutputTokens,
-          prompt,
-        })
+        const fbResult = await callWithFallback({ primary: modelId, fallbacks }, async (mid) =>
+          generateText({
+            model: getModelById(mid),
+            output: Output.object({ schema: l2OutputSchema }),
+            temperature: config.temperature,
+            maxOutputTokens: config.maxOutputTokens,
+            prompt,
+          }),
+        )
 
-        // Cost tracking (Guardrail #19)
-        const cost = estimateCost(modelId, 'L2', result.usage)
+        const result = fbResult.data
+        const actualModel = fbResult.modelUsed
+        chunkActualModel.set(chunk.chunkIndex, actualModel)
+        if (fbResult.fallbackUsed) anyFallbackUsed = true
+
+        // Cost tracking (Guardrail #19) — use actual model, not primary
+        const cost = estimateCost(actualModel, 'L2', result.usage)
         const record: AIUsageRecord = {
           tenantId,
           projectId,
           fileId,
-          model: modelId,
+          model: actualModel,
           layer: 'L2',
           inputTokens: result.usage.inputTokens ?? 0,
           outputTokens: result.usage.outputTokens ?? 0,
@@ -303,16 +310,23 @@ export async function runL2ForFile({
           usage: result.usage,
         })
       } catch (error) {
-        const kind = classifyAIError(error)
+        // After callWithFallback, errors here mean:
+        // - rate_limit/timeout: all models exhausted → re-throw for Inngest retry
+        // - NonRetriableError: all models failed with auth/schema → propagate
+        // - unknown: re-thrown by callWithFallback → non-retriable per chunk
+        if (error instanceof NonRetriableError) {
+          throw error
+        }
 
-        // Retriable errors → re-throw (Inngest retries entire step)
+        // Use classifyAIError for consistent retriability detection
+        const kind = classifyAIError(error)
         if (kind === 'rate_limit' || kind === 'timeout') {
           throw error
         }
 
         // Non-retriable for this chunk → log and continue with remaining chunks
         logger.error(
-          { err: error, fileId, chunkIndex: chunk.chunkIndex, aiErrorKind: kind },
+          { err: error, fileId, chunkIndex: chunk.chunkIndex },
           'L2 chunk failed (non-retriable — continuing with remaining chunks)',
         )
 
@@ -349,10 +363,11 @@ export async function runL2ForFile({
 
     // Step 7: Flatten + validate findings from successful chunks
     const segmentIdSet = new Set(segmentRows.map((s) => s.id))
-    const allFindings: L2MappedFinding[] = []
+    const allFindings: (L2MappedFinding & { actualModel: string })[] = []
 
     for (const cr of chunkResults) {
       if (!cr.success || !cr.data) continue
+      const chunkModel = chunkActualModel.get(cr.chunkIndex) ?? modelId
 
       for (const f of cr.data.findings) {
         // Validate segmentId exists in this file (open question #5 from spike guide)
@@ -371,6 +386,7 @@ export async function runL2ForFile({
           confidence: Math.min(100, Math.max(0, f.confidence)),
           description: f.description,
           suggestedFix: f.suggestion,
+          actualModel: chunkModel,
         })
       }
     }
@@ -391,7 +407,7 @@ export async function runL2ForFile({
         sourceTextExcerpt: seg ? seg.sourceText.slice(0, MAX_EXCERPT_LENGTH) : null,
         targetTextExcerpt: seg ? seg.targetText.slice(0, MAX_EXCERPT_LENGTH) : null,
         detectedByLayer: 'L2' as const,
-        aiModel: modelId,
+        aiModel: f.actualModel,
         aiConfidence: f.confidence,
         reviewSessionId: null,
         status: 'pending' as const,
@@ -427,6 +443,26 @@ export async function runL2ForFile({
     const chunksSucceeded = chunkResults.filter((c) => c.success).length
     const chunksFailed = chunkResults.filter((c) => !c.success).length
 
+    // Step 11a: Fallback audit log (AC10)
+    if (anyFallbackUsed) {
+      try {
+        await writeAuditLog({
+          tenantId,
+          ...(userId !== undefined ? { userId } : {}),
+          entityType: 'file',
+          entityId: fileId,
+          action: 'ai_fallback_activated',
+          newValue: {
+            originalModel: modelId,
+            fallbackModels: [...new Set(chunkActualModel.values())].filter((m) => m !== modelId),
+            layer: 'L2',
+          },
+        })
+      } catch (auditErr) {
+        logger.error({ err: auditErr, fileId }, 'L2 fallback audit log failed (non-fatal)')
+      }
+    }
+
     try {
       await writeAuditLog({
         tenantId,
@@ -441,6 +477,7 @@ export async function runL2ForFile({
           chunksFailed,
           partialFailure: chunksFailed > 0,
           aiModel: modelId,
+          fallbackUsed: anyFallbackUsed,
           duration,
         },
       })
@@ -459,6 +496,7 @@ export async function runL2ForFile({
       chunksSucceeded,
       chunksFailed,
       partialFailure: chunksFailed > 0,
+      fallbackUsed: anyFallbackUsed,
       totalUsage,
     }
   } catch (err) {

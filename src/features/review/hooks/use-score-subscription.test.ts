@@ -15,7 +15,10 @@ mockChannel.on.mockReturnValue(mockChannel)
 
 // Polling fallback mock chain: supabase.from().select().eq().single()
 const mockSingle = vi.fn((..._args: unknown[]) =>
-  Promise.resolve({ data: { mqm_score: 85, status: 'calculated' }, error: null }),
+  Promise.resolve({
+    data: { mqm_score: 85, status: 'calculated' } as { mqm_score: number; status: string } | null,
+    error: null as { message: string } | null,
+  }),
 )
 const mockEq = vi.fn().mockReturnValue({ single: mockSingle })
 const mockSelect = vi.fn().mockReturnValue({ eq: mockEq })
@@ -313,5 +316,27 @@ describe('useScoreSubscription', () => {
     await vi.advanceTimersByTimeAsync(0)
     // Verify polling select includes layer_completed column
     expect(mockSelect).toHaveBeenCalledWith(expect.stringContaining('layer_completed'))
+  })
+
+  // ── TA: Coverage Gap Tests ──
+
+  it('[P2] should not update store when polling .single() returns no data', async () => {
+    // Override mockSingle to return null data (no score row)
+    mockSingle.mockResolvedValueOnce({ data: null, error: { message: 'No rows found' } })
+
+    renderHook(() => useScoreSubscription('file-123'))
+
+    // Trigger channel error to start polling
+    const subscribeCallback = mockChannel.subscribe.mock.calls[0]![0] as (status: string) => void
+    act(() => {
+      subscribeCallback('CHANNEL_ERROR')
+    })
+
+    // First poll fires immediately
+    await vi.advanceTimersByTimeAsync(0)
+
+    // Store should remain at default values (no update from empty poll)
+    expect(useReviewStore.getState().currentScore).toBeNull()
+    expect(useReviewStore.getState().scoreStatus).toBe('na')
   })
 })

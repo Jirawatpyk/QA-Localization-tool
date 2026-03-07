@@ -878,4 +878,41 @@ describe('scoreFile', () => {
 
     expect(result.mqmScore).toBe(100)
   })
+
+  // ── TA: Coverage Gap Tests ──
+
+  // Gap #6 [P2]: status='na' overrides auto-pass eligible + autoPassRationale null
+  it('[P2] should set status=na even when autoPass returns eligible', async () => {
+    mockCalculateMqmScore.mockReturnValue({
+      mqmScore: 100,
+      npt: 0,
+      criticalCount: 0,
+      majorCount: 0,
+      minorCount: 0,
+      totalWords: 1000,
+      status: 'na' as const,
+    })
+    // autoPass says eligible — but status='na' should take priority
+    mockCheckAutoPass.mockResolvedValue(mockAutoPassEligible)
+
+    const naScore = { ...mockNewScore, status: 'na', autoPassRationale: null }
+    dbState.returnValues = [mockSegments, [], [undefined], [], [naScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    const result = await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    // status='na' overrides auto-pass eligible
+    expect(result.status).toBe('na')
+    // autoPassRationale must be null when status is not 'auto_passed'
+    expect(result.autoPassRationale).toBeNull()
+    // Verify INSERT values
+    expect(dbState.valuesCaptures).toContainEqual(
+      expect.objectContaining({ status: 'na', autoPassRationale: null }),
+    )
+  })
 })

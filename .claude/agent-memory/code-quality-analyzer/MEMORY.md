@@ -24,6 +24,7 @@
 - `cross-feature-review-findings.md` — Cross-Feature Review: parity/dashboard/project (0C/7H/9M/8L) 2026-03-03
 - `story-3-2c-findings.md` — Story 3.2c L2 Results Display & Score Update CR R1-R3 (R3: 0C/1H/3M/5L)
 - `story-3-3-findings.md` — Story 3.3 AI Layer 3 Deep Contextual Analysis CR R1 (0C/3H/5M/5L)
+- `story-3-4-findings.md` — Story 3.4 AI Resilience Fallback & Retry CR R1 (1C/7H/8M)
 
 ## Recurring Anti-Patterns (check EVERY review)
 
@@ -119,12 +120,12 @@
 - ModelPinningSettings custom dropdown: no click-outside, no keyboard nav
 - **STATUS:** FIXED in CR R1 code — useEffect click-outside handler added
 
-### 26. Feature Infrastructure Created But Not Wired (Story 3.1 → 3.2a)
+### 26. Feature Infrastructure Created But Not Wired (Story 3.1 → 3.2a → 3.4)
 
 - providers.ts getModelForLayerWithFallback() exists
-- **STATUS:** STILL OPEN in 3.2a — resolveHealthyModel() built + tested but NOT called from runL2ForFile
-- runL2/L3 call getModelForLayerWithFallback but only use `.primary`, ignoring `.fallbacks`
-- checkProviderHealth() built but not integrated into pipeline flow
+- **STATUS (3.2a):** resolveHealthyModel() built + tested but NOT called from runL2/L3ForFile
+- **STATUS (3.4):** PARTIALLY FIXED — callWithFallback() now wired into runL2/L3ForFile using `.fallbacks`
+- **STILL OPEN:** resolveHealthyModel() exists but NOT called anywhere in pipeline (only in providers.test.ts)
 
 ### 27. UTC vs Local Time in Date Calculations (Story 3.1)
 

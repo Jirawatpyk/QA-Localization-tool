@@ -32,6 +32,7 @@ export type AIMockOptions = {
 
 export type AIMockFunctions = {
   mockGenerateText: ReturnType<typeof vi.fn>
+  mockCallWithFallback: ReturnType<typeof vi.fn>
   mockClassifyAIError: ReturnType<typeof vi.fn>
   mockCheckTenantBudget: ReturnType<typeof vi.fn>
   mockCheckProjectBudget: ReturnType<typeof vi.fn>
@@ -47,6 +48,7 @@ export type AIMockModules = {
   aiClient: Record<string, unknown>
   aiCosts: Record<string, unknown>
   aiErrors: Record<string, unknown>
+  aiFallbackRunner: Record<string, unknown>
   aiBudget: Record<string, unknown>
   aiTypes: Record<string, unknown>
   aiProviders: Record<string, unknown>
@@ -75,6 +77,14 @@ export function createAIMock(options?: AIMockOptions): AIMockResult {
       finishReason: 'stop' as const,
     }),
   )
+
+  // callWithFallback: by default, calls fn with primary model and wraps result
+  const mockCallWithFallback = vi.fn(async (..._args: unknown[]) => {
+    const chain = _args[0] as { primary: string }
+    const fn = _args[1] as (mid: string) => Promise<unknown>
+    const data = await fn(chain.primary)
+    return { data, modelUsed: chain.primary, fallbackUsed: false, attemptsLog: [] }
+  })
 
   const mockClassifyAIError = vi.fn((..._args: unknown[]) => 'unknown' as string)
 
@@ -147,6 +157,9 @@ export function createAIMock(options?: AIMockOptions): AIMockResult {
     aiErrors: {
       classifyAIError: (...args: unknown[]) => mockClassifyAIError(...args),
     },
+    aiFallbackRunner: {
+      callWithFallback: (...args: unknown[]) => mockCallWithFallback(...args),
+    },
     aiBudget: {
       checkTenantBudget: (...args: unknown[]) => mockCheckTenantBudget(...args),
       checkProjectBudget: (...args: unknown[]) => mockCheckProjectBudget(...args),
@@ -182,6 +195,7 @@ export function createAIMock(options?: AIMockOptions): AIMockResult {
   return {
     mocks: {
       mockGenerateText,
+      mockCallWithFallback,
       mockClassifyAIError,
       mockCheckTenantBudget,
       mockCheckProjectBudget,

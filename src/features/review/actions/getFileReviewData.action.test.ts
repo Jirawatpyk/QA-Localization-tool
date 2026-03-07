@@ -287,4 +287,52 @@ describe('getFileReviewData', () => {
       expect(result.code).toBe('INTERNAL_ERROR')
     }
   })
+
+  // ── TA: Coverage Gap Tests ──
+
+  it('[P2] should maintain stable sort order when all findings have null aiConfidence', async () => {
+    const fileId = 'c3d4e5f6-a1b2-4c1d-ae2f-5a6b7c8d9e0f'
+    const projectId = 'd4e5f6a1-b2c3-4d1e-bf3a-6b7c8d9e0f1a'
+
+    const findingsData = [
+      buildDbFinding({
+        severity: 'major',
+        aiConfidence: null,
+        tenantId: mockTenantId,
+        fileId,
+        description: 'First',
+      }),
+      buildDbFinding({
+        severity: 'major',
+        aiConfidence: null,
+        tenantId: mockTenantId,
+        fileId,
+        description: 'Second',
+      }),
+      buildDbFinding({
+        severity: 'major',
+        aiConfidence: null,
+        tenantId: mockTenantId,
+        fileId,
+        description: 'Third',
+      }),
+    ]
+
+    dbState.returnValues = [
+      [buildFile({ fileId })],
+      findingsData,
+      [buildScoreRecord({ fileId, tenantId: mockTenantId })],
+      [{ l2ConfidenceMin: 70 }],
+    ]
+
+    const result = await getFileReviewData({ fileId, projectId })
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      // All same severity + null confidence → sort returns 0, stable insertion order preserved
+      expect(result.data.findings).toHaveLength(3)
+      const descriptions = result.data.findings.map((f: { description: string }) => f.description)
+      expect(descriptions).toEqual(['First', 'Second', 'Third'])
+    }
+  })
 })

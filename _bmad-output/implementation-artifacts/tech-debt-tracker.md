@@ -217,14 +217,8 @@
 
 ## Category 8: Pipeline & Concurrency
 
-### TD-PIPE-001: Batch completion race condition in processFile
-- **Severity:** Medium
-- **File:** `src/features/pipeline/inngest/processFile.ts` — batch completion check step
-- **Risk:** Two concurrent `processFilePipeline` invocations finishing simultaneously can both query batch status before either writes terminal status, causing both to miss the "all completed" condition → `pipeline.batch-ready` event never fires
-- **Mitigation:** Inngest `concurrency: { key: projectId, limit: 5 }` reduces (but doesn't eliminate) window. Batch completion is also eventually caught by polling/manual trigger
-- **Fix:** Use DB-level atomic check: `UPDATE upload_batches SET status='completed' WHERE id=? AND (SELECT count(*) FROM files WHERE batch_id=? AND status NOT IN ('l2_completed','l3_completed','failed')) = 0 RETURNING *` — if RETURNING is empty, another invocation already completed the batch
-- **Origin:** Story 2.6 design, identified during Story 3.2b validation (mode-aware terminal status makes race window wider)
-- **Status:** DEFERRED → **Story 3.4 — AI Resilience, Fallback, Retry & Partial Results** (atomic batch completion check is core resilience requirement; fix with DB-level UPDATE...RETURNING pattern)
+### ~~TD-PIPE-001: Batch completion race condition in processFile~~
+- **Status:** RESOLVED (2026-03-07) — Story 3.4 Task 7: Added `completed_at` column to `upload_batches`, implemented atomic `UPDATE...WHERE completed_at IS NULL` sentinel pattern in `processFile.ts` check-batch step. Race-safe: only first concurrent invocation sets `completedAt`; subsequent invocations get empty RETURNING → skip batch event.
 
 ### ~~TD-PIPE-002: Missing error-chunk cost logging in runL3ForFile~~
 - **Status:** RESOLVED (2026-03-03) — Added `logAIUsage(errorRecord)` in L3 catch block, matching L2 pattern (H3 fix in CI bug-fix CR round)
@@ -232,13 +226,8 @@
 ### ~~TD-PIPE-003: L3 buildL3Prompt is inline — should use shared prompt builder~~
 - **Status:** RESOLVED (2026-03-07) — Inline `buildL3Prompt` deleted from runL3ForFile.ts, replaced with shared `buildL3Prompt` from `src/features/pipeline/prompts/build-l3-prompt.ts` (Story 3.3 Task 5)
 
-### TD-PIPE-004: AI fallback chain resolved but not consumed
-- **Severity:** Low
-- **File:** `src/features/pipeline/helpers/runL2ForFile.ts` (~line 157), `runL3ForFile.ts` (~line 155)
-- **Risk:** `getModelForLayerWithFallback()` returns `{ primary, fallbacks }` but only `primary` is used. If primary model fails, the fallback chain is never tried — the error propagates to Inngest retry instead. This means fallback models add no value currently
-- **Fix:** Implement retry loop: try primary → on non-retriable failure → try fallback[0] → fallback[1] → etc. Log model switch for observability
-- **Origin:** Story 3.2b CR scan, identified by code-quality-analyzer
-- **Status:** DEFERRED → **Story 3.4 — AI Resilience, Fallback, Retry & Partial Results** (fallback chain consumption is a core resilience feature)
+### ~~TD-PIPE-004: AI fallback chain resolved but not consumed~~
+- **Status:** RESOLVED (2026-03-07) — Story 3.4 Tasks 2-4: Created `callWithFallback()` utility in `src/lib/ai/fallbackRunner.ts`. Wired into both `runL2ForFile.ts` and `runL3ForFile.ts` chunk processing loops. Primary model → classify error → try fallback models. Each attempt logged with model/error/kind. `FallbackResult` type tracks `modelUsed`, `fallbackUsed`, `attemptsLog`.
 
 ### TD-TEST-005: P2 skipped test — auto_passed propagation from scoreFile
 - **Severity:** Low
@@ -412,7 +401,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Phase:** CR
 - **Severity:** Medium
 - **Description:** `getDashboardData.action.ts` returns `findingsCount: 0` as placeholder. Should query actual `COUNT(*)` from findings table with tenant filter.
-- **Status:** DEFERRED → Story 3.4 (scoring/findings dashboard wiring)
+- **Status:** DEFERRED → **Epic 4 — Review & Decision Workflow** (dashboard wiring requires review infrastructure)
 
 ### TD-DASH-002: 5 AI-related actions missing ActionResult<T> return type
 - **Date:** 2026-03-03
@@ -420,7 +409,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Phase:** CR
 - **Severity:** Medium
 - **Description:** `getAiUsageSummary`, `getAiSpendByProject`, `getAiSpendByModel`, `getAiSpendTrend`, `exportAiUsage` actions return raw objects instead of `ActionResult<T>`. Should standardize for consistency.
-- **Status:** DEFERRED → Story 3.4 (AI dashboard hardening)
+- **Status:** DEFERRED → **Epic 4 — Review & Decision Workflow** (AI dashboard action standardization)
 
 ### TD-DASH-003: Realtime notification payload lacks Zod validation
 - **Date:** 2026-03-03
@@ -429,6 +418,15 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Medium
 - **Description:** `useNotifications.ts` casts Realtime payload via `as RawNotificationPayload` without runtime validation. Should add a Zod schema to validate incoming data from Supabase Realtime channel.
 - **Status:** DEFERRED → Epic 4 (Review & Notification hardening)
+
+### TD-E2E-011: Pipeline resilience E2E — chaos test for real fallback failure
+- **Date:** 2026-03-07
+- **Story:** Story 3.4 (AI Resilience)
+- **Phase:** ATDD
+- **Severity:** Low
+- **File:** `e2e/pipeline-resilience.spec.ts:11`
+- **Description:** E2E spec uses PostgREST seeding to simulate `ai_partial` status. Real fallback failure injection (chaos testing) is impractical in standard E2E. A dedicated chaos-test workflow could inject provider errors to validate actual fallback chain behavior end-to-end.
+- **Status:** DEFERRED → **Weekly chaos-test workflow** (CI `chaos-test.yml` already runs weekly; add fallback failure scenario there)
 
 ### TD-PARITY-001: Redundant in-memory filter after query fileId fix
 - **Date:** 2026-03-03
@@ -441,6 +439,10 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 ---
 
 ## CR Sprint — Story 3.2c (2026-03-03)
+
+### ~~TD-PIPE-005: L3 chunk total failure silently loses findings~~
+- **Status:** RESOLVED (2026-03-07) — Story 3.4: (1) `callWithFallback()` retries with fallback models per chunk before failing, (2) file status set to `ai_partial` (not `l3_completed`) when chunks fail after fallback exhaustion, (3) ReviewPageClient shows "Deep analysis unavailable — showing screening results" warning banner + ScoreBadge `'partial'` state
+- **Status:** DEFERRED → **Story 3.4 — AI Resilience, Fallback & Retry**
 
 ### TD-REVIEW-001: getFileReviewData Q4 JOIN matches sourceLang only
 - **Date:** 2026-03-03

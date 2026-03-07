@@ -91,6 +91,7 @@ vi.mock('@/db/helpers/withTenant', () => ({
 vi.mock('drizzle-orm', () => ({
   and: vi.fn((...args: unknown[]) => args),
   eq: vi.fn((...args: unknown[]) => args),
+  isNull: vi.fn((...args: unknown[]) => args),
 }))
 
 vi.mock('@/db/schema/files', () => ({
@@ -100,6 +101,14 @@ vi.mock('@/db/schema/files', () => ({
     status: 'status',
     projectId: 'project_id',
     batchId: 'batch_id',
+  },
+}))
+
+vi.mock('@/db/schema/uploadBatches', () => ({
+  uploadBatches: {
+    id: 'id',
+    tenantId: 'tenant_id',
+    completedAt: 'completed_at',
   },
 }))
 
@@ -378,7 +387,8 @@ describe('processFilePipeline', () => {
   // ── P0: onFailure handler ──
 
   it('onFailure should set file status to failed', async () => {
-    dbState.returnValues = [[]]
+    // SELECT current status (returns no file → defaults to 'failed') + UPDATE
+    dbState.returnValues = [[], []]
 
     const { processFilePipeline } = await import('./processFile')
     const { withTenant } = await import('@/db/helpers/withTenant')
@@ -403,8 +413,8 @@ describe('processFilePipeline', () => {
       })
     }
 
-    // Exactly 1 DB call: the db.update(files).set({ status: 'failed' })
-    expect(dbState.callIndex).toBe(1)
+    // 2 DB calls: SELECT current status + UPDATE to 'failed'
+    expect(dbState.callIndex).toBe(2)
     // withTenant must be called with the correct tenantId (tenant isolation in failure path)
     expect(withTenant).toHaveBeenCalledWith(expect.anything(), VALID_TENANT_ID)
     // Verify .set() was called with status: 'failed' (not some other status)
@@ -482,7 +492,7 @@ describe('processFilePipeline', () => {
   })
 
   it('onFailure should access original event data via v3 nested structure', async () => {
-    dbState.returnValues = [[]]
+    dbState.returnValues = [[], []]
 
     const { processFilePipeline } = await import('./processFile')
     const { withTenant } = await import('@/db/helpers/withTenant')
@@ -511,7 +521,7 @@ describe('processFilePipeline', () => {
 
     // withTenant must be called with the correct tenantId — verifies tenant-scoped WHERE clause
     expect(withTenant).toHaveBeenCalledWith(expect.anything(), VALID_TENANT_ID)
-    expect(dbState.callIndex).toBe(1)
+    expect(dbState.callIndex).toBe(2)
   })
 
   // ── L4: mode must NOT be forwarded to runL1ForFile ──
@@ -703,8 +713,9 @@ describe('processFilePipeline', () => {
 
   // ── P0: L2 failure preserves L1 findings (#13) ──
 
-  it('[P0] should preserve L1 findings when L2 step fails (exactly 1 DB call in onFailure, no DELETE)', async () => {
-    dbState.returnValues = [[]]
+  it('[P0] should preserve L1 findings when L2 step fails (no DELETE in onFailure)', async () => {
+    // SELECT: file not found (no status context) → defaults to 'failed' + UPDATE
+    dbState.returnValues = [[], []]
 
     const { processFilePipeline } = await import('./processFile')
     const { withTenant } = await import('@/db/helpers/withTenant')
@@ -731,9 +742,9 @@ describe('processFilePipeline', () => {
       })
     }
 
-    // Exactly 1 DB call: file status update to 'failed'
+    // 2 DB calls: SELECT current status + UPDATE status
     // NO DELETE of L1 findings — they must remain intact
-    expect(dbState.callIndex).toBe(1)
+    expect(dbState.callIndex).toBe(2)
     expect(withTenant).toHaveBeenCalledWith(expect.anything(), VALID_TENANT_ID)
     expect(dbState.setCaptures).toContainEqual(expect.objectContaining({ status: 'failed' }))
   })
@@ -741,7 +752,8 @@ describe('processFilePipeline', () => {
   // ── P0: L3 failure preserves L1+L2 findings (#23) ──
 
   it('[P0] should preserve L1 and L2 findings when L3 step fails in thorough mode', async () => {
-    dbState.returnValues = [[]]
+    // SELECT: file not found → defaults to 'failed' + UPDATE
+    dbState.returnValues = [[], []]
 
     const { processFilePipeline } = await import('./processFile')
     const { withTenant } = await import('@/db/helpers/withTenant')
@@ -768,9 +780,9 @@ describe('processFilePipeline', () => {
       })
     }
 
-    // Exactly 1 DB call: file status update to 'failed'
+    // 2 DB calls: SELECT current status + UPDATE status
     // NO DELETE of L1 or L2 findings — both layers must remain intact
-    expect(dbState.callIndex).toBe(1)
+    expect(dbState.callIndex).toBe(2)
     expect(withTenant).toHaveBeenCalledWith(expect.anything(), VALID_TENANT_ID)
     expect(dbState.setCaptures).toContainEqual(expect.objectContaining({ status: 'failed' }))
   })
@@ -819,7 +831,11 @@ describe('processFilePipeline', () => {
     })
 
     // Mock batch query: all files completed → triggers batch event
-    dbState.returnValues = [[{ id: VALID_FILE_ID, status: 'l2_completed' }]]
+    // Two DB calls inside check-batch step: SELECT files + UPDATE uploadBatches
+    dbState.returnValues = [
+      [{ id: VALID_FILE_ID, status: 'l2_completed' }],
+      [{ id: VALID_BATCH_ID, completedAt: new Date().toISOString() }],
+    ]
 
     const { processFilePipeline } = await import('./processFile')
     await (processFilePipeline as { handler: (...args: unknown[]) => unknown }).handler({
@@ -1125,7 +1141,11 @@ describe('processFilePipeline', () => {
     })
 
     // Single file in batch, already at terminal status
-    dbState.returnValues = [[{ id: VALID_FILE_ID, status: 'l2_completed' }]]
+    // Two DB calls inside check-batch step: SELECT files + UPDATE uploadBatches
+    dbState.returnValues = [
+      [{ id: VALID_FILE_ID, status: 'l2_completed' }],
+      [{ id: VALID_BATCH_ID, completedAt: new Date().toISOString() }],
+    ]
 
     const { processFilePipeline } = await import('./processFile')
     await (processFilePipeline as { handler: (...args: unknown[]) => unknown }).handler({
@@ -1151,11 +1171,13 @@ describe('processFilePipeline', () => {
     })
 
     // Mix of terminal states
+    // Two DB calls inside check-batch step: SELECT files + UPDATE uploadBatches
     dbState.returnValues = [
       [
         { id: VALID_FILE_ID, status: 'l3_completed' },
         { id: 'e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a5b', status: 'failed' },
       ],
+      [{ id: VALID_BATCH_ID, completedAt: new Date().toISOString() }],
     ]
 
     const { processFilePipeline } = await import('./processFile')
@@ -1227,7 +1249,11 @@ describe('processFilePipeline', () => {
     })
 
     // Batch check: single file at terminal
-    dbState.returnValues = [[{ id: VALID_FILE_ID, status: 'l3_completed' }]]
+    // Two DB calls inside check-batch step: SELECT files + UPDATE uploadBatches
+    dbState.returnValues = [
+      [{ id: VALID_FILE_ID, status: 'l3_completed' }],
+      [{ id: VALID_BATCH_ID, completedAt: new Date().toISOString() }],
+    ]
 
     const { processFilePipeline } = await import('./processFile')
     await (processFilePipeline as { handler: (...args: unknown[]) => unknown }).handler({
@@ -1250,5 +1276,221 @@ describe('processFilePipeline', () => {
       `score-all-${VALID_FILE_ID}`,
       `check-batch-${VALID_FILE_ID}`,
     ])
+  })
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // TA: Coverage Gap Tests (Story 3.2b — Test Automation expansion)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // Gap #1 [P1]: economy mqmScore uses L2 score result, not L1 score result
+  it('[P1] should return mqmScore from L2 score call, not L1 score call (economy)', async () => {
+    // Different scores per call to distinguish which one is used
+    mockScoreFile
+      .mockResolvedValueOnce({
+        scoreId: faker.string.uuid(),
+        fileId: VALID_FILE_ID,
+        mqmScore: 70,
+        npt: 30,
+        totalWords: 1000,
+        criticalCount: 0,
+        majorCount: 5,
+        minorCount: 0,
+        status: 'calculated',
+        autoPassRationale: null,
+      })
+      .mockResolvedValueOnce({
+        scoreId: faker.string.uuid(),
+        fileId: VALID_FILE_ID,
+        mqmScore: 92,
+        npt: 8,
+        totalWords: 1000,
+        criticalCount: 0,
+        majorCount: 1,
+        minorCount: 0,
+        status: 'calculated',
+        autoPassRationale: null,
+      })
+
+    const mockStep = createMockStep()
+    const eventData = buildPipelineEvent({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      mode: 'economy',
+    })
+
+    const { processFilePipeline } = await import('./processFile')
+    const result = (await (
+      processFilePipeline as { handler: (...args: unknown[]) => Promise<unknown> }
+    ).handler({
+      event: { data: eventData },
+      step: mockStep,
+    })) as Record<string, unknown>
+
+    // mqmScore must come from L2 score call (92), not L1 score call (70)
+    expect(result.mqmScore).toBe(92)
+    // Finding counts from correct helpers
+    expect(result.l1FindingCount).toBe(5)
+    expect(result.l2FindingCount).toBe(3)
+    expect(result.l3FindingCount).toBe(null)
+  })
+
+  // Gap #2 [P1]: thorough mqmScore uses L3 score result
+  it('[P1] should return mqmScore from L3 score call, not L1 or L2 score calls (thorough)', async () => {
+    mockScoreFile
+      .mockResolvedValueOnce({
+        scoreId: faker.string.uuid(),
+        fileId: VALID_FILE_ID,
+        mqmScore: 70,
+        npt: 30,
+        totalWords: 1000,
+        criticalCount: 0,
+        majorCount: 5,
+        minorCount: 0,
+        status: 'calculated',
+        autoPassRationale: null,
+      })
+      .mockResolvedValueOnce({
+        scoreId: faker.string.uuid(),
+        fileId: VALID_FILE_ID,
+        mqmScore: 85,
+        npt: 15,
+        totalWords: 1000,
+        criticalCount: 0,
+        majorCount: 2,
+        minorCount: 0,
+        status: 'calculated',
+        autoPassRationale: null,
+      })
+      .mockResolvedValueOnce({
+        scoreId: faker.string.uuid(),
+        fileId: VALID_FILE_ID,
+        mqmScore: 92,
+        npt: 8,
+        totalWords: 1000,
+        criticalCount: 0,
+        majorCount: 1,
+        minorCount: 0,
+        status: 'calculated',
+        autoPassRationale: null,
+      })
+
+    const mockStep = createMockStep()
+    const eventData = buildPipelineEvent({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      mode: 'thorough',
+    })
+
+    const { processFilePipeline } = await import('./processFile')
+    const result = (await (
+      processFilePipeline as { handler: (...args: unknown[]) => Promise<unknown> }
+    ).handler({
+      event: { data: eventData },
+      step: mockStep,
+    })) as Record<string, unknown>
+
+    // mqmScore must come from L3 score call (92), not L1 (70) or L2 (85)
+    expect(result.mqmScore).toBe(92)
+    expect(result.l1FindingCount).toBe(5)
+    expect(result.l2FindingCount).toBe(3)
+    expect(result.l3FindingCount).toBe(2)
+  })
+
+  // Gap #3 [P2]: l2PartialFailure=true explicitly in return value
+  it('[P2] should return l2PartialFailure=true when L2 reports partial failure', async () => {
+    mockRunL2ForFile.mockResolvedValue({
+      findingCount: 1,
+      duration: 300,
+      aiModel: 'gpt-4o-mini',
+      chunksTotal: 3,
+      chunksSucceeded: 2,
+      chunksFailed: 1,
+      partialFailure: true,
+      totalUsage: { inputTokens: 2000, outputTokens: 800, estimatedCostUsd: 0.002 },
+    } as L2Result)
+
+    const mockStep = createMockStep()
+    const eventData = buildPipelineEvent({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      mode: 'economy',
+    })
+
+    const { processFilePipeline } = await import('./processFile')
+    const result = (await (
+      processFilePipeline as { handler: (...args: unknown[]) => Promise<unknown> }
+    ).handler({
+      event: { data: eventData },
+      step: mockStep,
+    })) as Record<string, unknown>
+
+    // Strict true check — not just any Boolean
+    expect(result.l2PartialFailure).toBe(true)
+  })
+
+  // Gap #4 [P2]: Empty batch files → guard prevents false completion
+  it('[P2] should NOT fire batch-completed when batch query returns empty array', async () => {
+    const mockStep = createMockStep()
+    const VALID_BATCH_ID = 'f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c'
+    const eventData = buildPipelineEvent({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      mode: 'economy',
+      uploadBatchId: VALID_BATCH_ID,
+    })
+
+    // Empty batch query result — guard prevents [].every() = true quirk
+    dbState.returnValues = [[]]
+
+    const { processFilePipeline } = await import('./processFile')
+    await (processFilePipeline as { handler: (...args: unknown[]) => unknown }).handler({
+      event: { data: eventData },
+      step: mockStep,
+    })
+
+    // batch-completed must NOT fire for empty batch
+    expect(mockStep.sendEvent).not.toHaveBeenCalled()
+  })
+
+  // Gap #5 [P2]: Thorough + L2 partial failure → L3 still runs
+  it('[P2] should proceed to L3 in thorough mode even when L2 has partial failure', async () => {
+    mockRunL2ForFile.mockResolvedValue({
+      findingCount: 1,
+      duration: 300,
+      aiModel: 'gpt-4o-mini',
+      chunksTotal: 3,
+      chunksSucceeded: 2,
+      chunksFailed: 1,
+      partialFailure: true,
+      totalUsage: { inputTokens: 2000, outputTokens: 800, estimatedCostUsd: 0.002 },
+    } as L2Result)
+
+    const mockStep = createMockStep()
+    const eventData = buildPipelineEvent({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      mode: 'thorough',
+    })
+
+    const { processFilePipeline } = await import('./processFile')
+    await (processFilePipeline as { handler: (...args: unknown[]) => unknown }).handler({
+      event: { data: eventData },
+      step: mockStep,
+    })
+
+    // L3 must still run despite L2 partial failure
+    expect(mockRunL3ForFile).toHaveBeenCalled()
+    // 6 steps: L1 + score-l1 + L2 + score-l1l2 + L3 + score-all
+    expect(mockStep.run).toHaveBeenCalledTimes(6)
   })
 })

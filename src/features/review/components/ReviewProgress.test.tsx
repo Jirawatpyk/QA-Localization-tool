@@ -113,4 +113,37 @@ describe('ReviewProgress', () => {
 
     expect(screen.getByText(/AI.*L2.*complete/i)).toBeTruthy()
   })
+
+  // ── TA: Coverage Gap Tests ──
+
+  it('[P1] should show spinner for L3 during l3_processing in Thorough mode', () => {
+    render(
+      <ReviewProgress
+        fileStatus={'l3_processing' as DbFileStatus}
+        layerCompleted="L1L2"
+        processingMode={'thorough' as ProcessingMode}
+      />,
+    )
+
+    const l3Status = screen.getByTestId('layer-status-L3')
+    expect(l3Status.querySelector('.animate-spin')).not.toBeNull()
+  })
+
+  it('[P1] should render pending circle indicator for L3 in Thorough when not yet started', () => {
+    render(
+      <ReviewProgress
+        fileStatus={'l2_completed' as DbFileStatus}
+        layerCompleted="L1L2"
+        processingMode={'thorough' as ProcessingMode}
+      />,
+    )
+
+    const l3Status = screen.getByTestId('layer-status-L3')
+    // Pending renders a circle element (rounded-full border)
+    const pendingCircle = l3Status.querySelector('.rounded-full')
+    expect(pendingCircle).not.toBeNull()
+    // Should NOT be a spinner or checkmark
+    expect(l3Status.querySelector('.animate-spin')).toBeNull()
+    expect(l3Status).not.toHaveTextContent(/complete|✓|check/i)
+  })
 })

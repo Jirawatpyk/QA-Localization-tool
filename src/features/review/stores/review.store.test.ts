@@ -183,6 +183,19 @@ describe('useReviewStore', () => {
     expect(useReviewStore.getState().currentFileId).toBe('third-file')
   })
 
+  // ── TA: Coverage Gap Tests ──
+
+  it('[P2] should preserve existing layerCompleted when updateScore called without layerCompleted arg', () => {
+    // Set layerCompleted via 3-arg call
+    useReviewStore.getState().updateScore(85, 'calculated', 'L1L2')
+    expect(useReviewStore.getState().layerCompleted).toBe('L1L2')
+
+    // Update score without layerCompleted (2-arg call) — should NOT clear existing
+    useReviewStore.getState().updateScore(90, 'calculated')
+    expect(useReviewStore.getState().currentScore).toBe(90)
+    expect(useReviewStore.getState().layerCompleted).toBe('L1L2')
+  })
+
   // ── Story 3.2c AC6: layerCompleted tracking ──
 
   it('[P0] should update layerCompleted field via updateScore(score, status, layerCompleted)', () => {

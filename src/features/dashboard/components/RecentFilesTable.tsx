@@ -29,6 +29,8 @@ function getStatusVariant(
     case 'l2_processing':
     case 'l3_processing':
       return 'secondary'
+    case 'ai_partial':
+      return 'secondary'
     case 'failed':
       return 'destructive'
     default:

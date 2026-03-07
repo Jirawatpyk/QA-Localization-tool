@@ -10,6 +10,7 @@ const STATUS_LABELS: Record<DbFileStatus, string> = {
   l2_completed: 'L2 Completed',
   l3_processing: 'L3 Processing',
   l3_completed: 'L3 Completed',
+  ai_partial: 'AI Partial',
   failed: 'Failed',
 }
 

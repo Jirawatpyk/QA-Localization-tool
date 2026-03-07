@@ -1,14 +1,17 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { files } from '@/db/schema/files'
+import { uploadBatches } from '@/db/schema/uploadBatches'
 import { runL1ForFile } from '@/features/pipeline/helpers/runL1ForFile'
 import { runL2ForFile } from '@/features/pipeline/helpers/runL2ForFile'
 import { runL3ForFile } from '@/features/pipeline/helpers/runL3ForFile'
 import { scoreFile } from '@/features/scoring/helpers/scoreFile'
 import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
+import type { LayerCompleted } from '@/types/finding'
+import { L1_COMPLETED_STATUSES } from '@/types/pipeline'
 
 import type { PipelineFileEventData } from './types'
 
@@ -24,6 +27,7 @@ const handlerFn = async ({
   }
 }) => {
   const { fileId, projectId, tenantId, userId, mode, uploadBatchId } = event.data
+  const failedLayers: string[] = []
 
   // Step 1: Run L1 rule engine (deterministic checks, Xbench parity)
   const l1Result = await step.run(`l1-rules-${fileId}`, () =>
@@ -35,40 +39,81 @@ const handlerFn = async ({
     scoreFile({ fileId, projectId, tenantId, userId, layerFilter: 'L1' }),
   )
 
-  // Step 3: Run L2 AI screening
-  // Guardrail #21: chunk-level iteration is handled inside runL2ForFile —
-  // one Inngest step per file, not per chunk (Architecture Decision from Prep P4)
-  const l2Result = await step.run(`l2-screening-${fileId}`, () =>
-    runL2ForFile({ fileId, projectId, tenantId, userId }),
-  )
-
-  // Step 4: Recalculate score with ALL layers: L1 + L2
-  const l2ScoreResult = await step.run(`score-l1l2-${fileId}`, () =>
-    scoreFile({ fileId, projectId, tenantId, userId, layerCompleted: 'L1L2' }),
-  )
-
-  // Steps 5-6: Thorough mode — run L3 deep analysis + final score
-  let l3Result: { findingCount: number } | null = null
-  let finalScoreResult = l2ScoreResult
-
-  if (mode === 'thorough') {
-    // provisional L3 — Story 3.3 will add selective-segment filtering
-    const l3Raw = await step.run(`l3-analysis-${fileId}`, () =>
-      runL3ForFile({ fileId, projectId, tenantId, userId }),
+  // Step 3: Run L2 AI screening — wrapped in try-catch for partial results (AC5)
+  let l2Result: Awaited<ReturnType<typeof runL2ForFile>> | null = null
+  try {
+    l2Result = await step.run(`l2-screening-${fileId}`, () =>
+      runL2ForFile({ fileId, projectId, tenantId, userId }),
     )
-    l3Result = { findingCount: l3Raw.findingCount }
+  } catch (l2Err) {
+    logger.error({ err: l2Err, fileId }, 'L2 failed — preserving L1 results with ai_partial status')
+    failedLayers.push('L2')
+  }
 
-    finalScoreResult = await step.run(`score-all-${fileId}`, () =>
-      scoreFile({ fileId, projectId, tenantId, userId, layerCompleted: 'L1L2L3' }),
+  // Step 4: Recalculate score — depends on L2 outcome
+  let finalScoreResult: Awaited<ReturnType<typeof scoreFile>>
+  let layerCompleted: LayerCompleted = 'L1'
+  let l3Result: { findingCount: number } | null = null
+
+  if (l2Result) {
+    // L2 succeeded: score with L1+L2
+    finalScoreResult = await step.run(`score-l1l2-${fileId}`, () =>
+      scoreFile({ fileId, projectId, tenantId, userId, layerCompleted: 'L1L2' }),
+    )
+    layerCompleted = 'L1L2'
+
+    // Steps 5-6: Thorough mode — run L3 deep analysis + final score
+    if (mode === 'thorough') {
+      try {
+        const l3Raw = await step.run(`l3-analysis-${fileId}`, () =>
+          runL3ForFile({ fileId, projectId, tenantId, userId }),
+        )
+        l3Result = { findingCount: l3Raw.findingCount }
+      } catch (l3Err) {
+        logger.error({ err: l3Err, fileId }, 'L3 failed — preserving L1+L2 results with ai_partial')
+        failedLayers.push('L3')
+      }
+
+      if (l3Result) {
+        finalScoreResult = await step.run(`score-all-${fileId}`, () =>
+          scoreFile({ fileId, projectId, tenantId, userId, layerCompleted: 'L1L2L3' }),
+        )
+        layerCompleted = 'L1L2L3'
+      }
+    }
+  }
+
+  // Handle partial failure — set ai_partial status and re-score with partial flag
+  const aiPartial = failedLayers.length > 0
+
+  if (aiPartial) {
+    await step.run(`set-partial-${fileId}`, async () => {
+      await db
+        .update(files)
+        .set({ status: 'ai_partial', updatedAt: new Date() })
+        .where(and(withTenant(files.tenantId, tenantId), eq(files.id, fileId)))
+    })
+
+    finalScoreResult = await step.run(`score-partial-${fileId}`, () =>
+      scoreFile({
+        fileId,
+        projectId,
+        tenantId,
+        userId,
+        scoreStatus: 'partial',
+        layerCompleted,
+      }),
     )
   }
 
   // Step 7: Check if batch is complete — mode-aware terminal status
   // Guard: files.batchId is nullable — skip for non-batch uploads
   if (uploadBatchId) {
-    // Type-safe terminal status based on processing mode
-    const terminalStatus: 'l2_completed' | 'l3_completed' =
-      mode === 'thorough' ? 'l3_completed' : 'l2_completed'
+    // Terminal statuses include ai_partial (AC5) and failed
+    const terminalStatus: string[] =
+      mode === 'thorough'
+        ? ['l3_completed', 'ai_partial', 'failed']
+        : ['l2_completed', 'ai_partial', 'failed']
 
     const batchComplete = await step.run(`check-batch-${fileId}`, async () => {
       const batchFiles = await db
@@ -82,11 +127,26 @@ const handlerFn = async ({
           ),
         )
 
-      const allCompleted = batchFiles.every(
-        (f) => f.status === terminalStatus || f.status === 'failed',
-      )
+      const allCompleted =
+        batchFiles.length > 0 && batchFiles.every((f) => terminalStatus.includes(f.status))
 
-      return { allCompleted, fileCount: batchFiles.length }
+      if (!allCompleted) return { allCompleted: false, fileCount: batchFiles.length }
+
+      // Atomic batch completion: UPDATE...WHERE completed_at IS NULL (TD-PIPE-001)
+      // Returns 0 rows if another worker already completed the batch
+      const [updated] = await db
+        .update(uploadBatches)
+        .set({ completedAt: new Date() })
+        .where(
+          and(
+            eq(uploadBatches.id, uploadBatchId),
+            withTenant(uploadBatches.tenantId, tenantId),
+            isNull(uploadBatches.completedAt),
+          ),
+        )
+        .returning()
+
+      return { allCompleted: !!updated, fileCount: batchFiles.length }
     })
 
     if (batchComplete.allCompleted) {
@@ -106,15 +166,17 @@ const handlerFn = async ({
   return {
     fileId,
     l1FindingCount: l1Result.findingCount,
-    l2FindingCount: l2Result.findingCount,
+    l2FindingCount: l2Result ? l2Result.findingCount : null,
     l3FindingCount: l3Result ? l3Result.findingCount : null,
-    mqmScore: finalScoreResult.mqmScore,
-    layerCompleted: mode === 'thorough' ? ('L1L2L3' as const) : ('L1L2' as const),
-    l2PartialFailure: l2Result.partialFailure,
+    mqmScore: finalScoreResult!.mqmScore,
+    layerCompleted,
+    l2PartialFailure: l2Result?.partialFailure ?? false,
+    aiPartial,
+    failedLayers: aiPartial ? failedLayers : [],
   }
 }
 
-// onFailure: update file status to failed + log — no step.run (called after all retries exhausted)
+// onFailure: determine whether L1 completed (partial vs failed)
 const onFailureFn = async ({
   event,
   error,
@@ -128,9 +190,18 @@ const onFailureFn = async ({
   logger.error({ err: error, fileId }, 'processFilePipeline: function failed')
 
   try {
+    // Query current file status to determine if L1 completed (partial results exist)
+    const [currentFile] = await db
+      .select({ id: files.id, status: files.status })
+      .from(files)
+      .where(and(withTenant(files.tenantId, tenantId), eq(files.id, fileId)))
+
+    const hasPartialResults = currentFile && L1_COMPLETED_STATUSES.has(currentFile.status)
+    const newStatus = hasPartialResults ? 'ai_partial' : 'failed'
+
     await db
       .update(files)
-      .set({ status: 'failed', updatedAt: new Date() })
+      .set({ status: newStatus, updatedAt: new Date() })
       .where(and(withTenant(files.tenantId, tenantId), eq(files.id, fileId)))
   } catch (dbErr) {
     logger.error(

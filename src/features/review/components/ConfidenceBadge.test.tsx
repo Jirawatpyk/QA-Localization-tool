@@ -86,4 +86,16 @@ describe('ConfidenceBadge', () => {
     expect(screen.queryByText(/below threshold/i)).toBeNull()
     expect(screen.queryByTestId('confidence-warning')).toBeNull()
   })
+
+  // ── TA: Coverage Gap Tests ──
+
+  it('[P2] should not show "Below threshold" when l2ConfidenceMin=0 (zero boundary)', () => {
+    render(<ConfidenceBadge confidence={0} l2ConfidenceMin={0} />)
+
+    // confidence (0) < l2ConfidenceMin (0) is false → no warning
+    expect(screen.queryByText(/below threshold/i)).toBeNull()
+    expect(screen.queryByTestId('confidence-warning')).toBeNull()
+    // Still renders the Low badge
+    expect(screen.getByTestId('confidence-badge')).toHaveTextContent('Low')
+  })
 })

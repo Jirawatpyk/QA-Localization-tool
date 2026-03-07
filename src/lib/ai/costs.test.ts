@@ -1,3 +1,4 @@
+import type { LanguageModelUsage } from 'ai'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Must be first
@@ -51,6 +52,91 @@ const baseRecord = {
   languagePair: 'en-US→th' as string | null,
   status: 'success' as const,
 }
+
+function usage(input: number, output: number): LanguageModelUsage {
+  return {
+    inputTokens: input,
+    outputTokens: output,
+    totalTokens: input + output,
+  } as unknown as LanguageModelUsage
+}
+
+describe('estimateCost', () => {
+  it('should calculate cost for known model (gpt-4o-mini)', async () => {
+    const { estimateCost } = await import('./costs')
+    const cost = estimateCost('gpt-4o-mini', 'L2', usage(1000, 500))
+    // input: (1000/1000) * 0.00015 = 0.00015
+    // output: (500/1000) * 0.0006 = 0.0003
+    // total = 0.00045
+    expect(cost).toBeCloseTo(0.00045, 6)
+  })
+
+  it('should calculate cost for known model (claude-sonnet)', async () => {
+    const { estimateCost } = await import('./costs')
+    const cost = estimateCost('claude-sonnet-4-5-20250929', 'L3', usage(2000, 1000))
+    // input: (2000/1000) * 0.003 = 0.006
+    // output: (1000/1000) * 0.015 = 0.015
+    // total = 0.021
+    expect(cost).toBeCloseTo(0.021, 6)
+  })
+
+  it('should fall back to layer default for unknown model ID', async () => {
+    const { estimateCost } = await import('./costs')
+    const cost = estimateCost('gpt-4o-mini-2024-07-18', 'L2', usage(1000, 500))
+    // Falls back to gpt-4o-mini config (same rates)
+    expect(cost).toBeCloseTo(0.00045, 6)
+  })
+
+  it('should handle zero tokens gracefully', async () => {
+    const { estimateCost } = await import('./costs')
+    const cost = estimateCost('gpt-4o-mini', 'L2', usage(0, 0))
+    expect(cost).toBe(0)
+  })
+
+  it('should handle undefined tokens as zero', async () => {
+    const { estimateCost } = await import('./costs')
+    const cost = estimateCost('gpt-4o-mini', 'L2', {
+      inputTokens: undefined,
+      outputTokens: undefined,
+      totalTokens: 0,
+      inputTokenDetails: undefined,
+      outputTokenDetails: undefined,
+    } as unknown as LanguageModelUsage)
+    expect(cost).toBe(0)
+  })
+})
+
+describe('aggregateUsage', () => {
+  it('should sum tokens and cost across multiple records', async () => {
+    const { aggregateUsage } = await import('./costs')
+    const result = aggregateUsage([
+      { ...baseRecord, inputTokens: 100, outputTokens: 50, estimatedCostUsd: 0.001 },
+      { ...baseRecord, inputTokens: 200, outputTokens: 100, estimatedCostUsd: 0.002 },
+      { ...baseRecord, inputTokens: 300, outputTokens: 150, estimatedCostUsd: 0.003 },
+    ])
+    expect(result.inputTokens).toBe(600)
+    expect(result.outputTokens).toBe(300)
+    expect(result.estimatedCostUsd).toBeCloseTo(0.006, 6)
+  })
+
+  it('should return zeros for empty array', async () => {
+    const { aggregateUsage } = await import('./costs')
+    const result = aggregateUsage([])
+    expect(result.inputTokens).toBe(0)
+    expect(result.outputTokens).toBe(0)
+    expect(result.estimatedCostUsd).toBe(0)
+  })
+
+  it('should handle single record', async () => {
+    const { aggregateUsage } = await import('./costs')
+    const result = aggregateUsage([
+      { ...baseRecord, inputTokens: 500, outputTokens: 200, estimatedCostUsd: 0.005 },
+    ])
+    expect(result.inputTokens).toBe(500)
+    expect(result.outputTokens).toBe(200)
+    expect(result.estimatedCostUsd).toBeCloseTo(0.005, 6)
+  })
+})
 
 describe('logAIUsage', () => {
   beforeEach(() => {
@@ -184,5 +270,31 @@ describe('logAIUsage', () => {
 
     const insertedValues = dbState.valuesCaptures[0] as Record<string, unknown>
     expect(insertedValues.chunkIndex).toBe(3)
+  })
+
+  // ── TA: Coverage Gap Tests ──
+
+  // Gap #12 [P2]: status='error' for failed chunk records
+  it('[P2] should persist status=error for failed chunk records', async () => {
+    dbState.returnValues = [[]]
+
+    const { logAIUsage } = await import('./costs')
+    await logAIUsage({ ...baseRecord, status: 'error', inputTokens: 0, outputTokens: 0 })
+
+    const insertedValues = dbState.valuesCaptures[0] as Record<string, unknown>
+    expect(insertedValues.status).toBe('error')
+    expect(insertedValues.inputTokens).toBe(0)
+    expect(insertedValues.outputTokens).toBe(0)
+  })
+
+  // Gap #13 [P2]: null languagePair when language info unavailable
+  it('[P2] should persist null languagePair when language info unavailable', async () => {
+    dbState.returnValues = [[]]
+
+    const { logAIUsage } = await import('./costs')
+    await logAIUsage({ ...baseRecord, languagePair: null })
+
+    const insertedValues = dbState.valuesCaptures[0] as Record<string, unknown>
+    expect(insertedValues.languagePair).toBeNull()
   })
 })

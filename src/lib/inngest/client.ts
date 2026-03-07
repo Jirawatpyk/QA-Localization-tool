@@ -5,6 +5,7 @@ import type {
   PipelineBatchCompletedEventData,
   PipelineBatchEventData,
   PipelineFileEventData,
+  RetryFailedLayersEventData,
 } from '@/types/pipeline'
 
 // Event schemas — data types canonical in @/types/pipeline to avoid drift
@@ -13,6 +14,7 @@ type Events = {
   'pipeline.batch-started': { data: PipelineBatchEventData }
   'pipeline.batch-completed': { data: PipelineBatchCompletedEventData }
   'finding.changed': { data: FindingChangedEventData }
+  'pipeline.retry-failed-layers': { data: RetryFailedLayersEventData }
 }
 
 export const inngest = new Inngest({

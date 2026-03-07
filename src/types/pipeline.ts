@@ -58,7 +58,34 @@ export type DbFileStatus =
   | 'l2_completed'
   | 'l3_processing'
   | 'l3_completed'
+  | 'ai_partial'
   | 'failed'
+
+/** File statuses that indicate L1 has been completed (partial results exist) */
+export const L1_COMPLETED_STATUSES: ReadonlySet<string> = new Set([
+  'l1_completed',
+  'l2_processing',
+  'l2_completed',
+  'l3_processing',
+  'l3_completed',
+  'ai_partial',
+])
+
+// Client-safe primary model constants for fallback badge detection (no server-only import needed)
+export const PRIMARY_MODELS: Record<PipelineLayer, string> = {
+  L2: 'gpt-4o-mini',
+  L3: 'claude-sonnet-4-5-20250929',
+} as const
+
+/** Retry failed AI layers event — dispatched by retryAiAnalysis action */
+export type RetryFailedLayersEventData = {
+  fileId: string
+  projectId: string
+  tenantId: string
+  userId: string
+  layersToRetry: PipelineLayer[]
+  mode: ProcessingMode
+}
 
 export type PipelineStatus = 'queued' | 'processing' | 'completed' | 'failed'
 

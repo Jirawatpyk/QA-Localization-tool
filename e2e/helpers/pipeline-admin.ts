@@ -20,6 +20,7 @@ export type SeedFileStatus =
   | 'l2_completed'
   | 'l3_processing'
   | 'l3_completed'
+  | 'ai_partial'
   | 'failed'
 
 // Aligned with scores.layer_completed column (varchar(10))
@@ -176,6 +177,102 @@ export async function pollScoreLayer(
   throw new Error(
     `Timed out after ${timeoutMs}ms waiting for score layer_completed='${targetLayer}'. Last: '${lastLayer}'`,
   )
+}
+
+// ── Seeding ──────────────────────────────────────────────────────────────────
+
+/**
+ * Seed a file with ai_partial status + L1 finding + partial score.
+ * Used by Story 3.4 E2E to test partial results display + retry UI.
+ */
+export async function seedAiPartialFile(projectId: string, tenantId: string): Promise<string> {
+  // 1. Insert file with ai_partial status
+  const fileRes = await fetch(`${SUPABASE_URL}/rest/v1/files`, {
+    method: 'POST',
+    headers: { ...adminHeaders(), Prefer: 'return=representation' },
+    body: JSON.stringify({
+      project_id: projectId,
+      tenant_id: tenantId,
+      file_name: 'resilience-test.sdlxliff',
+      file_type: 'sdlxliff',
+      file_size_bytes: 1024,
+      storage_path: `e2e/resilience-test-${Date.now()}.sdlxliff`,
+      status: 'ai_partial',
+    }),
+  })
+  if (!fileRes.ok) {
+    const text = await fileRes.text()
+    throw new Error(`Failed to seed file: ${fileRes.status} ${text}`)
+  }
+  const fileData = (await fileRes.json()) as Array<{ id: string }>
+  const fileId = fileData[0].id
+
+  // 2. Insert a segment (required for L2 retry to have data to process)
+  const segRes = await fetch(`${SUPABASE_URL}/rest/v1/segments`, {
+    method: 'POST',
+    headers: { ...adminHeaders(), Prefer: 'return=minimal' },
+    body: JSON.stringify({
+      file_id: fileId,
+      project_id: projectId,
+      tenant_id: tenantId,
+      segment_number: 1,
+      source_text: 'Hello world',
+      target_text: 'สวัสดีชาวโลก',
+      source_lang: 'en',
+      target_lang: 'th',
+      word_count: 2,
+    }),
+  })
+  if (!segRes.ok) {
+    const text = await segRes.text()
+    throw new Error(`Failed to seed segment: ${segRes.status} ${text}`)
+  }
+
+  // 3. Insert L1 finding (so review page has something to display)
+  const findingRes = await fetch(`${SUPABASE_URL}/rest/v1/findings`, {
+    method: 'POST',
+    headers: { ...adminHeaders(), Prefer: 'return=minimal' },
+    body: JSON.stringify({
+      file_id: fileId,
+      project_id: projectId,
+      tenant_id: tenantId,
+      severity: 'minor',
+      category: 'Whitespace',
+      description: 'Leading whitespace in target segment',
+      detected_by_layer: 'L1',
+      status: 'pending',
+    }),
+  })
+  if (!findingRes.ok) {
+    const text = await findingRes.text()
+    throw new Error(`Failed to seed finding: ${findingRes.status} ${text}`)
+  }
+
+  // 3. Insert partial score (L1 only, status=partial)
+  const scoreRes = await fetch(`${SUPABASE_URL}/rest/v1/scores`, {
+    method: 'POST',
+    headers: { ...adminHeaders(), Prefer: 'return=minimal' },
+    body: JSON.stringify({
+      file_id: fileId,
+      project_id: projectId,
+      tenant_id: tenantId,
+      mqm_score: 99.0,
+      total_words: 500,
+      critical_count: 0,
+      major_count: 0,
+      minor_count: 1,
+      npt: 0.02,
+      layer_completed: 'L1',
+      status: 'partial',
+      calculated_at: new Date().toISOString(),
+    }),
+  })
+  if (!scoreRes.ok) {
+    const text = await scoreRes.text()
+    throw new Error(`Failed to seed score: ${scoreRes.status} ${text}`)
+  }
+
+  return fileId
 }
 
 // ── Cleanup ──────────────────────────────────────────────────────────────────
