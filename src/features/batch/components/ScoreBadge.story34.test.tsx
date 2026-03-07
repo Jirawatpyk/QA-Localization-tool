@@ -79,4 +79,22 @@ describe('ScoreBadge — partial state (Story 3.4)', () => {
     expect(screen.queryByText('Fail')).toBeNull()
     expect(screen.getByText('69.9')).toBeTruthy()
   })
+
+  // ── TA: BVA Gaps ──
+
+  // F19+B5 [P2]: score=null and score=0 with partial state
+  it('[P2] should show Partial label when score is null', () => {
+    render(<ScoreBadge score={null} state="partial" size="md" />)
+
+    expect(screen.getByText('Partial')).toBeTruthy()
+    expect(screen.queryByText('Passed')).toBeNull()
+  })
+
+  it('[P2] should show Partial + "0.0" when score=0 and state=partial', () => {
+    render(<ScoreBadge score={0} state="partial" size="md" />)
+
+    expect(screen.getByText('Partial')).toBeTruthy()
+    expect(screen.getByText('0.0')).toBeTruthy()
+    expect(screen.queryByText('Fail')).toBeNull()
+  })
 })

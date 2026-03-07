@@ -311,5 +311,73 @@ describe('ReviewPageClient — partial state & retry (Story 3.4)', () => {
       // When L2 failed (layerCompleted=L1 + partial)
       expect(screen.getByText(/AI analysis unavailable/i)).toBeTruthy()
     })
+
+    // F21 [P1]: retry failure → button stays visible
+    it('[P1] should keep retry button visible when retryAiAnalysis returns failure', async () => {
+      const user = userEvent.setup()
+
+      mockRetryAiAnalysis.mockResolvedValue({
+        success: false,
+        error: 'Budget exhausted',
+      } as unknown as { success: boolean; data: { retriedLayers: string[] } })
+
+      const initialData = buildInitialData({
+        file: { fileId: VALID_FILE_ID, fileName: 'test.sdlxliff', status: 'ai_partial' },
+        score: {
+          mqmScore: 75,
+          status: 'partial',
+          layerCompleted: 'L1' as LayerCompleted,
+          criticalCount: 0,
+          majorCount: 0,
+          minorCount: 0,
+        },
+      })
+
+      render(
+        <ReviewPageClient
+          fileId={VALID_FILE_ID}
+          projectId={VALID_PROJECT_ID}
+          initialData={initialData}
+        />,
+      )
+
+      const retryButton = screen.getByRole('button', { name: /retry/i })
+      await user.click(retryButton)
+
+      // Button should remain visible after failure (not hidden like on success)
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /retry/i })).toBeTruthy()
+      })
+    })
+  })
+
+  // ── TA: BVA Gaps ──
+
+  describe('deriveScoreBadgeState boundaries', () => {
+    // B7 [P2]: null layerCompleted + partial scoreStatus
+    it('[P2] should show Partial badge when layerCompleted=null but scoreStatus=partial', () => {
+      const initialData = buildInitialData({
+        file: { fileId: VALID_FILE_ID, fileName: 'test.sdlxliff', status: 'ai_partial' },
+        score: {
+          mqmScore: 80,
+          status: 'partial',
+          layerCompleted: null as unknown as LayerCompleted,
+          criticalCount: 0,
+          majorCount: 0,
+          minorCount: 0,
+        },
+      })
+
+      render(
+        <ReviewPageClient
+          fileId={VALID_FILE_ID}
+          projectId={VALID_PROJECT_ID}
+          initialData={initialData}
+        />,
+      )
+
+      // partial scoreStatus takes priority over null layerCompleted
+      expect(screen.getByText('Partial')).toBeTruthy()
+    })
   })
 })

@@ -85,10 +85,11 @@ const handlerFn = async ({ event, step }: { event: RetryEvent; step: StepApi }) 
     )
   })
 
-  // Track which layer completed successfully for partial scoring
-  let lastCompletedLayer: 'L1' | 'L1L2' | 'L1L2L3' = 'L1'
+  // Track which layer completed successfully for partial scoring.
+  // If L2 is NOT being retried, it means L2 was already done → baseline is L1L2.
   const retryL2 = layersToRetry.includes('L2')
   const retryL3 = layersToRetry.includes('L3')
+  let lastCompletedLayer: 'L1' | 'L1L2' | 'L1L2L3' = retryL2 ? 'L1' : 'L1L2'
 
   // Try-catch at handler level (NOT inside step.run) per Inngest guardrail
   try {

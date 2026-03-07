@@ -365,4 +365,74 @@ describe('callWithFallback', () => {
     await expect(callWithFallback(chain, modelFn)).rejects.toThrow(MockNonRetriableError)
     expect(modelFn).toHaveBeenCalledTimes(3)
   })
+
+  // ── TA Gap F3: mixed error types — last kind determines exhaust behavior ──
+  it('[P2] should throw NonRetriableError when primary=rate_limit but fallback=auth (last kind wins)', async () => {
+    const { callWithFallback } = await import('./fallbackRunner')
+
+    let callCount = 0
+    const modelFn = vi.fn((..._args: unknown[]) => {
+      callCount++
+      if (callCount === 1) return Promise.reject(makeRateLimitError())
+      return Promise.reject(makeAuthError())
+    })
+    const chain = { primary: 'gpt-4o-mini', fallbacks: ['gemini-2.0-flash'] }
+
+    // Last error is auth (non-retriable) → NonRetriableError, not re-throw of rate_limit
+    await expect(callWithFallback(chain, modelFn)).rejects.toThrow(MockNonRetriableError)
+    expect(modelFn).toHaveBeenCalledTimes(2)
+  })
+
+  // ── TA Gap F4: attemptsLog populated correctly ──
+  it('[P2] should populate attemptsLog with model, error, and kind for each attempt', async () => {
+    const { callWithFallback } = await import('./fallbackRunner')
+
+    const rateLimitErr = makeRateLimitError()
+    let callCount = 0
+    const modelFn = vi.fn((..._args: unknown[]) => {
+      callCount++
+      if (callCount === 1) return Promise.reject(rateLimitErr)
+      return Promise.resolve({ findings: [], usage: { inputTokens: 50, outputTokens: 20 } })
+    })
+    const chain = { primary: 'gpt-4o-mini', fallbacks: ['gemini-2.0-flash'] }
+
+    const result = await callWithFallback(chain, modelFn)
+
+    expect(result.attemptsLog).toHaveLength(1) // only failed attempts logged
+    expect(result.attemptsLog[0]).toEqual(
+      expect.objectContaining({
+        model: 'gpt-4o-mini',
+        error: expect.any(String),
+        kind: 'rate_limit',
+      }),
+    )
+  })
+
+  // ── TA Gap B2: attemptsLog length = chain size on full exhaust ──
+  it('[P2] should have attemptsLog.length equal to chain size on full exhaust', async () => {
+    const { callWithFallback } = await import('./fallbackRunner')
+
+    const rateLimitErr = makeRateLimitError()
+    const modelFn = vi.fn((..._args: unknown[]) => Promise.reject(rateLimitErr))
+    const chain = { primary: 'gpt-4o-mini', fallbacks: ['gemini-2.0-flash', 'gpt-4o'] }
+
+    try {
+      await callWithFallback(chain, modelFn)
+    } catch {
+      // expected to throw
+    }
+
+    // attemptsLog is internal — verify via logger.error that logs attemptsLog
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        totalAttempts: 3,
+        attemptsLog: expect.arrayContaining([
+          expect.objectContaining({ model: 'gpt-4o-mini' }),
+          expect.objectContaining({ model: 'gemini-2.0-flash' }),
+          expect.objectContaining({ model: 'gpt-4o' }),
+        ]),
+      }),
+      expect.any(String),
+    )
+  })
 })

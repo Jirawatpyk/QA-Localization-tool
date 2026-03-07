@@ -435,4 +435,157 @@ describe('retryAiAnalysis action (Story 3.4)', () => {
       )
     })
   })
+
+  // ── TA: FMA + BVA Coverage Gaps ──
+
+  describe('guard paths', () => {
+    // F5 [P1]: score row not found
+    it('[P1] should return error when score record not found for file', async () => {
+      const { retryAiAnalysis } = await import('./retryAiAnalysis.action')
+
+      dbState.returnValues = [
+        [buildFileRow()], // file found
+        [], // score NOT found
+      ]
+
+      const result = await retryAiAnalysis({ fileId: VALID_FILE_ID, projectId: VALID_PROJECT_ID })
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          success: false,
+          error: expect.stringMatching(/score.*not found/i),
+        }),
+      )
+      expect(mockInngestSend).not.toHaveBeenCalled()
+    })
+
+    // F6 [P1]: project row not found
+    it('[P1] should return error when project not found', async () => {
+      const { retryAiAnalysis } = await import('./retryAiAnalysis.action')
+
+      dbState.returnValues = [
+        [buildFileRow()], // file found
+        [buildScoreRow()], // score found
+        [], // project NOT found
+      ]
+
+      const result = await retryAiAnalysis({ fileId: VALID_FILE_ID, projectId: VALID_PROJECT_ID })
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          success: false,
+          error: expect.stringMatching(/project not found/i),
+        }),
+      )
+      expect(mockInngestSend).not.toHaveBeenCalled()
+    })
+
+    // F7 [P1]: cross-project guard
+    it('[P1] should reject when file belongs to different project (cross-project guard)', async () => {
+      const { retryAiAnalysis } = await import('./retryAiAnalysis.action')
+
+      const DIFFERENT_PROJECT_ID = 'e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a5b'
+      dbState.returnValues = [
+        [buildFileRow({ projectId: DIFFERENT_PROJECT_ID })], // file belongs to different project
+      ]
+
+      const result = await retryAiAnalysis({ fileId: VALID_FILE_ID, projectId: VALID_PROJECT_ID })
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          success: false,
+          code: 'NOT_FOUND',
+        }),
+      )
+      expect(mockInngestSend).not.toHaveBeenCalled()
+    })
+
+    // F8 [P1]: invalid layerCompleted
+    it('[P1] should reject when layerCompleted value is not in valid whitelist', async () => {
+      const { retryAiAnalysis } = await import('./retryAiAnalysis.action')
+
+      dbState.returnValues = [
+        [buildFileRow()],
+        [buildScoreRow({ layerCompleted: 'INVALID' })], // invalid layerCompleted
+      ]
+
+      const result = await retryAiAnalysis({ fileId: VALID_FILE_ID, projectId: VALID_PROJECT_ID })
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          success: false,
+          code: 'INVALID_STATUS',
+          error: expect.stringMatching(/layerCompleted/i),
+        }),
+      )
+    })
+
+    // F9 [P2]: invalid processingMode
+    it('[P2] should reject when processingMode is not economy or thorough', async () => {
+      const { retryAiAnalysis } = await import('./retryAiAnalysis.action')
+
+      dbState.returnValues = [
+        [buildFileRow()],
+        [buildScoreRow()],
+        [buildProjectRow({ processingMode: 'turbo' })], // invalid mode
+      ]
+
+      const result = await retryAiAnalysis({ fileId: VALID_FILE_ID, projectId: VALID_PROJECT_ID })
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          success: false,
+          code: 'INVALID_STATUS',
+          error: expect.stringMatching(/processingMode/i),
+        }),
+      )
+    })
+
+    // F10 [P2]: Zod validation failure
+    it('[P2] should reject with VALIDATION_ERROR when fileId is not a valid UUID', async () => {
+      const { retryAiAnalysis } = await import('./retryAiAnalysis.action')
+
+      const result = await retryAiAnalysis({ fileId: 'not-a-uuid', projectId: VALID_PROJECT_ID })
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          success: false,
+          code: 'VALIDATION_ERROR',
+        }),
+      )
+      expect(mockInngestSend).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('resilience', () => {
+    // F11 [P1]: audit log failure is non-fatal
+    it('[P1] should still return success when audit log write fails', async () => {
+      const { retryAiAnalysis } = await import('./retryAiAnalysis.action')
+
+      mockWriteAuditLog.mockRejectedValue(new Error('Audit DB connection failed'))
+
+      const result = await retryAiAnalysis({ fileId: VALID_FILE_ID, projectId: VALID_PROJECT_ID })
+
+      expect(result.success).toBe(true)
+      expect(mockInngestSend).toHaveBeenCalled()
+    })
+
+    // F13+B8 [P2]: no Inngest event when layersToRetry is empty
+    it('[P2] should NOT send Inngest event when all layers already completed (L1L2L3+thorough)', async () => {
+      const { retryAiAnalysis } = await import('./retryAiAnalysis.action')
+
+      dbState.returnValues = [
+        [buildFileRow()],
+        [buildScoreRow({ layerCompleted: 'L1L2L3' })],
+        [buildProjectRow({ processingMode: 'thorough' })],
+      ]
+
+      const result = await retryAiAnalysis({ fileId: VALID_FILE_ID, projectId: VALID_PROJECT_ID })
+
+      const success = assertSuccess(result)
+      expect(success.data.retriedLayers).toHaveLength(0)
+      // Critical: NO Inngest event should be sent for empty layers
+      expect(mockInngestSend).not.toHaveBeenCalled()
+    })
+  })
 })

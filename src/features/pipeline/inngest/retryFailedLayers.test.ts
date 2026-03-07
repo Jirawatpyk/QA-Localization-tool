@@ -464,6 +464,23 @@ describe('retryFailedLayers Inngest function (Story 3.4)', () => {
       expect(mockRunL3ForFile).not.toHaveBeenCalled()
     })
 
+    // B4 [P1]: empty layersToRetry boundary
+    it('[P1] should skip L2+L3 and return aiPartial=false when layersToRetry is empty', async () => {
+      const { retryFailedLayers } = await import('./retryFailedLayers')
+
+      const step = createMockStep()
+      const event = buildRetryEvent({ layersToRetry: [] as PipelineLayer[] })
+
+      const result = await (
+        retryFailedLayers as { handler: (...args: unknown[]) => Promise<unknown> }
+      ).handler({ event, step })
+
+      expect(mockRunL2ForFile).not.toHaveBeenCalled()
+      expect(mockRunL3ForFile).not.toHaveBeenCalled()
+      expect(mockScoreFile).not.toHaveBeenCalled()
+      expect(result).toEqual(expect.objectContaining({ aiPartial: false }))
+    })
+
     it('[P0] should re-check budget before making AI calls', async () => {
       const { retryFailedLayers } = await import('./retryFailedLayers')
 
@@ -487,6 +504,127 @@ describe('retryFailedLayers Inngest function (Story 3.4)', () => {
       ).rejects.toThrow(/quota|budget/i)
 
       expect(mockRunL2ForFile).not.toHaveBeenCalled()
+    })
+  })
+
+  // ── TA: FMA + BVA Coverage Gaps ──
+
+  describe('lastCompletedLayer tracking', () => {
+    // Q [P1]: BUG — lastCompletedLayer init='L1' wrong when retrying L3 only
+    it('[P1] should score with layerCompleted=L1L2 (not L1) when retrying only L3 and it fails', async () => {
+      const { retryFailedLayers } = await import('./retryFailedLayers')
+
+      // Ensure budget check passes
+      const { checkProjectBudget } = await import('@/lib/ai/budget')
+      vi.mocked(checkProjectBudget).mockResolvedValue({
+        hasQuota: true,
+        remainingBudgetUsd: Infinity,
+        monthlyBudgetUsd: null,
+        usedBudgetUsd: 0,
+      })
+
+      // Only L3 retry requested (L2 was already done successfully)
+      mockRunL3ForFile.mockRejectedValue(new Error('L3 retry also failed'))
+
+      const step = createMockStep()
+      const event = buildRetryEvent({ layersToRetry: ['L3'] as PipelineLayer[], mode: 'thorough' })
+
+      await (retryFailedLayers as { handler: (...args: unknown[]) => Promise<unknown> }).handler({
+        event,
+        step,
+      })
+
+      // BUG: lastCompletedLayer starts at 'L1' but L2 was already done.
+      // When L3 fails, scoreFile should use 'L1L2' (not 'L1').
+      expect(mockScoreFile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          layerCompleted: 'L1L2',
+          scoreStatus: 'partial',
+        }),
+      )
+    })
+  })
+
+  describe('onFailure edge cases', () => {
+    // F14 [P1]: file status NOT in L1_COMPLETED_STATUSES
+    it('[P1] should NOT set ai_partial when file status is pre-L1 (e.g. parsing)', async () => {
+      const { retryFailedLayers } = await import('./retryFailedLayers')
+
+      // File is in pre-L1 state — no partial results exist
+      dbState.returnValues = [[{ id: VALID_FILE_ID, status: 'parsing' }]]
+      dbState.setCaptures = []
+
+      const onFailureEvent = {
+        data: {
+          event: buildRetryEvent(),
+          error: { message: 'Retry function failed' },
+        },
+      }
+
+      await (
+        retryFailedLayers as { onFailure: (...args: unknown[]) => Promise<unknown> }
+      ).onFailure({ event: onFailureEvent, step: createMockStep() })
+
+      // ai_partial must NOT be set — no partial results to preserve
+      const aiPartialUpdate = (dbState.setCaptures as Record<string, unknown>[])?.find(
+        (s) => s.status === 'ai_partial',
+      )
+      expect(aiPartialUpdate).toBeUndefined()
+    })
+
+    // F16 [P1]: file not found in onFailure
+    it('[P1] should log warning and return when file not found in onFailure', async () => {
+      const { retryFailedLayers } = await import('./retryFailedLayers')
+      const { logger } = await import('@/lib/logger')
+
+      // File query returns empty — file was deleted
+      dbState.returnValues = [[]]
+      dbState.setCaptures = []
+
+      const onFailureEvent = {
+        data: {
+          event: buildRetryEvent(),
+          error: { message: 'Retry function failed' },
+        },
+      }
+
+      await (
+        retryFailedLayers as { onFailure: (...args: unknown[]) => Promise<unknown> }
+      ).onFailure({ event: onFailureEvent, step: createMockStep() })
+
+      // Should warn about missing file and not crash
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({ fileId: VALID_FILE_ID }),
+        expect.stringContaining('not found'),
+      )
+
+      // No status update should occur
+      const anyUpdate = (dbState.setCaptures as Record<string, unknown>[])?.find(
+        (s) => s.status !== undefined,
+      )
+      expect(anyUpdate).toBeUndefined()
+    })
+
+    // F15 [P2]: onFailure DB error caught silently
+    it('[P2] should not throw when onFailure DB query fails', async () => {
+      const { retryFailedLayers } = await import('./retryFailedLayers')
+
+      dbState.throwAtCallIndex = 0 // DB query throws
+
+      const onFailureEvent = {
+        data: {
+          event: buildRetryEvent(),
+          error: { message: 'Original failure' },
+        },
+      }
+
+      // onFailure must not throw — silent catch
+      await expect(
+        (retryFailedLayers as { onFailure: (...args: unknown[]) => Promise<unknown> }).onFailure({
+          event: onFailureEvent,
+          step: createMockStep(),
+        }),
+      ).resolves.not.toThrow()
     })
   })
 })
