@@ -108,6 +108,16 @@ describe('AiBudgetCard', () => {
     expect(progressBar.getAttribute('data-status')).toBe('warning')
   })
 
+  // ── TA Gap T: 0% usage ──
+  it('[P2] should render green progress bar at 0% usage', async () => {
+    const { AiBudgetCard } = await import('./AiBudgetCard')
+    render(<AiBudgetCard usedBudgetUsd={0} monthlyBudgetUsd={100} budgetAlertThresholdPct={80} />)
+
+    const progressBar = screen.getByTestId('ai-budget-progress')
+    expect(progressBar.getAttribute('aria-valuenow')).toBe('0')
+    expect(progressBar.getAttribute('data-status')).toBe('ok')
+  })
+
   describe('Threshold Editing (Story 3.2b6)', () => {
     beforeEach(() => {
       vi.clearAllMocks()

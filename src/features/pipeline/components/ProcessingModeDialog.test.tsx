@@ -341,4 +341,38 @@ describe('ProcessingModeDialog', () => {
     })
     // RED: exact rate match at 100K words
   })
+
+  // ── TA Gap J: Rate limit error display ──
+  it('[P2] should show rate limit error toast when startProcessing returns RATE_LIMITED', async () => {
+    mockStartProcessing.mockResolvedValue({
+      success: false,
+      code: 'RATE_LIMITED',
+      error: 'Rate limit exceeded. Try again later.',
+    })
+    const user = userEvent.setup()
+    render(<ProcessingModeDialog {...defaultProps} />)
+
+    await user.click(screen.getByRole('button', { name: 'Start Processing' }))
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Rate limit exceeded. Try again later.')
+    })
+  })
+
+  // ── TA Gap J: Budget exceeded error display ──
+  it('[P2] should show budget exceeded error toast when startProcessing returns BUDGET_EXCEEDED', async () => {
+    mockStartProcessing.mockResolvedValue({
+      success: false,
+      code: 'BUDGET_EXCEEDED',
+      error: 'AI budget exhausted for this project',
+    })
+    const user = userEvent.setup()
+    render(<ProcessingModeDialog {...defaultProps} />)
+
+    await user.click(screen.getByRole('button', { name: 'Start Processing' }))
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('AI budget exhausted for this project')
+    })
+  })
 })

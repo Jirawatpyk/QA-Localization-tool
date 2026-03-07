@@ -104,6 +104,22 @@ describe('estimateCost', () => {
     } as unknown as LanguageModelUsage)
     expect(cost).toBe(0)
   })
+
+  // ── TA Gap E: Gemini model ──
+  it('[P2] should fall back to L2 default cost for gemini-2.0-flash (unknown model)', async () => {
+    const { estimateCost } = await import('./costs')
+    const cost = estimateCost('gemini-2.0-flash', 'L2', usage(1000, 500))
+    // Falls back to gpt-4o-mini rates: input (1000/1000)*0.00015 + output (500/1000)*0.0006 = 0.00045
+    expect(cost).toBeCloseTo(0.00045, 6)
+  })
+
+  // ── TA Gap N: Single token ──
+  it('[P2] should round to zero for 1 input token (below 6-decimal precision)', async () => {
+    const { estimateCost } = await import('./costs')
+    const cost = estimateCost('gpt-4o-mini', 'L2', usage(1, 0))
+    // (1/1000) * 0.00015 = 0.00000015, rounds to 0 at 6 decimal places
+    expect(cost).toBe(0)
+  })
 })
 
 describe('aggregateUsage', () => {
@@ -135,6 +151,20 @@ describe('aggregateUsage', () => {
     expect(result.inputTokens).toBe(500)
     expect(result.outputTokens).toBe(200)
     expect(result.estimatedCostUsd).toBeCloseTo(0.005, 6)
+  })
+
+  // ── TA Gap H: Many records precision ──
+  it('[P2] should maintain precision when aggregating many small cost records', async () => {
+    const { aggregateUsage } = await import('./costs')
+    // 100 records each with $0.000001 cost
+    const records = Array.from({ length: 100 }, () => ({
+      ...baseRecord,
+      inputTokens: 1,
+      outputTokens: 0,
+      estimatedCostUsd: 0.000001,
+    }))
+    const result = aggregateUsage(records)
+    expect(result.estimatedCostUsd).toBeCloseTo(0.0001, 6)
   })
 })
 

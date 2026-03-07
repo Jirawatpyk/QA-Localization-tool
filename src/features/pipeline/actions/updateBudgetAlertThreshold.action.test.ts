@@ -190,4 +190,17 @@ describe('updateBudgetAlertThreshold', () => {
     expect(withTenant).toHaveBeenCalledWith(expect.anything(), adminUser.tenantId)
     // RED: withTenant guard
   })
+
+  // ── TA Gap W: Negative threshold ──
+  it('[P2] should return INVALID_INPUT when threshold is negative (-1)', async () => {
+    const { updateBudgetAlertThreshold } = await import('./updateBudgetAlertThreshold.action')
+
+    const result = await updateBudgetAlertThreshold({
+      projectId: VALID_PROJECT_ID,
+      thresholdPct: -1,
+    })
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INVALID_INPUT')
+  })
 })

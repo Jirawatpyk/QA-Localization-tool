@@ -153,4 +153,33 @@ describe('AI Rate Limiters', () => {
 
     expect(result.success).toBe(false)
   })
+
+  // ── TA Gap P: L3 limiter boundary ──
+  it('[P1] should allow the 50th request per project for L3 limiter', async () => {
+    mockAiL3Limit.mockResolvedValueOnce({
+      success: true,
+      limit: 50,
+      remaining: 0,
+      reset: Date.now() + 3600_000,
+    })
+
+    const { aiL3ProjectLimiter } = await import('./ratelimit')
+    const result = await aiL3ProjectLimiter.limit('project-id-abc')
+
+    expect(result.success).toBe(true)
+  })
+
+  it('[P1] should block the 51st request per project for L3 limiter', async () => {
+    mockAiL3Limit.mockResolvedValueOnce({
+      success: false,
+      limit: 50,
+      remaining: 0,
+      reset: Date.now() + 3600_000,
+    })
+
+    const { aiL3ProjectLimiter } = await import('./ratelimit')
+    const result = await aiL3ProjectLimiter.limit('project-id-abc')
+
+    expect(result.success).toBe(false)
+  })
 })

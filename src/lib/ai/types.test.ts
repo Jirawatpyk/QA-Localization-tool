@@ -26,6 +26,13 @@ describe('getConfigForModel', () => {
     const config = getConfigForModel('claude-sonnet-unknown-variant', 'L3')
     expect(config).toBe(MODEL_CONFIG['claude-sonnet-4-5-20250929'])
   })
+
+  // ── TA Gap F: Empty string ──
+  it('[P2] should fall back to layer default for empty string model ID', async () => {
+    const { getConfigForModel, MODEL_CONFIG } = await import('./types')
+    const config = getConfigForModel('', 'L2')
+    expect(config).toBe(MODEL_CONFIG['gpt-4o-mini'])
+  })
 })
 
 describe('deriveProviderFromModelId', () => {
@@ -56,5 +63,11 @@ describe('deriveProviderFromModelId', () => {
     const { deriveProviderFromModelId } = await import('./types')
     expect(deriveProviderFromModelId('llama-3')).toBe('unknown')
     expect(deriveProviderFromModelId('mistral-7b')).toBe('unknown')
+  })
+
+  // ── TA Gap X: Empty string ──
+  it('[P2] should return unknown for empty string model ID', async () => {
+    const { deriveProviderFromModelId } = await import('./types')
+    expect(deriveProviderFromModelId('')).toBe('unknown')
   })
 })

@@ -226,4 +226,48 @@ describe('checkProjectBudget', () => {
     expect(dbState.callIndex).toBe(2)
     // RED: month filter must be included in ai_usage_logs query
   })
+
+  // ── TA Gap I: DB error propagation ──
+  it('[P1] should propagate DB error when projects query throws', async () => {
+    dbState.throwAtCallIndex = 0
+
+    const { checkProjectBudget } = await import('./budget')
+    await expect(checkProjectBudget(VALID_PROJECT_ID, VALID_TENANT_ID)).rejects.toThrow()
+  })
+
+  // ── TA Gap K: Zero budget boundary ──
+  it('[P1] should return hasQuota=false when budget is $0 (zero budget blocks all)', async () => {
+    dbState.returnValues = [[{ aiBudgetMonthlyUsd: '0.00' }], [{ total: '0' }]]
+
+    const { checkProjectBudget } = await import('./budget')
+    const result = await checkProjectBudget(VALID_PROJECT_ID, VALID_TENANT_ID)
+
+    // $0 budget: usedBudgetUsd(0) < budget(0) → false
+    expect(result.hasQuota).toBe(false)
+    expect(result.monthlyBudgetUsd).toBe(0)
+    expect(result.remainingBudgetUsd).toBe(0)
+  })
+
+  // ── TA Gap L: Micro budget ──
+  it('[P2] should handle micro budget of $0.01 correctly', async () => {
+    dbState.returnValues = [[{ aiBudgetMonthlyUsd: '0.01' }], [{ total: '0' }]]
+
+    const { checkProjectBudget } = await import('./budget')
+    const result = await checkProjectBudget(VALID_PROJECT_ID, VALID_TENANT_ID)
+
+    expect(result.hasQuota).toBe(true)
+    expect(result.monthlyBudgetUsd).toBe(0.01)
+    expect(result.remainingBudgetUsd).toBeCloseTo(0.01)
+  })
+})
+
+describe('checkTenantBudget', () => {
+  it('[P1] should always return hasQuota=true (stub)', async () => {
+    const { checkTenantBudget } = await import('./budget')
+    const result = await checkTenantBudget('any-tenant-id')
+    expect(result.hasQuota).toBe(true)
+    expect(result.remainingBudgetUsd).toBe(Infinity)
+    expect(result.monthlyBudgetUsd).toBeNull()
+    expect(result.usedBudgetUsd).toBe(0)
+  })
 })

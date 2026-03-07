@@ -136,6 +136,18 @@ describe('buildFallbackChain', () => {
     const l3Chain = buildFallbackChain('L3', null)
     expect(l3Chain.fallbacks).not.toContain(l3Chain.primary)
   })
+
+  // ── TA Gap Q: Pin fallback model as primary ──
+  it('[P2] should handle pinned model that equals a fallback model (gemini-2.0-flash for L2)', async () => {
+    const { buildFallbackChain } = await import('./providers')
+    const chain = buildFallbackChain('L2', 'gemini-2.0-flash')
+
+    expect(chain.primary).toBe('gemini-2.0-flash')
+    // System default should be in fallbacks
+    expect(chain.fallbacks).toContain('gpt-4o-mini')
+    // No self-fallback
+    expect(chain.fallbacks).not.toContain('gemini-2.0-flash')
+  })
 })
 
 describe('getModelForLayerWithFallback', () => {
@@ -280,6 +292,20 @@ describe('fallback chain with health check integration', () => {
       expect.objectContaining({ primary: chain.primary }),
       expect.stringContaining('All providers unhealthy'),
     )
+  })
+
+  // ── TA Gap G: Fallback order preservation ──
+  it('[P1] should prepend original primary to fallbacks when fallback is promoted', async () => {
+    mockGenerateText
+      .mockRejectedValueOnce(new Error('connection refused'))
+      .mockResolvedValueOnce({ output: null, usage: { inputTokens: 0, outputTokens: 0 } })
+
+    const { buildFallbackChain, resolveHealthyModel } = await import('./providers')
+    const chain = buildFallbackChain('L2', null)
+    const resolved = await resolveHealthyModel(chain)
+
+    // Original primary should be first in fallbacks array
+    expect(resolved.fallbacks[0]).toBe('gpt-4o-mini')
   })
 })
 
