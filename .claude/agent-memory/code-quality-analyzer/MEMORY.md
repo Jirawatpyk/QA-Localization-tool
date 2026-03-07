@@ -24,7 +24,7 @@
 - `cross-feature-review-findings.md` — Cross-Feature Review: parity/dashboard/project (0C/7H/9M/8L) 2026-03-03
 - `story-3-2c-findings.md` — Story 3.2c L2 Results Display & Score Update CR R1-R3 (R3: 0C/1H/3M/5L)
 - `story-3-3-findings.md` — Story 3.3 AI Layer 3 Deep Contextual Analysis CR R1 (0C/3H/5M/5L)
-- `story-3-4-findings.md` — Story 3.4 AI Resilience Fallback & Retry CR R1 (1C/7H/8M)
+- `story-3-4-findings.md` — Story 3.4 AI Resilience Fallback & Retry CR R1-R2 (R2: 0C/1H/3M/5L)
 
 ## Recurring Anti-Patterns (check EVERY review)
 

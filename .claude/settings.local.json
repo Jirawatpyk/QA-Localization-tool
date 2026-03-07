@@ -147,7 +147,10 @@
       "Bash(npm view:*)",
       "Bash(npx dotenv-cli:*)",
       "Bash(PGPASSWORD=gyO7XXkkpPkHobtD psql:*)",
-      "Bash(export:*)"
+      "Bash(export:*)",
+      "Bash(cp:*)",
+      "Bash(INNGEST_DEV_URL=http://localhost:8288 npx dotenv-cli:*)",
+      "Bash(PGPASSWORD=postgres psql:*)"
     ]
   }
 }

@@ -183,30 +183,27 @@ Key confirmed patterns:
 
 ### Story 3.4 Audit Results (AI Resilience, Fallback, Retry, Partial Results — 2026-03-07)
 
-**Result: 0C/1H/0M/0L — AT RISK. 1 HIGH finding requires fix.**
+**R1 result: 0C/1H/0M/0L — AT RISK (HIGH: cross-project contamination in retryAiAnalysis.action.ts).**
+**R2 result: 0C/0H/0M/0L — SECURE. R1 HIGH fix verified correct.**
 
-Files: `retryAiAnalysis.action.ts`, `retryFailedLayers.ts`, `processFile.ts` (changed),
-`runL2ForFile.ts` (changed), `runL3ForFile.ts` (changed), `scoreFile.ts` (changed).
+R1 HIGH fix confirmed at `retryAiAnalysis.action.ts` L94-97: `file.projectId !== projectId` guard
+is present and correctly positioned — after tenant-guarded file SELECT, before score/project queries.
+Score query also has `eq(scores.projectId, projectId)` at L126 (redundant after L94-97 but defense-in-depth).
 
-HIGH finding — `retryAiAnalysis.action.ts` L73-87 + L121-131:
+All 6 files PASS (R2 full re-scan):
 
-The action queries `files` by `fileId + withTenant(tenantId)` (correct cross-tenant guard). It
-also queries `projects` by `projectId + withTenant(tenantId)` (correct cross-tenant guard). BUT
-it never validates that `file.projectId === projectId` (the projectId received from the client).
-A user within the same tenant could pass `fileId` from project A and `projectId` from project B
-(both in their tenant). The action would: (1) read project B's processingMode, (2) inject project
-B's ID into the Inngest event, (3) retryFailedLayers would run L2/L3 with project B's context for
-file A's segments. This is within-tenant cross-project data contamination.
-
-Fix: after loading `file`, add `if (file.projectId !== projectId) return { success: false, code: 'NOT_FOUND', ... }`
-
-All other patterns in this story confirmed PASS:
-
+- `retryAiAnalysis.action.ts`: tenantId from requireRole(); withTenant() on files/scores/projects queries;
+  cross-project guard (L94-97); Inngest payload tenantId from session; audit non-fatal (G2). PASS.
 - `retryFailedLayers.ts`: tenantId from event.data; withTenant() on every files/projects query;
   all status reset UPDATEs scoped; onFailure SELECT+UPDATE both scoped. PASS.
-- `processFile.ts` new batch completion path: `withTenant(files.tenantId)` on SELECT + `withTenant(uploadBatches.tenantId)` on UPDATE (confirmed uploadBatches.tenantId column exists in schema). PASS.
-- `runL2ForFile.ts`, `runL3ForFile.ts`: no new Story 3.4 queries. Prior audit (3.2a/3.3) confirmed. PASS.
-- `scoreFile.ts` new partial path: scores SELECT/DELETE/INSERT all scoped; `createGraduationNotification()`: dedup SELECT + userRoles SELECT both use withTenant(); notifications INSERT sets tenantId in values. PASS.
+- `processFile.ts`: withTenant(files.tenantId) on batch SELECT + withTenant(uploadBatches.tenantId) on UPDATE;
+  onFailure SELECT+UPDATE both scoped. PASS.
+- `scoreFile.ts`: segments/findings/scores all three-way guarded; createGraduationNotification()
+  withTenant() on dedup SELECT + userRoles SELECT; notifications INSERT sets tenantId in values. PASS.
+- `runL2ForFile.ts`: CAS UPDATE, segments, findings, glossary JOIN, project — all scoped;
+  DELETE+INSERT transaction scoped by withTenant()+fileId+layer; rollback path scoped. PASS.
+- `runL3ForFile.ts`: same patterns as L2 plus languagePairConfigs withTenant(); L3 confirm/contradict
+  UPDATE uses withTenant(findings.tenantId)+eq(findings.id, matchedL2.id) (id pre-validated via scoped SELECT). PASS.
 
 ### Pipeline & Scoring Full Deep-Dive Audit (2026-03-03)
 
