@@ -167,4 +167,31 @@ describe('AppBreadcrumb', () => {
     expect(screen.getByText('Dashboard')).toBeTruthy()
     expect(screen.getByText('Findings')).toBeTruthy()
   })
+
+  // F8 [P2] Root '/' path renders only "Dashboard" with no separators
+  it('[P2] should render only Dashboard at root path with no separators', () => {
+    mockUsePathname.mockReturnValue('/')
+
+    render(<AppBreadcrumb />)
+
+    // Only "Dashboard" text should be visible
+    expect(screen.getByText('Dashboard')).toBeTruthy()
+    // No separator should be rendered (single segment — root collapses to Dashboard only)
+    expect(document.querySelector('[data-slot="breadcrumb-separator"]')).toBeNull()
+    // No dynamic segments → server action should NOT be called
+    expect(mockGetBreadcrumbEntities).not.toHaveBeenCalled()
+  })
+
+  // F9 [P2] '/projects' without ID: renders Dashboard + Projects as static segments
+  it('[P2] should render Dashboard and Projects as static segments for /projects path', () => {
+    mockUsePathname.mockReturnValue('/projects')
+
+    render(<AppBreadcrumb />)
+
+    // Both static segments should be visible
+    expect(screen.getByText('Dashboard')).toBeTruthy()
+    expect(screen.getByText('Projects')).toBeTruthy()
+    // No dynamic UUID segment → server action should NOT be called
+    expect(mockGetBreadcrumbEntities).not.toHaveBeenCalled()
+  })
 })

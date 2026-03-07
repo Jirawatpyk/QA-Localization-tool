@@ -176,6 +176,17 @@ describe('recalculateScore', () => {
     ).resolves.toBeUndefined()
   })
 
+  // F12 [P1]: handler calls scoreFile WITHOUT layerFilter (review = all layers)
+  it('[P1] should call scoreFile without layerFilter (review context = all layers)', async () => {
+    const event = buildFindingChangedEvent()
+    const mockStep = createMockStep()
+
+    await recalculateScore.handler({ event: { data: event }, step: mockStep })
+
+    const callArgs = mockScoreFile.mock.calls[0]![0] as Record<string, unknown>
+    expect(callArgs).not.toHaveProperty('layerFilter')
+  })
+
   it('should have retries set to 3', () => {
     expect(recalculateScore.fnConfig.retries).toBe(3)
   })

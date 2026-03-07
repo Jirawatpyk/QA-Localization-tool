@@ -185,6 +185,53 @@ describe('useReviewStore', () => {
 
   // ── TA: Coverage Gap Tests ──
 
+  // F4 [P1]: explicit null clears layerCompleted (vs undefined which preserves)
+  it('[P1] should clear layerCompleted when updateScore called with explicit null', () => {
+    useReviewStore.getState().updateScore(85, 'calculated', 'L1L2')
+    expect(useReviewStore.getState().layerCompleted).toBe('L1L2')
+
+    useReviewStore.getState().updateScore(90, 'calculated', null)
+    expect(useReviewStore.getState().layerCompleted).toBeNull()
+  })
+
+  // F1 [P2]: setFinding overwrites existing finding with same key
+  it('[P2] should overwrite existing finding when setFinding called with same key', () => {
+    const original = buildFinding({ id: 'f1', severity: 'minor' })
+    const updated = buildFinding({ id: 'f1', severity: 'critical' })
+    useReviewStore.getState().setFinding('f1', original)
+    useReviewStore.getState().setFinding('f1', updated)
+
+    expect(useReviewStore.getState().findingsMap.size).toBe(1)
+    expect(useReviewStore.getState().findingsMap.get('f1')).toEqual(updated)
+  })
+
+  // F2 [P2]: removeFinding on non-existent ID is safe no-op
+  it('[P2] should be a safe no-op when removeFinding called with non-existent ID', () => {
+    useReviewStore.getState().setFinding('f1', buildFinding({ id: 'f1' }))
+    useReviewStore.getState().removeFinding('non-existent')
+
+    expect(useReviewStore.getState().findingsMap.size).toBe(1)
+    expect(useReviewStore.getState().findingsMap.has('f1')).toBe(true)
+  })
+
+  // F3 [P2]: clearSelection empties selectedIds
+  it('[P2] should empty selectedIds via clearSelection', () => {
+    useReviewStore.getState().toggleSelection('f1')
+    useReviewStore.getState().toggleSelection('f2')
+    expect(useReviewStore.getState().selectedIds.size).toBe(2)
+
+    useReviewStore.getState().clearSelection()
+    expect(useReviewStore.getState().selectedIds.size).toBe(0)
+  })
+
+  // F5 [P2]: single→single doesn't clear selectedIds
+  it('[P2] should not clear selectedIds when setSelectionMode single to single', () => {
+    useReviewStore.getState().toggleSelection('f1')
+    useReviewStore.getState().setSelectionMode('single')
+
+    expect(useReviewStore.getState().selectedIds.has('f1')).toBe(true)
+  })
+
   it('[P2] should preserve existing layerCompleted when updateScore called without layerCompleted arg', () => {
     // Set layerCompleted via 3-arg call
     useReviewStore.getState().updateScore(85, 'calculated', 'L1L2')
@@ -194,6 +241,16 @@ describe('useReviewStore', () => {
     useReviewStore.getState().updateScore(90, 'calculated')
     expect(useReviewStore.getState().currentScore).toBe(90)
     expect(useReviewStore.getState().layerCompleted).toBe('L1L2')
+  })
+
+  // B10 [P2]: setFindings with empty Map clears all findings
+  it('[P2] should clear all findings when setFindings called with empty Map', () => {
+    useReviewStore.getState().setFinding('f1', buildFinding({ id: 'f1' }))
+    useReviewStore.getState().setFinding('f2', buildFinding({ id: 'f2' }))
+    expect(useReviewStore.getState().findingsMap.size).toBe(2)
+
+    useReviewStore.getState().setFindings(new Map())
+    expect(useReviewStore.getState().findingsMap.size).toBe(0)
   })
 
   // ── Story 3.2c AC6: layerCompleted tracking ──

@@ -389,4 +389,98 @@ describe('ScoreBadge', () => {
       expect(screen.getByText('AI Screened')).toBeTruthy()
     })
   })
+
+  // -- FMA Gap Tests (8 tests, P1/P2) --
+
+  describe('FMA Gap Tests', () => {
+    // F1 [P1] Score=0 boundary: lowest possible numeric score → derives 'fail'
+    it('[P1] F1: should derive fail state and show "Fail" label when score=0', () => {
+      render(<ScoreBadge score={0} size="md" />)
+
+      const container = screen.getByTestId('score-badge')
+      expect(container.className).toMatch(/status-fail/)
+      expect(screen.getByText('Fail')).toBeTruthy()
+    })
+
+    // F2 [P1] Score=100 boundary: perfect score with no critical errors → derives 'pass'
+    it('[P1] F2: should derive pass state and show "Passed" label when score=100 and criticalCount=0', () => {
+      render(<ScoreBadge score={100} criticalCount={0} size="md" />)
+
+      const container = screen.getByTestId('score-badge')
+      expect(container.className).toMatch(/status-pass/)
+      expect(screen.getByText('Passed')).toBeTruthy()
+    })
+
+    // F3a [P1] State='deep-analyzed': explicit state renders deep-analyzed design token + label
+    it('[P1] F3a: should render deep-analyzed class and "Deep Analyzed" label when state=deep-analyzed', () => {
+      render(<ScoreBadge score={85} state="deep-analyzed" size="md" />)
+
+      const container = screen.getByTestId('score-badge')
+      expect(container.className).toMatch(/status-deep-analyzed/)
+      expect(screen.getByText('Deep Analyzed')).toBeTruthy()
+    })
+
+    // F3b [P1] State='partial': explicit state renders partial design token + label
+    it('[P1] F3b: should render partial class and "Partial" label when state=partial', () => {
+      render(<ScoreBadge score={75} state="partial" size="md" />)
+
+      const container = screen.getByTestId('score-badge')
+      expect(container.className).toMatch(/status-partial/)
+      expect(screen.getByText('Partial')).toBeTruthy()
+    })
+
+    // F4/F5 animation tests need fake timers
+    describe('no-animation edge cases', () => {
+      beforeEach(() => {
+        vi.useFakeTimers()
+      })
+
+      afterEach(() => {
+        vi.useRealTimers()
+      })
+
+      // F4 [P2] null→number: prev===null guard suppresses animation
+      it('[P2] F4: should not apply slide animation when score transitions from null to a number', () => {
+        const { rerender } = render(<ScoreBadge score={null} />)
+
+        rerender(<ScoreBadge score={80} />)
+
+        const badge = screen.getByText('80.0')
+        expect(badge.className).not.toMatch(/animate-slide-up/)
+        expect(badge.className).not.toMatch(/animate-slide-down/)
+      })
+
+      // F5 [P2] number→null: score===null guard suppresses animation
+      it('[P2] F5: should not apply slide animation when score transitions from a number to null', () => {
+        const { rerender } = render(<ScoreBadge score={80} />)
+
+        rerender(<ScoreBadge score={null} />)
+
+        // After rerender to null, score display is 'N/A'
+        const container = screen.getByTestId('score-badge')
+        // The score span now shows N/A — no animation class should be present
+        const scoreSpan = container.querySelector('span')
+        expect(scoreSpan?.className).not.toMatch(/animate-slide-up/)
+        expect(scoreSpan?.className).not.toMatch(/animate-slide-down/)
+      })
+    })
+
+    // F6 [P2] Negative score: -5 < 70 → derives 'fail'
+    it('[P2] F6: should derive fail state and show "Fail" label when score is negative', () => {
+      render(<ScoreBadge score={-5} size="md" />)
+
+      const container = screen.getByTestId('score-badge')
+      expect(container.className).toMatch(/status-fail/)
+      expect(screen.getByText('Fail')).toBeTruthy()
+    })
+
+    // F7 [P2] NaN score: NaN<70 is false, NaN>=95 is false → derives 'review'
+    it('[P2] F7: should derive review state and show "Review" label when score is NaN', () => {
+      render(<ScoreBadge score={NaN} size="md" />)
+
+      const container = screen.getByTestId('score-badge')
+      expect(container.className).toMatch(/status-pending/)
+      expect(screen.getByText('Review')).toBeTruthy()
+    })
+  })
 })

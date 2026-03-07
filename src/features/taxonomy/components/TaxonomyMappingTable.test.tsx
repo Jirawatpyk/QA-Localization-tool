@@ -255,3 +255,49 @@ describe('TaxonomyMappingTable — Drag-and-Drop Reorder', () => {
     expect(emptyCell.closest('td')).toHaveAttribute('colspan', '7')
   })
 })
+
+// ---------------------------------------------------------------------------
+// F11 — Null severity fallback
+// ---------------------------------------------------------------------------
+describe('TaxonomyMappingTable — Null Severity Fallback', () => {
+  const mockOnUpdate = vi.fn()
+  const mockOnDelete = vi.fn()
+  const mockOnAdd = vi.fn()
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  // F11 [P2] severity: null falls back to 'minor' via ?? operator (line 196 in source)
+  it('[P2] should fall back to minor severity badge when severity is null', async () => {
+    const NULL_SEVERITY_MAPPING: TaxonomyMapping = {
+      id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c84',
+      internalName: 'null-sev',
+      category: 'fluency',
+      parentCategory: null,
+      severity: null as unknown as 'critical' | 'major' | 'minor',
+      description: 'Null severity test',
+      isCustom: false,
+      isActive: true,
+      displayOrder: 0,
+      createdAt: new Date('2026-03-01T00:00:00Z'),
+      updatedAt: new Date('2026-03-01T00:00:00Z'),
+    }
+
+    const { TaxonomyMappingTable } = await import('./TaxonomyMappingTable')
+    render(
+      <TaxonomyMappingTable
+        mappings={[NULL_SEVERITY_MAPPING]}
+        onUpdate={mockOnUpdate}
+        onDelete={mockOnDelete}
+        onAdd={mockOnAdd}
+      />,
+    )
+
+    // The badge text should show "minor" (the ?? 'minor' fallback)
+    const fallbackBadge = screen.getByText('minor')
+    expect(fallbackBadge).toBeTruthy()
+    // Badge class must contain bg-severity-minor (same as a real 'minor' severity)
+    expect(fallbackBadge.className).toMatch(/bg-severity-minor/)
+  })
+})

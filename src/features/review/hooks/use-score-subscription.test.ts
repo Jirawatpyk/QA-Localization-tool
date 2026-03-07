@@ -320,6 +320,106 @@ describe('useScoreSubscription', () => {
 
   // ── TA: Coverage Gap Tests ──
 
+  // B9 [P1]: score=0 in Realtime payload — falsy but valid number
+  it('[P1] should update store when mqm_score is 0 (falsy but valid boundary)', () => {
+    renderHook(() => useScoreSubscription('file-123'))
+
+    const onHandler = mockChannel.on.mock.calls[0]![2] as (payload: {
+      new: Record<string, unknown>
+    }) => void
+    act(() => {
+      onHandler({
+        new: { mqm_score: 0, status: 'calculated' },
+      })
+    })
+
+    expect(useReviewStore.getState().currentScore).toBe(0)
+    expect(useReviewStore.getState().scoreStatus).toBe('calculated')
+  })
+
+  // B6 [P2]: polling interval resets to 5s after recovery then re-error
+  it('[P2] should reset polling interval to 5s after recovery and re-error', async () => {
+    renderHook(() => useScoreSubscription('file-123'))
+
+    const subscribeCallback = mockChannel.subscribe.mock.calls[0]![0] as (status: string) => void
+
+    // First error → start polling → advance through backoff
+    act(() => {
+      subscribeCallback('CHANNEL_ERROR')
+    })
+    await vi.advanceTimersByTimeAsync(0) // immediate poll
+    await vi.advanceTimersByTimeAsync(5000) // 5s
+    await vi.advanceTimersByTimeAsync(10000) // 10s (interval doubled)
+
+    // Recovery → stop polling and reset interval
+    act(() => {
+      subscribeCallback('SUBSCRIBED')
+    })
+
+    const callsAfterRecovery = mockFrom.mock.calls.length
+
+    // Second error → should restart at 5s (not 20s)
+    act(() => {
+      subscribeCallback('CHANNEL_ERROR')
+    })
+    await vi.advanceTimersByTimeAsync(0) // immediate poll
+    const callsAfterImmediate = mockFrom.mock.calls.length
+    expect(callsAfterImmediate).toBeGreaterThan(callsAfterRecovery)
+
+    // At 5s (initial interval), next poll should fire
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(mockFrom.mock.calls.length).toBeGreaterThan(callsAfterImmediate)
+  })
+
+  // F6 [P1]: handleScoreChange ignores non-number mqm_score
+  it('[P1] should not update store when mqm_score is not a number', () => {
+    renderHook(() => useScoreSubscription('file-123'))
+
+    const onHandler = mockChannel.on.mock.calls[0]![2] as (payload: {
+      new: Record<string, unknown>
+    }) => void
+    act(() => {
+      onHandler({
+        new: { mqm_score: '85', status: 'calculated' },
+      })
+    })
+
+    expect(useReviewStore.getState().currentScore).toBeNull()
+  })
+
+  // F7 [P1]: handleScoreChange ignores invalid status string
+  it('[P1] should not update store when status is not a valid ScoreStatus', () => {
+    renderHook(() => useScoreSubscription('file-123'))
+
+    const onHandler = mockChannel.on.mock.calls[0]![2] as (payload: {
+      new: Record<string, unknown>
+    }) => void
+    act(() => {
+      onHandler({
+        new: { mqm_score: 92, status: 'invalid_status' },
+      })
+    })
+
+    expect(useReviewStore.getState().currentScore).toBeNull()
+  })
+
+  // F8 [P2]: non-string layer_completed passes null to store
+  it('[P2] should pass null layerCompleted when layer_completed is not a string', () => {
+    renderHook(() => useScoreSubscription('file-123'))
+
+    const onHandler = mockChannel.on.mock.calls[0]![2] as (payload: {
+      new: Record<string, unknown>
+    }) => void
+    act(() => {
+      onHandler({
+        new: { mqm_score: 92, status: 'calculated', layer_completed: 123 },
+      })
+    })
+
+    expect(useReviewStore.getState().currentScore).toBe(92)
+    expect(useReviewStore.getState().layerCompleted).toBeNull()
+  })
+
   it('[P2] should not update store when polling .single() returns no data', async () => {
     // Override mockSingle to return null data (no score row)
     mockSingle.mockResolvedValueOnce({ data: null, error: { message: 'No rows found' } })

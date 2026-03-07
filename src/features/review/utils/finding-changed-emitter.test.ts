@@ -112,6 +112,60 @@ describe('createFindingChangedEmitter', () => {
     expect(mockTriggerFn).toHaveBeenCalledOnce()
   })
 
+  // B7 [P2]: synchronous double emit (0ms apart) — timer reset works
+  it('[P2] should handle two synchronous emits and fire only last', async () => {
+    const emitter = createFindingChangedEmitter(mockTriggerFn)
+    const event1 = buildFindingChangedEvent({ findingId: 'f1' })
+    const event2 = buildFindingChangedEvent({ findingId: 'f2' })
+
+    emitter.emit(event1)
+    emitter.emit(event2) // immediately after, 0ms gap
+
+    await vi.advanceTimersByTimeAsync(500)
+    expect(mockTriggerFn).toHaveBeenCalledOnce()
+    expect(mockTriggerFn).toHaveBeenCalledWith(event2)
+  })
+
+  // F9 [P2]: triggerFn rejection is silently caught (best-effort)
+  it('[P2] should not throw when triggerFn rejects (best-effort)', async () => {
+    const rejectingFn = vi.fn<(data: FindingChangedEventData) => Promise<void>>(() =>
+      Promise.reject(new Error('send failed')),
+    )
+    const emitter = createFindingChangedEmitter(rejectingFn)
+    emitter.emit(buildFindingChangedEvent())
+
+    await vi.advanceTimersByTimeAsync(500)
+    expect(rejectingFn).toHaveBeenCalledOnce()
+  })
+
+  // F10 [P2]: double cancel is safe no-op
+  it('[P2] should be a safe no-op when cancel called twice', async () => {
+    const emitter = createFindingChangedEmitter(mockTriggerFn)
+    emitter.emit(buildFindingChangedEvent())
+
+    emitter.cancel()
+    emitter.cancel()
+
+    await vi.advanceTimersByTimeAsync(500)
+    expect(mockTriggerFn).not.toHaveBeenCalled()
+  })
+
+  // F11 [P2]: emit after cancel starts new timer
+  it('[P2] should start a new timer when emit called after cancel', async () => {
+    const emitter = createFindingChangedEmitter(mockTriggerFn)
+    emitter.emit(buildFindingChangedEvent({ findingId: 'f1' }))
+
+    await vi.advanceTimersByTimeAsync(300)
+    emitter.cancel()
+
+    const newEvent = buildFindingChangedEvent({ findingId: 'f2' })
+    emitter.emit(newEvent)
+    await vi.advanceTimersByTimeAsync(500)
+
+    expect(mockTriggerFn).toHaveBeenCalledOnce()
+    expect(mockTriggerFn).toHaveBeenCalledWith(newEvent)
+  })
+
   it('should emit twice for two emits spaced exactly 500ms apart', async () => {
     const emitter = createFindingChangedEmitter(mockTriggerFn)
     const event1 = buildFindingChangedEvent({ findingId: 'f1' })
