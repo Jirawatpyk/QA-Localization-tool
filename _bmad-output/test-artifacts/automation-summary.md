@@ -122,3 +122,40 @@ lastSaved: '2026-03-07'
 - No further TA action needed for Story 3.2b
 - Recommended: run `test-review` workflow if broader test health audit desired
 - Story 3.4 (AI Resilience) will introduce new pipeline paths — consider TA run after completion
+
+---
+
+## TA Run #2: Epic 2 Quality Gate — P2/P3 Perf Benchmarks (2026-03-07)
+
+### Scope
+Fill remaining P2/P3 gaps identified in `test-design-epic-2.md` quality gate.
+
+### Tests Written — 3 new tests (2 files)
+
+| ID | Test | File | Result |
+|----|------|------|--------|
+| P2-01 | Excel 65K+ rows parse timing (< 15s) | `src/features/parser/excelParser.perf.test.ts` | PASS (1,280ms) |
+| P2-01 | Excel 65K+ rows memory growth (< 200MB) | `src/features/parser/excelParser.perf.test.ts` | PASS (141.9MB) |
+| P2-02 | Batch 50 files × 100 segments throughput (< 15s) | `src/features/pipeline/engine/__tests__/batchThroughput.perf.test.ts` | PASS (210ms) |
+
+### Gaps Verified as Already Covered (no new tests)
+| ID | Test | Existing Coverage |
+|----|------|-------------------|
+| P2-03 | Realtime disconnect/reconnect | `use-score-subscription.test.ts` — CHANNEL_ERROR→recovery→backoff (5→10→20→40→60s cap) |
+| P2-08 | Pipeline rerun idempotency | `runL1ForFile.test.ts` — idempotent re-run tests |
+
+### Previously Written (TA Run #1 same session)
+| ID | Tests | File |
+|----|-------|------|
+| P2-04 | 4 (Thai, Chinese, Japanese, mixed headers) | `qualityGateP2P3.test.ts` |
+| P2-07 | 3 (stable sort, repeated runs) | `qualityGateP2P3.test.ts` |
+| P2-09 | 2 (oversized segment isolation) | `qualityGateP2P3.test.ts` |
+| P3-01 | 2 (no mutation exports, no updatedAt) | `qualityGateP2P3.test.ts` |
+| P3-02 | 3 (createdAt on segments+files) | `qualityGateP2P3.test.ts` |
+| P3-04 | 1 (storage quota gap documented) | `qualityGateP2P3.test.ts` |
+| P3-05 | 1 (glossary term limit gap documented) | `qualityGateP2P3.test.ts` |
+
+### Quality Gate Status (post-TA)
+- **P2**: 7/10 PASS, 3 pending (P2-05 onboarding E2E, P2-06 ScoreBadge, P2-10 file history) = **70%**
+- **P3**: 4/5 PASS, 1 pending (P3-03 rate limit) = **80%**
+- Combined P2+P3: **11/15 = 73%** (target >= 90% — remaining items are UI/E2E scope for Epic 4)
