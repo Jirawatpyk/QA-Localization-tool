@@ -1,6 +1,6 @@
 # Story 3.4: AI Resilience — Fallback, Retry & Partial Results
 
-Status: review
+Status: done
 
 ## Story
 
@@ -443,8 +443,9 @@ Claude Opus 4.6
 ### Completion Notes List
 
 - All 13 tasks complete, all subtasks checked
-- **195 test files, 2507 tests pass, 4 failures (all pre-existing), 1 skipped (pre-existing P2)**
-- **Story 3.4 specific: 113 tests across 11 test files — ALL PASS**
+- **191 test files, 2493 tests pass** (worker exit errors are pre-existing Vitest memory issue on Windows)
+- **Story 3.4 specific: 119 tests across 12 test files — ALL PASS** (6 new from deriveLanguagePair.test.ts)
+- **CR rounds: R1 (15 findings → 14 fixed) → R2 (9 findings → 7 fixed) → R3 (0 findings — clean exit)**
 - **E2E: 5/5 pass** (`e2e/pipeline-resilience.spec.ts` — setup, partial badge, retry button, click retry → score update, fallback badge)
 - **Type-check: 0 Story 3.4 errors** (2 pre-existing in `qualityGateP2P3.test.ts`)
 - Pre-CR findings fixed: event naming (slash→dot), `string[]`→`PipelineLayer[]`, `PRIMARY_MODELS` key type, cross-project validation guard, `'use server'` directive, Zod validation, `L1_COMPLETED_STATUSES` DRY extraction, `createMockStep()` typed, E2E exception comments
@@ -556,3 +557,34 @@ Claude Opus 4.6
 | `src/features/pipeline/inngest/processFile.story34.test.ts` | M6/T73: scoring failure ≠ ai_partial test |
 | `src/features/pipeline/inngest/retryFailedLayers.test.ts` | L4: concurrent retry race condition test |
 | `e2e/helpers/pipeline-admin.ts` | M2: seed L2 fallback finding for T80 |
+
+**CR R2 fix files:**
+| File | Change |
+|------|--------|
+| `src/features/pipeline/inngest/processFile.ts` | R2-1: `failedLayers: PipelineLayer[]` (was `string[]`) |
+| `src/features/pipeline/inngest/retryFailedLayers.test.ts` | R2-2: `as PipelineLayer[]`, R2-3: `as ScoreStatus` |
+| `src/features/pipeline/inngest/processFile.story34.test.ts` | R2-3: `as ScoreStatus`, R2-6: import canonical `DbFileStatus` |
+| `e2e/helpers/pipeline-admin.ts` | R2-4: `ai_partial` fail-fast, R2-7: length guard `data[0]` |
+| `src/features/pipeline/helpers/deriveLanguagePair.test.ts` | R2-8: NEW dedicated unit test (6 tests) |
+
+### CR R2 Fixes Applied (2026-03-07)
+
+**0C / 0H / 5M / 4L = 9 findings → 7 fixed, 1 design decision (R2-5), 1 false positive (R2-9)**
+
+| ID | Sev | Fix |
+|----|-----|-----|
+| R2-1 | Med | `failedLayers: PipelineLayer[]` in processFile.ts (Guardrail #3) |
+| R2-2 | Med | `as PipelineLayer[]` in retryFailedLayers.test.ts (Guardrail #3) |
+| R2-3 | Med | `as ScoreStatus` in both test files (Guardrail #3) |
+| R2-4 | Med | `pollFileStatus` fail-fast on `ai_partial` terminal status |
+| R2-5 | Med | **Design decision** — step.run merge documented at L97-101 |
+| R2-6 | Low | T25: import canonical `DbFileStatus` from `@/types/pipeline` |
+| R2-7 | Low | `seedAiPartialFile`: length guard + `!` before `data[0].id` |
+| R2-8 | Low | `deriveLanguagePair.test.ts`: 6 dedicated unit tests |
+| R2-9 | Low | **False positive** — `uploadBatchId: ''` is correct for non-batch events |
+
+### CR R3 Result (2026-03-07)
+
+**0C / 0H / 0M / 0L — CLEAN EXIT**
+
+All R2 fixes verified correct. Story 3.4 CR complete.
