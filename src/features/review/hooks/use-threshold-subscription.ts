@@ -12,6 +12,7 @@ const TOAST_DEBOUNCE = 500
 /**
  * Subscribe to Realtime changes on language_pair_configs for the given language pair.
  * Falls back to polling when Realtime channel fails.
+ * Skips subscription when targetLang is empty (language pair not yet resolved).
  */
 export function useThresholdSubscription(sourceLang: string, targetLang: string): void {
   const updateThresholds = useReviewStore((s) => s.updateThresholds)
@@ -63,10 +64,18 @@ export function useThresholdSubscription(sourceLang: string, targetLang: string)
   }, [sourceLang, targetLang, updateThresholds, stopPolling])
 
   useEffect(() => {
+    // L-2: skip subscription when targetLang not yet resolved (null → '' fallback from caller)
+    if (!sourceLang || !targetLang) return
+
     const supabase = createBrowserClient()
 
     const handleThresholdChange = (payload: { new: Record<string, unknown> }) => {
       const row = payload.new
+
+      // Defense-in-depth: verify targetLang matches (Realtime filter only supports single column)
+      // Without this check, EN->JA threshold changes would incorrectly update EN->TH thresholds
+      if (row.target_lang !== targetLang) return
+
       const l2 = typeof row.l2_confidence_min === 'number' ? row.l2_confidence_min : null
       const l3 = typeof row.l3_confidence_min === 'number' ? row.l3_confidence_min : null
 

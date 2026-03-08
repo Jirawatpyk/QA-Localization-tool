@@ -10,10 +10,10 @@ import { segments } from '@/db/schema/segments'
 import { userRoles } from '@/db/schema/userRoles'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { checkAutoPass } from '@/features/scoring/autoPassChecker'
-import { NEW_PAIR_FILE_THRESHOLD } from '@/features/scoring/constants'
+import { CONTRIBUTING_STATUSES, NEW_PAIR_FILE_THRESHOLD } from '@/features/scoring/constants'
 import { calculateMqmScore } from '@/features/scoring/mqmCalculator'
 import { loadPenaltyWeights } from '@/features/scoring/penaltyWeightLoader'
-import type { ContributingFinding, FindingsSummary } from '@/features/scoring/types'
+import type { ContributingFinding, FindingsSummary, FindingStatus } from '@/features/scoring/types'
 import { logger } from '@/lib/logger'
 import type { DetectedByLayer, LayerCompleted } from '@/types/finding'
 
@@ -325,9 +325,16 @@ function buildFindingsSummary(
     detectedByLayer: string
   }>,
 ): FindingsSummary {
+  // H-2: Only count contributing findings (same filter as MQM calculator)
+  // Without this, rejected/false_positive findings would inflate severity counts
+  // while the MQM score excludes them — causing rationale inconsistency
+  const contributing = findingRows.filter((f) =>
+    CONTRIBUTING_STATUSES.has(f.status as FindingStatus),
+  )
+
   const severityCounts = { critical: 0, major: 0, minor: 0 }
 
-  for (const f of findingRows) {
+  for (const f of contributing) {
     if (f.severity === 'critical') severityCounts.critical++
     else if (f.severity === 'major') severityCounts.major++
     else if (f.severity === 'minor') severityCounts.minor++
@@ -339,7 +346,7 @@ function buildFindingsSummary(
   let riskiestPriority = -1
   let riskiestConfidence = -1
 
-  for (const f of findingRows) {
+  for (const f of contributing) {
     if (f.aiConfidence === null) continue // Skip L1 findings (FM-3.2)
 
     const priority = SEVERITY_PRIORITY[f.severity] ?? 0

@@ -107,7 +107,7 @@ development_status:
   3-2c-l2-results-display-score-update: done
   3-3-ai-layer-3-deep-contextual-analysis: done
   3-4-ai-resilience-fallback-retry-partial-results: done
-  3-5-score-lifecycle-confidence-display: review
+  3-5-score-lifecycle-confidence-display: done
   epic-3-retrospective: optional
 
   # ============================================================

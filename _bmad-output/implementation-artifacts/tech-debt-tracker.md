@@ -454,3 +454,16 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Mitigation:** Most projects currently have a single target language, so `sourceLang`-only match returns correct `l2ConfidenceMin`. Multi-target returns null (safe default — no "Below threshold" warning)
 - **Fix:** When file-level target language metadata is added (Epic 5 multi-lang support), JOIN on both source + target
 - **Status:** DEFERRED → **Epic 5 — Language Intelligence & Non-Native Support** (multi-target-lang file metadata needed)
+
+## CR Sprint — Story 3.5 (2026-03-08)
+
+### TD-REVIEW-002: Realtime auto_passed transition doesn't show rationale
+- **Date:** 2026-03-08
+- **Story:** Story 3.5 (Score Lifecycle & Confidence Display)
+- **Phase:** CR R1
+- **Severity:** Medium
+- **File:** `src/features/review/components/ReviewPageClient.tsx:250-252`
+- **Description:** `AutoPassRationale` renders from `initialData.autoPassRationale` (server-side SSR data). If score transitions to `auto_passed` via Realtime after page load, `isAutoPassedStatus` becomes true (store-driven) but `initialData.autoPassRationale` remains null (stale). Result: Approve button correctly hidden, but no rationale shown until page refresh.
+- **Mitigation:** Edge case requiring page loaded before pipeline completes AND pipeline auto-passes the file AND Realtime pushes status. User can refresh page to see rationale. Approve button behavior is correct regardless.
+- **Fix:** Track `autoPassRationale` in Zustand store via `useScoreSubscription` (subscribe to `auto_pass_rationale` column changes), or trigger `getFileReviewData` re-fetch when `scoreStatus` transitions to `auto_passed`.
+- **Status:** DEFERRED → **Epic 4 — Review Workflow Infrastructure** (review page data re-fetch patterns needed)

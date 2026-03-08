@@ -46,7 +46,10 @@ export function AutoPassRationale({ rationale }: AutoPassRationaleProps) {
         <div className="flex items-center gap-2">
           <span className="text-lg font-semibold">{score}</span>
           <span className="text-muted-foreground text-sm">/ {threshold}</span>
-          <Badge variant={margin >= 0 ? 'default' : 'destructive'}>+{margin.toFixed(1)}</Badge>
+          <Badge variant={margin >= 0 ? 'default' : 'destructive'}>
+            {margin >= 0 ? '+' : ''}
+            {margin.toFixed(1)}
+          </Badge>
         </div>
 
         {/* Severity counts */}

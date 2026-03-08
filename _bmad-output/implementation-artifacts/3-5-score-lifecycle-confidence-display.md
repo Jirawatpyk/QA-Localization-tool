@@ -1,6 +1,6 @@
 # Story 3.5: Score Lifecycle & Confidence Display
 
-Status: review
+Status: done
 
 ## Story
 
@@ -109,7 +109,7 @@ So that I can trust the scores, understand how they evolve, and make informed re
   - [x] 7.3 ConfidenceBadge and FindingListItem re-render reactively (threshold is a prop)
   - [x] 7.4 Toast notification: debounced (500ms) "Confidence thresholds updated" via sonner
   - [x] 7.5 Fallback: polling every 30s on CHANNEL_ERROR
-  - [x] 7.6 Unit tests: `use-threshold-subscription.test.ts` — 5 tests PASS (Realtime update, toast, cleanup, polling fallback, debounce)
+  - [x] 7.6 Unit tests: `use-threshold-subscription.test.ts` — 7 tests PASS (Realtime update, toast, cleanup, polling fallback, debounce, targetLang filter, empty targetLang skip)
 
 - [x] **Task 8: Unit tests — comprehensive boundary values** (AC: #12)
   - [x] 8.1 `approveFile.action.test.ts` — all 6 score statuses covered (U-011..U-016)
@@ -422,6 +422,30 @@ Claude Opus 4.6
 - Pre-CR scan 3 (code-quality): 0C/3H/7M/5L → all H fixed (hook wired, l3ConfidenceMin passed, status type)
 - Final: **0C/0H** — CR exit criteria met
 - Pre-existing test failure: `TaxonomyManager.test.tsx` (2 tests) — unrelated to Story 3.5
+- **CR R1:** 0C/2H/4M/3L → all fixed (see below)
+- **CR R2:** 0C/0H/0M/3L → all fixed (see below) — **0C/0H exit confirmed**
+
+### CR R1 Fixes Applied
+
+| ID | Severity | Fix |
+|----|----------|-----|
+| H-1 | HIGH | `use-threshold-subscription.ts`: added `targetLang` filter in Realtime callback (FM-8.2 defense) + early return when `targetLang` is empty |
+| H-2 | HIGH | `scoreFile.ts:buildFindingsSummary`: filter by `CONTRIBUTING_STATUSES` before counting severity (consistency with MQM calculator) |
+| M-1 | MEDIUM | `AutoPassRationale.tsx`: fixed margin display `+-1.5` → `-1.5` (conditional `+` prefix) |
+| M-2 | MEDIUM | `ReviewPageClient.tsx`: added TODO(TD-REVIEW-002) + tech debt entry for stale rationale on Realtime auto_passed transition |
+| M-3 | MEDIUM | File List updated to include all committed files |
+| M-4 | MEDIUM | Noted: uncommitted pipeline test files are from separate TA coverage task, not Story 3.5 |
+| L-1 | LOW | Not a finding — `isRecalculating` is store API pre-wired for finding-changed-emitter |
+| L-2 | LOW | `use-threshold-subscription.ts`: early return when `sourceLang` or `targetLang` is empty |
+| L-3 | LOW | Deleted stray `{console.log('status` file from repo root |
+
+### CR R2 Fixes Applied
+
+| ID | Severity | Fix |
+|----|----------|-----|
+| L-1 | LOW | `scoreFile.story35.test.ts`: added test verifying `CONTRIBUTING_STATUSES` filter excludes rejected/false_positive findings from severity counts (H-2 fix verification) |
+| L-2 | LOW | Story file: corrected test count from "~76" to accurate "71 story-specific unit + 5 E2E = 76 tests" |
+| L-3 | LOW | `ReviewPageClient.tsx`: removed unnecessary `as ScoreStatus | null` widening cast on `effectiveScoreStatus` |
 
 ### Completion Notes List
 
@@ -453,13 +477,13 @@ Claude Opus 4.6
 | `src/features/review/actions/approveFile.action.test.ts` | — |
 | `src/features/review/components/AutoPassRationale.tsx` | 5 |
 | `src/features/review/components/AutoPassRationale.test.tsx` | — |
-| `src/features/review/hooks/use-threshold-subscription.ts` | 5 |
+| `src/features/review/hooks/use-threshold-subscription.ts` | 7 |
 | `src/features/review/hooks/use-threshold-subscription.test.ts` | — |
 | `src/features/review/components/ConfidenceBadge.story35.test.tsx` | 13 |
 | `src/features/review/components/FindingListItem.story35.test.tsx` | 7 |
 | `src/features/review/components/ReviewPageClient.story35.test.tsx` | 14 |
 | `src/features/scoring/autoPassChecker.story35.test.ts` | 8 |
-| `src/features/scoring/helpers/scoreFile.story35.test.ts` | 2 |
+| `src/features/scoring/helpers/scoreFile.story35.test.ts` | 3 |
 | `e2e/score-lifecycle.spec.ts` | 5 E2E |
 
 **Modified files:**
@@ -477,4 +501,12 @@ Claude Opus 4.6
 | `src/features/review/components/ReviewPageClient.story33.test.tsx` | Added `useThresholdSubscription` mock, updated `FileReviewData` mock |
 | `src/features/review/components/ReviewPageClient.story34.test.tsx` | Added `useThresholdSubscription` mock, `server-only` mock, updated `FileReviewData` mock |
 
-**Total Story 3.5 tests: ~74 unit + 5 E2E = 79 tests**
+| `src/components/ui/tooltip.tsx` | — |
+
+**Modified files (additional — committed during implementation):**
+| File | Change |
+|------|--------|
+| `src/features/scoring/constants.ts` | `CONTRIBUTING_STATUSES` imported for severity count filtering |
+| `vitest.config.ts` | Test workspace configuration |
+
+**Total Story 3.5 tests: 72 story-specific unit + 5 E2E = 77 tests** (+ mock updates in 3 existing test files)

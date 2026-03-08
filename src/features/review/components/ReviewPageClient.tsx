@@ -110,10 +110,7 @@ export function ReviewPageClient({ fileId, projectId, initialData }: ReviewPageC
   const effectiveScore = currentScore ?? initialData.score.mqmScore
   const effectiveLayerCompleted = layerCompleted ?? initialData.score.layerCompleted
   const effectiveScoreStatus = scoreStatus ?? initialData.score.status
-  const badgeState = deriveScoreBadgeState(
-    effectiveLayerCompleted,
-    effectiveScoreStatus as ScoreStatus | null,
-  )
+  const badgeState = deriveScoreBadgeState(effectiveLayerCompleted, effectiveScoreStatus)
 
   // Story 3.5: score lifecycle states
   const isCalculating = effectiveScoreStatus === 'calculating'
@@ -247,6 +244,8 @@ export function ReviewPageClient({ fileId, projectId, initialData }: ReviewPageC
       </div>
 
       {/* Auto-pass rationale — shown when auto_passed */}
+      {/* TODO(TD-REVIEW-002): rationale comes from initialData (SSR) — won't update via Realtime.
+          If score transitions to auto_passed after page load, rationale won't show until refresh. */}
       {isAutoPassedStatus && initialData.autoPassRationale && (
         <AutoPassRationale rationale={initialData.autoPassRationale} />
       )}

@@ -99,8 +99,8 @@ describe('useThresholdSubscription', () => {
     act(() => {
       updateCallback?.({
         eventType: 'UPDATE',
-        new: { l2_confidence_min: 80, l3_confidence_min: 90 },
-        old: { l2_confidence_min: 70, l3_confidence_min: 80 },
+        new: { l2_confidence_min: 80, l3_confidence_min: 90, target_lang: 'th-TH' },
+        old: { l2_confidence_min: 70, l3_confidence_min: 80, target_lang: 'th-TH' },
       })
     })
 
@@ -132,8 +132,8 @@ describe('useThresholdSubscription', () => {
     act(() => {
       updateCallback?.({
         eventType: 'UPDATE',
-        new: { l2_confidence_min: 80, l3_confidence_min: 90 },
-        old: { l2_confidence_min: 70, l3_confidence_min: 80 },
+        new: { l2_confidence_min: 80, l3_confidence_min: 90, target_lang: 'th-TH' },
+        old: { l2_confidence_min: 70, l3_confidence_min: 80, target_lang: 'th-TH' },
       })
     })
 
@@ -178,6 +178,43 @@ describe('useThresholdSubscription', () => {
     expect(mockSelect).toHaveBeenCalled()
   })
 
+  // CR-H1: targetLang filter in callback — prevents cross-language-pair contamination
+  it('[P1] should ignore Realtime events for different targetLang (FM-8.2)', () => {
+    // Arrange: hook subscribes for 'en-US' -> 'th-TH'
+    const { unmount } = renderHook(() => useThresholdSubscription('en-US', 'th-TH'))
+
+    const onCall = mockChannel.on.mock.calls.find(
+      (call: unknown[]) =>
+        typeof call[1] === 'object' &&
+        call[1] !== null &&
+        (call[1] as Record<string, unknown>).event === 'UPDATE',
+    )
+    const updateCallback = onCall?.[2] as ((payload: unknown) => void) | undefined
+
+    // Simulate UPDATE for a different target language (en-US -> ja-JP)
+    act(() => {
+      updateCallback?.({
+        eventType: 'UPDATE',
+        new: { l2_confidence_min: 90, l3_confidence_min: 95, target_lang: 'ja-JP' },
+        old: { l2_confidence_min: 70, l3_confidence_min: 80, target_lang: 'ja-JP' },
+      })
+    })
+
+    // Assert: store NOT updated — event was for a different language pair
+    expect(mockUpdateThresholds).not.toHaveBeenCalled()
+
+    unmount()
+  })
+
+  // CR-L2: empty targetLang skips subscription entirely
+  it('[P1] should skip subscription when targetLang is empty string', () => {
+    // Arrange: targetLang not yet resolved (null -> '' fallback)
+    renderHook(() => useThresholdSubscription('en-US', ''))
+
+    // Assert: no channel created — subscription skipped
+    expect(mockSupabase.channel).not.toHaveBeenCalled()
+  })
+
   // 3.5-U-052: Rapid changes -> debounced toast (not shown per change)
   it('[P2] should debounce toast so rapid threshold changes show only one notification', async () => {
     // Arrange: multiple rapid Realtime events arrive within debounce window
@@ -195,17 +232,17 @@ describe('useThresholdSubscription', () => {
     act(() => {
       updateCallback?.({
         eventType: 'UPDATE',
-        new: { l2_confidence_min: 71, l3_confidence_min: 81 },
+        new: { l2_confidence_min: 71, l3_confidence_min: 81, target_lang: 'th-TH' },
         old: {},
       })
       updateCallback?.({
         eventType: 'UPDATE',
-        new: { l2_confidence_min: 72, l3_confidence_min: 82 },
+        new: { l2_confidence_min: 72, l3_confidence_min: 82, target_lang: 'th-TH' },
         old: {},
       })
       updateCallback?.({
         eventType: 'UPDATE',
-        new: { l2_confidence_min: 73, l3_confidence_min: 83 },
+        new: { l2_confidence_min: 73, l3_confidence_min: 83, target_lang: 'th-TH' },
         old: {},
       })
     })

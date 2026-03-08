@@ -270,6 +270,74 @@ describe('scoreFile — Story 3.5 findings summary passed to checkAutoPass', () 
     )
   })
 
+  // CR-R2-L1: Rejected findings excluded from severity counts (H-2 fix verification)
+  it('[P1] should exclude rejected findings from severity counts in findingsSummary', async () => {
+    // Arrange: mix of contributing (pending) and non-contributing (rejected) findings
+    const findingRows = [
+      {
+        id: 'f1b2c3d4-0000-4a1b-8c2d-3e4f5a6b7c8d',
+        severity: 'critical',
+        status: 'rejected', // non-contributing — should be excluded
+        segmentCount: 1,
+        aiConfidence: 90,
+        category: 'accuracy',
+        description: 'False positive critical issue',
+        detectedByLayer: 'L2',
+      },
+      {
+        id: 'f2b2c3d4-0000-4a1b-8c2d-3e4f5a6b7c8d',
+        severity: 'major',
+        status: 'pending', // contributing
+        segmentCount: 1,
+        aiConfidence: 85,
+        category: 'fluency',
+        description: 'Real major issue',
+        detectedByLayer: 'L2',
+      },
+      {
+        id: 'f3b2c3d4-0000-4a1b-8c2d-3e4f5a6b7c8d',
+        severity: 'minor',
+        status: 'false_positive', // non-contributing — should be excluded
+        segmentCount: 1,
+        aiConfidence: 70,
+        category: 'style',
+        description: 'False positive minor',
+        detectedByLayer: 'L2',
+      },
+    ]
+
+    dbState.returnValues = [
+      mockSegmentRows, // 0: SELECT segments
+      findingRows, // 1: SELECT findings — mix of statuses
+      [null], // 2: tx prev score
+      [], // 3: tx DELETE
+      [buildMockScore()], // 4: tx INSERT
+    ]
+
+    // Act
+    const { scoreFile } = await import('@/features/scoring/helpers/scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    // Assert: only contributing finding (pending major) counted in severity counts
+    // rejected critical and false_positive minor should be excluded
+    expect(mockCheckAutoPass).toHaveBeenCalledWith(
+      expect.objectContaining({
+        findingsSummary: expect.objectContaining({
+          severityCounts: { critical: 0, major: 1, minor: 0 },
+          riskiestFinding: expect.objectContaining({
+            severity: 'major',
+            description: 'Real major issue',
+          }),
+        }),
+      }),
+    )
+  })
+
   // 3.5-U-036: scoreFile with 0 findings -> riskiestFinding: null
   it('[P0] should pass riskiestFinding=null to checkAutoPass when there are no findings', async () => {
     // Arrange: file with no findings (perfect score scenario)
