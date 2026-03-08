@@ -46,6 +46,7 @@ type ScoreRow = {
   critical_count: number
   major_count: number
   minor_count: number
+  auto_pass_rationale: string | null
 }
 
 // ── File Queries ─────────────────────────────────────────────────────────────
@@ -108,7 +109,7 @@ export async function queryFindingsCount(
  */
 export async function queryScore(fileId: string): Promise<ScoreRow | null> {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/scores?file_id=eq.${fileId}&select=id,mqm_score,layer_completed,status,total_words,critical_count,major_count,minor_count&order=created_at.desc&limit=1`,
+    `${SUPABASE_URL}/rest/v1/scores?file_id=eq.${fileId}&select=id,mqm_score,layer_completed,status,total_words,critical_count,major_count,minor_count,auto_pass_rationale&order=created_at.desc&limit=1`,
     { headers: adminHeaders() },
   )
   const data = (await res.json()) as ScoreRow[]

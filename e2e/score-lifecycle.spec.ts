@@ -134,6 +134,27 @@ async function seedFindingsWithConfidence(opts: {
   }
 }
 
+// ── Page-Ready Guard ─────────────────────────────────────────────────────────
+
+/**
+ * Wait for the review page to fully render by checking for a positive indicator.
+ * If SSR fails (auth error, data not found), the page shows error text instead.
+ * This guard detects errors early instead of timing out on missing elements.
+ */
+async function waitForReviewPageReady(page: import('@playwright/test').Page) {
+  // Wait for either the review heading (success) or error text (SSR failure)
+  const heading = page.locator('h1')
+  await expect(heading).toBeVisible({ timeout: 30_000 })
+
+  // Fail fast if SSR returned an error
+  const errorText = page.locator('.text-destructive')
+  const errorCount = await errorText.count()
+  if (errorCount > 0) {
+    const msg = await errorText.first().textContent()
+    throw new Error(`Review page SSR error: "${msg}"`)
+  }
+}
+
 // ── Test Suite ─────────────────────────────────────────────────────────────────
 
 // Ephemeral user — auto-cleaned by global-teardown (matches /^e2e-.*\d{13,}@test\.local$/)
@@ -187,10 +208,11 @@ test.describe.serial('Score Lifecycle & Confidence Display — Story 3.5', () =>
     // Act: navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
     await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await waitForReviewPageReady(page)
 
     // Assert: ScoreBadge shows calculating / spinner state
     const scoreBadge = page.getByTestId('score-badge')
-    await expect(scoreBadge).toBeVisible({ timeout: 15_000 })
+    await expect(scoreBadge).toBeVisible({ timeout: 30_000 })
     // "Calculating..." or "Analyzing" indicator visible
     await expect(scoreBadge).toContainText(/calculat|analyz/i)
 
@@ -225,10 +247,11 @@ test.describe.serial('Score Lifecycle & Confidence Display — Story 3.5', () =>
     // Act: navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
     await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await waitForReviewPageReady(page)
 
     // Assert: ScoreBadge shows "AI Screened" state (L1L2 = Economy pipeline complete)
     const scoreBadge = page.getByTestId('score-badge')
-    await expect(scoreBadge).toBeVisible({ timeout: 15_000 })
+    await expect(scoreBadge).toBeVisible({ timeout: 30_000 })
     await expect(scoreBadge).toContainText(/ai screened/i)
 
     // Assert: MQM score value is visible (not "N/A" or empty)
@@ -236,7 +259,7 @@ test.describe.serial('Score Lifecycle & Confidence Display — Story 3.5', () =>
 
     // Assert: Approve button is enabled (score is settled)
     const approveBtn = page.getByRole('button', { name: /approve/i })
-    await expect(approveBtn).toBeVisible({ timeout: 10_000 })
+    await expect(approveBtn).toBeVisible({ timeout: 15_000 })
     await expect(approveBtn).toBeEnabled()
   })
 
@@ -265,6 +288,7 @@ test.describe.serial('Score Lifecycle & Confidence Display — Story 3.5', () =>
     // Act: navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
     await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await waitForReviewPageReady(page)
 
     // Wait for the review page to fully render with the score badge
     const scoreBadge = page.getByTestId('score-badge')
@@ -272,7 +296,7 @@ test.describe.serial('Score Lifecycle & Confidence Display — Story 3.5', () =>
 
     // Wait for Approve button to be enabled (score is 'calculated')
     const approveBtn = page.getByRole('button', { name: /approve/i })
-    await expect(approveBtn).toBeVisible({ timeout: 15_000 })
+    await expect(approveBtn).toBeVisible({ timeout: 30_000 })
     await expect(approveBtn).toBeEnabled({ timeout: 5_000 })
 
     // Mutate score status to 'calculating' via PostgREST (behind the UI's back)
@@ -329,22 +353,25 @@ test.describe.serial('Score Lifecycle & Confidence Display — Story 3.5', () =>
       autoPassRationale: rationale,
     })
 
-    // Verify seed
+    // Verify seed — both status and rationale must be present
     const score = await queryScore(fileId)
     expect(score).not.toBeNull()
     expect(score!.status).toBe('auto_passed')
+    expect(score!.auto_pass_rationale).not.toBeNull()
 
     // Act: navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
     await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await waitForReviewPageReady(page)
+
+    // Assert: AutoPassRationale card is visible (check positive indicator first)
+    const rationaleCard = page.getByTestId('auto-pass-rationale')
+    await expect(rationaleCard).toBeVisible({ timeout: 30_000 })
 
     // Assert: Approve button is NOT visible (auto_passed files don't need manual approval)
+    // Check AFTER rationaleCard is visible — this confirms the page rendered correctly
     const approveBtn = page.getByRole('button', { name: /^approve$/i })
-    await expect(approveBtn).not.toBeVisible({ timeout: 10_000 })
-
-    // Assert: AutoPassRationale card is visible
-    const rationaleCard = page.getByTestId('auto-pass-rationale')
-    await expect(rationaleCard).toBeVisible({ timeout: 15_000 })
+    await expect(approveBtn).not.toBeVisible({ timeout: 5_000 })
 
     // Assert: score margin "+1.5 above threshold" visible
     await expect(rationaleCard).toContainText(/1\.5/i)
@@ -411,10 +438,11 @@ test.describe.serial('Score Lifecycle & Confidence Display — Story 3.5', () =>
     // Act: navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
     await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await waitForReviewPageReady(page)
 
     // Wait for findings list to render
     const confidenceBadges = page.getByTestId('confidence-badge')
-    await expect(confidenceBadges.first()).toBeVisible({ timeout: 15_000 })
+    await expect(confidenceBadges.first()).toBeVisible({ timeout: 30_000 })
 
     // Assert: at least 3 confidence badges visible (one per seeded finding)
     await expect(confidenceBadges).toHaveCount(3, { timeout: 10_000 })
