@@ -271,3 +271,35 @@ describe('checkAutoPass — Story 3.5 structured rationale', () => {
     }
   })
 })
+
+// TA: Coverage Gap Tests (Story 3.5)
+describe('checkAutoPass — TA coverage gap tests (Story 3.5)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    dbState.callIndex = 0
+    dbState.returnValues = []
+  })
+
+  // G15: null threshold from DB → conservative fallback (99)
+  it('[P2] should use conservative fallback threshold 99 when language pair config returns null autoPassThreshold (G15)', async () => {
+    // Arrange: language pair config exists but autoPassThreshold is null
+    // DB call 0: languagePairConfigs returns row with null threshold
+    // DB call 1: count query returns 60 (established pair)
+    dbState.returnValues = [
+      [{ autoPassThreshold: null }], // 0: lang pair config — threshold is null
+      [{ count: 60 }], // 1: file count
+    ]
+
+    // Act: score 98 — should NOT auto-pass because conservative threshold is 99
+    const { checkAutoPass } = await import('./autoPassChecker')
+    const result = await checkAutoPass({
+      ...BASE_INPUT,
+      mqmScore: 98,
+      criticalCount: 0,
+    })
+
+    // Assert: 98 < 99 (conservative fallback) → ineligible
+    expect(result.eligible).toBe(false)
+    expect(result.rationale).toContain('below')
+  })
+})

@@ -184,3 +184,43 @@ describe('ConfidenceBadge — Story 3.5 prop rename + boundary values', () => {
     expect(screen.queryByTestId('confidence-warning')).toBeNull()
   })
 })
+
+// TA: Coverage Gap Tests (Story 3.5)
+
+describe('ConfidenceBadge — TA: Coverage Gap Tests (Story 3.5)', () => {
+  // G9 [P2]: rounding edge — confidence=84.5 → displays "85%" but tier is medium (orange)
+  it('[P2] should display "85%" but use medium tier when confidence is 84.5 (G9)', () => {
+    render(<ConfidenceBadge confidence={84.5} confidenceMin={70} />)
+
+    const badge = screen.getByTestId('confidence-badge')
+    // Math.round(84.5) = 85, so display text shows "85%"
+    expect(badge.textContent).toContain('85%')
+    // But tier is computed from raw value 84.5, which is < 85 → medium
+    expect(badge.getAttribute('data-confidence-tier')).toBe('medium')
+    expect(badge.className).toMatch(/warning|orange/i)
+  })
+
+  // WI-7 [P2]: confidenceMin=NaN → threshold check always false → no warning
+  it('[P2] should show NO warning when confidenceMin is NaN (G9-WI-7)', () => {
+    render(<ConfidenceBadge confidence={50} confidenceMin={NaN} />)
+
+    // `50 < NaN` is always false in JavaScript → isBelowThreshold = false
+    expect(screen.queryByTestId('confidence-warning')).toBeNull()
+
+    // Badge should still render correctly
+    const badge = screen.getByTestId('confidence-badge')
+    expect(badge).toHaveTextContent('Low')
+  })
+
+  // SC-1-badge [P2]: verify correct behavior with different confidenceMin values
+  it('[P2] should NOT show warning when confidence meets threshold (SC-1-badge)', () => {
+    const { rerender } = render(<ConfidenceBadge confidence={85} confidenceMin={80} />)
+
+    // 85 >= 80 → no warning
+    expect(screen.queryByTestId('confidence-warning')).toBeNull()
+
+    // Re-render with higher threshold: 85 < 90 → warning should appear
+    rerender(<ConfidenceBadge confidence={85} confidenceMin={90} />)
+    expect(screen.getByTestId('confidence-warning')).toBeInTheDocument()
+  })
+})

@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import type { FileReviewData } from '@/features/review/actions/getFileReviewData.action'
 import { ReviewPageClient } from '@/features/review/components/ReviewPageClient'
-import type { LayerCompleted, ScoreStatus } from '@/types/finding'
+import type { Finding, LayerCompleted, ScoreStatus } from '@/types/finding'
 
 // ── Mocks ──
 
@@ -49,7 +49,10 @@ vi.mock('@/features/pipeline/actions/retryAiAnalysis.action', () => ({
 }))
 
 const mockApproveFile = vi.fn((..._args: unknown[]) =>
-  Promise.resolve({ success: true, data: { fileId: VALID_FILE_ID } }),
+  Promise.resolve({
+    success: true,
+    data: { fileId: VALID_FILE_ID, mqmScore: 85 as number | null, status: 'calculated' as string },
+  }),
 )
 vi.mock('@/features/review/actions/approveFile.action', () => ({
   approveFile: (...args: unknown[]) => mockApproveFile(...args),
@@ -408,8 +411,10 @@ describe('ReviewPageClient — Story 3.5 score lifecycle & approve', () => {
       threshold: 95,
       margin: 2,
       severityCounts: { critical: 0, major: 1, minor: 1 },
-      criteria: { scoreAboveThreshold: true, noCriticalFindings: true },
+      criteria: { scoreAboveThreshold: true, noCriticalFindings: true, allLayersComplete: true },
       riskiestFinding: null,
+      isNewPair: false,
+      fileCount: 10,
     })
 
     // Act
@@ -446,7 +451,10 @@ describe('ReviewPageClient — Story 3.5 score lifecycle & approve', () => {
       success: false,
       error: 'Score is being recalculated',
       code: 'SCORE_STALE',
-    } as unknown as { success: boolean; data: { fileId: string } })
+    } as unknown as {
+      success: boolean
+      data: { fileId: string; mqmScore: number | null; status: string }
+    })
 
     storeMockState.scoreStatus = 'calculated'
     storeMockState.currentScore = 85
@@ -576,6 +584,444 @@ describe('ReviewPageClient — Story 3.5 score lifecycle & approve', () => {
       expect(approveBtn).toBeDisabled()
     } else {
       expect(screen.queryByRole('button', { name: /approve/i })).toBeNull()
+    }
+  })
+})
+
+// TA: Coverage Gap Tests (Story 3.5)
+
+// Toast mock for approve success tests (SC-2)
+const mockToast = vi.hoisted(() => ({
+  success: vi.fn((..._args: unknown[]) => undefined),
+  error: vi.fn((..._args: unknown[]) => undefined),
+}))
+vi.mock('sonner', () => ({
+  toast: mockToast,
+}))
+
+function buildFindingForStore(overrides?: Partial<Finding>): Finding {
+  return {
+    id: crypto.randomUUID(),
+    tenantId: 't1',
+    projectId: VALID_PROJECT_ID,
+    sessionId: 's1',
+    segmentId: 'seg1',
+    severity: 'major',
+    category: 'accuracy',
+    description: 'Test finding',
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    fileId: VALID_FILE_ID,
+    detectedByLayer: 'L2',
+    aiModel: 'gpt-4o-mini',
+    aiConfidence: 80,
+    suggestedFix: null,
+    sourceTextExcerpt: null,
+    targetTextExcerpt: null,
+    segmentCount: 1,
+    scope: 'per-file',
+    reviewSessionId: null,
+    relatedFileIds: null,
+    ...overrides,
+  }
+}
+
+describe('ReviewPageClient — TA: Coverage Gap Tests (Story 3.5)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockReducedMotion(false)
+
+    storeMockState.currentScore = null
+    storeMockState.layerCompleted = null
+    storeMockState.scoreStatus = null
+    storeMockState.findingsMap = new Map()
+    storeMockState.l2ConfidenceMin = null
+    storeMockState.l3ConfidenceMin = null
+  })
+
+  // G1 [P1]: partialWarningText — L1L2 + thorough mode → "Deep analysis unavailable"
+  it('[P1] should show "Deep analysis unavailable" when L1L2 partial in thorough mode (G1)', () => {
+    storeMockState.scoreStatus = 'partial'
+    storeMockState.layerCompleted = 'L1L2'
+
+    render(
+      <ReviewPageClient
+        fileId={VALID_FILE_ID}
+        projectId={VALID_PROJECT_ID}
+        initialData={buildInitialData({
+          processingMode: 'thorough',
+          score: {
+            mqmScore: 82,
+            status: 'partial',
+            layerCompleted: 'L1L2',
+            criticalCount: 0,
+            majorCount: 1,
+            minorCount: 0,
+          },
+        })}
+      />,
+    )
+
+    expect(screen.getByText(/deep analysis unavailable/i)).toBeInTheDocument()
+  })
+
+  // G2 [P1]: partialWarningText — L1 only → "AI analysis unavailable"
+  it('[P1] should show "AI analysis unavailable" when L1 partial (G2)', () => {
+    storeMockState.scoreStatus = 'partial'
+    storeMockState.layerCompleted = 'L1'
+
+    render(
+      <ReviewPageClient
+        fileId={VALID_FILE_ID}
+        projectId={VALID_PROJECT_ID}
+        initialData={buildInitialData({
+          score: {
+            mqmScore: 80,
+            status: 'partial',
+            layerCompleted: 'L1',
+            criticalCount: 0,
+            majorCount: 1,
+            minorCount: 0,
+          },
+        })}
+      />,
+    )
+
+    expect(screen.getByText(/ai analysis unavailable/i)).toBeInTheDocument()
+  })
+
+  // CM-2 [P1]: partialWarningText — economy + L2 partial → NO warning (characterization)
+  it('[P1] should NOT show partial warning when economy mode with L1L2 partial (CM-2)', () => {
+    storeMockState.scoreStatus = 'partial'
+    storeMockState.layerCompleted = 'L1L2'
+
+    render(
+      <ReviewPageClient
+        fileId={VALID_FILE_ID}
+        projectId={VALID_PROJECT_ID}
+        initialData={buildInitialData({
+          processingMode: 'economy',
+          score: {
+            mqmScore: 82,
+            status: 'partial',
+            layerCompleted: 'L1L2',
+            criticalCount: 0,
+            majorCount: 1,
+            minorCount: 0,
+          },
+        })}
+      />,
+    )
+
+    // Economy mode L1L2 partial returns null — no warning text rendered
+    expect(screen.queryByText(/deep analysis unavailable/i)).toBeNull()
+    expect(screen.queryByText(/ai analysis unavailable/i)).toBeNull()
+  })
+
+  // CM-3 [P2]: partialWarningText — L1L2L3 + partial → NO warning
+  it('[P2] should NOT show partial warning when all layers complete L1L2L3 + partial (CM-3)', () => {
+    storeMockState.scoreStatus = 'partial'
+    storeMockState.layerCompleted = 'L1L2L3'
+
+    render(
+      <ReviewPageClient
+        fileId={VALID_FILE_ID}
+        projectId={VALID_PROJECT_ID}
+        initialData={buildInitialData({
+          processingMode: 'thorough',
+          score: {
+            mqmScore: 85,
+            status: 'partial',
+            layerCompleted: 'L1L2L3',
+            criticalCount: 0,
+            majorCount: 2,
+            minorCount: 1,
+          },
+        })}
+      />,
+    )
+
+    // L1L2L3 completed — no warning about missing layers
+    expect(screen.queryByText(/deep analysis unavailable/i)).toBeNull()
+    expect(screen.queryByText(/ai analysis unavailable/i)).toBeNull()
+  })
+
+  // G11 [P2]: severity counts rendered correctly
+  it('[P2] should render correct severity counts for findings (G11)', () => {
+    const f1 = buildFindingForStore({
+      id: 'a1b2c3d4-0001-4a1b-8c2d-3e4f5a6b7c8d',
+      severity: 'critical',
+    })
+    const f2 = buildFindingForStore({
+      id: 'a1b2c3d4-0002-4a1b-8c2d-3e4f5a6b7c8d',
+      severity: 'major',
+    })
+    const f3 = buildFindingForStore({
+      id: 'a1b2c3d4-0003-4a1b-8c2d-3e4f5a6b7c8d',
+      severity: 'major',
+    })
+    const f4 = buildFindingForStore({
+      id: 'a1b2c3d4-0004-4a1b-8c2d-3e4f5a6b7c8d',
+      severity: 'minor',
+    })
+    const f5 = buildFindingForStore({
+      id: 'a1b2c3d4-0005-4a1b-8c2d-3e4f5a6b7c8d',
+      severity: 'minor',
+    })
+    const f6 = buildFindingForStore({
+      id: 'a1b2c3d4-0006-4a1b-8c2d-3e4f5a6b7c8d',
+      severity: 'minor',
+    })
+
+    const map = new Map<string, Finding>()
+    for (const f of [f1, f2, f3, f4, f5, f6]) {
+      map.set(f.id, f)
+    }
+    storeMockState.findingsMap = map
+    storeMockState.scoreStatus = 'calculated'
+    storeMockState.layerCompleted = 'L1L2'
+    storeMockState.currentScore = 75
+
+    render(
+      <ReviewPageClient
+        fileId={VALID_FILE_ID}
+        projectId={VALID_PROJECT_ID}
+        initialData={buildInitialData({
+          score: {
+            mqmScore: 75,
+            status: 'calculated',
+            layerCompleted: 'L1L2',
+            criticalCount: 1,
+            majorCount: 2,
+            minorCount: 3,
+          },
+        })}
+      />,
+    )
+
+    const summary = screen.getByTestId('finding-count-summary')
+    expect(summary).toHaveTextContent('Critical: 1')
+    expect(summary).toHaveTextContent('Major: 2')
+    expect(summary).toHaveTextContent('Minor: 3')
+  })
+
+  // G12 [P2]: empty findings list → empty state message
+  it('[P2] should show empty state text when findings list is empty (G12)', () => {
+    storeMockState.findingsMap = new Map()
+    storeMockState.scoreStatus = 'calculated'
+    storeMockState.layerCompleted = 'L1L2'
+    storeMockState.currentScore = 100
+
+    render(
+      <ReviewPageClient
+        fileId={VALID_FILE_ID}
+        projectId={VALID_PROJECT_ID}
+        initialData={buildInitialData({
+          findings: [],
+          score: {
+            mqmScore: 100,
+            status: 'calculated',
+            layerCompleted: 'L1L2',
+            criticalCount: 0,
+            majorCount: 0,
+            minorCount: 0,
+          },
+        })}
+      />,
+    )
+
+    expect(screen.getByText(/no findings/i)).toBeInTheDocument()
+  })
+
+  // G13 [P2]: findings sorted by severity then confidence DESC
+  it('[P2] should render findings sorted by severity then confidence DESC (G13)', () => {
+    const fMinor = buildFindingForStore({
+      id: 'a1b2c3d4-0010-4a1b-8c2d-3e4f5a6b7c8d',
+      severity: 'minor',
+      aiConfidence: 90,
+      description: 'Minor finding with high confidence',
+    })
+    const fCritical = buildFindingForStore({
+      id: 'a1b2c3d4-0011-4a1b-8c2d-3e4f5a6b7c8d',
+      severity: 'critical',
+      aiConfidence: 70,
+      description: 'Critical finding with lower confidence',
+    })
+    const fMajor = buildFindingForStore({
+      id: 'a1b2c3d4-0012-4a1b-8c2d-3e4f5a6b7c8d',
+      severity: 'major',
+      aiConfidence: 85,
+      description: 'Major finding with mid confidence',
+    })
+
+    const map = new Map<string, Finding>()
+    for (const f of [fMinor, fCritical, fMajor]) {
+      map.set(f.id, f)
+    }
+    storeMockState.findingsMap = map
+    storeMockState.scoreStatus = 'calculated'
+    storeMockState.layerCompleted = 'L1L2'
+    storeMockState.currentScore = 70
+
+    render(
+      <ReviewPageClient
+        fileId={VALID_FILE_ID}
+        projectId={VALID_PROJECT_ID}
+        initialData={buildInitialData({
+          score: {
+            mqmScore: 70,
+            status: 'calculated',
+            layerCompleted: 'L1L2',
+            criticalCount: 1,
+            majorCount: 1,
+            minorCount: 1,
+          },
+        })}
+      />,
+    )
+
+    // Get all rendered finding list items and check order
+    const items = screen.getAllByTestId('finding-list-item')
+    expect(items.length).toBe(3)
+
+    // First: critical, Second: major, Third: minor
+    expect(items[0]!.textContent).toMatch(/critical/i)
+    expect(items[1]!.textContent).toMatch(/major/i)
+    expect(items[2]!.textContent).toMatch(/minor/i)
+  })
+
+  // SC-2 [P2]: approve success → toast.success message
+  it('[P2] should show toast.success when approve succeeds (SC-2)', async () => {
+    mockApproveFile.mockResolvedValue({
+      success: true,
+      data: { fileId: VALID_FILE_ID, mqmScore: 96, status: 'calculated' },
+    })
+
+    storeMockState.scoreStatus = 'calculated'
+    storeMockState.currentScore = 96
+    storeMockState.layerCompleted = 'L1L2'
+
+    const user = userEvent.setup()
+
+    render(
+      <ReviewPageClient
+        fileId={VALID_FILE_ID}
+        projectId={VALID_PROJECT_ID}
+        initialData={buildInitialData({
+          score: {
+            mqmScore: 96,
+            status: 'calculated',
+            layerCompleted: 'L1L2',
+            criticalCount: 0,
+            majorCount: 0,
+            minorCount: 1,
+          },
+        })}
+      />,
+    )
+
+    const approveBtn = screen.getByRole('button', { name: /approve/i })
+    expect(approveBtn).toBeEnabled()
+
+    await user.click(approveBtn)
+
+    expect(mockApproveFile).toHaveBeenCalledWith({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+    })
+    expect(mockToast.success).toHaveBeenCalledWith('File approved')
+  })
+
+  // G17: SCORE_STALE → custom toast message (not generic error)
+  it('[P1] should show custom toast message with "recalculated" or "wait and retry" when approveFile returns SCORE_STALE (G17)', async () => {
+    // Arrange: approveFile returns SCORE_STALE error code
+    mockApproveFile.mockResolvedValue({
+      success: false,
+      code: 'SCORE_STALE',
+      error: 'Score stale',
+    } as unknown as {
+      success: boolean
+      data: { fileId: string; mqmScore: number | null; status: string }
+    })
+
+    storeMockState.scoreStatus = 'calculated'
+    storeMockState.currentScore = 85
+    storeMockState.layerCompleted = 'L1L2'
+
+    const user = userEvent.setup()
+
+    // Act
+    render(
+      <ReviewPageClient
+        fileId={VALID_FILE_ID}
+        projectId={VALID_PROJECT_ID}
+        initialData={buildInitialData({
+          score: {
+            mqmScore: 85,
+            status: 'calculated',
+            layerCompleted: 'L1L2',
+            criticalCount: 0,
+            majorCount: 2,
+            minorCount: 1,
+          },
+        })}
+      />,
+    )
+
+    const approveBtn = screen.getByRole('button', { name: /approve/i })
+    await user.click(approveBtn)
+
+    // Assert: toast.error called with SCORE_STALE-specific message (not the generic error)
+    expect(mockToast.error).toHaveBeenCalledWith(expect.stringMatching(/recalculated|wait.*retry/i))
+  })
+
+  // CM-1: handleApprove with undefined error → toast shows reasonable message
+  it('[P1] should not show literal "undefined" in toast when approveFile returns undefined error (CM-1)', async () => {
+    // Arrange: approveFile returns failure with undefined code and error
+    mockApproveFile.mockResolvedValue({
+      success: false,
+      code: undefined,
+      error: undefined,
+    } as unknown as {
+      success: boolean
+      data: { fileId: string; mqmScore: number | null; status: string }
+    })
+
+    storeMockState.scoreStatus = 'calculated'
+    storeMockState.currentScore = 85
+    storeMockState.layerCompleted = 'L1L2'
+
+    const user = userEvent.setup()
+
+    // Act
+    render(
+      <ReviewPageClient
+        fileId={VALID_FILE_ID}
+        projectId={VALID_PROJECT_ID}
+        initialData={buildInitialData({
+          score: {
+            mqmScore: 85,
+            status: 'calculated',
+            layerCompleted: 'L1L2',
+            criticalCount: 0,
+            majorCount: 2,
+            minorCount: 1,
+          },
+        })}
+      />,
+    )
+
+    const approveBtn = screen.getByRole('button', { name: /approve/i })
+    await user.click(approveBtn)
+
+    // Assert: toast.error is called, but NOT with the literal string "undefined"
+    expect(mockToast.error).toHaveBeenCalled()
+    const callArg = mockToast.error.mock.calls[0]?.[0]
+    // The actual value passed may be `undefined` (the JS value), which sonner handles
+    // But it should NOT be the literal string "undefined"
+    if (typeof callArg === 'string') {
+      expect(callArg).not.toBe('undefined')
     }
   })
 })

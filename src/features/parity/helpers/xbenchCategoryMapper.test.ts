@@ -60,7 +60,7 @@ describe('mapXbenchToToolCategory', () => {
     const knownMappings: Array<[string, string]> = [
       ['Inconsistency in Source', 'consistency'],
       ['Inconsistency in Target', 'consistency'],
-      ['Key Term Mismatch', 'key_term'],
+      ['Key Term Mismatch', 'glossary_compliance'],
       ['Untranslated', 'completeness'],
       ['Target same as Source', 'completeness'],
       ['Tag Mismatch', 'tag_integrity'],
@@ -70,7 +70,7 @@ describe('mapXbenchToToolCategory', () => {
       ['Double Blank', 'spacing'],
       ['Repeated Word', 'repeated_word'],
       ['Repeated Words', 'repeated_word'],
-      ['Spell Check', 'fluency'],
+      ['Spell Check', 'spelling'],
     ]
 
     for (const [xbenchType, expectedCategory] of knownMappings) {
@@ -83,7 +83,7 @@ describe('mapXbenchToToolCategory', () => {
 
     expect(mapXbenchToToolCategory('TAG MISMATCH')).toBe('tag_integrity')
     expect(mapXbenchToToolCategory('number mismatch')).toBe('number_format')
-    expect(mapXbenchToToolCategory('Key Term Mismatch')).toBe('key_term')
+    expect(mapXbenchToToolCategory('Key Term Mismatch')).toBe('glossary_compliance')
   })
 
   it('[P1] should return other for unknown check type', async () => {
@@ -102,9 +102,85 @@ describe('mapXbenchToToolCategory', () => {
     // Number Mismatch: MQM → accuracy, Tool → number_format
     expect(mapXbenchCategory('Number Mismatch')).toBe('accuracy')
     expect(mapXbenchToToolCategory('Number Mismatch')).toBe('number_format')
+
+    // Key Term Mismatch: MQM → terminology, Tool → glossary_compliance (G31 fix)
+    expect(mapXbenchCategory('Key Term Mismatch')).toBe('terminology')
+    expect(mapXbenchToToolCategory('Key Term Mismatch')).toBe('glossary_compliance')
+
+    // Spell Check: MQM → fluency, Tool → spelling (G31 fix)
+    expect(mapXbenchCategory('Spell Check')).toBe('fluency')
+    expect(mapXbenchToToolCategory('Spell Check')).toBe('spelling')
   })
 
   // TA: Coverage Gap Tests — Story 2.7
+
+  // TA: Coverage Gap Tests — Stories 2.7 & 3.5 (Advanced Elicitation)
+
+  it('[P2] should throw on null/undefined input since no null guard exists (G4)', async () => {
+    const { mapXbenchCategory, mapXbenchToToolCategory } = await import('./xbenchCategoryMapper')
+
+    // G4: mapper calls .toLowerCase() directly — crashes on null/undefined
+    // @ts-expect-error Testing runtime null safety
+    expect(() => mapXbenchCategory(null)).toThrow()
+    // @ts-expect-error Testing runtime null safety
+    expect(() => mapXbenchToToolCategory(undefined)).toThrow()
+  })
+
+  it('[P1] should output only values that exist in engine RuleCategory or known aliases (G31)', async () => {
+    const { mapXbenchToToolCategory } = await import('./xbenchCategoryMapper')
+
+    // G31: Verify mapper tool outputs align with engine RuleCategory type
+    const engineRuleCategories = new Set([
+      'completeness',
+      'tag_integrity',
+      'number_format',
+      'placeholder_integrity',
+      'spacing',
+      'punctuation',
+      'url_integrity',
+      'consistency',
+      'glossary_compliance',
+      'custom_rule',
+      'capitalization',
+      'repeated_word',
+      'spelling',
+    ])
+
+    const allXbenchTypes = [
+      'Inconsistency in Source',
+      'Inconsistency in Target',
+      'Key Term Mismatch',
+      'Untranslated',
+      'Target same as Source',
+      'Tag Mismatch',
+      'Number Mismatch',
+      'Numeric Mismatch',
+      'Double Space',
+      'Double Blank',
+      'Repeated Word',
+      'Repeated Words',
+      'Spell Check',
+    ]
+
+    const nonEngineOutputs: string[] = []
+    for (const xbenchType of allXbenchTypes) {
+      const output = mapXbenchToToolCategory(xbenchType)
+      if (output !== 'other' && !engineRuleCategories.has(output)) {
+        nonEngineOutputs.push(`${xbenchType} → ${output}`)
+      }
+    }
+
+    // After G31 fix: all mapper outputs should now exist in RuleCategory
+    // key_term → glossary_compliance, fluency → spelling
+    if (nonEngineOutputs.length > 0) {
+      process.stderr.write(
+        `\n⚠️ G31: Mapper outputs not in RuleCategory: ${nonEngineOutputs.join(', ')}\n`,
+      )
+    }
+
+    // Post-fix: zero divergences expected
+    expect(nonEngineOutputs.length).toBe(0)
+  })
 
   it('[P1] should map ALL known golden corpus Xbench categories to non-other values (U17)', async () => {
     const { mapXbenchToToolCategory, mapXbenchCategory } = await import('./xbenchCategoryMapper')

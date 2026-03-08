@@ -694,4 +694,142 @@ describe.skipIf(!hasGoldenCorpus())('Golden Corpus — Formal Parity Comparison'
     // Engine should still find SOME consistency issues
     expect(engineByMqm['consistency'] ?? 0).toBeGreaterThan(0)
   })
+
+  // TA: Coverage Gap Tests — Stories 2.7 & 3.5 (Advanced Elicitation: FP+CM+RE+SC)
+
+  it('should have exactly 0 genuine gaps after AC4 fixes (G3)', () => {
+    // G3: AC4 requires all genuine gaps to be fixed — explicit assertion
+    const { xbenchOnly } = getPerFindingParity()
+    const genuineGaps = xbenchOnly.filter((g) => g.gapType === 'genuine_gap')
+
+    if (genuineGaps.length > 0) {
+      process.stderr.write(`\n⚠️ G3: ${genuineGaps.length} genuine gap(s) found:\n`)
+      for (const gap of genuineGaps.slice(0, 10)) {
+        process.stderr.write(
+          `  [${gap.xbenchCategory}] ${gap.fileName} seg#${gap.segmentNumber}: "${gap.sourceText.slice(0, 60)}"\n`,
+        )
+      }
+    }
+
+    expect(genuineGaps).toHaveLength(0)
+  })
+
+  it('should have XBENCH_TO_ENGINE mapping cover every Xbench category in report (G26)', () => {
+    // G26: Unmapped categories silently become genuine_gap in computePerFindingParity
+    const uniqueXbenchCategories = [...new Set(xbenchFindings.map((xf) => xf.category))]
+
+    process.stderr.write(
+      `\nG26: Unique Xbench categories in report: ${uniqueXbenchCategories.join(', ')}\n`,
+    )
+
+    const unmappedCategories = uniqueXbenchCategories.filter((cat) => !XBENCH_TO_ENGINE[cat])
+
+    if (unmappedCategories.length > 0) {
+      process.stderr.write(`⚠️ Unmapped: ${unmappedCategories.join(', ')}\n`)
+    }
+
+    expect(unmappedCategories).toHaveLength(0)
+  })
+
+  it('should have per-category adjusted parity ≥ 80% for each Xbench check type (G11)', () => {
+    // G11: Overall 99.5% could mask a category with 0% parity
+    const { matched, xbenchOnly } = getPerFindingParity()
+
+    type CatStats = { matched: number; total: number; archDiff: number; xbenchFP: number }
+    const catStats: Record<string, CatStats> = {}
+
+    for (const xf of xbenchFindings) {
+      const entry = catStats[xf.category] ?? { matched: 0, total: 0, archDiff: 0, xbenchFP: 0 }
+      entry.total++
+      catStats[xf.category] = entry
+    }
+    for (const m of matched) {
+      const entry = catStats[m.xbenchCategory]
+      if (entry) entry.matched++
+    }
+    for (const g of xbenchOnly) {
+      const entry = catStats[g.xbenchCategory]
+      if (entry) {
+        if (g.gapType === 'architectural_difference') entry.archDiff++
+        else if (g.gapType === 'xbench_false_positive') entry.xbenchFP++
+      }
+    }
+
+    process.stderr.write(`\nG11: Per-category adjusted parity:\n`)
+    const lowParityCategories: string[] = []
+
+    for (const [cat, stats] of Object.entries(catStats).sort((a, b) => b[1].total - a[1].total)) {
+      const adjParity = ((stats.matched + stats.archDiff + stats.xbenchFP) / stats.total) * 100
+      process.stderr.write(
+        `  ${cat.padEnd(28)} ${adjParity.toFixed(1)}% (${stats.matched + stats.archDiff + stats.xbenchFP}/${stats.total})\n`,
+      )
+      if (adjParity < 80) {
+        lowParityCategories.push(`${cat}: ${adjParity.toFixed(1)}%`)
+      }
+    }
+
+    expect(lowParityCategories).toHaveLength(0)
+  })
+
+  it('should classify architectural differences only from categories with known engine limitations (G14)', () => {
+    // G14: Verify classification isn't hiding genuine gaps behind arch_diff label
+    const { xbenchOnly } = getPerFindingParity()
+    const archDiffs = xbenchOnly.filter((g) => g.gapType === 'architectural_difference')
+
+    // Valid sources of arch_diff: categories in ARCHITECTURAL_DIFFERENCES set + Repeated Word
+    const validArchDiffSources = new Set([
+      ...Object.entries(XBENCH_TO_ENGINE)
+        .filter(([, cats]) => cats.some((c) => ARCHITECTURAL_DIFFERENCES.has(c)))
+        .map(([xbenchType]) => xbenchType),
+      'Repeated Word',
+    ])
+
+    const invalidArchDiffs = archDiffs.filter((ad) => !validArchDiffSources.has(ad.xbenchCategory))
+
+    if (invalidArchDiffs.length > 0) {
+      process.stderr.write(`\n⚠️ G14: Invalid arch_diff classifications:\n`)
+      for (const ad of invalidArchDiffs) {
+        process.stderr.write(`  [${ad.xbenchCategory}] ${ad.fileName} seg#${ad.segmentNumber}\n`)
+      }
+    }
+
+    // Every arch_diff must come from a valid source
+    expect(invalidArchDiffs).toHaveLength(0)
+
+    // Document the distribution
+    process.stderr.write(`\nG14: Arch diffs by category:\n`)
+    const archByCat: Record<string, number> = {}
+    for (const ad of archDiffs) {
+      archByCat[ad.xbenchCategory] = (archByCat[ad.xbenchCategory] ?? 0) + 1
+    }
+    for (const [cat, count] of Object.entries(archByCat)) {
+      process.stderr.write(`  ${cat}: ${count}\n`)
+    }
+  })
+
+  it('should have ENGINE_TO_MQM consistent with xbenchCategoryMapper for primary categories (G31)', () => {
+    // G31: Test-internal ENGINE_TO_MQM must agree with production mapper
+    const inconsistencies: string[] = []
+
+    for (const [xbenchType, engineCats] of Object.entries(XBENCH_TO_ENGINE)) {
+      const mapperMqm = mapXbenchCategory(xbenchType)
+      const primaryEngineCat = engineCats[0]!
+      const testMqm = ENGINE_TO_MQM[primaryEngineCat] ?? 'other'
+
+      if (mapperMqm !== testMqm) {
+        inconsistencies.push(
+          `${xbenchType}: mapper→${mapperMqm}, ENGINE_TO_MQM[${primaryEngineCat}]→${testMqm}`,
+        )
+      }
+    }
+
+    if (inconsistencies.length > 0) {
+      process.stderr.write(`\n⚠️ G31 mapping inconsistencies:\n`)
+      for (const inc of inconsistencies) {
+        process.stderr.write(`  ${inc}\n`)
+      }
+    }
+
+    expect(inconsistencies).toHaveLength(0)
+  })
 })

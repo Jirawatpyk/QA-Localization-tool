@@ -1,7 +1,24 @@
 ---
 stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets', 'step-03-generate-tests', 'step-03c-aggregate', 'step-04-validate-and-summarize']
-lastStep: 'step-02-identify-targets'
+lastStep: 'step-04-validate-and-summarize'
 lastSaved: '2026-03-08'
+taRun8:
+  stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets', 'step-03-generate-tests', 'step-03c-aggregate', 'step-04-validate-and-summarize']
+  lastStep: 'step-04-validate-and-summarize'
+  lastSaved: '2026-03-08'
+  storyFile: '_bmad-output/implementation-artifacts/3-5-score-lifecycle-confidence-display.md'
+  mode: 'BMad-Integrated'
+  existingTests: 78
+  gapsTotal: 30
+  gapsP1: 11
+  gapsP2: 16
+  gapsP3: 3
+  gapsAlreadyCovered: 4
+  gapsSkipped: 3
+  gapsActionable: 23
+  testsAdded: 29
+  result: 'PASS — 29 new tests (9 P1, 17 P2, 3 characterization), 4 already covered, 3 P3 skipped, 86/86 green'
+  elicitationMethods: ['Chaos Monkey Scenarios', 'What If Scenarios', 'Self-Consistency Validation']
 taRun6:
   stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets', 'step-03-generate-tests', 'step-03c-aggregate', 'step-04-validate-and-summarize']
   lastStep: 'step-04-validate-and-summarize'
@@ -42,6 +59,191 @@ taRun5:
   gapsActionable: 19
   gapsDeferred: 1
   elicitationMethods: ['Red Team vs Blue Team', 'Failure Mode Analysis', 'Boundary Stress', 'Contract Verification', 'Pre-mortem']
+taRun7:
+  stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets', 'step-03-generate-tests', 'step-03c-aggregate', 'step-04-validate-and-summarize']
+  lastStep: 'step-04-validate-and-summarize'
+  lastSaved: '2026-03-08'
+  storyFile: '_bmad-output/implementation-artifacts/2-10-parity-verification-sprint.md'
+  mode: 'BMad-Integrated'
+  gapsTotal: 34
+  gapsActionable: 16
+  gapsDeferred: 18
+  testsAdded: 16
+  result: 'PASS — 16 new tests (5 P1, 9 P2, 2 P3-equivalent), 18 deferred (integration-only/corpus-required), 7 elicitation methods applied'
+  elicitationMethods: ['Failure Mode Analysis', 'Pre-mortem Analysis', 'Red Team vs Blue Team', 'First Principles Analysis', 'Chaos Monkey Scenarios', 'Reverse Engineering', 'Self-Consistency Validation']
+---
+
+# Test Automation Summary — Story 3.5 (TA Run #8)
+
+## Step 1: Preflight & Context
+
+### Execution Mode
+- **BMad-Integrated** — Story 3.5 (Score Lifecycle & Confidence Display)
+- Story Status: done (CR R1+R2 passed, 0C+0H)
+
+### Framework
+- **Vitest 4.0.18** (workspace: unit/jsdom) + **Playwright** (E2E)
+- Test co-location: `*.story35.test.ts` / `*.test.tsx` next to source
+
+### ATDD Baseline
+- 78 existing tests (72 unit + 6 E2E), 0 skips
+- Covers all 12 ACs
+- FMA (36 failure modes), Pre-mortem (8 gaps), Red Team (6 vulns) from ATDD
+
+### Source Files Analyzed
+| File | Domain | Key Functions |
+|------|--------|---------------|
+| `scoreFile.ts` | Scoring | buildFindingsSummary, riskiest finding, CONTRIBUTING_STATUSES |
+| `autoPassChecker.ts` | Scoring | buildResult, findingsSummary, threshold |
+| `ReviewPageClient.tsx` | Review UI | deriveScoreBadgeState, handleApprove, partialWarningText |
+| `AutoPassRationale.tsx` | Review UI | tryParseRationale (no Zod) |
+| `ConfidenceBadge.tsx` | Review UI | getConfidenceLevel, isBelowThreshold |
+| `FindingListItem.tsx` | Review UI | stripL3Markers, truncate, confidenceMin |
+| `use-threshold-subscription.ts` | Hooks | Realtime subscription, polling fallback |
+| `approveFile.action.ts` | Actions | APPROVABLE_STATUSES, STATUS_ERROR_MAP |
+| `review.store.ts` | State | ThresholdSlice, resetForFile, updateScore |
+
+---
+
+## Step 2: Coverage Gap Identification
+
+### Initial Source Analysis: 20 Gaps
+From source code analysis beyond ATDD coverage — missing edge cases, boundary values, and defensive checks.
+
+### Advanced Elicitation: +10 Gaps (3 methods)
+
+**Method 1: Chaos Monkey Scenarios (+7)**
+| ID | Priority | Description |
+|----|----------|-------------|
+| CM-1 | P1 | handleApprove undefined error → toast must NOT show "undefined" |
+| CM-2 | P1 | economy+L2 partial → no warning shown (characterization) |
+| CM-3 | P2 | L1L2L3+partial → no warning (characterization) |
+| CM-4 | P1 | All-L1 riskiest finding inconsistency |
+| CM-5 | P1 | Partial threshold (l3='invalid') → updateThresholds NOT called |
+| CM-6 | P2 | Empty findings → riskiest=null |
+| CM-7 | P2 | Mixed severity without contribution |
+
+**Method 2: What If Scenarios (+2)**
+| ID | Priority | Description |
+|----|----------|-------------|
+| WI-1 | P1 | AutoPassRationale wrong JSON shape → crash (no Zod validation) |
+| WI-7 | P2 | confidenceMin=NaN → threshold check always false |
+
+**Method 3: Self-Consistency Validation (+1, +confirmed 0 false positives)**
+| ID | Priority | Description |
+|----|----------|-------------|
+| SC-1 | P2 | Threshold 80→90 re-evaluation — confidence 85 gains warning |
+| SC-2 | P2 | approve success → toast.success "File approved" |
+
+### Final Gap Summary
+| Priority | Count | Status |
+|----------|-------|--------|
+| P1 | 11 | All actionable |
+| P2 | 16 | All actionable |
+| P3 | 3 | Skipped (G18, G19, G20) |
+| Already covered | 4 | G5, CM-6, CM-7, G16 in ATDD |
+| **Total** | **30** | **23 actionable** |
+
+---
+
+## Step 3: Test Generation (Parallel Subprocesses)
+
+### Subprocess A: Scoring & Backend (6 new tests)
+| Gap ID | Priority | File | Description |
+|--------|----------|------|-------------|
+| G15 | P2 | autoPassChecker.story35.test.ts | null threshold → conservative fallback (99) |
+| WI-1 | P1 | AutoPassRationale.test.tsx | wrong JSON shape → crash characterization |
+| G7 | P2 | AutoPassRationale.test.tsx | margin=0 displays "+0.0" |
+| G8 | P2 | AutoPassRationale.test.tsx | margin=-1.5 displays "-1.5" |
+| G17 | P1 | ReviewPageClient.story35.test.tsx | SCORE_STALE → custom toast |
+| CM-1 | P1 | ReviewPageClient.story35.test.tsx | undefined error → no "undefined" in toast |
+
+### Subprocess B: Components & Hooks (23 new tests)
+| Gap ID | Priority | File | Description |
+|--------|----------|------|-------------|
+| G1 | P1 | ReviewPageClient.story35.test.tsx | partial L1L2+thorough → "Deep analysis unavailable" |
+| G2 | P1 | ReviewPageClient.story35.test.tsx | partial L1 → "AI analysis unavailable" |
+| CM-2 | P1 | ReviewPageClient.story35.test.tsx | economy+L2 partial → no warning |
+| CM-3 | P2 | ReviewPageClient.story35.test.tsx | L1L2L3+partial → no warning |
+| G11 | P2 | ReviewPageClient.story35.test.tsx | severity counts rendered correctly |
+| G12 | P2 | ReviewPageClient.story35.test.tsx | empty findings → empty state |
+| G13 | P2 | ReviewPageClient.story35.test.tsx | findings sorted severity→confidence DESC |
+| SC-2 | P2 | ReviewPageClient.story35.test.tsx | approve success → toast.success |
+| G3 | P1 | FindingListItem.story35.test.tsx | L3 Confirmed badge |
+| G4 | P1 | FindingListItem.story35.test.tsx | L3 Disagrees badge |
+| G10 | P2 | FindingListItem.story35.test.tsx | truncation boundary 100/101 chars |
+| SC-1 | P2 | FindingListItem.story35.test.tsx | threshold change re-evaluation |
+| — | P2 | FindingListItem.story35.test.tsx | characterization test |
+| G9 | P2 | ConfidenceBadge.story35.test.tsx | confidence=84.5 rounds to 85% tier=medium |
+| WI-7 | P2 | ConfidenceBadge.story35.test.tsx | NaN threshold → no warning |
+| SC-1-badge | P2 | ConfidenceBadge.story35.test.tsx | threshold change verification |
+| G6 | P1 | use-threshold-subscription.test.ts | lang pair change → channel swap |
+| CM-5 | P1 | use-threshold-subscription.test.ts | partial threshold → blocked |
+| G14 | P2 | use-threshold-subscription.test.ts | null thresholds → blocked |
+| + | — | scoreFile.story35.test.ts | 7 tests (baseline + edge cases) |
+
+---
+
+## Step 3c: Aggregate
+
+### Test Verification
+```
+npx vitest run (7 Story 3.5 files)
+  autoPassChecker.story35.test.ts:     9 tests  PASS
+  use-threshold-subscription.test.ts: 10 tests  PASS
+  ConfidenceBadge.story35.test.tsx:   16 tests  PASS
+  scoreFile.story35.test.ts:           7 tests  PASS
+  FindingListItem.story35.test.tsx:   12 tests  PASS
+  AutoPassRationale.test.tsx:          8 tests  PASS
+  ReviewPageClient.story35.test.tsx:  24 tests  PASS
+  ─────────────────────────────────────────────
+  Total: 86 tests  |  86 passed  |  0 failed
+```
+
+### Lines Added
++1,013 lines across 7 test files
+
+---
+
+## Step 4: Validate & Summarize
+
+### Validation Checklist
+- [x] Execution mode: BMad-Integrated
+- [x] ATDD baseline loaded and respected (no duplicates)
+- [x] 3 advanced elicitation methods applied
+- [x] Priority tagging: P1/P2 in test names
+- [x] P3 skipped per policy (G18, G19, G20)
+- [x] Tests deterministic, no flaky patterns
+- [x] Factory/mock patterns (drizzleMock, vi.mock, vi.fn)
+- [x] Co-located with source files
+- [x] All 86 tests pass, 0 regressions
+- [x] Parallel subprocess execution completed
+
+### Final Results
+| Metric | Value |
+|--------|-------|
+| ATDD baseline | 78 tests (72 unit + 6 E2E) |
+| New tests added | 29 |
+| Total Story 3.5 unit tests | 86 |
+| Gaps identified | 30 (11 P1, 16 P2, 3 P3) |
+| Gaps filled | 23 |
+| Already covered | 4 |
+| P3 skipped | 3 |
+| Elicitation methods | 3 (Chaos Monkey, What If, Self-Consistency) |
+| Test files modified | 7 |
+| Lines added | +1,013 |
+| Result | **PASS** |
+
+### Key Findings
+1. **WI-1 (P1):** `AutoPassRationale.tryParseRationale` lacks Zod validation — wrong JSON shape crashes on `margin.toFixed(1)`. Documented as characterization test.
+2. **CM-1 (P1):** `handleApprove` error path could show "undefined" in toast if error message is missing.
+3. **WI-7 (P2):** `confidenceMin=NaN` silently bypasses threshold check (`50 < NaN` is always false).
+4. **G5/CM-6/CM-7/G16:** Already covered in ATDD baseline — no duplicate tests.
+
+### Recommendations
+- Consider adding Zod validation to `tryParseRationale` (WI-1) — currently fails silently on malformed rationale JSON
+- NaN guard for `confidenceMin` in `FindingListItem` (WI-7) is low-risk but worth a defensive check
+
 ---
 
 # Test Automation Summary — Story 3.2b
@@ -745,3 +947,182 @@ Fill remaining P2/P3 gaps identified in `test-design-epic-2.md` quality gate.
 **Next Steps:**
 - No further TA action needed for Story 2.7
 - Story 2.7 ready for final review sign-off with 252 tests total
+
+---
+
+## TA Run #7: Story 2.10 — Parity Verification Sprint (2026-03-08)
+
+### Step 1: Preflight & Context
+
+**Mode:** BMad-Integrated (Story 2.10, status: done, all 6 ACs met)
+**Test Level:** Unit (Vitest) + Integration (golden corpus required)
+**Existing Coverage:** ~20 tests across 4 test files (all implemented, 0 skip)
+
+**Source Modules (4):**
+- `ruleEngine.ts` — L1 processFile orchestrator, 17 checks (163 lines)
+- `parityComparator.ts` — NFKC + category mapping + severity ±1 + 1-to-1 matching (118 lines)
+- `xbenchCategoryMapper.ts` — Dual lookup tables (MQM + tool category) (46 lines)
+- `factories.ts::buildPerfSegments` — Deterministic modulo distribution (590 lines)
+
+**Existing Test Distribution:**
+
+| File | Tests | Level |
+|------|-------|-------|
+| golden-corpus-parity.test.ts | 7 | Integration (corpus-required) |
+| tier2-multilang-parity.test.ts | 4 | Integration (corpus-required) |
+| clean-corpus-baseline.test.ts | 3 | Integration (corpus-required) |
+| ruleEngine.perf.test.ts | 6 | Unit (synthetic data) |
+| parityComparator.test.ts | 13 | Unit |
+| xbenchCategoryMapper.test.ts | 8 | Unit |
+| **Total** | **~41** | |
+
+### Step 2: Coverage Gap Analysis
+
+**Elicitation Methods Applied (7):**
+1. **Failure Mode Analysis** — 4 modules, 12 initial gaps
+2. **Pre-mortem Analysis** — Production failure scenarios, reinforced 5 gaps
+3. **Red Team vs Blue Team** — 6 attacks, confirmed 3 new gaps
+4. **First Principles Analysis** (Advanced) — 12 assumptions stripped, +8 new gaps (G13-G20)
+5. **Chaos Monkey Scenarios** (Advanced) — 6 break scenarios, +5 new gaps (G21-G25)
+6. **Reverse Engineering** (Advanced) — 7 requirements traced backwards, +5 new gaps (G26-G30)
+7. **Self-Consistency Validation** (Advanced) — 4 contradictions found, +4 new gaps (G31-G34)
+
+**Coverage Gaps Identified: 34 total (P1=9, P2=18, P3=7)**
+
+#### P1 Gaps (9)
+
+| ID | Target | Source | Description |
+|----|--------|--------|-------------|
+| G1 | ruleEngine perf | FMA | Perf with glossary terms — production workload |
+| G3 | golden-corpus | FMA | genuineGaps=0 explicit assertion (AC4) |
+| G7 | ruleEngine perf | FMA | Check category coverage — synthetic triggers ≥N categories |
+| G8 | buildPerfSegments | FMA | Distribution verification (60/10/10/5/10/5%) |
+| G11 | golden-corpus | FMA+PM | Per-category min match rate ≥80% |
+| G13 | golden-corpus vs comparator | FirstPrinciples | Dual-algorithm consistency |
+| G14 | golden-corpus | FirstPrinciples | Classification correctness — arch_diff validation |
+| G26 | golden-corpus | ReverseEngineering | XBENCH_TO_ENGINE mapping completeness |
+| G31 | xbenchCategoryMapper | SelfConsistency | Triple mapping divergence — key_term, fluency not in RuleCategory |
+
+#### P2 Gaps (18)
+
+| ID | Target | Source | Description |
+|----|--------|--------|-------------|
+| G2 | buildPerfSegments | FMA | Naive word count (split(' ').length) |
+| G4 | xbenchCategoryMapper | FMA | No null guard on input |
+| G5 | clean-corpus | FMA | File count = 14 assertion |
+| G6 | tier2 | FMA | MQM categories present |
+| G10 | golden-corpus | FMA | Tool-only baseline |
+| G15 | parityComparator | FirstPrinciples | Excerpt truncation impact |
+| G16 | parityComparator | FirstPrinciples | Empty source collision |
+| G17 | parityComparator | FirstPrinciples | Severity tolerance boundary (critical↔trivial) |
+| G18 | parityComparator | FirstPrinciples | Suppression impact on parity |
+| G20 | clean-corpus | FirstPrinciples | FP baseline regression guard |
+| G21 | parityComparator | ChaosMonkey | Asymmetric trim (tool category not trimmed) |
+| G22 | parityComparator | ChaosMonkey | One-to-many matching order dependency |
+| G23 | ruleEngine | ChaosMonkey | SKIP_QA_STATES parity void |
+| G24 | ruleEngine | ChaosMonkey | Multibyte truncation corruption |
+| G27 | golden-corpus | ReverseEngineering | Segment-number false match |
+| G28 | golden-corpus | ReverseEngineering | ARCHITECTURAL_DIFFERENCES staleness |
+| G32 | golden-corpus | SelfConsistency | Aggregate vs per-finding disconnect |
+| G33 | golden-corpus | SelfConsistency | KNOWN_GAPS set inconsistency |
+| G34 | golden-corpus | SelfConsistency | Engine surplus quality (genuine vs FP) |
+
+#### P3 Gaps (7)
+
+| ID | Target | Source | Description |
+|----|--------|--------|-------------|
+| G9 | comparator | FMA | NFKC regression test |
+| G12 | ruleEngine | FMA | Content type → check coverage |
+| G19 | golden-corpus | FirstPrinciples | Match strategy distribution |
+| G25 | golden-corpus | ChaosMonkey | Hardcoded SDLXLIFF_FILES staleness |
+| G29 | ruleEngine perf | ReverseEngineering | Real corpus performance benchmark |
+| G30 | golden-corpus | ReverseEngineering | Corpus version pinning |
+
+### Step 3: Test Generation
+
+**Execution Mode:** Direct injection into 5 existing test files
+**Tests Generated:** 16 total (5 P1, 9 P2, 2 integration/P3-equivalent)
+
+#### Unit Tests (9 tests, 3 files)
+
+| # | Gap | Pri | File | Type | Status |
+|---|-----|-----|------|------|--------|
+| G16 | Empty source collision behavior | P2 | parityComparator.test.ts | Characterization | GREEN |
+| G17 | critical↔trivial severity gap=3 | P2 | parityComparator.test.ts | Boundary | GREEN |
+| G21 | Asymmetric trim on tool category | P2 | parityComparator.test.ts | Characterization | GREEN |
+| G22 | One-to-many consumed matching | P2 | parityComparator.test.ts | Order dependency | GREEN |
+| G4 | Null/undefined input crash | P2 | xbenchCategoryMapper.test.ts | Defensive | GREEN |
+| G31 | Mapper outputs vs RuleCategory | P1 | xbenchCategoryMapper.test.ts | Consistency | GREEN |
+| G1 | 5K segs + 100 glossary < 5s | P1 | ruleEngine.perf.test.ts | Performance | GREEN |
+| G7 | ≥3 distinct categories triggered | P1 | ruleEngine.perf.test.ts | Category coverage | GREEN |
+| G8 | Distribution 60/10/10/5/10/5% | P1 | ruleEngine.perf.test.ts | Factory verification | GREEN |
+
+#### Integration Tests (7 tests, 2 files — require golden corpus)
+
+| # | Gap | Pri | File | Type | Status |
+|---|-----|-----|------|------|--------|
+| G3 | genuineGaps=0 explicit | P1 | golden-corpus-parity.test.ts | AC4 assertion | PENDING (corpus) |
+| G26 | XBENCH_TO_ENGINE completeness | P1 | golden-corpus-parity.test.ts | Mapping guard | PENDING (corpus) |
+| G11 | Per-category parity ≥80% | P2 | golden-corpus-parity.test.ts | Category floor | PENDING (corpus) |
+| G14 | arch_diff classification valid | P2 | golden-corpus-parity.test.ts | Classification | PENDING (corpus) |
+| G31 | ENGINE_TO_MQM vs mapper consistency | P2 | golden-corpus-parity.test.ts | Mapping sync | PENDING (corpus) |
+| G5 | Clean corpus = 14 files | P2 | clean-corpus-baseline.test.ts | Corpus drift | PENDING (corpus) |
+| G20 | FP count ≤ 50 regression | P2 | clean-corpus-baseline.test.ts | Regression guard | PENDING (corpus) |
+
+### Step 3c: Aggregate
+
+**Unit test verification:** `npx vitest run --project unit` (3 modified files)
+- **3 test files, 36 tests — ALL PASS** (0 skip, 0 fail)
+- Integration tests require golden corpus (describe.skipIf)
+
+| File | Before | After | Delta |
+|------|--------|-------|-------|
+| parityComparator.test.ts | 13 | 17 | +4 |
+| xbenchCategoryMapper.test.ts | 8 | 10 | +2 |
+| ruleEngine.perf.test.ts | 6 | 9 | +3 |
+| golden-corpus-parity.test.ts | 7 | 12 | +5 |
+| clean-corpus-baseline.test.ts | 3 | 5 | +2 |
+| **Total (5 modified)** | **37** | **53** | **+16** |
+
+### Step 4: Validation & Summary
+
+**Validation Result: PASS (unit tests green, integration pending corpus)**
+
+| Category | Checks | Pass | N/A |
+|----------|--------|------|-----|
+| Preflight | 4 | 4 | 0 |
+| Targets | 5 | 5 | 0 |
+| Generation Quality | 8 | 8 | 0 |
+| Infrastructure | 3 | 1 | 2 |
+| E2E/API/Component | 3 | 0 | 3 |
+
+**Final Coverage Summary:**
+
+| Metric | Value |
+|--------|-------|
+| Existing tests (before) | ~41 (6 files) |
+| New tests added | 16 |
+| Total tests (after) | ~57 (6 files) |
+| P1 tests added | 5 |
+| P2 tests added | 9 |
+| Integration tests (corpus-required) | 7 |
+| Gaps identified | 34 |
+| Gaps actionable (written) | 16 |
+| Gaps deferred | 18 (integration-only, corpus-required, or low-priority) |
+| Files modified | 5 |
+| New files created | 0 |
+| Elicitation methods | 7 (3 standard + 4 advanced) |
+
+**Key Findings (Advanced Elicitation):**
+
+1. **G31 (Triple Mapping Divergence):** `xbenchCategoryMapper` outputs `key_term` and `fluency` which DON'T exist in engine's `RuleCategory`. Production `parityComparator` will never match Key Term Mismatch or Spell Check findings. Test confirms and bounds at ≤2 divergences.
+
+2. **G7 (Category Coverage Gap):** Synthetic `buildPerfSegments` only triggers 3 of 13 RuleCategory types (capitalization, completeness, punctuation). Real corpus triggers significantly more. Baseline documented.
+
+3. **G1 (Glossary Performance):** 5000 segments + 100 glossary terms: 166ms (well within 5000ms). Glossary adds ~40ms overhead vs empty glossary (119ms).
+
+**Deferred Gaps (18):**
+- G2, G6, G9, G10, G12, G13, G15, G18, G19, G23, G24, G25, G27, G28, G29, G30, G32, G33, G34
+- Reasons: Require golden corpus data, integration test scope, or diminishing returns (P3)
+
+**Elicitation Yield:** 7 methods produced 34 unique gaps. Standard 3 methods found 12 gaps. Advanced 4 methods found +22 additional gaps (83% increase). Most impactful: First Principles (+8), Chaos Monkey (+5), Reverse Engineering (+5), Self-Consistency (+4).

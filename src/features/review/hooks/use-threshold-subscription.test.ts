@@ -259,3 +259,98 @@ describe('useThresholdSubscription', () => {
     unmount()
   })
 })
+
+// TA: Coverage Gap Tests (Story 3.5)
+
+describe('useThresholdSubscription — TA: Coverage Gap Tests (Story 3.5)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.clearAllMocks()
+    // Reset channel mock chain after clearAllMocks
+    mockChannel.on.mockReturnValue(mockChannel)
+    mockChannel.subscribe.mockReturnValue(mockChannel)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  // G6 [P1]: language pair change → cleanup old subscription + start new
+  it('[P1] should cleanup old subscription and create new one when language pair changes (G6)', () => {
+    // First render: subscribe for en-US -> th-TH
+    const { rerender, unmount } = renderHook(
+      ({ source, target }: { source: string; target: string }) =>
+        useThresholdSubscription(source, target),
+      { initialProps: { source: 'en-US', target: 'th-TH' } },
+    )
+
+    // Verify first channel was created
+    expect(mockSupabase.channel).toHaveBeenCalledWith('thresholds:en-US:th-TH')
+    const firstCallCount = mockSupabase.removeChannel.mock.calls.length
+
+    // Re-render with different target language: en-US -> ja-JP
+    rerender({ source: 'en-US', target: 'ja-JP' })
+
+    // Old channel should be cleaned up (removeChannel called)
+    expect(mockSupabase.removeChannel.mock.calls.length).toBeGreaterThan(firstCallCount)
+
+    // New channel should be created for the new language pair
+    expect(mockSupabase.channel).toHaveBeenCalledWith('thresholds:en-US:ja-JP')
+
+    unmount()
+  })
+
+  // CM-5 [P1]: partial threshold update — only l2 changes, l3 is non-number → update blocked
+  it('[P1] should NOT call updateThresholds when l3_confidence_min is not a number (CM-5)', () => {
+    const { unmount } = renderHook(() => useThresholdSubscription('en-US', 'th-TH'))
+
+    const onCall = mockChannel.on.mock.calls.find(
+      (call: unknown[]) =>
+        typeof call[1] === 'object' &&
+        call[1] !== null &&
+        (call[1] as Record<string, unknown>).event === 'UPDATE',
+    )
+    const updateCallback = onCall?.[2] as ((payload: unknown) => void) | undefined
+
+    // Simulate Realtime payload: l2 is number, but l3 is a non-number string
+    act(() => {
+      updateCallback?.({
+        eventType: 'UPDATE',
+        new: { l2_confidence_min: 85, l3_confidence_min: 'invalid', target_lang: 'th-TH' },
+        old: {},
+      })
+    })
+
+    // Both must be numbers — since l3 is 'invalid', updateThresholds should NOT be called
+    expect(mockUpdateThresholds).not.toHaveBeenCalled()
+
+    unmount()
+  })
+
+  // G14 [P2]: Realtime payload with null thresholds → type guard blocks
+  it('[P2] should NOT call updateThresholds when thresholds are null in Realtime payload (G14)', () => {
+    const { unmount } = renderHook(() => useThresholdSubscription('en-US', 'th-TH'))
+
+    const onCall = mockChannel.on.mock.calls.find(
+      (call: unknown[]) =>
+        typeof call[1] === 'object' &&
+        call[1] !== null &&
+        (call[1] as Record<string, unknown>).event === 'UPDATE',
+    )
+    const updateCallback = onCall?.[2] as ((payload: unknown) => void) | undefined
+
+    // Simulate Realtime payload with null thresholds
+    act(() => {
+      updateCallback?.({
+        eventType: 'UPDATE',
+        new: { l2_confidence_min: null, l3_confidence_min: null, target_lang: 'th-TH' },
+        old: {},
+      })
+    })
+
+    // typeof null !== 'number' → both are null → updateThresholds should NOT be called
+    expect(mockUpdateThresholds).not.toHaveBeenCalled()
+
+    unmount()
+  })
+})

@@ -194,3 +194,122 @@ describe('FindingListItem — Story 3.5 confidence tooltip & thresholds', () => 
     expect(screen.getByTestId('confidence-warning')).toBeInTheDocument()
   })
 })
+
+// TA: Coverage Gap Tests (Story 3.5)
+
+describe('FindingListItem — TA: Coverage Gap Tests (Story 3.5)', () => {
+  // G3 [P1]: L3 Confirmed marker detection → confirmed badge
+  it('[P1] should show "Confirmed by L3" badge when description contains [L3 Confirmed] marker (G3)', () => {
+    const finding = buildFindingForDisplay({
+      description: '[L3 Confirmed] Good translation quality verified',
+      detectedByLayer: 'L2',
+      aiConfidence: 85,
+      aiModel: 'gpt-4o-mini',
+    })
+
+    render(<FindingListItem finding={finding} l2ConfidenceMin={70} l3ConfidenceMin={80} />)
+
+    // Badge with "Confirmed" text visible
+    expect(screen.getByTestId('l3-confirm-badge')).toBeInTheDocument()
+    expect(screen.getByTestId('l3-confirm-badge')).toHaveTextContent(/confirmed/i)
+
+    // Description text should have the marker stripped
+    const desc = screen.getByTestId('finding-description')
+    expect(desc.textContent).not.toContain('[L3 Confirmed]')
+    expect(desc.textContent).toContain('Good translation quality verified')
+  })
+
+  // G4 [P1]: L3 Disagrees marker → disagrees badge
+  it('[P1] should show "L3 disagrees" badge when description contains [L3 Disagrees] marker (G4)', () => {
+    const finding = buildFindingForDisplay({
+      description: '[L3 Disagrees] Translation may have issues with terminology',
+      detectedByLayer: 'L2',
+      aiConfidence: 75,
+      aiModel: 'gpt-4o-mini',
+    })
+
+    render(<FindingListItem finding={finding} l2ConfidenceMin={70} l3ConfidenceMin={80} />)
+
+    // Badge with "disagrees" text visible
+    expect(screen.getByTestId('l3-disagree-badge')).toBeInTheDocument()
+    expect(screen.getByTestId('l3-disagree-badge')).toHaveTextContent(/disagrees/i)
+
+    // Description text should have the marker stripped
+    const desc = screen.getByTestId('finding-description')
+    expect(desc.textContent).not.toContain('[L3 Disagrees]')
+    expect(desc.textContent).toContain('Translation may have issues with terminology')
+  })
+
+  // G10 [P2]: description truncation boundary
+  it('[P2] should NOT truncate description that is exactly 100 chars (G10)', () => {
+    // Build exactly 100-char description
+    const exactDescription = 'A'.repeat(100)
+
+    const finding = buildFindingForDisplay({
+      description: exactDescription,
+      detectedByLayer: 'L2',
+      aiConfidence: 80,
+      aiModel: 'gpt-4o-mini',
+    })
+
+    render(<FindingListItem finding={finding} l2ConfidenceMin={70} l3ConfidenceMin={80} />)
+
+    const desc = screen.getByTestId('finding-description')
+    // Exactly 100 chars → NOT truncated (no "...")
+    expect(desc.textContent).toBe(exactDescription)
+    expect(desc.textContent).not.toContain('...')
+  })
+
+  it('[P2] should truncate description that is 101 chars with "..." (G10)', () => {
+    // Build 101-char description
+    const longDescription = 'B'.repeat(101)
+
+    const finding = buildFindingForDisplay({
+      description: longDescription,
+      detectedByLayer: 'L2',
+      aiConfidence: 80,
+      aiModel: 'gpt-4o-mini',
+    })
+
+    render(<FindingListItem finding={finding} l2ConfidenceMin={70} l3ConfidenceMin={80} />)
+
+    const desc = screen.getByTestId('finding-description')
+    // 101 chars → truncated to 100 + "..."
+    expect(desc.textContent).toContain('...')
+    expect(desc.textContent?.length).toBe(103) // 100 chars + "..."
+  })
+
+  // WI-7 [P2]: NaN confidenceMin guard — should normalize to null (no warning, "not configured" tooltip)
+  it('[P2] should treat NaN confidenceMin as null — no warning, tooltip says "not configured" (WI-7)', () => {
+    const finding = buildFindingForDisplay({
+      detectedByLayer: 'L2',
+      aiConfidence: 50,
+      aiModel: 'gpt-4o-mini',
+    })
+
+    render(<FindingListItem finding={finding} l2ConfidenceMin={NaN} l3ConfidenceMin={80} />)
+
+    // NaN is normalized to null by the guard → treated as "not configured"
+    expect(screen.queryByTestId('confidence-warning')).toBeNull()
+    expect(screen.getByTitle(/not configured/i)).toBeInTheDocument()
+  })
+
+  // SC-1 [P2]: threshold change re-evaluation — finding at confidence 85 with threshold 80 vs 90
+  it('[P2] should show warning when threshold raised above finding confidence (SC-1)', () => {
+    const finding = buildFindingForDisplay({
+      detectedByLayer: 'L2',
+      aiConfidence: 85,
+      aiModel: 'gpt-4o-mini',
+    })
+
+    // First render: threshold=80, confidence=85 → 85 >= 80 → NO warning
+    const { rerender } = render(
+      <FindingListItem finding={finding} l2ConfidenceMin={80} l3ConfidenceMin={80} />,
+    )
+    expect(screen.queryByTestId('confidence-warning')).toBeNull()
+
+    // Re-render: threshold=90, confidence=85 → 85 < 90 → warning appears
+    rerender(<FindingListItem finding={finding} l2ConfidenceMin={90} l3ConfidenceMin={80} />)
+    expect(screen.getByTestId('confidence-warning')).toBeInTheDocument()
+  })
+})

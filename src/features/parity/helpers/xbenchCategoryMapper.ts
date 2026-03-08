@@ -1,3 +1,5 @@
+import type { RuleCategory } from '@/features/pipeline/engine/types'
+
 // Maps Xbench check types → MQM top-level categories (used by integration tests)
 const XBENCH_TO_MQM_CATEGORY: Record<string, string> = {
   'inconsistency in source': 'consistency',
@@ -16,10 +18,11 @@ const XBENCH_TO_MQM_CATEGORY: Record<string, string> = {
 }
 
 // Maps Xbench check types → tool rule engine categories (used by parity comparator)
-const XBENCH_TO_TOOL_CATEGORY: Record<string, string> = {
+// Type-safe: values must exist in RuleCategory union — prevents silent matching failures
+const XBENCH_TO_TOOL_CATEGORY: Record<string, RuleCategory> = {
   'inconsistency in source': 'consistency',
   'inconsistency in target': 'consistency',
-  'key term mismatch': 'key_term',
+  'key term mismatch': 'glossary_compliance',
   untranslated: 'completeness',
   'target same as source': 'completeness',
   'tag mismatch': 'tag_integrity',
@@ -29,7 +32,7 @@ const XBENCH_TO_TOOL_CATEGORY: Record<string, string> = {
   'double blank': 'spacing',
   'repeated word': 'repeated_word',
   'repeated words': 'repeated_word',
-  'spell check': 'fluency',
+  'spell check': 'spelling',
 }
 
 /** Maps Xbench check type → MQM top-level category (for integration tests / reporting). */

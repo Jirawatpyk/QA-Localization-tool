@@ -367,4 +367,102 @@ describe('parityComparator', () => {
     expect(result.xbenchOnly).toHaveLength(1)
     expect(result.toolOnly).toHaveLength(1)
   })
+
+  // TA: Coverage Gap Tests — Stories 2.7 & 3.5 (Advanced Elicitation: FP+CM+RE+SC)
+
+  it('[P2] should match when both source texts are empty — documents empty collision behavior (G16)', async () => {
+    // G16: normalize('') and normalize(null) both yield '' → ''.includes('') = true
+    const testFileId = 'e5f6a7b8-c9d0-4e1f-8a2b-3c4d5e6f7a8b'
+    const xbenchFindings = [
+      buildXbenchFinding({ sourceText: '', category: 'accuracy', severity: 'major' }),
+    ]
+    const toolFindings = [
+      buildToolFinding({
+        sourceTextExcerpt: null,
+        category: 'accuracy',
+        severity: 'major',
+        fileId: testFileId,
+      }),
+    ]
+
+    const { compareFindings } = await import('./parityComparator')
+    const result = compareFindings(xbenchFindings, toolFindings, testFileId)
+
+    // Empty-source findings DO match same-category (behavioral doc)
+    expect(result.matched).toHaveLength(1)
+  })
+
+  it('[P2] should reject critical-to-trivial severity pair with gap of 3 (G17)', async () => {
+    // G17: critical(3) ↔ trivial(0) = distance 3, exceeds ±1 tolerance
+    const testFileId = 'f6a7b8c9-d0e1-4f2a-8b3c-4d5e6f7a8b9c'
+    const xbenchFindings = [buildXbenchFinding({ category: 'accuracy', severity: 'critical' })]
+    const toolFindings = [
+      buildToolFinding({ category: 'accuracy', severity: 'trivial', fileId: testFileId }),
+    ]
+
+    const { compareFindings } = await import('./parityComparator')
+    const result = compareFindings(xbenchFindings, toolFindings, testFileId)
+
+    expect(result.matched).toHaveLength(0)
+    expect(result.xbenchOnly).toHaveLength(1)
+    expect(result.toolOnly).toHaveLength(1)
+  })
+
+  it('[P2] should not match tool category with trailing whitespace due to asymmetric trim (G21)', async () => {
+    // G21: comparator does .toLowerCase() but NOT .trim() on tool category
+    // mapper does .toLowerCase().trim() on Xbench side → asymmetric
+    const testFileId = 'a7b8c9d0-e1f2-4a3b-8c4d-5e6f7a8b9c0d'
+    const xbenchFindings = [
+      buildXbenchFinding({ sourceText: 'Test text', category: 'accuracy', severity: 'major' }),
+    ]
+    const toolFindings = [
+      buildToolFinding({
+        sourceTextExcerpt: 'Test text',
+        category: 'accuracy ',
+        severity: 'major',
+        fileId: testFileId,
+      }),
+    ]
+
+    const { compareFindings } = await import('./parityComparator')
+    const result = compareFindings(xbenchFindings, toolFindings, testFileId)
+
+    expect(result.matched).toHaveLength(0)
+    expect(result.xbenchOnly).toHaveLength(1)
+    expect(result.toolOnly).toHaveLength(1)
+  })
+
+  it('[P2] should leave second Xbench finding unmatched when tool pool consumed by first (G22)', async () => {
+    // G22: 1-to-1 consumed matching — first Xbench eats the only tool match
+    const testFileId = 'b8c9d0e1-f2a3-4b4c-8d5e-6f7a8b9c0d1e'
+    const xbenchFindings = [
+      buildXbenchFinding({
+        sourceText: 'Shared source',
+        category: 'accuracy',
+        severity: 'major',
+        segmentNumber: 1,
+      }),
+      buildXbenchFinding({
+        sourceText: 'Shared source',
+        category: 'accuracy',
+        severity: 'major',
+        segmentNumber: 1,
+      }),
+    ]
+    const toolFindings = [
+      buildToolFinding({
+        sourceTextExcerpt: 'Shared source',
+        category: 'accuracy',
+        severity: 'major',
+        fileId: testFileId,
+      }),
+    ]
+
+    const { compareFindings } = await import('./parityComparator')
+    const result = compareFindings(xbenchFindings, toolFindings, testFileId)
+
+    expect(result.matched).toHaveLength(1)
+    expect(result.xbenchOnly).toHaveLength(1)
+    expect(result.toolOnly).toHaveLength(0)
+  })
 })

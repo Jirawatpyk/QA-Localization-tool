@@ -73,8 +73,12 @@ export function FindingListItem({
 
   const showAnimation = isNew === true && !reducedMotion
 
-  // Story 3.5: compute layer-specific confidence threshold
-  const confidenceMin = finding.detectedByLayer === 'L3' ? l3ConfidenceMin : l2ConfidenceMin
+  // Story 3.5: compute layer-specific confidence threshold (NaN guard — WI-7)
+  const rawConfidenceMin = finding.detectedByLayer === 'L3' ? l3ConfidenceMin : l2ConfidenceMin
+  const confidenceMin =
+    typeof rawConfidenceMin === 'number' && Number.isFinite(rawConfidenceMin)
+      ? rawConfidenceMin
+      : null
 
   // Tooltip text for confidence badge
   const confidenceTooltipText = (() => {

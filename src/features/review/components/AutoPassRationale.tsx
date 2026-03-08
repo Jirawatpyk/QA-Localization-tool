@@ -1,6 +1,7 @@
 'use client'
 
 import { CheckCircle2 } from 'lucide-react'
+import { z } from 'zod'
 
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,9 +11,37 @@ type AutoPassRationaleProps = {
   rationale: string
 }
 
+const autoPassRationaleSchema = z.object({
+  score: z.number(),
+  threshold: z.number(),
+  margin: z.number(),
+  severityCounts: z.object({
+    critical: z.number(),
+    major: z.number(),
+    minor: z.number(),
+  }),
+  riskiestFinding: z
+    .object({
+      category: z.string(),
+      severity: z.string(),
+      confidence: z.number().nullable(),
+      description: z.string(),
+    })
+    .nullable(),
+  criteria: z.object({
+    scoreAboveThreshold: z.boolean(),
+    noCriticalFindings: z.boolean(),
+    allLayersComplete: z.boolean(),
+  }),
+  isNewPair: z.boolean(),
+  fileCount: z.number(),
+})
+
 function tryParseRationale(rationale: string): AutoPassRationaleData | null {
   try {
-    return JSON.parse(rationale) as AutoPassRationaleData
+    const parsed: unknown = JSON.parse(rationale)
+    const result = autoPassRationaleSchema.safeParse(parsed)
+    return result.success ? result.data : null
   } catch {
     return null
   }

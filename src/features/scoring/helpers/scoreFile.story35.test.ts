@@ -379,3 +379,262 @@ describe('scoreFile — Story 3.5 findings summary passed to checkAutoPass', () 
     )
   })
 })
+
+// TA: Coverage Gap Tests (Story 3.5)
+describe('scoreFile — TA coverage gap tests (Story 3.5)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    dbState.callIndex = 0
+    dbState.returnValues = []
+
+    mockCheckAutoPass.mockResolvedValue({
+      eligible: true,
+      rationale: 'Score 96 >= configured threshold 95 with no critical findings',
+      isNewPair: false,
+      fileCount: 60,
+      rationaleData: null,
+    })
+
+    mockCalculateMqmScore.mockReturnValue({
+      mqmScore: 96,
+      npt: 4,
+      criticalCount: 0,
+      majorCount: 2,
+      minorCount: 1,
+      totalWords: 1000,
+      status: 'calculated' as const,
+    })
+  })
+
+  // G5: buildFindingsSummary riskiest finding tiebreaker — higher confidence wins
+  it('[P1] should select riskiest finding with higher confidence when two critical findings tie on severity (G5)', async () => {
+    // Arrange: 2 critical findings — confidence 80 vs 92 → riskiest = 92 confidence
+    const findingRows = [
+      {
+        id: 'f1b2c3d4-0000-4a1b-8c2d-3e4f5a6b7c8d',
+        severity: 'critical',
+        status: 'pending',
+        segmentCount: 1,
+        aiConfidence: 80,
+        category: 'accuracy',
+        description: 'Critical accuracy issue A',
+        detectedByLayer: 'L2',
+      },
+      {
+        id: 'f2b2c3d4-0000-4a1b-8c2d-3e4f5a6b7c8d',
+        severity: 'critical',
+        status: 'pending',
+        segmentCount: 1,
+        aiConfidence: 92,
+        category: 'terminology',
+        description: 'Critical terminology issue B',
+        detectedByLayer: 'L2',
+      },
+    ]
+
+    mockCalculateMqmScore.mockReturnValue({
+      mqmScore: 60,
+      npt: 50,
+      criticalCount: 2,
+      majorCount: 0,
+      minorCount: 0,
+      totalWords: 1000,
+      status: 'calculated' as const,
+    })
+
+    dbState.returnValues = [
+      mockSegmentRows, // 0: SELECT segments
+      findingRows, // 1: SELECT findings
+      [null], // 2: tx prev score
+      [], // 3: tx DELETE
+      [buildMockScore({ mqmScore: 60, criticalCount: 2 })], // 4: tx INSERT
+    ]
+
+    // Act
+    const { scoreFile } = await import('@/features/scoring/helpers/scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    // Assert: riskiest finding should be the one with confidence 92 (higher tiebreaker)
+    expect(mockCheckAutoPass).toHaveBeenCalledWith(
+      expect.objectContaining({
+        findingsSummary: expect.objectContaining({
+          riskiestFinding: expect.objectContaining({
+            confidence: 92,
+            category: 'terminology',
+            description: 'Critical terminology issue B',
+          }),
+        }),
+      }),
+    )
+  })
+
+  // CM-6: buildFindingsSummary all L1 findings — riskiestFinding is null (all aiConfidence null)
+  it('[P1] should have null riskiestFinding when all findings are L1 with null aiConfidence (CM-6)', async () => {
+    // Arrange: 1 critical L1 finding (aiConfidence: null) — L1 findings skipped for riskiest
+    const findingRows = [
+      {
+        id: 'f1b2c3d4-0000-4a1b-8c2d-3e4f5a6b7c8d',
+        severity: 'critical',
+        status: 'pending',
+        segmentCount: 1,
+        aiConfidence: null,
+        category: 'consistency',
+        description: 'Rule-based critical finding',
+        detectedByLayer: 'L1',
+      },
+    ]
+
+    mockCalculateMqmScore.mockReturnValue({
+      mqmScore: 75,
+      npt: 25,
+      criticalCount: 1,
+      majorCount: 0,
+      minorCount: 0,
+      totalWords: 1000,
+      status: 'calculated' as const,
+    })
+
+    dbState.returnValues = [
+      mockSegmentRows, // 0: SELECT segments
+      findingRows, // 1: SELECT findings
+      [null], // 2: tx prev score
+      [], // 3: tx DELETE
+      [buildMockScore({ mqmScore: 75, criticalCount: 1 })], // 4: tx INSERT
+    ]
+
+    // Act
+    const { scoreFile } = await import('@/features/scoring/helpers/scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    // Assert: severityCounts shows critical:1 but riskiestFinding is null (L1 skipped)
+    expect(mockCheckAutoPass).toHaveBeenCalledWith(
+      expect.objectContaining({
+        findingsSummary: expect.objectContaining({
+          severityCounts: { critical: 1, major: 0, minor: 0 },
+          riskiestFinding: null,
+        }),
+      }),
+    )
+  })
+
+  // CM-7: buildFindingsSummary same severity same confidence — deterministic (first wins)
+  it('[P2] should select the first finding when same severity and same confidence tie (CM-7)', async () => {
+    // Arrange: 2 critical findings both confidence 85, different categories
+    const findingRows = [
+      {
+        id: 'f1b2c3d4-0000-4a1b-8c2d-3e4f5a6b7c8d',
+        severity: 'critical',
+        status: 'pending',
+        segmentCount: 1,
+        aiConfidence: 85,
+        category: 'accuracy',
+        description: 'First critical finding',
+        detectedByLayer: 'L2',
+      },
+      {
+        id: 'f2b2c3d4-0000-4a1b-8c2d-3e4f5a6b7c8d',
+        severity: 'critical',
+        status: 'pending',
+        segmentCount: 1,
+        aiConfidence: 85,
+        category: 'terminology',
+        description: 'Second critical finding',
+        detectedByLayer: 'L2',
+      },
+    ]
+
+    mockCalculateMqmScore.mockReturnValue({
+      mqmScore: 60,
+      npt: 50,
+      criticalCount: 2,
+      majorCount: 0,
+      minorCount: 0,
+      totalWords: 1000,
+      status: 'calculated' as const,
+    })
+
+    dbState.returnValues = [
+      mockSegmentRows, // 0: SELECT segments
+      findingRows, // 1: SELECT findings
+      [null], // 2: tx prev score
+      [], // 3: tx DELETE
+      [buildMockScore({ mqmScore: 60, criticalCount: 2 })], // 4: tx INSERT
+    ]
+
+    // Act
+    const { scoreFile } = await import('@/features/scoring/helpers/scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    // Assert: first finding wins when tie on both severity and confidence
+    expect(mockCheckAutoPass).toHaveBeenCalledWith(
+      expect.objectContaining({
+        findingsSummary: expect.objectContaining({
+          riskiestFinding: expect.objectContaining({
+            category: 'accuracy',
+            description: 'First critical finding',
+            confidence: 85,
+          }),
+        }),
+      }),
+    )
+  })
+
+  // G16: scoreFile no previous score → layerCompleted defaults to 'L1'
+  it('[P2] should default layerCompleted to L1 when no previous score exists and no override (G16)', async () => {
+    // Arrange: DB returns empty for previous score (no existing score record)
+    dbState.returnValues = [
+      mockSegmentRows, // 0: SELECT segments
+      [], // 1: SELECT findings
+      [], // 2: tx prev score — EMPTY (no previous score)
+      [], // 3: tx DELETE
+      [buildMockScore({ layerCompleted: 'L1' })], // 4: tx INSERT
+    ]
+
+    mockCalculateMqmScore.mockReturnValue({
+      mqmScore: 100,
+      npt: 0,
+      criticalCount: 0,
+      majorCount: 0,
+      minorCount: 0,
+      totalWords: 1000,
+      status: 'calculated' as const,
+    })
+
+    // Act: no layerFilter or layerCompleted override provided
+    const { scoreFile } = await import('@/features/scoring/helpers/scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    // Assert: insert was called — verify via the transaction mock
+    // The transaction callback builds layerCompleted from:
+    //   layerCompletedOverride ?? prev?.layerCompleted ?? layerFilter ?? 'L1'
+    // With no override, no prev, no filter → defaults to 'L1'
+    // We verify this by checking the insert values passed to db.transaction
+    expect(dbState.valuesCaptures.length).toBeGreaterThan(0)
+    // The insert values capture should contain layerCompleted: 'L1'
+    const insertCapture = dbState.valuesCaptures.find(
+      (v: unknown) => v !== null && typeof v === 'object' && 'layerCompleted' in v,
+    ) as Record<string, unknown> | undefined
+    expect(insertCapture).toBeDefined()
+    expect(insertCapture?.layerCompleted).toBe('L1')
+  })
+})

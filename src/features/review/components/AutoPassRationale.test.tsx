@@ -129,3 +129,61 @@ describe('AutoPassRationale', () => {
     expect(screen.getByText(/no rationale available/i)).toBeInTheDocument()
   })
 })
+
+// TA: Coverage Gap Tests (Story 3.5)
+describe('AutoPassRationale — TA coverage gap tests (Story 3.5)', () => {
+  // WI-1: Valid JSON with wrong shape → graceful fallback via Zod validation
+  it('[P1] should render raw text fallback when JSON has wrong shape (WI-1)', () => {
+    // Arrange: valid JSON but missing required fields — Zod safeParse rejects, falls back to raw text
+    const wrongShapeJson = '{"version":2,"note":"ok"}'
+
+    // Act
+    render(<AutoPassRationale rationale={wrongShapeJson} />)
+
+    // Assert: falls back to raw text display (no crash)
+    expect(screen.getByText(wrongShapeJson)).toBeInTheDocument()
+  })
+
+  // G7: margin exactly 0.0 → display "+0.0"
+  it('[P2] should display "+0.0" when margin is exactly 0 (G7)', () => {
+    // Arrange: score exactly equals threshold → margin = 0
+    const rationaleJson = JSON.stringify(
+      buildRationaleData({
+        score: 95,
+        threshold: 95,
+        margin: 0,
+      }),
+    )
+
+    // Act
+    render(<AutoPassRationale rationale={rationaleJson} />)
+
+    // Assert: margin badge shows "+0.0" (positive prefix for zero, 1 decimal place)
+    expect(screen.getByText('+0.0')).toBeInTheDocument()
+  })
+
+  // G8: negative margin -1.5 → display "-1.5" (no "+-" prefix)
+  it('[P2] should display "-1.5" without double prefix when margin is negative (G8)', () => {
+    // Arrange: score below threshold → negative margin
+    const rationaleJson = JSON.stringify(
+      buildRationaleData({
+        score: 93.5,
+        threshold: 95,
+        margin: -1.5,
+        criteria: {
+          scoreAboveThreshold: false,
+          noCriticalFindings: true,
+          allLayersComplete: true,
+        },
+      }),
+    )
+
+    // Act
+    render(<AutoPassRationale rationale={rationaleJson} />)
+
+    // Assert: displays "-1.5" (not "+-1.5") — CR R1 fix verification
+    expect(screen.getByText('-1.5')).toBeInTheDocument()
+    // Verify no double-prefix "+-" appears
+    expect(screen.queryByText(/\+\-/)).toBeNull()
+  })
+})

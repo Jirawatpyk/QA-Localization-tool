@@ -152,4 +152,24 @@ describe.skipIf(!hasCleanCorpus())('Clean Corpus False Positive Baseline (AC6)',
     process.stderr.write(`\nFalse positive baseline: ${allFindings.length}\n`)
     expect(allFindings.length).toBeDefined()
   })
+
+  // TA: Coverage Gap Tests — Stories 2.7 & 3.5 (Advanced Elicitation: FP+CM+RE+SC)
+
+  it('should process exactly 14 clean SDLXLIFF files from the corpus (G5)', () => {
+    // G5: Clean corpus directory has 14 known-good files — verify count for corpus drift
+    process.stderr.write(`\nG5: Clean corpus file count: ${fileCount}\n`)
+
+    // If corpus has fewer files, coverage is incomplete
+    // If more files appear, they should be reviewed
+    expect(fileCount).toBe(14)
+  })
+
+  it('should have false positive count within regression bound of 50 (G20)', () => {
+    // G20: Establish regression guard — FP count should not increase significantly
+    // Baseline established during Story 2.10: count is documented per run
+    // Bound of 50 provides headroom for minor engine changes while catching major regressions
+    process.stderr.write(`\nG20: FP regression check — count: ${allFindings.length}, bound: 50\n`)
+
+    expect(allFindings.length).toBeLessThanOrEqual(50)
+  })
 })

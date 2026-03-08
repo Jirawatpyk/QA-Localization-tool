@@ -22,6 +22,7 @@ vi.mock('@/lib/cache/glossaryCache', () => ({
 }))
 
 import { processFile } from '@/features/pipeline/engine/ruleEngine'
+import type { GlossaryTermRecord } from '@/features/pipeline/engine/types'
 import { buildPerfSegments } from '@/test/factories'
 
 const PERF_HARD_LIMIT_MS = 5000
@@ -104,6 +105,95 @@ describe('ruleEngine NFR2 Performance', () => {
 
       expect(results).toBeDefined()
       expect(duration).toBeLessThan(PERF_HARD_LIMIT_MS)
+    })
+  })
+
+  // TA: Coverage Gap Tests — Stories 2.7 & 3.5 (Advanced Elicitation: FP+CM+RE+SC)
+
+  describe('glossary performance (G1)', () => {
+    it('should process 5,000 segments with 100 glossary terms in < 5,000ms', async () => {
+      // G1: Production workload includes glossary — Intl.Segmenter boundary validation is heavy
+      const segments = buildPerfSegments(5000)
+      const glossaryTerms: GlossaryTermRecord[] = Array.from({ length: 100 }, (_, i) => ({
+        id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
+        glossaryId: '00000000-0000-4000-8000-100000000000',
+        sourceTerm: `term${i}`,
+        targetTerm: `คำศัพท์${i}`,
+        caseSensitive: false,
+        createdAt: new Date('2026-01-01T00:00:00Z'),
+      }))
+
+      const start = performance.now()
+      const results = await processFile(segments, glossaryTerms, new Set(), [])
+      const duration = performance.now() - start
+
+      process.stderr.write(`\nG1: 5,000 segs + 100 glossary terms in ${duration.toFixed(0)}ms\n`)
+      process.stderr.write(`Findings produced: ${results.length}\n`)
+
+      expect(results).toBeDefined()
+      expect(duration).toBeLessThan(PERF_HARD_LIMIT_MS)
+    })
+  })
+
+  describe('check category coverage (G7)', () => {
+    it('should produce findings from at least 3 distinct check categories with 5,000 segments', async () => {
+      // G7: Verify synthetic data exercises multiple check paths
+      // NOTE: buildPerfSegments triggers ~3 categories (capitalization, completeness, punctuation)
+      // with synthetic data. Real corpus data triggers more (tag_integrity, number_format, etc.)
+      // This establishes the BASELINE — if category count drops, a check may have regressed.
+      const segments = buildPerfSegments(5000)
+      const results = await processFile(segments, [], new Set(), [])
+
+      const categories = new Set(results.map((r) => r.category))
+
+      process.stderr.write(`\nG7: Categories triggered: ${[...categories].sort().join(', ')}\n`)
+      process.stderr.write(`Distinct categories: ${categories.size}\n`)
+
+      // Baseline: 3 categories from synthetic data
+      // If this drops, a check function may have broken
+      expect(categories.size).toBeGreaterThanOrEqual(3)
+    })
+  })
+
+  describe('buildPerfSegments distribution (G8)', () => {
+    it('should produce correct content type distribution at 1,000 segments', () => {
+      // G8: Verify deterministic distribution: 60% normal, 10% tags, 10% numbers,
+      // 5% placeholders, 10% Thai/CJK, 5% edge cases
+      const segments = buildPerfSegments(1000)
+
+      expect(segments).toHaveLength(1000)
+
+      // Count by distribution bucket (mirrors factory logic)
+      let normal = 0
+      let tags = 0
+      let numbers = 0
+      let placeholders = 0
+      let thaiCjk = 0
+      let edge = 0
+
+      for (let i = 0; i < 1000; i++) {
+        const pct = (i * 100) / 1000
+        if (pct < 60) normal++
+        else if (pct < 70) tags++
+        else if (pct < 80) numbers++
+        else if (pct < 85) placeholders++
+        else if (pct < 95) thaiCjk++
+        else edge++
+      }
+
+      expect(normal).toBe(600)
+      expect(tags).toBe(100)
+      expect(numbers).toBe(100)
+      expect(placeholders).toBe(50)
+      expect(thaiCjk).toBe(100)
+      expect(edge).toBe(50)
+
+      // Every segment should have required fields (some edge cases have empty target)
+      for (const seg of segments) {
+        expect(seg.sourceText).toBeDefined()
+        expect(seg.targetText).toBeDefined()
+        expect(seg.id).toBeTruthy()
+      }
     })
   })
 })
