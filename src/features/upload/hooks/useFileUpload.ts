@@ -226,7 +226,14 @@ export function useFileUpload({ projectId }: UseFileUploadOptions): UseFileUploa
     for (let i = 0; i < validFiles.length; i++) {
       const { file, fileId } = validFiles[i]!
 
-      const hash = await computeHash(file)
+      let hash: string
+      try {
+        hash = await computeHash(file)
+      } catch {
+        // crypto.subtle unavailable (HTTP context) or file read failure
+        updateFileProgress(fileId, { status: 'error', error: 'HASH_FAILED' })
+        continue
+      }
       const dupResult = await checkDuplicate({ fileHash: hash, projectId })
 
       if (dupResult.success && dupResult.data.isDuplicate) {

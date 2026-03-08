@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "uq_files_project_hash" ON "files" USING btree ("project_id","file_hash") WHERE "files"."file_hash" is not null;

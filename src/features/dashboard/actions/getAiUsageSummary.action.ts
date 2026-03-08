@@ -10,12 +10,9 @@ import { aiUsageLogs } from '@/db/schema/aiUsageLogs'
 import type { AiUsageSummary } from '@/features/dashboard/types'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
+import type { ActionResult } from '@/types/actionResult'
 
-export type GetAiUsageSummaryResult =
-  | { success: true; data: AiUsageSummary }
-  | { success: false; code: string; error: string }
-
-export async function getAiUsageSummary(): Promise<GetAiUsageSummaryResult> {
+export async function getAiUsageSummary(): Promise<ActionResult<AiUsageSummary>> {
   let currentUser
   try {
     currentUser = await requireRole('admin', 'read')

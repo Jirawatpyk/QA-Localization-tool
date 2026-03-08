@@ -5,6 +5,7 @@ export type UploadErrorCode =
   | 'DUPLICATE_FILE'
   | 'STORAGE_ERROR'
   | 'NETWORK_ERROR'
+  | 'HASH_FAILED'
 
 export type FileStatus = 'pending' | 'uploading' | 'uploaded' | 'error'
 

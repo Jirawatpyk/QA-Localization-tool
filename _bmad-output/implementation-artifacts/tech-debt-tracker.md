@@ -39,6 +39,17 @@
 - **Origin:** Story 2.7, flagged by code-quality-analyzer
 - **Status:** RESOLVED (2026-02-25 — Drizzle schema updated, NOTE comment removed)
 
+### TD-DB-005: Missing UNIQUE on files(project_id, file_hash)
+- **Date:** 2026-03-08
+- **Story:** Story 2.1 TA Run (Red Team analysis UNIT-011)
+- **Phase:** TA (Test Automation)
+- **Severity:** Medium
+- **Risk:** Concurrent duplicate uploads from 2 users could bypass client-side SHA-256 duplicate detection. Client check covers 99.9% of cases, but DB-level constraint needed for defense-in-depth
+- **Mitigation:** Client-side `checkDuplicate()` action queries DB before upload — race window is < 100ms
+- **Fix:** `ALTER TABLE files ADD CONSTRAINT files_project_hash_unique UNIQUE(project_id, file_hash)` — requires dedup check on existing data first
+- **Origin:** Story 2.1 TA Run, Red Team attack vector #8
+- **Status:** RESOLVED (2026-03-08) — Added `uniqueIndex('uq_files_project_hash').on(projectId, fileHash).where(isNotNull(fileHash))` partial unique index to Drizzle schema. Run `db:generate` + `db:migrate` to apply. Guardrail #23 quick fix.
+
 ### TD-DB-004: segmentId not persisted to DB
 - **Severity:** Medium
 - **Risk:** Cross-file analysis and finding deduplication can't reference segment identity
@@ -202,7 +213,7 @@
 - **Mitigation:** Render-time state reset (`if (pathname !== prevPathname) setEntities({})`) clears stale data on route change, but in-flight fetch can still resolve after
 - **Fix:** Add `AbortController` to `fetchEntities()` with cleanup in `useEffect` return
 - **Origin:** Story 3.0.5 CR R1, flagged by code-quality-analyzer (M3)
-- **Status:** DEFERRED → **Epic 4 — Review & Decision Workflow** (breadcrumb entity queries needed when review routes `projects/[id]/review/[sessionId]` add real DB lookups)
+- **Status:** DEFERRED → **Story 4.0 — Review Infrastructure Setup** (breadcrumb component refactored with real DB queries in same story as TD-TODO-001)
 
 ### TD-UX-002: truncateSegments shows only first+last, loses context
 - **Severity:** Low
@@ -211,7 +222,7 @@
 - **Current:** `[first, ellipsis, last]`
 - **Better:** `[first, ellipsis, secondToLast, last]`
 - **Origin:** Story 3.0.5 CR R1, flagged by code-quality-analyzer (M5)
-- **Status:** DEFERRED → **Epic 4 — Review & Decision Workflow** (review routes `projects/[id]/review/[sessionId]/findings/[findingId]` create 5+ segment paths that trigger this issue)
+- **Status:** DEFERRED → **Story 4.0 — Review Infrastructure Setup** (same breadcrumb refactor as TD-UX-001 + TD-TODO-001)
 
 ---
 
@@ -271,7 +282,7 @@
 - **Risk:** Review panel doesn't exist yet (Epic 4) — legitimate skip but no TD entry
 - **Fix:** Implement when Epic 4 review infrastructure is built
 - **Origin:** Epic 1 skeleton, identified during full scan (2026-03-02)
-- **Status:** DEFERRED → fix in **Epic 4** (review infrastructure)
+- **Status:** DEFERRED → **Story 4.0 — Review Infrastructure Setup** (unskip + implement review score E2E)
 
 ### TD-CODE-006: console.warn in glossary-matching-real-data.test.ts
 - **Severity:** Low
@@ -309,7 +320,7 @@
 - **File:** `src/components/layout/actions/getBreadcrumbEntities.action.ts:24`
 - **Fix:** Implement DB queries with `withTenant()` when review routes are created (Epic 4)
 - **Origin:** Story 3.0, identified during TODO scan (2026-03-02)
-- **Status:** DEFERRED → fix in **Epic 4** (review infrastructure)
+- **Status:** DEFERRED → **Story 4.0 — Review Infrastructure Setup** (same breadcrumb refactor as TD-UX-001/UX-002)
 
 ### TD-TODO-002: getFileHistory reviewer name deferred to Epic 4
 - **Severity:** Low
@@ -317,7 +328,7 @@
 - **File:** `src/features/batch/actions/getFileHistory.action.ts:95`
 - **Fix:** Join `reviewActions` + `users` tables for actual reviewer name
 - **Origin:** Story 2.7, identified during TODO scan (2026-03-02)
-- **Status:** DEFERRED → fix in **Epic 4** (review actions)
+- **Status:** DEFERRED → **Story 4.2 — Core Review Actions** (review_actions data available after 4.2 implements actions)
 
 ### TD-UX-003: File selection UI before processing — all files auto-selected
 - **Severity:** Low
@@ -401,7 +412,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Phase:** CR
 - **Severity:** Medium
 - **Description:** `getDashboardData.action.ts` returns `findingsCount: 0` as placeholder. Should query actual `COUNT(*)` from findings table with tenant filter.
-- **Status:** DEFERRED → **Epic 4 — Review & Decision Workflow** (dashboard wiring requires review infrastructure)
+- **Status:** DEFERRED → **Story 4.0 — Review Infrastructure Setup** (wire findings COUNT query with withTenant)
 
 ### TD-DASH-002: 5 AI-related actions missing ActionResult<T> return type
 - **Date:** 2026-03-03
@@ -409,7 +420,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Phase:** CR
 - **Severity:** Medium
 - **Description:** `getAiUsageSummary`, `getAiSpendByProject`, `getAiSpendByModel`, `getAiSpendTrend`, `exportAiUsage` actions return raw objects instead of `ActionResult<T>`. Should standardize for consistency.
-- **Status:** DEFERRED → **Epic 4 — Review & Decision Workflow** (AI dashboard action standardization)
+- **Status:** RESOLVED (2026-03-08) — All 5 actions now use `ActionResult<T>` from `@/types/actionResult`. Removed inline result type aliases (`GetAiUsageSummaryResult`, `GetAiSpendByModelResult`, `GetAiSpendTrendResult`, `GetAiUsageByProjectResult`, `ExportAiUsageResult`). Return shape unchanged (structurally identical), no test changes needed.
 
 ### TD-DASH-003: Realtime notification payload lacks Zod validation
 - **Date:** 2026-03-03
@@ -417,7 +428,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Phase:** CR
 - **Severity:** Medium
 - **Description:** `useNotifications.ts` casts Realtime payload via `as RawNotificationPayload` without runtime validation. Should add a Zod schema to validate incoming data from Supabase Realtime channel.
-- **Status:** DEFERRED → Epic 4 (Review & Notification hardening)
+- **Status:** DEFERRED → **Story 4.0 — Review Infrastructure Setup** (Zod schema for Realtime payloads as part of review infrastructure)
 
 ### TD-E2E-011: Pipeline resilience E2E — chaos test for real fallback failure
 - **Date:** 2026-03-07
@@ -465,7 +476,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **File:** `src/features/dashboard/components/NotificationDropdown.tsx`
 - **Description:** Fully implemented component (bell icon + dropdown, uses `useNotifications` hook) but never imported in any `src/app/` page or layout. Created during Epic 1 but no story has wired it into the dashboard header/sidebar shell.
 - **Fix:** Import and mount in `src/app/(app)/layout.tsx` header area or `AppHeader` component when notification UX is designed.
-- **Status:** DEFERRED → **Epic 4 — Review & Decision Workflow** (notification UI wiring as part of review workflow infrastructure)
+- **Status:** DEFERRED → **Story 4.0 — Review Infrastructure Setup** (wire NotificationDropdown into AppHeader/layout)
 
 ### TD-REVIEW-002: Realtime auto_passed transition doesn't show rationale
 - **Date:** 2026-03-08
@@ -476,4 +487,4 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** `AutoPassRationale` renders from `initialData.autoPassRationale` (server-side SSR data). If score transitions to `auto_passed` via Realtime after page load, `isAutoPassedStatus` becomes true (store-driven) but `initialData.autoPassRationale` remains null (stale). Result: Approve button correctly hidden, but no rationale shown until page refresh.
 - **Mitigation:** Edge case requiring page loaded before pipeline completes AND pipeline auto-passes the file AND Realtime pushes status. User can refresh page to see rationale. Approve button behavior is correct regardless.
 - **Fix:** Track `autoPassRationale` in Zustand store via `useScoreSubscription` (subscribe to `auto_pass_rationale` column changes), or trigger `getFileReviewData` re-fetch when `scoreStatus` transitions to `auto_passed`.
-- **Status:** DEFERRED → **Epic 4 — Review Workflow Infrastructure** (review page data re-fetch patterns needed)
+- **Status:** DEFERRED → **Story 4.0 — Review Infrastructure Setup** (review page data re-fetch + Realtime store patterns)

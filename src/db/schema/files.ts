@@ -1,4 +1,5 @@
-import { index, pgTable, uuid, varchar, integer, timestamp } from 'drizzle-orm/pg-core'
+import { isNotNull } from 'drizzle-orm'
+import { index, pgTable, uniqueIndex, uuid, varchar, integer, timestamp } from 'drizzle-orm/pg-core'
 
 import { projects } from './projects'
 import { tenants } from './tenants'
@@ -26,5 +27,10 @@ export const files = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index('idx_files_tenant_project').on(table.tenantId, table.projectId)],
+  (table) => [
+    index('idx_files_tenant_project').on(table.tenantId, table.projectId),
+    uniqueIndex('uq_files_project_hash')
+      .on(table.projectId, table.fileHash)
+      .where(isNotNull(table.fileHash)),
+  ],
 )

@@ -82,7 +82,7 @@ development_status:
   # ============================================================
   # Epic 3: AI-Powered Quality Analysis (MVP)
   # ============================================================
-  epic-3: in-progress
+  epic-3: done
   3-0-score-review-infrastructure: done
   # Story 3.0.5: UX Foundation Gap Fix — ScoreBadge variants, Breadcrumb, severity badge color
   # Dependencies: Story 3.0 (done). Blocks: Story 3.2c
@@ -90,7 +90,7 @@ development_status:
   3-1-ai-cost-control-throttling-model-pinning: done
   # Story 3.1a: Split from 3.1 — full AI usage dashboard (reporting UI)
   # Dependencies: Story 3.1 (ai_usage_logs DB persistence)
-  3-1a-ai-usage-dashboard-reporting: ready-for-dev
+  3-1a-ai-usage-dashboard-reporting: done
   # Story 3.1b: UX polish follow-on to 3.1a — empty state, sortable table, model breakdown, tooltip/aria
   3-1b-ai-dashboard-ux-polish: done
   3-2a-ai-provider-integration-structured-output: done
@@ -108,7 +108,8 @@ development_status:
   3-3-ai-layer-3-deep-contextual-analysis: done
   3-4-ai-resilience-fallback-retry-partial-results: done
   3-5-score-lifecycle-confidence-display: done
-  epic-3-retrospective: optional
+  # Retrospective completed 2026-03-08
+  epic-3-retrospective: done
 
   # ============================================================
   # Epic 4: Review & Decision Workflow (MVP)

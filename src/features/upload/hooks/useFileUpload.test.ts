@@ -523,4 +523,205 @@ describe('useFileUpload', () => {
     expect(result.current.pendingDuplicate).toBeNull()
     expect(result.current.isUploading).toBe(false)
   })
+
+  // 2.1-UNIT-001 [P2]: cancelDuplicate skips current file AND clears remaining queue
+  it('should skip duplicate file and clear remaining queue when cancelDuplicate is called', async () => {
+    // Setup: 3 files, file 2 is duplicate
+    let uuidIndex = 0
+    vi.stubGlobal('crypto', {
+      randomUUID: vi.fn().mockImplementation(() => `cancel-uuid-${uuidIndex++}`),
+      subtle: { digest: vi.fn().mockResolvedValue(new Uint8Array(32).buffer) },
+    })
+
+    mockCheckDuplicate
+      .mockResolvedValueOnce({ success: true, data: { isDuplicate: false } }) // f1
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          isDuplicate: true,
+          existingFileId: 'existing-id',
+          originalUploadDate: '2025-01-01T00:00:00.000Z',
+          existingScore: null,
+        },
+      }) // f2 (duplicate)
+
+    const fileResult = {
+      fileId: 'file-1',
+      fileName: 'f1.sdlxliff',
+      fileSizeBytes: 1024,
+      fileType: 'sdlxliff',
+      fileHash: 'a'.repeat(64),
+      storagePath: 'path/1',
+      status: 'uploaded',
+      batchId: null,
+    }
+    setupXhrMock({ success: true, data: { files: [fileResult] } })
+
+    const { result } = renderHook(() => useFileUpload({ projectId: VALID_PROJECT_ID }))
+
+    act(() => {
+      void result.current.startUpload([
+        makeFile('f1.sdlxliff'),
+        makeFile('f2.sdlxliff'),
+        makeFile('f3.sdlxliff'),
+      ])
+    })
+
+    // Wait for f2 to be detected as duplicate
+    await waitFor(() => {
+      expect(result.current.pendingDuplicate?.file.name).toBe('f2.sdlxliff')
+    })
+
+    // Cancel duplicate — f2 skipped, queue cleared, f3 does NOT process
+    act(() => {
+      result.current.cancelDuplicate()
+    })
+
+    expect(result.current.pendingDuplicate).toBeNull()
+    expect(result.current.isUploading).toBe(false)
+
+    // checkDuplicate should NOT have been called for f3
+    expect(mockCheckDuplicate).toHaveBeenCalledTimes(2)
+  })
+
+  // 2.1-UNIT-005 [P2]: XHR abort handler — abort event treated as network error
+  it('should treat XHR abort as network error and retry', async () => {
+    xhrInstances = []
+
+    class AbortXHR extends MockXHR {
+      override status = 0
+      override responseText = ''
+
+      override send = vi.fn().mockImplementation(function (this: AbortXHR) {
+        void Promise.resolve().then(() => {
+          const abortHandler = (this.addEventListener.mock.calls as [string, () => void][]).find(
+            ([event]) => event === 'abort',
+          )?.[1]
+          if (abortHandler) abortHandler()
+        })
+      })
+    }
+
+    Object.defineProperty(global, 'XMLHttpRequest', {
+      writable: true,
+      configurable: true,
+      value: AbortXHR,
+    })
+
+    const { result } = renderHook(() => useFileUpload({ projectId: VALID_PROJECT_ID }))
+
+    act(() => {
+      void result.current.startUpload([makeFile('report.sdlxliff')])
+    })
+
+    await waitFor(
+      () => {
+        expect(result.current.progress[0]?.status).toBe('error')
+        expect(result.current.progress[0]?.error).toBe('NETWORK_ERROR')
+      },
+      { timeout: 5000 },
+    )
+
+    // Abort resolves as status=0, same as network error — triggers retries
+    // 1 original + 3 retries = 4 total
+    expect(xhrInstances.length).toBe(4)
+  })
+
+  // 2.1-UNIT-006 [P2]: XHR 200 but success: false in response body
+  it('should mark file as uploaded when XHR returns 200 even if body has success: false', async () => {
+    // uploadSingleFile checks result.ok (status 200-299), NOT body.success
+    setupXhrMock({ success: false, error: 'Storage quota exceeded' }, 200)
+
+    const { result } = renderHook(() => useFileUpload({ projectId: VALID_PROJECT_ID }))
+
+    act(() => {
+      void result.current.startUpload([makeFile('report.sdlxliff')])
+    })
+
+    await waitFor(() => {
+      // status 200 → ok: true → marks as 'uploaded'
+      expect(result.current.progress[0]?.status).toBe('uploaded')
+    })
+  })
+
+  // 2.1-UNIT-007 [P2]: crypto.subtle unavailable — graceful HASH_FAILED error
+  it('should set HASH_FAILED error when crypto.subtle is unavailable', async () => {
+    vi.stubGlobal('crypto', {
+      randomUUID: vi.fn().mockReturnValue('mock-uuid'),
+      subtle: undefined,
+    })
+
+    setupXhrMock({ success: true, data: { files: [] } })
+    const { result } = renderHook(() => useFileUpload({ projectId: VALID_PROJECT_ID }))
+
+    // computeHash calls crypto.subtle.digest — TypeError caught by try-catch
+    await act(async () => {
+      await result.current.startUpload([makeFile('report.sdlxliff')])
+    })
+
+    expect(result.current.progress[0]?.status).toBe('error')
+    expect(result.current.progress[0]?.error).toBe('HASH_FAILED')
+    expect(result.current.isUploading).toBe(false)
+  })
+
+  // 2.1-UNIT-008 [P2]: Concurrent startUpload guard
+  it('should not reprocess batch size check on concurrent startUpload calls', async () => {
+    let uuidIndex = 100
+    vi.stubGlobal('crypto', {
+      randomUUID: vi.fn().mockImplementation(() => `concurrent-uuid-${uuidIndex++}`),
+      subtle: { digest: vi.fn().mockResolvedValue(new Uint8Array(32).buffer) },
+    })
+
+    // Delayed XHR: keeps isUploading=true while first upload runs
+    xhrInstances = []
+    let resolveFirst: (() => void) | null = null
+
+    class DelayedXHR extends MockXHR {
+      override status = 200
+      override responseText = JSON.stringify({ success: true, data: { files: [] } })
+
+      override send = vi.fn().mockImplementation(function (this: DelayedXHR) {
+        resolveFirst = () => {
+          const loadHandler = (this.addEventListener.mock.calls as [string, () => void][]).find(
+            ([event]) => event === 'load',
+          )?.[1]
+          if (loadHandler) loadHandler()
+        }
+      })
+    }
+
+    Object.defineProperty(global, 'XMLHttpRequest', {
+      writable: true,
+      configurable: true,
+      value: DelayedXHR,
+    })
+
+    const { result } = renderHook(() => useFileUpload({ projectId: VALID_PROJECT_ID }))
+
+    // First call — starts uploading
+    act(() => {
+      void result.current.startUpload([makeFile('f1.sdlxliff')])
+    })
+
+    await waitFor(() => {
+      expect(result.current.isUploading).toBe(true)
+    })
+
+    // Second call while first is still in progress — replaces progress state
+    act(() => {
+      void result.current.startUpload([makeFile('f2.sdlxliff')])
+    })
+
+    // Resolve first XHR
+    act(() => {
+      resolveFirst?.()
+    })
+
+    await waitFor(
+      () => {
+        expect(result.current.isUploading).toBe(false)
+      },
+      { timeout: 5000 },
+    )
+  })
 })

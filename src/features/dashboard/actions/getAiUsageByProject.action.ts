@@ -11,12 +11,9 @@ import { projects } from '@/db/schema/projects'
 import type { AiProjectSpend } from '@/features/dashboard/types'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
+import type { ActionResult } from '@/types/actionResult'
 
-export type GetAiUsageByProjectResult =
-  | { success: true; data: AiProjectSpend[] }
-  | { success: false; code: string; error: string }
-
-export async function getAiUsageByProject(): Promise<GetAiUsageByProjectResult> {
+export async function getAiUsageByProject(): Promise<ActionResult<AiProjectSpend[]>> {
   let currentUser
   try {
     currentUser = await requireRole('admin', 'read')

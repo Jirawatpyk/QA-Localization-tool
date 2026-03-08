@@ -66,4 +66,37 @@ describe('buildStoragePath', () => {
     const path = buildStoragePath(tenantId, projectId, fileHash, 'report\0.sdlxliff')
     expect(path).not.toContain('\0')
   })
+
+  // 2.1-UNIT-004 [P1]: Path traversal guard — deep attack vectors
+  it('should sanitize deep path traversal with forward slashes from fileName', () => {
+    const path = buildStoragePath(tenantId, projectId, fileHash, '../../etc/passwd.sdlxliff')
+    // After sanitization: ".." removed, "/" removed → result is "etcpasswd.sdlxliff"
+    expect(path).not.toContain('..')
+    // Should still have exactly 4 segments (tenant/project/hash/sanitizedName)
+    const segments = path.split('/')
+    expect(segments).toHaveLength(4)
+    // The last segment (filename) must not contain path separators
+    expect(segments[3]).not.toContain('/')
+    expect(segments[3]).toBe('etcpasswd.sdlxliff')
+  })
+
+  it('should sanitize Windows-style path traversal with backslashes from fileName', () => {
+    const path = buildStoragePath(
+      tenantId,
+      projectId,
+      fileHash,
+      '..\\..\\windows\\system32.sdlxliff',
+    )
+    expect(path).not.toContain('..')
+    expect(path).not.toContain('\\')
+    const segments = path.split('/')
+    expect(segments).toHaveLength(4)
+    expect(segments[3]).toBe('windowssystem32.sdlxliff')
+  })
+
+  it('should not modify a normal filename without traversal characters', () => {
+    const normalName = 'my-report_2025.sdlxliff'
+    const path = buildStoragePath(tenantId, projectId, fileHash, normalName)
+    expect(path).toBe(`${tenantId}/${projectId}/${fileHash}/${normalName}`)
+  })
 })

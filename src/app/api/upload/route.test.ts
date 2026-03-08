@@ -402,4 +402,60 @@ describe('POST /api/upload', () => {
     // DB must NOT be queried for an invalid UUID
     expect(mockSelectFn).not.toHaveBeenCalled()
   })
+
+  // 2.1-UNIT-003 [P1]: Partial batch failure — file 1 storage OK, file 2 storage fails
+  it('should return 500 when second file storage upload fails in a batch', async () => {
+    // File 1 succeeds, file 2 fails storage upload
+    mockUploadStorage
+      .mockResolvedValueOnce({ error: null }) // file 1 OK
+      .mockResolvedValueOnce({ error: { message: 'Disk quota exceeded' } }) // file 2 fails
+
+    const { POST } = await import('./route')
+    const formData = new FormData()
+    formData.append('projectId', VALID_UUID)
+    formData.append('files', makeFile('report1.sdlxliff'))
+    formData.append('files', makeFile('report2.sdlxliff'))
+
+    const response = await POST(makeRequest(formData))
+    const body = await response.json()
+
+    // Route returns 500 on first storage failure — entire batch aborts
+    expect(response.status).toBe(500)
+    expect(body.error).toContain('Storage upload failed')
+  })
+
+  // 2.1-UNIT-009 [P2]: Re-upload with "already exists" for first file, normal for second
+  it('should handle mixed already-exists and fresh uploads in same batch', async () => {
+    const fileRecord1 = {
+      ...MOCK_FILE_RECORD,
+      id: 'f1e2d3c4-b5a6-4f1e-8d2c-3b4a5f6e7d81',
+      fileName: 'report1.sdlxliff',
+    }
+    const fileRecord2 = {
+      ...MOCK_FILE_RECORD,
+      id: 'f1e2d3c4-b5a6-4f1e-8d2c-3b4a5f6e7d82',
+      fileName: 'report2.sdlxliff',
+    }
+
+    mockUploadStorage
+      .mockResolvedValueOnce({ error: { message: 'The resource already exists' } }) // file 1 idempotent
+      .mockResolvedValueOnce({ error: null }) // file 2 fresh upload
+
+    mockReturningFn.mockResolvedValueOnce([fileRecord1]).mockResolvedValueOnce([fileRecord2])
+
+    const { POST } = await import('./route')
+    const formData = new FormData()
+    formData.append('projectId', VALID_UUID)
+    formData.append('files', makeFile('report1.sdlxliff'))
+    formData.append('files', makeFile('report2.sdlxliff'))
+
+    const response = await POST(makeRequest(formData))
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.success).toBe(true)
+    expect(body.data.files).toHaveLength(2)
+    // Both files should have DB records
+    expect(mockInsertFn).toHaveBeenCalledTimes(2)
+  })
 })

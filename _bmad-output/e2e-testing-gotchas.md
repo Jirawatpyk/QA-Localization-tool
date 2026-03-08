@@ -305,6 +305,623 @@ await page.keyboard.press('Space')
 
 ---
 
+## Keyboard & Accessibility E2E Patterns (Epic 4)
+
+Epic 4 introduces keyboard-driven review workflow: J/K navigation, A/R/F/N/S hotkeys,
+Ctrl+Z undo, Esc hierarchy, Tab focus management, and ARIA live regions. This section
+documents Playwright testing patterns for all these interactions.
+
+**Reference:** `_bmad-output/planning-artifacts/research/keyboard-focus-spike-2026-03-08.md`
+
+---
+
+### 10.1 Playwright Keyboard API Reference
+
+Playwright provides two distinct APIs for keyboard interaction. Choosing the wrong one
+is a common source of flaky tests.
+
+| API | When to use | Focus behavior |
+|-----|-------------|---------------|
+| `page.keyboard.press('j')` | Global hotkeys (dispatches to whatever element is focused) | Does NOT change focus — fires on `document.activeElement` |
+| `locator.press('Enter')` | Element-specific keys (button activation, input confirm) | First focuses the locator's element, then dispatches key |
+| `page.keyboard.type('hello')` | Text input (dispatches `keydown` + `keypress` + `input` per char) | Does NOT change focus — types into `document.activeElement` |
+| `page.keyboard.down('Shift')` / `.up('Shift')` | Hold modifier across multiple actions | Manual modifier state management |
+
+**Key name format:** Playwright uses [UIEvents KeyboardEvent.key](https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values) values.
+Common names: `'a'` (lowercase), `'A'` (Shift+a), `'Enter'`, `'Escape'`, `'Tab'`,
+`'ArrowDown'`, `'ArrowUp'`, `'Backspace'`, `'Control+z'` (modifier combo).
+
+**Modifier combos:** Use `+` separator: `'Control+z'`, `'Control+Shift+z'`, `'Meta+z'`.
+On macOS, Playwright maps `Meta` to Command. On Windows/Linux, use `Control`.
+
+```typescript
+// Cross-platform undo — use Control (Playwright normalizes for the OS)
+await page.keyboard.press('Control+z')
+
+// NOT this — Meta only works on macOS
+await page.keyboard.press('Meta+z')
+```
+
+---
+
+### 10.2 Pattern: J/K Finding Navigation
+
+The review page uses `aria-activedescendant` for virtual focus (DOM focus stays on
+the grid container, visual focus indicator moves between rows). This means we assert
+the grid's `aria-activedescendant` attribute, NOT `toBeFocused()` on individual rows.
+
+```typescript
+// Step 1: Focus the grid container first — hotkeys fire on the focused element
+const grid = page.getByRole('grid', { name: /findings review list/i })
+await grid.focus()
+
+// Step 2: Press J to move to first finding
+await page.keyboard.press('j')
+
+// Step 3: Assert virtual focus via aria-activedescendant
+const firstRow = grid.getByRole('row').first()
+const firstRowId = await firstRow.getAttribute('id')
+await expect(grid).toHaveAttribute('aria-activedescendant', firstRowId!)
+
+// Step 4: Press J again to move to second finding
+await page.keyboard.press('j')
+const secondRow = grid.getByRole('row').nth(1)
+const secondRowId = await secondRow.getAttribute('id')
+await expect(grid).toHaveAttribute('aria-activedescendant', secondRowId!)
+
+// Step 5: Press K to move back
+await page.keyboard.press('k')
+await expect(grid).toHaveAttribute('aria-activedescendant', firstRowId!)
+```
+
+**Gotcha:** `aria-activedescendant` is NOT set until the grid receives focus AND a
+navigation key is pressed. Do not assert it immediately after `grid.focus()`.
+
+**Gotcha:** `data-keyboard-focused="true"` is the CSS visual indicator (custom attribute,
+not native focus). To assert the highlight is on the correct row:
+
+```typescript
+await expect(secondRow).toHaveAttribute('data-keyboard-focused', 'true')
+```
+
+---
+
+### 10.3 Pattern: Hotkey Actions (A/R/F/N/S)
+
+Single-key hotkeys execute review actions on the currently selected finding. The test
+must: (1) navigate to a finding, (2) press the hotkey, (3) assert action executed,
+(4) assert auto-advance moved to next pending finding.
+
+```typescript
+const grid = page.getByRole('grid', { name: /findings review list/i })
+await grid.focus()
+
+// Navigate to first pending finding
+await page.keyboard.press('j')
+
+// Accept the finding
+await page.keyboard.press('a')
+
+// Assert: action feedback via aria-live region (screen reader announcement)
+const announcer = page.locator('[aria-live="assertive"]')
+await expect(announcer).toHaveText(/accepted/i, { timeout: 3_000 })
+
+// Assert: toast confirmation (auto-dismiss in 3s — assert quickly)
+await expect(page.getByText(/accepted/i)).toBeVisible({ timeout: 2_000 })
+
+// Assert: auto-advance — focus moved to next pending finding (200ms delay per AC)
+await page.waitForTimeout(300) // 200ms auto-advance + 100ms buffer
+const newActiveId = await grid.getAttribute('aria-activedescendant')
+// Verify the new active finding is NOT the one we just accepted
+expect(newActiveId).not.toBe(firstRowId)
+```
+
+**Gotcha:** Toast auto-dismisses after 3 seconds. Assert toast content within 2 seconds
+of the action, or use `page.waitForSelector('[data-sonner-toast]')` to catch it.
+
+**Gotcha:** Auto-advance has a 200ms delay (per Story 4.2 AC). Always `waitForTimeout(300)`
+before asserting the new focus position. Do NOT use exact 200ms — CI timing is imprecise.
+
+---
+
+### 10.4 Pattern: Esc Hierarchy (Layered Escape)
+
+Escape closes the most specific open layer first. Test each layer independently:
+
+```typescript
+// ── Layer 1: Dropdown inside expanded finding ──
+const grid = page.getByRole('grid', { name: /findings review list/i })
+await grid.focus()
+await page.keyboard.press('j')
+await page.keyboard.press('Enter') // expand finding
+
+// Open severity override dropdown
+await page.keyboard.press('-')
+const dropdown = page.getByRole('listbox')
+await expect(dropdown).toBeVisible()
+
+// Esc closes ONLY the dropdown, NOT the expanded finding
+await page.keyboard.press('Escape')
+await expect(dropdown).not.toBeVisible()
+// Finding is still expanded
+const row = grid.getByRole('row').first()
+await expect(row).toHaveAttribute('aria-expanded', 'true')
+
+// ── Layer 2: Esc collapses the expanded finding ──
+await page.keyboard.press('Escape')
+await expect(row).toHaveAttribute('aria-expanded', 'false')
+
+// ── Layer 3: Esc deselects the finding ──
+await page.keyboard.press('Escape')
+await expect(grid).not.toHaveAttribute('aria-activedescendant')
+```
+
+**Gotcha:** Radix UI dropdowns/popovers handle their own Escape internally. If your
+component uses Radix `DropdownMenu` or `Popover`, the first Escape is consumed by Radix
+(closes the popup) and does NOT propagate to the grid's `onKeyDown`. The custom Esc
+hierarchy handler only fires for subsequent Escape presses.
+
+---
+
+### 10.5 Pattern: Tab Order Verification
+
+Tab order tests verify the logical flow through the review page layout. Use sequential
+Tab presses and `toBeFocused()` assertions.
+
+```typescript
+// Start from top of page (focus first element)
+await page.keyboard.press('Tab')
+
+// Expected tab order: filter bar -> finding list (grid) -> detail panel -> action bar
+await expect(page.getByRole('combobox', { name: /severity filter/i }))
+  .toBeFocused()
+
+// Tab through filter controls...
+await page.keyboard.press('Tab')
+await page.keyboard.press('Tab')
+// ... until we reach the grid
+await expect(page.getByRole('grid', { name: /findings review list/i }))
+  .toBeFocused()
+
+// Shift+Tab goes backwards
+await page.keyboard.press('Shift+Tab')
+await expect(page.getByRole('combobox', { name: /severity filter/i }))
+  .toBeFocused()
+```
+
+**Gotcha:** `toBeFocused()` checks `document.activeElement`. In headless Chromium,
+programmatic focus via `element.focus()` behaves identically to keyboard Tab focus.
+However, add a 50ms delay before `toBeFocused()` if the assertion is flaky in CI:
+
+```typescript
+await page.keyboard.press('Tab')
+await page.waitForTimeout(50) // allow focus to settle
+await expect(targetElement).toBeFocused()
+```
+
+**Gotcha:** `tabIndex={0}` should only be on the grid container, NOT on every finding
+row (300+ rows would make Tab traversal unusable). Inside the grid, navigation is via
+J/K (virtual focus), not Tab.
+
+---
+
+### 10.6 Pattern: Focus Trap in Modal
+
+Modals (Radix Dialog) trap Tab focus — Tab from last focusable wraps to first focusable.
+Test both the trap and focus restoration on close.
+
+```typescript
+// Remember what was focused before modal opens
+const grid = page.getByRole('grid', { name: /findings review list/i })
+await grid.focus()
+
+// Open keyboard shortcuts modal
+await page.keyboard.press('Control+/')
+const dialog = page.getByRole('dialog')
+await expect(dialog).toBeVisible()
+
+// Focus should be inside the modal (on first focusable element)
+const closeBtn = dialog.getByRole('button', { name: /close/i })
+await expect(closeBtn).toBeFocused()
+
+// Tab should cycle within modal (not escape to grid behind it)
+const allButtons = dialog.getByRole('button')
+const lastButton = allButtons.last()
+await lastButton.focus()
+await page.keyboard.press('Tab')
+// Wraps back to first focusable in modal
+await expect(closeBtn).toBeFocused()
+
+// Shift+Tab from first wraps to last
+await page.keyboard.press('Shift+Tab')
+await expect(lastButton).toBeFocused()
+
+// Escape closes modal and RESTORES focus to grid
+await page.keyboard.press('Escape')
+await expect(dialog).not.toBeVisible()
+await expect(grid).toBeFocused()
+```
+
+**Gotcha:** Radix Dialog uses `FocusScope` with sentinel `<span>` elements at boundaries.
+These are not visible but are focusable. If `Tab` appears to "skip" an element, it may
+be hitting a sentinel. Do NOT assert focus on sentinels — they are implementation details.
+
+**Gotcha:** Focus restoration uses `requestAnimationFrame`. In rare CI cases, the restored
+element may not have focus immediately after the dialog's exit animation. Add a short wait:
+
+```typescript
+await page.keyboard.press('Escape')
+await expect(dialog).not.toBeVisible()
+await page.waitForTimeout(100) // allow rAF focus restore
+await expect(grid).toBeFocused()
+```
+
+---
+
+### 10.7 Pattern: Ctrl+Z Undo
+
+After accepting/rejecting a finding, Ctrl+Z should revert it to the previous state.
+
+```typescript
+const grid = page.getByRole('grid', { name: /findings review list/i })
+await grid.focus()
+
+// Navigate to finding and accept it
+await page.keyboard.press('j')
+const activeId = await grid.getAttribute('aria-activedescendant')
+await page.keyboard.press('a')
+
+// Verify accepted state
+await expect(page.locator(`#${activeId}`))
+  .toHaveAttribute('data-status', 'accepted')
+
+// Undo
+await page.keyboard.press('Control+z')
+
+// Verify reverted to pending
+await expect(page.locator(`#${activeId}`))
+  .toHaveAttribute('data-status', 'pending')
+
+// Toast should announce undo
+await expect(page.getByText(/undone/i)).toBeVisible({ timeout: 2_000 })
+```
+
+**Gotcha:** Ctrl+Z also triggers browser "undo" in text inputs. The app's input guard
+should let Ctrl+Z pass through to the browser when an input/textarea is focused (undo
+typed text), and only intercept it when the grid or page body is focused (undo review
+action). Test this explicitly:
+
+```typescript
+// Focus a text input — Ctrl+Z should NOT undo review action
+const searchInput = page.getByRole('searchbox')
+await searchInput.fill('test')
+await page.keyboard.press('Control+z')
+// Browser undo removes the typed text, NOT the review action
+await expect(searchInput).toHaveValue('tes') // browser text undo
+```
+
+---
+
+### 10.8 Pattern: Screen Reader Announcements (aria-live)
+
+The review page uses a centralized `aria-live` region for action feedback. Test that
+it updates correctly after keyboard actions.
+
+```typescript
+// The announcer element (sr-only, but content is testable)
+const announcer = page.locator('#sr-announcer')
+
+// Perform an action
+const grid = page.getByRole('grid', { name: /findings review list/i })
+await grid.focus()
+await page.keyboard.press('j')
+await page.keyboard.press('a') // accept
+
+// aria-live region should contain action feedback
+await expect(announcer).toHaveText(/finding.*accepted/i, { timeout: 2_000 })
+
+// Navigate — announcement should update
+await page.keyboard.press('j')
+await expect(announcer).toHaveText(/finding.*\d+/i, { timeout: 1_000 })
+```
+
+**Gotcha:** The announcer clears its `textContent` before setting a new message (to
+force screen readers to re-announce even if the text is identical). If you assert too
+fast, you may catch the empty state. Use `toHaveText()` with a timeout (it retries)
+rather than a single `textContent()` snapshot.
+
+**Gotcha:** `aria-live="polite"` waits for idle before announcing. In fast E2E tests,
+"polite" announcements may queue up. For action feedback tests, the app uses
+`aria-live="assertive"` which announces immediately. Assert against the assertive region.
+
+---
+
+### 10.9 Pattern: Reduced Motion & Animations
+
+Epic 4 respects `prefers-reduced-motion: reduce` for auto-advance animations and focus
+transitions. Playwright can emulate this media feature.
+
+```typescript
+// Emulate reduced motion BEFORE navigating to the page
+await page.emulateMedia({ reducedMotion: 'reduce' })
+await page.goto(`/projects/${projectId}/review/${fileId}`)
+
+// Auto-advance should still work but skip CSS transition animations.
+// Assert the functional behavior (focus moved), NOT animation timing.
+const grid = page.getByRole('grid', { name: /findings review list/i })
+await grid.focus()
+await page.keyboard.press('j')
+await page.keyboard.press('a')
+await page.waitForTimeout(300)
+
+// Focus should still advance (functionality, not animation)
+const activeId = await grid.getAttribute('aria-activedescendant')
+expect(activeId).toBeTruthy()
+```
+
+**Rule:** NEVER assert animation duration or CSS transition timing in E2E tests.
+Headless browser animation timing is unreliable. Assert the **end state** only.
+
+---
+
+### 10.10 Pattern: Input Guard Verification
+
+Single-key hotkeys (A, R, F, J, K) must NOT fire when the user is typing in a text
+input, textarea, or contenteditable element. This is critical to prevent accidental
+actions.
+
+```typescript
+// Focus the search/filter input
+const searchInput = page.getByRole('searchbox')
+await searchInput.focus()
+
+// Type 'a' — should go into the input, NOT trigger Accept
+await page.keyboard.press('a')
+await expect(searchInput).toHaveValue('a')
+
+// No action toast should appear
+await expect(page.getByText(/accepted/i)).not.toBeVisible({ timeout: 1_000 })
+
+// BUT: Escape should still work inside inputs (closes filter, per Esc hierarchy)
+await page.keyboard.press('Escape')
+await expect(searchInput).toHaveValue('') // filter cleared
+
+// AND: Ctrl combos should work in inputs (Ctrl+Z = browser text undo, not review undo)
+await searchInput.fill('test')
+await page.keyboard.press('Control+a') // select all text in input
+// Should NOT trigger "select all findings"
+```
+
+**Gotcha:** The input guard checks `event.target.tagName` (INPUT, TEXTAREA) and
+`isContentEditable`. Elements with `role="textbox"` (e.g., custom rich text editors)
+must also be guarded. If your component uses a `<div contenteditable>`, add
+`role="textbox"` for the guard to detect it.
+
+---
+
+### 10.11 Anti-Patterns (Things NOT To Do)
+
+| Anti-Pattern | Problem | Correct Approach |
+|-------------|---------|-----------------|
+| `page.keyboard.press('a')` without focusing grid first | Key dispatches to `<body>` or last focused element — unpredictable | Always `await grid.focus()` before hotkey presses |
+| `await expect(row).toBeFocused()` for J/K navigation | J/K uses virtual focus (`aria-activedescendant`), NOT DOM focus | Assert `grid.toHaveAttribute('aria-activedescendant', rowId)` |
+| `page.keyboard.type('a')` for hotkeys | `.type()` dispatches `input` event (for text entry), not just `keydown` | Use `page.keyboard.press('a')` for hotkeys |
+| `locator.press('j')` for global hotkeys | `.press()` first focuses the locator, which may steal focus from grid | Use `page.keyboard.press('j')` after manually focusing grid |
+| `page.keyboard.press('ctrl+z')` (lowercase) | Modifier names are case-sensitive | Use `'Control+z'` (capital C) |
+| Asserting exact animation duration | CI headless timing varies by 50-200ms | Assert end-state only, use generous timeouts |
+| `waitForTimeout(0)` after keyboard action | Zero timeout is unreliable — browser needs event loop tick | Use `waitForTimeout(50)` minimum, or better: `waitForSelector` / `toHaveAttribute` with retry |
+| Hardcoding finding IDs in assertions | IDs are UUIDs, change every run | Read `aria-activedescendant` dynamically, use `getAttribute('id')` |
+| Testing Ctrl+Z by checking DB directly | Undo is optimistic (UI reverts immediately, server sync is async) | Assert UI state (`data-status` attribute), not DB state |
+| `page.keyboard.press('?')` for cheat sheet | `?` requires Shift on most keyboards — Playwright may not auto-Shift | Use `page.keyboard.press('Control+/')` (the actual binding) |
+
+---
+
+### 10.12 CI Considerations — Headless Browser Keyboard Quirks
+
+1. **Focus on page load:** In headless Chromium, `document.activeElement` is `<body>` on
+   page load. You MUST explicitly focus the grid before pressing hotkeys. Do not assume
+   any element has focus after `page.goto()`.
+
+2. **`driver.js` tour overlay:** The onboarding tour intercepts ALL keyboard events when
+   active. Always set `setup_tour_completed` + `project_tour_completed` in E2E setup
+   (existing pattern from `setUserMetadata()`).
+
+3. **Modifier key state leaks:** If a test fails mid-modifier (e.g., Shift is held down),
+   the next test inherits the modifier state. Use `page.keyboard.up('Shift')` in
+   `afterEach` or isolate with fresh pages:
+
+   ```typescript
+   test.afterEach(async ({ page }) => {
+     // Release any stuck modifier keys
+     await page.keyboard.up('Shift')
+     await page.keyboard.up('Control')
+     await page.keyboard.up('Alt')
+   })
+   ```
+
+4. **IME composition (Thai/CJK):** When testing Thai or CJK text input, the browser
+   fires `compositionstart` / `compositionend` events. During composition,
+   `event.isComposing === true`. The app's input guard must also check `isComposing`
+   to prevent hotkey firing during IME input. Playwright does NOT simulate IME
+   composition — use `page.keyboard.type('สวัสดี')` which dispatches individual character
+   events without composition events. For IME-specific bugs, test manually.
+
+5. **Timing between rapid keypresses:** CI environments are slower than local dev. When
+   testing rapid sequences (J, J, J to skip 3 findings), add a small delay between
+   presses to allow the store + DOM to update:
+
+   ```typescript
+   // Rapid navigation — needs breathing room in CI
+   for (let i = 0; i < 3; i++) {
+     await page.keyboard.press('j')
+     await page.waitForTimeout(100) // allow store update + DOM render
+   }
+   ```
+
+6. **Parallel test isolation:** Keyboard tests that modify finding states (accept/reject)
+   must use `.describe.serial()` with unique test data. Parallel tests sharing the same
+   findings will cause race conditions on state assertions.
+
+---
+
+### 10.13 Suggested Helper Functions for `e2e/helpers/keyboard.ts`
+
+Create reusable helpers to reduce boilerplate across Epic 4 E2E specs.
+
+```typescript
+// e2e/helpers/keyboard.ts
+
+import { expect, type Page, type Locator } from '@playwright/test'
+
+/**
+ * Focus the findings grid and return its locator.
+ * MUST be called before any hotkey press in review tests.
+ */
+export async function focusGrid(page: Page): Promise<Locator> {
+  const grid = page.getByRole('grid', { name: /findings review list/i })
+  await grid.focus()
+  await page.waitForTimeout(50) // allow focus to settle
+  return grid
+}
+
+/**
+ * Navigate to the Nth finding using J key presses.
+ * Returns the id of the focused finding row.
+ */
+export async function navigateToFinding(
+  page: Page,
+  grid: Locator,
+  position: number,
+): Promise<string> {
+  for (let i = 0; i < position; i++) {
+    await page.keyboard.press('j')
+    await page.waitForTimeout(100) // allow store + DOM update
+  }
+  const activeId = await grid.getAttribute('aria-activedescendant')
+  if (!activeId) throw new Error(`No aria-activedescendant after ${position} J presses`)
+  return activeId
+}
+
+/**
+ * Assert that the grid's virtual focus points to a specific row ID.
+ */
+export async function assertVirtualFocus(
+  grid: Locator,
+  expectedRowId: string,
+): Promise<void> {
+  await expect(grid).toHaveAttribute('aria-activedescendant', expectedRowId)
+}
+
+/**
+ * Assert that a finding row has a specific status attribute.
+ */
+export async function assertFindingStatus(
+  page: Page,
+  rowId: string,
+  expectedStatus: string,
+): Promise<void> {
+  await expect(page.locator(`#${rowId}`))
+    .toHaveAttribute('data-status', expectedStatus, { timeout: 3_000 })
+}
+
+/**
+ * Press a hotkey and verify the aria-live announcer updated.
+ * Returns the announcement text.
+ */
+export async function pressHotkeyAndAssertAnnouncement(
+  page: Page,
+  key: string,
+  expectedPattern: RegExp,
+): Promise<string> {
+  await page.keyboard.press(key)
+  const announcer = page.locator('#sr-announcer')
+  await expect(announcer).toHaveText(expectedPattern, { timeout: 3_000 })
+  const text = await announcer.textContent()
+  return text ?? ''
+}
+
+/**
+ * Assert that focus is trapped inside a dialog (Tab wraps).
+ * Presses Tab from last focusable and checks focus returns to first.
+ */
+export async function assertFocusTrap(dialog: Locator, page: Page): Promise<void> {
+  const buttons = dialog.getByRole('button')
+  const firstBtn = buttons.first()
+  const lastBtn = buttons.last()
+
+  // Tab from last -> should wrap to first
+  await lastBtn.focus()
+  await page.keyboard.press('Tab')
+  await page.waitForTimeout(50)
+  await expect(firstBtn).toBeFocused()
+
+  // Shift+Tab from first -> should wrap to last
+  await page.keyboard.press('Shift+Tab')
+  await page.waitForTimeout(50)
+  await expect(lastBtn).toBeFocused()
+}
+
+/**
+ * Release all modifier keys. Call in afterEach to prevent state leaks.
+ */
+export async function releaseModifiers(page: Page): Promise<void> {
+  await page.keyboard.up('Shift')
+  await page.keyboard.up('Control')
+  await page.keyboard.up('Alt')
+  await page.keyboard.up('Meta')
+}
+```
+
+**Usage in spec files:**
+
+```typescript
+import {
+  focusGrid,
+  navigateToFinding,
+  assertVirtualFocus,
+  assertFindingStatus,
+  releaseModifiers,
+} from './helpers/keyboard'
+
+test.describe.serial('Review Keyboard Navigation', () => {
+  test.afterEach(async ({ page }) => {
+    await releaseModifiers(page)
+  })
+
+  test('J/K navigates between findings', async ({ page }) => {
+    await signupOrLogin(page, TEST_EMAIL)
+    await page.goto(`/projects/${projectId}/review/${fileId}`)
+
+    const grid = await focusGrid(page)
+    const firstId = await navigateToFinding(page, grid, 1)
+    const secondId = await navigateToFinding(page, grid, 1)
+
+    // K goes back
+    await page.keyboard.press('k')
+    await assertVirtualFocus(grid, firstId)
+  })
+
+  test('A accepts finding and auto-advances', async ({ page }) => {
+    await signupOrLogin(page, TEST_EMAIL)
+    await page.goto(`/projects/${projectId}/review/${fileId}`)
+
+    const grid = await focusGrid(page)
+    const targetId = await navigateToFinding(page, grid, 1)
+
+    await page.keyboard.press('a')
+    await page.waitForTimeout(300) // auto-advance delay
+
+    await assertFindingStatus(page, targetId, 'accepted')
+
+    // Focus should have moved to next pending finding
+    const newActiveId = await grid.getAttribute('aria-activedescendant')
+    expect(newActiveId).not.toBe(targetId)
+  })
+})
+```
+
+---
+
 ## Quick Reference
 
 | Gotcha | Fix |
@@ -318,3 +935,13 @@ await page.keyboard.press('Space')
 | Dialog doesn't show item name | Verify dialog content before asserting |
 | Auth tests timing out | `test.setTimeout(120_000)` |
 | @dnd-kit drag not triggering onDragEnd | Use keyboard reorder: `focus()` → `press('Space')` → `ArrowDown` × N → `press('Space')` |
+| Hotkey fires on `<body>` instead of grid | Always `grid.focus()` before `page.keyboard.press()` |
+| `toBeFocused()` fails for J/K navigation | Use `grid.toHaveAttribute('aria-activedescendant', rowId)` (virtual focus) |
+| `page.keyboard.type('a')` triggers input event | Use `page.keyboard.press('a')` for hotkeys |
+| Modifier key name case-sensitive | `'Control+z'` not `'ctrl+z'` |
+| Toast auto-dismisses before assertion | Assert within 2s of action, or use `waitForSelector` |
+| Auto-advance timing flaky in CI | `waitForTimeout(300)` after action (200ms delay + 100ms buffer) |
+| Focus not restored after modal close | Add `waitForTimeout(100)` for rAF focus restore |
+| Modifier key state leaks between tests | `releaseModifiers(page)` in `afterEach` |
+| IME composition triggers hotkeys | App must check `event.isComposing` — cannot test via Playwright |
+| Rapid J/J/J skips findings in CI | Add `waitForTimeout(100)` between presses |

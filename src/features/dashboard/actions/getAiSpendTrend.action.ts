@@ -10,6 +10,7 @@ import { aiUsageLogs } from '@/db/schema/aiUsageLogs'
 import type { AiSpendTrendPoint } from '@/features/dashboard/types'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
+import type { ActionResult } from '@/types/actionResult'
 
 const MAX_DAYS = 90
 
@@ -17,11 +18,9 @@ type GetAiSpendTrendInput = {
   days: 7 | 30 | 90
 }
 
-export type GetAiSpendTrendResult =
-  | { success: true; data: AiSpendTrendPoint[] }
-  | { success: false; code: string; error: string }
-
-export async function getAiSpendTrend(input: GetAiSpendTrendInput): Promise<GetAiSpendTrendResult> {
+export async function getAiSpendTrend(
+  input: GetAiSpendTrendInput,
+): Promise<ActionResult<AiSpendTrendPoint[]>> {
   let currentUser
   try {
     currentUser = await requireRole('admin', 'read')

@@ -10,14 +10,11 @@ import { aiUsageLogs } from '@/db/schema/aiUsageLogs'
 import { projects } from '@/db/schema/projects'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
+import type { ActionResult } from '@/types/actionResult'
 
 const MAX_DAYS = 90
 
-export type ExportAiUsageResult =
-  | { success: true; data: { csv: string; filename: string } }
-  | { success: false; code: string; error: string }
-
-export async function exportAiUsage(): Promise<ExportAiUsageResult> {
+export async function exportAiUsage(): Promise<ActionResult<{ csv: string; filename: string }>> {
   let currentUser
   try {
     currentUser = await requireRole('admin', 'read')
