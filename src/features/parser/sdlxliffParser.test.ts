@@ -883,4 +883,404 @@ describe('parseXliff', () => {
       expect(result.data.segments[0]?.confirmationState).toBeNull()
     })
   })
+
+  // ════════════════════════════════════════════════════════════════════
+  // TA Run 11 — Coverage gap tests (Story 2.2)
+  // 16 gaps: 2 P1 + 14 P2 — Advanced Elicitation (What If, FMA, Pre-mortem, Chaos Monkey)
+  // ════════════════════════════════════════════════════════════════════
+  describe('TA Run 11 — coverage gap tests (Story 2.2)', () => {
+    // ── G1 (P1): Valid parse → 0 segments ─────────────────────────────
+    it('should return success with 0 segments when body has no trans-units (G1)', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file source-language="en" target-language="th" datatype="plaintext" original="empty.txt">
+    <body></body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'xliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments).toEqual([])
+      expect(result.data.segmentCount).toBe(0)
+    })
+
+    // ── G2 (P2): No matching target mrk for mid ──────────────────────
+    it('should return empty targetText when target mrk mid does not match source mrk mid (G2)', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:sdl="http://sdl.com/FileTypes/SdlXliff/1.0">
+  <file source-language="en" target-language="th" datatype="plaintext" original="test.sdlxliff">
+    <body>
+      <group id="g1">
+        <trans-unit id="1">
+          <seg-source><mrk mtype="seg" mid="1">Hello</mrk></seg-source>
+          <target><mrk mtype="seg" mid="99">Wrong match</mrk></target>
+        </trans-unit>
+      </group>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'sdlxliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments).toHaveLength(1)
+      expect(result.data.segments[0]!.sourceText).toBe('Hello')
+      expect(result.data.segments[0]!.targetText).toBe('')
+    })
+
+    // ── G3 (P2): Nested <group> 2+ levels deep ──────────────────────
+    it('should extract trans-unit from nested group 2+ levels deep (G3)', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file source-language="en" target-language="th" datatype="plaintext" original="nested.txt">
+    <body>
+      <group id="g1"><group id="g2">
+        <trans-unit id="1">
+          <source>Deeply nested</source>
+          <target>ซ้อนลึก</target>
+        </trans-unit>
+      </group></group>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'xliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments).toHaveLength(1)
+      expect(result.data.segments[0]!.sourceText).toBe('Deeply nested')
+      expect(result.data.segments[0]!.targetText).toBe('ซ้อนลึก')
+    })
+
+    // ── G4 (P2): XLIFF unknown state → null ──────────────────────────
+    it('should set confirmationState to null for unknown target state (G4)', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file source-language="en" target-language="th" datatype="plaintext" original="state.txt">
+    <body>
+      <trans-unit id="1">
+        <source>Hello</source>
+        <target state="custom-unknown-state">สวัสดี</target>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'xliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments).toHaveLength(1)
+      expect(result.data.segments[0]!.confirmationState).toBeNull()
+    })
+
+    // ── G5 (P2): SDLXLIFF <note> ignored ────────────────────────────
+    it('should ignore XLIFF-style note in SDLXLIFF path — translatorComment remains null (G5)', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:sdl="http://sdl.com/FileTypes/SdlXliff/1.0">
+  <file source-language="en" target-language="th" datatype="plaintext" original="note.sdlxliff">
+    <body>
+      <group id="g1">
+        <trans-unit id="1">
+          <note>some note that should be ignored</note>
+          <seg-source><mrk mtype="seg" mid="1">Hello</mrk></seg-source>
+          <target><mrk mtype="seg" mid="1">สวัสดี</mrk></target>
+        </trans-unit>
+      </group>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'sdlxliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments).toHaveLength(1)
+      expect(result.data.segments[0]!.translatorComment).toBeNull()
+    })
+
+    // ── G7 (P2): Self-closing <source/> → empty sourceText ──────────
+    it('should handle self-closing source with empty sourceText and wordCount=0 (G7)', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file source-language="en" target-language="th" datatype="plaintext" original="selfclose.txt">
+    <body>
+      <trans-unit id="1">
+        <source/>
+        <target>มีข้อความ</target>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'xliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments).toHaveLength(1)
+      expect(result.data.segments[0]!.sourceText).toBe('')
+      expect(result.data.segments[0]!.wordCount).toBe(0)
+      expect(result.data.segments[0]!.targetText).toBe('มีข้อความ')
+    })
+
+    // ── G8 (P2): Empty sdl:cmt → null ───────────────────────────────
+    it('should set translatorComment to null when sdl:cmt is empty (G8)', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:sdl="http://sdl.com/FileTypes/SdlXliff/1.0">
+  <file source-language="en" target-language="th" datatype="plaintext" original="emptycmt.sdlxliff">
+    <body>
+      <group id="g1">
+        <trans-unit id="1">
+          <seg-source><mrk mtype="seg" mid="1">Hello</mrk></seg-source>
+          <target><mrk mtype="seg" mid="1">สวัสดี</mrk></target>
+          <sdl:seg-defs><sdl:seg id="1" conf="Translated" percent="100"><sdl:cmt></sdl:cmt></sdl:seg></sdl:seg-defs>
+        </trans-unit>
+      </group>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'sdlxliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments).toHaveLength(1)
+      expect(result.data.segments[0]!.translatorComment).toBeNull()
+    })
+
+    // ── G9 (P2): Source mrk present, target has no mrk ──────────────
+    it('should return empty targetText when target has plain text but no mrk elements (G9)', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:sdl="http://sdl.com/FileTypes/SdlXliff/1.0">
+  <file source-language="en" target-language="th" datatype="plaintext" original="nomrk.sdlxliff">
+    <body>
+      <group id="g1">
+        <trans-unit id="1">
+          <seg-source><mrk mtype="seg" mid="1">Source text</mrk></seg-source>
+          <target>plain text no mrk</target>
+        </trans-unit>
+      </group>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'sdlxliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments).toHaveLength(1)
+      expect(result.data.segments[0]!.sourceText).toBe('Source text')
+      expect(result.data.segments[0]!.targetText).toBe('')
+    })
+
+    // ── G10 (P2): seg-source present, no mrk elements ───────────────
+    it('should produce 0 segments when seg-source has no mrk elements (G10)', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:sdl="http://sdl.com/FileTypes/SdlXliff/1.0">
+  <file source-language="en" target-language="th" datatype="plaintext" original="nomrk2.sdlxliff">
+    <body>
+      <group id="g1">
+        <trans-unit id="1">
+          <seg-source>bare text without any mrk elements</seg-source>
+          <target><mrk mtype="seg" mid="1">target</mrk></target>
+        </trans-unit>
+      </group>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'sdlxliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments).toHaveLength(0)
+    })
+
+    // ── G11 (P2): Empty <mrk/> self-closing ─────────────────────────
+    it('should create segment with empty sourceText for self-closing mrk (G11)', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:sdl="http://sdl.com/FileTypes/SdlXliff/1.0">
+  <file source-language="en" target-language="th" datatype="plaintext" original="selfmrk.sdlxliff">
+    <body>
+      <group id="g1">
+        <trans-unit id="1">
+          <seg-source><mrk mtype="seg" mid="1"/></seg-source>
+          <target><mrk mtype="seg" mid="1">target text</mrk></target>
+        </trans-unit>
+      </group>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'sdlxliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments).toHaveLength(1)
+      expect(result.data.segments[0]!.sourceText).toBe('')
+    })
+
+    // ── G12 (P2): sdl:seg id mismatch → metadata null ───────────────
+    it('should set confirmationState and matchPercentage to null when sdl:seg id mismatches mrk mid (G12)', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:sdl="http://sdl.com/FileTypes/SdlXliff/1.0">
+  <file source-language="en" target-language="th" datatype="plaintext" original="mismatch.sdlxliff">
+    <body>
+      <group id="g1">
+        <trans-unit id="1">
+          <seg-source><mrk mtype="seg" mid="1">Source</mrk></seg-source>
+          <target><mrk mtype="seg" mid="1">Target</mrk></target>
+          <sdl:seg-defs><sdl:seg id="999" conf="Translated" percent="85"/></sdl:seg-defs>
+        </trans-unit>
+      </group>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'sdlxliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments).toHaveLength(1)
+      expect(result.data.segments[0]!.confirmationState).toBeNull()
+      expect(result.data.segments[0]!.matchPercentage).toBeNull()
+    })
+
+    // ── G13 (P2): Segment number contiguity across skipped TUs ──────
+    it('should number segments contiguously when middle TU has empty source (G13)', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file source-language="en" target-language="th" datatype="plaintext" original="contiguous.txt">
+    <body>
+      <trans-unit id="1"><source>First</source><target>แรก</target></trans-unit>
+      <trans-unit id="2"><source/><target/></trans-unit>
+      <trans-unit id="3"><source>Third</source><target>สาม</target></trans-unit>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'xliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      // Segment numbers must be contiguous starting from 1
+      const numbers = result.data.segments.map((s) => s.segmentNumber)
+      for (let i = 0; i < numbers.length; i++) {
+        expect(numbers[i]).toBe(i + 1)
+      }
+      expect(result.data.segments.some((s) => s.sourceText === 'First')).toBe(true)
+      expect(result.data.segments.some((s) => s.sourceText === 'Third')).toBe(true)
+    })
+
+    // ── G14 (P2): Nested groups at depth 5 ──────────────────────────
+    it('should extract trans-unit from 5 levels of nested groups (G14)', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file source-language="en" target-language="th" datatype="plaintext" original="deep.txt">
+    <body>
+      <group id="g1"><group id="g2"><group id="g3"><group id="g4"><group id="g5">
+        <trans-unit id="1"><source>Deep level 5</source><target>ระดับ 5</target></trans-unit>
+      </group></group></group></group></group>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'xliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments).toHaveLength(1)
+      expect(result.data.segments[0]!.sourceText).toBe('Deep level 5')
+    })
+
+    it('should still extract trans-unit at exactly 50 nested groups (G14-fix boundary)', () => {
+      // depth=50 is the last level where collectTransUnits still recurses (depth > 50 = stop)
+      let xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file source-language="en" target-language="th" datatype="plaintext" original="boundary.txt">
+    <body>`
+      for (let i = 0; i < 50; i++) xml += `<group id="g${i}">`
+      xml += `<trans-unit id="1"><source>At boundary</source><target>ขอบเขต</target></trans-unit>`
+      for (let i = 0; i < 50; i++) xml += `</group>`
+      xml += `</body></file></xliff>`
+
+      const result = parseXliff(xml, 'xliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments).toHaveLength(1)
+      expect(result.data.segments[0]!.sourceText).toBe('At boundary')
+    })
+
+    it('should silently drop trans-units at 51 nested groups — first depth beyond limit (G14-fix)', () => {
+      // depth=51 is the first level where collectTransUnits returns [] (depth > 50)
+      let xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file source-language="en" target-language="th" datatype="plaintext" original="bomb.txt">
+    <body>`
+      for (let i = 0; i < 51; i++) xml += `<group id="g${i}">`
+      xml += `<trans-unit id="1"><source>Unreachable</source><target>เข้าไม่ถึง</target></trans-unit>`
+      for (let i = 0; i < 51; i++) xml += `</group>`
+      xml += `</body></file></xliff>`
+
+      const result = parseXliff(xml, 'xliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments).toHaveLength(0)
+    })
+
+    // ── G15 (P2): Duplicate mid in mrk elements ─────────────────────
+    it('should use first-wins for duplicate mid in target mrk map (G15-fix)', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:sdl="http://sdl.com/FileTypes/SdlXliff/1.0">
+  <file source-language="en" target-language="th" datatype="plaintext" original="dupmid.sdlxliff">
+    <body>
+      <group id="g1">
+        <trans-unit id="1">
+          <seg-source>
+            <mrk mtype="seg" mid="1">First source</mrk>
+            <mrk mtype="seg" mid="1">Second source</mrk>
+          </seg-source>
+          <target>
+            <mrk mtype="seg" mid="1">First target</mrk>
+            <mrk mtype="seg" mid="1">Second target</mrk>
+          </target>
+        </trans-unit>
+      </group>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'sdlxliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments).toHaveLength(2)
+      expect(result.data.segments[0]!.sourceText).toBe('First source')
+      expect(result.data.segments[1]!.sourceText).toBe('Second source')
+      // First-wins: both source mrk mid="1" match the FIRST target mrk mid="1"
+      expect(result.data.segments[0]!.targetText).toBe('First target')
+      expect(result.data.segments[1]!.targetText).toBe('First target')
+      // Both segments share the same segmentId (duplicate mid)
+      expect(result.data.segments[0]!.segmentId).toBe('1')
+      expect(result.data.segments[1]!.segmentId).toBe('1')
+    })
+
+    // ── G16 (P2): CDATA in source content ───────────────────────────
+    it('should extract CDATA content from source element (G16-fix)', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file source-language="en" target-language="th" datatype="plaintext" original="cdata.txt">
+    <body>
+      <trans-unit id="1">
+        <source><![CDATA[Hello world]]></source>
+        <target>สวัสดีโลก</target>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'xliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments).toHaveLength(1)
+      // After fix: extractInlineTags now handles __cdata nodes from fast-xml-parser
+      expect(result.data.segments[0]!.sourceText).toBe('Hello world')
+      expect(result.data.segments[0]!.wordCount).toBe(2)
+    })
+
+    it('should extract CDATA content from target element (L5)', () => {
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file source-language="en" target-language="th" datatype="plaintext" original="cdata-tgt.txt">
+    <body>
+      <trans-unit id="1">
+        <source>Hello</source>
+        <target><![CDATA[สวัสดี]]></target>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>`
+      const result = parseXliff(xml, 'xliff')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segments).toHaveLength(1)
+      expect(result.data.segments[0]!.sourceText).toBe('Hello')
+      expect(result.data.segments[0]!.targetText).toBe('สวัสดี')
+    })
+  })
 })

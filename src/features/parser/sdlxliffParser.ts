@@ -412,7 +412,10 @@ function buildTargetMrkMap(targetEl: XmlNode | undefined): Map<string, XmlNode[]
 
   for (const mrkEl of mrkEls) {
     const mid = getAttrs(mrkEl)['@_mid'] ?? ''
-    map.set(mid, getChildren(mrkEl, 'mrk'))
+    // First-wins: if duplicate mid exists (malformed SDLXLIFF), keep the first match
+    if (!map.has(mid)) {
+      map.set(mid, getChildren(mrkEl, 'mrk'))
+    }
   }
 
   return map
@@ -422,7 +425,14 @@ function buildTargetMrkMap(targetEl: XmlNode | undefined): Map<string, XmlNode[]
 // Tree traversal helpers
 // ============================================================
 
-function collectTransUnits(nodes: XmlNode[]): XmlNode[] {
+// Maximum recursion depth for collectTransUnits — defense-in-depth against
+// maliciously nested <group> elements (mirrors MAX_WALK_DEPTH in inlineTagExtractor)
+const MAX_GROUP_DEPTH = 50
+
+function collectTransUnits(nodes: XmlNode[], depth = 0): XmlNode[] {
+  // Silent drop is intentional: depth > 50 = malicious/malformed input, not legitimate use.
+  // Real SDLXLIFF/XLIFF files have 1-3 group levels max (Trados, memoQ, Memsource).
+  if (depth > MAX_GROUP_DEPTH) return []
   const units: XmlNode[] = []
   for (const node of nodes) {
     const tag = getTagName(node)
@@ -430,19 +440,20 @@ function collectTransUnits(nodes: XmlNode[]): XmlNode[] {
       units.push(node)
     } else if (tag === 'group') {
       const groupChildren = getChildren(node, 'group')
-      units.push(...collectTransUnits(groupChildren))
+      units.push(...collectTransUnits(groupChildren, depth + 1))
     }
   }
   return units
 }
 
-function findElement(nodes: XmlNode[], tagName: string): XmlNode | undefined {
+function findElement(nodes: XmlNode[], tagName: string, depth = 0): XmlNode | undefined {
+  if (depth > MAX_GROUP_DEPTH) return undefined
   for (const node of nodes) {
     if (getTagName(node) === tagName) return node
     // Recurse into children (for declaration nodes like `?xml`)
     const children = getAnyChildren(node)
     if (children.length > 0) {
-      const found = findElement(children, tagName)
+      const found = findElement(children, tagName, depth + 1)
       if (found) return found
     }
   }

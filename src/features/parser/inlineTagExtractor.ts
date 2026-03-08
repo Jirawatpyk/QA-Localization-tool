@@ -77,6 +77,19 @@ function walkNodes(
       continue
     }
 
+    // CDATA node: fast-xml-parser with preserveOrder+cdataPropName stores as
+    // { __cdata: [{ '#text': 'content' }] } — recurse into children to extract text.
+    // CDATA is not a nesting level in XML, so depth stays the same.
+    if ('__cdata' in node) {
+      const cdataChildren = asNodeArray(node['__cdata'])
+      if (cdataChildren.length > 0) {
+        const innerResult = walkNodes(cdataChildren, tags, openPaired, text, depth)
+        if (!innerResult.success) return innerResult
+        text = innerResult.plainText
+      }
+      continue
+    }
+
     // Find the tag name (the key that is not ':@' or '#text')
     const tagName = Object.keys(node).find((k) => k !== ':@')
     if (!tagName) continue

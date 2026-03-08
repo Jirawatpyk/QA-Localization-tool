@@ -323,6 +323,52 @@ describe('extractInlineTags', () => {
     })
   })
 
+  // ── G16-fix: CDATA node handling ──────────────────────────────────
+  // fast-xml-parser with preserveOrder+cdataPropName stores CDATA as:
+  // { __cdata: [{ '#text': 'content' }] }
+  describe('CDATA node handling (G16-fix)', () => {
+    it('should extract text from __cdata nodes', () => {
+      const result = extractInlineTags([{ __cdata: [{ '#text': 'Hello world' }] }])
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.plainText).toBe('Hello world')
+      expect(result.tags).toHaveLength(0)
+    })
+
+    it('should concatenate __cdata with adjacent #text nodes', () => {
+      const result = extractInlineTags([
+        { '#text': 'Before ' },
+        { __cdata: [{ '#text': 'CDATA content' }] },
+        { '#text': ' After' },
+      ])
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.plainText).toBe('Before CDATA content After')
+    })
+
+    it('should handle empty __cdata array as empty string', () => {
+      const result = extractInlineTags([{ __cdata: [] }])
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.plainText).toBe('')
+    })
+
+    it('should handle __cdata with non-array value gracefully (L2)', () => {
+      // asNodeArray returns [] for non-array values — defensive
+      const result = extractInlineTags([{ __cdata: 'raw string' }])
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.plainText).toBe('')
+    })
+
+    it('should handle __cdata with null value gracefully (L2)', () => {
+      const result = extractInlineTags([{ __cdata: null }])
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.plainText).toBe('')
+    })
+  })
+
   describe('attributes handling', () => {
     it('should store extra attributes without @_ prefix', () => {
       const result = extractInlineTags([{ x: [], ':@': { '@_id': '1', '@_ctype': 'bold' } }])

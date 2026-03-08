@@ -629,6 +629,82 @@ describe('parseFile action', () => {
     })
   })
 
+  // ════════════════════════════════════════════════════════════════════
+  // TA Run 11 — G6 (P1): 0 segments → status='parsed', segmentCount=0
+  // ════════════════════════════════════════════════════════════════════
+  describe('zero segments from valid parse (G6)', () => {
+    it('should return success with segmentCount=0 when XLIFF body has no trans-units (G6)', async () => {
+      const emptyBodyXliff = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file original="empty.docx" source-language="en-US" target-language="de-DE" datatype="plaintext">
+    <body></body>
+  </file>
+</xliff>`
+
+      buildSelectChain([{ ...mockFile, fileType: 'xliff', fileName: 'empty.xliff' }])
+      buildUpdateChain()
+      buildInsertChain()
+      mockDownload.mockResolvedValue({
+        data: new Blob([emptyBodyXliff], { type: 'application/xml' }),
+        error: null,
+      })
+
+      const result = await parseFile(FILE_ID)
+
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.data.segmentCount).toBe(0)
+      expect(result.data.fileId).toBe(FILE_ID)
+    })
+
+    it('should still update file status to parsed when parse returns 0 segments (G6)', async () => {
+      const emptyBodyXliff = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file original="empty.docx" source-language="en-US" target-language="de-DE" datatype="plaintext">
+    <body></body>
+  </file>
+</xliff>`
+
+      buildSelectChain([{ ...mockFile, fileType: 'xliff', fileName: 'empty.xliff' }])
+      const updateChain = buildUpdateChain()
+      buildInsertChain()
+      mockDownload.mockResolvedValue({
+        data: new Blob([emptyBodyXliff], { type: 'application/xml' }),
+        error: null,
+      })
+
+      await parseFile(FILE_ID)
+
+      expect(updateChain.set).toHaveBeenCalledWith({ status: 'parsed' })
+    })
+
+    it('should write audit log with segmentCount=0 when parse returns 0 segments (G6)', async () => {
+      const emptyBodyXliff = `<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file original="empty.docx" source-language="en-US" target-language="de-DE" datatype="plaintext">
+    <body></body>
+  </file>
+</xliff>`
+
+      buildSelectChain([{ ...mockFile, fileType: 'xliff', fileName: 'empty.xliff' }])
+      buildUpdateChain()
+      buildInsertChain()
+      mockDownload.mockResolvedValue({
+        data: new Blob([emptyBodyXliff], { type: 'application/xml' }),
+        error: null,
+      })
+
+      await parseFile(FILE_ID)
+
+      expect(mockWriteAuditLog).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'file.parsed',
+          newValue: expect.objectContaining({ segmentCount: 0 }),
+        }),
+      )
+    })
+  })
+
   describe('XLIFF fileType branch (tH3)', () => {
     it('should parse XLIFF file successfully when fileType is "xliff"', async () => {
       buildSelectChain([{ ...mockFile, fileType: 'xliff', fileName: 'test.xliff' }])
