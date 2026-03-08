@@ -25,6 +25,7 @@ type FindingListItemProps = {
   finding: FindingForDisplay
   isNew?: boolean | undefined
   l2ConfidenceMin?: number | null | undefined
+  l3ConfidenceMin?: number | null | undefined
 }
 
 const SEVERITY_CLASSES: Record<FindingSeverity, string> = {
@@ -45,7 +46,12 @@ function truncate(text: string, maxLength: number): string {
   return text.slice(0, maxLength) + '...'
 }
 
-export function FindingListItem({ finding, isNew, l2ConfidenceMin }: FindingListItemProps) {
+export function FindingListItem({
+  finding,
+  isNew,
+  l2ConfidenceMin,
+  l3ConfidenceMin,
+}: FindingListItemProps) {
   const [expanded, setExpanded] = useState(false)
   const reducedMotion = useReducedMotion()
 
@@ -66,6 +72,17 @@ export function FindingListItem({ finding, isNew, l2ConfidenceMin }: FindingList
     finding.suggestedFix !== null
 
   const showAnimation = isNew === true && !reducedMotion
+
+  // Story 3.5: compute layer-specific confidence threshold
+  const confidenceMin = finding.detectedByLayer === 'L3' ? l3ConfidenceMin : l2ConfidenceMin
+
+  // Tooltip text for confidence badge
+  const confidenceTooltipText = (() => {
+    if (finding.aiConfidence === null) return null
+    if (confidenceMin === null || confidenceMin === undefined) return 'Threshold not configured'
+    const status = finding.aiConfidence >= confidenceMin ? 'Meets threshold' : 'Below threshold'
+    return `Threshold: ${confidenceMin}% | Status: ${status}`
+  })()
 
   return (
     <div
@@ -110,8 +127,10 @@ export function FindingListItem({ finding, isNew, l2ConfidenceMin }: FindingList
           </span>
         )}
 
-        {/* Confidence badge */}
-        <ConfidenceBadge confidence={finding.aiConfidence} l2ConfidenceMin={l2ConfidenceMin} />
+        {/* Confidence badge with threshold tooltip */}
+        <span title={confidenceTooltipText ?? undefined}>
+          <ConfidenceBadge confidence={finding.aiConfidence} confidenceMin={confidenceMin} />
+        </span>
 
         {/* Fallback badge (AC3) */}
         {isFallback && (

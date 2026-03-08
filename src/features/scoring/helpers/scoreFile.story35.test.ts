@@ -1,0 +1,313 @@
+/**
+ * ATDD Tests — Story 3.5: Score Lifecycle & Confidence Display
+ * AC: scoreFile passes findings summary (severityCounts + riskiestFinding) to checkAutoPass
+ */
+import { faker } from '@faker-js/faker'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+// ── Hoisted mocks ──
+const {
+  mockCalculateMqmScore,
+  mockCheckAutoPass,
+  mockLoadPenaltyWeights,
+  mockWriteAuditLog,
+  dbState,
+  dbMockModule,
+} = vi.hoisted(() => {
+  const { dbState, dbMockModule } = createDrizzleMock()
+  return {
+    mockCalculateMqmScore: vi.fn((..._args: unknown[]) => ({
+      mqmScore: 96,
+      npt: 4,
+      criticalCount: 0,
+      majorCount: 2,
+      minorCount: 1,
+      totalWords: 1000,
+      status: 'calculated' as const,
+    })),
+    mockCheckAutoPass: vi.fn((..._args: unknown[]) =>
+      Promise.resolve({
+        eligible: true,
+        rationale: 'Score 96 >= configured threshold 95 with no critical findings',
+        isNewPair: false,
+        fileCount: 60,
+        rationaleData: null,
+      }),
+    ),
+    mockLoadPenaltyWeights: vi.fn((..._args: unknown[]) =>
+      Promise.resolve({ critical: 25, major: 5, minor: 1 }),
+    ),
+    mockWriteAuditLog: vi.fn((..._args: unknown[]) => Promise.resolve()),
+    dbState,
+    dbMockModule,
+  }
+})
+
+vi.mock('@/features/scoring/mqmCalculator', () => ({
+  calculateMqmScore: (...args: unknown[]) => mockCalculateMqmScore(...args),
+}))
+
+vi.mock('@/features/scoring/autoPassChecker', () => ({
+  checkAutoPass: (...args: unknown[]) => mockCheckAutoPass(...args),
+}))
+
+vi.mock('@/features/scoring/penaltyWeightLoader', () => ({
+  loadPenaltyWeights: (...args: unknown[]) => mockLoadPenaltyWeights(...args),
+}))
+
+vi.mock('@/features/audit/actions/writeAuditLog', () => ({
+  writeAuditLog: (...args: unknown[]) => mockWriteAuditLog(...args),
+}))
+
+vi.mock('@/lib/logger', () => ({
+  logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}))
+
+vi.mock('@/db/client', () => dbMockModule)
+
+vi.mock('@/db/helpers/withTenant', () => ({
+  withTenant: vi.fn((..._args: unknown[]) => 'tenant-filter'),
+}))
+
+vi.mock('drizzle-orm', () => ({
+  and: vi.fn((...args: unknown[]) => args),
+  eq: vi.fn((...args: unknown[]) => args),
+  sql: vi.fn(() => 'sql-expr'),
+}))
+
+vi.mock('@/db/schema/segments', () => ({
+  segments: {
+    fileId: 'file_id',
+    projectId: 'project_id',
+    tenantId: 'tenant_id',
+    wordCount: 'word_count',
+    sourceLang: 'source_lang',
+    targetLang: 'target_lang',
+  },
+}))
+
+vi.mock('@/db/schema/findings', () => ({
+  findings: {
+    fileId: 'file_id',
+    projectId: 'project_id',
+    tenantId: 'tenant_id',
+    detectedByLayer: 'detected_by_layer',
+    severity: 'severity',
+    status: 'status',
+    segmentCount: 'segment_count',
+    aiConfidence: 'ai_confidence',
+    aiModel: 'ai_model',
+    description: 'description',
+    category: 'category',
+    id: 'id',
+  },
+}))
+
+vi.mock('@/db/schema/scores', () => ({
+  scores: {
+    id: 'id',
+    fileId: 'file_id',
+    projectId: 'project_id',
+    tenantId: 'tenant_id',
+    mqmScore: 'mqm_score',
+    status: 'status',
+    layerCompleted: 'layer_completed',
+    totalWords: 'total_words',
+    criticalCount: 'critical_count',
+    majorCount: 'major_count',
+    minorCount: 'minor_count',
+    npt: 'npt',
+    autoPassRationale: 'auto_pass_rationale',
+    calculatedAt: 'calculated_at',
+    createdAt: 'created_at',
+  },
+}))
+
+vi.mock('@/db/schema/userRoles', () => ({
+  userRoles: { tenantId: 'tenant_id', role: 'role', userId: 'user_id' },
+}))
+
+vi.mock('@/db/schema/notifications', () => ({
+  notifications: {
+    tenantId: 'tenant_id',
+    type: 'type',
+    metadata: 'metadata',
+    id: 'id',
+  },
+}))
+
+vi.mock('inngest', () => ({
+  NonRetriableError: class NonRetriableError extends Error {
+    constructor(message: string) {
+      super(message)
+      this.name = 'NonRetriableError'
+    }
+  },
+}))
+
+// ── Constants ──
+
+const VALID_FILE_ID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
+const VALID_PROJECT_ID = 'b1c2d3e4-f5a6-4b2c-9d3e-4f5a6b7c8d9e'
+const VALID_TENANT_ID = 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f'
+const VALID_USER_ID = 'd1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5a'
+
+const mockSegmentRows = [
+  { wordCount: 500, sourceLang: 'en-US', targetLang: 'th-TH' },
+  { wordCount: 500, sourceLang: 'en-US', targetLang: 'th-TH' },
+]
+
+function buildMockScore(overrides?: Partial<Record<string, unknown>>) {
+  return {
+    id: faker.string.uuid(),
+    fileId: VALID_FILE_ID,
+    projectId: VALID_PROJECT_ID,
+    tenantId: VALID_TENANT_ID,
+    mqmScore: 96,
+    npt: 4,
+    totalWords: 1000,
+    criticalCount: 0,
+    majorCount: 2,
+    minorCount: 1,
+    status: 'auto_passed',
+    autoPassRationale: JSON.stringify({ score: 96, threshold: 95, margin: 1 }),
+    layerCompleted: 'L1L2',
+    calculatedAt: new Date(),
+    createdAt: new Date(),
+    ...overrides,
+  }
+}
+
+// ── Tests ──
+
+describe('scoreFile — Story 3.5 findings summary passed to checkAutoPass', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    dbState.callIndex = 0
+    dbState.returnValues = []
+
+    // Reset to default eligible behavior
+    mockCheckAutoPass.mockResolvedValue({
+      eligible: true,
+      rationale: 'Score 96 >= configured threshold 95 with no critical findings',
+      isNewPair: false,
+      fileCount: 60,
+      rationaleData: null,
+    })
+
+    mockCalculateMqmScore.mockReturnValue({
+      mqmScore: 96,
+      npt: 4,
+      criticalCount: 0,
+      majorCount: 2,
+      minorCount: 1,
+      totalWords: 1000,
+      status: 'calculated' as const,
+    })
+  })
+
+  // 3.5-U-035: scoreFile passes findings summary to checkAutoPass
+  it('[P0] should pass findings summary with severityCounts and riskiestFinding to checkAutoPass', async () => {
+    // Arrange: segments + findings rows (including AI findings with confidence)
+    const findingRows = [
+      {
+        id: 'f1b2c3d4-0000-4a1b-8c2d-3e4f5a6b7c8d',
+        severity: 'major',
+        status: 'pending',
+        segmentCount: 1,
+        aiConfidence: 85,
+        category: 'accuracy',
+        description: 'Translation accuracy issue',
+        detectedByLayer: 'L2',
+      },
+      {
+        id: 'f2b2c3d4-0000-4a1b-8c2d-3e4f5a6b7c8d',
+        severity: 'minor',
+        status: 'pending',
+        segmentCount: 1,
+        aiConfidence: 92,
+        category: 'fluency',
+        description: 'Minor style issue',
+        detectedByLayer: 'L2',
+      },
+    ]
+
+    // DB call order: segments (0), findings (1), penaltyWeights via mock,
+    // transaction: prev score (2), delete (3), insert (4)
+    dbState.returnValues = [
+      mockSegmentRows, // 0: SELECT segments
+      findingRows, // 1: SELECT findings
+      [null], // 2: tx prev score
+      [], // 3: tx DELETE
+      [buildMockScore()], // 4: tx INSERT .returning()
+    ]
+
+    // Act
+    const { scoreFile } = await import('@/features/scoring/helpers/scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    // Assert: checkAutoPass was called with findingsSummary containing severity counts
+    expect(mockCheckAutoPass).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mqmScore: expect.any(Number),
+        criticalCount: expect.any(Number),
+        projectId: VALID_PROJECT_ID,
+        tenantId: VALID_TENANT_ID,
+        // Story 3.5: new findingsSummary param
+        findingsSummary: expect.objectContaining({
+          severityCounts: expect.objectContaining({
+            critical: expect.any(Number),
+            major: expect.any(Number),
+            minor: expect.any(Number),
+          }),
+        }),
+      }),
+    )
+  })
+
+  // 3.5-U-036: scoreFile with 0 findings -> riskiestFinding: null
+  it('[P0] should pass riskiestFinding=null to checkAutoPass when there are no findings', async () => {
+    // Arrange: file with no findings (perfect score scenario)
+    dbState.returnValues = [
+      mockSegmentRows, // 0: SELECT segments
+      [], // 1: SELECT findings — empty
+      [null], // 2: tx prev score
+      [], // 3: tx DELETE
+      [buildMockScore({ mqmScore: 100, majorCount: 0, minorCount: 0, criticalCount: 0 })], // 4: tx INSERT
+    ]
+
+    mockCalculateMqmScore.mockReturnValue({
+      mqmScore: 100,
+      npt: 0,
+      criticalCount: 0,
+      majorCount: 0,
+      minorCount: 0,
+      totalWords: 1000,
+      status: 'calculated' as const,
+    })
+
+    // Act
+    const { scoreFile } = await import('@/features/scoring/helpers/scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    // Assert: riskiestFinding is null when no findings exist
+    expect(mockCheckAutoPass).toHaveBeenCalledWith(
+      expect.objectContaining({
+        findingsSummary: expect.objectContaining({
+          riskiestFinding: null,
+          severityCounts: { critical: 0, major: 0, minor: 0 },
+        }),
+      }),
+    )
+  })
+})

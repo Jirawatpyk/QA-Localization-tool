@@ -141,4 +141,24 @@ describe('loadPenaltyWeights', () => {
     expect(result.major).toBe(88)
     expect(result.minor).toBe(77)
   })
+
+  // -- TA: Coverage Gap Tests (Story 2.5) --
+
+  // T14 [P2] PW-4: Row order independence — system rows appear before tenant rows in DB result
+  it('[P2] should produce same result regardless of DB row order (system before tenant)', async () => {
+    // System defaults appear BEFORE tenant-specific in results
+    // Map.set overwrites — tenant row must still win
+    dbState.returnValues = [
+      [
+        mkRow(null, 'critical', 25), // system first
+        mkRow(null, 'major', 5),
+        mkRow(null, 'minor', 1),
+        mkRow(TENANT_ID, 'critical', 40), // tenant after
+      ],
+    ]
+    const result = await loadPenaltyWeights(TENANT_ID)
+    expect(result.critical).toBe(40) // tenant wins despite appearing last
+    expect(result.major).toBe(5) // system default
+    expect(result.minor).toBe(1) // system default
+  })
 })

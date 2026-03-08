@@ -25,6 +25,7 @@
 - `story-3-2c-findings.md` — Story 3.2c L2 Results Display & Score Update CR R1-R3 (R3: 0C/1H/3M/5L)
 - `story-3-3-findings.md` — Story 3.3 AI Layer 3 Deep Contextual Analysis CR R1 (0C/3H/5M/5L)
 - `story-3-4-findings.md` — Story 3.4 AI Resilience Fallback & Retry CR R1-R2 (R2: 0C/1H/3M/5L)
+- `story-3-5-findings.md` — Story 3.5 Score Lifecycle & Confidence Display CR R1 (0C/3H/7M/5L)
 
 ## Recurring Anti-Patterns (check EVERY review)
 
@@ -199,7 +200,16 @@
 - Fix: prefix with domain: `AI_PIPELINE_LAYERS` or `MODEL_PINNABLE_LAYERS`
 - **Check during review:** Constants named `ALL_*` or plural noun should be truly exhaustive
 
-### 38. Missing onDragCancel in @dnd-kit DndContext (Story 3.2b7)
+### 38. Realtime Channel Without Row-Level Filter (Story 3.5)
+
+- use-threshold-subscription subscribes to ALL updates on `language_pair_configs` table
+- No `filter:` in Supabase `.on()` config AND no row-level check in handler
+- Receives updates for ALL language pairs, ALL tenants -- wastes bandwidth, risks wrong threshold
+- Compare: use-score-subscription correctly uses `filter: \`file_id=eq.${fileId}\``
+- Fix: add filter to `.on()` config, AND/OR filter in handler callback
+- **Check during review:** Every Supabase Realtime `.on()` should have row-level `filter` unless intentionally table-wide
+
+### 39. Missing onDragCancel in @dnd-kit DndContext (Story 3.2b7)
 
 > NOTE: Anti-patterns 38+ near end of file may be truncated from system prompt (200-line limit).
 > See `pipeline-deep-review-findings.md` for 3C/8H/8M findings from 2026-03-03 deep review.

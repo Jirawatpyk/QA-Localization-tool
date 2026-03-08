@@ -219,4 +219,82 @@ describe('checkAutoPass', () => {
     expect(result.fileCount).toBe(0)
     expect(result.eligible).toBe(false)
   })
+
+  // -- TA: Coverage Gap Tests (Story 2.5) --
+
+  // T1 [P1] L10: Decision tree missing leaf — conservative threshold + criticalCount > 0
+  // No lang config, fileCount=60 (>= 50), no project → CONSERVATIVE_AUTO_PASS_THRESHOLD (99)
+  // mqmScore=99 >= 99 is true, BUT criticalCount=1 === 0 is false → NOT eligible
+  it('should return not eligible when conservative threshold applies but criticalCount is 1', async () => {
+    // Slot 0: langConfig → [], Slot 1: fileCount → [{count:60}], Slot 2: project → []
+    dbState.returnValues = [[], [{ count: 60 }], []]
+    const result = await checkAutoPass({
+      ...BASE_INPUT,
+      mqmScore: CONSERVATIVE_AUTO_PASS_THRESHOLD,
+      criticalCount: 1,
+    })
+    expect(result.eligible).toBe(false)
+    expect(result.rationale).toContain('Critical findings')
+    expect(result.rationale).toContain('1')
+  })
+
+  // T2 [P1] FM-26: Threshold = 0 boundary — any score auto-passes when threshold is 0
+  // Lang config exists with threshold = 0
+  // mqmScore = 0, criticalCount = 0 → 0 >= 0 is true → eligible
+  it('should return eligible when configured threshold is 0 and score is 0', async () => {
+    // Slot 0: langConfig → [{autoPassThreshold:0}], Slot 1: fileCount → [{count:60}]
+    dbState.returnValues = [[{ autoPassThreshold: 0 }], [{ count: 60 }]]
+    const result = await checkAutoPass({ ...BASE_INPUT, mqmScore: 0, criticalCount: 0 })
+    expect(result.eligible).toBe(true)
+    expect(result.rationale).toContain('0')
+  })
+
+  // T3 [P1] FM-27: Threshold = 100 boundary — only perfect score passes
+  // Lang config with threshold = 100, mqmScore = 99, criticalCount = 0
+  // 99 >= 100 is false → NOT eligible
+  it('should return not eligible when configured threshold is 100 and score is 99', async () => {
+    // Slot 0: langConfig → [{autoPassThreshold:100}], Slot 1: fileCount → [{count:60}]
+    dbState.returnValues = [[{ autoPassThreshold: 100 }], [{ count: 60 }]]
+    const result = await checkAutoPass({ ...BASE_INPUT, mqmScore: 99, criticalCount: 0 })
+    expect(result.eligible).toBe(false)
+    expect(result.rationale).toContain('below')
+    expect(result.rationale).toContain('100')
+  })
+
+  // T4 [P1] A2.5: Negative criticalCount — characterization test for strict equality guard
+  // Lang config threshold = 90, mqmScore = 95, criticalCount = -1
+  // criticalCount === 0 is false (-1 !== 0) → NOT eligible
+  // Documents that only exactly 0 passes the critical check — negatives are rejected the same as positives
+  it('should return not eligible when criticalCount is -1 (strict equality guard rejects non-zero)', async () => {
+    // Slot 0: langConfig → [{autoPassThreshold:90}], Slot 1: fileCount → [{count:60}]
+    dbState.returnValues = [[{ autoPassThreshold: 90 }], [{ count: 60 }]]
+    const result = await checkAutoPass({ ...BASE_INPUT, mqmScore: 95, criticalCount: -1 })
+    // criticalCount === 0 → false; score branch check: criticalCount > 0 → also false
+    // rationale falls to the score-below branch: "Score 95 below configured threshold 90"? No:
+    // eligible = mqmScore >= threshold && criticalCount === 0 = true && false = false
+    // criticalCount > 0 is false, so rationale = "Score 95 below configured threshold 90"
+    expect(result.eligible).toBe(false)
+  })
+
+  // T12 [P2] A2.4: Fractional score near threshold — off-by-epsilon is NOT eligible
+  // Lang config threshold = 100, mqmScore = 99.999, criticalCount = 0
+  // 99.999 >= 100 is false → NOT eligible
+  it('should return not eligible when score is 99.999 and threshold is 100', async () => {
+    // Slot 0: langConfig → [{autoPassThreshold:100}], Slot 1: fileCount → [{count:60}]
+    dbState.returnValues = [[{ autoPassThreshold: 100 }], [{ count: 60 }]]
+    const result = await checkAutoPass({ ...BASE_INPUT, mqmScore: 99.999, criticalCount: 0 })
+    expect(result.eligible).toBe(false)
+    expect(result.rationale).toContain('below')
+  })
+
+  // T13 [P2] A4.5: Null autoPassThreshold → falls back to CONSERVATIVE_AUTO_PASS_THRESHOLD (99)
+  // DB has NOT NULL constraint, but defense-in-depth ?? guard prevents JS null→0 coercion hazard
+  it('should fall back to conservative threshold when language pair config has null autoPassThreshold', async () => {
+    // Slot 0: langConfig → [{autoPassThreshold:null}], Slot 1: fileCount → [{count:60}]
+    dbState.returnValues = [[{ autoPassThreshold: null }], [{ count: 60 }]]
+    const result = await checkAutoPass({ ...BASE_INPUT, mqmScore: 96, criticalCount: 0 })
+    // null threshold → ?? guard → CONSERVATIVE_AUTO_PASS_THRESHOLD (99) → 96 < 99 → not eligible
+    expect(result.eligible).toBe(false)
+    expect(result.isNewPair).toBe(false)
+  })
 })

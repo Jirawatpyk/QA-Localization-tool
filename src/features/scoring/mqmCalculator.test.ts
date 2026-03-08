@@ -282,4 +282,118 @@ describe('calculateMqmScore', () => {
     expect(result.mqmScore).toBe(100)
     expect(result.status).toBe('calculated')
   })
+
+  // -- TA: Coverage Gap Tests (Story 2.5) --
+
+  // T5 [P1] INV-1: Score bounded — negative totalWords causes score > 100
+  // totalWords=-100 bypasses the `=== 0` guard; NPT = (1/-100)*1000 = -10
+  // score = max(0, 100 - (-10)) = 110 — documents absence of upper clamp
+  it('should return score greater than 100 when totalWords is negative (no upper clamp)', () => {
+    const result = calculateMqmScore([mkFinding('minor', 'pending')], -100)
+    expect(result.npt).toBe(-10)
+    expect(result.mqmScore).toBe(110)
+    expect(result.status).toBe('calculated')
+  })
+
+  // T6 [P1] FM-8: Unknown severity string silently excluded
+  // The switch has no default case — an unrecognised severity is simply skipped
+  it('should exclude a finding with unknown severity from counts and penalty', () => {
+    const unknownSeverityFinding = {
+      severity: 'info' as 'critical', // cast to satisfy ContributingFinding type
+      status: 'pending' as const,
+      segmentCount: 1,
+    }
+    const result = calculateMqmScore([unknownSeverityFinding], 1000)
+    expect(result.criticalCount).toBe(0)
+    expect(result.majorCount).toBe(0)
+    expect(result.minorCount).toBe(0)
+    expect(result.mqmScore).toBe(100)
+    expect(result.npt).toBe(0)
+  })
+
+  // T7 [P1] FM-9: Negative totalWords with zero findings produces finite numbers
+  // No findings → sumPenalties=0 → rawNpt=0/-1=−0 → no NaN or Infinity
+  it('should return finite npt and score when totalWords is negative and no findings exist', () => {
+    const result = calculateMqmScore([], -1)
+    expect(Number.isFinite(result.npt)).toBe(true)
+    expect(Number.isFinite(result.mqmScore)).toBe(true)
+    expect(Number.isNaN(result.npt)).toBe(false)
+    expect(Number.isNaN(result.mqmScore)).toBe(false)
+    expect(result.status).toBe('calculated')
+  })
+
+  // T8 [P2] INV-6: Monotonicity — adding a finding never increases score
+  // base = [1 major] in 1000 words → score=95
+  // extended = [1 major, 1 minor] in 1000 words → score=94
+  it('should produce a lower or equal score when an additional finding is added', () => {
+    const baseResult = calculateMqmScore([mkFinding('major', 'pending')], 1000)
+    const extendedResult = calculateMqmScore(
+      [mkFinding('major', 'pending'), mkFinding('minor', 'pending')],
+      1000,
+    )
+    expect(extendedResult.mqmScore).toBeLessThanOrEqual(baseResult.mqmScore)
+  })
+
+  // T9 [P2] INV-3: Complementary property — mqmScore + npt === 100 when npt <= 100
+  // [1 critical, 1 major, 1 minor] in 1000 words: sumPenalties=31, npt=31 (≤100), score=69
+  it('should satisfy mqmScore + npt === 100 when NPT does not exceed 100', () => {
+    const findings = [
+      mkFinding('critical', 'pending'),
+      mkFinding('major', 'pending'),
+      mkFinding('minor', 'pending'),
+    ]
+    const result = calculateMqmScore(findings, 1000)
+    // npt=31 which is ≤100, so max(0,...) has no effect
+    expect(result.npt).toBeLessThanOrEqual(100)
+    expect(result.mqmScore + result.npt).toBe(100)
+  })
+
+  // T10 [P2] A1.2: Fractional totalWords
+  // 1 minor in 0.5 words: rawNpt=(1/0.5)*1000=2000 → clamped to score=0
+  // Verifies the function handles non-integer totalWords without throwing
+  it('should return finite mqmScore and npt when totalWords is a fraction', () => {
+    const result = calculateMqmScore([mkFinding('minor', 'pending')], 0.5)
+    expect(Number.isFinite(result.mqmScore)).toBe(true)
+    expect(Number.isFinite(result.npt)).toBe(true)
+    expect(result.mqmScore).toBeGreaterThanOrEqual(0)
+    expect(result.status).toBe('calculated')
+  })
+
+  // T11 [P2] SET-2: Unknown status string excluded from contributing
+  // 'deferred' is not in CONTRIBUTING_STATUSES → finding is filtered out
+  it('should exclude a finding with unknown status from penalty calculation', () => {
+    const unknownStatusFinding = {
+      severity: 'major' as const,
+      status: 'deferred' as 'pending', // cast to satisfy ContributingFinding type
+      segmentCount: 1,
+    }
+    const result = calculateMqmScore([unknownStatusFinding], 1000)
+    expect(result.majorCount).toBe(0)
+    expect(result.mqmScore).toBe(100)
+  })
+
+  // T18 [P3] FM-10: Negative penalty weights cause score > 100 (no upper clamp)
+  // weight.critical=-10 → sumPenalties=-10 → npt=-10 → score=max(0, 110)=110
+  it('should return score greater than 100 when penalty weight is negative (no upper clamp)', () => {
+    const negativeWeights = { critical: -10, major: 5, minor: 1 }
+    const result = calculateMqmScore([mkFinding('critical', 'pending')], 1000, negativeWeights)
+    expect(result.npt).toBe(-10)
+    expect(result.mqmScore).toBeGreaterThan(100)
+  })
+
+  // T19 [P3] INV-4: Contributing counts sum <= total input findings length
+  // Input: 4 findings — only 2 have contributing status (pending + accepted)
+  // rejected and flagged are excluded → countSum=2 ≤ 4
+  it('should have total contributing count less than or equal to total input findings', () => {
+    const findings = [
+      mkFinding('critical', 'pending'), // contributes
+      mkFinding('major', 'rejected'), // excluded
+      mkFinding('minor', 'accepted'), // contributes
+      mkFinding('critical', 'flagged'), // excluded
+    ]
+    const result = calculateMqmScore(findings, 1000)
+    const countSum = result.criticalCount + result.majorCount + result.minorCount
+    expect(countSum).toBe(2)
+    expect(countSum).toBeLessThanOrEqual(findings.length)
+  })
 })

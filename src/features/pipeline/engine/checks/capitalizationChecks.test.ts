@@ -179,3 +179,21 @@ describe('checkCamelCaseWords', () => {
     expect(checkCamelCaseWords(segment, ctx)).toEqual([])
   })
 })
+
+describe('TA: Coverage Gap Tests — capitalizationChecks', () => {
+  const ctx = { sourceLang: 'en-US', targetLang: 'th-TH' } as const
+
+  // G25 (P3): XMLParser — acronym-CamelCase hybrid
+  it('should extract XML from XMLParser via uppercase check but not match camelcase', () => {
+    const segment = buildSegment({
+      sourceText: 'Use XMLParser for data',
+      targetText: 'ใช้ XMLParser สำหรับข้อมูล',
+    })
+    const upperResults = checkUppercaseWords(segment, ctx)
+    const camelResults = checkCamelCaseWords(segment, ctx)
+    // UPPERCASE regex matches "XML" (found in target via "XMLParser")
+    expect(upperResults).toEqual([])
+    // CamelCase regex requires uppercase-lowercase pattern — "XMLParser" starts with 3 uppercase → no match
+    expect(camelResults).toEqual([])
+  })
+})

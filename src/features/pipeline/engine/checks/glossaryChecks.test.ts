@@ -181,3 +181,77 @@ describe('checkGlossaryComplianceRule', () => {
     expect(checkFn).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('TA: Coverage Gap Tests — glossaryChecks', () => {
+  const ctx = { sourceLang: 'en-US', targetLang: 'th-TH' } as const
+
+  // G16 (P2): Empty sourceTerm — pre-filter passes everything
+  it('should pass all segments through pre-filter when sourceTerm is empty string', async () => {
+    const checkFn = vi
+      .fn()
+      .mockResolvedValue({ matches: [], missingTerms: [], lowConfidenceMatches: [] })
+    const term = {
+      id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
+      glossaryId: 'b2c3d4e5-f6a1-4b2c-9d3e-4f5a6b7c8d9e',
+      sourceTerm: '',
+      targetTerm: 'anything',
+      caseSensitive: false,
+      createdAt: new Date(),
+    }
+    const segment = buildSegment({ sourceText: 'Hello world', targetText: 'สวัสดีโลก' })
+    await checkGlossaryComplianceRule(segment, [term], ctx, checkFn as unknown as GlossaryCheckFn)
+    // Empty sourceTerm: "hello world".includes("") = true → term passes pre-filter
+    expect(checkFn).toHaveBeenCalledTimes(1)
+    // The filtered array passed to checkFn should include the empty-sourceTerm term
+    expect(checkFn.mock.calls[0]![1]).toHaveLength(1)
+  })
+
+  // G23 (P2): Performance with large glossary
+  it('should complete pre-filter within 2s for 500 terms x 100 segments', async () => {
+    const checkFn = vi
+      .fn()
+      .mockResolvedValue({ matches: [], missingTerms: [], lowConfidenceMatches: [] })
+    const terms = Array.from({ length: 500 }, (_, i) => ({
+      id: `a1b2c3d4-e5f6-4a1b-8c2d-${String(i).padStart(12, '0')}`,
+      glossaryId: 'b2c3d4e5-f6a1-4b2c-9d3e-4f5a6b7c8d9e',
+      sourceTerm: `term_${i}`,
+      targetTerm: `คำ_${i}`,
+      caseSensitive: false,
+      createdAt: new Date(),
+    }))
+    const segments = Array.from({ length: 100 }, (_, i) =>
+      buildSegment({
+        sourceText: `Segment ${i} contains term_${i % 500} in the text`,
+        targetText: `เซ็กเมนต์ ${i} มี คำ_${i % 500}`,
+      }),
+    )
+
+    const start = performance.now()
+    for (const seg of segments) {
+      await checkGlossaryComplianceRule(seg, terms, ctx, checkFn as unknown as GlossaryCheckFn)
+    }
+    const duration = performance.now() - start
+    expect(duration).toBeLessThan(2000)
+  })
+
+  // G29 (P3→fixed): NFKC compat chars — fi ligature U+FB01 in source should match glossary term "find"
+  it('should match glossary term through NFKC normalization (fi ligature)', async () => {
+    const checkFn = vi
+      .fn()
+      .mockResolvedValue({ matches: [], missingTerms: [], lowConfidenceMatches: [] })
+    const term = {
+      id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
+      glossaryId: 'b2c3d4e5-f6a1-4b2c-9d3e-4f5a6b7c8d9e',
+      sourceTerm: 'find',
+      targetTerm: 'ค้นหา',
+      caseSensitive: false,
+      createdAt: new Date(),
+    }
+    // Source text uses fi ligature U+FB01: "ﬁnd" → NFKC normalizes to "find"
+    const segment = buildSegment({ sourceText: '\uFB01nd the file', targetText: 'ค้นหาไฟล์' })
+    await checkGlossaryComplianceRule(segment, [term], ctx, checkFn as unknown as GlossaryCheckFn)
+    // After NFKC: "ﬁnd" → "find" → includes("find") = true → term passes pre-filter
+    expect(checkFn).toHaveBeenCalledTimes(1)
+    expect(checkFn.mock.calls[0]![1]).toHaveLength(1)
+  })
+})

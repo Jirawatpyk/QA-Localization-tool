@@ -359,3 +359,64 @@ describe('checkEndPunctuation', () => {
     expect(checkEndPunctuation(segment, ctx)).toBeNull()
   })
 })
+
+describe('TA: Coverage Gap Tests — formattingChecks', () => {
+  const ctx = { sourceLang: 'en-US', targetLang: 'th-TH' } as const
+
+  // G10 (P1): Ellipsis U+2026 vs three dots — different last char
+  it('should flag ellipsis U+2026 vs period as end punctuation mismatch', () => {
+    const segment = buildSegment({
+      sourceText: 'Loading...',
+      targetText: 'กำลังโหลด\u2026',
+    })
+    const result = checkEndPunctuation(segment, ctx)
+    // Source ends ".", target ends "…" (U+2026) → not in fullwidth map → mismatch
+    expect(result).not.toBeNull()
+    expect(result!.category).toBe('punctuation')
+  })
+
+  // G6 (P1): Thai maiyamok — different from period
+  it('should flag Thai maiyamok as end punctuation mismatch vs period', () => {
+    const segment = buildSegment({
+      sourceText: 'Repeat data.',
+      targetText: 'ข้อมูลๆ',
+    })
+    const result = checkEndPunctuation(segment, ctx)
+    // Source ends ".", target ends "ๆ" (U+0E46) → mismatch
+    expect(result).not.toBeNull()
+    expect(result!.description).toContain('.')
+  })
+
+  // G31 (P1): CJK period on Thai target — equiv should NOT apply but currently does
+  it('should treat CJK period on Thai target as equivalent to halfwidth period (current behavior)', () => {
+    const segment = buildSegment({
+      sourceText: 'Click here.',
+      targetText: 'คลิกที่นี่\u3002',
+    })
+    const result = checkEndPunctuation(segment, ctx)
+    // Current behavior: isFullwidthEquivalent('.', '。') = true → null (no finding)
+    // Known limitation: CJK equiv applied globally, not just for CJK targets
+    expect(result).toBeNull()
+  })
+
+  // G15 (P2): URL with query params
+  it('should detect URL with query params missing in target', () => {
+    const segment = buildSegment({
+      sourceText: 'Visit https://example.com/path?a=1&b=2',
+      targetText: 'เยี่ยมชม https://example.com/path',
+    })
+    const result = checkUrlMismatches(segment, ctx)
+    expect(result).not.toBeNull()
+    expect(result!.category).toBe('url_integrity')
+  })
+
+  // G15 (P2): URL with fragment — preserved correctly
+  it('should not flag when URL with fragment is preserved in target', () => {
+    const segment = buildSegment({
+      sourceText: 'See https://docs.example.com/guide#section-1',
+      targetText: 'ดู https://docs.example.com/guide#section-1',
+    })
+    const result = checkUrlMismatches(segment, ctx)
+    expect(result).toBeNull()
+  })
+})

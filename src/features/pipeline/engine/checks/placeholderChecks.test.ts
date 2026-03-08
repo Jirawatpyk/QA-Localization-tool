@@ -278,3 +278,53 @@ describe('checkPlaceholderConsistency', () => {
     expect(result!.description).toContain('extra')
   })
 })
+
+describe('TA: Coverage Gap Tests — placeholderChecks', () => {
+  const ctx = { sourceLang: 'en-US', targetLang: 'th-TH' } as const
+
+  // G2 (P1): ${name} overlap — matched by both template-literal and named-var patterns
+  it('should not produce false finding when ${name} is in both source and target', () => {
+    const segment = buildSegment({
+      sourceText: 'Welcome ${userName}, you have ${count} items',
+      targetText: 'ยินดีต้อนรับ ${userName} คุณมี ${count} รายการ',
+    })
+    const result = checkPlaceholderConsistency(segment, ctx)
+    // Both sides have same overlap pattern → counts cancel → no finding
+    expect(result).toBeNull()
+  })
+
+  // G5 (P1): Nested {{name}} — inner {name} also extracted by named-var pattern
+  it('should not produce false finding when {{name}} is in both source and target', () => {
+    const segment = buildSegment({
+      sourceText: 'Hello {{userName}} and {{count}}',
+      targetText: 'สวัสดี {{userName}} และ {{count}}',
+    })
+    const result = checkPlaceholderConsistency(segment, ctx)
+    // Symmetric overlap in both sides → no finding
+    expect(result).toBeNull()
+  })
+
+  // G5 (P1): Nested {{name}} missing outer braces in target — should detect
+  it('should detect missing outer braces when target has {name} instead of {{name}}', () => {
+    const segment = buildSegment({
+      sourceText: 'Hello {{userName}}',
+      targetText: 'สวัสดี {userName}',
+    })
+    const result = checkPlaceholderConsistency(segment, ctx)
+    // Source: {{userName}}:1 + {userName}:1, Target: {userName}:1
+    // {{userName}} missing in target → finding
+    expect(result).not.toBeNull()
+    expect(result!.description).toContain('missing')
+  })
+
+  // G18 (P2): Placeholder inside URL path
+  it('should extract placeholder from URL path /{version}/endpoint', () => {
+    const segment = buildSegment({
+      sourceText: 'Go to https://api.com/{version}/docs',
+      targetText: 'ไปที่ https://api.com/{version}/docs',
+    })
+    const result = checkPlaceholderConsistency(segment, ctx)
+    // {version} in both → no finding
+    expect(result).toBeNull()
+  })
+})

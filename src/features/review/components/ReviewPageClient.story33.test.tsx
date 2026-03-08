@@ -2,7 +2,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
-import type { ScoreBadgeState, LayerCompleted } from '@/types/finding'
 import type { FileReviewData } from '@/features/review/actions/getFileReviewData.action'
 
 vi.mock('server-only', () => ({}))
@@ -13,6 +12,9 @@ vi.mock('@/features/review/hooks/use-findings-subscription', () => ({
 }))
 vi.mock('@/features/review/hooks/use-score-subscription', () => ({
   useScoreSubscription: vi.fn(),
+}))
+vi.mock('@/features/review/hooks/use-threshold-subscription', () => ({
+  useThresholdSubscription: vi.fn(),
 }))
 vi.mock('@/features/pipeline/actions/retryAiAnalysis.action', () => ({
   retryAiAnalysis: vi.fn((..._args: unknown[]) =>
@@ -33,12 +35,15 @@ vi.mock('@/features/review/stores/review.store', () => {
         layerCompleted: null,
         scoreStatus: null,
         updateScore: mockUpdateScore,
+        l2ConfidenceMin: null,
+        l3ConfidenceMin: null,
       }),
     ),
   }
 })
 
 import { ReviewPageClient } from '@/features/review/components/ReviewPageClient'
+import type { ScoreBadgeState, LayerCompleted } from '@/types/finding'
 
 // Helper to mock prefers-reduced-motion (required by ScoreBadge)
 function mockReducedMotion(matches: boolean) {
@@ -71,7 +76,11 @@ function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
       layerCompleted: 'L1L2L3' as LayerCompleted,
     },
     l2ConfidenceMin: 70,
+    l3ConfidenceMin: null,
     processingMode: 'thorough',
+    autoPassRationale: null,
+    sourceLang: 'en-US',
+    targetLang: 'th-TH',
     ...overrides,
   } as FileReviewData
 }

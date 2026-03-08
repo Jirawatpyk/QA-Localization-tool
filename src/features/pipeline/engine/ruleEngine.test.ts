@@ -394,4 +394,41 @@ describe('processFile', () => {
     expect(ids.has(segments[0]!.id)).toBe(true)
     expect(ids.has(segments[1]!.id)).toBe(false)
   })
+
+  // ── TA: Coverage Gap Tests ──
+
+  // G11 (P1): Untranslated segment with placeholders → multiple findings
+  it('should produce multiple findings for untranslated segment with placeholders and numbers', async () => {
+    const segments = [
+      buildSegment({
+        sourceText: 'Page {0}: Total is 1,500',
+        targetText: '',
+        confirmationState: 'Draft',
+      }),
+    ]
+    const results = await processFile(segments, emptyGlossary, noSuppression, noCustomRules)
+    // Untranslated → completeness finding
+    expect(results.some((r) => r.category === 'completeness')).toBe(true)
+    // Document: how many total findings fire on empty target?
+    // placeholder_integrity + number_format may also fire
+    expect(results.length).toBeGreaterThanOrEqual(1)
+  })
+
+  // G24 (P2): Document total finding count on completely empty target
+  it('should document finding count for empty target with mixed source content', async () => {
+    const segments = [
+      buildSegment({
+        sourceText: 'Visit https://example.com and use {code}.',
+        targetText: '',
+        confirmationState: 'Draft',
+      }),
+    ]
+    const results = await processFile(segments, emptyGlossary, noSuppression, noCustomRules)
+    const categories = new Set(results.map((r) => r.category))
+    // At minimum: completeness (untranslated)
+    expect(categories.has('completeness')).toBe(true)
+    // Also fires: placeholder_integrity ({code}), url_integrity, possibly spacing
+    // This documents the multi-finding behavior on empty targets
+    expect(results.length).toBeGreaterThanOrEqual(2)
+  })
 })

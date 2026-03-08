@@ -37,8 +37,10 @@ export async function checkGlossaryComplianceRule(
   checkFn: GlossaryCheckFn,
 ): Promise<RuleCheckResult[]> {
   // Pre-filter: only pass terms whose sourceTerm appears in source text (case-insensitive)
+  // NFKC normalization handles compat chars (e.g., ﬁ ligature U+FB01 → fi)
+  const normalizedSource = segment.sourceText.normalize('NFKC').toLowerCase()
   const filtered = glossaryTerms.filter((term) =>
-    segment.sourceText.toLowerCase().includes(term.sourceTerm.toLowerCase()),
+    normalizedSource.includes(term.sourceTerm.normalize('NFKC').toLowerCase()),
   )
 
   if (filtered.length === 0) return []

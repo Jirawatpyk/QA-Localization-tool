@@ -87,6 +87,26 @@ const createScoreSlice = (
   setRecalculating: () => set({ isRecalculating: true, scoreStatus: 'calculating' }),
 })
 
+// ── Threshold Slice ──
+
+type ThresholdSlice = {
+  l2ConfidenceMin: number | null
+  l3ConfidenceMin: number | null
+  updateThresholds: (thresholds: { l2ConfidenceMin: number; l3ConfidenceMin: number }) => void
+}
+
+const createThresholdSlice = (
+  set: (fn: Partial<ReviewState> | ((s: ReviewState) => Partial<ReviewState>)) => void,
+): ThresholdSlice => ({
+  l2ConfidenceMin: null,
+  l3ConfidenceMin: null,
+  updateThresholds: (thresholds) =>
+    set({
+      l2ConfidenceMin: thresholds.l2ConfidenceMin,
+      l3ConfidenceMin: thresholds.l3ConfidenceMin,
+    }),
+})
+
 // ── Selection Slice ──
 
 type SelectionSlice = {
@@ -129,6 +149,7 @@ const createSelectionSlice = (
 
 type ReviewState = FindingsSlice &
   ScoreSlice &
+  ThresholdSlice &
   SelectionSlice & {
     currentFileId: string | null
     resetForFile: (fileId: string) => void
@@ -142,6 +163,7 @@ export const useReviewStore = create<ReviewState>()((set, _get) => {
   return {
     ...createFindingsSlice(setState),
     ...createScoreSlice(setState),
+    ...createThresholdSlice(setState),
     ...createSelectionSlice(setState),
     currentFileId: null,
     resetForFile: (fileId: string) =>
@@ -154,6 +176,8 @@ export const useReviewStore = create<ReviewState>()((set, _get) => {
         scoreStatus: 'na',
         layerCompleted: null,
         isRecalculating: false,
+        l2ConfidenceMin: null,
+        l3ConfidenceMin: null,
         selectedIds: new Set(),
         selectionMode: 'single',
       }),

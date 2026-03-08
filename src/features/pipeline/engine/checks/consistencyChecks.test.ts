@@ -353,3 +353,27 @@ describe('checkKeyTermConsistency', () => {
     expect(checkKeyTermConsistency(buildCtx(segments, [term]))).toEqual([])
   })
 })
+
+describe('TA: Coverage Gap Tests — consistencyChecks', () => {
+  // G22 (P2): Performance with high-duplicate segments
+  it('should complete within 2s for 5000 segments with 80% duplicate sources', () => {
+    // 1000 unique sources, 4000 duplicates of the first 1000
+    const segments = Array.from({ length: 5000 }, (_, i) => {
+      const sourceIdx = i < 1000 ? i : i % 1000
+      return buildSegment({
+        sourceText: `Menu item ${sourceIdx}`,
+        targetText: `เมนู ${sourceIdx} ${i < 1000 ? 'แบบ A' : 'แบบ B'}`,
+        targetLang: 'th-TH',
+      })
+    })
+    const ctx = { segments, glossaryTerms: [], targetLang: 'th-TH' }
+
+    const start = performance.now()
+    const results = checkSameSourceDiffTarget(ctx)
+    const duration = performance.now() - start
+
+    expect(duration).toBeLessThan(2000)
+    // Should find inconsistencies (same source → different target for first 1000)
+    expect(results.length).toBeGreaterThan(0)
+  })
+})

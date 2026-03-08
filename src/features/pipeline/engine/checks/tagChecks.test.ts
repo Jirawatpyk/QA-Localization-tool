@@ -288,3 +288,64 @@ describe('checkTagIntegrity', () => {
     expect(results[0]!.targetExcerpt.length).toBe(200)
   })
 })
+
+// ── TA: Coverage Gap Tests — tagChecks ──
+
+describe('TA: Coverage Gap Tests — tagChecks', () => {
+  // G7 (P1): inlineTags = {} (empty object, no source/target keys) — should not crash
+  // DEFENSIVE: code uses `tagsData.source ?? []` → gracefully handles missing keys
+  it('should return no findings when inlineTags is empty object {} (G7)', () => {
+    const segment = buildSegment({
+      inlineTags: {} as ReturnType<typeof buildSegment>['inlineTags'],
+    })
+    const results = checkTagIntegrity(segment, ctx)
+    // {} → source ?? [] = [], target ?? [] = [] → both empty → no findings
+    expect(results).toEqual([])
+  })
+
+  // G17 (P2): Malformed inlineTags — source is not an array
+  // DEFENSIVE: documents that non-array shapes would cause runtime errors in buildTagMap
+  // Note: Schema validation should prevent this — test documents the boundary
+  it('should handle inlineTags with source as non-array gracefully or throw (G17)', () => {
+    const segment = buildSegment({
+      inlineTags: { source: 'not-an-array', target: [] } as unknown as ReturnType<
+        typeof buildSegment
+      >['inlineTags'],
+    })
+    // String has .length but iterating yields characters, not tag objects
+    // buildTagMap will access char.type → undefined, char.id → undefined
+    // Key becomes "undefined\0undefined" — no crash, but produces garbage results
+    expect(() => checkTagIntegrity(segment, ctx)).not.toThrow()
+  })
+
+  it('should handle inlineTags with numeric source gracefully (G17 variant)', () => {
+    const segment = buildSegment({
+      inlineTags: { source: 42, target: [] } as unknown as ReturnType<
+        typeof buildSegment
+      >['inlineTags'],
+    })
+    // Number has no Symbol.iterator → for...of in buildTagMap will throw
+    expect(() => checkTagIntegrity(segment, ctx)).toThrow()
+  })
+
+  // G26 (P3): Null byte collision in tag key — characterization
+  // Tag key uses \0 separator. If tag id contains \0, splitTagKey may split wrong.
+  // CHARACTERIZATION: documents current behavior with exotic input
+  it('should handle tag ids that do not contain null bytes (normal case, G26)', () => {
+    const segment = buildSegment({
+      inlineTags: {
+        source: [
+          { type: 'g', id: '1', position: 0 },
+          { type: 'ph', id: '1', position: 5 },
+        ],
+        target: [
+          { type: 'g', id: '1', position: 0 },
+          { type: 'ph', id: '1', position: 3 },
+        ],
+      },
+    })
+    // Different type+id combos → no collision → correct counts → no findings
+    const results = checkTagIntegrity(segment, ctx)
+    expect(results).toEqual([])
+  })
+})

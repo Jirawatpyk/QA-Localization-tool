@@ -55,6 +55,10 @@ export type FileReviewData = {
   }
   processingMode: ProcessingMode
   l2ConfidenceMin: number | null
+  l3ConfidenceMin: number | null
+  autoPassRationale: string | null
+  sourceLang: string
+  targetLang: string | null
 }
 
 const SEVERITY_PRIORITY: Record<string, number> = {
@@ -149,6 +153,7 @@ export async function getFileReviewData(
         criticalCount: scores.criticalCount,
         majorCount: scores.majorCount,
         minorCount: scores.minorCount,
+        autoPassRationale: scores.autoPassRationale,
       })
       .from(scores)
       .where(
@@ -159,14 +164,25 @@ export async function getFileReviewData(
         ),
       )
 
-    const score = scoreRows[0] ?? {
-      mqmScore: null,
-      status: 'na' as ScoreStatus,
-      layerCompleted: null,
-      criticalCount: 0,
-      majorCount: 0,
-      minorCount: 0,
-    }
+    const scoreRow = scoreRows[0]
+    const score = scoreRow
+      ? {
+          mqmScore: scoreRow.mqmScore,
+          status: scoreRow.status,
+          layerCompleted: scoreRow.layerCompleted,
+          criticalCount: scoreRow.criticalCount,
+          majorCount: scoreRow.majorCount,
+          minorCount: scoreRow.minorCount,
+        }
+      : {
+          mqmScore: null,
+          status: 'na' as ScoreStatus,
+          layerCompleted: null,
+          criticalCount: 0,
+          majorCount: 0,
+          minorCount: 0,
+        }
+    const autoPassRationale = scoreRow?.autoPassRationale ?? null
 
     // Q4: Get project processingMode + language pair l2ConfidenceMin
     // TODO(TD-REVIEW-001): JOIN matches sourceLang only — projects.targetLangs is a JSONB array,
@@ -175,7 +191,10 @@ export async function getFileReviewData(
     const configRows = await db
       .select({
         processingMode: projects.processingMode,
+        sourceLang: projects.sourceLang,
         l2ConfidenceMin: languagePairConfigs.l2ConfidenceMin,
+        l3ConfidenceMin: languagePairConfigs.l3ConfidenceMin,
+        targetLang: languagePairConfigs.targetLang,
       })
       .from(projects)
       .leftJoin(
@@ -189,7 +208,10 @@ export async function getFileReviewData(
 
     const config = configRows[0]
     const processingMode = (config?.processingMode ?? 'economy') as ProcessingMode
+    const sourceLang = config?.sourceLang ?? ''
+    const targetLang = config?.targetLang ?? null
     const l2ConfidenceMin = config?.l2ConfidenceMin ?? null
+    const l3ConfidenceMin = config?.l3ConfidenceMin ?? null
 
     // Sort findings: severity priority (critical→major→minor), then aiConfidence DESC NULLS LAST
     const sortedFindings = sortFindings(findingRows as FileReviewData['findings'])
@@ -202,6 +224,10 @@ export async function getFileReviewData(
         score: score as FileReviewData['score'],
         processingMode,
         l2ConfidenceMin,
+        l3ConfidenceMin,
+        autoPassRationale,
+        sourceLang,
+        targetLang,
       },
     }
   } catch (err) {

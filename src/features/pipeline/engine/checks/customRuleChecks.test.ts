@@ -135,3 +135,43 @@ describe('checkCustomRules', () => {
     expect(results).toEqual([]) // invalid regex → skipped
   })
 })
+
+// ── TA: Coverage Gap Tests — customRuleChecks ──
+
+describe('TA: Coverage Gap Tests — customRuleChecks', () => {
+  // G3 (P1): Empty regex pattern "" — now skipped to prevent false positives
+  // Fix: empty pattern guard added before RegExp construction
+  it('should skip empty pattern and return no findings (G3 — fixed)', () => {
+    const segment = buildSegment({ targetText: 'any text at all' })
+    const rules = [makeCustomRule('', 'Empty pattern should be skipped')]
+    const results = checkCustomRules(segment, rules, ctx)
+    expect(results).toEqual([])
+  })
+
+  it('should skip empty pattern even with empty target (G3 variant)', () => {
+    const segment = buildSegment({ targetText: '' })
+    const rules = [makeCustomRule('', 'Catches everything')]
+    const results = checkCustomRules(segment, rules, ctx)
+    expect(results).toEqual([])
+  })
+
+  // G33 (P2): ReDoS catastrophic backtracking pattern "(a+)+b" — under 500 chars
+  // DEFENSIVE: V8 has backtracking limits. Code wraps regex.test() in try-catch.
+  // Pattern compiles fine but may timeout on pathological input.
+  it('should not crash on ReDoS pattern (a+)+b with safe input (G33)', () => {
+    const segment = buildSegment({ targetText: 'aaab' })
+    const rules = [makeCustomRule('(a+)+b', 'ReDoS pattern')]
+    const results = checkCustomRules(segment, rules, ctx)
+    // Pattern matches "aaab" normally — only pathological with "aaa...a" (no 'b')
+    expect(results).toHaveLength(1)
+  })
+
+  it('should handle ReDoS pattern with non-matching input without hanging (G33)', () => {
+    // Short non-matching input — V8 handles quickly even with catastrophic pattern
+    const segment = buildSegment({ targetText: 'a'.repeat(20) + 'c' })
+    const rules = [makeCustomRule('(a+)+b', 'ReDoS pattern')]
+    const results = checkCustomRules(segment, rules, ctx)
+    // No match (no 'b') — should return empty, not hang
+    expect(results).toEqual([])
+  })
+})

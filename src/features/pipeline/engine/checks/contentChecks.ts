@@ -1,5 +1,8 @@
 import type { RuleCheckResult, SegmentCheckContext, SegmentRecord } from '../types'
 
+// Zero-width characters that trim() does not remove but should be treated as empty
+const ZERO_WIDTH_RE = /[\u200B\u200C\u200D\uFEFF]/g
+
 // Numbers-only regex: segments containing only digits, spaces, commas, periods
 const NUMBERS_ONLY_RE = /^[\d\s.,]+$/
 
@@ -14,9 +17,9 @@ export function checkUntranslated(
   segment: SegmentRecord,
   _ctx: SegmentCheckContext,
 ): RuleCheckResult | null {
-  if (segment.targetText.trim().length === 0) {
+  if (segment.targetText.replace(ZERO_WIDTH_RE, '').trim().length === 0) {
     // Skip if source is also empty — nothing to translate
-    if (segment.sourceText.trim().length === 0) return null
+    if (segment.sourceText.replace(ZERO_WIDTH_RE, '').trim().length === 0) return null
 
     return {
       segmentId: segment.id,

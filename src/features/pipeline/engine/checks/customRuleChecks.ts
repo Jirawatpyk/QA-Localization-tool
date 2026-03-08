@@ -24,6 +24,12 @@ export function checkCustomRules(
   const results: RuleCheckResult[] = []
 
   for (const rule of customRules) {
+    // Empty pattern matches everything — skip to avoid false positives on all segments
+    if (rule.pattern.length === 0) {
+      logger.warn({ ruleId: rule.id }, 'Custom rule has empty pattern — skipped')
+      continue
+    }
+
     // ReDoS prevention: reject oversized patterns.
     // NOTE: Length check alone doesn't prevent all catastrophic patterns (e.g., "(a+)+b" = 7 chars).
     // Mitigated by: (1) admin-only input, (2) V8 backtracking limits, (3) short segment text.

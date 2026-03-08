@@ -182,3 +182,58 @@ describe('checkTargetIdenticalToSource', () => {
     expect(result).not.toBeNull()
   })
 })
+
+// ── TA: Coverage Gap Tests — contentChecks ──
+
+describe('TA: Coverage Gap Tests — contentChecks', () => {
+  // G32 (P1): Zero-width space U+200B now correctly detected as untranslated
+  // Fix: strip zero-width chars (U+200B, U+200C, U+200D, U+FEFF) before trim
+  it('should flag zero-width space U+200B as untranslated', () => {
+    const segment = buildSegment({ sourceText: 'Hello', targetText: '\u200B' })
+    const result = checkUntranslated(segment, ctx)
+    expect(result).not.toBeNull()
+    expect(result!.severity).toBe('critical')
+    expect(result!.category).toBe('completeness')
+  })
+
+  it('should flag zero-width non-joiner U+200C as untranslated', () => {
+    const segment = buildSegment({ sourceText: 'Hello', targetText: '\u200C' })
+    const result = checkUntranslated(segment, ctx)
+    expect(result).not.toBeNull()
+    expect(result!.severity).toBe('critical')
+  })
+
+  it('should flag zero-width joiner U+200D as untranslated', () => {
+    const segment = buildSegment({ sourceText: 'Hello', targetText: '\u200D' })
+    const result = checkUntranslated(segment, ctx)
+    expect(result).not.toBeNull()
+  })
+
+  it('should flag BOM U+FEFF as untranslated', () => {
+    const segment = buildSegment({ sourceText: 'Hello', targetText: '\uFEFF' })
+    const result = checkUntranslated(segment, ctx)
+    expect(result).not.toBeNull()
+  })
+
+  it('should NOT flag zero-width char mixed with real text', () => {
+    const segment = buildSegment({ sourceText: 'Hello', targetText: '\u200Bสวัสดี' })
+    const result = checkUntranslated(segment, ctx)
+    expect(result).toBeNull()
+  })
+
+  // G12 (P2): NBSP U+00A0 is treated as empty by trim() — correctly flagged
+  // DEFENSIVE: confirms correct behavior — NBSP is whitespace per ES spec
+  it('should flag NBSP-only target as untranslated (trim removes U+00A0)', () => {
+    const segment = buildSegment({ sourceText: 'Hello', targetText: '\u00A0' })
+    const result = checkUntranslated(segment, ctx)
+    expect(result).not.toBeNull()
+    expect(result!.severity).toBe('critical')
+    expect(result!.category).toBe('completeness')
+  })
+
+  it('should flag mixed NBSP + regular whitespace as untranslated', () => {
+    const segment = buildSegment({ sourceText: 'Hello', targetText: '\u00A0 \t\u00A0' })
+    const result = checkUntranslated(segment, ctx)
+    expect(result).not.toBeNull()
+  })
+})

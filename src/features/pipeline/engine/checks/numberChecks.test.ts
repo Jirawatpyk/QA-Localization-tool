@@ -363,3 +363,89 @@ describe('checkNumberConsistency', () => {
     expect(result!.description).toContain('three')
   })
 })
+
+describe('TA: Coverage Gap Tests — numberChecks', () => {
+  // G1 (P1): Version string "1.2.3" — normalizeNumber drops minor version
+  it('should not flag version string when present in both source and target', () => {
+    const segment = buildSegment({
+      sourceText: 'Version 1.2.3 released',
+      targetText: 'เวอร์ชัน 1.2.3 เปิดตัวแล้ว',
+    })
+    const ctx = { sourceLang: 'en-US', targetLang: 'th-TH' }
+    const result = checkNumberConsistency(segment, ctx)
+    // Both sides have identical "1.2.3" → normalizes same way → no finding
+    expect(result).toBeNull()
+  })
+
+  // G1 (P1): Version mismatch — characterization: "1.2.3" normalizes to "1.2"
+  it('should document that version 1.2.3 vs 1.2.4 both normalize to 1.2 (lossy)', () => {
+    const segment = buildSegment({
+      sourceText: 'Version 1.2.3',
+      targetText: 'เวอร์ชัน 1.2.4',
+    })
+    const ctx = { sourceLang: 'en-US', targetLang: 'th-TH' }
+    const result = checkNumberConsistency(segment, ctx)
+    // Known limitation: "1.2.3" → parseFloat → 1.2, "1.2.4" → 1.2 → match → no finding
+    expect(result).toBeNull()
+  })
+
+  // G4 (P1): European millions "1.000.000" — should normalize correctly
+  it('should normalize European millions 1.000.000 to 1000000', () => {
+    const segment = buildSegment({
+      sourceText: 'Total: 1.000.000 units',
+      targetText: 'รวม: 1,000,000 หน่วย',
+    })
+    const ctx = { sourceLang: 'de-DE', targetLang: 'th-TH' }
+    const result = checkNumberConsistency(segment, ctx)
+    // "1.000.000" → European format → 1000000, "1,000,000" → US format → 1000000 → match
+    expect(result).toBeNull()
+  })
+
+  // G9 (P1): Ambiguous "1.100" — characterization: treated as European thousands
+  it('should treat "1.100" as European thousands (1100), not decimal 1.1', () => {
+    const segment = buildSegment({
+      sourceText: 'Weight: 1.100 kg',
+      targetText: 'น้ำหนัก: 1100 กก.',
+    })
+    const ctx = { sourceLang: 'de-DE', targetLang: 'th-TH' }
+    const result = checkNumberConsistency(segment, ctx)
+    // "1.100" matches European regex → normalizes to 1100 → "1100" matches → no finding
+    expect(result).toBeNull()
+  })
+
+  // G13 (P2): Buddhist year with comma formatting "2,569"
+  it('should match Buddhist year with comma formatting 2,569 vs 2026', () => {
+    const segment = buildSegment({
+      sourceText: 'Year 2026',
+      targetText: 'ปี 2,569',
+    })
+    const ctx = { sourceLang: 'en-US', targetLang: 'th-TH' }
+    const result = checkNumberConsistency(segment, ctx)
+    // "2,569" → remove commas → 2569. Buddhist year: |2569-2026|=543 → exempt
+    expect(result).toBeNull()
+  })
+
+  // G14 (P2): International phone — documents multi-number extraction
+  it('should extract multiple numbers from international phone format', () => {
+    const segment = buildSegment({
+      sourceText: 'Call +66-2-123-4567',
+      targetText: 'โทร +66-2-123-4567',
+    })
+    const ctx = { sourceLang: 'en-US', targetLang: 'th-TH' }
+    const result = checkNumberConsistency(segment, ctx)
+    // Same phone in both → same extraction → no finding
+    expect(result).toBeNull()
+  })
+
+  // G19 (P2): Ambiguous "3.500" — characterization
+  it('should treat "3.500" as European thousands (3500)', () => {
+    const segment = buildSegment({
+      sourceText: 'Price: 3.500 EUR',
+      targetText: 'ราคา: 3,500 บาท',
+    })
+    const ctx = { sourceLang: 'de-DE', targetLang: 'th-TH' }
+    const result = checkNumberConsistency(segment, ctx)
+    // "3.500" → European → 3500, "3,500" → US → 3500 → match
+    expect(result).toBeNull()
+  })
+})

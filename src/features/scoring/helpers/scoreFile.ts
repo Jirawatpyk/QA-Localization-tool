@@ -13,7 +13,7 @@ import { checkAutoPass } from '@/features/scoring/autoPassChecker'
 import { NEW_PAIR_FILE_THRESHOLD } from '@/features/scoring/constants'
 import { calculateMqmScore } from '@/features/scoring/mqmCalculator'
 import { loadPenaltyWeights } from '@/features/scoring/penaltyWeightLoader'
-import type { ContributingFinding } from '@/features/scoring/types'
+import type { ContributingFinding, FindingsSummary } from '@/features/scoring/types'
 import { logger } from '@/lib/logger'
 import type { DetectedByLayer, LayerCompleted } from '@/types/finding'
 
@@ -88,11 +88,17 @@ export async function scoreFile({
   // When layerFilter is set (pipeline context): only that layer's findings
   // When layerFilter is undefined (review context): ALL layers
   // Filter by projectId (defense-in-depth: prevents within-tenant cross-project contamination)
+  // Story 3.5: expanded SELECT to include fields needed for structured auto-pass rationale
   const findingRows = await db
     .select({
+      id: findings.id,
       severity: findings.severity,
       status: findings.status,
       segmentCount: findings.segmentCount,
+      category: findings.category,
+      aiConfidence: findings.aiConfidence,
+      description: findings.description,
+      detectedByLayer: findings.detectedByLayer,
     })
     .from(findings)
     .where(
@@ -123,6 +129,9 @@ export async function scoreFile({
   if (scoreStatus === 'partial') {
     status = 'partial'
   } else {
+    // Story 3.5: build findings summary for structured auto-pass rationale
+    const findingsSummary = buildFindingsSummary(findingRows)
+
     autoPassResult = await checkAutoPass({
       mqmScore: scoreResult.mqmScore,
       criticalCount: scoreResult.criticalCount,
@@ -130,6 +139,7 @@ export async function scoreFile({
       tenantId,
       sourceLang,
       targetLang,
+      findingsSummary,
     })
     status =
       scoreResult.status === 'na' ? 'na' : autoPassResult.eligible ? 'auto_passed' : 'calculated'
@@ -294,4 +304,59 @@ async function createGraduationNotification(params: {
       'Failed to create graduation notification',
     )
   }
+}
+
+// Severity priority for riskiest finding selection
+const SEVERITY_PRIORITY: Record<string, number> = { critical: 3, major: 2, minor: 1 }
+
+/**
+ * Build findings summary for structured auto-pass rationale (Story 3.5).
+ * Riskiest finding = highest severity, then highest confidence within that severity.
+ * L1 findings (aiConfidence=null) are skipped for riskiest selection.
+ */
+function buildFindingsSummary(
+  findingRows: Array<{
+    id: string
+    severity: string
+    status: string
+    category: string
+    aiConfidence: number | null
+    description: string
+    detectedByLayer: string
+  }>,
+): FindingsSummary {
+  const severityCounts = { critical: 0, major: 0, minor: 0 }
+
+  for (const f of findingRows) {
+    if (f.severity === 'critical') severityCounts.critical++
+    else if (f.severity === 'major') severityCounts.major++
+    else if (f.severity === 'minor') severityCounts.minor++
+  }
+
+  // Select riskiest finding: highest severity, then highest confidence
+  // Skip L1 findings (no aiConfidence = no risk ranking)
+  let riskiest: FindingsSummary['riskiestFinding'] = null
+  let riskiestPriority = -1
+  let riskiestConfidence = -1
+
+  for (const f of findingRows) {
+    if (f.aiConfidence === null) continue // Skip L1 findings (FM-3.2)
+
+    const priority = SEVERITY_PRIORITY[f.severity] ?? 0
+    if (
+      priority > riskiestPriority ||
+      (priority === riskiestPriority && f.aiConfidence > riskiestConfidence)
+    ) {
+      riskiestPriority = priority
+      riskiestConfidence = f.aiConfidence
+      riskiest = {
+        category: f.category,
+        severity: f.severity,
+        confidence: f.aiConfidence,
+        description: f.description,
+      }
+    }
+  }
+
+  return { severityCounts, riskiestFinding: riskiest }
 }

@@ -2,7 +2,7 @@
 
 type ConfidenceBadgeProps = {
   confidence: number | null
-  l2ConfidenceMin?: number | null | undefined
+  confidenceMin?: number | null | undefined
 }
 
 type ConfidenceLevel = 'high' | 'medium' | 'low'
@@ -25,7 +25,7 @@ const LEVEL_CLASSES: Record<ConfidenceLevel, string> = {
   low: 'bg-error/10 text-error border-error/20',
 }
 
-export function ConfidenceBadge({ confidence, l2ConfidenceMin }: ConfidenceBadgeProps) {
+export function ConfidenceBadge({ confidence, confidenceMin }: ConfidenceBadgeProps) {
   if (confidence === null) return null
 
   const level = getConfidenceLevel(confidence)
@@ -33,12 +33,13 @@ export function ConfidenceBadge({ confidence, l2ConfidenceMin }: ConfidenceBadge
   const classes = LEVEL_CLASSES[level]
   const displayPct = Math.round(confidence)
   const isBelowThreshold =
-    l2ConfidenceMin !== null && l2ConfidenceMin !== undefined && confidence < l2ConfidenceMin
+    confidenceMin !== null && confidenceMin !== undefined && confidence < confidenceMin
 
   return (
     <span className="inline-flex items-center gap-1">
       <span
         data-testid="confidence-badge"
+        data-confidence-tier={level}
         className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium border ${classes}`}
       >
         {label} ({displayPct}%)
@@ -47,7 +48,7 @@ export function ConfidenceBadge({ confidence, l2ConfidenceMin }: ConfidenceBadge
         <span
           data-testid="confidence-warning"
           className="text-warning"
-          title={`Below threshold (${l2ConfidenceMin}%)`}
+          title={`Below threshold (${confidenceMin}%)`}
         >
           <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
             <path

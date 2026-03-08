@@ -14,6 +14,9 @@ vi.mock('@/features/review/hooks/use-findings-subscription', () => ({
 vi.mock('@/features/review/hooks/use-score-subscription', () => ({
   useScoreSubscription: vi.fn(),
 }))
+vi.mock('@/features/review/hooks/use-threshold-subscription', () => ({
+  useThresholdSubscription: vi.fn(),
+}))
 vi.mock('@/features/pipeline/actions/retryAiAnalysis.action', () => ({
   retryAiAnalysis: vi.fn((..._args: unknown[]) =>
     Promise.resolve({ success: true, data: { retriedLayers: [] } }),
@@ -55,6 +58,10 @@ function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
     },
     processingMode: 'economy' as never,
     l2ConfidenceMin: 70,
+    l3ConfidenceMin: null,
+    autoPassRationale: null,
+    sourceLang: 'en-US',
+    targetLang: 'th-TH',
     ...overrides,
   }
 }

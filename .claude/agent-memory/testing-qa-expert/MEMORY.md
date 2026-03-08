@@ -18,6 +18,30 @@ the transform-time error. Fix: create a stub `.ts` file at the path with minimal
 Stub approach is preferred over workaround mocks — establishes API contract early.
 Example: `src/lib/ai/providers.ts` stub created during Story 3.1 ATDD phase.
 
+### Story 3.5 ATDD RED Phase Summary (2026-03-08)
+
+8 test files, 64 skipped tests total. All parse cleanly with 0 errors.
+New stub files created to prevent Vite transform-time failures:
+
+- `src/features/review/actions/approveFile.action.ts` — exports `approveFile` + `ApproveFileInput` + `ApproveFileData`
+- `src/features/review/components/AutoPassRationale.tsx` — exports `AutoPassRationale`
+- `src/features/review/hooks/use-threshold-subscription.ts` — exports `useThresholdSubscription`
+
+Key pattern for approveFile.action.test.ts: used static `import { approveFile }` (not dynamic `await import()`)
+because the stub already exists — dynamic import in `it.skip()` body still fails at Vite transform time.
+
+Story 3.5 new API contracts:
+
+- `approveFile({ fileId, projectId })` → `ActionResult<ApproveFileData>` with error codes:
+  `SCORE_STALE | SCORE_PARTIAL | SCORE_NA | ALREADY_APPROVED | SCORE_NOT_FOUND | VALIDATION`
+- `checkAutoPass()` Story 3.5 extension: receives `findingsSummary: { severityCounts, riskiestFinding }`
+  returns `rationaleData?: AutoPassRationaleData` with `score, threshold, margin, severityCounts, criteria, riskiestFinding`
+- `scoreFile()` Story 3.5 extension: fetches full findings rows (id, aiConfidence, aiModel, detectedByLayer, description)
+  to build `findingsSummary` before calling `checkAutoPass`
+- `ConfidenceBadge` Story 3.5 prop rename: `l2ConfidenceMin` → `confidenceMin` (supports L2 + L3)
+- `FindingListItem` Story 3.5 new prop: `l3ConfidenceMin?: number | null` (L3 findings use this threshold)
+- `useThresholdSubscription(sourceLang, targetLang, tenantId)` — subscribes to `language_pair_configs` Realtime
+
 ### Story 3.4 ATDD RED Phase Summary (2026-03-07)
 
 10 test files, 101 skipped tests total. All parse cleanly with 0 errors.

@@ -14,6 +14,11 @@ export default defineConfig({
     globals: true,
     coverage: {
       provider: 'v8',
+      exclude: [
+        'src/db/schema/**', // Declarative schema + relations — not business logic
+        'src/test/**', // Test utilities, factories, mocks, fixtures
+        'src/components/ui/**', // shadcn/ui generated components
+      ],
       thresholds: {
         lines: 90,
         statements: 89,

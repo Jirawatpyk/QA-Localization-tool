@@ -151,12 +151,16 @@ describe('P2-09: chunkSegments payload size boundary', () => {
 // ─── P3-01: Segment immutability audit ───────────────────────────────────────
 
 describe('P3-01: Segment immutability — no update/delete actions exposed', () => {
-  it('should not export segment mutation functions from parser actions', async () => {
+  it('should not have updateSegment or deleteSegment action files', async () => {
     // Segments are immutable — only parseFile action exists (DELETE+INSERT in transaction)
-    const parseAction = await import('@/features/parser/actions/parseFile.action')
-    const exportedNames = Object.keys(parseAction)
-    expect(exportedNames.some((n) => /update.*segment/i.test(n))).toBe(false)
-    expect(exportedNames.some((n) => /delete.*segment/i.test(n))).toBe(false)
+    const fs = await import('fs')
+    const path = await import('path')
+    const actionsDir = path.resolve(__dirname, '../../../../features/parser/actions')
+    const actionFiles = fs.readdirSync(actionsDir) as unknown as string[]
+    const mutationFiles = actionFiles.filter(
+      (f: string) => /update.*segment/i.test(f) || /delete.*segment/i.test(f),
+    )
+    expect(mutationFiles).toEqual([])
   })
 
   it('should not have updatedAt column on segments table (immutable after insert)', () => {

@@ -49,16 +49,16 @@ describe('ConfidenceBadge', () => {
     expect(screen.queryByTestId('confidence-badge')).toBeNull()
   })
 
-  it('[P0] should show "Below threshold" warning when confidence < l2ConfidenceMin', () => {
-    render(<ConfidenceBadge confidence={60} l2ConfidenceMin={70} />)
+  it('[P0] should show "Below threshold" warning when confidence < confidenceMin', () => {
+    render(<ConfidenceBadge confidence={60} confidenceMin={70} />)
 
     expect(screen.getByText(/below threshold/i)).toBeTruthy()
   })
 
   // ── P1: Edge cases and threshold validation ──
 
-  it('[P1] should not show warning when confidence >= l2ConfidenceMin (at threshold)', () => {
-    render(<ConfidenceBadge confidence={70} l2ConfidenceMin={70} />)
+  it('[P1] should not show warning when confidence >= confidenceMin (at threshold)', () => {
+    render(<ConfidenceBadge confidence={70} confidenceMin={70} />)
 
     expect(screen.queryByText(/below threshold/i)).toBeNull()
   })
@@ -79,8 +79,8 @@ describe('ConfidenceBadge', () => {
     expect(badge.className).toMatch(/error|low/i)
   })
 
-  it('[P1] should not render l2ConfidenceMin warning when threshold is null', () => {
-    render(<ConfidenceBadge confidence={50} l2ConfidenceMin={null} />)
+  it('[P1] should not render confidenceMin warning when threshold is null', () => {
+    render(<ConfidenceBadge confidence={50} confidenceMin={null} />)
 
     // Even though confidence is low, no "Below threshold" warning when threshold is null
     expect(screen.queryByText(/below threshold/i)).toBeNull()
@@ -89,10 +89,10 @@ describe('ConfidenceBadge', () => {
 
   // ── TA: Coverage Gap Tests ──
 
-  it('[P2] should not show "Below threshold" when l2ConfidenceMin=0 (zero boundary)', () => {
-    render(<ConfidenceBadge confidence={0} l2ConfidenceMin={0} />)
+  it('[P2] should not show "Below threshold" when confidenceMin=0 (zero boundary)', () => {
+    render(<ConfidenceBadge confidence={0} confidenceMin={0} />)
 
-    // confidence (0) < l2ConfidenceMin (0) is false → no warning
+    // confidence (0) < confidenceMin (0) is false → no warning
     expect(screen.queryByText(/below threshold/i)).toBeNull()
     expect(screen.queryByTestId('confidence-warning')).toBeNull()
     // Still renders the Low badge

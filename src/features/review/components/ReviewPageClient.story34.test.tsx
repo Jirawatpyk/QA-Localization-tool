@@ -9,11 +9,16 @@ import type { LayerCompleted, ScoreBadgeState } from '@/types/finding'
 
 // ── Mocks — must be before component import ──
 
+vi.mock('server-only', () => ({}))
+
 vi.mock('@/features/review/hooks/use-findings-subscription', () => ({
   useFindingsSubscription: vi.fn(),
 }))
 vi.mock('@/features/review/hooks/use-score-subscription', () => ({
   useScoreSubscription: vi.fn(),
+}))
+vi.mock('@/features/review/hooks/use-threshold-subscription', () => ({
+  useThresholdSubscription: vi.fn(),
 }))
 
 // Mock retryAiAnalysis server action (Story 3.4)
@@ -33,6 +38,8 @@ const storeMockState = {
   layerCompleted: null as LayerCompleted | null,
   updateScore: vi.fn(),
   scoreStatus: null as string | null, // Story 3.4: new field
+  l2ConfidenceMin: null as number | null,
+  l3ConfidenceMin: null as number | null,
 }
 
 vi.mock('@/features/review/stores/review.store', () => ({
@@ -76,7 +83,11 @@ function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
       minorCount: 0,
     },
     l2ConfidenceMin: 70,
+    l3ConfidenceMin: null,
     processingMode: 'economy',
+    autoPassRationale: null,
+    sourceLang: 'en-US',
+    targetLang: 'th-TH',
     ...overrides,
   } as FileReviewData
 }

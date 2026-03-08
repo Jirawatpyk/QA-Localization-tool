@@ -1104,4 +1104,102 @@ describe('scoreFile', () => {
       expect.objectContaining({ status: 'na', autoPassRationale: null }),
     )
   })
+
+  // -- TA: Coverage Gap Tests (Story 2.5) --
+
+  // T15 [P2] FM-37: Mixed language pairs in segments — uses first segment's lang pair
+  it('[P2] should use first segment language pair when segments have mixed langs', async () => {
+    const mixedSegments = [
+      { wordCount: 500, sourceLang: 'en-US', targetLang: 'th-TH' },
+      { wordCount: 500, sourceLang: 'en-US', targetLang: 'ja-JP' }, // different target
+    ]
+    dbState.returnValues = [mixedSegments, [], [undefined], [], [mockNewScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    // checkAutoPass should be called with first segment's lang pair
+    expect(mockCheckAutoPass).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceLang: 'en-US',
+        targetLang: 'th-TH', // first segment's targetLang, not 'ja-JP'
+      }),
+    )
+  })
+
+  // T16 [P2] PM-B3: NonRetriableError type preserved on no-segments throw
+  it('[P2] should throw NonRetriableError (not generic Error) when no segments', async () => {
+    dbState.returnValues = [[]]
+
+    const { scoreFile } = await import('./scoreFile')
+    const err = await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    }).catch((e: unknown) => e)
+
+    // Verify it's specifically NonRetriableError (Inngest won't retry)
+    // not a generic Error (which Inngest WOULD retry)
+    expect((err as Error).constructor.name).toBe('NonRetriableError')
+  })
+
+  // T17 [P2] PM-C1: checkAutoPass receives correct language pair from segments
+  it('[P2] should pass segment language pair to checkAutoPass for auto-pass decision', async () => {
+    // Language pair consistency: segments → checkAutoPass → graduation notification
+    // Verifies the sourceLang/targetLang from segments[0] reaches checkAutoPass correctly
+    const customSegments = [
+      { wordCount: 300, sourceLang: 'ja-JP', targetLang: 'ko-KR' },
+      { wordCount: 200, sourceLang: 'ja-JP', targetLang: 'ko-KR' },
+    ]
+    dbState.returnValues = [customSegments, [], [undefined], [], [mockNewScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    expect(mockCheckAutoPass).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceLang: 'ja-JP',
+        targetLang: 'ko-KR',
+      }),
+    )
+  })
+
+  // T20 [P3] FM-38: Previous score with different status — audit captures status transition
+  it('[P3] should include previous score status in audit oldValue on re-score', async () => {
+    const previousScore = { ...mockNewScore, mqmScore: 70, status: 'auto_passed' }
+    dbState.returnValues = [mockSegments, [], [previousScore], [], [mockNewScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    // Audit log should capture the status transition (auto_passed → calculated)
+    expect(mockWriteAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        oldValue: expect.objectContaining({
+          mqmScore: 70,
+          status: 'auto_passed',
+        }),
+        newValue: expect.objectContaining({
+          mqmScore: 85,
+          status: 'calculated',
+        }),
+      }),
+    )
+  })
 })

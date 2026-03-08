@@ -240,3 +240,80 @@ Project convention (established by `useNotifications.ts` L66, verified 2026-02-2
 Supabase PostgREST queries in polling fallbacks MUST include both a primary filter AND
 `.eq('tenant_id', tenantId)` as defense-in-depth. RLS is the primary guard, but application-level
 filters are mandatory per convention. When new hooks use polling, flag if `tenant_id` filter absent.
+
+## Story 3.5 — Score Lifecycle & Confidence Display (2026-03-08)
+
+**Audit date:** 2026-03-08
+**Result:** 0 Critical / 2 High / 0 Medium / 0 Low — AT RISK
+**Files:** 5 reviewed (4 PASS, 1 AT RISK)
+
+### Files Audited
+
+- `src/features/review/actions/approveFile.action.ts` — NEW. SELECT-only gate action. 3-way WHERE:
+  `withTenant(scores.tenantId, tenantId)` + `eq(scores.fileId, fileId)` + `eq(scores.projectId, projectId)`.
+  `tenantId` from `requireRole('qa_reviewer')`. Zod UUID validation on both input IDs. Audit log non-fatal.
+  No UPDATE/DELETE — approval gate only; `auto_passed` status is set by `scoreFile()`. PASS.
+
+- `src/features/review/actions/getFileReviewData.action.ts` — CHANGED: `l3ConfidenceMin` added to Q4 SELECT.
+  No new query path — reads from the same already-filtered `languagePairConfigs` row.
+  Q1/Q2/Q3/Q4 all PASS. Q4 LEFT JOIN confirmed correct (`withTenant(projects.tenantId)` in WHERE,
+  `withTenant(languagePairConfigs.tenantId)` in JOIN condition). Story 3.2c findings resolved. PASS.
+
+- `src/features/scoring/autoPassChecker.ts` — Parallel queries (Promise.all). Query 1 (languagePairConfigs):
+  `withTenant(languagePairConfigs.tenantId, tenantId)`. Query 2 (COUNT scores INNER JOIN segments):
+  `withTenant(scores.tenantId, tenantId)` AND `withTenant(segments.tenantId, tenantId)` — both JOIN sides
+  independently filtered. Conditional Q3 (projects): `withTenant(projects.tenantId, tenantId)`.
+  `eq(scores.projectId, projectId)` on Q2 for cross-project defense-in-depth. PASS.
+
+- `src/features/scoring/helpers/scoreFile.ts` — CHANGED: expanded findings SELECT for `findingsSummary`
+  (Story 3.5 adds `category`, `aiConfidence`, `description`, `detectedByLayer`). Same WHERE clause, no
+  new query path. Transaction sub-queries (prev SELECT, DELETE, INSERT) all confirmed scoped.
+  `createGraduationNotification()` inner function: 3 sub-queries all correctly isolated. PASS.
+
+- `src/features/review/hooks/use-threshold-subscription.ts` — NEW. **2 HIGH findings** (see below).
+
+### HIGH Finding 1 — Realtime channel missing `tenant_id` filter
+
+`use-threshold-subscription.ts` L84-99: `postgres_changes` subscription on `language_pair_configs`
+has NO `filter:` field. Every UPDATE to any tenant's language pair config fires `handleThresholdChange`
+in every connected client. Threshold data (l2ConfidenceMin, l3ConfidenceMin) leaks cross-tenant in real time.
+
+Fix:
+
+```ts
+// In .on() event config:
+filter: `tenant_id=eq.${tenantId}`,
+
+// In handleThresholdChange — client-side guard (defense-in-depth):
+const row = payload.new as Record<string, unknown>
+if (row.source_lang !== sourceLang || row.target_lang !== targetLang) return
+```
+
+Note: Supabase Realtime supports compound `&` filter syntax — use
+`filter: \`tenant_id=eq.${tenantId}&source_lang=eq.${sourceLang}&target_lang=eq.${targetLang}\``if
+your version supports it (verify against`useNotifications.ts`which uses`&` compound form). Either
+way, client-side guard is mandatory.
+
+### HIGH Finding 2 — Polling fallback trusts prop `tenantId` instead of session
+
+`use-threshold-subscription.ts` L46-53: polling fallback correctly calls `.eq('tenant_id', tenantId)`
+but `tenantId` is a prop from the parent component, not derived from the authenticated Supabase session
+inside the hook. If a parent passes a stale or wrong `tenantId`, the query fetches the wrong tenant's config.
+
+Contrast: `useNotifications.ts` derives `userId` + `tenantId` from the Supabase auth session inside the hook.
+
+Fix (recommended): derive `tenantId` inside the hook from `supabase.auth.getUser()` session, or add
+an assertion that the prop `tenantId` matches `session.user.app_metadata.tenant_id` on mount.
+
+### Key Patterns Confirmed / Reinforced
+
+- `approveFile` is a read-gate action (SELECT only). The score `auto_passed` status mutation happens
+  inside `scoreFile()`. Audit log must be present even for gate-check actions (it is).
+- `autoPassChecker` parallel Promise.all pattern: each independent DB query in the array must carry
+  its own `withTenant()` — they do not share a transaction context.
+- Realtime hooks that subscribe to tenant-scoped tables MUST include `filter: tenant_id=eq.${tenantId}`
+  in the `postgres_changes` config. No filter = every row change from every tenant is broadcast.
+- Client-side guard in `handleXxxChange` is defense-in-depth: always check `row.source_lang`, `row.target_lang`,
+  `row.tenant_id` etc. before calling `updateStore()`.
+- Hooks that accept `tenantId` as prop should either validate against session or derive from session.
+  The prop-trust pattern is a HIGH risk when combined with missing Realtime filter.

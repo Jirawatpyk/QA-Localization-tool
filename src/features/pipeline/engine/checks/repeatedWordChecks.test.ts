@@ -163,3 +163,19 @@ describe('checkRepeatedWords', () => {
     expect(result!.description).toContain('5')
   })
 })
+
+describe('TA: Coverage Gap Tests — repeatedWordChecks', () => {
+  const ctx = { sourceLang: 'en-US', targetLang: 'th-TH' } as const
+
+  // G28 (P3): Repeated word across newline
+  it('should detect repeated word separated by newline', () => {
+    const segment = buildSegment({
+      sourceText: 'Original text',
+      targetText: 'the\nthe translation',
+    })
+    const result = checkRepeatedWords(segment, ctx)
+    // \s+ in regex matches \n → "the\nthe" detected as repeated
+    expect(result).not.toBeNull()
+    expect(result!.description).toContain('the')
+  })
+})
