@@ -29,7 +29,7 @@ So that Stories 4.1-4.7 can build review features on a consistent, accessible, k
 **And** ARIA roles are established: `role="grid"` for finding list, `role="row"` for each finding, `aria-expanded` for collapsible cards, `aria-live="polite"` for score changes
 
 **Given** the review UI shell layout
-**When** the shell renders at `src/app/(dashboard)/projects/[projectId]/files/[fileId]/review/page.tsx`
+**When** the shell renders at `src/app/(app)/projects/[projectId]/review/[fileId]/page.tsx`
 **Then** the layout defines 3 zones: file navigation (left, collapsible), finding list (center), detail panel (right, Sheet component)
 **And** the `useReviewStore` from Story 3.0 is wired to the review page
 **And** the ReviewProgress component shell renders with placeholder data
@@ -489,4 +489,10 @@ So that I can build the glossary organically as I discover terminology issues du
 | P4 | TD-DASH-002 ActionResult | RESOLVED — 5 actions standardized |
 | P5 | Accessibility Baseline | `accessibility-baseline-2026-03-08.md` |
 | P6 | E2E Keyboard Patterns | `e2e-testing-gotchas.md` (13 subsections) |
+
+### Execution Rules (Epic 3 Retro → carry forward)
+
+1. **Route path = existing pattern** — ทุก story ต้องใช้ `src/app/(app)/projects/[projectId]/review/[fileId]/` (NOT `(dashboard)/` หรือ `/files/[fileId]/review/`). CS workflow ต้อง cross-check กับ Route Decision ด้านบน
+2. **Orphan scan ทุก 5 stories** — หลัง Story 4.1a (story ที่ 5 ของ epic) → run orphan component scan ก่อนเริ่ม story ถัดไป. Orphan = export แต่ไม่มี import ใน `src/app/`
+3. **Architecture Checklist S9 ทุก story** — ทุก story ที่สร้าง hook/component ใหม่ ต้อง pass S9 (User Journey check) ก่อนปิด story — ยืนยันว่ามี page consumer mount จริง
 
