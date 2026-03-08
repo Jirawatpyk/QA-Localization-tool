@@ -134,13 +134,12 @@ test.describe('File History Page (Story 2.7)', () => {
     const allRows = page.getByRole('table').getByRole('row')
     const totalCount = await allRows.count()
 
-    // Click a status filter
+    // Click a status filter — filter button MUST be visible (seeded 1 failed file)
     const failedFilter = page.getByRole('button', { name: /Failed/i })
-    if (await failedFilter.isVisible()) {
-      await failedFilter.click()
-      // Wait for filter to apply — expect header + 1 failed file = 2 rows
-      await expect(page.getByRole('table').getByRole('row')).toHaveCount(2, { timeout: 5_000 })
-    }
+    await expect(failedFilter).toBeVisible({ timeout: 5_000 })
+    await failedFilter.click()
+    // Wait for filter to apply — expect header + 1 failed file = 2 rows
+    await expect(page.getByRole('table').getByRole('row')).toHaveCount(2, { timeout: 5_000 })
 
     // Reset filter
     await allFilter.click()

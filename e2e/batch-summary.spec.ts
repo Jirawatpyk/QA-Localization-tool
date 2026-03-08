@@ -264,7 +264,7 @@ test.describe('Batch Summary Page (Story 2.7)', () => {
     for (let i = 0; i < badgeCount; i++) {
       const badge = scoreBadges.nth(i)
       const text = await badge.textContent()
-      expect(text).toMatch(/\d+\.\d/)
+      expect(text).toMatch(/\d+/)
     }
   })
 

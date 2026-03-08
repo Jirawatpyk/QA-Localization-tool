@@ -2,6 +2,47 @@
 stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets', 'step-03-generate-tests', 'step-03c-aggregate', 'step-04-validate-and-summarize']
 lastStep: 'step-04-validate-and-summarize'
 lastSaved: '2026-03-08'
+taRun12:
+  stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets', 'step-03-generate-tests', 'step-03c-aggregate', 'step-04-validate-and-summarize']
+  lastStep: 'step-04-validate-and-summarize'
+  lastSaved: '2026-03-08'
+  storyFile: '_bmad-output/implementation-artifacts/2-2-sdlxliff-xliff-unified-parser.md'
+  mode: 'BMad-Integrated'
+  existingTests: 263
+  gapsTotal: 16
+  gapsP1: 2
+  gapsP2: 14
+  gapsP3: 0
+  gapsSkipped: 0
+  gapsDropped: 0
+  gapsActionable: 16
+  testsAdded: 18
+  result: 'PASS — 18 new tests (15 parser + 3 action), 16 gaps covered (2 P1 + 14 P2), 138/138 green'
+  elicitationMethods: ['What If Scenarios', 'Failure Mode Analysis', 'Pre-mortem Analysis', 'Chaos Monkey Scenarios']
+  targetFiles:
+    - 'src/features/parser/sdlxliffParser.test.ts (15 tests: G1-G5,G7-G16)'
+    - 'src/features/parser/actions/parseFile.action.test.ts (3 tests: G6)'
+  findings:
+    - 'G16: CDATA in source silently dropped — fast-xml-parser __cdata vs extractInlineTags #text'
+    - 'G15: Duplicate mrk mid — Map.set overwrites, both source segments get same target'
+    - 'G14: collectTransUnits no depth guard (unlike extractInlineTags depth=50)'
+taRun11:
+  stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets', 'step-03-generate-tests', 'step-03c-aggregate', 'step-04-validate-and-summarize']
+  lastStep: 'step-04-validate-and-summarize'
+  lastSaved: '2026-03-08'
+  storyFile: '_bmad-output/implementation-artifacts/3-2b7-taxonomy-reorder-ui.md'
+  mode: 'BMad-Integrated'
+  existingTests: 21
+  gapsTotal: 11
+  gapsP1: 3
+  gapsP2: 6
+  gapsP3: 0
+  gapsSkipped: 0
+  gapsDropped: 2
+  gapsActionable: 9
+  testsAdded: 9
+  result: 'PASS — 9 new tests (3 P1, 6 P2), 2 dropped (U7=ATDD dup, U11=jsdom limitation), 30/30 green'
+  elicitationMethods: ['What If Scenarios', 'Failure Mode Analysis', 'Pre-mortem Analysis']
 taRun10:
   stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets', 'step-03-generate-tests', 'step-03c-aggregate', 'step-04-validate-and-summarize']
   lastStep: 'step-04-validate-and-summarize'
@@ -1251,3 +1292,135 @@ Fill remaining P2/P3 gaps identified in `test-design-epic-2.md` quality gate.
 - Reasons: Require golden corpus data, integration test scope, or diminishing returns (P3)
 
 **Elicitation Yield:** 7 methods produced 34 unique gaps. Standard 3 methods found 12 gaps. Advanced 4 methods found +22 additional gaps (83% increase). Most impactful: First Principles (+8), Chaos Monkey (+5), Reverse Engineering (+5), Self-Consistency (+4).
+
+---
+
+## TA Run #11: Story 3.2b7 — Taxonomy Mapping Reorder UI (2026-03-08)
+
+### Step 1: Preflight & Context
+
+**Mode:** BMad-Integrated (Story 3.2b7, status: done, CR R1+R2 complete 0C/0H exit)
+**Test Level:** Unit (Vitest jsdom + node)
+**Existing Coverage:** 21 tests across 3 test files (all GREEN, 0 skip)
+
+**Source Modules (3):**
+- `TaxonomyMappingTable.tsx` — @dnd-kit DnD table, SortableMappingRow, computeNewOrder (513 lines)
+- `reorderMappings.action.ts` — Server Action with db.transaction(), Zod validation, audit log (81 lines)
+- `TaxonomyManager.tsx` — Optimistic reorder handler, toast.promise pattern (145 lines)
+
+**Existing Test Distribution:**
+
+| File | Tests | Level |
+|------|-------|-------|
+| TaxonomyMappingTable.test.tsx | 11 | Unit (jsdom) |
+| reorderMappings.action.test.ts | 10 | Unit (node) |
+| TaxonomyManager.test.tsx | 3 | Unit (jsdom) |
+| **Total** | **24** | |
+
+**ATDD Coverage (already GREEN):** 10 unit + 2 E2E tests from atdd-checklist-3-2b7.md
+
+### Step 2: Coverage Gap Analysis
+
+**Elicitation Methods Applied (3):**
+1. **What If Scenarios** — 5 edge-case scenarios → 4 gaps (U1, U2, U6, U10)
+2. **Failure Mode Analysis** — 4 failure modes → 3 gaps (U3, U5, U8)
+3. **Pre-mortem Analysis** — Production failure scenarios → 2 refinements (U4 strict assertion, U9 count behavior)
+
+**Coverage Gaps Identified: 11 total (P1=3, P2=6, dropped=2)**
+
+#### P1 Gaps (3)
+
+| ID | Target | Source | Description |
+|----|--------|--------|-------------|
+| U1 | computeNewOrder | What If | Reverse direction (last→first) — only first→last tested |
+| U4 | reorderMappings .set() | Pre-mortem | Strict payload match — existing uses objectContaining (too loose) |
+| U9 | reorderMappings updated | Pre-mortem | Documents input-length count (not actual affected rows) |
+
+#### P2 Gaps (6)
+
+| ID | Target | Source | Description |
+|----|--------|--------|-------------|
+| U2 | computeNewOrder | What If | Adjacent swap with 2-item array |
+| U3 | TaxonomyMappingTable | FMA | Empty state colspan=6 when canReorder={false} |
+| U5 | reorderMappings | FMA | Non-Error rejection fallback message |
+| U6 | computeNewOrder | What If | Single-item array no-op |
+| U8 | reorderMappings | FMA | revalidateTag throws (documents unhandled gap) |
+| U10 | computeNewOrder | What If | activeId===overId same position |
+
+#### Dropped (2)
+
+| ID | Reason |
+|----|--------|
+| U7 | Already covered by ATDD E2E test (keyboard reorder) |
+| U11 | @dnd-kit sensors require getBoundingClientRect (jsdom limitation) |
+
+### Step 3: Test Generation
+
+**Execution Mode:** Direct injection into 2 existing test files
+**Tests Generated:** 9 total (3 P1, 6 P2)
+
+#### Unit Tests — TaxonomyMappingTable.test.tsx (5 tests)
+
+| # | Gap | Pri | Description | Status |
+|---|-----|-----|-------------|--------|
+| U1 | computeNewOrder reverse | P1 | last→first produces correct [{id,displayOrder}] | GREEN |
+| U2 | Adjacent swap | P2 | 2-item array swap | GREEN |
+| U3 | Empty state colspan | P2 | colspan=6 when canReorder={false} | GREEN |
+| U6 | Single-item no-op | P2 | 1-item array returns same order | GREEN |
+| U10 | Same position | P2 | activeId===overId returns original order | GREEN |
+
+#### Unit Tests — reorderMappings.action.test.ts (4 tests)
+
+| # | Gap | Pri | Description | Status |
+|---|-----|-----|-------------|--------|
+| U4 | Strict .set() payload | P1 | toEqual {displayOrder, updatedAt} + key count=2 | GREEN |
+| U9 | Input-length count | P1 | Returns parsed.data.length, not affected rows | GREEN |
+| U5 | Non-Error rejection | P2 | Fallback message for string rejection | GREEN |
+| U8 | revalidateTag throws | P2 | Documents unhandled gap (no try-catch) | GREEN |
+
+### Step 3c: Aggregate
+
+**Test verification:** `npx vitest run` (2 modified files)
+- **2 test files, 30 tests — ALL PASS** (0 skip, 0 fail)
+
+| File | Before | After | Delta |
+|------|--------|-------|-------|
+| TaxonomyMappingTable.test.tsx | 11 | 16 | +5 |
+| reorderMappings.action.test.ts | 10 | 14 | +4 |
+| **Total (2 modified)** | **21** | **30** | **+9** |
+
+### Step 4: Validation & Summary
+
+**Validation Result: PASS (all 30 tests green)**
+
+| Category | Checks | Pass | N/A |
+|----------|--------|------|-----|
+| Preflight | 4 | 4 | 0 |
+| Targets | 5 | 5 | 0 |
+| Generation Quality | 8 | 8 | 0 |
+| Infrastructure | 3 | 1 | 2 |
+| E2E/API/Component | 3 | 0 | 3 |
+
+**Final Coverage Summary:**
+
+| Metric | Value |
+|--------|-------|
+| Existing tests (before) | 21 (3 files) |
+| New tests added | 9 |
+| Total tests (after) | 30 (3 files) |
+| P1 tests added | 3 |
+| P2 tests added | 6 |
+| Gaps identified | 11 |
+| Gaps actionable (written) | 9 |
+| Gaps dropped | 2 (ATDD dup + jsdom limitation) |
+| Files modified | 2 |
+| New files created | 0 |
+| Elicitation methods | 3 (What If, FMA, Pre-mortem) |
+
+**Key Findings:**
+
+1. **U4 (Strict Payload):** Existing ATDD test used `objectContaining` — wouldn't catch extra fields leaked into `.set()`. New test uses `toEqual` + `Object.keys().toHaveLength(2)` for defense-in-depth.
+
+2. **U8 (revalidateTag Gap):** `revalidateTag('taxonomy', 'minutes')` at line 77 is outside try-catch. If cache service fails after DB commit, error propagates unhandled. Documented as characterization test — fix deferred (non-critical, Next.js rarely throws here).
+
+3. **U9 (Count Mismatch):** Action returns `parsed.data.length` (input count), not actual DB affected rows. Documented as characterization test — behavioral contract for callers.
