@@ -42,6 +42,15 @@ function getCellText(cell: ExcelJS.Cell): string {
       .join('')
       .trim()
   }
+  // ExcelJS formula cells: { formula: string, result: string | number }
+  if (typeof value === 'object' && 'result' in value) {
+    const result = (value as { result: unknown }).result
+    return result !== null && result !== undefined ? String(result).trim() : ''
+  }
+  // ExcelJS hyperlink cells: { text: string, hyperlink: string }
+  if (typeof value === 'object' && 'hyperlink' in value) {
+    return ((value as { text: string }).text ?? '').trim()
+  }
   return String(value).trim()
 }
 
@@ -109,7 +118,7 @@ function parseTabular(worksheet: ExcelJS.Worksheet): XbenchReportFinding[] {
       sourceText: getValue('source'),
       targetText: getValue('target'),
       category: getValue('category'),
-      severity: getValue('severity'),
+      severity: getValue('severity') || 'major',
       fileName: getValue('file'),
       segmentNumber: getNumValue('segment'),
     }
@@ -155,6 +164,10 @@ function parseSectioned(worksheet: ExcelJS.Worksheet): XbenchReportFinding[] {
         })
       }
     } else if (colA) {
+      // Guard: skip rows that look like file references with unsupported extensions
+      // (e.g., "report.mxliff (10)") — these are NOT section markers
+      if (/\.\w+\s*\(\d+\)$/.test(colA)) return
+
       // Section marker row — always update currentCategory (allows recovery from LI state)
       if (colA.toLowerCase().includes('language inspector')) {
         currentCategory = 'LI' // sentinel — skip file-ref rows in this section

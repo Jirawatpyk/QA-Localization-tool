@@ -187,6 +187,361 @@ const MOCK_WORKSHEETS: Record<string, unknown[][]> = {
     [undefined, 'Key Term Mismatch (EN)'],
     [undefined, 'chapter4.sdlxliff (4)', undefined, 'Source 4', 'Target 4'],
   ],
+
+  // ── Coverage gap mocks (TA) ──
+
+  // G1: LI section recovery — Tag Mismatch → LI → Numeric Mismatch
+  'mock-xlsx-sectioned-li-recovery': [
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined, 'Tag Mismatch'],
+    [undefined, 'chapter1.sdlxliff (1)', undefined, 'Tag src', 'Tag tgt'],
+    [undefined, 'Language Inspector'],
+    [undefined, 'intro.sdlxliff (2)', undefined, 'LI src', 'LI tgt'],
+    [undefined, 'Numeric Mismatch'],
+    [undefined, 'chapter2.sdlxliff (3)', undefined, 'Num src', 'Num tgt'],
+  ],
+
+  // G2: Multiple findings under same section
+  'mock-xlsx-sectioned-multi': [
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined, 'Tag Mismatch'],
+    [undefined, 'file1.sdlxliff (1)', undefined, 'Src A', 'Tgt A'],
+    [undefined, 'file2.sdlxliff (2)', undefined, 'Src B', 'Tgt B'],
+    [undefined, 'file3.sdlxliff (3)', undefined, 'Src C', 'Tgt C'],
+  ],
+
+  // G3: Tabular format with richText cell
+  'mock-xlsx-tabular-richtext': [
+    [undefined, 'Source', 'Target', 'Category', 'Severity', 'File', 'Segment'],
+    [
+      undefined,
+      { richText: [{ text: 'Rich ' }, { text: 'tabular' }] },
+      'Plain target',
+      'Tag Mismatch',
+      'major',
+      'intro.sdlxliff',
+      1,
+    ],
+  ],
+
+  // G4: Same filename across different sections
+  'mock-xlsx-sectioned-same-file': [
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined, 'Tag Mismatch'],
+    [undefined, 'chapter1.sdlxliff (5)', undefined, 'Tag src', 'Tag tgt'],
+    [undefined, 'Numeric Mismatch'],
+    [undefined, 'chapter1.sdlxliff (10)', undefined, 'Num src', 'Num tgt'],
+  ],
+
+  // G19: File ref before any section marker → empty category
+  'mock-xlsx-sectioned-no-marker': [
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined, 'chapter1.sdlxliff (5)', undefined, 'Orphan src', 'Orphan tgt'],
+  ],
+
+  // G29: Unmatched file-like row corrupts category via catch-all
+  'mock-xlsx-sectioned-bad-ref': [
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined, 'Tag Mismatch'],
+    [undefined, 'chapter1.sdlxliff (5)', undefined, 'Good src', 'Good tgt'],
+    [undefined, 'report.mxliff (10)'],
+    [undefined, 'intro.sdlxliff (3)', undefined, 'Bad cat src', 'Bad cat tgt'],
+  ],
+
+  // G5: Empty worksheet (0 rows)
+  'mock-xlsx-empty-rows': [],
+
+  // G6+G10: Consecutive markers + empty colA rows
+  'mock-xlsx-sectioned-consecutive': [
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined, 'Tag Mismatch'],
+    [undefined, ''],
+    [undefined, null],
+    [undefined, 'Numeric Mismatch'],
+    [undefined, 'chapter1.sdlxliff (1)', undefined, 'Src', 'Tgt'],
+  ],
+
+  // G7: Sectioned format with numeric value in colC
+  'mock-xlsx-sectioned-number-cell': [
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined, 'Tag Mismatch'],
+    [undefined, 'chapter1.sdlxliff (1)', undefined, 42, 'Target text'],
+  ],
+
+  // G8: getCellText boolean fallback
+  'mock-xlsx-sectioned-bool-cell': [
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined, 'Tag Mismatch'],
+    [undefined, 'chapter1.sdlxliff (1)', undefined, true, 'Target text'],
+  ],
+
+  // G9: Tabular format with non-numeric segment
+  'mock-xlsx-tabular-nan-segment': [
+    [undefined, 'Source', 'Target', 'Category', 'Severity', 'File', 'Segment'],
+    [undefined, 'Src', 'Tgt', 'Tag Mismatch', 'major', 'intro.sdlxliff', 'abc'],
+  ],
+
+  // G13: richText with empty parts
+  'mock-xlsx-sectioned-richtext-empty': [
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined, 'Tag Mismatch'],
+    [
+      undefined,
+      'chapter1.sdlxliff (1)',
+      undefined,
+      { richText: [{ text: '' }, { text: 'only' }] },
+      'Target',
+    ],
+  ],
+
+  // G14: richText with intermediate whitespace
+  'mock-xlsx-sectioned-richtext-whitespace': [
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined, 'Tag Mismatch'],
+    [
+      undefined,
+      'chapter1.sdlxliff (1)',
+      undefined,
+      { richText: [{ text: ' Hello ' }, { text: ' World ' }] },
+      'Target',
+    ],
+  ],
+
+  // G15: Single tabular marker → detected as tabular
+  'mock-xlsx-single-header': [
+    [undefined, 'Source'],
+    [undefined, 'Some value'],
+  ],
+
+  // G16: Case-mixed headers → detected as tabular
+  'mock-xlsx-case-mixed': [
+    [undefined, 'SOURCE', 'target', 'CATEGORY', 'Severity', 'File', 'Segment'],
+    [undefined, 'Src', 'Tgt', 'Tag Mismatch', 'major', 'intro.sdlxliff', 1],
+  ],
+
+  // G17: Missing severity column in tabular
+  'mock-xlsx-missing-severity': [
+    [undefined, 'Source', 'Target', 'Category', 'File', 'Segment'],
+    [undefined, 'Src', 'Tgt', 'Tag Mismatch', 'intro.sdlxliff', 1],
+  ],
+
+  // G18: All-LI tabular → empty
+  'mock-xlsx-all-li': [
+    [undefined, 'Source', 'Target', 'Category', 'Severity', 'File', 'Segment', 'Authority'],
+    [undefined, 'LI src 1', 'LI tgt 1', 'Double Space', 'minor', 'intro.sdlxliff', 1, 'LI'],
+    [undefined, 'LI src 2', 'LI tgt 2', 'Extra Tab', 'minor', 'chapter1.sdlxliff', 2, 'LI'],
+  ],
+
+  // G20: Unsupported file extension .mxliff → treated as section marker
+  'mock-xlsx-sectioned-unsupported-ext': [
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined, 'report.mxliff (10)'],
+    [undefined, 'chapter1.sdlxliff (1)', undefined, 'Src', 'Tgt'],
+  ],
+
+  // G21: Segment number = 0 in file ref
+  'mock-xlsx-sectioned-seg-zero': [
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined, 'Tag Mismatch'],
+    [undefined, 'chapter1.sdlxliff (0)', undefined, 'Zero seg src', 'Zero seg tgt'],
+  ],
+
+  // G23: Spaces in filename
+  'mock-xlsx-sectioned-space-filename': [
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined, 'Tag Mismatch'],
+    [undefined, 'my file.sdlxliff (42)', undefined, 'Space src', 'Space tgt'],
+  ],
+
+  // G24: Empty tabular (header only, no data rows)
+  'mock-xlsx-tabular-empty': [
+    [undefined, 'Source', 'Target', 'Category', 'Severity', 'File', 'Segment'],
+  ],
+
+  // G25: Parentheses in filename
+  'mock-xlsx-sectioned-paren-filename': [
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined, 'Tag Mismatch'],
+    [undefined, 'file (copy).sdlxliff (42)', undefined, 'Paren src', 'Paren tgt'],
+  ],
+
+  // G26+G30: Formula and hyperlink cell fallback
+  'mock-xlsx-sectioned-formula': [
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined],
+    [undefined, 'Tag Mismatch'],
+    [
+      undefined,
+      'chapter1.sdlxliff (1)',
+      undefined,
+      { formula: '=A1', result: 'Hello' },
+      { text: 'Link', hyperlink: 'http://example.com' },
+    ],
+  ],
 }
 
 let _activeRows: unknown[][] = []
@@ -486,5 +841,370 @@ describe('xbenchReportParser — sectioned format (Story 2.9)', () => {
     const { parseXbenchReport } = await import('./xbenchReportParser')
     const mockBuffer = Buffer.from('mock-xlsx-no-sheet')
     await expect(parseXbenchReport(mockBuffer)).rejects.toThrow('No worksheet found')
+  })
+})
+
+// ── Coverage gap tests (FMA + What-If + Pre-mortem) ──
+
+describe('xbenchReportParser — coverage gaps (TA)', () => {
+  // ══════════════ P1 Gaps ══════════════
+
+  describe('P1: Critical coverage gaps', () => {
+    it('[P1] G1: should recover from LI section and resume creating findings for next category', async () => {
+      // Given: Tag Mismatch → finding → Language Inspector → LI finding → Numeric Mismatch → finding
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-sectioned-li-recovery')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: 2 findings (Tag Mismatch + Numeric Mismatch); LI finding filtered
+      expect(result.findings.length).toBe(2)
+      expect(result.findings[0]?.category).toBe('Tag Mismatch')
+      expect(result.findings[0]?.fileName).toBe('chapter1.sdlxliff')
+      expect(result.findings[1]?.category).toBe('Numeric Mismatch')
+      expect(result.findings[1]?.fileName).toBe('chapter2.sdlxliff')
+      // LI finding must not be present
+      const liFindings = result.findings.filter((f) => f.sourceText === 'LI src')
+      expect(liFindings.length).toBe(0)
+    })
+
+    it('[P1] G2: should create multiple findings under the same section marker', async () => {
+      // Given: Tag Mismatch → 3 consecutive file refs
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-sectioned-multi')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: 3 findings, all with category 'Tag Mismatch'
+      expect(result.findings.length).toBe(3)
+      for (const finding of result.findings) {
+        expect(finding.category).toBe('Tag Mismatch')
+      }
+      expect(result.findings[0]?.fileName).toBe('file1.sdlxliff')
+      expect(result.findings[1]?.fileName).toBe('file2.sdlxliff')
+      expect(result.findings[2]?.fileName).toBe('file3.sdlxliff')
+    })
+
+    it('[P1] G3: should handle richText cells in tabular format via getCellText', async () => {
+      // Given: tabular format with richText object in Source column
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-tabular-richtext')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: getCellText extracts and joins richText parts
+      expect(result.findings.length).toBe(1)
+      expect(result.findings[0]?.sourceText).toBe('Rich tabular')
+      expect(result.findings[0]?.targetText).toBe('Plain target')
+    })
+
+    it('[P1] G4: should group findings from same file across different sections', async () => {
+      // Given: chapter1.sdlxliff appears under Tag Mismatch AND Numeric Mismatch
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-sectioned-same-file')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: fileGroups['chapter1.sdlxliff'] has 2 findings with different categories
+      expect(result.findings.length).toBe(2)
+      const group = result.fileGroups['chapter1.sdlxliff']
+      expect(group).toBeDefined()
+      expect(group?.length).toBe(2)
+      expect(group?.[0]?.category).toBe('Tag Mismatch')
+      expect(group?.[1]?.category).toBe('Numeric Mismatch')
+    })
+
+    it('[P1] G19: should assign empty category when file ref appears before any section marker', async () => {
+      // Given: row 13 is a file ref directly (no preceding section marker)
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-sectioned-no-marker')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: finding has category '' (default currentCategory)
+      expect(result.findings.length).toBe(1)
+      expect(result.findings[0]?.category).toBe('')
+      expect(result.findings[0]?.fileName).toBe('chapter1.sdlxliff')
+    })
+
+    it('[P1] G29: should preserve category when unsupported-ext file-like row is skipped', async () => {
+      // Given: Tag Mismatch → valid finding → 'report.mxliff (10)' (wrong ext) → next finding
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-sectioned-bad-ref')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: 'report.mxliff (10)' is guarded — skipped, NOT set as category
+      expect(result.findings.length).toBe(2)
+      expect(result.findings[0]?.category).toBe('Tag Mismatch')
+      expect(result.findings[0]?.fileName).toBe('chapter1.sdlxliff')
+      // Second finding preserves 'Tag Mismatch' (no corruption)
+      expect(result.findings[1]?.category).toBe('Tag Mismatch')
+      expect(result.findings[1]?.fileName).toBe('intro.sdlxliff')
+    })
+  })
+
+  // ══════════════ P2 Gaps ══════════════
+
+  describe('P2: Empty / boundary worksheets', () => {
+    it('[P2] G5: should return empty result for worksheet with zero rows', async () => {
+      // Given: empty worksheet (no rows at all)
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-empty-rows')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: detected as 'sectioned' (default), 0 findings
+      expect(result.findings).toEqual([])
+      expect(result.fileGroups).toEqual({})
+    })
+
+    it('[P2] G24: should return empty result for tabular format with header only', async () => {
+      // Given: tabular header row, no data rows
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-tabular-empty')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: 0 findings, empty groups
+      expect(result.findings).toEqual([])
+      expect(result.fileGroups).toEqual({})
+    })
+
+    it('[P2] G18: should return empty result when all tabular rows are LI authority', async () => {
+      // Given: tabular format where every row has authority = 'LI'
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-all-li')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: all LI rows filtered → empty
+      expect(result.findings).toEqual([])
+      expect(result.fileGroups).toEqual({})
+    })
+  })
+
+  describe('P2: Section markers and category transitions', () => {
+    it('[P2] G6+G10: should use last marker when consecutive markers appear with empty rows between', async () => {
+      // Given: Tag Mismatch → empty rows → Numeric Mismatch → file ref
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-sectioned-consecutive')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: finding gets 'Numeric Mismatch' (last marker wins); empty rows silently skipped
+      expect(result.findings.length).toBe(1)
+      expect(result.findings[0]?.category).toBe('Numeric Mismatch')
+    })
+
+    it('[P2] G20: should skip unsupported file extension row (not treat as section marker)', async () => {
+      // Given: 'report.mxliff (10)' — .mxliff not in regex
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-sectioned-unsupported-ext')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: .mxliff row is guarded as file-like pattern → skipped; category stays ''
+      expect(result.findings.length).toBe(1)
+      expect(result.findings[0]?.category).toBe('')
+      expect(result.findings[0]?.fileName).toBe('chapter1.sdlxliff')
+    })
+  })
+
+  describe('P2: getCellText edge cases', () => {
+    it('[P2] G7: should convert numeric cell value to string', async () => {
+      // Given: sectioned format where colC has numeric value 42
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-sectioned-number-cell')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: getCellText returns '42'
+      expect(result.findings.length).toBe(1)
+      expect(result.findings[0]?.sourceText).toBe('42')
+    })
+
+    it('[P2] G8: should handle boolean cell value via String() fallback', async () => {
+      // Given: sectioned format where colC has boolean true
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-sectioned-bool-cell')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: getCellText returns 'true' via String(value).trim() fallback
+      expect(result.findings.length).toBe(1)
+      expect(result.findings[0]?.sourceText).toBe('true')
+    })
+
+    it('[P2] G13: should handle richText with empty text parts', async () => {
+      // Given: colC = { richText: [{ text: '' }, { text: 'only' }] }
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-sectioned-richtext-empty')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: getCellText joins '' + 'only' → 'only' (trim applied)
+      expect(result.findings.length).toBe(1)
+      expect(result.findings[0]?.sourceText).toBe('only')
+    })
+
+    it('[P2] G14: should preserve inner whitespace in richText while trimming outer', async () => {
+      // Given: colC = { richText: [{ text: ' Hello ' }, { text: ' World ' }] }
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-sectioned-richtext-whitespace')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: getCellText joins ' Hello ' + ' World ' → ' Hello  World ' → trim → 'Hello  World'
+      expect(result.findings.length).toBe(1)
+      expect(result.findings[0]?.sourceText).toBe('Hello  World')
+    })
+
+    it('[P2] G26+G30: should extract result from formula cells and text from hyperlink cells', async () => {
+      // Given: colC = { formula: '=A1', result: 'Hello' }, colD = { text: 'Link', hyperlink: '...' }
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-sectioned-formula')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: getCellText extracts result from formula, text from hyperlink
+      expect(result.findings.length).toBe(1)
+      expect(result.findings[0]?.sourceText).toBe('Hello')
+      expect(result.findings[0]?.targetText).toBe('Link')
+    })
+  })
+
+  describe('P2: Format detection edge cases', () => {
+    it('[P2] G15: should detect tabular format when only one tabular marker is present', async () => {
+      // Given: row 1 has only 'Source' (1 of 6 tabular markers)
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-single-header')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: detected as 'tabular' (.some() triggers on 1 match)
+      // No data columns discovered beyond 'source' → findings have empty fields
+      expect(result.findings.length).toBe(1)
+      expect(result.findings[0]?.sourceText).toBe('Some value')
+    })
+
+    it('[P2] G16: should detect tabular format with case-mixed headers', async () => {
+      // Given: row 1 has 'SOURCE', 'target', 'CATEGORY' (mixed case)
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-case-mixed')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: detected as tabular (toLowerCase applied in detection + columnMap)
+      expect(result.findings.length).toBe(1)
+      expect(result.findings[0]?.sourceText).toBe('Src')
+      expect(result.findings[0]?.category).toBe('Tag Mismatch')
+    })
+  })
+
+  describe('P2: Tabular parser edge cases', () => {
+    it('[P2] G9: should return segmentNumber 0 for non-numeric segment value', async () => {
+      // Given: tabular format where Segment column has 'abc'
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-tabular-nan-segment')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: Number('abc') is NaN → || 0 → segmentNumber = 0
+      expect(result.findings.length).toBe(1)
+      expect(result.findings[0]?.segmentNumber).toBe(0)
+    })
+
+    it('[P2] G17: should default severity to "major" when severity column is missing', async () => {
+      // Given: tabular header with Source, Target, Category, File, Segment (NO Severity)
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-missing-severity')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: getValue('severity') returns '' → fallback to 'major' (consistent with sectioned parser)
+      expect(result.findings.length).toBe(1)
+      expect(result.findings[0]?.severity).toBe('major')
+    })
+  })
+
+  describe('P2: Sectioned file ref parsing edge cases', () => {
+    it('[P2] G21: should parse segment number 0 from file ref', async () => {
+      // Given: 'chapter1.sdlxliff (0)' — segment 0
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-sectioned-seg-zero')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: parseInt('0', 10) = 0
+      expect(result.findings.length).toBe(1)
+      expect(result.findings[0]?.segmentNumber).toBe(0)
+      expect(result.findings[0]?.fileName).toBe('chapter1.sdlxliff')
+    })
+
+    it('[P2] G23: should parse filename with spaces', async () => {
+      // Given: 'my file.sdlxliff (42)'
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-sectioned-space-filename')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: regex captures 'my file.sdlxliff' as fileName
+      expect(result.findings.length).toBe(1)
+      expect(result.findings[0]?.fileName).toBe('my file.sdlxliff')
+      expect(result.findings[0]?.segmentNumber).toBe(42)
+    })
+
+    it('[P2] G25: should parse filename with parentheses', async () => {
+      // Given: 'file (copy).sdlxliff (42)'
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-sectioned-paren-filename')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: greedy regex captures 'file (copy).sdlxliff' as fileName
+      expect(result.findings.length).toBe(1)
+      expect(result.findings[0]?.fileName).toBe('file (copy).sdlxliff')
+      expect(result.findings[0]?.segmentNumber).toBe(42)
+    })
+  })
+
+  describe('P2: Logger behavior', () => {
+    it('[P2] G27: should log finding count 0 for non-empty worksheet yielding no findings', async () => {
+      // Given: sectioned worksheet with rows but no file refs (mock-xlsx-sectioned-empty)
+      const { logger } = await import('@/lib/logger')
+      const { parseXbenchReport } = await import('./xbenchReportParser')
+      const mockBuffer = Buffer.from('mock-xlsx-sectioned-empty')
+
+      // When: parsing the buffer
+      const result = await parseXbenchReport(mockBuffer)
+
+      // Then: logger.info called with count 0
+      expect(result.findings.length).toBe(0)
+      expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('0 findings'))
+    })
   })
 })
