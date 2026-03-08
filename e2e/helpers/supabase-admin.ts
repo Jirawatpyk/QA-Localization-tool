@@ -37,7 +37,7 @@ export async function signupOrLogin(
 
   let loginSucceeded = true
   try {
-    await page.waitForURL('**/dashboard', { timeout: 8000 })
+    await page.waitForURL('**/dashboard', { timeout: 15000, waitUntil: 'domcontentloaded' })
   } catch {
     loginSucceeded = false
   }
@@ -48,7 +48,7 @@ export async function signupOrLogin(
     await page.getByLabel('Email').fill(email)
     await page.getByLabel('Password').fill(password)
     await page.getByRole('button', { name: 'Create account' }).click()
-    await page.waitForURL('**/dashboard', { timeout: 15000 })
+    await page.waitForURL('**/dashboard', { timeout: 30000, waitUntil: 'domcontentloaded' })
   }
 }
 

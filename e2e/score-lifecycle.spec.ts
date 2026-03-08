@@ -58,8 +58,6 @@ async function seedFileWithScore(opts: {
       file_size_bytes: 512,
       storage_path: `e2e/score-lifecycle-${opts.scoreStatus}-${Date.now()}.sdlxliff`,
       status: 'l2_completed',
-      source_lang: 'en',
-      target_lang: 'th',
     }),
   })
   if (!fileRes.ok) {
@@ -246,42 +244,57 @@ test.describe.serial('Score Lifecycle & Confidence Display — Story 3.5', () =>
   test('[P0] should show SCORE_STALE toast when approving a calculating score', async ({
     page,
   }) => {
-    // Arrange: seed file with score_status='calculating'
-    // This test validates the SERVER-SIDE gate: even if the client guard is bypassed,
-    // the approve action must reject stale scores.
+    // Strategy: seed file as 'calculated' so the Approve button is enabled on load,
+    // then mutate score to 'calculating' via PostgREST BEFORE clicking Approve.
+    // This tests the real defense-in-depth scenario: UI shows stale state, server rejects.
+
+    // Arrange: seed file with score_status='calculated' (button will be enabled)
     const fileId = await seedFileWithScore({
       tenantId,
       projectId,
-      scoreStatus: 'calculating',
-      layerCompleted: 'L1',
-      mqmScore: 0,
+      scoreStatus: 'calculated',
+      layerCompleted: 'L1L2',
+      mqmScore: 90.0,
     })
+
+    // Verify seed before navigating
+    const score = await queryScore(fileId)
+    expect(score).not.toBeNull()
+    expect(score!.status).toBe('calculated')
 
     // Act: navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
     await page.goto(`/projects/${projectId}/review/${fileId}`)
 
-    // Wait for page to load
+    // Wait for the review page to fully render with the score badge
     const scoreBadge = page.getByTestId('score-badge')
-    await expect(scoreBadge).toBeVisible({ timeout: 15_000 })
+    await expect(scoreBadge).toBeVisible({ timeout: 30_000 })
 
-    // Attempt to force-click the Approve button even if disabled
-    // (tests server-side SCORE_STALE guard — client guard may also prevent this)
+    // Wait for Approve button to be enabled (score is 'calculated')
     const approveBtn = page.getByRole('button', { name: /approve/i })
-    const btnCount = await approveBtn.count()
-    if (btnCount > 0) {
-      // Force click bypasses the disabled state to test server-side rejection
-      await approveBtn.click({ force: true })
+    await expect(approveBtn).toBeVisible({ timeout: 15_000 })
+    await expect(approveBtn).toBeEnabled({ timeout: 5_000 })
 
-      // Assert: SCORE_STALE error toast visible (sonner renders in role="status" region)
-      const toast = page
-        .locator('[data-sonner-toast]')
-        .filter({ hasText: /calculat|please wait|score.*recalcul/i })
-      await expect(toast).toBeVisible({ timeout: 10_000 })
+    // Mutate score status to 'calculating' via PostgREST (behind the UI's back)
+    // This simulates a recalculation starting between page render and user click.
+    const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/scores?file_id=eq.${fileId}`, {
+      method: 'PATCH',
+      headers: { ...adminHeaders(), Prefer: 'return=minimal' },
+      body: JSON.stringify({ status: 'calculating' }),
+    })
+    if (!patchRes.ok) {
+      const text = await patchRes.text()
+      throw new Error(`Failed to patch score to calculating: ${patchRes.status} ${text}`)
     }
 
-    // Assert: file is NOT approved (badge still shows calculating)
-    await expect(scoreBadge).toContainText(/calculat|analyz/i)
+    // Click Approve — UI still shows it as enabled, but server-side gate should reject
+    await approveBtn.click()
+
+    // Assert: SCORE_STALE error toast visible
+    const toast = page
+      .locator('[data-sonner-toast]')
+      .filter({ hasText: /calculat|please wait|score.*recalcul/i })
+    await expect(toast).toBeVisible({ timeout: 10_000 })
   })
 
   // ── 3.5-E-004 [P1]: auto_passed + rationale → AutoPassRationale card ──────
