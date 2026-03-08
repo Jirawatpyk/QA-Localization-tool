@@ -2,6 +2,27 @@
 export const MAX_SEGMENTER_CHUNK = 30_000
 
 /**
+ * Zero-width characters that break substring matching (indexOf).
+ * U+200B = Zero-Width Space (Thai CMS/web editors insert for line-breaking hints)
+ * U+200C = Zero-Width Non-Joiner
+ * U+200D = Zero-Width Joiner
+ * U+FEFF = BOM / Zero-Width No-Break Space
+ */
+const ZERO_WIDTH_RE = /[\u200B\u200C\u200D\uFEFF]/g
+
+/**
+ * Strips zero-width characters that cause false negatives in text matching.
+ * These invisible characters break indexOf substring comparison when present
+ * in source text (e.g., Thai CMS content with U+200B for line-breaking hints).
+ *
+ * WARNING: This changes string length — positions in stripped text differ from
+ * original. Only use for comparison; do NOT mix positions across stripped/unstripped text.
+ */
+export function stripZeroWidth(text: string): string {
+  return text.replace(ZERO_WIDTH_RE, '')
+}
+
+/**
  * Strips inline markup from text, replacing each removed character with a SPACE.
  * Equal-length replacement preserves character positions — no offset map needed.
  *
@@ -30,15 +51,29 @@ export function stripMarkup(text: string): string {
 }
 
 /**
- * Splits text into chunks of MAX_SEGMENTER_CHUNK chars.
+ * Splits text into chunks of ~MAX_SEGMENTER_CHUNK chars.
  * Used before Intl.Segmenter to prevent stack overflow.
  * Returns array of { chunk, offset } where offset is the start index in original text.
+ *
+ * Surrogate-safe: if the last char of a chunk is a high surrogate (U+D800–U+DBFF),
+ * the chunk is extended by 1 to include the low surrogate, preventing split emoji
+ * or supplementary CJK characters from producing invalid strings.
  */
 export function chunkText(text: string): Array<{ chunk: string; offset: number }> {
   if (text.length <= MAX_SEGMENTER_CHUNK) return [{ chunk: text, offset: 0 }]
   const result: Array<{ chunk: string; offset: number }> = []
-  for (let i = 0; i < text.length; i += MAX_SEGMENTER_CHUNK) {
-    result.push({ chunk: text.slice(i, i + MAX_SEGMENTER_CHUNK), offset: i })
+  let i = 0
+  while (i < text.length) {
+    let end = Math.min(i + MAX_SEGMENTER_CHUNK, text.length)
+    // Avoid splitting surrogate pairs: if last char is a high surrogate, include its pair
+    if (end < text.length) {
+      const charCode = text.charCodeAt(end - 1)
+      if (charCode >= 0xd800 && charCode <= 0xdbff) {
+        end += 1
+      }
+    }
+    result.push({ chunk: text.slice(i, end), offset: i })
+    i = end
   }
   return result
 }

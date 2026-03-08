@@ -446,15 +446,15 @@ So that I can build the glossary organically as I discover terminology issues du
 
 ### Tech Debt Assignments
 
-**Story 4.0 (8 TD items):**
+**Story 4.0 (7 TD items):**
 - TD-E2E-007: Unskip review-score E2E test
 - TD-TODO-001: Breadcrumb DB queries (hardcoded null → real entity names)
 - TD-UX-001: AbortController on breadcrumb fetch
 - TD-UX-002: truncateSegments first+secondToLast+last
 - TD-DASH-001: findingsCount COUNT query (hardcoded 0)
 - TD-DASH-003: Realtime notification payload Zod validation
-- TD-ORPHAN-004: Wire NotificationDropdown into layout
 - TD-REVIEW-002: Realtime auto_passed rationale (store-driven re-fetch)
+- ~~TD-ORPHAN-004~~: RESOLVED — already wired in `app-header.tsx`
 
 **Story 4.2:**
 - TD-TODO-002: getFileHistory reviewer name (JOIN review_actions + users)

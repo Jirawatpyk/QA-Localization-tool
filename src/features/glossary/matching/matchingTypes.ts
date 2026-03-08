@@ -14,7 +14,7 @@ export type GlossaryTermMatch = {
   sourceTerm: string // the source glossary term
   expectedTarget: string // the expected target translation (glossary_terms.target_term)
   foundText: string // the actual text matched (same as expectedTarget for exact match)
-  position: number // 0-based index in NFKC-normalized target text
+  position: number // 0-based index in NFKC-normalized, zero-width-stripped target text
   boundaryConfidence: BoundaryConfidence
 }
 

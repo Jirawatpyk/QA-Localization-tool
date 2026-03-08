@@ -133,3 +133,13 @@ describe('isNoSpaceLanguage', () => {
     expect(isNoSpaceLanguage('TH')).toBe(true)
   })
 })
+
+describe('isNoSpaceLanguage — extended locales (TA expansion)', () => {
+  it('should return true for Myanmar (my)', () => {
+    expect(isNoSpaceLanguage('my')).toBe(true)
+  })
+
+  it('should return true for Khmer (km)', () => {
+    expect(isNoSpaceLanguage('km')).toBe(true)
+  })
+})

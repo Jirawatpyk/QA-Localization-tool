@@ -186,22 +186,58 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       )
     }
 
-    // 5e. Insert files record via Drizzle with withTenant
-    const [fileRecord] = await db
-      .insert(files)
-      .values({
-        tenantId: currentUser.tenantId,
-        projectId,
-        fileName: file.name,
-        fileType,
-        fileSizeBytes: file.size,
-        fileHash,
-        storagePath,
-        status: 'uploaded',
-        uploadedBy: currentUser.id,
-        batchId: batchId ?? undefined,
-      })
-      .returning()
+    // 5e. Check for existing file with same hash (duplicate re-run case)
+    // When user clicks "Re-run QA", the file has the same (projectId, fileHash)
+    // — reset existing record instead of inserting a duplicate
+    let fileRecord: typeof files.$inferSelect | undefined
+    let isRerun = false
+
+    const [existingFile] = await db
+      .select()
+      .from(files)
+      .where(
+        and(
+          withTenant(files.tenantId, currentUser.tenantId),
+          eq(files.projectId, projectId),
+          eq(files.fileHash, fileHash),
+        ),
+      )
+      .limit(1)
+
+    if (existingFile) {
+      // Re-run: reset file status to 'uploaded' for re-processing
+      const [updated] = await db
+        .update(files)
+        .set({
+          status: 'uploaded',
+          storagePath,
+          uploadedBy: currentUser.id,
+          batchId: batchId ?? null,
+          updatedAt: new Date(),
+        })
+        .where(eq(files.id, existingFile.id))
+        .returning()
+      fileRecord = updated
+      isRerun = true
+    } else {
+      // New file: INSERT record
+      const [inserted] = await db
+        .insert(files)
+        .values({
+          tenantId: currentUser.tenantId,
+          projectId,
+          fileName: file.name,
+          fileType,
+          fileSizeBytes: file.size,
+          fileHash,
+          storagePath,
+          status: 'uploaded',
+          uploadedBy: currentUser.id,
+          batchId: batchId ?? undefined,
+        })
+        .returning()
+      fileRecord = inserted
+    }
 
     if (!fileRecord) {
       // H1: cleanup storage to prevent orphan when DB insert fails
@@ -220,7 +256,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         userId: currentUser.id,
         entityType: 'file',
         entityId: fileRecord.id,
-        action: 'file.uploaded',
+        action: isRerun ? 'file.rerun' : 'file.uploaded',
         newValue: {
           fileId: fileRecord.id,
           fileName: file.name,
@@ -229,6 +265,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           fileHash,
           projectId,
           batchId: batchId ?? null,
+          isRerun,
         },
       })
     } catch (auditError) {

@@ -95,6 +95,19 @@
 - **Origin:** Story 3.2a CR R2, flagged as M1/M2 (optional fix)
 - **Status:** RESOLVED (2026-03-02) — changed to `severity: FindingSeverity`, `detectedByLayer: DetectedByLayer` with imports from `@/types/finding`
 
+### TD-CODE-008: Unicode case folding (German ß→ss, Turkish İ→i) not supported in glossary matching
+- **Date:** 2026-03-09
+- **Story:** Story 1.5 TA Run 15 (Failure Mode Analysis finding F3)
+- **Phase:** TA (Test Automation — code fix candidate)
+- **Severity:** Low
+- **Risk:** `toLowerCase()` does not perform Unicode case folding — "STRASSE" will NOT match "Straße" (German), Turkish İ (U+0130) produces 2-char form shifting positions. Neither language is in current target scope (CJK/Thai primary)
+- **Mitigation:** Documented as known limitation in `findTermInText()` JSDoc. German ß test (TA-UNIT-027) explicitly documents behavior
+- **Fix:** Replace `toLowerCase()` with `caseFold()` function that handles ß→ss, İ→i with position mapping infrastructure (folded text → original position map array). Approach: build `{ folded: string, posMap: number[] }` since case folding can change string length. Estimated effort: 4-6 hours
+- **Research:** `Intl.Collator` sliding window won't work (ß expands 1→2 chars, window size mismatch). Manual position-mapped case folding is the correct approach
+- **Origin:** Story 1.5 TA Run 15, FMEA finding + Party Mode discussion (2026-03-09)
+- **Target:** Epic 5 — Multi-language Quality Expansion (German/Turkish glossary + QA workflow ยังไม่มี)
+- **Status:** DEFERRED → Epic 5
+
 ### TD-CODE-003: getFileHistory fetches ALL files + JS filter/paginate
 - **Severity:** Medium
 - **Risk:** O(N) memory for large projects
@@ -466,17 +479,48 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Fix:** When file-level target language metadata is added (Epic 5 multi-lang support), JOIN on both source + target
 - **Status:** DEFERRED → **Epic 5 — Language Intelligence & Non-Native Support** (multi-target-lang file metadata needed)
 
+## Bug Fix — Duplicate Rerun Storage Error (2026-03-09)
+
+### TD-UPLOAD-001: Route handler INSERT crashes on duplicate rerun (23505)
+- **Date:** 2026-03-09
+- **Story:** Story 2.1 (File Upload) — discovered during Story 2.3 TA
+- **Phase:** TA (Test Automation validation run)
+- **Severity:** Medium
+- **Root Cause:** TD-DB-005 added `uq_files_project_hash` unique index but route handler (`src/app/api/upload/route.ts:190`) was NOT updated to handle INSERT conflict → PostgreSQL 23505 → HTTP 500 → "Storage error. Please try again."
+- **Impact:** All file formats (SDLXLIFF, XLIFF, Excel) — any "Re-run QA" on duplicate file fails
+- **Fix:** Route handler now checks for existing file before INSERT. If exists → UPDATE reset status to 'uploaded' (reuse record). Audit log differentiates `file.rerun` vs `file.uploaded`.
+- **Files Changed:** `src/app/api/upload/route.ts`
+- **Origin:** Story 2.3 TA Run (Party Mode analysis traced to TD-DB-005 half-fix)
+- **Status:** RESOLVED (2026-03-09)
+
+### TD-UPLOAD-002: batchInsertSegments missing DELETE for re-parse idempotency
+- **Date:** 2026-03-09
+- **Story:** Story 2.1 (File Upload) — discovered during Story 2.3 TA
+- **Phase:** TA (Test Automation validation run)
+- **Severity:** Medium
+- **Root Cause:** `parseFile.action.ts:batchInsertSegments()` does INSERT without DELETE old segments → `uq_segments_file_segment` constraint blocks re-parse after file status reset. Violates Guardrail #6 (DELETE + INSERT = transaction)
+- **Impact:** Re-run QA succeeds at upload but parse fails ("Parse failed" shown in UI)
+- **Fix:** Added `tx.delete(segments).where(eq(segments.fileId, fileId))` at start of transaction, before batch INSERT
+- **Files Changed:** `src/features/parser/actions/parseFile.action.ts`
+- **Origin:** Story 2.3 TA Run — discovered when `upload-duplicate.spec.ts` failed with "Parse failed"
+- **Status:** RESOLVED (2026-03-09)
+
+### TD-E2E-012: assertDuplicateDetected helper wrong text match
+- **Date:** 2026-03-09
+- **Story:** Story 2.1 (File Upload) — pre-existing helper bug
+- **Phase:** TA (Test Automation validation run)
+- **Severity:** Low
+- **Root Cause:** `e2e/helpers/fileUpload.ts:assertDuplicateDetected()` checked for `"This file was uploaded on"` but actual dialog text is `"{filename} was uploaded on"`. Helper never tested in real E2E run.
+- **Fix:** Changed assertion to `getByText('was uploaded on', { exact: false })`
+- **Files Changed:** `e2e/helpers/fileUpload.ts`
+- **Status:** RESOLVED (2026-03-09)
+
+---
+
 ## CR Sprint — Story 3.5 (2026-03-08)
 
-### TD-ORPHAN-004: NotificationDropdown component not wired to any page
-- **Date:** 2026-03-08
-- **Story:** Epic 3 sign-off orphan scan
-- **Phase:** Epic sign-off
-- **Severity:** Low
-- **File:** `src/features/dashboard/components/NotificationDropdown.tsx`
-- **Description:** Fully implemented component (bell icon + dropdown, uses `useNotifications` hook) but never imported in any `src/app/` page or layout. Created during Epic 1 but no story has wired it into the dashboard header/sidebar shell.
-- **Fix:** Import and mount in `src/app/(app)/layout.tsx` header area or `AppHeader` component when notification UX is designed.
-- **Status:** DEFERRED → **Story 4.0 — Review Infrastructure Setup** (wire NotificationDropdown into AppHeader/layout)
+### ~~TD-ORPHAN-004: NotificationDropdown component not wired to any page~~
+- **Status:** RESOLVED (2026-03-09) — Already wired in `src/components/layout/app-header.tsx:4,20`. Import + mount confirmed. Orphan scan false positive — component was wired before tracker entry was created.
 
 ### TD-REVIEW-002: Realtime auto_passed transition doesn't show rationale
 - **Date:** 2026-03-08

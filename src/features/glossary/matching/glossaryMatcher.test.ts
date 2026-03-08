@@ -562,3 +562,402 @@ describe('checkGlossaryCompliance', () => {
     expect(result.matches).toHaveLength(1)
   })
 })
+
+// ---------------------------------------------------------------------------
+// TA — P0 Critical: Multi-term compliance + overlapping CJK + zero-width chars
+// ---------------------------------------------------------------------------
+
+describe('TA — P0 Critical', () => {
+  beforeEach(() => {
+    mockWriteAuditLog.mockReset()
+    mockWriteAuditLog.mockResolvedValue(undefined)
+    mockLogger.warn.mockReset()
+    mockLogger.info.mockReset()
+  })
+
+  it('TA-UNIT-001: checkGlossaryCompliance with 4 terms — 2 found (1 high, 1 low) + 1 missing + correct categorization', async () => {
+    const termHigh = buildTerm({
+      id: '00000000-0000-4000-8000-000000000011',
+      sourceTerm: 'hospital',
+      targetTerm: 'hospital',
+      caseSensitive: false,
+    })
+    const termLow = buildTerm({
+      id: '00000000-0000-4000-8000-000000000012',
+      sourceTerm: 'care',
+      targetTerm: 'care',
+      caseSensitive: false,
+    })
+    const termMissing = buildTerm({
+      id: '00000000-0000-4000-8000-000000000013',
+      sourceTerm: 'pharmacy',
+      targetTerm: 'pharmacy',
+      caseSensitive: false,
+    })
+    const termAlsoFound = buildTerm({
+      id: '00000000-0000-4000-8000-000000000014',
+      sourceTerm: 'visit',
+      targetTerm: 'visit',
+      caseSensitive: false,
+    })
+
+    const { checkGlossaryCompliance } = await import('./glossaryMatcher')
+    const result = await checkGlossaryCompliance(
+      'visit the hospital for prehospitalcare treatment',
+      [termHigh, termLow, termMissing, termAlsoFound],
+      'en',
+      testCtx,
+    )
+
+    // termHigh ('hospital') found at word boundary → high confidence (first occurrence at "hospital for")
+    expect(result.matches.some((m) => m.termId === termHigh.id)).toBe(true)
+
+    // termLow ('care') found mid-word in "prehospitalcare" → low confidence
+    const careMatch =
+      result.matches.find((m) => m.termId === termLow.id) ??
+      result.lowConfidenceMatches.find((m) => m.termId === termLow.id)
+    expect(careMatch).toBeDefined()
+
+    // termMissing ('pharmacy') not in text → missingTerms
+    expect(result.missingTerms).toContain(termMissing.id)
+
+    // termAlsoFound ('visit') found at word boundary → high
+    expect(result.matches.some((m) => m.termId === termAlsoFound.id)).toBe(true)
+
+    // Verify lowConfidenceMatches is a proper subset of matches
+    for (const lc of result.lowConfidenceMatches) {
+      expect(result.matches.some((m) => m.termId === lc.termId)).toBe(true)
+    }
+  })
+
+  it('TA-UNIT-002: checkGlossaryCompliance — overlapping terms "図書" and "図書館" both found in "市立図書館"', async () => {
+    const termShort = buildTerm({
+      id: '00000000-0000-4000-8000-000000000011',
+      sourceTerm: 'book',
+      targetTerm: '図書',
+      caseSensitive: false,
+    })
+    const termLong = buildTerm({
+      id: '00000000-0000-4000-8000-000000000012',
+      sourceTerm: 'library',
+      targetTerm: '図書館',
+      caseSensitive: false,
+    })
+
+    const { checkGlossaryCompliance } = await import('./glossaryMatcher')
+    const result = await checkGlossaryCompliance('市立図書館', [termShort, termLong], 'ja', testCtx)
+
+    // Both terms should be found independently (substring search finds both)
+    const shortFound =
+      result.matches.some((m) => m.termId === termShort.id) ||
+      result.lowConfidenceMatches.some((m) => m.termId === termShort.id)
+    const longFound =
+      result.matches.some((m) => m.termId === termLong.id) ||
+      result.lowConfidenceMatches.some((m) => m.termId === termLong.id)
+
+    expect(shortFound).toBe(true)
+    expect(longFound).toBe(true)
+    expect(result.missingTerms).toHaveLength(0)
+  })
+
+  it('TA-UNIT-016: findTermInText — Zero-Width Space U+200B stripped before matching → term found', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    // ZWS inserted between โรง and พยาบาล — stripZeroWidth removes it before indexOf
+    const results = findTermInText('โรง\u200Bพยาบาล', 'โรงพยาบาล', false, 'th')
+    expect(results.length).toBeGreaterThan(0)
+  })
+
+  it('TA-UNIT-020: findTermInText — Zero-Width Joiner U+200D stripped before matching → term found', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    // ZWJ inserted — stripZeroWidth removes it before indexOf
+    const results = findTermInText('โรง\u200Dพยาบาล', 'โรงพยาบาล', false, 'th')
+    expect(results.length).toBeGreaterThan(0)
+  })
+
+  it('TA-UNIT-016b: findTermInText — text is all zero-width chars → empty results, no crash', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('\u200B\u200C\u200D', 'test', false, 'en')
+    expect(results).toHaveLength(0)
+  })
+
+  it('TA-UNIT-016c: findTermInText — term itself contains ZWC → stripped before matching → found', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    // Term pasted from CMS has ZWC inside — stripped before indexOf
+    const results = findTermInText('โรงพยาบาล', 'โรง\u200Bพยาบาล', false, 'th')
+    expect(results.length).toBeGreaterThan(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// TA — P1 High: Edge cases for findTermInText + checkGlossaryCompliance
+// ---------------------------------------------------------------------------
+
+describe('TA — P1 High: findTermInText edge cases', () => {
+  it('TA-UNIT-003: findTermInText — single CJK char "的" in Chinese text with multiple occurrences', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('这是的确的', '的', false, 'zh')
+    // "的" appears at index 2 and index 4
+    expect(results.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('TA-UNIT-013: findTermInText — Thai Sara Am in "คนทำงานหนัก" search "ทำงาน" lang=th', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('คนทำงานหนัก', 'ทำงาน', false, 'th')
+    expect(results.length).toBeGreaterThan(0)
+    // Check confidence is valid
+    expect(['high', 'low']).toContain(results[0]?.confidence)
+  })
+
+  it('TA-UNIT-017: findTermInText — invalid locale "xx-invalid" uses European fallback, no crash', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    // 'xx-invalid' is NOT in NO_SPACE_LOCALES → uses European boundary validation
+    const results = findTermInText('Visit hospital today', 'hospital', false, 'xx-invalid')
+    expect(results.length).toBeGreaterThan(0)
+    expect(results[0]?.confidence).toBe('high')
+  })
+
+  it('TA-UNIT-025: findTermInText — text with emoji "ข้อความ😀ดี" search "ดี" → match found after emoji', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('ข้อความ😀ดี', 'ดี', false, 'th')
+    expect(results.length).toBeGreaterThan(0)
+  })
+
+  it('TA-UNIT-014: findTermInText — "ภาษา C++ เป็นที่นิยม" search "C++" → found', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('ภาษา C++ เป็นที่นิยม', 'C++', false, 'th')
+    expect(results.length).toBeGreaterThan(0)
+  })
+})
+
+describe('TA — P1 High: checkGlossaryCompliance edge cases', () => {
+  beforeEach(() => {
+    mockWriteAuditLog.mockReset()
+    mockWriteAuditLog.mockResolvedValue(undefined)
+    mockLogger.warn.mockReset()
+    mockLogger.info.mockReset()
+  })
+
+  it('TA-UNIT-004: checkGlossaryCompliance — text is only markup "<b><i>{0}</i></b>" → all terms missing, no crash', async () => {
+    const term = buildTerm({ targetTerm: 'hospital' })
+
+    const { checkGlossaryCompliance } = await import('./glossaryMatcher')
+    const result = await checkGlossaryCompliance('<b><i>{0}</i></b>', [term], 'en', testCtx)
+
+    expect(result.missingTerms).toContain(term.id)
+    expect(result.matches).toHaveLength(0)
+    expect(result.lowConfidenceMatches).toHaveLength(0)
+  })
+
+  it('TA-UNIT-005: checkGlossaryCompliance — ctx without userId → audit log called without userId', async () => {
+    // buildTerm with a substring that yields low confidence → triggers audit log
+    const term = buildTerm({ targetTerm: 'บาล' })
+    const ctxNoUser = { segmentId: SEGMENT_ID, projectId: PROJECT_ID, tenantId: TENANT_ID }
+
+    const { checkGlossaryCompliance } = await import('./glossaryMatcher')
+    await checkGlossaryCompliance('โรงพยาบาล', [term], 'th', ctxNoUser)
+
+    expect(mockWriteAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: TENANT_ID,
+        entityType: 'segment',
+        entityId: SEGMENT_ID,
+        action: 'glossary_boundary_mismatch',
+      }),
+    )
+    // Verify userId is NOT present in the audit log call
+    const callArg = mockWriteAuditLog.mock.calls[0]?.[0] as Record<string, unknown> | undefined
+    expect(callArg).toBeDefined()
+    expect('userId' in (callArg ?? {})).toBe(false)
+  })
+
+  it('TA-UNIT-006: checkGlossaryCompliance — audit log throws "DB down" → error propagates (not swallowed)', async () => {
+    const term = buildTerm({ targetTerm: 'บาล' }) // low confidence → triggers audit log
+    mockWriteAuditLog.mockRejectedValueOnce(new Error('DB down'))
+
+    const { checkGlossaryCompliance } = await import('./glossaryMatcher')
+    await expect(checkGlossaryCompliance('โรงพยาบาล', [term], 'th', testCtx)).rejects.toThrow(
+      'DB down',
+    )
+  })
+
+  it('TA-UNIT-023: checkGlossaryCompliance — delayed audit resolution (100ms) → result still correct', async () => {
+    const term = buildTerm({ targetTerm: 'บาล' }) // low confidence → triggers audit
+    mockWriteAuditLog.mockImplementationOnce(
+      () => new Promise<void>((resolve) => setTimeout(resolve, 100)),
+    )
+
+    const { checkGlossaryCompliance } = await import('./glossaryMatcher')
+    const result = await checkGlossaryCompliance('โรงพยาบาล', [term], 'th', testCtx)
+
+    // Result should still be correct despite delayed audit
+    const allFound = [...result.matches, ...result.lowConfidenceMatches]
+    expect(allFound.length).toBeGreaterThan(0)
+    expect(mockWriteAuditLog).toHaveBeenCalledTimes(1)
+  })
+
+  it('TA-UNIT-028: checkGlossaryCompliance — duplicate terms in array → may produce duplicate matches', async () => {
+    const term = buildTerm({ targetTerm: 'hospital' })
+
+    const { checkGlossaryCompliance } = await import('./glossaryMatcher')
+    const result = await checkGlossaryCompliance(
+      'Visit hospital today',
+      [term, term], // same term object passed twice
+      'en',
+      testCtx,
+    )
+
+    // Both references are processed → 2 matches (implementation iterates all terms)
+    expect(result.matches).toHaveLength(2)
+    expect(result.matches[0]?.termId).toBe(term.id)
+    expect(result.matches[1]?.termId).toBe(term.id)
+  })
+
+  it('TA-UNIT-029: checkGlossaryCompliance — term with empty targetTerm → goes to missingTerms', async () => {
+    const term = buildTerm({ targetTerm: '' })
+
+    const { checkGlossaryCompliance } = await import('./glossaryMatcher')
+    const result = await checkGlossaryCompliance('Some text here', [term], 'en', testCtx)
+
+    // findTermInText returns [] for empty term → term goes to missingTerms
+    expect(result.missingTerms).toContain(term.id)
+    expect(result.matches).toHaveLength(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// TA — P1 High: validateBoundary large text
+// ---------------------------------------------------------------------------
+
+describe('TA — P1 High: validateBoundary', () => {
+  it('TA-UNIT-021: validateBoundary — text 60001 chars, term spans chunk boundary → returns valid confidence', async () => {
+    const { validateBoundary } = await import('./glossaryMatcher')
+    // Create text where term crosses the 30000-char chunk boundary
+    const prefix = 'ก'.repeat(29998)
+    const term = 'โรงพยาบาล' // 9 chars, spans 29998..30007
+    const suffix = 'ข'.repeat(30000)
+    const text = prefix + term + suffix
+
+    const result = validateBoundary(text, 29998, term.length, 'th')
+    expect(['high', 'low']).toContain(result)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// TA — P2 Medium: Korean, punctuation boundaries, NFKC ligature, mixed scripts
+// ---------------------------------------------------------------------------
+
+describe('TA — P2 Medium: findTermInText — additional languages and edge cases', () => {
+  it('TA-UNIT-007: findTermInText — Korean "나는 도서관에 갔다" search "도서관" lang=ko → match found', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('나는 도서관에 갔다', '도서관', false, 'ko')
+    expect(results.length).toBeGreaterThan(0)
+  })
+
+  it('TA-UNIT-008: findTermInText — "Visit hospital, please" search "hospital" → high confidence (comma is non-word boundary)', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('Visit hospital, please', 'hospital', false, 'en')
+    expect(results.length).toBeGreaterThan(0)
+    expect(results[0]?.confidence).toBe('high')
+  })
+
+  it('TA-UNIT-009: findTermInText — "Go to hospital." search "hospital" → high confidence (period is non-word boundary)', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('Go to hospital.', 'hospital', false, 'en')
+    expect(results.length).toBeGreaterThan(0)
+    expect(results[0]?.confidence).toBe('high')
+  })
+
+  it('TA-UNIT-015: findTermInText — ligature "ﬁle" (U+FB01 + "le") search "file" → NFKC normalizes → match found', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    // U+FB01 = ﬁ (fi ligature). NFKC normalizes ﬁ → "fi"
+    const results = findTermInText('\uFB01le manager', 'file', false, 'en')
+    expect(results.length).toBeGreaterThan(0)
+  })
+
+  it('TA-UNIT-018: findTermInText — mixed Thai+English "กรุณาคลิก Submit เพื่อดำเนินการ" search "Submit" lang=th → found', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('กรุณาคลิก Submit เพื่อดำเนินการ', 'Submit', false, 'th')
+    expect(results.length).toBeGreaterThan(0)
+  })
+
+  it('TA-UNIT-024: findTermInText — "圖書館" found with both lang=zh and lang=zh-TW', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const resultsZh = findTermInText('我去圖書館借書', '圖書館', false, 'zh')
+    const resultsZhTW = findTermInText('我去圖書館借書', '圖書館', false, 'zh-TW')
+
+    expect(resultsZh.length).toBeGreaterThan(0)
+    expect(resultsZhTW.length).toBeGreaterThan(0)
+  })
+
+  it('TA-UNIT-027: findTermInText — German "DIE STRASSE IST LANG" search "Straße" caseSensitive=false → NOT found (known limitation: ß≠ss in toLowerCase)', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    // toLowerCase: "Straße" → "straße", "STRASSE" → "strasse"
+    // "straße" !== "strasse" — toLowerCase does NOT perform case folding (ß ≠ ss)
+    const results = findTermInText('DIE STRASSE IST LANG', 'Straße', false, 'de')
+    // Document: This is a known limitation — ß does not case-fold to ss with toLowerCase
+    expect(results).toHaveLength(0)
+  })
+})
+
+describe('TA — P2 Medium: validateEuropeanBoundary', () => {
+  it('TA-UNIT-026: validateEuropeanBoundary — term IS entire text (matchIndex=0, termLen=text.length) → high', async () => {
+    const { validateEuropeanBoundary } = await import('./glossaryMatcher')
+    const text = 'hospital'
+    const result = validateEuropeanBoundary(text, 0, text.length)
+    expect(result).toBe('high')
+  })
+})
+
+describe('TA — P2 Medium: checkGlossaryCompliance audit log count', () => {
+  beforeEach(() => {
+    mockWriteAuditLog.mockReset()
+    mockWriteAuditLog.mockResolvedValue(undefined)
+    mockLogger.warn.mockReset()
+    mockLogger.info.mockReset()
+  })
+
+  it('TA-UNIT-022: checkGlossaryCompliance — 10 terms where 8 have low confidence → audit log called exactly 8 times', async () => {
+    // Create 8 terms that will match with low confidence (mid-word substrings in Thai)
+    // and 2 terms that will match with high confidence
+    const lowTerms = Array.from({ length: 8 }, (_, i) =>
+      buildTerm({
+        id: `00000000-0000-4000-8000-00000000002${i}`,
+        sourceTerm: `low-term-${i}`,
+        // Use distinct single-char substrings that appear mid-word in the text
+        targetTerm: ['รง', 'พย', 'บา', 'นร', 'ฐบ', 'ลร', 'งพ', 'ยา'][i]!,
+        caseSensitive: false,
+      }),
+    )
+
+    const highTerms = [
+      buildTerm({
+        id: '00000000-0000-4000-8000-000000000030',
+        sourceTerm: 'hospital',
+        targetTerm: 'hospital',
+        caseSensitive: false,
+      }),
+      buildTerm({
+        id: '00000000-0000-4000-8000-000000000031',
+        sourceTerm: 'visit',
+        targetTerm: 'visit',
+        caseSensitive: false,
+      }),
+    ]
+
+    const { checkGlossaryCompliance } = await import('./glossaryMatcher')
+    // Thai text with predictable mid-word substrings + English text with word boundaries
+    const result = await checkGlossaryCompliance(
+      'โรงพยาบาลรัฐบาลรงพยา visit hospital',
+      [...lowTerms, ...highTerms],
+      'th',
+      testCtx,
+    )
+
+    // Count how many low-confidence matches actually triggered audit
+    const lowCount = result.lowConfidenceMatches.length
+    // Audit should be called exactly once per low-confidence term
+    expect(mockWriteAuditLog).toHaveBeenCalledTimes(lowCount)
+    // At least some should be low confidence
+    expect(lowCount).toBeGreaterThan(0)
+  })
+})

@@ -4,7 +4,7 @@ import type { InferSelectModel } from 'drizzle-orm'
 
 import type { glossaryTerms } from '@/db/schema/glossaryTerms'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
-import { chunkText, stripMarkup } from '@/lib/language/markupStripper'
+import { chunkText, stripMarkup, stripZeroWidth } from '@/lib/language/markupStripper'
 import { getSegmenter, isNoSpaceLanguage } from '@/lib/language/segmenterCache'
 import { logger } from '@/lib/logger'
 
@@ -95,8 +95,15 @@ export function validateEuropeanBoundary(
  * Returns array of {position, confidence} for each occurrence.
  *
  * - Normalizes text via NFKC (terms are already NFKC in DB from Story 1.4)
+ * - Strips zero-width characters (U+200B/200C/200D/FEFF) that break indexOf matching
  * - Strips markup before boundary validation
  * - caseSensitive flag from glossary_terms.case_sensitive
+ *
+ * Known limitations (toLowerCase() ≠ Unicode case folding) — TODO(TD-CODE-008):
+ * - German ß does not case-fold to "ss": "STRASSE" will NOT match "Straße".
+ * - Turkish İ (U+0130) → toLowerCase() produces 2-char "i̇", shifting positions.
+ * Neither German nor Turkish is in current target scope (CJK/Thai primary).
+ * Fix deferred to Epic 5 — requires caseFold() with position mapping infrastructure.
  */
 export function findTermInText(
   rawText: string,
@@ -104,9 +111,11 @@ export function findTermInText(
   caseSensitive: boolean,
   lang: string,
 ): Array<{ position: number; confidence: BoundaryConfidence }> {
-  // Step 1: NFKC normalize (defensive — terms already normalized at import)
-  const normalizedText = rawText.normalize('NFKC')
-  const normalizedTerm = term.normalize('NFKC')
+  // Step 1: NFKC normalize + strip zero-width characters
+  // ZWC (U+200B, U+200D, etc.) are inserted by CMS/web editors in Thai text
+  // for line-breaking hints — they break indexOf substring matching
+  const normalizedText = stripZeroWidth(rawText.normalize('NFKC'))
+  const normalizedTerm = stripZeroWidth(term.normalize('NFKC'))
 
   // Step 2: Prepare comparison strings (case sensitivity)
   const searchText = caseSensitive ? normalizedText : normalizedText.toLowerCase()
@@ -211,6 +220,8 @@ export async function checkGlossaryCompliance(
   const lowConfidenceMatches: GlossaryTermMatch[] = []
   // Track logged mismatches to avoid duplicate audit entries per (segmentId, term)
   const loggedMismatches = new Set<string>()
+  // Pre-compute NFKC + ZWC-stripped text once (positions from findTermInText reference this)
+  const normalizedTarget = stripZeroWidth(targetText.normalize('NFKC'))
 
   for (const term of terms) {
     const occurrences = findTermInText(targetText, term.targetTerm, term.caseSensitive, targetLang)
@@ -223,12 +234,13 @@ export async function checkGlossaryCompliance(
     // Use first occurrence for the match record (primary hit)
     // Safe: occurrences.length > 0 guaranteed by the check above
     const first = occurrences[0]!
-    // CR1 FIX: extract actual matched text from NFKC-normalized original
+    // CR1 FIX: extract actual matched text from NFKC-normalized + ZWC-stripped original
     // (for case-insensitive European matches, foundText preserves original case)
-    const normalizedTargetTerm = term.targetTerm.normalize('NFKC')
-    const foundText = targetText
-      .normalize('NFKC')
-      .slice(first.position, first.position + normalizedTargetTerm.length)
+    const normalizedTargetTerm = stripZeroWidth(term.targetTerm.normalize('NFKC'))
+    const foundText = normalizedTarget.slice(
+      first.position,
+      first.position + normalizedTargetTerm.length,
+    )
     const match: GlossaryTermMatch = {
       termId: term.id,
       sourceTerm: term.sourceTerm,

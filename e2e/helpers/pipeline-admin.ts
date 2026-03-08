@@ -183,6 +183,37 @@ export async function pollScoreLayer(
   )
 }
 
+// ── Segment Queries ─────────────────────────────────────────────────────────
+
+/**
+ * Count segments for a file using PostgREST exact count.
+ */
+export async function querySegmentsCount(fileId: string): Promise<number> {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/segments?file_id=eq.${fileId}&select=id`, {
+    headers: { ...adminHeaders(), Prefer: 'count=exact' },
+  })
+  const range = res.headers.get('content-range')
+  if (!range) return 0
+  const match = range.match(/\/(\d+)$/)
+  return match ? parseInt(match[1], 10) : 0
+}
+
+/**
+ * Query the first segment (ordered by segment_number) for a file.
+ * Returns source_text and target_text for assertion.
+ */
+export async function queryFirstSegment(
+  fileId: string,
+): Promise<{ source_text: string; target_text: string } | null> {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/segments?file_id=eq.${fileId}&select=source_text,target_text&order=segment_number.asc&limit=1`,
+    { headers: adminHeaders() },
+  )
+  const data = (await res.json()) as Array<{ source_text: string; target_text: string }>
+  if (!data || data.length === 0) return null
+  return data[0]
+}
+
 // ── Seeding ──────────────────────────────────────────────────────────────────
 
 /**

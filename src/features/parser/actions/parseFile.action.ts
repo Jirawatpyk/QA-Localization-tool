@@ -308,8 +308,11 @@ async function batchInsertSegments(
   projectId: string,
   tenantId: string,
 ): Promise<void> {
-  // H7: Wrap all batch inserts in a single transaction — partial failure rolls back all batches
+  // H7: Wrap DELETE + batch INSERT in a single transaction (Guardrail #6 — idempotent re-run)
   await db.transaction(async (tx) => {
+    // Delete old segments first (re-run case: file reset to 'uploaded' still has old segments)
+    await tx.delete(segments).where(eq(segments.fileId, fileId))
+
     for (let i = 0; i < parsedSegments.length; i += SEGMENT_BATCH_SIZE) {
       const batch = parsedSegments.slice(i, i + SEGMENT_BATCH_SIZE)
       const values = batch.map((seg) => ({

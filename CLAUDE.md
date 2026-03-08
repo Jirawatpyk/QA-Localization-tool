@@ -163,6 +163,7 @@ Each feature module contains: `components/`, `actions/` (Server Actions), `hooks
 38. **ARIA landmarks on review layout** — `<nav>` for file nav, `<main>` for finding list (one per page), `role="complementary"` for detail panel. Finding list = `role="grid"` + `aria-label`. Expandable cards = `aria-expanded`. Filter bar = `role="toolbar"` + `aria-label`
 39. **lang attribute on segment text** — every source/target text element MUST have `lang="{languageCode}"` from file metadata. CJK containers add 1.1x font scale. Without `lang`, Thai line-breaking and CJK font fallback break (SC 3.1.2)
 40. **No focus stealing on mount** — auto-expand (Critical findings) is visual only, NOT auto-focus. Initial focus = first logical tab stop (filter bar or first finding row). `useEffect` + `.focus()` on mount FORBIDDEN except modal open (#30) and auto-advance (#32). (SC 2.4.3)
+41. **DB constraint added → audit all INSERT/UPDATE paths** — when adding UNIQUE, CHECK, or FK constraint to a table, MUST audit every `db.insert()` and `db.update()` that touches that table. Add conflict handling (`onConflictDoUpdate`, try-catch for 23505, or pre-check SELECT). Also verify idempotent re-run paths (DELETE + INSERT in transaction per Guardrail #6). Constraint without code-path update = latent production bug. (Story 2.3 TA Retro — TD-DB-005 half-fix)
 
 ## Naming Conventions
 

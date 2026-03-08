@@ -8,22 +8,39 @@ vi.mock('server-only', () => ({}))
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 
 // Use vi.hoisted to hoist mock refs (fixes "Cannot access before initialization" error)
-const { mockSelect, mockUpdate, mockInsert, mockTransaction, mockDownload, mockStorage } =
-  vi.hoisted(() => {
-    const mockDownload = vi.fn()
-    const mockStorage = { from: vi.fn(() => ({ download: mockDownload })) }
-    const mockInsert = vi.fn()
-    const mockUpdate = vi.fn()
-    const mockSelect = vi.fn()
-    const mockTransaction = vi.fn()
-    return { mockSelect, mockUpdate, mockInsert, mockTransaction, mockDownload, mockStorage }
-  })
+const {
+  mockSelect,
+  mockUpdate,
+  mockInsert,
+  mockDelete,
+  mockTransaction,
+  mockDownload,
+  mockStorage,
+} = vi.hoisted(() => {
+  const mockDownload = vi.fn()
+  const mockStorage = { from: vi.fn(() => ({ download: mockDownload })) }
+  const mockInsert = vi.fn()
+  const mockDelete = vi.fn()
+  const mockUpdate = vi.fn()
+  const mockSelect = vi.fn()
+  const mockTransaction = vi.fn()
+  return {
+    mockSelect,
+    mockUpdate,
+    mockInsert,
+    mockDelete,
+    mockTransaction,
+    mockDownload,
+    mockStorage,
+  }
+})
 
 vi.mock('@/db/client', () => ({
   db: {
     select: mockSelect,
     update: mockUpdate,
     insert: mockInsert,
+    delete: mockDelete,
     transaction: mockTransaction,
   },
 }))
@@ -192,10 +209,11 @@ describe('parseFile action', () => {
     mockWriteAuditLog.mockResolvedValue(undefined)
     // Re-bind mockStorage.from each time since clearAllMocks resets it
     mockStorage.from.mockReturnValue({ download: mockDownload })
-    // H7: transaction mock — forward to callback with mockInsert as tx.insert
+    // H7: transaction mock — forward to callback with tx.delete + tx.insert (Guardrail #6)
+    mockDelete.mockReturnValue({ where: vi.fn() })
     mockTransaction.mockImplementation(
-      async (fn: (tx: { insert: typeof mockInsert }) => Promise<void>) =>
-        fn({ insert: mockInsert }),
+      async (fn: (tx: { insert: typeof mockInsert; delete: typeof mockDelete }) => Promise<void>) =>
+        fn({ insert: mockInsert, delete: mockDelete }),
     )
   })
 

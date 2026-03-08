@@ -170,8 +170,8 @@ export async function assertDuplicateDetected(page: Page, expectedScore?: number
   const dialog = page.getByRole('dialog')
   await expect(dialog).toBeVisible({ timeout: 10_000 })
 
-  // Should show "was uploaded on [date]" text
-  await expect(dialog.getByText('This file was uploaded on', { exact: false })).toBeVisible()
+  // Should show "was uploaded on [date]" text (format: "{filename} was uploaded on {date}")
+  await expect(dialog.getByText('was uploaded on', { exact: false })).toBeVisible()
 
   // Should have Re-run QA and Cancel options
   await expect(dialog.getByRole('button', { name: 'Re-run QA' })).toBeVisible()
