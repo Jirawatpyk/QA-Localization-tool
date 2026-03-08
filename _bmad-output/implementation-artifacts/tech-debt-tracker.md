@@ -457,6 +457,16 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 
 ## CR Sprint — Story 3.5 (2026-03-08)
 
+### TD-ORPHAN-004: NotificationDropdown component not wired to any page
+- **Date:** 2026-03-08
+- **Story:** Epic 3 sign-off orphan scan
+- **Phase:** Epic sign-off
+- **Severity:** Low
+- **File:** `src/features/dashboard/components/NotificationDropdown.tsx`
+- **Description:** Fully implemented component (bell icon + dropdown, uses `useNotifications` hook) but never imported in any `src/app/` page or layout. Created during Epic 1 but no story has wired it into the dashboard header/sidebar shell.
+- **Fix:** Import and mount in `src/app/(app)/layout.tsx` header area or `AppHeader` component when notification UX is designed.
+- **Status:** DEFERRED → **Epic 4 — Review & Decision Workflow** (notification UI wiring as part of review workflow infrastructure)
+
 ### TD-REVIEW-002: Realtime auto_passed transition doesn't show rationale
 - **Date:** 2026-03-08
 - **Story:** Story 3.5 (Score Lifecycle & Confidence Display)

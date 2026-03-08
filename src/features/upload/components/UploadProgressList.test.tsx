@@ -113,4 +113,49 @@ describe('UploadProgressList', () => {
     render(<UploadProgressList files={[makeProgress({ status: 'error', error: null })]} />)
     expect(screen.getByRole('alert').textContent).toContain('Upload failed')
   })
+
+  // Story 3.2b5 — TA expansion (parse state props)
+
+  it('should show "Parsing..." when parsingFileIds contains uploaded file (U1)', () => {
+    render(
+      <UploadProgressList
+        files={[makeProgress({ fileId: 'f1', status: 'uploaded', percent: 100 })]}
+        parsingFileIds={new Set(['f1'])}
+      />,
+    )
+    expect(screen.getByText(/Parsing\.\.\./)).toBeTruthy()
+  })
+
+  it('should show "Parsed (N segments)" with success testid when parsedFiles contains file (U2)', () => {
+    render(
+      <UploadProgressList
+        files={[makeProgress({ fileId: 'f1', status: 'uploaded', percent: 100 })]}
+        parsedFiles={new Map([['f1', 42]])}
+      />,
+    )
+    expect(screen.getByText(/Parsed \(42 segments\)/)).toBeTruthy()
+    expect(screen.getByTestId('upload-status-success')).toBeTruthy()
+  })
+
+  it('should show "Parse failed" when parseFailedFileIds contains file (U3)', () => {
+    render(
+      <UploadProgressList
+        files={[makeProgress({ fileId: 'f1', status: 'uploaded', percent: 100 })]}
+        parseFailedFileIds={new Set(['f1'])}
+      />,
+    )
+    expect(screen.getByText(/Parse failed/)).toBeTruthy()
+  })
+
+  it('should prioritize parseFailedFileIds over parsedFiles for same fileId (U9)', () => {
+    render(
+      <UploadProgressList
+        files={[makeProgress({ fileId: 'f1', status: 'uploaded', percent: 100 })]}
+        parsedFiles={new Map([['f1', 42]])}
+        parseFailedFileIds={new Set(['f1'])}
+      />,
+    )
+    expect(screen.getByText(/Parse failed/)).toBeTruthy()
+    expect(screen.queryByText(/Parsed/)).toBeNull()
+  })
 })

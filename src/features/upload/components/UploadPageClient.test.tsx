@@ -879,4 +879,133 @@ describe('UploadPageClient', () => {
       expect(screen.queryByRole('button', { name: /start processing/i })).toBeNull()
     })
   })
+
+  // --- Story 3.2b5 — TA expansion (edge cases) ---
+
+  it('should show error toast and not crash when parseFile throws unexpected Error (U6)', async () => {
+    mockParseFile.mockRejectedValue(new Error('Network timeout'))
+
+    vi.mocked(useFileUpload).mockReturnValue({
+      progress: [],
+      largeFileWarnings: [],
+      isUploading: false,
+      pendingDuplicate: null,
+      uploadedFiles: [
+        makeUploadedFile({
+          fileId: 'throw-id',
+          fileName: 'crash.sdlxliff',
+          fileType: 'sdlxliff',
+        }),
+      ],
+      startUpload: mockStartUpload,
+      confirmRerun: mockConfirmRerun,
+      cancelDuplicate: mockCancelDuplicate,
+      reset: vi.fn(),
+    })
+
+    const { rerender } = render(<UploadPageClient projectId={VALID_PROJECT_ID} />)
+
+    // .catch() branch should fire toast.error with file name (no crash)
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('crash.sdlxliff'))
+    })
+
+    // Re-render should NOT re-trigger parseFile (fileId added to dismissedParseIds)
+    mockParseFile.mockClear()
+    rerender(<UploadPageClient projectId={VALID_PROJECT_ID} />)
+
+    await waitFor(() => {
+      expect(mockParseFile).not.toHaveBeenCalled()
+    })
+  })
+
+  it('should disable "Start Processing" button when parsing in progress and isUploading=false (U7)', async () => {
+    // File A resolves immediately, File B never resolves (simulates ongoing parse)
+    mockParseFile
+      .mockResolvedValueOnce({ success: true, data: { segmentCount: 10, fileId: 'file-a' } })
+      .mockReturnValueOnce(new Promise(() => {})) // never resolves
+
+    vi.mocked(useFileUpload).mockReturnValue({
+      progress: [],
+      largeFileWarnings: [],
+      isUploading: false,
+      pendingDuplicate: null,
+      uploadedFiles: [
+        makeUploadedFile({ fileId: 'file-a', fileName: 'first.sdlxliff', fileType: 'sdlxliff' }),
+        makeUploadedFile({ fileId: 'file-b', fileName: 'second.sdlxliff', fileType: 'sdlxliff' }),
+      ],
+      startUpload: mockStartUpload,
+      confirmRerun: mockConfirmRerun,
+      cancelDuplicate: mockCancelDuplicate,
+      reset: vi.fn(),
+    })
+
+    render(<UploadPageClient projectId={VALID_PROJECT_ID} />)
+
+    // Wait for both files to be attempted (sequential parse)
+    await waitFor(() => {
+      expect(mockParseFile).toHaveBeenCalledWith('file-a')
+      expect(mockParseFile).toHaveBeenCalledWith('file-b')
+    })
+
+    // Button should be visible (parsedFiles has file-a) but disabled (file-b still parsing)
+    await waitFor(() => {
+      const button = screen.getByRole('button', { name: /start processing/i })
+      expect(button).toBeInTheDocument()
+      expect(button).toBeDisabled()
+    })
+  })
+
+  it('should show correct count and pass correct fileIds when 1 of 3 parses fails (U10)', async () => {
+    const FILE_1_ID = 'a1b2c3d4-0001-4a1b-8c2d-3e4f5a6b7c8d'
+    const FILE_2_ID = 'a1b2c3d4-0002-4a1b-8c2d-3e4f5a6b7c8d'
+    const FILE_3_ID = 'a1b2c3d4-0003-4a1b-8c2d-3e4f5a6b7c8d'
+
+    mockParseFile
+      .mockResolvedValueOnce({ success: true, data: { segmentCount: 10, fileId: FILE_1_ID } })
+      .mockResolvedValueOnce({ success: false, error: 'Invalid XML' })
+      .mockResolvedValueOnce({ success: true, data: { segmentCount: 20, fileId: FILE_3_ID } })
+
+    vi.mocked(useFileUpload).mockReturnValue({
+      progress: [],
+      largeFileWarnings: [],
+      isUploading: false,
+      pendingDuplicate: null,
+      uploadedFiles: [
+        makeUploadedFile({ fileId: FILE_1_ID, fileName: 'file1.sdlxliff', fileType: 'sdlxliff' }),
+        makeUploadedFile({ fileId: FILE_2_ID, fileName: 'file2.sdlxliff', fileType: 'sdlxliff' }),
+        makeUploadedFile({ fileId: FILE_3_ID, fileName: 'file3.sdlxliff', fileType: 'sdlxliff' }),
+      ],
+      startUpload: mockStartUpload,
+      confirmRerun: mockConfirmRerun,
+      cancelDuplicate: mockCancelDuplicate,
+      reset: vi.fn(),
+    })
+
+    render(<UploadPageClient projectId={VALID_PROJECT_ID} />)
+
+    // Wait for all 3 files to be processed (sequential parse)
+    await waitFor(() => {
+      expect(mockParseFile).toHaveBeenCalledTimes(3)
+    })
+
+    // toast.error should have been called for file-2
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('file2.sdlxliff'))
+    })
+
+    // Button should show "(2 files)" — only successfully parsed files
+    await waitFor(() => {
+      const button = screen.getByRole('button', { name: /start processing/i })
+      expect(button).toHaveTextContent('2 files')
+    })
+
+    // Click button → dialog opens → verify 2 fileIds passed
+    await userEvent.click(screen.getByRole('button', { name: /start processing/i }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('processing-mode-dialog')).toBeInTheDocument()
+      expect(screen.getByTestId('dialog-file-count').textContent).toBe('2 files')
+    })
+  })
 })

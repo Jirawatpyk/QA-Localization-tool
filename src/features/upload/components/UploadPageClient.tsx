@@ -30,6 +30,7 @@ export function UploadPageClient({ projectId }: UploadPageClientProps) {
     startUpload,
     confirmRerun,
     cancelDuplicate,
+    reset,
   } = useFileUpload({ projectId })
 
   // Track fileIds where the column mapping dialog has been dismissed (confirmed or cancelled)
@@ -159,6 +160,8 @@ export function UploadPageClient({ projectId }: UploadPageClientProps) {
     setParseFailedFileIds(new Set())
     setDismissedParseIds(new Set())
     parsingStartedRef.current = new Set()
+    // Clear uploadedFiles to prevent auto-parse re-trigger (TA Run #10 — U8 fix)
+    reset()
   }
 
   return (

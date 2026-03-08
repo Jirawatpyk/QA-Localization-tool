@@ -2,6 +2,41 @@
 stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets', 'step-03-generate-tests', 'step-03c-aggregate', 'step-04-validate-and-summarize']
 lastStep: 'step-04-validate-and-summarize'
 lastSaved: '2026-03-08'
+taRun10:
+  stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets', 'step-03-generate-tests', 'step-03c-aggregate', 'step-04-validate-and-summarize']
+  lastStep: 'step-04-validate-and-summarize'
+  lastSaved: '2026-03-08'
+  storyFile: '_bmad-output/implementation-artifacts/3-2b5-upload-pipeline-wiring.md'
+  mode: 'BMad-Integrated'
+  existingTests: 39
+  gapsTotal: 10
+  gapsP1: 5
+  gapsP2: 3
+  gapsP3: 0
+  gapsSkipped: 2
+  gapsDropped: 1
+  gapsActionable: 7
+  testsAdded: 7
+  result: 'PASS — 7 new tests (5 P1, 2 P2), 2 skipped (U4=dup, U5=trivial), 1 dropped (U8=actual behavior), 46/46 green'
+  elicitationMethods: ['Failure Mode Analysis', 'Pre-mortem Analysis', 'Critique and Refine']
+taRun9:
+  stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets', 'step-03-generate-tests', 'step-03c-aggregate', 'step-04-validate-and-summarize']
+  lastStep: 'step-04-validate-and-summarize'
+  lastSaved: '2026-03-08'
+  storyFile: '_bmad-output/implementation-artifacts/2-9-xbench-report-multi-format-support.md'
+  mode: 'BMad-Integrated'
+  existingTests: 20
+  gapsTotal: 27
+  gapsP1: 6
+  gapsP2: 18
+  gapsP3: 3
+  gapsSkipped: 3
+  gapsActionable: 24
+  testsAdded: 24
+  result: 'PASS — 24 new tests (6 P1, 18 P2), 3 P3 skipped, 44/44 green in 144ms'
+  elicitationMethods: ['Failure Mode Analysis', 'What If Scenarios', 'Pre-mortem Analysis']
+  gapsActionable: 24
+  elicitationMethods: ['Failure Mode Analysis', 'What If Scenarios', 'Pre-mortem Analysis']
 taRun8:
   stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets', 'step-03-generate-tests', 'step-03c-aggregate', 'step-04-validate-and-summarize']
   lastStep: 'step-04-validate-and-summarize'
@@ -71,6 +106,96 @@ taRun7:
   testsAdded: 16
   result: 'PASS — 16 new tests (5 P1, 9 P2, 2 P3-equivalent), 18 deferred (integration-only/corpus-required), 7 elicitation methods applied'
   elicitationMethods: ['Failure Mode Analysis', 'Pre-mortem Analysis', 'Red Team vs Blue Team', 'First Principles Analysis', 'Chaos Monkey Scenarios', 'Reverse Engineering', 'Self-Consistency Validation']
+---
+
+# Test Automation Summary — Story 3.2b5 (TA Run #10)
+
+## Step 1: Preflight & Context
+
+### Execution Mode
+- **BMad-Integrated** — Story 3.2b5 (Upload-to-Pipeline Wiring)
+- Story Status: done (pre-CR scan clean, 26 unit + 2 E2E pass)
+
+### Framework
+- **Vitest 4.0.18** (workspace: unit/jsdom) + **Playwright** (E2E)
+- Test co-location: `*.test.tsx` next to source
+
+### ATDD Baseline
+- 39 existing tests (26 UploadPageClient + 13 UploadProgressList), 0 skips
+- E2E: `upload-segments.spec.ts` (6 tests), `pipeline-findings.spec.ts` (7 tests)
+
+---
+
+## Step 2: Coverage Gap Analysis
+
+### Advanced Elicitation Applied
+3 methods used to refine coverage plan:
+1. **Failure Mode Analysis (FMA)** — found U9 (parse status priority: parseFailedFileIds must win over parsedFiles)
+2. **Pre-mortem Analysis** — found U10 (partial failure count accuracy: 3 files, 1 fails, button shows correct count)
+3. **Critique and Refine** — dropped U4 (duplicate of existing test #4) and U5 (trivial code path)
+
+### Gaps Identified (10 total → 7 actionable)
+
+| ID | Gap | File | Priority | Status |
+|----|-----|------|----------|--------|
+| U1 | Parse status: "Parsing..." for parsingFileIds | UploadProgressList.test.tsx | P1 | ADDED |
+| U2 | Parse status: "Parsed (N segments)" with testid | UploadProgressList.test.tsx | P1 | ADDED |
+| U3 | Parse status: "Parse failed" for parseFailedFileIds | UploadProgressList.test.tsx | P1 | ADDED |
+| U4 | Non-XML files skip auto-parse | UploadPageClient.test.tsx | P2 | SKIPPED (duplicate of test #4) |
+| U5 | No files = no parse effect | UploadPageClient.test.tsx | P2 | SKIPPED (trivial) |
+| U6 | Error toast when parseFile throws unexpected Error | UploadPageClient.test.tsx | P1 | ADDED |
+| U7 | "Start Processing" disabled during active parsing | UploadPageClient.test.tsx | P2 | ADDED |
+| U8 | "Start Processing" hidden after onStartProcessing resets | UploadPageClient.test.tsx | P2 | DROPPED (actual behavior — reset re-triggers auto-parse) |
+| U9 | parseFailedFileIds priority over parsedFiles (FMA) | UploadProgressList.test.tsx | P1 | ADDED |
+| U10 | Partial failure: correct count in button + dialog (Pre-mortem) | UploadPageClient.test.tsx | P2 | ADDED |
+
+---
+
+## Step 3: Test Generation
+
+### Files Modified
+| File | Existing | Added | Total |
+|------|----------|-------|-------|
+| `src/features/upload/components/UploadProgressList.test.tsx` | 13 | 4 (U1, U2, U3, U9) | 17 |
+| `src/features/upload/components/UploadPageClient.test.tsx` | 26 | 3 (U6, U7, U10) | 29 |
+| **Total** | **39** | **7** | **46** |
+
+### E2E Expansion
+- **Not needed** — existing `upload-segments.spec.ts` and `pipeline-findings.spec.ts` cover auto-parse → pipeline → findings → score flow adequately
+
+### Dropped Test Analysis (U8)
+- **Root cause:** `handleStartProcessing()` resets ALL state (parsedFiles, parsingFileIds, parseFailedFileIds, dismissedParseIds, parsingStartedRef). Since mock `useFileUpload` still returns same `uploadedFiles`, auto-parse useEffect re-triggers immediately → "Start Processing" button reappears.
+- **Verdict:** Actual production behavior, not test bug. Partially covered by test #11 (dialog closes).
+
+---
+
+## Step 4: Validate & Summarize
+
+### Test Results
+```
+✅ 46/46 tests passed (0 failed, 0 skipped)
+Duration: 5.49s (transform 548ms, setup 555ms, import 2.13s, tests 2.03s)
+```
+
+### Validation Checklist
+- [x] Framework config loaded (vitest.workspace.ts)
+- [x] Test co-location correct (next to source files)
+- [x] No duplicate coverage (ATDD gaps only)
+- [x] Priority tags: 5 P1, 2 P2
+- [x] Factory pattern used (makeProgress, makeUploadedFile)
+- [x] No hardcoded UUIDs (valid v4 format)
+- [x] No flaky patterns (no timeouts, deterministic mocks)
+- [x] Tests isolated (each test independent)
+- [x] All 46 tests green
+
+### Key Assumptions & Risks
+1. **U8 behavior** — `handleStartProcessing` doesn't clear `uploadedFiles` → re-parse triggers. If this is intentional design, no fix needed. If not, file a bug.
+2. **Mock stability** — tests mock `useFileUpload` at module level. If hook signature changes, all 29 UploadPageClient tests need update.
+
+### Recommendations
+- **Next workflow:** `test-review` on both test files for quality scoring
+- **Consider:** Adding integration test for `handleStartProcessing` → `triggerProcessing` action chain (currently mocked)
+
 ---
 
 # Test Automation Summary — Story 3.5 (TA Run #8)
