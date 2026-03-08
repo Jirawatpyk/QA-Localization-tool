@@ -49,7 +49,7 @@ function getCellText(cell: ExcelJS.Cell): string {
   }
   // ExcelJS hyperlink cells: { text: string, hyperlink: string }
   if (typeof value === 'object' && 'hyperlink' in value) {
-    return ((value as { text: string }).text ?? '').trim()
+    return String((value as { text: string }).text ?? '').trim()
   }
   return String(value).trim()
 }
@@ -166,7 +166,7 @@ function parseSectioned(worksheet: ExcelJS.Worksheet): XbenchReportFinding[] {
     } else if (colA) {
       // Guard: skip rows that look like file references with unsupported extensions
       // (e.g., "report.mxliff (10)") — these are NOT section markers
-      if (/\.\w+\s*\(\d+\)$/.test(colA)) return
+      if (/\.\w{2,}\s*\(\d+\)$/.test(colA)) return
 
       // Section marker row — always update currentCategory (allows recovery from LI state)
       if (colA.toLowerCase().includes('language inspector')) {
