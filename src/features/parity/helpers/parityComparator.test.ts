@@ -246,4 +246,125 @@ describe('parityComparator', () => {
     expect(result.xbenchOnly).toHaveLength(0)
     expect(result.toolOnly).toHaveLength(2)
   })
+
+  // TA: Coverage Gap Tests — Story 2.7
+
+  it('[P1] should match Thai text correctly after NFKC normalization (U2)', async () => {
+    // U2: Thai text "สวัสดี" in both source fields should match exactly
+    const testFileId = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
+    const xbenchFindings = [
+      buildXbenchFinding({
+        sourceText: 'สวัสดี',
+        category: 'accuracy',
+        severity: 'major',
+      }),
+    ]
+    const toolFindings = [
+      buildToolFinding({
+        sourceTextExcerpt: 'สวัสดี',
+        category: 'accuracy',
+        severity: 'major',
+        fileId: testFileId,
+      }),
+    ]
+
+    const { compareFindings } = await import('./parityComparator')
+    const result = compareFindings(xbenchFindings, toolFindings, testFileId)
+
+    expect(result.matched).toHaveLength(1)
+    expect(result.xbenchOnly).toHaveLength(0)
+    expect(result.toolOnly).toHaveLength(0)
+  })
+
+  it('[P2] should NOT match when same category and severity but different source text (U6)', async () => {
+    // U6: Same category + same severity but different segment (source text) → should NOT match
+    const testFileId = 'b2c3d4e5-f6a7-4b2c-8d3e-4f5a6b7c8d9e'
+    const xbenchFindings = [
+      buildXbenchFinding({
+        sourceText: 'First segment source text',
+        category: 'accuracy',
+        severity: 'major',
+        segmentNumber: 1,
+      }),
+    ]
+    const toolFindings = [
+      buildToolFinding({
+        sourceTextExcerpt: 'Completely different source text',
+        category: 'accuracy',
+        severity: 'major',
+        fileId: testFileId,
+      }),
+    ]
+
+    const { compareFindings } = await import('./parityComparator')
+    const result = compareFindings(xbenchFindings, toolFindings, testFileId)
+
+    // Different source text → no match
+    expect(result.matched).toHaveLength(0)
+    expect(result.xbenchOnly).toHaveLength(1)
+    expect(result.toolOnly).toHaveLength(1)
+  })
+
+  it('[P2] should pick only first match for each xbench finding and not double-count (U11)', async () => {
+    // U11: One Xbench finding matches multiple tool findings — only first match used
+    const testFileId = 'c3d4e5f6-a7b8-4c9d-8e0f-1a2b3c4d5e6f'
+    const xbenchFindings = [
+      buildXbenchFinding({
+        sourceText: 'Duplicate text source',
+        category: 'accuracy',
+        severity: 'major',
+      }),
+    ]
+    const toolFindings = [
+      buildToolFinding({
+        sourceTextExcerpt: 'Duplicate text source',
+        category: 'accuracy',
+        severity: 'major',
+        fileId: testFileId,
+      }),
+      buildToolFinding({
+        sourceTextExcerpt: 'Duplicate text source',
+        category: 'accuracy',
+        severity: 'major',
+        fileId: testFileId,
+      }),
+    ]
+
+    const { compareFindings } = await import('./parityComparator')
+    const result = compareFindings(xbenchFindings, toolFindings, testFileId)
+
+    // 1 xbench matches 1 tool finding (first), second tool finding is unmatched
+    expect(result.matched).toHaveLength(1)
+    expect(result.xbenchOnly).toHaveLength(0)
+    expect(result.toolOnly).toHaveLength(1)
+  })
+
+  it('[P1] should handle tool finding with null sourceTextExcerpt safely (U12)', async () => {
+    // U12: Tool finding has sourceTextExcerpt: null — should not crash, should not match
+    const testFileId = 'd4e5f6a7-b8c9-4d0e-8f1a-2b3c4d5e6f7a'
+    const xbenchFindings = [
+      buildXbenchFinding({
+        sourceText: 'Some source text here',
+        category: 'terminology',
+        severity: 'minor',
+      }),
+    ]
+    const toolFindings = [
+      buildToolFinding({
+        sourceTextExcerpt: null,
+        category: 'terminology',
+        severity: 'minor',
+        fileId: testFileId,
+      }),
+    ]
+
+    const { compareFindings } = await import('./parityComparator')
+    // Should not throw
+    const result = compareFindings(xbenchFindings, toolFindings, testFileId)
+
+    // null excerpt → normalize('') → empty string, "some source text" doesn't match "" → no match
+    expect(result.matched).toHaveLength(0)
+    expect(result.xbenchOnly).toHaveLength(1)
+    expect(result.toolOnly).toHaveLength(1)
+  })
 })

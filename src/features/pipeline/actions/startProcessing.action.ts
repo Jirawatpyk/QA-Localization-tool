@@ -43,27 +43,26 @@ export async function startProcessing(
   }
   const { tenantId, id: userId } = currentUser
 
-  // Rate limit guard — check BEFORE budget (most restrictive wins)
-  const { success: allowed } = await aiPipelineLimiter.limit(userId)
-  if (!allowed) {
-    return {
-      success: false,
-      code: 'RATE_LIMITED',
-      error: 'Rate limit exceeded — please wait before starting another analysis',
-    }
-  }
-
-  // Budget guard — check project budget before triggering pipeline
-  const budget = await checkProjectBudget(projectId, tenantId)
-  if (!budget.hasQuota) {
-    return {
-      success: false,
-      code: 'BUDGET_EXCEEDED',
-      error: `AI budget exhausted ($${budget.usedBudgetUsd.toFixed(2)}/$${budget.monthlyBudgetUsd?.toFixed(2) ?? '∞'}). Upgrade plan or set new budget`,
-    }
-  }
-
   try {
+    // Rate limit guard — check BEFORE budget (most restrictive wins)
+    const { success: allowed } = await aiPipelineLimiter.limit(userId)
+    if (!allowed) {
+      return {
+        success: false,
+        code: 'RATE_LIMITED',
+        error: 'Rate limit exceeded — please wait before starting another analysis',
+      }
+    }
+
+    // Budget guard — check project budget before triggering pipeline
+    const budget = await checkProjectBudget(projectId, tenantId)
+    if (!budget.hasQuota) {
+      return {
+        success: false,
+        code: 'BUDGET_EXCEEDED',
+        error: `AI budget exhausted ($${budget.usedBudgetUsd.toFixed(2)}/$${budget.monthlyBudgetUsd?.toFixed(2) ?? '∞'}). Upgrade plan or set new budget`,
+      }
+    }
     // Validate files: all must exist in this project + tenant (regardless of status first)
     const foundFiles = await db
       .select({ id: files.id, status: files.status })

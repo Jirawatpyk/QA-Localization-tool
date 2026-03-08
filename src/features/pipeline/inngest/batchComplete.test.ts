@@ -215,4 +215,29 @@ describe('batchComplete', () => {
       expect.any(Function),
     )
   })
+
+  // TA: Coverage Gap Tests — Story 2.7
+
+  it('[P2] should have concurrency config with key=event.data.projectId and limit=1 (U15)', async () => {
+    // U15: Verify the Inngest function config has concurrency for score atomicity
+    const { inngest } = await import('@/lib/inngest/client')
+    const createFunctionMock = inngest.createFunction as ReturnType<typeof vi.fn>
+
+    vi.resetModules()
+    await import('./batchComplete')
+
+    // Find the createFunction call and inspect the config
+    expect(createFunctionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        concurrency: expect.arrayContaining([
+          expect.objectContaining({
+            key: 'event.data.projectId',
+            limit: 1,
+          }),
+        ]),
+      }),
+      expect.anything(),
+      expect.any(Function),
+    )
+  })
 })

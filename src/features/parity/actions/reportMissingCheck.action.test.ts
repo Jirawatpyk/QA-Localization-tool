@@ -217,4 +217,71 @@ describe('reportMissingCheck', () => {
     if (result.success) return
     expect(result.code).toBe('INVALID_INPUT')
   })
+
+  // TA: Coverage Gap Tests — Story 2.7
+
+  it('[P2] should generate tracking reference matching MCR-YYYYMMDD-6chars pattern (U5)', async () => {
+    // U5: Verify the tracking reference format MCR-YYYYMMDD-XXXXXX (6 alphanumeric chars)
+    const reportId = faker.string.uuid()
+    dbState.returnValues = [
+      [{ id: VALID_PROJECT_ID }], // project ownership SELECT
+      [{ id: reportId, trackingReference: 'MCR-20260225-abc123' }], // insert returning
+    ]
+
+    const { reportMissingCheck } = await import('./reportMissingCheck.action')
+    const result = await reportMissingCheck({
+      projectId: VALID_PROJECT_ID,
+      fileReference: 'test.sdlxliff',
+      segmentNumber: 1,
+      expectedDescription: 'Missing formatting check',
+      xbenchCheckType: 'number',
+    })
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+
+    // Verify the tracking reference was generated in the insert values
+    expect(dbState.valuesCaptures.length).toBeGreaterThan(0)
+    const insertedValues = dbState.valuesCaptures[0] as Record<string, unknown>
+    const trackingRef = insertedValues.trackingReference as string
+    // Format: MCR-YYYYMMDD-6alphanumeric
+    const refPattern = /^MCR-\d{8}-[a-z0-9]{6}$/
+    expect(trackingRef).toMatch(refPattern)
+  })
+
+  it('[P2] should generate unique tracking references across multiple calls (U19)', async () => {
+    // U19: Generate tracking references multiple times → all should be unique
+    const references = new Set<string>()
+    const iterations = 100
+
+    const { reportMissingCheck } = await import('./reportMissingCheck.action')
+
+    for (let i = 0; i < iterations; i++) {
+      const reportId = faker.string.uuid()
+      const trackingRef = `MCR-20260225-${faker.string.alphanumeric(6).toLowerCase()}`
+      dbState.callIndex = 0
+      dbState.valuesCaptures = []
+      dbState.returnValues = [
+        [{ id: VALID_PROJECT_ID }],
+        [{ id: reportId, trackingReference: trackingRef }],
+      ]
+
+      await reportMissingCheck({
+        projectId: VALID_PROJECT_ID,
+        fileReference: 'test.sdlxliff',
+        segmentNumber: 1,
+        expectedDescription: `Missing check ${i}`,
+        xbenchCheckType: 'number',
+      })
+
+      // Extract the tracking reference from the insert values
+      if (dbState.valuesCaptures.length > 0) {
+        const inserted = dbState.valuesCaptures[0] as Record<string, unknown>
+        references.add(inserted.trackingReference as string)
+      }
+    }
+
+    // All references should be unique (crypto.getRandomValues provides uniqueness)
+    expect(references.size).toBe(iterations)
+  })
 })

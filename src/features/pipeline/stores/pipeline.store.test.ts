@@ -218,4 +218,68 @@ describe('usePipelineStore', () => {
       })
     }).not.toThrow()
   })
+
+  // ── TA Gap Coverage: Story 2.6 (FMA+RT+BVA) ──
+
+  it('[P2] should NOT set completedAt for intermediate status l1_completed (G4)', async () => {
+    const { usePipelineStore } = await import('./pipeline.store')
+
+    usePipelineStore.getState().startProcessing([VALID_FILE_ID_1])
+    usePipelineStore.getState().updateFileStatus(VALID_FILE_ID_1, 'l1_completed')
+
+    // l1_completed is NOT a terminal state — completedAt must remain undefined
+    expect(usePipelineStore.getState().completedAt).toBeUndefined()
+  })
+
+  it('[P2] should NOT set completedAt for intermediate status l2_completed (G4)', async () => {
+    const { usePipelineStore } = await import('./pipeline.store')
+
+    usePipelineStore.getState().startProcessing([VALID_FILE_ID_1])
+    usePipelineStore.getState().updateFileStatus(VALID_FILE_ID_1, 'l2_completed')
+
+    // l2_completed is NOT a terminal state — only 'completed' and 'failed' are terminal
+    expect(usePipelineStore.getState().completedAt).toBeUndefined()
+  })
+
+  it('[P2] should handle empty fileIds array without error (G8)', async () => {
+    const { usePipelineStore } = await import('./pipeline.store')
+
+    expect(() => usePipelineStore.getState().startProcessing([])).not.toThrow()
+
+    const state = usePipelineStore.getState()
+    expect(state.processingFiles.size).toBe(0)
+    expect(state.startedAt).toBeDefined()
+  })
+
+  it('[P2] should accept store-specific status values that differ from DB statuses (G12)', async () => {
+    const { usePipelineStore } = await import('./pipeline.store')
+
+    usePipelineStore.getState().startProcessing([VALID_FILE_ID_1])
+
+    // Store has 'processing' (generic) — DB has 'l1_processing', 'l2_processing', 'l3_processing'
+    expect(usePipelineStore.getState().processingFiles.get(VALID_FILE_ID_1)?.status).toBe(
+      'processing',
+    )
+
+    // Store has 'completed' (generic) — DB uses 'l2_completed' or 'l3_completed' as terminal
+    usePipelineStore.getState().updateFileStatus(VALID_FILE_ID_1, 'completed')
+    expect(usePipelineStore.getState().processingFiles.get(VALID_FILE_ID_1)?.status).toBe(
+      'completed',
+    )
+    expect(usePipelineStore.getState().completedAt).toBeDefined()
+  })
+
+  it('[P3] should discard previous batch data when startProcessing called with new files (G15)', async () => {
+    const { usePipelineStore } = await import('./pipeline.store')
+
+    // Start first batch
+    usePipelineStore.getState().startProcessing([VALID_FILE_ID_1])
+    usePipelineStore.getState().updateFileStatus(VALID_FILE_ID_1, 'l1_completed')
+    expect(usePipelineStore.getState().processingFiles.has(VALID_FILE_ID_1)).toBe(true)
+
+    // Start second batch — file 1 data should be gone
+    usePipelineStore.getState().startProcessing([VALID_FILE_ID_2])
+    expect(usePipelineStore.getState().processingFiles.has(VALID_FILE_ID_1)).toBe(false)
+    expect(usePipelineStore.getState().processingFiles.has(VALID_FILE_ID_2)).toBe(true)
+  })
 })

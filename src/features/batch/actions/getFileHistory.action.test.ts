@@ -395,4 +395,43 @@ describe('getFileHistory', () => {
     if (!result.success) return
     expect(result.data.files).toHaveLength(5)
   })
+
+  // TA: Coverage Gap Tests — Story 2.7
+
+  it('[P2] should return empty items array when page number exceeds total pages (U9)', async () => {
+    // U9: 5 files, PAGE_SIZE=50 → page 2 should return empty items, totalCount=5
+    const allFiles = Array.from({ length: 5 }, () => buildFileHistoryRow())
+    dbState.returnValues = [[{ autoPassThreshold: 95 }], allFiles]
+
+    const { getFileHistory } = await import('./getFileHistory.action')
+    const result = await getFileHistory({
+      projectId: VALID_PROJECT_ID,
+      filter: 'all',
+      page: 2,
+    })
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.files).toHaveLength(0) // page 2 is beyond available data
+    expect(result.data.totalCount).toBe(5) // totalCount still reflects all files
+  })
+
+  it('[P1] should not call inArray with empty array when files query returns 0 files (U10)', async () => {
+    // U10: Guardrail #5 — inArray(col, []) = invalid SQL. When files query returns [],
+    // the action should not make a reviewActions query with empty file IDs.
+    // In getFileHistory, there is no separate inArray query — the action returns early with empty results.
+    dbState.returnValues = [[{ autoPassThreshold: 95 }], []]
+
+    const { getFileHistory } = await import('./getFileHistory.action')
+    const result = await getFileHistory({
+      projectId: VALID_PROJECT_ID,
+      filter: 'all',
+    })
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.files).toHaveLength(0)
+    // Only 2 DB calls: project query + files query. No additional reviewActions query.
+    expect(dbState.callIndex).toBe(2)
+  })
 })

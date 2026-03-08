@@ -344,4 +344,17 @@ describe('processBatch', () => {
       status: 'dispatched',
     })
   })
+
+  // ── TA Gap Coverage: Story 2.6 (CV) ──
+
+  it('[P3] should listen on pipeline.batch-started event (sender-receiver contract) (G19)', async () => {
+    const { inngest } = await import('@/lib/inngest/client')
+    const createFunctionMock = inngest.createFunction as ReturnType<typeof vi.fn>
+
+    vi.resetModules()
+    await import('./processBatch')
+
+    const eventTrigger = createFunctionMock.mock.calls[0]?.[1]
+    expect(eventTrigger).toEqual({ event: 'pipeline.batch-started' })
+  })
 })

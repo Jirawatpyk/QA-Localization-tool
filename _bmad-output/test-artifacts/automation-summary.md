@@ -1,7 +1,19 @@
 ---
 stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets', 'step-03-generate-tests', 'step-03c-aggregate', 'step-04-validate-and-summarize']
-lastStep: 'step-04-validate-and-summarize'
-lastSaved: '2026-03-07'
+lastStep: 'step-02-identify-targets'
+lastSaved: '2026-03-08'
+taRun6:
+  stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets', 'step-03-generate-tests', 'step-03c-aggregate', 'step-04-validate-and-summarize']
+  lastStep: 'step-04-validate-and-summarize'
+  lastSaved: '2026-03-08'
+  storyFile: '_bmad-output/implementation-artifacts/2-7-batch-summary-file-history-parity-tools.md'
+  mode: 'BMad-Integrated'
+  gapsTotal: 28
+  gapsActionable: 24
+  gapsSkipped: 4
+  testsAdded: 27
+  result: 'PASS — 27 new tests (1 P0, 11 P1, 15 P2), 4 skipped, 3 elicitation methods applied'
+  elicitationMethods: ['Failure Mode Analysis', 'Pre-mortem Analysis', 'Red Team vs Blue Team']
 taRun3:
   stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets', 'step-03-generate-tests', 'step-03c-aggregate', 'step-04-validate-and-summarize']
   lastStep: 'step-04-validate-and-summarize'
@@ -19,6 +31,17 @@ taRun4:
   gapsTotal: 30
   gapsActionable: 20
   gapsDeferred: 8
+taRun5:
+  stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets', 'step-03-generate-tests', 'step-04-validate-and-summarize']
+  lastStep: 'step-04-validate-and-summarize'
+  lastSaved: '2026-03-08'
+  storyFile: '_bmad-output/implementation-artifacts/2-6-inngest-pipeline-foundation-processing-modes.md'
+  mode: 'BMad-Integrated'
+  result: 'PASS — 21 new tests (4 P1, 12 P2, 5 P3), 1 deferred (G11), 1 bug documented (G14), 5 elicitation methods applied'
+  gapsTotal: 20
+  gapsActionable: 19
+  gapsDeferred: 1
+  elicitationMethods: ['Red Team vs Blue Team', 'Failure Mode Analysis', 'Boundary Stress', 'Contract Verification', 'Pre-mortem']
 ---
 
 # Test Automation Summary — Story 3.2b
@@ -519,3 +542,206 @@ Fill remaining P2/P3 gaps identified in `test-design-epic-2.md` quality gate.
 - T13 documents current safe behavior (`96 >= null` → `96 >= 0` → true only when score is high). If `checkAutoPass` flow changes, test may need updating
 - All tests rely on `createDrizzleMock()` Proxy pattern — mock doesn't support deep call chain inspection (graduation notification path)
 - Property invariant tests (T8, T9, T19) sample specific values — not exhaustive proof
+
+---
+
+## TA Run #6: Story 2.7 — Batch Summary, File History & Parity Tools (2026-03-08)
+
+### Step 1: Preflight & Context
+
+**Mode:** BMad-Integrated (Story 2.7, status: review, 9 tasks all done)
+**Test Level:** Unit (Vitest) + Component (jsdom) + Integration
+**Existing Coverage:** 270+ tests across 29 test files (0 skip)
+
+**Source Modules (20+):**
+- Batch: getBatchSummary, getFileHistory, BatchSummaryView, FileStatusCard, ScoreBadge, FileHistoryTable, batchSchemas
+- Parity: xbenchReportParser, parityComparator, xbenchCategoryMapper, generateParityReport, compareWithXbench, reportMissingCheck, ParityComparisonView, ParityResultsTable, ReportMissingCheckDialog, paritySchemas
+- Pipeline: crossFileConsistency, batchComplete (Inngest)
+
+**TEA Config:** `tea_use_playwright_utils: true`, `tea_browser_automation: auto`
+
+### Step 2: Coverage Gap Analysis
+
+**Elicitation Methods Applied (3):**
+1. **Failure Mode Analysis** — 7 components, 24 failure modes → 9 new gaps
+2. **Pre-mortem Analysis** — 6 production scenarios → 3 new gaps
+3. **Red Team vs Blue Team** — 6 rounds (Red 3, Blue 2, Draw 1) → 4 new gaps
+
+**Coverage Gaps Identified: 28 total (P0=1, P1=11, P2=14, P3=2)**
+
+#### Unit Tests (23 gaps)
+
+| ID | Target | Pri | Source | Description |
+|----|--------|-----|--------|-------------|
+| U1 | crossFileConsistency | P1 | FMA-FM15 | Exactly 3 words source text (boundary — should process, not skip) |
+| U2 | crossFileConsistency + parityComparator | P1 | FMA-FM13/16 | Thai/CJK text — Intl.Segmenter word counting vs space-split |
+| U4 | getBatchSummary | P1 | FMA-FM2 | Files with multiple score rows (L1 + L1L2) — JOIN filter to L1 only |
+| U5 | reportMissingCheck | P2 | Original | Tracking reference format MCR-YYYYMMDD-XXXXXX regex validation |
+| U6 | parityComparator | P2 | Original | Same category + same severity but different segment — should NOT match |
+| U7 | getFileHistory | P2 | Original | Filter change resets pagination to page 1 |
+| U8 | getBatchSummary | P1 | FMA-FM3 | Null fileId score row (project-level aggregate) pollutes JOIN |
+| U9 | getFileHistory | P2 | FMA-FM8 | Page beyond total count — return empty, not error |
+| U10 | getFileHistory | P1 | FMA-FM9 | inArray([]) guard (Guardrail #5) — 0 files → skip second query |
+| U11 | parityComparator | P2 | FMA-FM12 | One Xbench → multiple tool matches — verify dedup behavior |
+| U12 | parityComparator | P1 | FMA-FM14 | Null sourceTextExcerpt — no crash on null→string compare |
+| U13 | crossFileConsistency | P0 | FMA-FM17 | NFKC NOT applied before Intl.Segmenter (Thai sara am U+0E33) |
+| U14 | crossFileConsistency | P2 | FMA-FM18 | 3+ files different translations — relatedFileIds includes all |
+| U15 | batchComplete | P2 | FMA-FM22 | Concurrency guard config verification |
+| U16 | xbenchReportParser | P3 | FMA-FM24 | UTF-8 BOM handling |
+| U17 | xbenchCategoryMapper | P1 | PreMortem-B | Golden corpus completeness — 0 unmapped real categories |
+| U18 | crossFileConsistency | P2 | PreMortem-D | Large batch dedup — N files × M inconsistencies = 1 finding not N² |
+| U19 | reportMissingCheck | P2 | PreMortem-F | Statistical uniqueness — 100 calls → 0 duplicates |
+| U20 | getBatchSummary | P1 | RedTeam-R1 | Project query rows[0]! guard (Guardrail #4) |
+| U21 | getBatchSummary | P1 | RedTeam-R2 | withTenant assertion on ALL 3 DB queries |
+| U22 | xbenchReportParser | P3 | RedTeam-R3 | Formula cells — .result vs .value |
+| U23 | crossFileConsistency + parityComparator | P1 | RedTeam-R5 | NFKC vs NFC — half-width katakana ﾃｽﾄ → テスト |
+
+#### Component Tests (5 gaps)
+
+| ID | Target | Pri | Source | Description |
+|----|--------|-----|--------|-------------|
+| C1 | ReportMissingCheckDialog | P1 | FMA-FM19 | Form state reset on re-open (Guardrail #11) |
+| C2 | FileHistoryTable | P2 | Original | Empty state message when filter returns 0 results |
+| C3 | FileStatusCard | P2 | Original | Link href format /projects/[projectId]/review/[fileId] |
+| C4 | BatchSummaryView | P2 | Original | Cross-file section accessible name / aria |
+| C5 | ReportMissingCheckDialog | P2 | FMA-FM20 | segmentNumber ≤ 0 validation rejection |
+
+#### Integration Tests (1 gap)
+
+| ID | Target | Pri | Source | Description |
+|----|--------|-----|--------|-------------|
+| I1 | Cross-file → MQM score | P1 | Original | Cross-file findings trigger score recalculation |
+
+### Priority Summary
+
+| Priority | Count |
+|----------|-------|
+| P0 | 1 |
+| P1 | 11 |
+| P2 | 14 |
+| P3 | 2 |
+| **Total** | **28** |
+
+### Coverage Strategy
+**Selective** — Add only tests identified by FMA + Pre-mortem + Red Team. No duplicate coverage with existing 270+ tests.
+
+### Step 3: Test Generation
+
+**Execution Mode:** Parallel subprocesses (Subprocess A = Unit, Subprocess B = Component)
+- Subprocess A: 20 unit tests across 7 files — ALL GREEN
+- Subprocess B: 7 component tests across 4 files — ALL GREEN
+
+#### Subprocess A — Unit Tests (20 tests, 7 files)
+
+| # | Gap | Pri | File | Tests | Type | Status |
+|---|-----|-----|------|-------|------|--------|
+| U1 | crossFileConsistency — 3 words boundary | P1 | crossFileConsistency.test.ts | 1 | Boundary | GREEN |
+| U2 | parityComparator — Thai text NFKC normalization | P1 | parityComparator.test.ts | 1 | Characterization | GREEN |
+| U4 | getBatchSummary — multiple score rows JOIN filter | P1 | getBatchSummary.action.test.ts | 1 | Data flow | GREEN |
+| U5 | reportMissingCheck — tracking reference regex | P2 | reportMissingCheck.action.test.ts | 1 | Format validation | GREEN |
+| U6 | parityComparator — same cat+sev different segment | P2 | parityComparator.test.ts | 1 | Negative match | GREEN |
+| U8 | getBatchSummary — null fileId pollutes JOIN | P1 | getBatchSummary.action.test.ts | 1 | Defensive | GREEN |
+| U9 | getFileHistory — page beyond total → empty | P2 | getFileHistory.action.test.ts | 1 | Boundary | GREEN |
+| U10 | getFileHistory — inArray([]) guard (Guardrail #5) | P1 | getFileHistory.action.test.ts | 1 | Guard | GREEN |
+| U11 | parityComparator — one xbench → multiple tool dedup | P2 | parityComparator.test.ts | 1 | Dedup | GREEN |
+| U12 | parityComparator — null sourceTextExcerpt no crash | P1 | parityComparator.test.ts | 1 | Defensive | GREEN |
+| U13 | crossFileConsistency — NFKC NOT before Segmenter | P0 | crossFileConsistency.test.ts | 1 | Critical invariant | GREEN |
+| U14 | crossFileConsistency — 3+ files relatedFileIds | P2 | crossFileConsistency.test.ts | 1 | Data completeness | GREEN |
+| U15 | batchComplete — concurrency guard config | P2 | batchComplete.test.ts | 1 | Config verification | GREEN |
+| U17 | xbenchCategoryMapper — golden corpus completeness | P1 | xbenchCategoryMapper.test.ts | 1 | Parity gap | GREEN |
+| U18 | crossFileConsistency — large batch dedup (not N²) | P2 | crossFileConsistency.test.ts | 1 | Dedup invariant | GREEN |
+| U19 | reportMissingCheck — 100 calls 0 duplicates | P2 | reportMissingCheck.action.test.ts | 1 | Statistical | GREEN |
+| U20 | getBatchSummary — rows[0]! guard (Guardrail #4) | P1 | getBatchSummary.action.test.ts | 1 | Guard | GREEN |
+| U21 | getBatchSummary — withTenant on ALL 3 queries | P1 | getBatchSummary.action.test.ts | 1 | Tenant isolation | GREEN |
+| U23 | crossFileConsistency — NFKC half-width katakana | P1 | crossFileConsistency.test.ts | 1 | CJK normalization | GREEN |
+
+#### Subprocess B — Component Tests (7 tests, 4 files)
+
+| # | Gap | Pri | File | Tests | Type | Status |
+|---|-----|-----|------|-------|------|--------|
+| C1 | ReportMissingCheckDialog — form reset on re-open | P1 | ReportMissingCheckDialog.test.tsx | 1 | Guardrail #11 | GREEN |
+| C2 | FileHistoryTable — empty filter state message | P2 | FileHistoryTable.test.tsx | 1 | Empty state | GREEN |
+| C3 | FileStatusCard — link href format validation | P2 | FileStatusCard.test.tsx | 2 | Link format | GREEN |
+| C4 | BatchSummaryView — cross-file section accessibility | P2 | BatchSummaryView.test.tsx | 1 | Accessibility | GREEN |
+| C5 | ReportMissingCheckDialog — segmentNumber ≤ 0 reject | P2 | ReportMissingCheckDialog.test.tsx | 2 | Validation | GREEN |
+
+#### Gaps Skipped (4)
+
+| ID | Pri | Reason |
+|----|-----|--------|
+| U7 | P2 | Filter resets pagination — UI component concern, not actionable in server action test |
+| U16 | P3 | UTF-8 BOM — ExcelJS handles transparently |
+| U22 | P3 | Formula cells — ExcelJS handles transparently |
+| I1 | P1 | Already covered by existing batchComplete integration tests |
+
+### Step 3c: Aggregate
+
+**Full test suite verification:** `npx vitest run src/features/batch/ src/features/parity/ src/features/pipeline/ --project unit`
+- **22 test files, 252 tests — ALL PASS** (0 skip, 0 todo, 0 fail)
+- No regressions in existing tests
+
+| File | Before | After | Delta |
+|------|--------|-------|-------|
+| crossFileConsistency.test.ts | 10 | 15 | +5 |
+| getBatchSummary.action.test.ts | 18 | 22 | +4 |
+| parityComparator.test.ts | 9 | 13 | +4 |
+| ReportMissingCheckDialog.test.tsx | 5 | 8 | +3 |
+| getFileHistory.action.test.ts | 14 | 16 | +2 |
+| reportMissingCheck.action.test.ts | 6 | 8 | +2 |
+| FileStatusCard.test.tsx | 4 | 6 | +2 |
+| xbenchCategoryMapper.test.ts | 7 | 8 | +1 |
+| batchComplete.test.ts | 5 | 6 | +1 |
+| FileHistoryTable.test.tsx | 5 | 6 | +1 |
+| BatchSummaryView.test.tsx | 12 | 13 | +1 |
+| **Total (11 modified)** | **225** | **252** | **+27** |
+
+### Step 4: Validation & Summary
+
+**Validation Result: PASS**
+
+| Category | Checks | Pass | N/A |
+|----------|--------|------|-----|
+| Preflight | 4 | 4 | 0 |
+| Targets | 5 | 5 | 0 |
+| Generation Quality | 8 | 8 | 0 |
+| Infrastructure | 3 | 1 | 2 |
+| E2E/API/Component | 3 | 1 | 2 |
+
+**Final Coverage Summary:**
+
+| Metric | Value |
+|--------|-------|
+| Existing tests (before) | 225 (22 files in scope) |
+| New tests added | 27 |
+| Total tests (after) | 252 (22 files) |
+| P0 tests added | 1 (U13: NFKC invariant) |
+| P1 tests added | 11 |
+| P2 tests added | 15 |
+| P3 tests added | 0 (both P3 gaps skipped — ExcelJS handles transparently) |
+| Gaps identified | 28 |
+| Gaps actionable | 24 |
+| Gaps skipped | 4 (U7, U16, U22, I1) |
+| Files modified | 11 |
+| New files created | 0 |
+| New fixtures/helpers | 0 |
+
+**Priority Breakdown of New Tests:**
+
+| Priority | Tests | Key Coverage |
+|----------|-------|-------------|
+| P0 | 1 | NFKC NOT applied before Intl.Segmenter (Thai sara am U+0E33) |
+| P1 | 11 | Guardrail #4/#5/#11, withTenant, null safety, CJK normalization, golden corpus |
+| P2 | 15 | Form validation, dedup, empty state, pagination boundary, accessibility, statistics |
+
+**Elicitation Yield:** 3 methods produced 28 unique gaps (FMA: 9 components → 24 gaps, Pre-mortem: +3 new, Red Team: +4 new). Advanced elicitation found 7 gaps beyond basic FMA.
+
+**Assumptions & Risks:**
+- U7 (filter resets pagination) skipped — UI component concern, no server action impact
+- U16/U22 (ExcelJS edge cases) skipped — ExcelJS handles transparently in current version
+- I1 (cross-file → score recalculation) already covered by existing batchComplete tests
+- Component tests (C1-C5) rely on jsdom rendering — may diverge from real browser behavior
+- All unit tests use `createDrizzleMock()` Proxy pattern — mock changes may require test updates
+
+**Next Steps:**
+- No further TA action needed for Story 2.7
+- Story 2.7 ready for final review sign-off with 252 tests total

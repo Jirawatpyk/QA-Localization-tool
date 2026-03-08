@@ -534,4 +534,155 @@ describe('runL1ForFile', () => {
     expect(typeof result.duration).toBe('number')
     expect(result.duration).toBeGreaterThanOrEqual(0)
   })
+
+  // ── TA Gap Coverage: Story 2.6 (FMA+BVA+RT+CV) ──
+
+  it('[P1] should call audit log without userId field when userId is undefined (G1)', async () => {
+    dbState.returnValues = [[mockFile], [], [], [], []]
+
+    const { runL1ForFile } = await import('./runL1ForFile')
+    await runL1ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      // userId intentionally omitted (undefined)
+    })
+
+    const auditArg = mockWriteAuditLog.mock.calls[0]?.[0] as Record<string, unknown>
+    expect(auditArg).not.toHaveProperty('userId')
+    expect(auditArg).toMatchObject({
+      tenantId: VALID_TENANT_ID,
+      action: 'file.l1_completed',
+    })
+  })
+
+  it('[P1] should map ALL RuleCheckResult fields to findings insert correctly (G2)', async () => {
+    const ruleResult = {
+      segmentId: 'seg-mapping',
+      category: 'completeness',
+      severity: 'critical',
+      description: 'Missing translation',
+      suggestedFix: 'Translate segment',
+      sourceExcerpt: 'Hello World',
+      targetExcerpt: '',
+    }
+    mockProcessFile.mockResolvedValue([ruleResult])
+    dbState.valuesCaptures = []
+    dbState.returnValues = [[mockFile], [buildSegment()], [], [], [], [], []]
+
+    const { runL1ForFile } = await import('./runL1ForFile')
+    await runL1ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    expect(dbState.valuesCaptures.length).toBeGreaterThan(0)
+    const batch = dbState.valuesCaptures[0] as Record<string, unknown>[]
+    const finding = batch[0]
+
+    // Direct field mappings
+    expect(finding).toMatchObject({
+      segmentId: 'seg-mapping',
+      category: 'completeness',
+      severity: 'critical',
+      description: 'Missing translation',
+      suggestedFix: 'Translate segment',
+    })
+    // Name-transformed fields (sourceExcerpt → sourceTextExcerpt)
+    expect(finding).toHaveProperty('sourceTextExcerpt', 'Hello World')
+    expect(finding).toHaveProperty('targetTextExcerpt', '')
+    // L1 hardcoded constants
+    expect(finding).toHaveProperty('detectedByLayer', 'L1')
+    expect(finding).toHaveProperty('aiModel', null)
+    expect(finding).toHaveProperty('aiConfidence', null)
+    expect(finding).toHaveProperty('status', 'pending')
+    expect(finding).toHaveProperty('segmentCount', 1)
+  })
+
+  it('[P2] should pass empty segments array to processFile when no segments found (G9)', async () => {
+    dbState.returnValues = [[mockFile], [], [], [], []]
+
+    const { runL1ForFile } = await import('./runL1ForFile')
+    const result = await runL1ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    expect(mockProcessFile).toHaveBeenCalledWith(
+      [], // empty segments array
+      expect.any(Array),
+      expect.any(Set),
+      expect.any(Array),
+    )
+    expect(result.findingCount).toBe(0)
+  })
+
+  it('[P3] should NOT add custom_rule to suppressedCategories (unsuppressable by design) (G13)', async () => {
+    const rules = [
+      { id: 'r1', category: 'spacing', isActive: true, projectId: VALID_PROJECT_ID },
+      {
+        id: 'r2',
+        category: 'custom_rule',
+        isActive: true,
+        projectId: VALID_PROJECT_ID,
+        pattern: '\\bTODO\\b',
+      },
+    ]
+    dbState.returnValues = [[mockFile], [buildSegment()], rules, [], []]
+
+    const { runL1ForFile } = await import('./runL1ForFile')
+    await runL1ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    const processFileCall = mockProcessFile.mock.calls[0]
+    const suppressedSet = processFileCall?.[2] as Set<string>
+    const customRules = processFileCall?.[3] as Array<{ category: string }>
+
+    // 'spacing' should be suppressed
+    expect(suppressedSet.has('spacing')).toBe(true)
+    // 'custom_rule' should NOT be in suppressed set — unsuppressable by design
+    expect(suppressedSet.has('custom_rule')).toBe(false)
+    // custom_rule should be passed as custom rules (4th arg)
+    expect(customRules).toEqual([expect.objectContaining({ category: 'custom_rule' })])
+  })
+
+  it('[P2] should handle exactly FINDING_BATCH_SIZE (100) findings in single batch (G16)', async () => {
+    const exactBatchFindings = Array.from({ length: 100 }, (_, i) => ({
+      segmentId: `seg-${i}`,
+      category: 'completeness' as const,
+      severity: 'minor' as const,
+      description: `Finding ${i}`,
+      suggestedFix: null,
+      sourceExcerpt: `src-${i}`,
+      targetExcerpt: `tgt-${i}`,
+    }))
+    mockProcessFile.mockResolvedValue(exactBatchFindings)
+
+    // CAS, segments(100), suppRules, txDelete, txInsert×1 (exactly 100), statusUpdate
+    dbState.returnValues = [
+      [mockFile],
+      Array.from({ length: 100 }, () => buildSegment()),
+      [],
+      [],
+      [],
+      [],
+    ]
+
+    const { runL1ForFile } = await import('./runL1ForFile')
+    const result = await runL1ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    expect(result.findingCount).toBe(100)
+    // 6 DB calls: CAS + segments + suppRules + txDelete + txInsert×1 + statusUpdate
+    // (vs 7 for 150 findings which splits into 2 insert batches)
+    expect(dbState.callIndex).toBe(6)
+  })
 })

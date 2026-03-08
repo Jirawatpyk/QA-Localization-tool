@@ -103,4 +103,39 @@ describe('mapXbenchToToolCategory', () => {
     expect(mapXbenchCategory('Number Mismatch')).toBe('accuracy')
     expect(mapXbenchToToolCategory('Number Mismatch')).toBe('number_format')
   })
+
+  // TA: Coverage Gap Tests — Story 2.7
+
+  it('[P1] should map ALL known golden corpus Xbench categories to non-other values (U17)', async () => {
+    const { mapXbenchToToolCategory, mapXbenchCategory } = await import('./xbenchCategoryMapper')
+
+    // All known Xbench check types from the golden corpus and Xbench report format
+    const goldenCorpusCategories = [
+      'Inconsistency in Source',
+      'Inconsistency in Target',
+      'Key Term Mismatch',
+      'Untranslated',
+      'Target same as Source',
+      'Tag Mismatch',
+      'Number Mismatch',
+      'Numeric Mismatch',
+      'Double Space',
+      'Double Blank',
+      'Repeated Word',
+      'Repeated Words',
+      'Spell Check',
+    ]
+
+    // Every known category should map to a non-'other' tool category
+    for (const category of goldenCorpusCategories) {
+      const toolCategory = mapXbenchToToolCategory(category)
+      expect(toolCategory).not.toBe('other')
+    }
+
+    // Every known category should also map to a non-'other' MQM category
+    for (const category of goldenCorpusCategories) {
+      const mqmCategory = mapXbenchCategory(category)
+      expect(mqmCategory).not.toBe('other')
+    }
+  })
 })

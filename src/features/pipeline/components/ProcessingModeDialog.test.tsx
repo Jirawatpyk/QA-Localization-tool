@@ -375,4 +375,58 @@ describe('ProcessingModeDialog', () => {
       expect(toast.error).toHaveBeenCalledWith('AI budget exhausted for this project')
     })
   })
+
+  // ── TA Gap Coverage: Story 2.6 (FMA+BVA) ──
+
+  it('[P2] should show fallback cost display when getFilesWordCount returns failure (G5)', async () => {
+    mockGetFilesWordCount.mockResolvedValue({
+      success: false,
+      code: 'INTERNAL_ERROR',
+      error: 'Database unavailable',
+    })
+
+    render(<ProcessingModeDialog {...defaultProps} />)
+
+    // When word count fails, totalWords stays null → estimatedCost is null → shows fallback
+    await waitFor(() => {
+      const costSection = screen.getByTestId('cost-estimate')
+      expect(costSection.textContent).toContain('—')
+    })
+  })
+
+  it('[P2] should reset to Economy mode when dialog re-opens via useEffect (Guardrail #11) (G6)', async () => {
+    const user = userEvent.setup()
+    mockGetFilesWordCount.mockResolvedValue({ success: true, data: { totalWords: 50_000 } })
+
+    const { rerender } = render(<ProcessingModeDialog {...defaultProps} />)
+
+    // Select Thorough mode
+    await user.click(screen.getByRole('radio', { name: /Thorough/i }))
+    expect(screen.getByRole('radio', { name: /Thorough/i }).getAttribute('aria-checked')).toBe(
+      'true',
+    )
+
+    // Close dialog (content stays mounted via rerender — simulates forceMount scenario)
+    rerender(<ProcessingModeDialog {...defaultProps} open={false} />)
+
+    // Re-open — useEffect resets mode to 'economy' (Guardrail #11)
+    rerender(<ProcessingModeDialog {...defaultProps} open={true} />)
+
+    await waitFor(() => {
+      const economyCard = screen.getByRole('radio', { name: /Economy/i })
+      expect(economyCard.getAttribute('aria-checked')).toBe('true')
+    })
+  })
+
+  it('[P3] should display $0.00 for word count of 1 (minimum non-zero precision) (G18)', async () => {
+    // (1 / 100000) × 0.40 = 0.000004 → toFixed(2) → "0.00"
+    mockGetFilesWordCount.mockResolvedValue({ success: true, data: { totalWords: 1 } })
+
+    render(<ProcessingModeDialog {...defaultProps} />)
+
+    await waitFor(() => {
+      const costSection = screen.getByTestId('cost-estimate')
+      expect(costSection.textContent).toContain('0.00')
+    })
+  })
 })

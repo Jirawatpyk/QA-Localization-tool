@@ -158,4 +158,17 @@ describe('FileHistoryTable', () => {
     expect(within(nav).getByText('1')).toBeTruthy()
     expect(within(nav).getByText('2')).toBeTruthy()
   })
+
+  // TA: Coverage Gap Tests — Story 2.7
+
+  // C2 (P2): Empty state when filter returns 0 results with active filter
+  it('[P2] should display empty state message when files array is empty with active filter', () => {
+    // EXPECTED: When files is empty and a non-"all" filter is active,
+    // show empty state "No files found" — no table rendered
+    render(<FileHistoryTable {...defaultProps} files={[]} activeFilter="needs_review" />)
+
+    expect(screen.getByText(/No files/i)).toBeTruthy()
+    // Table should NOT render when no files
+    expect(screen.queryByRole('table')).toBeNull()
+  })
 })

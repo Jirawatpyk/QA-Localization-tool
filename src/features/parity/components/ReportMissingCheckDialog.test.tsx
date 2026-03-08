@@ -156,4 +156,121 @@ describe('ReportMissingCheckDialog', () => {
       expect(toast.error).toHaveBeenCalledWith('Duplicate report for this segment')
     })
   })
+
+  // TA: Coverage Gap Tests — Story 2.7
+
+  // C1 (P1): Form reset on re-open (Guardrail #11)
+  it('[P1] should reset all form fields when dialog is closed and re-opened', async () => {
+    // Guardrail #11: custom dialogs must reset form state on re-open
+    const user = userEvent.setup()
+    const onOpenChange = vi.fn()
+
+    const { rerender } = render(
+      <ReportMissingCheckDialog
+        open={true}
+        onOpenChange={onOpenChange}
+        projectId={PROJECT_ID}
+        fileId={FILE_ID}
+      />,
+    )
+
+    // Fill form fields with user data
+    const fileRefInput = screen.getByLabelText(/File Reference/i) as HTMLInputElement
+    await user.clear(fileRefInput)
+    await user.type(fileRefInput, 'modified-file.sdlxliff')
+    await user.type(screen.getByLabelText(/Segment Number/i), '99')
+    await user.type(screen.getByLabelText(/Description/i), 'Some description text')
+
+    // Select a check type
+    const checkTypeBtn = screen.getByLabelText(/Check Type/i)
+    await user.click(checkTypeBtn)
+    await user.click(screen.getByRole('option', { name: /term/i }))
+
+    // Verify fields are filled
+    expect((screen.getByLabelText(/Segment Number/i) as HTMLInputElement).value).toBe('99')
+    expect((screen.getByLabelText(/Description/i) as HTMLTextAreaElement).value).toBe(
+      'Some description text',
+    )
+
+    // Close dialog (open=false triggers reset effect)
+    rerender(
+      <ReportMissingCheckDialog
+        open={false}
+        onOpenChange={onOpenChange}
+        projectId={PROJECT_ID}
+        fileId={FILE_ID}
+      />,
+    )
+
+    // Re-open dialog
+    rerender(
+      <ReportMissingCheckDialog
+        open={true}
+        onOpenChange={onOpenChange}
+        projectId={PROJECT_ID}
+        fileId={FILE_ID}
+      />,
+    )
+
+    // All fields should be reset
+    // fileReference resets to fileId prop value (pre-fill behavior)
+    expect((screen.getByLabelText(/File Reference/i) as HTMLInputElement).value).toBe(FILE_ID)
+    expect((screen.getByLabelText(/Segment Number/i) as HTMLInputElement).value).toBe('')
+    expect((screen.getByLabelText(/Description/i) as HTMLTextAreaElement).value).toBe('')
+    // Check type should be reset to placeholder "Select..."
+    expect(screen.getByLabelText(/Check Type/i).textContent).toBe('Select...')
+  })
+
+  // C5 (P2): segmentNumber <= 0 validation
+  it('[P2] should show validation error when segmentNumber is 0', async () => {
+    const user = userEvent.setup()
+    render(<ReportMissingCheckDialog {...defaultProps} />)
+
+    // Fill all fields except use segmentNumber = 0
+    const fileRefInput = screen.getByLabelText(/File Reference/i) as HTMLInputElement
+    await user.clear(fileRefInput)
+    await user.type(fileRefInput, 'test.sdlxliff')
+    await user.type(screen.getByLabelText(/Segment Number/i), '0')
+    await user.type(screen.getByLabelText(/Description/i), 'Some check description')
+
+    const checkTypeBtn = screen.getByLabelText(/Check Type/i)
+    await user.click(checkTypeBtn)
+    await user.click(screen.getByRole('option', { name: /tag/i }))
+
+    // Submit
+    await user.click(screen.getByRole('button', { name: /Submit|Report/i }))
+
+    await waitFor(() => {
+      // Validation error for segmentNumber should appear
+      expect(screen.getByText(/Segment Number is required/i)).toBeTruthy()
+      // Server action should NOT have been called
+      expect(mockReportMissingCheck).not.toHaveBeenCalled()
+    })
+  })
+
+  it('[P2] should show validation error when segmentNumber is negative', async () => {
+    const user = userEvent.setup()
+    render(<ReportMissingCheckDialog {...defaultProps} />)
+
+    // Fill all fields except use segmentNumber = -1
+    const fileRefInput = screen.getByLabelText(/File Reference/i) as HTMLInputElement
+    await user.clear(fileRefInput)
+    await user.type(fileRefInput, 'test.sdlxliff')
+    await user.type(screen.getByLabelText(/Segment Number/i), '-1')
+    await user.type(screen.getByLabelText(/Description/i), 'Some check description')
+
+    const checkTypeBtn = screen.getByLabelText(/Check Type/i)
+    await user.click(checkTypeBtn)
+    await user.click(screen.getByRole('option', { name: /other/i }))
+
+    // Submit
+    await user.click(screen.getByRole('button', { name: /Submit|Report/i }))
+
+    await waitFor(() => {
+      // Validation error for segmentNumber should appear
+      expect(screen.getByText(/Segment Number is required/i)).toBeTruthy()
+      // Server action should NOT have been called
+      expect(mockReportMissingCheck).not.toHaveBeenCalled()
+    })
+  })
 })

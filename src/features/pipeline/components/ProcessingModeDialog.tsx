@@ -55,6 +55,7 @@ export function ProcessingModeDialog({
   useEffect(() => {
     if (!open || fileIds.length === 0) return
 
+    setMode('economy')
     setTotalWords(null)
     setIsLoadingWords(true)
     getFilesWordCount({ fileIds, projectId })

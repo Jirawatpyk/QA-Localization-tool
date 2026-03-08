@@ -619,4 +619,180 @@ describe('startProcessing', () => {
 
     expect(mockCheckProjectBudget).toHaveBeenCalledWith(VALID_PROJECT_ID, mockUser.tenantId)
   })
+
+  // ── TA Gap Coverage: Story 2.6 (FMA+BVA+PM+CV) ──
+
+  it('[P1] should return success even when audit log throws after inngest.send (G3)', async () => {
+    mockWriteAuditLog.mockRejectedValue(new Error('audit DB down'))
+    const validFiles = [
+      {
+        id: VALID_FILE_ID_1,
+        projectId: VALID_PROJECT_ID,
+        tenantId: mockUser.tenantId,
+        status: 'parsed',
+      },
+    ]
+    dbState.returnValues = [validFiles, []]
+
+    const { startProcessing } = await import('./startProcessing.action')
+    const result = await startProcessing({
+      fileIds: [VALID_FILE_ID_1],
+      projectId: VALID_PROJECT_ID,
+      mode: 'economy',
+    })
+
+    // Pipeline was triggered successfully — audit failure must not affect result
+    expect(result.success).toBe(true)
+    expect(mockInngestSend).toHaveBeenCalled()
+  })
+
+  it('[P2] should show ∞ in budget error when monthlyBudgetUsd is null (G7)', async () => {
+    mockCheckProjectBudget.mockResolvedValue({
+      hasQuota: false,
+      usedBudgetUsd: 50,
+      monthlyBudgetUsd: null,
+      remainingBudgetUsd: 0,
+    })
+
+    const { startProcessing } = await import('./startProcessing.action')
+    const result = await startProcessing({
+      fileIds: [VALID_FILE_ID_1],
+      projectId: VALID_PROJECT_ID,
+      mode: 'economy',
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('BUDGET_EXCEEDED')
+    expect(result.error).toContain('∞')
+  })
+
+  it('[P3] should set uploadBatchId equal to batchId in Inngest event (G10)', async () => {
+    mockAiPipelineLimit.mockResolvedValue({ success: true, limit: 5, remaining: 4, reset: 0 })
+    mockCheckProjectBudget.mockResolvedValue({
+      hasQuota: true,
+      remainingBudgetUsd: Infinity,
+      monthlyBudgetUsd: null as number | null,
+      usedBudgetUsd: 0,
+    })
+    const validFiles = [
+      {
+        id: VALID_FILE_ID_1,
+        projectId: VALID_PROJECT_ID,
+        tenantId: mockUser.tenantId,
+        status: 'parsed',
+      },
+    ]
+    dbState.returnValues = [validFiles, []]
+
+    const { startProcessing } = await import('./startProcessing.action')
+    const result = await startProcessing({
+      fileIds: [VALID_FILE_ID_1],
+      projectId: VALID_PROJECT_ID,
+      mode: 'economy',
+    })
+
+    expect(result.success).toBe(true)
+    expect(mockInngestSend).toHaveBeenCalledTimes(1)
+    const eventData = (
+      mockInngestSend.mock.calls[0]![0] as {
+        data: { batchId: string; uploadBatchId: string }
+      }
+    ).data
+    expect(eventData.uploadBatchId).toBe(eventData.batchId)
+  })
+
+  it('[P1] should return INTERNAL_ERROR when aiPipelineLimiter.limit() throws (G14)', async () => {
+    mockAiPipelineLimit.mockRejectedValue(new Error('Redis connection refused'))
+
+    const { startProcessing } = await import('./startProcessing.action')
+    const result = await startProcessing({
+      fileIds: [VALID_FILE_ID_1],
+      projectId: VALID_PROJECT_ID,
+      mode: 'economy',
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INTERNAL_ERROR')
+    expect(mockInngestSend).not.toHaveBeenCalled()
+  })
+
+  it('[P2] should accept exactly 100 fileIds (max boundary) (G17)', async () => {
+    mockAiPipelineLimit.mockResolvedValue({ success: true, limit: 5, remaining: 4, reset: 0 })
+    mockCheckProjectBudget.mockResolvedValue({
+      hasQuota: true,
+      remainingBudgetUsd: Infinity,
+      monthlyBudgetUsd: null as number | null,
+      usedBudgetUsd: 0,
+    })
+    const hundredIds = Array.from({ length: 100 }, (_, i) => {
+      const hex = i.toString(16).padStart(2, '0')
+      return `a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c${hex}`
+    })
+    const validFiles = hundredIds.map((id) => ({ id, status: 'parsed' }))
+    dbState.returnValues = [validFiles, []]
+
+    const { startProcessing } = await import('./startProcessing.action')
+    const result = await startProcessing({
+      fileIds: hundredIds,
+      projectId: VALID_PROJECT_ID,
+      mode: 'economy',
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it('[P2] should reject 101 fileIds (over max boundary) (G17)', async () => {
+    const tooManyIds = Array.from({ length: 101 }, (_, i) => {
+      const hex = i.toString(16).padStart(3, '0')
+      return `a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b${hex}`
+    })
+
+    const { startProcessing } = await import('./startProcessing.action')
+    const result = await startProcessing({
+      fileIds: tooManyIds,
+      projectId: VALID_PROJECT_ID,
+      mode: 'economy',
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INVALID_INPUT')
+  })
+
+  it('[P2] should use same batchId in Inngest event and audit log (G20)', async () => {
+    mockAiPipelineLimit.mockResolvedValue({ success: true, limit: 5, remaining: 4, reset: 0 })
+    mockCheckProjectBudget.mockResolvedValue({
+      hasQuota: true,
+      remainingBudgetUsd: Infinity,
+      monthlyBudgetUsd: null as number | null,
+      usedBudgetUsd: 0,
+    })
+    const validFiles = [
+      {
+        id: VALID_FILE_ID_1,
+        projectId: VALID_PROJECT_ID,
+        tenantId: mockUser.tenantId,
+        status: 'parsed',
+      },
+    ]
+    dbState.returnValues = [validFiles, []]
+
+    const { startProcessing } = await import('./startProcessing.action')
+    const result = await startProcessing({
+      fileIds: [VALID_FILE_ID_1],
+      projectId: VALID_PROJECT_ID,
+      mode: 'economy',
+    })
+
+    expect(result.success).toBe(true)
+    const inngestBatchId = (mockInngestSend.mock.calls[0]![0] as { data: { batchId: string } }).data
+      .batchId
+    const auditBatchId = (mockWriteAuditLog.mock.calls[0]![0] as { newValue: { batchId: string } })
+      .newValue.batchId
+
+    expect(inngestBatchId).toBeDefined()
+    expect(auditBatchId).toBe(inngestBatchId)
+  })
 })

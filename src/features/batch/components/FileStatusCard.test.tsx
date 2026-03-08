@@ -136,4 +136,34 @@ describe('FileStatusCard', () => {
     // Link should be focusable for keyboard nav
     expect(link.getAttribute('tabindex')).not.toBe('-1')
   })
+
+  // TA: Coverage Gap Tests — Story 2.7
+
+  // C3 (P2): Link href format verification with different projectId/fileId
+  it('[P2] should render link with correct href pattern /projects/{projectId}/review/{fileId}', () => {
+    const customProjectId = 'c3d4e5f6-a1b2-4c3d-ae4f-5a6b7c8d9e0f'
+    const customFile: FileCardData = {
+      ...defaultFile,
+      fileId: 'd4e5f6a1-b2c3-4d4e-bf5a-6b7c8d9e0f1a',
+      fileName: 'custom-file.xlf',
+    }
+
+    render(<FileStatusCard file={customFile} projectId={customProjectId} />)
+
+    const link = screen.getByRole('link')
+    const href = link.getAttribute('href')
+
+    // Verify exact href format
+    expect(href).toBe(`/projects/${customProjectId}/review/${customFile.fileId}`)
+    // Verify it starts with /projects/ and contains /review/
+    expect(href).toMatch(/^\/projects\/[a-f0-9-]+\/review\/[a-f0-9-]+$/)
+  })
+
+  // C3 edge case: href when projectId is undefined
+  it('[P2] should render link with href="#" when projectId is not provided', () => {
+    render(<FileStatusCard file={defaultFile} />)
+
+    const link = screen.getByRole('link')
+    expect(link.getAttribute('href')).toBe('#')
+  })
 })

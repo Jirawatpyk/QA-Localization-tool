@@ -322,4 +322,35 @@ describe('BatchSummaryView', () => {
     expect(costLine.textContent).toContain('$0.00')
     // RED: zero-cost boundary case
   })
+
+  // TA: Coverage Gap Tests — Story 2.7
+
+  // C4 (P2): Cross-file section heading accessibility
+  it('[P2] should render cross-file section with accessible h3 heading', () => {
+    const crossFileFindings = [
+      {
+        id: 'cf-003',
+        description: 'Inconsistent date format across files',
+        sourceTextExcerpt: 'March 1, 2026',
+        relatedFileIds: ['f1-uuid-0001-0001-000000000001', 'f2-uuid-0002-0002-000000000002'],
+      },
+    ]
+
+    render(
+      <BatchSummaryView
+        projectId={PROJECT_ID}
+        passedFiles={passedFiles}
+        reviewFiles={reviewFiles}
+        crossFileFindings={crossFileFindings}
+      />,
+    )
+
+    // Cross-file section should have a heading element for screen reader accessibility
+    const crossFileSection = screen.getByTestId('cross-file-issues')
+    const heading = within(crossFileSection).getByRole('heading')
+    expect(heading).toBeTruthy()
+    expect(heading.textContent).toMatch(/Cross-file/i)
+    // Heading level should be h3 (consistent with other section headings)
+    expect(heading.tagName).toBe('H3')
+  })
 })

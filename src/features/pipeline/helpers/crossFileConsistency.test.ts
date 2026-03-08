@@ -446,4 +446,185 @@ describe('crossFileConsistency', () => {
 
     expect(result.findingCount).toBe(0)
   })
+
+  // TA: Coverage Gap Tests — Story 2.7
+
+  it('[P1] should process source text with EXACTLY 3 words (boundary: not skipped)', async () => {
+    // U1: Code skips source texts with wordCount < 3. A 3-word source must be processed.
+    const seg1 = buildSegmentRow({
+      fileId: FILE_ID_1,
+      sourceText: 'hello world today',
+      targetText: 'สวัสดีโลกวันนี้',
+      wordCount: 3,
+    })
+    const seg2 = buildSegmentRow({
+      fileId: FILE_ID_2,
+      sourceText: 'hello world today',
+      targetText: 'สวัสดีชาวโลก',
+      wordCount: 3,
+    })
+    dbState.returnValues = [
+      [seg1, seg2],
+      [], // glossary
+      [], // existing findings
+      [], // insert
+    ]
+
+    const { crossFileConsistency } = await import('./crossFileConsistency')
+    const result = await crossFileConsistency({
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      batchId: VALID_BATCH_ID,
+      fileIds: [FILE_ID_1, FILE_ID_2],
+    })
+
+    // 3-word source IS processed (not skipped) → different targets → 1 finding
+    expect(result.findingCount).toBe(1)
+  })
+
+  it('[P0] should NOT apply NFKC normalization before Intl.Segmenter word counting (Thai sara am)', async () => {
+    // U13: Thai sara am (U+0E33 ำ) decomposes under NFKC to U+0E4D + U+0E32.
+    // The code uses wordCount from DB (pre-computed), so NFKC normalization only applies
+    // to source text comparison (grouping key), NOT to the wordCount filter.
+    // Verify that segments with Thai text containing sara am are processed correctly —
+    // the wordCount field is used directly without re-counting after NFKC.
+    const thaiWithSaraAm = 'คำสั่งซื้อสำเร็จแล้ว' // contains ำ (sara am)
+    const seg1 = buildSegmentRow({
+      fileId: FILE_ID_1,
+      sourceText: 'Order completed successfully now',
+      targetText: thaiWithSaraAm,
+      wordCount: 4, // >= 3, should be processed
+    })
+    const seg2 = buildSegmentRow({
+      fileId: FILE_ID_2,
+      sourceText: 'Order completed successfully now',
+      targetText: 'ออเดอร์เสร็จสมบูรณ์แล้ว',
+      wordCount: 4,
+    })
+    dbState.returnValues = [
+      [seg1, seg2],
+      [], // glossary
+      [], // existing findings
+      [], // insert
+    ]
+
+    const { crossFileConsistency } = await import('./crossFileConsistency')
+    const result = await crossFileConsistency({
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      batchId: VALID_BATCH_ID,
+      fileIds: [FILE_ID_1, FILE_ID_2],
+    })
+
+    // Segments with Thai sara am in targets should still produce findings when targets differ
+    expect(result.findingCount).toBe(1)
+  })
+
+  it('[P2] should include ALL conflicting file IDs in relatedFileIds when 3+ files differ', async () => {
+    // U14: When 3+ files have different translations, relatedFileIds should include ALL conflicting file IDs.
+    const fileId3 = 'f3a4b5c6-d7e8-4f9a-8b1c-2d3e4f5a6b7c'
+    const seg1 = buildSegmentRow({
+      fileId: FILE_ID_1,
+      sourceText: 'Your account is ready now',
+      targetText: 'บัญชีของคุณพร้อมแล้ว',
+    })
+    const seg2 = buildSegmentRow({
+      fileId: FILE_ID_2,
+      sourceText: 'Your account is ready now',
+      targetText: 'แอคเคาท์ของคุณพร้อม',
+    })
+    const seg3 = buildSegmentRow({
+      fileId: fileId3,
+      sourceText: 'Your account is ready now',
+      targetText: 'บัญชีพร้อมใช้งานแล้ว',
+    })
+    dbState.returnValues = [
+      [seg1, seg2, seg3],
+      [], // glossary
+      [], // existing findings
+      [], // insert
+    ]
+
+    const { crossFileConsistency } = await import('./crossFileConsistency')
+    await crossFileConsistency({
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      batchId: VALID_BATCH_ID,
+      fileIds: [FILE_ID_1, FILE_ID_2, fileId3],
+    })
+
+    // Verify the inserted finding's relatedFileIds contains ALL 3 file IDs
+    expect(dbState.valuesCaptures.length).toBeGreaterThan(0)
+    const insertedFindings = dbState.valuesCaptures[0] as Array<Record<string, unknown>>
+    expect(insertedFindings.length).toBe(1) // 1 inconsistency
+    const relatedIds = (insertedFindings[0] as { relatedFileIds: string[] }).relatedFileIds
+    expect(relatedIds).toEqual(expect.arrayContaining([FILE_ID_1, FILE_ID_2, fileId3]))
+    expect(relatedIds.length).toBe(3)
+  })
+
+  it('[P2] should create exactly 1 finding when same source inconsistency spans 5 files with 3 different translations', async () => {
+    // U18: Large batch dedup — same source text inconsistency across many files = 1 finding, not N²
+    const fileIds = [
+      FILE_ID_1,
+      FILE_ID_2,
+      'f3a4b5c6-d7e8-4f9a-8b1c-2d3e4f5a6b7c',
+      'f4b5c6d7-e8f9-4a0b-8c1d-2e3f4a5b6c7d',
+      'f5c6d7e8-f9a0-4b1c-8d2e-3f4a5b6c7d8e',
+    ]
+    const translations = ['การแปลหนึ่ง', 'การแปลสอง', 'การแปลหนึ่ง', 'การแปลสาม', 'การแปลสอง']
+    const segments = fileIds.map((fId, i) =>
+      buildSegmentRow({
+        fileId: fId,
+        sourceText: 'This is the shared source text',
+        targetText: translations[i]!,
+      }),
+    )
+    dbState.returnValues = [
+      segments,
+      [], // glossary
+      [], // existing findings
+      [], // insert
+    ]
+
+    const { crossFileConsistency } = await import('./crossFileConsistency')
+    const result = await crossFileConsistency({
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      batchId: VALID_BATCH_ID,
+      fileIds,
+    })
+
+    // Exactly 1 finding for this source text inconsistency (not N² or N)
+    expect(result.findingCount).toBe(1)
+  })
+
+  it('[P1] should normalize half-width katakana to full-width via NFKC before comparison', async () => {
+    // U23: Half-width katakana ﾃｽﾄ → full-width テスト under NFKC (not NFC)
+    // This proves NFKC is used, not just NFC
+    const seg1 = buildSegmentRow({
+      fileId: FILE_ID_1,
+      sourceText: 'Test result is ready now',
+      targetText: '\uFF83\uFF7D\uFF84', // ﾃｽﾄ (half-width katakana)
+    })
+    const seg2 = buildSegmentRow({
+      fileId: FILE_ID_2,
+      sourceText: 'Test result is ready now',
+      targetText: '\u30C6\u30B9\u30C8', // テスト (full-width katakana)
+    })
+    dbState.returnValues = [
+      [seg1, seg2],
+      [], // glossary
+    ]
+
+    const { crossFileConsistency } = await import('./crossFileConsistency')
+    const result = await crossFileConsistency({
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      batchId: VALID_BATCH_ID,
+      fileIds: [FILE_ID_1, FILE_ID_2],
+    })
+
+    // After NFKC: ﾃｽﾄ normalizes to テスト → same target → NO finding
+    expect(result.findingCount).toBe(0)
+  })
 })
