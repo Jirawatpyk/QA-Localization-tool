@@ -74,7 +74,13 @@ export async function reorderMappings(input: unknown): Promise<ActionResult<{ up
     logger.error({ err: auditErr }, 'Audit log failed after taxonomy reorder')
   }
 
-  revalidateTag('taxonomy', 'minutes')
+  // U8 fix: revalidateTag failure after successful DB commit must not crash the action
+  // or trigger optimistic revert in the caller (same non-fatal pattern as audit log above)
+  try {
+    revalidateTag('taxonomy', 'minutes')
+  } catch (cacheErr) {
+    logger.warn({ err: cacheErr }, 'revalidateTag failed after taxonomy reorder')
+  }
 
   return { success: true, data: { updated: parsed.data.length } }
 }

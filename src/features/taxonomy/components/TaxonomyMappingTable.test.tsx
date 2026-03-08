@@ -254,6 +254,99 @@ describe('TaxonomyMappingTable — Drag-and-Drop Reorder', () => {
     const emptyCell = screen.getByText('No mappings found. Add one to get started.')
     expect(emptyCell.closest('td')).toHaveAttribute('colspan', '7')
   })
+
+  // TA expansion — Story 3.2b7 coverage gap U1
+  it('[P1] should produce correct [{id, displayOrder}] via computeNewOrder (last → first, reverse direction)', async () => {
+    // Given: 3 mappings in order [terminology(0), mistranslation(1), style(2)]
+    const { computeNewOrder } = await import('./TaxonomyMappingTable')
+
+    // When: drag last item (style, c83) to first position (terminology, c81)
+    const result = computeNewOrder(MOCK_MAPPINGS, MOCK_MAPPINGS[2]!.id, MOCK_MAPPINGS[0]!.id)
+
+    // Then: style moves to 0, terminology to 1, mistranslation to 2
+    expect(result).not.toBeNull()
+    expect(result).toHaveLength(3)
+    expect(result![0]!.id).toBe(MOCK_MAPPINGS[2]!.id) // style
+    expect(result![1]!.id).toBe(MOCK_MAPPINGS[0]!.id) // terminology
+    expect(result![2]!.id).toBe(MOCK_MAPPINGS[1]!.id) // mistranslation
+    // Verify all displayOrder sequential
+    result!.forEach((item, i) => expect(item.displayOrder).toBe(i))
+  })
+
+  // TA expansion — Story 3.2b7 coverage gap U2
+  it('[P2] should handle adjacent swap correctly with 2-item array via computeNewOrder', async () => {
+    // Given: 2-item subset of mappings
+    const twoItemMappings: TaxonomyMapping[] = [MOCK_MAPPINGS[0]!, MOCK_MAPPINGS[1]!]
+    const { computeNewOrder } = await import('./TaxonomyMappingTable')
+
+    // When: drag first (terminology, c81) to second (mistranslation, c82)
+    const result = computeNewOrder(twoItemMappings, twoItemMappings[0]!.id, twoItemMappings[1]!.id)
+
+    // Then: items swap — mistranslation(0), terminology(1)
+    expect(result).not.toBeNull()
+    expect(result).toHaveLength(2)
+    expect(result![0]!.id).toBe(twoItemMappings[1]!.id) // mistranslation
+    expect(result![1]!.id).toBe(twoItemMappings[0]!.id) // terminology
+    result!.forEach((item, i) => expect(item.displayOrder).toBe(i))
+  })
+
+  // TA expansion — Story 3.2b7 coverage gap U6
+  it('[P2] should return same order from computeNewOrder with single-item array (no-op)', async () => {
+    // Given: single-item mappings array
+    const singleItemMappings: TaxonomyMapping[] = [MOCK_MAPPINGS[0]!]
+    const { computeNewOrder } = await import('./TaxonomyMappingTable')
+
+    // When: activeId and overId are both the single item (arrayMove no-op)
+    const result = computeNewOrder(
+      singleItemMappings,
+      singleItemMappings[0]!.id,
+      singleItemMappings[0]!.id,
+    )
+
+    // Then: result has same order (1 item, displayOrder=0)
+    expect(result).not.toBeNull()
+    expect(result).toHaveLength(1)
+    expect(result![0]!.id).toBe(singleItemMappings[0]!.id)
+    expect(result![0]!.displayOrder).toBe(0)
+  })
+
+  // TA expansion — Story 3.2b7 coverage gap U10
+  it('[P2] should return same order from computeNewOrder when activeId===overId (same position)', async () => {
+    // Given: 3 mappings in original order
+    const { computeNewOrder } = await import('./TaxonomyMappingTable')
+
+    // When: drag item to its own position (activeId === overId)
+    const result = computeNewOrder(MOCK_MAPPINGS, MOCK_MAPPINGS[1]!.id, MOCK_MAPPINGS[1]!.id)
+
+    // Then: order unchanged — terminology(0), mistranslation(1), style(2)
+    expect(result).not.toBeNull()
+    expect(result).toHaveLength(3)
+    expect(result![0]!.id).toBe(MOCK_MAPPINGS[0]!.id)
+    expect(result![1]!.id).toBe(MOCK_MAPPINGS[1]!.id)
+    expect(result![2]!.id).toBe(MOCK_MAPPINGS[2]!.id)
+    result!.forEach((item, i) => expect(item.displayOrder).toBe(i))
+  })
+
+  // TA expansion — Story 3.2b7 coverage gap U3
+  it('[P2] should render empty state with colSpan=6 when canReorder={false}', async () => {
+    // Given: empty mappings with canReorder={false}
+    const { TaxonomyMappingTable } = await import('./TaxonomyMappingTable')
+
+    // When: render with empty array and canReorder={false}
+    render(
+      <TaxonomyMappingTable
+        mappings={[]}
+        onUpdate={mockOnUpdate}
+        onDelete={mockOnDelete}
+        onAdd={mockOnAdd}
+        canReorder={false}
+      />,
+    )
+
+    // Then: colSpan should be "6" (no drag handle column)
+    const emptyCell = screen.getByText('No mappings found. Add one to get started.')
+    expect(emptyCell.closest('td')).toHaveAttribute('colspan', '6')
+  })
 })
 
 // ---------------------------------------------------------------------------

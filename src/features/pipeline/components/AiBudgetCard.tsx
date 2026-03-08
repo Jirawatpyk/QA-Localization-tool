@@ -54,7 +54,9 @@ export function AiBudgetCard({
   }
 
   const pct =
-    monthlyBudgetUsd > 0 ? Math.min(100, Math.round((usedBudgetUsd / monthlyBudgetUsd) * 100)) : 0
+    monthlyBudgetUsd > 0
+      ? Math.max(0, Math.min(100, Math.round((usedBudgetUsd / monthlyBudgetUsd) * 100)))
+      : 0
   const { fill: fillColor, marker: markerColor, status } = getProgressColor(pct, thresholdValue)
   const isExceeded = usedBudgetUsd >= monthlyBudgetUsd
 

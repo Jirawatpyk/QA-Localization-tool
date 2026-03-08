@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -569,5 +569,79 @@ describe('AiBudgetCard', () => {
       expect(screen.queryByRole('spinbutton')).toBeNull()
       expect(screen.getByTestId('ai-budget-unlimited')).toBeTruthy()
     })
+  })
+
+  // ── TA Gap Tests (Story 3.2b6) ──
+
+  // G1 — P1-BV: Zero budget division guard
+  it('[P1-BV] should render 0% progress with no NaN when monthlyBudgetUsd is 0', async () => {
+    const { AiBudgetCard } = await import('./AiBudgetCard')
+    render(<AiBudgetCard usedBudgetUsd={10} monthlyBudgetUsd={0} budgetAlertThresholdPct={80} />)
+
+    const progressBar = screen.getByTestId('ai-budget-progress')
+    expect(progressBar.getAttribute('aria-valuenow')).toBe('0')
+    expect(progressBar.getAttribute('data-status')).toBe('ok')
+
+    const spendText = screen.getByTestId('ai-budget-spend')
+    expect(spendText.textContent).toContain('$10.00')
+    expect(spendText.textContent).toContain('$0.00')
+    expect(spendText.textContent).toContain('used')
+  })
+
+  // G2 — P2-BV: Negative threshold rejected (defense-in-depth)
+  // HTML type="number" min={1} strips `-` in jsdom, so fireEvent.change
+  // is used to bypass the constraint and verify isValidThreshold guard
+  it('[P2-BV] should NOT call action when threshold is negative (-5)', async () => {
+    const { AiBudgetCard } = await import('./AiBudgetCard')
+    render(
+      <AiBudgetCard
+        usedBudgetUsd={50}
+        monthlyBudgetUsd={200}
+        budgetAlertThresholdPct={80}
+        projectId={TEST_PROJECT_ID}
+        canEditThreshold={true}
+      />,
+    )
+
+    const input = screen.getByRole('spinbutton', { name: /alert threshold/i })
+    fireEvent.change(input, { target: { value: '-5' } })
+    fireEvent.blur(input)
+
+    expect(mockUpdateBudgetAlertThreshold).not.toHaveBeenCalled()
+    // Component still renders without crash
+    expect(screen.getByTestId('ai-budget-card')).toBeTruthy()
+  })
+
+  // G3 — P2: Enter + empty input reverts
+  it('[P2] should NOT call action and should revert to saved value when Enter is pressed on empty input', async () => {
+    const user = userEvent.setup()
+    const { AiBudgetCard } = await import('./AiBudgetCard')
+    render(
+      <AiBudgetCard
+        usedBudgetUsd={50}
+        monthlyBudgetUsd={200}
+        budgetAlertThresholdPct={80}
+        projectId={TEST_PROJECT_ID}
+        canEditThreshold={true}
+      />,
+    )
+
+    const input = screen.getByRole('spinbutton', { name: /alert threshold/i })
+    await user.clear(input)
+    await user.keyboard('{Enter}')
+
+    expect(mockUpdateBudgetAlertThreshold).not.toHaveBeenCalled()
+    expect((input as HTMLInputElement).value).toBe('80')
+  })
+
+  // G7 — P3: Negative usedBudgetUsd renders without crash
+  it('[P3] should render progress bar without crashing when usedBudgetUsd is negative', async () => {
+    const { AiBudgetCard } = await import('./AiBudgetCard')
+    render(<AiBudgetCard usedBudgetUsd={-5} monthlyBudgetUsd={100} budgetAlertThresholdPct={80} />)
+
+    const progressBar = screen.getByTestId('ai-budget-progress')
+    expect(progressBar.getAttribute('aria-valuenow')).toBe('0')
+    expect(progressBar.getAttribute('data-status')).toBe('ok')
+    expect(screen.getByTestId('ai-budget-card')).toBeTruthy()
   })
 })

@@ -57,9 +57,10 @@ vi.mock('@/features/audit/actions/writeAuditLog', () => ({
 
 // CR R2 M3 fix: mock logger for audit error path (Guardrail #2)
 const mockLoggerError = vi.fn()
+const mockLoggerWarn = vi.fn()
 vi.mock('@/lib/logger', () => ({
   logger: {
-    warn: vi.fn(),
+    warn: (...args: unknown[]) => mockLoggerWarn(...args),
     info: vi.fn(),
     error: (...args: unknown[]) => mockLoggerError(...args),
     debug: vi.fn(),
@@ -234,5 +235,110 @@ describe('reorderMappings', () => {
     )
     // revalidateTag still called
     expect(mockRevalidateTag).toHaveBeenCalledWith('taxonomy', 'minutes')
+  })
+
+  // TA expansion — U4 strict .set() payload match
+  it('[P1] should call .set() with exactly { displayOrder, updatedAt } and no extra fields', async () => {
+    // Given — 2 items to reorder
+    const { reorderMappings } = await import('./reorderMappings.action')
+
+    // When — action executes the transaction
+    await reorderMappings([
+      { id: UUID_A, displayOrder: 0 },
+      { id: UUID_B, displayOrder: 1 },
+    ])
+
+    // Then — each .set() call has EXACTLY 2 fields, nothing else
+    expect(mockTxSet).toHaveBeenCalledTimes(2)
+    const firstSetArg = mockTxSet.mock.calls[0]![0] as Record<string, unknown>
+    const secondSetArg = mockTxSet.mock.calls[1]![0] as Record<string, unknown>
+
+    expect(firstSetArg).toEqual({ displayOrder: 0, updatedAt: expect.any(Date) })
+    expect(secondSetArg).toEqual({ displayOrder: 1, updatedAt: expect.any(Date) })
+
+    // Strict: verify no extra keys beyond displayOrder + updatedAt
+    expect(Object.keys(firstSetArg)).toHaveLength(2)
+    expect(Object.keys(secondSetArg)).toHaveLength(2)
+  })
+
+  // TA expansion — U9 documents input-length count behavior
+  it('[P1] should return updated count based on input length, not actual affected rows', async () => {
+    // Documents current behavior: action returns parsed.data.length,
+    // NOT the number of rows actually modified in the database.
+    // mockTxUpdateWhere returns [] (0 affected rows) by default.
+
+    // Given — 2 items with non-existent IDs (mock returns empty arrays)
+    const { reorderMappings } = await import('./reorderMappings.action')
+
+    // When — reorder with IDs that match no DB rows
+    const result = await reorderMappings([
+      { id: UUID_A, displayOrder: 0 },
+      { id: UUID_B, displayOrder: 1 },
+    ])
+
+    // Then — success:true with updated:2 even though 0 rows were modified
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.updated).toBe(2)
+    }
+    // Confirm the transaction executed (it didn't throw)
+    expect(mockTransaction).toHaveBeenCalledTimes(1)
+    // Confirm the DB returned empty arrays (0 affected rows)
+    expect(mockTxUpdateWhere).toHaveReturnedWith(expect.any(Promise))
+    const dbResult = await mockTxUpdateWhere.mock.results[0]!.value
+    expect(dbResult).toEqual([])
+  })
+
+  // TA expansion — U5 non-Error rejection fallback message
+  it('[P2] should return fallback error message when transaction rejects with non-Error value', async () => {
+    // Given — transaction rejects with a string (not an Error instance)
+    mockTransaction.mockRejectedValueOnce('Connection reset')
+
+    const { reorderMappings } = await import('./reorderMappings.action')
+
+    // When — action catches the non-Error rejection
+    const result = await reorderMappings([
+      { id: UUID_A, displayOrder: 0 },
+      { id: UUID_B, displayOrder: 1 },
+    ])
+
+    // Then — fallback message used because `err instanceof Error` is false
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('UPDATE_FAILED')
+      expect(result.error).toBe('Failed to reorder mappings')
+    }
+    // Audit log should NOT be called on transaction failure
+    expect(mockWriteAuditLog).not.toHaveBeenCalled()
+  })
+
+  // TA expansion — U8 revalidateTag throws after successful commit (FIXED: non-fatal)
+  it('[P2] should return success and log warning when revalidateTag fails after commit', async () => {
+    // U8 fix: revalidateTag failure is now non-fatal (wrapped in try-catch)
+    mockRevalidateTag.mockImplementationOnce(() => {
+      throw new Error('Cache service unavailable')
+    })
+
+    const { reorderMappings } = await import('./reorderMappings.action')
+
+    const result = await reorderMappings([
+      { id: UUID_A, displayOrder: 0 },
+      { id: UUID_B, displayOrder: 1 },
+    ])
+
+    // Action returns success despite cache failure
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.updated).toBe(2)
+    }
+    // DB transaction succeeded
+    expect(mockTransaction).toHaveBeenCalledTimes(1)
+    // Audit log was written
+    expect(mockWriteAuditLog).toHaveBeenCalledTimes(1)
+    // logger.warn called with cache error (pino arg order)
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      expect.objectContaining({ err: expect.any(Error) }),
+      'revalidateTag failed after taxonomy reorder',
+    )
   })
 })
