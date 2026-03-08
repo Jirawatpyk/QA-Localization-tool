@@ -89,7 +89,7 @@ export function ReviewPageClient({ fileId, projectId, initialData }: ReviewPageC
         initialData.score.layerCompleted,
       )
     }
-  }, [fileId, resetForFile, setFinding, updateScore, initialData])
+  }, [fileId, projectId, resetForFile, setFinding, updateScore, initialData])
 
   // Retry AI analysis state
   const [isPending, startTransition] = useTransition()

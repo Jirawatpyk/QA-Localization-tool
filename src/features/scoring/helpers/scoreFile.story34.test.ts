@@ -1,5 +1,4 @@
 /** Story 3.4 ATDD — scoreFile partial status support */
-import { faker } from '@faker-js/faker'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // ── Hoisted mocks ──

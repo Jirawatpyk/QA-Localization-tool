@@ -6,11 +6,10 @@
  *
  * Workbook generation is excluded from timing — only parse is measured.
  */
+import ExcelJS from 'exceljs'
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('server-only', () => ({}))
-
-import ExcelJS from 'exceljs'
 
 import { parseExcelBilingual } from './excelParser'
 import type { ExcelColumnMapping } from './validation/excelMappingSchema'

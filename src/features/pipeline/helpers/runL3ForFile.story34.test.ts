@@ -12,7 +12,6 @@ const {
     mockGenerateText,
     mockCheckProjectBudget,
     mockWriteAuditLog,
-    mockLogAIUsage,
     mockGetModelForLayerWithFallback,
   },
   modules,

@@ -2,6 +2,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
+// eslint-disable-next-line import/order -- vi.mock hoisting splits internal imports
 import type { FileReviewData } from '@/features/review/actions/getFileReviewData.action'
 
 vi.mock('server-only', () => ({}))
@@ -43,7 +44,7 @@ vi.mock('@/features/review/stores/review.store', () => {
 })
 
 import { ReviewPageClient } from '@/features/review/components/ReviewPageClient'
-import type { ScoreBadgeState, LayerCompleted } from '@/types/finding'
+import type { LayerCompleted } from '@/types/finding'
 
 // Helper to mock prefers-reduced-motion (required by ScoreBadge)
 function mockReducedMotion(matches: boolean) {

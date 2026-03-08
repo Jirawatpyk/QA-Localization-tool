@@ -2,8 +2,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
-import type { ScoreBadgeState } from '@/types/finding'
-
 import { ScoreBadge } from './ScoreBadge'
 
 // Helper to mock prefers-reduced-motion

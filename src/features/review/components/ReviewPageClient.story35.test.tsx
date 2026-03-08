@@ -329,12 +329,7 @@ describe('ReviewPageClient — Story 3.5 score lifecycle & approve', () => {
       />,
     )
 
-    // Assert: score badge or its container has a muted/dim class
-    const scoreContainer =
-      screen.getByTestId('score-badge').closest('[data-recalculating]') ??
-      screen.getByTestId('score-badge').parentElement
-
-    // Either data-recalculating attribute or opacity/muted class
+    // Assert: score badge area has a muted/dim class or recalculating attribute
     const scoreArea =
       document.querySelector('[data-recalculating="true"]') ??
       document.querySelector('.opacity-50') ??

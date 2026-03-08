@@ -17,7 +17,7 @@ import { faker } from '@faker-js/faker'
 
 import { parseXliff } from '@/features/parser/sdlxliffParser'
 import { processFile } from '@/features/pipeline/engine/ruleEngine'
-import type { RuleCheckResult, SegmentRecord } from '@/features/pipeline/engine/types'
+import type { RuleCheckResult } from '@/features/pipeline/engine/types'
 import { buildSegmentRecordFromParsed } from '@/test/factories'
 
 // ── File Paths ──

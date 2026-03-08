@@ -1,6 +1,6 @@
 /** Story 3.3 ATDD — AC9: L3 Findings Display with Confirm/Contradict Badges — RED PHASE (TDD) */
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import { FindingListItem } from '@/features/review/components/FindingListItem'
 import { buildDbFinding } from '@/test/factories'

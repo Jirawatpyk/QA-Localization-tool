@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import type { FileReviewData } from '@/features/review/actions/getFileReviewData.action'
 import { ReviewPageClient } from '@/features/review/components/ReviewPageClient'
-import type { LayerCompleted, ScoreBadgeState } from '@/types/finding'
+import type { LayerCompleted } from '@/types/finding'
 
 // ── Mocks — must be before component import ──
 
