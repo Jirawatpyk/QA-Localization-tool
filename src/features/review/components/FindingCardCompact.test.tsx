@@ -8,35 +8,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 
 import { FindingCardCompact } from '@/features/review/components/FindingCardCompact'
-import type { FindingForDisplay } from '@/features/review/types'
-import { buildDbFinding } from '@/test/factories'
-import type { DetectedByLayer, FindingSeverity, FindingStatus } from '@/types/finding'
-
-// ── Helper: convert DbFindingInsert → FindingForDisplay ──
-
-function buildFindingForUI(overrides?: Record<string, unknown>): FindingForDisplay {
-  const dbFinding = buildDbFinding({
-    detectedByLayer: 'L2' as DetectedByLayer,
-    aiConfidence: 88,
-    severity: 'major',
-    category: 'accuracy',
-    description: 'Test finding description',
-    ...overrides,
-  })
-  return {
-    id: (overrides?.['id'] as string) ?? dbFinding.segmentId ?? `finding-${Date.now()}`,
-    severity: (dbFinding.severity ?? 'major') as FindingSeverity,
-    category: dbFinding.category ?? 'accuracy',
-    description: dbFinding.description ?? 'Test finding',
-    status: (dbFinding.status ?? 'pending') as FindingStatus,
-    detectedByLayer: (dbFinding.detectedByLayer ?? 'L2') as DetectedByLayer,
-    aiConfidence: dbFinding.aiConfidence ?? null,
-    sourceTextExcerpt: dbFinding.sourceTextExcerpt ?? null,
-    targetTextExcerpt: dbFinding.targetTextExcerpt ?? null,
-    suggestedFix: dbFinding.suggestedFix ?? null,
-    aiModel: (overrides?.['aiModel'] as string) ?? null,
-  }
-}
+import { buildFindingForUI } from '@/test/factories'
 
 describe('FindingCardCompact', () => {
   // ── T2.1 [P0]: Dense row renders all required elements ──

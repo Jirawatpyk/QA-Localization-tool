@@ -6,8 +6,16 @@ import { ConfidenceBadge } from '@/features/review/components/ConfidenceBadge'
 import { LayerBadge } from '@/features/review/components/LayerBadge'
 import { SeverityIndicator } from '@/features/review/components/SeverityIndicator'
 import type { FindingForDisplay } from '@/features/review/types'
+import {
+  L3_CONFIRMED_MARKER,
+  L3_DISAGREES_MARKER,
+  computeConfidenceMin,
+  isCjkLang,
+  isFallbackModel,
+  stripL3Markers,
+} from '@/features/review/utils/finding-display'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
-import { PRIMARY_MODELS } from '@/types/pipeline'
+import type { FindingStatus } from '@/types/finding'
 
 export type FindingCardProps = {
   finding: FindingForDisplay
@@ -20,23 +28,8 @@ export type FindingCardProps = {
   isNew?: boolean | undefined
 }
 
-const L3_CONFIRMED_MARKER = '[L3 Confirmed]'
-const L3_DISAGREES_MARKER = '[L3 Disagrees]'
-
-const CJK_LANGS = new Set(['ja', 'zh', 'ko', 'ja-JP', 'zh-CN', 'zh-TW', 'ko-KR'])
-function isCjkLang(lang: string | undefined): boolean {
-  if (!lang) return false
-  return (
-    CJK_LANGS.has(lang) || lang.startsWith('ja') || lang.startsWith('zh') || lang.startsWith('ko')
-  )
-}
-
-function stripL3Markers(text: string): string {
-  return text.replaceAll(L3_CONFIRMED_MARKER, '').replaceAll(L3_DISAGREES_MARKER, '').trim()
-}
-
 /** State-based background color tokens from Story 4.0 */
-const STATUS_BG: Record<string, string> = {
+const STATUS_BG: Partial<Record<FindingStatus, string>> = {
   accepted: 'bg-[var(--color-finding-accepted)]',
   re_accepted: 'bg-[var(--color-finding-accepted)]',
   rejected: 'bg-[var(--color-finding-rejected)]',
@@ -61,28 +54,20 @@ export function FindingCard({
   const l3Disagrees = finding.description.includes(L3_DISAGREES_MARKER)
   const cleanDescription = stripL3Markers(finding.description)
 
-  // Fallback badge detection
-  const isFallback =
-    finding.aiModel !== null &&
-    finding.detectedByLayer !== 'L1' &&
-    finding.aiModel !== PRIMARY_MODELS[finding.detectedByLayer]
-
-  // Confidence threshold
-  const rawConfidenceMin = finding.detectedByLayer === 'L3' ? l3ConfidenceMin : l2ConfidenceMin
-  const confidenceMin =
-    typeof rawConfidenceMin === 'number' && Number.isFinite(rawConfidenceMin)
-      ? rawConfidenceMin
-      : null
+  const isFallback = isFallbackModel(finding.aiModel, finding.detectedByLayer)
+  const confidenceMin = computeConfidenceMin(
+    finding.detectedByLayer,
+    l2ConfidenceMin,
+    l3ConfidenceMin,
+  )
 
   const showAnimation = isNew === true && !reducedMotion
   const bgClass = STATUS_BG[finding.status] ?? ''
 
   return (
     <div
-      role="row"
       data-testid="finding-card"
       data-finding-id={finding.id}
-      aria-expanded="true"
       className={`border rounded-lg p-3 ${bgClass} ${showAnimation ? 'animate-fade-in' : ''}`}
     >
       {/* Header row: severity + category + layer + finding number */}
@@ -99,7 +84,7 @@ export function FindingCard({
             data-testid="l3-confirm-badge"
             className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium bg-status-pass/10 text-status-pass border border-status-pass/20"
           >
-            Confirmed by L3
+            L3 Confirmed
           </span>
         )}
         {l3Disagrees && (

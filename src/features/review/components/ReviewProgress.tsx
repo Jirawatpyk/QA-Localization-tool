@@ -9,6 +9,15 @@ export type ReviewProgressProps = {
   totalCount: number
   fileStatus: DbFileStatus
   processingMode: ProcessingMode
+  layerCompleted?: string | null | undefined
+}
+
+/** Map layerCompleted to an equivalent DbFileStatus for progress derivation */
+function deriveStatusFromLayer(layerCompleted: string | null | undefined): DbFileStatus | null {
+  if (layerCompleted === 'L1L2L3') return 'l3_completed'
+  if (layerCompleted === 'L1L2') return 'l2_completed'
+  if (layerCompleted === 'L1') return 'l1_completed'
+  return null
 }
 
 /** Derive AI processing percentage from file status */
@@ -56,22 +65,27 @@ export function ReviewProgress({
   totalCount,
   fileStatus,
   processingMode,
+  layerCompleted,
 }: ReviewProgressProps) {
   const reducedMotion = useReducedMotion()
 
+  // Use layerCompleted (Realtime) over stale fileStatus when it shows more progress
+  const layerDerivedStatus = deriveStatusFromLayer(layerCompleted)
+  const effectiveStatus = layerDerivedStatus ?? fileStatus
+
   const reviewPercent = totalCount > 0 ? Math.round((reviewedCount / totalCount) * 100) : 0
-  const aiProgress = getAiProgress(fileStatus, processingMode)
-  const aiLabel = getAiStatusLabel(fileStatus, processingMode)
+  const aiProgress = getAiProgress(effectiveStatus, processingMode)
+  const aiLabel = getAiStatusLabel(effectiveStatus, processingMode)
   const isAiComplete = aiProgress === 100
   const isReviewComplete = totalCount > 0 && reviewedCount >= totalCount
   const isAllDone = isAiComplete && isReviewComplete
-  const isFailed = fileStatus === 'failed'
+  const isFailed = effectiveStatus === 'failed'
 
   // Review label
   const reviewLabel = isAllDone ? 'All reviewed' : `Reviewed: ${reviewedCount}/${totalCount}`
 
   return (
-    <div data-testid="review-progress" className={`flex flex-col gap-2 ${reducedMotion ? '' : ''}`}>
+    <div data-testid="review-progress" className="flex flex-col gap-2">
       {/* Track 1: Review progress */}
       <div className="flex items-center gap-3">
         <span className="text-sm font-medium min-w-[120px]">{reviewLabel}</span>

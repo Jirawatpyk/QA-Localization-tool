@@ -7,8 +7,14 @@ import { ConfidenceBadge } from '@/features/review/components/ConfidenceBadge'
 import { LayerBadge } from '@/features/review/components/LayerBadge'
 import { SeverityIndicator } from '@/features/review/components/SeverityIndicator'
 import type { FindingForDisplay } from '@/features/review/types'
+import {
+  L3_CONFIRMED_MARKER,
+  L3_DISAGREES_MARKER,
+  computeConfidenceMin,
+  isFallbackModel,
+  truncate,
+} from '@/features/review/utils/finding-display'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
-import { PRIMARY_MODELS } from '@/types/pipeline'
 
 export type FindingCardCompactProps = {
   finding: FindingForDisplay
@@ -20,14 +26,6 @@ export type FindingCardCompactProps = {
   l2ConfidenceMin?: number | null | undefined
   l3ConfidenceMin?: number | null | undefined
   onExpand: (id: string) => void
-}
-
-const L3_CONFIRMED_MARKER = '[L3 Confirmed]'
-const L3_DISAGREES_MARKER = '[L3 Disagrees]'
-
-function truncate(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text
-  return text.slice(0, maxLength) + '...'
 }
 
 export function FindingCardCompact({
@@ -46,18 +44,12 @@ export function FindingCardCompact({
   const l3Confirmed = finding.description.includes(L3_CONFIRMED_MARKER)
   const l3Disagrees = finding.description.includes(L3_DISAGREES_MARKER)
 
-  // Fallback badge detection
-  const isFallback =
-    finding.aiModel !== null &&
-    finding.detectedByLayer !== 'L1' &&
-    finding.aiModel !== PRIMARY_MODELS[finding.detectedByLayer]
-
-  // Confidence threshold
-  const rawConfidenceMin = finding.detectedByLayer === 'L3' ? l3ConfidenceMin : l2ConfidenceMin
-  const confidenceMin =
-    typeof rawConfidenceMin === 'number' && Number.isFinite(rawConfidenceMin)
-      ? rawConfidenceMin
-      : null
+  const isFallback = isFallbackModel(finding.aiModel, finding.detectedByLayer)
+  const confidenceMin = computeConfidenceMin(
+    finding.detectedByLayer,
+    l2ConfidenceMin,
+    l3ConfidenceMin,
+  )
 
   const showAnimation = isNew === true && !reducedMotion
 
@@ -134,7 +126,7 @@ export function FindingCardCompact({
       )}
 
       {/* Quick action icons — disabled until Story 4.2 */}
-      <div className="flex items-center gap-1 shrink-0" aria-label="Quick actions">
+      <div role="group" className="flex items-center gap-1 shrink-0" aria-label="Quick actions">
         <button
           type="button"
           disabled

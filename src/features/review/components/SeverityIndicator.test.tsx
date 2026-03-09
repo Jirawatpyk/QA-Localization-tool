@@ -71,51 +71,6 @@ describe('SeverityIndicator', () => {
     })
   })
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // Segment text attributes (G#39)
-  // ═══════════════════════════════════════════════════════════════════════
-
-  describe('Source/target text lang attribute (G#39)', () => {
-    it('[T4.5][P1] should set lang attribute on source/target text elements from file metadata', () => {
-      // G#39: every source/target text element MUST have lang="{languageCode}"
-      // Without lang, Thai line-breaking and CJK font fallback break (SC 3.1.2)
-      render(
-        <SeverityIndicator
-          severity="major"
-          sourceLang="en-US"
-          targetLang="th-TH"
-          sourceText="The source segment"
-          targetText="เซกเมนต์ต้นฉบับ"
-        />,
-      )
-
-      // Source text element should have lang="en-US"
-      const sourceEl = screen.getByText('The source segment')
-      expect(sourceEl.getAttribute('lang')).toBe('en-US')
-
-      // Target text element should have lang="th-TH"
-      const targetEl = screen.getByText('เซกเมนต์ต้นฉบับ')
-      expect(targetEl.getAttribute('lang')).toBe('th-TH')
-    })
-  })
-
-  describe('CJK font scaling (G#39)', () => {
-    it('[T4.6][P2] should apply 1.1x font scale class to CJK target text containers', () => {
-      // G#39: CJK containers add 1.1x font scale
-      render(
-        <SeverityIndicator
-          severity="minor"
-          sourceLang="en-US"
-          targetLang="ja-JP"
-          sourceText="Quality checklist"
-          targetText="品質チェックリスト"
-        />,
-      )
-
-      // CJK target container should have a font-scale class (e.g., text-cjk-scale or similar)
-      const targetEl = screen.getByText('品質チェックリスト')
-      const container = targetEl.closest('[class]')
-      expect(container?.className).toMatch(/cjk|font-scale|text-scale/)
-    })
-  })
+  // Note: Source/target text lang attr (G#39) and CJK font scaling tests
+  // moved to FindingCard.test.tsx — SeverityIndicator is now a pure severity badge.
 })

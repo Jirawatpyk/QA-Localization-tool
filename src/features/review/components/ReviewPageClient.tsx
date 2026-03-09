@@ -359,6 +359,7 @@ export function ReviewPageClient({
           totalCount={allFindings.length}
           fileStatus={initialData.file.status}
           processingMode={initialData.processingMode}
+          layerCompleted={effectiveLayerCompleted}
         />
 
         {/* Finding count summary */}

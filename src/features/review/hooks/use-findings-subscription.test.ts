@@ -31,6 +31,11 @@ vi.mock('@/lib/supabase/client', () => ({
   createBrowserClient: () => mockSupabase,
 }))
 
+const mockAnnounce = vi.fn()
+vi.mock('@/features/review/utils/announce', () => ({
+  announce: (...args: unknown[]) => mockAnnounce(...args),
+}))
+
 import { useFindingsSubscription } from '@/features/review/hooks/use-findings-subscription'
 import { useReviewStore } from '@/features/review/stores/review.store'
 import { buildDbFinding } from '@/test/factories'
@@ -39,6 +44,7 @@ describe('useFindingsSubscription', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.clearAllMocks()
+    mockAnnounce.mockClear()
     useReviewStore.getState().resetForFile('test')
     mockChannel.on.mockReturnValue(mockChannel)
   })
@@ -482,6 +488,78 @@ describe('useFindingsSubscription', () => {
     expect(finding!.segmentCount).toBe(1)
     expect(finding!.scope).toBe('per-file')
     expect(finding!.relatedFileIds).toBeNull()
+  })
+
+  // ── M4: announce() called on burst INSERT flush (Guardrail #33) ──
+
+  it('[P1] should call announce() with count after batched INSERT flush', async () => {
+    renderHook(() => useFindingsSubscription('file-abc'))
+
+    const insertCall = mockChannel.on.mock.calls.find(
+      (call: unknown[]) => (call[1] as Record<string, unknown>)?.event === 'INSERT',
+    )
+    const onInsertHandler = insertCall![2] as (payload: { new: Record<string, unknown> }) => void
+
+    await act(async () => {
+      onInsertHandler({
+        new: {
+          id: 'f1',
+          severity: 'major',
+          category: 'accuracy',
+          status: 'pending',
+          file_id: 'file-abc',
+          detected_by_layer: 'L2',
+        },
+      })
+      onInsertHandler({
+        new: {
+          id: 'f2',
+          severity: 'minor',
+          category: 'style',
+          status: 'pending',
+          file_id: 'file-abc',
+          detected_by_layer: 'L2',
+        },
+      })
+      onInsertHandler({
+        new: {
+          id: 'f3',
+          severity: 'critical',
+          category: 'accuracy',
+          status: 'pending',
+          file_id: 'file-abc',
+          detected_by_layer: 'L2',
+        },
+      })
+    })
+
+    // announce() should be called once with the batch count
+    expect(mockAnnounce).toHaveBeenCalledTimes(1)
+    expect(mockAnnounce).toHaveBeenCalledWith('3 new AI findings added')
+  })
+
+  it('[P1] should call announce() with singular form for 1 finding', async () => {
+    renderHook(() => useFindingsSubscription('file-abc'))
+
+    const insertCall = mockChannel.on.mock.calls.find(
+      (call: unknown[]) => (call[1] as Record<string, unknown>)?.event === 'INSERT',
+    )
+    const onInsertHandler = insertCall![2] as (payload: { new: Record<string, unknown> }) => void
+
+    await act(async () => {
+      onInsertHandler({
+        new: {
+          id: 'single',
+          severity: 'major',
+          category: 'accuracy',
+          status: 'pending',
+          file_id: 'file-abc',
+          detected_by_layer: 'L2',
+        },
+      })
+    })
+
+    expect(mockAnnounce).toHaveBeenCalledWith('1 new AI finding added')
   })
 
   // ── TD-TENANT-003: tenantId filter (Story 4.1a) ──

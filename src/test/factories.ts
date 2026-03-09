@@ -16,9 +16,10 @@ import type { ParityComparisonResult, XbenchFinding } from '@/features/parity/ty
 import type { ExcelPreview } from '@/features/parser/actions/previewExcelColumns.action'
 import type { ParsedSegment } from '@/features/parser/types'
 import type { ExcelColumnMapping } from '@/features/parser/validation/excelMappingSchema'
+import type { FindingForDisplay } from '@/features/review/types'
 import type { ContributingFinding } from '@/features/scoring/types'
 import type { BatchRecord, UploadFileResult } from '@/features/upload/types'
-import type { Finding } from '@/types/finding'
+import type { DetectedByLayer, Finding, FindingSeverity, FindingStatus } from '@/types/finding'
 import type { FindingChangedEventData, ProcessingMode, PipelineRun } from '@/types/pipeline'
 import type { ReviewSession } from '@/types/review'
 
@@ -586,4 +587,33 @@ export function buildPerfSegments(count: number): SegmentRecord[] {
   }
 
   return segments
+}
+
+/**
+ * Factory for FindingForDisplay — UI display shape used by FindingList, FindingCard, FindingCardCompact.
+ * Wraps buildDbFinding with sensible defaults for UI tests.
+ */
+export function buildFindingForUI(overrides?: Record<string, unknown>): FindingForDisplay {
+  const dbFinding = buildDbFinding({
+    detectedByLayer: 'L2' as DetectedByLayer,
+    aiConfidence: 88,
+    severity: 'major',
+    category: 'accuracy',
+    description: 'Test finding description',
+    ...overrides,
+  })
+
+  return {
+    id: (overrides?.['id'] as string) ?? dbFinding.segmentId ?? `finding-${Date.now()}`,
+    severity: (dbFinding.severity ?? 'major') as FindingSeverity,
+    category: dbFinding.category ?? 'accuracy',
+    description: dbFinding.description ?? 'Test finding',
+    status: (dbFinding.status ?? 'pending') as FindingStatus,
+    detectedByLayer: (dbFinding.detectedByLayer ?? 'L2') as DetectedByLayer,
+    aiConfidence: dbFinding.aiConfidence ?? null,
+    sourceTextExcerpt: dbFinding.sourceTextExcerpt ?? null,
+    targetTextExcerpt: dbFinding.targetTextExcerpt ?? null,
+    suggestedFix: dbFinding.suggestedFix ?? null,
+    aiModel: (overrides?.['aiModel'] as string) ?? null,
+  }
 }
