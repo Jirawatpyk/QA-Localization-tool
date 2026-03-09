@@ -73,6 +73,18 @@ const KEY_ALIASES: Record<string, string> = {
   ' ': 'space',
 }
 
+/**
+ * Shift-key character equivalences for cross-platform matching.
+ * On some platforms (Linux headless Chromium), Ctrl+Shift+/ produces event.key='/'
+ * instead of '?'. This map normalizes shifted keys so registrations work everywhere.
+ */
+const SHIFT_KEY_MAP: Record<string, string> = {
+  '/': '?',
+  '1': '!',
+  '=': '+',
+  '-': '_',
+}
+
 function parseKey(raw: string): ParsedKey {
   const parts = raw.toLowerCase().split('+')
   const modifiers: ModifierKey[] = []
@@ -102,7 +114,14 @@ function eventToKey(event: KeyboardEvent): string {
   if (event.shiftKey) modifiers.push('shift')
   modifiers.sort()
 
-  const key = KEY_ALIASES[event.key.toLowerCase()] ?? event.key.toLowerCase()
+  let key = KEY_ALIASES[event.key.toLowerCase()] ?? event.key.toLowerCase()
+
+  // Normalize shifted keys for cross-platform compatibility
+  // (Linux headless Chromium: Ctrl+Shift+/ → event.key='/' not '?')
+  if (event.shiftKey) {
+    key = SHIFT_KEY_MAP[key] ?? key
+  }
+
   return [...modifiers, key].join('+')
 }
 
