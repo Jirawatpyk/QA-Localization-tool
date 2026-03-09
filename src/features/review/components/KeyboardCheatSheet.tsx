@@ -65,6 +65,20 @@ const SHORTCUT_CATEGORIES: ShortcutCategory[] = [
   },
 ]
 
+/** Build a CSS selector to re-find an element after React re-render (Guardrail #30). */
+function buildFocusSelector(el: Element | null): string | null {
+  if (!el || el === document.body) return null
+  if (el.id) return `#${el.id}`
+  const findingId = el.getAttribute('data-finding-id')
+  if (findingId) return `[data-finding-id="${findingId}"]`
+  const testId = el.getAttribute('data-testid')
+  if (testId) return `[data-testid="${testId}"]`
+  // Fallback: role + tabindex for generic focusable elements
+  const role = el.getAttribute('role')
+  if (role) return `[role="${role}"][tabindex="0"]`
+  return null
+}
+
 /**
  * Keyboard Cheat Sheet Modal — Story 4.0 AC6
  *
@@ -76,15 +90,16 @@ export function KeyboardCheatSheet() {
   const [open, setOpen] = useState(false)
   const reducedMotion = useReducedMotion()
   const { register } = useKeyboardActions()
-  // Guardrail #30: save trigger element for focus restore on close
-  const triggerRef = useRef<Element | null>(null)
+  // Guardrail #30: save a CSS selector to re-query the trigger element after re-render.
+  // Storing a DOM ref fails because React may replace the DOM node between open/close.
+  const triggerSelectorRef = useRef<string | null>(null)
 
   // Register Ctrl+? via keyboard actions system (M4 — respects IME guard + input suppression)
   useEffect(() => {
     const cleanup = register(
       'ctrl+shift+?',
       () => {
-        triggerRef.current = document.activeElement
+        triggerSelectorRef.current = buildFocusSelector(document.activeElement)
         setOpen(true)
       },
       {
@@ -97,16 +112,19 @@ export function KeyboardCheatSheet() {
     return cleanup
   }, [register])
 
-  // Guardrail #30: restore focus when dialog closes
-  // useEffect runs after React render cycle — more reliable than onCloseAutoFocus
-  // which can be overridden by Radix Dialog's exit animation cleanup.
-  // setTimeout(250) waits for Radix's 200ms exit animation to finish.
+  // Guardrail #30: restore focus when dialog closes.
+  // Uses selector-based lookup because React may replace DOM nodes during re-render,
+  // making any saved DOM ref point to a detached (stale) node.
   useEffect(() => {
-    if (!open && triggerRef.current instanceof HTMLElement) {
-      const el = triggerRef.current
-      triggerRef.current = null
+    if (!open && triggerSelectorRef.current) {
+      const selector = triggerSelectorRef.current
+      triggerSelectorRef.current = null
+      // Wait for Radix's 200ms exit animation + React re-render to complete
       const timer = setTimeout(() => {
-        el.focus()
+        const el = document.querySelector(selector)
+        if (el instanceof HTMLElement) {
+          el.focus()
+        }
       }, 250)
       return () => clearTimeout(timer)
     }
