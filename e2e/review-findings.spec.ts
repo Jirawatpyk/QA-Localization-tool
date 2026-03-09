@@ -144,14 +144,20 @@ test.describe.serial('Review Findings — Story 3.2c', () => {
 
     // If pipeline produced findings, the findings list should have items
     if (totalFindings > 0) {
-      const findingRows = page.getByTestId('finding-compact-row')
-      await expect(findingRows.first()).toBeVisible({ timeout: 15_000 })
+      // Wait for finding list to render (either rows or minor accordion)
+      const findingList = page.getByTestId('finding-list')
+      await expect(findingList).toBeVisible({ timeout: 15_000 })
 
-      // Expand minor accordion if present (minor findings hidden by default — Story 4.1a)
+      // Expand minor accordion if present (Story 4.1a: minor findings hidden by default)
       const minorAccordion = page.getByText(/Minor \(\d+\)/i)
       if (await minorAccordion.isVisible().catch(() => false)) {
         await minorAccordion.click()
+        await page.waitForTimeout(500)
       }
+
+      // Now finding rows should be visible
+      const findingRows = page.getByTestId('finding-compact-row')
+      await expect(findingRows.first()).toBeVisible({ timeout: 10_000 })
 
       // Count of rendered findings should match DB count
       const renderedCount = await findingRows.count()

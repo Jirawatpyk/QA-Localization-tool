@@ -209,9 +209,20 @@ test.describe.serial('Review L3 Findings — Story 3.3', () => {
     await page.goto(`/projects/${projectId}/review/${fileId}`)
 
     if (l3Count > 0) {
+      // Wait for finding list to render
+      const findingList = page.getByTestId('finding-list')
+      await expect(findingList).toBeVisible({ timeout: 15_000 })
+
+      // Expand minor accordion if present (Story 4.1a: minor findings hidden by default)
+      const minorAccordion = page.getByText(/Minor \(\d+\)/i)
+      if (await minorAccordion.isVisible().catch(() => false)) {
+        await minorAccordion.click()
+        await page.waitForTimeout(500)
+      }
+
       // At least one finding should be visible
       const findingItems = page.getByTestId('finding-compact-row')
-      await expect(findingItems.first()).toBeVisible({ timeout: 15_000 })
+      await expect(findingItems.first()).toBeVisible({ timeout: 10_000 })
 
       // L3 findings should display a confidence badge
       const confidenceBadge = page.getByTestId('confidence-badge')
@@ -296,15 +307,20 @@ test.describe.serial('Review L3 Findings — Story 3.3', () => {
     await page.goto(`/projects/${projectId}/review/${fileId}`)
 
     if (totalCount > 0) {
-      // Finding list items should be visible
-      const findingItems = page.getByTestId('finding-compact-row')
-      await expect(findingItems.first()).toBeVisible({ timeout: 15_000 })
+      // Wait for finding list to render
+      const findingList = page.getByTestId('finding-list')
+      await expect(findingList).toBeVisible({ timeout: 15_000 })
 
-      // Expand minor accordion if present (minor findings hidden by default — Story 4.1a)
+      // Expand minor accordion if present (Story 4.1a: minor findings hidden by default)
       const minorAccordion = page.getByText(/Minor \(\d+\)/i)
       if (await minorAccordion.isVisible().catch(() => false)) {
         await minorAccordion.click()
+        await page.waitForTimeout(500)
       }
+
+      // Finding rows should be visible after accordion expansion
+      const findingItems = page.getByTestId('finding-compact-row')
+      await expect(findingItems.first()).toBeVisible({ timeout: 10_000 })
 
       // Rendered count should match total across all layers
       const renderedCount = await findingItems.count()
