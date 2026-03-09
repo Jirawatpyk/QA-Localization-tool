@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import {
   Dialog,
@@ -76,23 +76,42 @@ export function KeyboardCheatSheet() {
   const [open, setOpen] = useState(false)
   const reducedMotion = useReducedMotion()
   const { register } = useKeyboardActions()
+  // Guardrail #30: save trigger element for focus restore on close
+  const triggerRef = useRef<Element | null>(null)
 
   // Register Ctrl+? via keyboard actions system (M4 — respects IME guard + input suppression)
   useEffect(() => {
-    const cleanup = register('ctrl+shift+?', () => setOpen(true), {
-      scope: 'global',
-      description: 'Open keyboard cheat sheet',
-      category: 'Panels',
-      allowInInput: true,
-    })
+    const cleanup = register(
+      'ctrl+shift+?',
+      () => {
+        triggerRef.current = document.activeElement
+        setOpen(true)
+      },
+      {
+        scope: 'global',
+        description: 'Open keyboard cheat sheet',
+        category: 'Panels',
+        allowInInput: true,
+      },
+    )
     return cleanup
   }, [register])
+
+  function handleCloseAutoFocus(event: Event) {
+    // Guardrail #30: restore focus to the element that was active before modal opened
+    event.preventDefault()
+    if (triggerRef.current instanceof HTMLElement) {
+      triggerRef.current.focus()
+    }
+    triggerRef.current = null
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
         className={reducedMotion ? '[&[data-state]]:duration-0 [&[data-state]]:animate-none' : ''}
         aria-describedby="keyboard-cheat-sheet-desc"
+        onCloseAutoFocus={handleCloseAutoFocus}
       >
         <DialogHeader>
           <DialogTitle>Keyboard Shortcuts</DialogTitle>
