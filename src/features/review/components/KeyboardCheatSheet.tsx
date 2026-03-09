@@ -97,21 +97,28 @@ export function KeyboardCheatSheet() {
     return cleanup
   }, [register])
 
-  function handleCloseAutoFocus(event: Event) {
-    // Guardrail #30: restore focus to the element that was active before modal opened
-    event.preventDefault()
-    if (triggerRef.current instanceof HTMLElement) {
-      triggerRef.current.focus()
+  // Guardrail #30: restore focus when dialog closes
+  // useEffect runs after React render cycle — more reliable than onCloseAutoFocus
+  // which can be overridden by Radix Dialog's exit animation cleanup.
+  // setTimeout(250) waits for Radix's 200ms exit animation to finish.
+  useEffect(() => {
+    if (!open && triggerRef.current instanceof HTMLElement) {
+      const el = triggerRef.current
+      triggerRef.current = null
+      const timer = setTimeout(() => {
+        el.focus()
+      }, 250)
+      return () => clearTimeout(timer)
     }
-    triggerRef.current = null
-  }
+    return undefined
+  }, [open])
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
         className={reducedMotion ? '[&[data-state]]:duration-0 [&[data-state]]:animate-none' : ''}
         aria-describedby="keyboard-cheat-sheet-desc"
-        onCloseAutoFocus={handleCloseAutoFocus}
+        onCloseAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader>
           <DialogTitle>Keyboard Shortcuts</DialogTitle>
