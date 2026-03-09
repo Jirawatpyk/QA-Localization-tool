@@ -150,34 +150,26 @@ test.describe.serial('Review L3 Findings — Story 3.3', () => {
     await expect(scoreBadge).toContainText(/deep analyzed/i)
   })
 
-  // ── P1: ReviewProgress shows all 3 layers completed ────────────────────
-  test('[P1] ReviewProgress shows L1, L2, L3 checkmarks for thorough mode', async ({ page }) => {
+  // ── P1: ReviewProgress shows AI complete for thorough mode ──────────────
+  test('[P1] ReviewProgress shows AI complete for thorough mode', async ({ page }) => {
     test.setTimeout(60_000)
 
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
     await page.goto(`/projects/${projectId}/review/${fileId}`)
 
-    // ReviewProgress component should be visible
+    // ReviewProgress component should be visible (Story 4.1a dual-track)
     const reviewProgress = page.getByTestId('review-progress')
     await expect(reviewProgress).toBeVisible({ timeout: 15_000 })
 
-    // L1 layer should show completed (checkmark)
-    const l1Status = reviewProgress.getByTestId('layer-status-L1')
-    await expect(l1Status).toBeVisible()
-    await expect(l1Status).toHaveAttribute('data-completed', 'true')
+    // AI status track should show "AI: complete" for thorough mode with L3 completed
+    const aiStatus = reviewProgress.getByTestId('ai-status-track')
+    await expect(aiStatus).toBeVisible()
+    await expect(aiStatus).toContainText(/AI: complete/i)
 
-    // L2 layer should show completed (checkmark)
-    const l2Status = reviewProgress.getByTestId('layer-status-L2')
-    await expect(l2Status).toBeVisible()
-    await expect(l2Status).toHaveAttribute('data-completed', 'true')
-
-    // L3 layer should show completed (checkmark) — NOT "N/A" like in Economy mode
-    const l3Status = reviewProgress.getByTestId('layer-status-L3')
-    await expect(l3Status).toBeVisible()
-    await expect(l3Status).toHaveAttribute('data-completed', 'true')
-    // Ensure it does NOT say "N/A"
-    await expect(l3Status).not.toHaveText(/N\/A/i)
+    // AI progress bar should be at 100%
+    const aiProgressBar = reviewProgress.getByTestId('ai-progress-bar')
+    await expect(aiProgressBar).toHaveAttribute('aria-valuenow', '100')
   })
 
   // ── P1: Score layer_completed matches DB ────────────────────────────────
@@ -218,7 +210,7 @@ test.describe.serial('Review L3 Findings — Story 3.3', () => {
 
     if (l3Count > 0) {
       // At least one finding should be visible
-      const findingItems = page.getByTestId('finding-list-item')
+      const findingItems = page.getByTestId('finding-compact-row')
       await expect(findingItems.first()).toBeVisible({ timeout: 15_000 })
 
       // L3 findings should display a confidence badge
@@ -305,8 +297,14 @@ test.describe.serial('Review L3 Findings — Story 3.3', () => {
 
     if (totalCount > 0) {
       // Finding list items should be visible
-      const findingItems = page.getByTestId('finding-list-item')
+      const findingItems = page.getByTestId('finding-compact-row')
       await expect(findingItems.first()).toBeVisible({ timeout: 15_000 })
+
+      // Expand minor accordion if present (minor findings hidden by default — Story 4.1a)
+      const minorAccordion = page.getByText(/Minor \(\d+\)/i)
+      if (await minorAccordion.isVisible().catch(() => false)) {
+        await minorAccordion.click()
+      }
 
       // Rendered count should match total across all layers
       const renderedCount = await findingItems.count()

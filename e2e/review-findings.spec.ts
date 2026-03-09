@@ -144,12 +144,17 @@ test.describe.serial('Review Findings — Story 3.2c', () => {
 
     // If pipeline produced findings, the findings list should have items
     if (totalFindings > 0) {
-      const findingItems = page.getByTestId('finding-list-item')
-      await expect(findingItems.first()).toBeVisible({ timeout: 15_000 })
+      const findingRows = page.getByTestId('finding-compact-row')
+      await expect(findingRows.first()).toBeVisible({ timeout: 15_000 })
+
+      // Expand minor accordion if present (minor findings hidden by default — Story 4.1a)
+      const minorAccordion = page.getByText(/Minor \(\d+\)/i)
+      if (await minorAccordion.isVisible().catch(() => false)) {
+        await minorAccordion.click()
+      }
 
       // Count of rendered findings should match DB count
-      // (or at least first page if paginated)
-      const renderedCount = await findingItems.count()
+      const renderedCount = await findingRows.count()
       expect(renderedCount).toBeGreaterThan(0)
     }
   })
@@ -197,32 +202,26 @@ test.describe.serial('Review Findings — Story 3.2c', () => {
     expect(scoreText).toMatch(/\d+/)
   })
 
-  // ── P0: ReviewProgress shows L2 checkmark ─────────────────────────────
-  test('[P0] ReviewProgress shows L2 checkmark for economy mode', async ({ page }) => {
+  // ── P0: ReviewProgress shows AI complete for economy mode ──────────────
+  test('[P0] ReviewProgress shows AI complete for economy mode', async ({ page }) => {
     test.setTimeout(60_000)
 
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
     await page.goto(`/projects/${projectId}/review/${fileId}`)
 
-    // ReviewProgress component should be visible
+    // ReviewProgress component should be visible (Story 4.1a dual-track)
     const reviewProgress = page.getByTestId('review-progress')
     await expect(reviewProgress).toBeVisible({ timeout: 15_000 })
 
-    // L1 layer should show completed (checkmark, not spinner)
-    const l1Status = reviewProgress.getByTestId('layer-status-L1')
-    await expect(l1Status).toBeVisible()
-    await expect(l1Status).toHaveAttribute('data-completed', 'true')
+    // AI status track should show "AI: complete" for economy mode with L2 completed
+    const aiStatus = reviewProgress.getByTestId('ai-status-track')
+    await expect(aiStatus).toBeVisible()
+    await expect(aiStatus).toContainText(/AI: complete/i)
 
-    // L2 layer should show completed (checkmark, not spinner)
-    const l2Status = reviewProgress.getByTestId('layer-status-L2')
-    await expect(l2Status).toBeVisible()
-    await expect(l2Status).toHaveAttribute('data-completed', 'true')
-
-    // L3 layer should show "N/A" (Economy mode skips L3)
-    const l3Status = reviewProgress.getByTestId('layer-status-L3')
-    await expect(l3Status).toBeVisible()
-    await expect(l3Status).toHaveText(/N\/A/i)
+    // AI progress bar should be at 100%
+    const aiProgressBar = reviewProgress.getByTestId('ai-progress-bar')
+    await expect(aiProgressBar).toHaveAttribute('aria-valuenow', '100')
   })
 
   // ── P1: Findings display layer badge ───────────────────────────────────

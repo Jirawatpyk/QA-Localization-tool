@@ -444,6 +444,14 @@ test.describe.serial('Score Lifecycle & Confidence Display — Story 3.5', () =>
     const confidenceBadges = page.getByTestId('confidence-badge')
     await expect(confidenceBadges.first()).toBeVisible({ timeout: 30_000 })
 
+    // Expand minor accordion if present (minor findings hidden by default — Story 4.1a)
+    const minorAccordion = page.getByText(/Minor \(\d+\)/i)
+    if (await minorAccordion.isVisible().catch(() => false)) {
+      await minorAccordion.click()
+      // Wait for accordion to expand and render minor finding badges
+      await page.waitForTimeout(500)
+    }
+
     // Assert: at least 3 confidence badges visible (one per seeded finding)
     await expect(confidenceBadges).toHaveCount(3, { timeout: 10_000 })
 
