@@ -79,21 +79,23 @@ describe('ScoreBadge Boundary Tests (Story 3.2c AC11)', () => {
     expect(container.className).not.toMatch(/status-pass/)
   })
 
-  // ── P0: Zero L2 findings — score unchanged, L2 checkmark still shows ──
+  // ── P0: Zero L2 findings — score unchanged, AI complete still shows ──
 
-  it('[P0] should show L2 checkmark even when zero L2 findings (score unchanged from L1)', () => {
-    // L2 completed with no new findings — score stays the same, but L2 layer is done
+  it('[P0] should show AI complete even when zero L2 findings (score unchanged from L1)', () => {
+    // L2 completed with no new findings — score stays the same, but AI processing is done
     render(
       <ReviewProgress
+        reviewedCount={0}
+        totalCount={0}
         fileStatus={'l2_completed' as DbFileStatus}
-        layerCompleted="L1L2"
         processingMode={'economy' as ProcessingMode}
       />,
     )
 
-    // L2 should show complete checkmark even though no findings were added
-    const l2Status = screen.getByTestId('layer-status-L2')
-    expect(l2Status).toHaveTextContent(/complete|✓|check/i)
+    // AI track should show complete status with checkmark
+    const aiTrack = screen.getByTestId('ai-status-track')
+    expect(aiTrack).toHaveTextContent(/AI: complete/i)
+    expect(aiTrack).toHaveTextContent(/✓/)
   })
 
   // ── P0: File with only L1 findings — rule-only state, no confidence badges ──

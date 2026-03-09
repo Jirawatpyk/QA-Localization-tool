@@ -65,6 +65,7 @@ beforeEach(() => {
 
 function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
   return {
+    tenantId: 't1',
     file: { fileId: 'f1', fileName: 'test.sdlxliff', status: 'l2_completed' as never },
     findings: [],
     score: {
@@ -102,7 +103,7 @@ describe('ReviewPageClient — deriveScoreBadgeState', () => {
       },
     })
 
-    render(<ReviewPageClient fileId="f1" projectId="p1" initialData={data} />)
+    render(<ReviewPageClient fileId="f1" projectId="p1" tenantId="t1" initialData={data} />)
 
     expect(screen.getByTestId('score-badge')).toHaveTextContent('Rule-based')
   })
@@ -119,7 +120,7 @@ describe('ReviewPageClient — deriveScoreBadgeState', () => {
       },
     })
 
-    render(<ReviewPageClient fileId="f1" projectId="p1" initialData={data} />)
+    render(<ReviewPageClient fileId="f1" projectId="p1" tenantId="t1" initialData={data} />)
 
     expect(screen.getByTestId('score-badge')).toHaveTextContent('AI Screened')
   })
@@ -136,7 +137,7 @@ describe('ReviewPageClient — deriveScoreBadgeState', () => {
       },
     })
 
-    render(<ReviewPageClient fileId="f1" projectId="p1" initialData={data} />)
+    render(<ReviewPageClient fileId="f1" projectId="p1" tenantId="t1" initialData={data} />)
 
     // layerCompleted=null → badgeState=undefined → no state label
     const badge = screen.getByTestId('score-badge')

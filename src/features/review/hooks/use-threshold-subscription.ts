@@ -14,7 +14,11 @@ const TOAST_DEBOUNCE = 500
  * Falls back to polling when Realtime channel fails.
  * Skips subscription when targetLang is empty (language pair not yet resolved).
  */
-export function useThresholdSubscription(sourceLang: string, targetLang: string): void {
+export function useThresholdSubscription(
+  sourceLang: string,
+  targetLang: string,
+  tenantId?: string | undefined,
+): void {
   const updateThresholds = useReviewStore((s) => s.updateThresholds)
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -41,12 +45,15 @@ export function useThresholdSubscription(sourceLang: string, targetLang: string)
 
     const poll = async () => {
       const supabase = createBrowserClient()
-      const { data } = await supabase
+      let query = supabase
         .from('language_pair_configs')
         .select('l2_confidence_min, l3_confidence_min')
         .eq('source_lang', sourceLang)
         .eq('target_lang', targetLang)
-        .single()
+      if (tenantId) {
+        query = query.eq('tenant_id', tenantId)
+      }
+      const { data } = await query.single()
 
       if (data) {
         updateThresholds({
@@ -61,7 +68,7 @@ export function useThresholdSubscription(sourceLang: string, targetLang: string)
         /* polling errors are non-fatal */
       })
     }, POLL_INTERVAL)
-  }, [sourceLang, targetLang, updateThresholds, stopPolling])
+  }, [sourceLang, targetLang, tenantId, updateThresholds, stopPolling])
 
   useEffect(() => {
     // L-2: skip subscription when targetLang not yet resolved (null → '' fallback from caller)
@@ -85,6 +92,11 @@ export function useThresholdSubscription(sourceLang: string, targetLang: string)
       }
     }
 
+    // TD-TENANT-003: compound filter with tenant_id when available
+    const realtimeFilter = tenantId
+      ? `source_lang=eq.${sourceLang}&tenant_id=eq.${tenantId}`
+      : `source_lang=eq.${sourceLang}`
+
     const channel = supabase
       .channel(`thresholds:${sourceLang}:${targetLang}`)
       .on(
@@ -93,7 +105,7 @@ export function useThresholdSubscription(sourceLang: string, targetLang: string)
           event: 'UPDATE',
           schema: 'public',
           table: 'language_pair_configs',
-          filter: `source_lang=eq.${sourceLang}`,
+          filter: realtimeFilter,
         },
         handleThresholdChange,
       )
@@ -110,5 +122,13 @@ export function useThresholdSubscription(sourceLang: string, targetLang: string)
       }
       supabase.removeChannel(channel)
     }
-  }, [sourceLang, targetLang, updateThresholds, showDebouncedToast, startPolling, stopPolling])
+  }, [
+    sourceLang,
+    targetLang,
+    tenantId,
+    updateThresholds,
+    showDebouncedToast,
+    startPolling,
+    stopPolling,
+  ])
 }

@@ -24,7 +24,12 @@ export default async function ReviewPage({
 
   return (
     <div className="p-6">
-      <ReviewPageClient fileId={fileId} projectId={projectId} initialData={result.data} />
+      <ReviewPageClient
+        fileId={fileId}
+        projectId={projectId}
+        tenantId={result.data.tenantId}
+        initialData={result.data}
+      />
     </div>
   )
 }

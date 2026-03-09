@@ -12,9 +12,12 @@ const mockChannel = {
 }
 mockChannel.on.mockReturnValue(mockChannel)
 
-// Polling fallback mock chain: supabase.from().select().eq().order()
+// Polling fallback mock chain: supabase.from().select().eq().eq().order()
+// Each .eq() returns an object with .eq() (chainable) + .order()
 const mockOrder = vi.fn((..._args: unknown[]) => Promise.resolve({ data: [], error: null }))
-const mockEq = vi.fn().mockReturnValue({ order: mockOrder })
+const mockEqResult = { order: mockOrder } as Record<string, unknown>
+const mockEq = vi.fn().mockReturnValue(mockEqResult)
+mockEqResult.eq = mockEq // make .eq() chainable
 const mockSelect = vi.fn().mockReturnValue({ eq: mockEq })
 const mockFrom = vi.fn().mockReturnValue({ select: mockSelect })
 
@@ -479,5 +482,43 @@ describe('useFindingsSubscription', () => {
     expect(finding!.segmentCount).toBe(1)
     expect(finding!.scope).toBe('per-file')
     expect(finding!.relatedFileIds).toBeNull()
+  })
+
+  // ── TD-TENANT-003: tenantId filter (Story 4.1a) ──
+
+  it('[T5.1][P0] should include tenant_id in Realtime filter when tenantId provided', () => {
+    renderHook(() => useFindingsSubscription('file-abc', 'tenant-xyz'))
+
+    // Verify .on() is called with a filter containing tenant_id compound filter
+    const onCalls = mockChannel.on.mock.calls as unknown[][]
+    const hasCompoundFilter = onCalls.some((callArgs) => {
+      const filterConfig = callArgs[1] as Record<string, unknown> | undefined
+      if (!filterConfig) return false
+      const filter = filterConfig.filter as string | undefined
+      return filter?.includes('tenant_id=eq.tenant-xyz')
+    })
+    expect(hasCompoundFilter).toBe(true)
+  })
+
+  it('[T5.3][P0] should include tenant_id in polling fallback query', async () => {
+    renderHook(() => useFindingsSubscription('file-abc', 'tenant-xyz'))
+
+    // Trigger polling fallback
+    const subscribeCallback = mockChannel.subscribe.mock.calls[0]?.[0] as
+      | ((status: string) => void)
+      | undefined
+    if (subscribeCallback) {
+      await act(async () => {
+        subscribeCallback('CHANNEL_ERROR')
+      })
+    }
+
+    // Advance timer past initial poll delay
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000)
+    })
+
+    // Verify .eq('tenant_id', 'tenant-xyz') is called in the polling chain
+    expect(mockEq).toHaveBeenCalledWith('tenant_id', 'tenant-xyz')
   })
 })

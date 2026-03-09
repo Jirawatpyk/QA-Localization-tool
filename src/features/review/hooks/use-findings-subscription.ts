@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react'
 
 import { useReviewStore } from '@/features/review/stores/review.store'
+import { announce } from '@/features/review/utils/announce'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { FINDING_STATUSES } from '@/types/finding'
 import type { DetectedByLayer, Finding, FindingSeverity, FindingStatus } from '@/types/finding'
@@ -72,7 +73,7 @@ function mapRowToFinding(row: Record<string, unknown>): Finding | null {
  * Subscribe to findings table changes for a specific file via Supabase Realtime.
  * Falls back to polling with exponential backoff on channel error.
  */
-export function useFindingsSubscription(fileId: string) {
+export function useFindingsSubscription(fileId: string, tenantId?: string | undefined) {
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pollIntervalRef = useRef(INITIAL_POLL_INTERVAL)
   const isPollingRef = useRef(false)
@@ -98,11 +99,11 @@ export function useFindingsSubscription(fileId: string) {
       const supabase = supabaseRef.current
       if (supabase) {
         try {
-          const { data } = await supabase
-            .from('findings')
-            .select('*')
-            .eq('file_id', fileId)
-            .order('created_at', { ascending: false })
+          let query = supabase.from('findings').select('*').eq('file_id', fileId)
+          if (tenantId) {
+            query = query.eq('tenant_id', tenantId)
+          }
+          const { data } = await query.order('created_at', { ascending: false })
           if (data && Array.isArray(data)) {
             const newMap = new Map<string, Finding>()
             for (const row of data) {
@@ -128,7 +129,7 @@ export function useFindingsSubscription(fileId: string) {
     poll().catch(() => {
       /* best-effort initial poll */
     })
-  }, [fileId])
+  }, [fileId, tenantId])
 
   useEffect(() => {
     const supabase = createBrowserClient()
@@ -147,6 +148,8 @@ export function useFindingsSubscription(fileId: string) {
         newMap.set(f.id, f)
       }
       store.setFindings(newMap)
+      // Guardrail #33: polite announcement for new findings
+      announce(`${batch.length} new AI finding${batch.length === 1 ? '' : 's'} added`)
     }
 
     const handleInsert = (payload: { new: Record<string, unknown> }) => {
@@ -174,6 +177,11 @@ export function useFindingsSubscription(fileId: string) {
       }
     }
 
+    // TD-TENANT-003: compound filter with tenant_id when available
+    const realtimeFilter = tenantId
+      ? `file_id=eq.${fileId}&tenant_id=eq.${tenantId}`
+      : `file_id=eq.${fileId}`
+
     const channel = supabase
       .channel(`findings:${fileId}`)
       .on(
@@ -182,7 +190,7 @@ export function useFindingsSubscription(fileId: string) {
           event: 'INSERT',
           schema: 'public',
           table: 'findings',
-          filter: `file_id=eq.${fileId}`,
+          filter: realtimeFilter,
         },
         handleInsert,
       )
@@ -192,7 +200,7 @@ export function useFindingsSubscription(fileId: string) {
           event: 'UPDATE',
           schema: 'public',
           table: 'findings',
-          filter: `file_id=eq.${fileId}`,
+          filter: realtimeFilter,
         },
         handleUpdate,
       )
@@ -202,7 +210,7 @@ export function useFindingsSubscription(fileId: string) {
           event: 'DELETE',
           schema: 'public',
           table: 'findings',
-          filter: `file_id=eq.${fileId}`,
+          filter: realtimeFilter,
         },
         handleDelete,
       )
@@ -219,5 +227,5 @@ export function useFindingsSubscription(fileId: string) {
       stopPolling()
       supabase.removeChannel(channel)
     }
-  }, [fileId, startPolling, stopPolling])
+  }, [fileId, tenantId, startPolling, stopPolling])
 }

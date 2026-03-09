@@ -86,6 +86,7 @@ function mockReducedMotion(matches: boolean) {
 
 function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
   return {
+    tenantId: VALID_TENANT_ID,
     file: {
       fileId: 'f1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
       fileName: 'test-file.sdlxliff',
@@ -112,6 +113,7 @@ function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
 
 const VALID_FILE_ID = 'f1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
 const VALID_PROJECT_ID = 'b1c2d3e4-f5a6-4b2c-9d3e-4f5a6b7c8d9e'
+const VALID_TENANT_ID = 'c1d2e3f4-a5b6-4c3d-8e4f-5a6b7c8d9e0f'
 
 // ── Suite ──
 
@@ -146,6 +148,7 @@ describe('ReviewPageClient — partial state & retry (Story 3.4)', () => {
         <ReviewPageClient
           fileId={VALID_FILE_ID}
           projectId={VALID_PROJECT_ID}
+          tenantId={VALID_TENANT_ID}
           initialData={initialData}
         />,
       )
@@ -173,6 +176,7 @@ describe('ReviewPageClient — partial state & retry (Story 3.4)', () => {
         <ReviewPageClient
           fileId={VALID_FILE_ID}
           projectId={VALID_PROJECT_ID}
+          tenantId={VALID_TENANT_ID}
           initialData={initialData}
         />,
       )
@@ -198,6 +202,7 @@ describe('ReviewPageClient — partial state & retry (Story 3.4)', () => {
         <ReviewPageClient
           fileId={VALID_FILE_ID}
           projectId={VALID_PROJECT_ID}
+          tenantId={VALID_TENANT_ID}
           initialData={initialData}
         />,
       )
@@ -235,6 +240,7 @@ describe('ReviewPageClient — partial state & retry (Story 3.4)', () => {
         <ReviewPageClient
           fileId={VALID_FILE_ID}
           projectId={VALID_PROJECT_ID}
+          tenantId={VALID_TENANT_ID}
           initialData={initialData}
         />,
       )
@@ -275,6 +281,7 @@ describe('ReviewPageClient — partial state & retry (Story 3.4)', () => {
         <ReviewPageClient
           fileId={VALID_FILE_ID}
           projectId={VALID_PROJECT_ID}
+          tenantId={VALID_TENANT_ID}
           initialData={initialData}
         />,
       )
@@ -307,6 +314,7 @@ describe('ReviewPageClient — partial state & retry (Story 3.4)', () => {
         <ReviewPageClient
           fileId={VALID_FILE_ID}
           projectId={VALID_PROJECT_ID}
+          tenantId={VALID_TENANT_ID}
           initialData={initialData}
         />,
       )
@@ -333,6 +341,7 @@ describe('ReviewPageClient — partial state & retry (Story 3.4)', () => {
         <ReviewPageClient
           fileId={VALID_FILE_ID}
           projectId={VALID_PROJECT_ID}
+          tenantId={VALID_TENANT_ID}
           initialData={initialData}
         />,
       )
@@ -366,6 +375,7 @@ describe('ReviewPageClient — partial state & retry (Story 3.4)', () => {
         <ReviewPageClient
           fileId={VALID_FILE_ID}
           projectId={VALID_PROJECT_ID}
+          tenantId={VALID_TENANT_ID}
           initialData={initialData}
         />,
       )
@@ -401,6 +411,7 @@ describe('ReviewPageClient — partial state & retry (Story 3.4)', () => {
         <ReviewPageClient
           fileId={VALID_FILE_ID}
           projectId={VALID_PROJECT_ID}
+          tenantId={VALID_TENANT_ID}
           initialData={initialData}
         />,
       )

@@ -57,6 +57,8 @@ vi.mock('@/features/review/stores/review.store', () => {
         updateScore: mockUpdateScore,
         l2ConfidenceMin: null,
         l3ConfidenceMin: null,
+        selectedId: null,
+        setSelectedFinding: vi.fn(),
       }),
     ),
   }
@@ -84,6 +86,7 @@ function mockReducedMotion(matches: boolean) {
 
 function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
   return {
+    tenantId: 't1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
     file: {
       fileId: 'f1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
       fileName: 'test-file.sdlxliff',
@@ -124,6 +127,7 @@ describe('ReviewPageClient — Story 3.3: L1L2L3 State Mapping', () => {
       <ReviewPageClient
         fileId="f1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d"
         projectId="p1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d"
+        tenantId="t1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d"
         initialData={initialData}
       />,
     )
@@ -137,7 +141,7 @@ describe('ReviewPageClient — Story 3.3: L1L2L3 State Mapping', () => {
     expect(screen.queryByText('AI Screened')).toBeNull()
   })
 
-  it('[P1] U27: should show L3 checkmark in ReviewProgress when layerCompleted includes L3', () => {
+  it('[P1] U27: should show AI complete in ReviewProgress when l3_completed (thorough mode)', () => {
     const initialData = buildInitialData({
       file: {
         fileId: 'f1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
@@ -156,14 +160,14 @@ describe('ReviewPageClient — Story 3.3: L1L2L3 State Mapping', () => {
       <ReviewPageClient
         fileId="f1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d"
         projectId="p1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d"
+        tenantId="t1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d"
         initialData={initialData}
       />,
     )
 
-    // ReviewProgress should show L3 step as complete
-    const l3Status = screen.getByTestId('layer-status-L3')
-    // L3 should show checkmark (complete status) with data-completed="true"
-    expect(l3Status.getAttribute('data-completed')).toBe('true')
-    expect(l3Status).toHaveTextContent(/complete|check/i)
+    // Dual-track ReviewProgress: AI track should show complete status with checkmark
+    const aiTrack = screen.getByTestId('ai-status-track')
+    expect(aiTrack).toHaveTextContent(/AI: complete/i)
+    expect(aiTrack).toHaveTextContent(/✓/)
   })
 })

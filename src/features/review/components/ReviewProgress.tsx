@@ -1,120 +1,126 @@
 'use client'
 
-import type { LayerCompleted } from '@/types/finding'
+import { Progress } from '@/components/ui/progress'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 import type { DbFileStatus, ProcessingMode } from '@/types/pipeline'
 
-type ReviewProgressProps = {
-  layerCompleted: LayerCompleted | null
+export type ReviewProgressProps = {
+  reviewedCount: number
+  totalCount: number
   fileStatus: DbFileStatus
   processingMode: ProcessingMode
 }
 
-type StepStatus = 'complete' | 'processing' | 'pending' | 'na'
+/** Derive AI processing percentage from file status */
+function getAiProgress(fileStatus: DbFileStatus, processingMode: ProcessingMode): number {
+  if (fileStatus === 'failed') return 0
+  if (fileStatus === 'ai_partial') return 50
 
-function getL2Status(fileStatus: DbFileStatus, layerCompleted: LayerCompleted | null): StepStatus {
-  if (layerCompleted === 'L1L2' || layerCompleted === 'L1L2L3') return 'complete'
-  if (fileStatus === 'l2_processing') return 'processing'
-  return 'pending'
+  // Economy mode: L2 is the terminal layer
+  if (processingMode === 'economy') {
+    if (fileStatus === 'l2_completed' || fileStatus === 'l3_completed') return 100
+    if (fileStatus === 'l2_processing') return 50
+    if (fileStatus === 'l1_completed' || fileStatus === 'l1_processing') return 25
+    return 0
+  }
+
+  // Thorough mode: L3 is the terminal layer
+  if (fileStatus === 'l3_completed') return 100
+  if (fileStatus === 'l3_processing') return 75
+  if (fileStatus === 'l2_completed') return 50
+  if (fileStatus === 'l2_processing') return 30
+  if (fileStatus === 'l1_completed' || fileStatus === 'l1_processing') return 15
+  return 0
 }
 
-function getL3Status(
-  fileStatus: DbFileStatus,
-  layerCompleted: LayerCompleted | null,
-  processingMode: ProcessingMode,
-): StepStatus {
-  if (processingMode === 'economy') return 'na'
-  if (layerCompleted === 'L1L2L3') return 'complete'
-  if (fileStatus === 'l3_processing') return 'processing'
-  return 'pending'
-}
+/** Derive AI status label */
+function getAiStatusLabel(fileStatus: DbFileStatus, processingMode: ProcessingMode): string {
+  if (fileStatus === 'failed') return 'AI: error'
+  if (fileStatus === 'ai_partial') return 'AI: partial'
+  if (fileStatus === 'l2_processing') return 'Processing L2...'
+  if (fileStatus === 'l3_processing') return 'Processing L3...'
 
-function StatusIcon({ status }: { status: StepStatus }) {
-  if (status === 'complete') {
-    return (
-      <span className="inline-flex items-center">
-        <svg
-          className="h-4 w-4 text-status-pass"
-          fill="currentColor"
-          viewBox="0 0 20 20"
-          aria-hidden="true"
-        >
-          <path
-            fillRule="evenodd"
-            d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-            clipRule="evenodd"
-          />
-        </svg>
-        <span className="sr-only">complete</span>
-      </span>
-    )
+  if (processingMode === 'economy') {
+    if (fileStatus === 'l2_completed' || fileStatus === 'l3_completed') return 'AI: complete'
+  } else {
+    if (fileStatus === 'l3_completed') return 'AI: complete'
+    if (fileStatus === 'l2_completed') return 'AI: L2 complete'
   }
-  if (status === 'processing') {
-    return (
-      <span className="inline-flex items-center animate-spin">
-        <svg
-          className="h-4 w-4 text-status-analyzing"
-          fill="none"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <circle
-            className="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            strokeWidth="4"
-          />
-          <path
-            className="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-          />
-        </svg>
-        <span className="sr-only">processing</span>
-      </span>
-    )
-  }
-  if (status === 'na') {
-    return <span className="text-xs text-muted-foreground font-medium">N/A</span>
-  }
-  // pending
-  return <span className="h-4 w-4 rounded-full border-2 border-muted-foreground/30" />
+
+  if (fileStatus === 'l1_completed' || fileStatus === 'l1_processing') return 'AI: pending'
+  return 'AI: analyzing...'
 }
 
 export function ReviewProgress({
-  layerCompleted,
+  reviewedCount,
+  totalCount,
   fileStatus,
   processingMode,
 }: ReviewProgressProps) {
-  const l2Status = getL2Status(fileStatus, layerCompleted)
-  const l3Status = getL3Status(fileStatus, layerCompleted, processingMode)
+  const reducedMotion = useReducedMotion()
 
-  const l2Complete = l2Status === 'complete'
+  const reviewPercent = totalCount > 0 ? Math.round((reviewedCount / totalCount) * 100) : 0
+  const aiProgress = getAiProgress(fileStatus, processingMode)
+  const aiLabel = getAiStatusLabel(fileStatus, processingMode)
+  const isAiComplete = aiProgress === 100
+  const isReviewComplete = totalCount > 0 && reviewedCount >= totalCount
+  const isAllDone = isAiComplete && isReviewComplete
+  const isFailed = fileStatus === 'failed'
+
+  // Review label
+  const reviewLabel = isAllDone ? 'All reviewed' : `Reviewed: ${reviewedCount}/${totalCount}`
 
   return (
-    <div data-testid="review-progress" className="flex items-center gap-3 text-sm">
-      <div data-testid="layer-status-L1" data-completed="true" className="flex items-center gap-1">
-        <StatusIcon status="complete" />
-        <span>Rules</span>
+    <div data-testid="review-progress" className={`flex flex-col gap-2 ${reducedMotion ? '' : ''}`}>
+      {/* Track 1: Review progress */}
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-medium min-w-[120px]">{reviewLabel}</span>
+        <div
+          data-testid="review-progress-bar"
+          role="progressbar"
+          aria-valuenow={reviewedCount}
+          aria-valuemin={0}
+          aria-valuemax={totalCount}
+          aria-label="Review progress"
+          className="flex-1"
+        >
+          <Progress
+            value={reviewPercent}
+            className={reducedMotion ? '[&>div]:transition-none' : ''}
+          />
+        </div>
+        {isReviewComplete && (
+          <span className="text-xs text-status-pass" aria-hidden="true">
+            ✓
+          </span>
+        )}
       </div>
-      <div
-        data-testid="layer-status-L2"
-        data-completed={l2Status === 'complete' ? 'true' : undefined}
-        className="flex items-center gap-1"
-      >
-        <StatusIcon status={l2Status} />
-        <span>AI Screening</span>
+
+      {/* Track 2: AI processing status */}
+      <div className="flex items-center gap-3" data-testid="ai-status-track">
+        <span className={`text-sm font-medium min-w-[120px] ${isFailed ? 'text-destructive' : ''}`}>
+          {aiLabel}
+        </span>
+        <div
+          data-testid="ai-progress-bar"
+          role="progressbar"
+          aria-valuenow={aiProgress}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="AI processing progress"
+          className="flex-1"
+        >
+          <Progress value={aiProgress} className={reducedMotion ? '[&>div]:transition-none' : ''} />
+        </div>
+        {isAiComplete && (
+          <span className="text-xs text-status-pass" aria-hidden="true">
+            ✓
+          </span>
+        )}
       </div>
-      <div
-        data-testid="layer-status-L3"
-        data-completed={l3Status === 'complete' ? 'true' : undefined}
-        className="flex items-center gap-1"
-      >
-        <StatusIcon status={l3Status} />
-        <span>Deep Analysis</span>
-      </div>
-      {l2Complete && <span className="text-xs text-muted-foreground ml-2">AI: L2 complete</span>}
+
+      {/* All Done label */}
+      {isAllDone && <span className="text-xs text-status-pass font-medium">All Done</span>}
     </div>
   )
 }

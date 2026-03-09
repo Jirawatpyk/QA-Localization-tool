@@ -27,7 +27,9 @@ const mockSingle = vi.fn((..._args: unknown[]) =>
     error: null as { message: string } | null,
   }),
 )
-const mockEq = vi.fn().mockReturnValue({ single: mockSingle })
+const mockEqResult = { single: mockSingle } as Record<string, unknown>
+const mockEq = vi.fn().mockReturnValue(mockEqResult)
+mockEqResult.eq = mockEq // make .eq() chainable for compound tenant filter
 const mockSelect = vi.fn().mockReturnValue({ eq: mockEq })
 const mockFrom = vi.fn().mockReturnValue({ select: mockSelect })
 
@@ -350,6 +352,45 @@ describe('useThresholdSubscription — TA: Coverage Gap Tests (Story 3.5)', () =
 
     // typeof null !== 'number' → both are null → updateThresholds should NOT be called
     expect(mockUpdateThresholds).not.toHaveBeenCalled()
+
+    unmount()
+  })
+
+  // TD-TENANT-003 [P0]: tenantId compound filter on Realtime + polling
+  it('[P0] should include tenant_id in Realtime filter when tenantId provided (TD-TENANT-003)', () => {
+    const { unmount } = renderHook(() => useThresholdSubscription('en-US', 'th-TH', 'tenant-abc'))
+
+    // Verify Realtime filter includes tenant_id compound filter
+    const onCalls = mockChannel.on.mock.calls as unknown[][]
+    const updateCall = onCalls.find(
+      (call) =>
+        typeof call[1] === 'object' &&
+        call[1] !== null &&
+        (call[1] as Record<string, unknown>).event === 'UPDATE',
+    )
+    const filterConfig = updateCall?.[1] as Record<string, unknown> | undefined
+    expect(filterConfig?.filter).toBe('source_lang=eq.en-US&tenant_id=eq.tenant-abc')
+
+    unmount()
+  })
+
+  // TD-TENANT-003 [P0]: polling fallback includes tenant_id
+  it('[P0] should include tenant_id in polling query when tenantId provided (TD-TENANT-003)', async () => {
+    const { unmount } = renderHook(() => useThresholdSubscription('en-US', 'th-TH', 'tenant-abc'))
+
+    // Trigger CHANNEL_ERROR → starts polling
+    const subscribeFn = mockChannel.subscribe.mock.calls[0]?.[0] as
+      | ((status: string) => void)
+      | undefined
+    act(() => subscribeFn?.('CHANNEL_ERROR'))
+
+    // Advance timer to trigger poll
+    await vi.advanceTimersByTimeAsync(30_000)
+
+    // Verify .eq() was called with tenant_id
+    const eqCalls = mockEq.mock.calls as unknown[][]
+    const tenantEqCall = eqCalls.find((call) => call[0] === 'tenant_id' && call[1] === 'tenant-abc')
+    expect(tenantEqCall).toBeDefined()
 
     unmount()
   })

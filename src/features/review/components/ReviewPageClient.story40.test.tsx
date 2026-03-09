@@ -67,6 +67,7 @@ function setupMatchMedia(prefersReducedMotion = false) {
 
 function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
   return {
+    tenantId: 't1',
     file: { fileId: 'f1', fileName: 'test.sdlxliff', status: 'l2_completed' as DbFileStatus },
     findings: [],
     score: {
@@ -100,6 +101,7 @@ describe('ReviewPageClient — Story 4.0 ARIA Foundation', () => {
       <ReviewPageClient
         fileId="f1"
         projectId="p1"
+        tenantId="t1"
         initialData={buildInitialData({
           findings: [buildFinding({ id: 'find1' })],
         })}
@@ -112,7 +114,14 @@ describe('ReviewPageClient — Story 4.0 ARIA Foundation', () => {
   })
 
   it('[P0] A2: should mount aria-live container before injecting content', () => {
-    render(<ReviewPageClient fileId="f1" projectId="p1" initialData={buildInitialData()} />)
+    render(
+      <ReviewPageClient
+        fileId="f1"
+        projectId="p1"
+        tenantId="t1"
+        initialData={buildInitialData()}
+      />,
+    )
 
     // mountAnnouncer is called on mount
     expect(mockMountAnnouncer).toHaveBeenCalled()
@@ -122,7 +131,7 @@ describe('ReviewPageClient — Story 4.0 ARIA Foundation', () => {
     expect(scoreLiveRegion.getAttribute('aria-live')).toBe('polite')
   })
 
-  it('[P1] A3: should toggle aria-expanded on finding card click', async () => {
+  it('[P1] A3: should toggle aria-expanded on finding compact row click', async () => {
     const user = userEvent.setup()
     const finding = buildFinding({
       id: 'find1',
@@ -135,16 +144,17 @@ describe('ReviewPageClient — Story 4.0 ARIA Foundation', () => {
       <ReviewPageClient
         fileId="f1"
         projectId="p1"
+        tenantId="t1"
         initialData={buildInitialData({ findings: [finding] })}
       />,
     )
 
-    // Find the expand button
-    const expandBtn = screen.getByRole('button', { name: /expand/i })
-    expect(expandBtn.getAttribute('aria-expanded')).toBe('false')
+    // FindingCardCompact row has aria-expanded on the row itself
+    const row = screen.getByTestId('finding-compact-row')
+    expect(row.getAttribute('aria-expanded')).toBe('false')
 
-    await user.click(expandBtn)
-    expect(expandBtn.getAttribute('aria-expanded')).toBe('true')
+    await user.click(row)
+    expect(row.getAttribute('aria-expanded')).toBe('true')
   })
 
   it('[P1] A4: should apply focus ring CSS with correct outline spec', () => {
@@ -154,6 +164,7 @@ describe('ReviewPageClient — Story 4.0 ARIA Foundation', () => {
       <ReviewPageClient
         fileId="f1"
         projectId="p1"
+        tenantId="t1"
         initialData={buildInitialData({ findings: [finding] })}
       />,
     )
@@ -213,6 +224,7 @@ describe('ReviewPageClient — Story 4.0 Layout', () => {
       <ReviewPageClient
         fileId="f1"
         projectId="p1"
+        tenantId="t1"
         initialData={buildInitialData({
           findings: [buildFinding({ id: 'find1' })],
         })}
@@ -238,7 +250,14 @@ describe('ReviewPageClient — Story 4.0 Layout', () => {
   })
 
   it('[P1] L2: should not render global DetailPanel content on review page', () => {
-    render(<ReviewPageClient fileId="f1" projectId="p1" initialData={buildInitialData()} />)
+    render(
+      <ReviewPageClient
+        fileId="f1"
+        projectId="p1"
+        tenantId="t1"
+        initialData={buildInitialData()}
+      />,
+    )
 
     // Global detail panel is rendered by (app)/layout.tsx, not by ReviewPageClient
     // Review page uses Sheet exclusively
@@ -246,7 +265,14 @@ describe('ReviewPageClient — Story 4.0 Layout', () => {
   })
 
   it('[P0] L3: should render 3-zone layout with nav, finding list, and sheet zones', () => {
-    render(<ReviewPageClient fileId="f1" projectId="p1" initialData={buildInitialData()} />)
+    render(
+      <ReviewPageClient
+        fileId="f1"
+        projectId="p1"
+        tenantId="t1"
+        initialData={buildInitialData()}
+      />,
+    )
 
     // Zone 1: nav
     const nav = screen.getByRole('navigation', { name: /file navigation/i })
@@ -262,15 +288,29 @@ describe('ReviewPageClient — Story 4.0 Layout', () => {
   })
 
   it('[P0] L4: should maintain Realtime subscriptions after layout refactor', () => {
-    render(<ReviewPageClient fileId="f1" projectId="p1" initialData={buildInitialData()} />)
+    render(
+      <ReviewPageClient
+        fileId="f1"
+        projectId="p1"
+        tenantId="t1"
+        initialData={buildInitialData()}
+      />,
+    )
 
-    expect(mockUseFindingsSubscription).toHaveBeenCalledWith('f1')
-    expect(mockUseScoreSubscription).toHaveBeenCalledWith('f1')
-    expect(mockUseThresholdSubscription).toHaveBeenCalledWith('en-US', 'th-TH')
+    expect(mockUseFindingsSubscription).toHaveBeenCalledWith('f1', 't1')
+    expect(mockUseScoreSubscription).toHaveBeenCalledWith('f1', 't1')
+    expect(mockUseThresholdSubscription).toHaveBeenCalledWith('en-US', 'th-TH', 't1')
   })
 
   it('[P1] L5: should not auto-focus any element on mount', () => {
-    render(<ReviewPageClient fileId="f1" projectId="p1" initialData={buildInitialData()} />)
+    render(
+      <ReviewPageClient
+        fileId="f1"
+        projectId="p1"
+        tenantId="t1"
+        initialData={buildInitialData()}
+      />,
+    )
 
     // No auto-focus — activeElement should be body (Guardrail #40)
     expect(document.activeElement).toBe(document.body)
@@ -295,6 +335,7 @@ describe('ReviewPageClient — Story 4.0 reduced-motion', () => {
       <ReviewPageClient
         fileId="f1"
         projectId="p1"
+        tenantId="t1"
         initialData={buildInitialData({
           findings: [buildFinding({ id: 'find1' })],
         })}

@@ -442,6 +442,22 @@ describe('useScoreSubscription', () => {
     expect(useReviewStore.getState().scoreStatus).toBe('na')
   })
 
+  // ── TD-TENANT-003: tenantId filter (Story 4.1a) ──
+
+  it('[T5.2][P0] should include tenant_id in Realtime filter when tenantId provided', () => {
+    renderHook(() => useScoreSubscription('file-abc', 'tenant-xyz'))
+
+    // Verify .on() is called with a filter containing tenant_id compound filter
+    const onCalls = mockChannel.on.mock.calls as unknown[][]
+    const hasCompoundFilter = onCalls.some((callArgs) => {
+      const filterConfig = callArgs[1] as Record<string, unknown> | undefined
+      if (!filterConfig) return false
+      const filter = filterConfig.filter as string | undefined
+      return filter?.includes('tenant_id=eq.tenant-xyz')
+    })
+    expect(hasCompoundFilter).toBe(true)
+  })
+
   // ── Story 4.0 TD Regression ──
 
   it('[P1] TD7: should update autoPassRationale on Realtime transition to auto_passed', () => {

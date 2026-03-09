@@ -24,7 +24,7 @@ function isValidLayerCompleted(value: string): value is LayerCompleted {
  * Subscribe to scores table changes for a specific file via Supabase Realtime.
  * Falls back to polling with exponential backoff on channel error.
  */
-export function useScoreSubscription(fileId: string) {
+export function useScoreSubscription(fileId: string, tenantId?: string | undefined) {
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pollIntervalRef = useRef(INITIAL_POLL_INTERVAL)
   const isPollingRef = useRef(false)
@@ -50,11 +50,14 @@ export function useScoreSubscription(fileId: string) {
       const supabase = supabaseRef.current
       if (supabase) {
         try {
-          const { data } = await supabase
+          let query = supabase
             .from('scores')
             .select('mqm_score, status, layer_completed, auto_pass_rationale')
             .eq('file_id', fileId)
-            .single()
+          if (tenantId) {
+            query = query.eq('tenant_id', tenantId)
+          }
+          const { data } = await query.single()
           if (data && isValidScoreStatus(data.status)) {
             const layerCompleted =
               typeof data.layer_completed === 'string' &&
@@ -85,7 +88,7 @@ export function useScoreSubscription(fileId: string) {
     poll().catch(() => {
       /* best-effort initial poll */
     })
-  }, [fileId])
+  }, [fileId, tenantId])
 
   useEffect(() => {
     const supabase = createBrowserClient()
@@ -105,6 +108,11 @@ export function useScoreSubscription(fileId: string) {
       useReviewStore.getState().updateScore(mqm_score, status, layerCompleted, autoPassRationale)
     }
 
+    // TD-TENANT-003: compound filter with tenant_id when available
+    const realtimeFilter = tenantId
+      ? `file_id=eq.${fileId}&tenant_id=eq.${tenantId}`
+      : `file_id=eq.${fileId}`
+
     const channel = supabase
       .channel(`scores:${fileId}`)
       .on(
@@ -113,7 +121,7 @@ export function useScoreSubscription(fileId: string) {
           event: 'INSERT',
           schema: 'public',
           table: 'scores',
-          filter: `file_id=eq.${fileId}`,
+          filter: realtimeFilter,
         },
         handleScoreChange,
       )
@@ -123,7 +131,7 @@ export function useScoreSubscription(fileId: string) {
           event: 'UPDATE',
           schema: 'public',
           table: 'scores',
-          filter: `file_id=eq.${fileId}`,
+          filter: realtimeFilter,
         },
         handleScoreChange,
       )
@@ -140,5 +148,5 @@ export function useScoreSubscription(fileId: string) {
       stopPolling()
       supabase.removeChannel(channel)
     }
-  }, [fileId, startPolling, stopPolling])
+  }, [fileId, tenantId, startPolling, stopPolling])
 }

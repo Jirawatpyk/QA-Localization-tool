@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
@@ -10,7 +10,7 @@ import { approveFile } from '@/features/review/actions/approveFile.action'
 import type { FileReviewData } from '@/features/review/actions/getFileReviewData.action'
 import { AutoPassRationale } from '@/features/review/components/AutoPassRationale'
 import { FindingDetailSheet } from '@/features/review/components/FindingDetailSheet'
-import { FindingListItem } from '@/features/review/components/FindingListItem'
+import { FindingList } from '@/features/review/components/FindingList'
 import { KeyboardCheatSheet } from '@/features/review/components/KeyboardCheatSheet'
 import { ReviewActionBar } from '@/features/review/components/ReviewActionBar'
 import { ReviewProgress } from '@/features/review/components/ReviewProgress'
@@ -19,6 +19,7 @@ import { useReviewHotkeys } from '@/features/review/hooks/use-keyboard-actions'
 import { useScoreSubscription } from '@/features/review/hooks/use-score-subscription'
 import { useThresholdSubscription } from '@/features/review/hooks/use-threshold-subscription'
 import { useReviewStore } from '@/features/review/stores/review.store'
+import type { FindingForDisplay } from '@/features/review/types'
 import { mountAnnouncer, unmountAnnouncer } from '@/features/review/utils/announce'
 import type {
   Finding,
@@ -31,6 +32,7 @@ import type {
 type ReviewPageClientProps = {
   fileId: string
   projectId: string
+  tenantId: string
   initialData: FileReviewData
 }
 
@@ -52,9 +54,12 @@ function deriveScoreBadgeState(
 /** Score statuses that allow manual approval */
 const APPROVABLE_STATUSES = new Set<ScoreStatus>(['calculated', 'overridden'])
 
-const SEVERITY_ORDER: Record<FindingSeverity, number> = { critical: 0, major: 1, minor: 2 }
-
-export function ReviewPageClient({ fileId, projectId, initialData }: ReviewPageClientProps) {
+export function ReviewPageClient({
+  fileId,
+  projectId,
+  tenantId,
+  initialData,
+}: ReviewPageClientProps) {
   const resetForFile = useReviewStore((s) => s.resetForFile)
   const setFindings = useReviewStore((s) => s.setFindings)
   const findingsMap = useReviewStore((s) => s.findingsMap)
@@ -118,13 +123,13 @@ export function ReviewPageClient({ fileId, projectId, initialData }: ReviewPageC
   // Approve state
   const [isApproving, startApproveTransition] = useTransition()
 
-  // Wire Realtime subscriptions
-  useScoreSubscription(fileId)
-  useFindingsSubscription(fileId)
+  // Wire Realtime subscriptions (TD-TENANT-003: pass tenantId for compound filter)
+  useScoreSubscription(fileId, tenantId)
+  useFindingsSubscription(fileId, tenantId)
   // Threshold subscription — only if language pair is available
   const sourceLang = initialData.sourceLang
   const targetLang = initialData.targetLang
-  useThresholdSubscription(sourceLang, targetLang ?? '')
+  useThresholdSubscription(sourceLang, targetLang ?? '', tenantId)
 
   // Derive display values
   const effectiveScore = currentScore ?? initialData.score.mqmScore
@@ -185,18 +190,27 @@ export function ReviewPageClient({ fileId, projectId, initialData }: ReviewPageC
     return null
   }, [isPartial, effectiveLayerCompleted, initialData.processingMode])
 
-  // Sort findings from store
-  const sortedFindings = useMemo(() => {
-    const arr = Array.from(findingsMap.values())
-    return arr.sort((a, b) => {
-      const severityDiff = (SEVERITY_ORDER[a.severity] ?? 99) - (SEVERITY_ORDER[b.severity] ?? 99)
-      if (severityDiff !== 0) return severityDiff
-      if (a.aiConfidence === null && b.aiConfidence === null) return 0
-      if (a.aiConfidence === null) return 1
-      if (b.aiConfidence === null) return -1
-      return b.aiConfidence - a.aiConfidence
-    })
-  }, [findingsMap])
+  // Convert findings map to array (FindingList handles sorting internally)
+  const allFindings = useMemo(() => Array.from(findingsMap.values()), [findingsMap])
+
+  // Convert Finding → FindingForDisplay for FindingList
+  const findingsForDisplay: FindingForDisplay[] = useMemo(
+    () =>
+      allFindings.map((f) => ({
+        id: f.id,
+        severity: f.severity,
+        category: f.category,
+        description: f.description,
+        status: f.status,
+        detectedByLayer: f.detectedByLayer,
+        aiConfidence: f.aiConfidence,
+        sourceTextExcerpt: f.sourceTextExcerpt,
+        targetTextExcerpt: f.targetTextExcerpt,
+        suggestedFix: f.suggestedFix,
+        aiModel: f.aiModel,
+      })),
+    [allFindings],
+  )
 
   // Count findings per severity
   const severityCounts = useMemo(() => {
@@ -206,6 +220,50 @@ export function ReviewPageClient({ fileId, projectId, initialData }: ReviewPageC
     }
     return counts
   }, [findingsMap])
+
+  // Expand/collapse state — local ephemeral UI state
+  // Critical findings are pre-populated as expanded
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set<string>())
+
+  // Pre-expand critical findings — "adjust state during render" pattern (React 19)
+  // Avoids setState-in-effect which violates react-hooks/set-state-in-effect
+  const criticalIdsForExpand = useMemo(
+    () => findingsForDisplay.filter((f) => f.severity === 'critical').map((f) => f.id),
+    [findingsForDisplay],
+  )
+  const criticalIdsKey = criticalIdsForExpand.join(',')
+  const [prevCriticalIdsKey, setPrevCriticalIdsKey] = useState('')
+
+  if (criticalIdsKey !== prevCriticalIdsKey) {
+    setPrevCriticalIdsKey(criticalIdsKey)
+    if (criticalIdsForExpand.length > 0) {
+      setExpandedIds((prev) => {
+        const next = new Set(prev)
+        for (const id of criticalIdsForExpand) {
+          next.add(id)
+        }
+        return next
+      })
+    }
+  }
+
+  const handleToggleExpand = useCallback((id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }, [])
+
+  // Reviewed count for ReviewProgress dual-track
+  const reviewedCount = useMemo(
+    () => allFindings.filter((f) => f.status !== 'pending').length,
+    [allFindings],
+  )
 
   // Sheet open state — driven by store selectedId
   const isSheetOpen = selectedId !== null
@@ -217,7 +275,7 @@ export function ReviewPageClient({ fileId, projectId, initialData }: ReviewPageC
 
   return (
     <div className="flex h-full" data-testid="review-3-zone">
-      {/* Zone 1: File Navigation (left, collapsible) — shell only, populated in Story 4.1a */}
+      {/* Zone 1: File Navigation (left, collapsible) */}
       <nav aria-label="File navigation" className="w-60 border-r shrink-0 overflow-y-auto p-4">
         <h2 className="text-sm font-semibold text-muted-foreground mb-2">Files</h2>
         <p className="text-xs text-muted-foreground">File list will be populated in Story 4.1a.</p>
@@ -295,9 +353,10 @@ export function ReviewPageClient({ fileId, projectId, initialData }: ReviewPageC
           </div>
         )}
 
-        {/* Layer progress */}
+        {/* Dual-track progress (Story 4.1a AC3) */}
         <ReviewProgress
-          layerCompleted={effectiveLayerCompleted}
+          reviewedCount={reviewedCount}
+          totalCount={allFindings.length}
           fileStatus={initialData.file.status}
           processingMode={initialData.processingMode}
         />
@@ -319,23 +378,15 @@ export function ReviewPageClient({ fileId, projectId, initialData }: ReviewPageC
           data-testid="finding-list"
           className="mt-4 space-y-2"
         >
-          <div role="rowgroup">
-            {sortedFindings.length === 0 ? (
-              <p className="text-muted-foreground text-sm py-4">No findings for this file.</p>
-            ) : (
-              sortedFindings.map((finding, index) => (
-                <FindingListItem
-                  key={finding.id}
-                  finding={finding}
-                  isFirstRow={index === 0}
-                  sourceLang={sourceLang}
-                  targetLang={targetLang ?? undefined}
-                  l2ConfidenceMin={storeL2ConfidenceMin ?? initialData.l2ConfidenceMin}
-                  l3ConfidenceMin={storeL3ConfidenceMin ?? initialData.l3ConfidenceMin}
-                />
-              ))
-            )}
-          </div>
+          <FindingList
+            findings={findingsForDisplay}
+            expandedIds={expandedIds}
+            onToggleExpand={handleToggleExpand}
+            sourceLang={sourceLang}
+            targetLang={targetLang ?? undefined}
+            l2ConfidenceMin={storeL2ConfidenceMin ?? initialData.l2ConfidenceMin}
+            l3ConfidenceMin={storeL3ConfidenceMin ?? initialData.l3ConfidenceMin}
+          />
         </div>
         {/* Action Bar (Task 5 — below finding list) */}
         <ReviewActionBar />

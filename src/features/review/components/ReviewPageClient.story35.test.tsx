@@ -51,6 +51,8 @@ const storeMockState = {
   scoreStatus: null as ScoreStatus | null,
   l2ConfidenceMin: null as number | null,
   l3ConfidenceMin: null as number | null,
+  selectedId: null as string | null,
+  setSelectedFinding: vi.fn(),
 }
 
 vi.mock('@/features/review/stores/review.store', () => ({
@@ -80,6 +82,7 @@ vi.mock('@/features/review/actions/approveFile.action', () => ({
 
 const VALID_FILE_ID = 'f1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
 const VALID_PROJECT_ID = 'b1c2d3e4-f5a6-4b2c-9d3e-4f5a6b7c8d9e'
+const VALID_TENANT_ID = 't1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
 
 function mockReducedMotion(matches: boolean) {
   Object.defineProperty(window, 'matchMedia', {
@@ -99,6 +102,7 @@ function mockReducedMotion(matches: boolean) {
 
 function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
   return {
+    tenantId: VALID_TENANT_ID,
     file: {
       fileId: VALID_FILE_ID,
       fileName: 'test-file.sdlxliff',
@@ -147,6 +151,7 @@ describe('ReviewPageClient — Story 3.5 score lifecycle & approve', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           score: {
             mqmScore: 85,
@@ -177,6 +182,7 @@ describe('ReviewPageClient — Story 3.5 score lifecycle & approve', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           score: {
             mqmScore: 85,
@@ -212,6 +218,7 @@ describe('ReviewPageClient — Story 3.5 score lifecycle & approve', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           score: {
             mqmScore: 85,
@@ -247,6 +254,7 @@ describe('ReviewPageClient — Story 3.5 score lifecycle & approve', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           score: {
             mqmScore: 88,
@@ -275,6 +283,7 @@ describe('ReviewPageClient — Story 3.5 score lifecycle & approve', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           score: {
             mqmScore: 85,
@@ -303,6 +312,7 @@ describe('ReviewPageClient — Story 3.5 score lifecycle & approve', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           file: { fileId: VALID_FILE_ID, fileName: 'test.sdlxliff', status: 'ai_partial' },
           score: {
@@ -334,6 +344,7 @@ describe('ReviewPageClient — Story 3.5 score lifecycle & approve', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           score: {
             mqmScore: 85,
@@ -365,6 +376,7 @@ describe('ReviewPageClient — Story 3.5 score lifecycle & approve', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           score: {
             mqmScore: 85,
@@ -393,6 +405,7 @@ describe('ReviewPageClient — Story 3.5 score lifecycle & approve', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           score: {
             mqmScore: 85,
@@ -435,6 +448,7 @@ describe('ReviewPageClient — Story 3.5 score lifecycle & approve', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           score: {
             mqmScore: 97,
@@ -479,6 +493,7 @@ describe('ReviewPageClient — Story 3.5 score lifecycle & approve', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           score: {
             mqmScore: 85,
@@ -517,6 +532,7 @@ describe('ReviewPageClient — Story 3.5 score lifecycle & approve', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           score: {
             mqmScore: 80,
@@ -550,6 +566,7 @@ describe('ReviewPageClient — Story 3.5 score lifecycle & approve', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           score: {
             mqmScore: 88,
@@ -578,6 +595,7 @@ describe('ReviewPageClient — Story 3.5 score lifecycle & approve', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           score: {
             mqmScore: null,
@@ -662,6 +680,7 @@ describe('ReviewPageClient — TA: Coverage Gap Tests (Story 3.5)', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           processingMode: 'thorough',
           score: {
@@ -688,6 +707,7 @@ describe('ReviewPageClient — TA: Coverage Gap Tests (Story 3.5)', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           score: {
             mqmScore: 80,
@@ -713,6 +733,7 @@ describe('ReviewPageClient — TA: Coverage Gap Tests (Story 3.5)', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           processingMode: 'economy',
           score: {
@@ -741,6 +762,7 @@ describe('ReviewPageClient — TA: Coverage Gap Tests (Story 3.5)', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           processingMode: 'thorough',
           score: {
@@ -800,6 +822,7 @@ describe('ReviewPageClient — TA: Coverage Gap Tests (Story 3.5)', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           score: {
             mqmScore: 75,
@@ -830,6 +853,7 @@ describe('ReviewPageClient — TA: Coverage Gap Tests (Story 3.5)', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           findings: [],
           score: {
@@ -881,6 +905,7 @@ describe('ReviewPageClient — TA: Coverage Gap Tests (Story 3.5)', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           score: {
             mqmScore: 70,
@@ -894,14 +919,16 @@ describe('ReviewPageClient — TA: Coverage Gap Tests (Story 3.5)', () => {
       />,
     )
 
-    // Get all rendered finding list items and check order
-    const items = screen.getAllByTestId('finding-list-item')
-    expect(items.length).toBe(3)
+    // Critical + Major rows visible; Minor inside collapsed accordion
+    const rows = screen.getAllByTestId('finding-compact-row')
+    expect(rows.length).toBe(2) // minor hidden inside accordion
 
-    // First: critical, Second: major, Third: minor
-    expect(items[0]!.textContent).toMatch(/critical/i)
-    expect(items[1]!.textContent).toMatch(/major/i)
-    expect(items[2]!.textContent).toMatch(/minor/i)
+    // First: critical, Second: major (sorted by severity)
+    expect(rows[0]!.textContent).toMatch(/critical/i)
+    expect(rows[1]!.textContent).toMatch(/major/i)
+
+    // Minor accordion header shows count
+    expect(screen.getByText(/Minor \(1\)/)).toBeDefined()
   })
 
   // SC-2 [P2]: approve success → toast.success message
@@ -921,6 +948,7 @@ describe('ReviewPageClient — TA: Coverage Gap Tests (Story 3.5)', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           score: {
             mqmScore: 96,
@@ -969,6 +997,7 @@ describe('ReviewPageClient — TA: Coverage Gap Tests (Story 3.5)', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           score: {
             mqmScore: 85,
@@ -1012,6 +1041,7 @@ describe('ReviewPageClient — TA: Coverage Gap Tests (Story 3.5)', () => {
       <ReviewPageClient
         fileId={VALID_FILE_ID}
         projectId={VALID_PROJECT_ID}
+        tenantId={VALID_TENANT_ID}
         initialData={buildInitialData({
           score: {
             mqmScore: 85,

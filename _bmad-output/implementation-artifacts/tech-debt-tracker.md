@@ -182,8 +182,8 @@
 - **Phase:** pre-CR
 - **Files:** `src/features/review/hooks/use-score-subscription.ts`, `src/features/review/hooks/use-findings-subscription.ts`
 - **Description:** Both hooks subscribe to Realtime with `file_id=eq.${fileId}` only — missing `&tenant_id=eq.${tenantId}`. Polling fallback also queries without tenant_id. Pattern differs from `useNotifications.ts` which correctly includes tenant_id compound filter.
-- **Fix:** Thread `tenantId` from page.tsx → ReviewPageClient → subscription hooks. Add compound Realtime filter + `.eq('tenant_id', tenantId)` on polling.
-- **Status:** DEFERRED — Story 4.1a (file navigation will refactor ReviewPageClient props, natural place to add tenantId)
+- **Fix:** Threaded `tenantId` from page.tsx → ReviewPageClient → all 3 subscription hooks. Added compound Realtime filter `&tenant_id=eq.${tenantId}` + `.eq('tenant_id', tenantId)` on polling fallback queries for findings, score, AND threshold hooks.
+- **Status:** RESOLVED (2026-03-09 — Story 4.1a, all 3 hooks: findings ✓ score ✓ threshold ✓)
 
 ### TD-TENANT-002: glossary_terms duplicate-check by glossaryId only
 - **Severity:** Low
@@ -543,8 +543,8 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Phase:** CR R1
 - **Severity:** Low
 - **File:** `e2e/review-keyboard.spec.ts` — test E1
-- **Description:** E2E test for full keyboard review flow (J/K navigation → Enter to open Sheet → Esc → focus restore) is skipped because J/K roving tabindex navigation is not wired to DOM focus yet. Requires Story 4.1a (file navigation + keyboard wiring).
-- **Status:** DEFERRED → **Story 4.1a — File Navigation & Keyboard Wiring**
+- **Description:** E2E test for full keyboard review flow (J/K navigation → Enter to open Sheet → Esc → focus restore) is skipped because J/K roving tabindex navigation is not wired to DOM focus yet. Story 4.1a added roving tabindex on FindingCardCompact rows, but DOM focus wiring for J/K hotkeys requires keyboard actions integration.
+- **Status:** DEFERRED → **Story 4.1b — Keyboard Navigation Wiring** (J/K moves active row + DOM focus)
 
 ### TD-E2E-015: TD2 — Score recalculate after finding action (review-score E2E)
 - **Date:** 2026-03-09

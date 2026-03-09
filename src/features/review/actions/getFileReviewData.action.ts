@@ -24,6 +24,7 @@ import type {
 import type { DbFileStatus, ProcessingMode } from '@/types/pipeline'
 
 export type FileReviewData = {
+  tenantId: string
   file: {
     fileId: string
     fileName: string
@@ -219,6 +220,7 @@ export async function getFileReviewData(
     return {
       success: true,
       data: {
+        tenantId,
         file: file as FileReviewData['file'],
         findings: sortedFindings,
         score: score as FileReviewData['score'],
