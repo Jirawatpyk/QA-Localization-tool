@@ -21,7 +21,7 @@
 import { test, expect } from '@playwright/test'
 
 import { cleanupTestProject, queryScore } from './helpers/pipeline-admin'
-import { waitForReviewPageReady } from './helpers/review-page'
+import { waitForReviewPageHydrated, waitForReviewPageReady } from './helpers/review-page'
 import {
   SUPABASE_URL,
   adminHeaders,
@@ -193,12 +193,19 @@ test.describe.serial('Review Keyboard & Focus — Story 4.0 ATDD', () => {
     // Navigate to review page with seeded findings
     await signupOrLogin(page, TEST_EMAIL)
     await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageReady(page)
+    // Wait for full hydration (finding grid + keyboard bindings registered)
+    await waitForReviewPageHydrated(page)
 
     // Open keyboard cheat sheet modal (Ctrl+Shift+/ = Ctrl+?)
-    await page.keyboard.press('Control+Shift+/')
+    // Use explicit key down/up sequence for cross-platform reliability
+    // (headless Chromium on Linux may handle modifier+key combos differently)
+    await page.keyboard.down('Control')
+    await page.keyboard.down('Shift')
+    await page.keyboard.press('/')
+    await page.keyboard.up('Shift')
+    await page.keyboard.up('Control')
     const modal = page.getByRole('dialog', { name: /keyboard shortcuts/i })
-    await expect(modal).toBeVisible({ timeout: 5_000 })
+    await expect(modal).toBeVisible({ timeout: 10_000 })
 
     // Tab through modal — focus should stay inside
     await page.keyboard.press('Tab')
@@ -271,10 +278,16 @@ test.describe.serial('Review Keyboard & Focus — Story 4.0 ATDD', () => {
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
     await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageReady(page)
+    // Wait for full hydration (finding grid + keyboard bindings registered)
+    await waitForReviewPageHydrated(page)
 
     // Press Ctrl+Shift+/ (produces Ctrl+? in most keyboard layouts)
-    await page.keyboard.press('Control+Shift+/')
+    // Use explicit key sequence for cross-platform reliability
+    await page.keyboard.down('Control')
+    await page.keyboard.down('Shift')
+    await page.keyboard.press('/')
+    await page.keyboard.up('Shift')
+    await page.keyboard.up('Control')
 
     const modal = page.getByRole('dialog', { name: /keyboard shortcuts/i })
     await expect(modal).toBeVisible({ timeout: 5_000 })

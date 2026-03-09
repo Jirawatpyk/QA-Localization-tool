@@ -20,3 +20,24 @@ export async function waitForReviewPageReady(page: Page) {
     throw new Error(`Review page SSR error: "${msg}"`)
   }
 }
+
+/**
+ * Wait for the review page to fully hydrate — finding grid + rows visible.
+ * This confirms React hydration completed and all useEffect callbacks
+ * (including keyboard binding registration) have executed.
+ *
+ * Use this before testing keyboard shortcuts that depend on useEffect hooks.
+ */
+export async function waitForReviewPageHydrated(page: Page) {
+  await waitForReviewPageReady(page)
+
+  // Finding rows are populated via useEffect → Zustand store → render,
+  // so their presence confirms all effects (including keyboard bindings) have run
+  const grid = page.getByRole('grid', { name: /finding/i })
+  await expect(grid).toBeVisible({ timeout: 30_000 })
+  await expect(grid.getByRole('row').first()).toBeVisible({ timeout: 10_000 })
+
+  // Click body to ensure the page has keyboard focus (headless Chromium may
+  // not auto-focus the page after navigation)
+  await page.locator('body').click()
+}
