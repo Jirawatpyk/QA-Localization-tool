@@ -196,6 +196,12 @@ test.describe.serial('Review Keyboard & Focus — Story 4.0 ATDD', () => {
     // Wait for full hydration (finding grid + keyboard bindings registered)
     await waitForReviewPageHydrated(page)
 
+    // Focus a finding row BEFORE opening modal so Radix can restore focus
+    // (Guardrail #30: Modal focus trap + restore — needs a visible trigger element)
+    const firstRow = page.getByRole('row').first()
+    await firstRow.focus()
+    await expect(firstRow).toBeFocused()
+
     // Open keyboard cheat sheet modal (Ctrl+Shift+/ = Ctrl+?)
     // Use explicit key down/up sequence for cross-platform reliability
     // (headless Chromium on Linux may handle modifier+key combos differently)
@@ -220,10 +226,8 @@ test.describe.serial('Review Keyboard & Focus — Story 4.0 ATDD', () => {
     await page.keyboard.press('Escape')
     await expect(modal).not.toBeVisible()
 
-    // Focus should return to the element that triggered the modal
-    // (Guardrail #30: Modal focus trap + restore)
-    const focusedElement = page.locator(':focus')
-    await expect(focusedElement).toBeVisible()
+    // Focus should return to the finding row (Guardrail #30: restore on close)
+    await expect(firstRow).toBeFocused({ timeout: 5_000 })
   })
 
   // ── 4.0-E-F5e [P1]: Escape key hierarchy ─────────────────────────────────
