@@ -167,8 +167,9 @@ export async function assertLargeFileWarning(page: Page): Promise<void> {
  */
 export async function assertDuplicateDetected(page: Page, expectedScore?: number): Promise<void> {
   // Duplicate detection dialog should appear
+  // 30s timeout: under concurrent shard load, Supabase hash-check + dialog render can be slow
   const dialog = page.getByRole('dialog')
-  await expect(dialog).toBeVisible({ timeout: 10_000 })
+  await expect(dialog).toBeVisible({ timeout: 30_000 })
 
   // Should show "was uploaded on [date]" text (format: "{filename} was uploaded on {date}")
   await expect(dialog.getByText('was uploaded on', { exact: false })).toBeVisible()

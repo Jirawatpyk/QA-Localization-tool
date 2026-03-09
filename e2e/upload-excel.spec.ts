@@ -63,7 +63,8 @@ test.describe.serial('Excel Upload Flow', () => {
   test('[P1] upload xlsx → auto-detect columns → Confirm & Parse → verify segments → Start Processing', async ({
     page,
   }) => {
-    test.setTimeout(120_000)
+    // 180s: auth + upload + parse + DB verify — needs headroom under concurrent shard load
+    test.setTimeout(180_000)
 
     // Each Playwright test gets a fresh page — must re-authenticate
     await signupOrLogin(page, TEST_EMAIL)
@@ -141,7 +142,8 @@ test.describe.serial('Excel Upload Flow', () => {
 
   // ── Test P2: Upload xlsx → column mapping dialog → cancel → file stays ──
   test('[P2] upload xlsx → column mapping dialog → cancel → file stays', async ({ page }) => {
-    test.setTimeout(120_000)
+    // 180s: project creation + auth + upload + dialog — needs headroom under concurrent shard load
+    test.setTimeout(180_000)
 
     // Use a fresh project to avoid duplicate detection from P1
     cancelProjectId = await createTestProject(tenantId, 'Excel Cancel E2E')

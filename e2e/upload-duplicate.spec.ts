@@ -54,7 +54,8 @@ test.describe.serial('Duplicate File Detection (Story 2.1)', () => {
 
   // ── Test: First upload succeeds ────────────────────────────────────────
   test('[P1] first upload completes successfully and auto-parses', async ({ page }) => {
-    test.setTimeout(120_000)
+    // 180s: auth + upload + auto-parse — needs headroom under concurrent shard load
+    test.setTimeout(180_000)
 
     await signupOrLogin(page, TEST_EMAIL)
     await gotoProjectUpload(page, projectId)
@@ -72,7 +73,8 @@ test.describe.serial('Duplicate File Detection (Story 2.1)', () => {
 
   // ── Test: Duplicate detection → dialog → confirm re-run ───────────────
   test('[P1] second upload triggers duplicate dialog → re-run succeeds', async ({ page }) => {
-    test.setTimeout(120_000)
+    // 180s: auth + upload + duplicate detect + re-run + re-parse — needs headroom under concurrent shard load
+    test.setTimeout(180_000)
 
     await signupOrLogin(page, TEST_EMAIL)
     await gotoProjectUpload(page, projectId)

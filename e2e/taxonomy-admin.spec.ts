@@ -377,6 +377,9 @@ test.describe.serial('Story 3.2b7 — Taxonomy Mapping Reorder', () => {
   test('[P0] AC1 — should reorder taxonomy mapping via drag-and-drop and persist after reload', async ({
     page,
   }) => {
+    // 90s: DnD + server action (37 UPDATEs) + reload — needs headroom under concurrent shard load
+    test.setTimeout(90_000)
+
     // Given: Admin is on /admin/taxonomy with mapping table loaded
     await login(page)
     await page.goto('/admin/taxonomy')
@@ -421,12 +424,13 @@ test.describe.serial('Story 3.2b7 — Taxonomy Mapping Reorder', () => {
     await page.keyboard.press('Space')
 
     // Then: Success toast appears confirming the reorder was saved
-    // 30s timeout: server action runs 37 UPDATEs in transaction via cloud DB with network latency
-    await expect(page.getByText('Mappings reordered')).toBeVisible({ timeout: 30_000 })
+    // 60s timeout: server action runs 37 UPDATEs in transaction via cloud DB with network latency
+    // (increased from 30s — concurrent shard load on shared Supabase can double latency)
+    await expect(page.getByText('Mappings reordered')).toBeVisible({ timeout: 60_000 })
 
     // And: After page reload, the new order persists (server action saved to DB)
     await page.reload()
-    await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 30_000 })
 
     // Verify: the row that was originally first should no longer be in position 1
     // and the row that was originally third should no longer be in position 3
