@@ -12,7 +12,12 @@ vi.mock('@/lib/supabase/admin', () => ({
 const mockReturningFn = vi.fn()
 const mockValuesFn = vi.fn().mockReturnValue({ returning: mockReturningFn })
 const mockInsertFn = vi.fn().mockReturnValue({ values: mockValuesFn })
-// Chainable select mock for ownership verification (projects + uploadBatches)
+// Chainable update mock for duplicate re-run path (UPDATE existing file)
+const mockUpdateReturningFn = vi.fn()
+const mockUpdateWhereFn = vi.fn().mockReturnValue({ returning: mockUpdateReturningFn })
+const mockUpdateSetFn = vi.fn().mockReturnValue({ where: mockUpdateWhereFn })
+const mockUpdateFn = vi.fn().mockReturnValue({ set: mockUpdateSetFn })
+// Chainable select mock for ownership verification (projects + uploadBatches) + file existence check
 const mockLimitFn = vi.fn().mockResolvedValue([{ id: 'some-id' }])
 const mockWhereFn = vi.fn().mockReturnValue({ limit: mockLimitFn })
 const mockFromFn = vi.fn().mockReturnValue({ where: mockWhereFn })
@@ -21,6 +26,7 @@ vi.mock('@/db/client', () => ({
   db: {
     insert: (...args: unknown[]) => mockInsertFn(...args),
     select: (...args: unknown[]) => mockSelectFn(...args),
+    update: (...args: unknown[]) => mockUpdateFn(...args),
   },
 }))
 
@@ -120,6 +126,11 @@ function makeRequest(mockFd: FormData, contentLength?: number): NextRequest {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  // mockReset clears mockResolvedValueOnce queues (vi.clearAllMocks doesn't)
+  mockLimitFn.mockReset()
+  mockReturningFn.mockReset()
+  mockUploadStorage.mockReset()
+
   mockRequireRole.mockResolvedValue(MOCK_USER)
   mockReturningFn.mockResolvedValue([MOCK_FILE_RECORD])
   mockValuesFn.mockReturnValue({ returning: mockReturningFn })
@@ -127,8 +138,13 @@ beforeEach(() => {
   mockUploadStorage.mockResolvedValue({ error: null })
   mockRemoveStorage.mockResolvedValue({ error: null })
   mockStorageFrom.mockReturnValue({ upload: mockUploadStorage, remove: mockRemoveStorage })
-  // Ownership check: project found by default
-  mockLimitFn.mockResolvedValue([{ id: VALID_UUID }])
+  // Update mock chain (duplicate re-run path)
+  mockUpdateReturningFn.mockResolvedValue([MOCK_FILE_RECORD])
+  mockUpdateWhereFn.mockReturnValue({ returning: mockUpdateReturningFn })
+  mockUpdateSetFn.mockReturnValue({ where: mockUpdateWhereFn })
+  mockUpdateFn.mockReturnValue({ set: mockUpdateSetFn })
+  // Select mock: first call = project ownership (found), subsequent = file existence (not found)
+  mockLimitFn.mockResolvedValueOnce([{ id: VALID_UUID }]).mockResolvedValue([])
   mockWhereFn.mockReturnValue({ limit: mockLimitFn })
   mockFromFn.mockReturnValue({ where: mockWhereFn })
   mockSelectFn.mockReturnValue({ from: mockFromFn })
@@ -296,7 +312,8 @@ describe('POST /api/upload', () => {
   })
 
   it('should return 404 when projectId does not belong to the authenticated tenant', async () => {
-    mockLimitFn.mockResolvedValueOnce([]) // project not found for this tenant
+    mockLimitFn.mockReset()
+    mockLimitFn.mockResolvedValue([]) // project not found for this tenant
     const { POST } = await import('./route')
     const formData = new FormData()
     formData.append('projectId', VALID_UUID)
@@ -355,9 +372,10 @@ describe('POST /api/upload', () => {
 
   it('should return 404 when batchId does not belong to the authenticated tenant', async () => {
     // First call (project check) returns found, second call (batch check) returns not found
+    mockLimitFn.mockReset()
     mockLimitFn
       .mockResolvedValueOnce([{ id: VALID_UUID }]) // project owned
-      .mockResolvedValueOnce([]) // batch not owned
+      .mockResolvedValue([]) // batch not owned (+ default for file existence)
     const { POST } = await import('./route')
     const formData = new FormData()
     formData.append('projectId', VALID_UUID)
