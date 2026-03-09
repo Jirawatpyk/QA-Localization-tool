@@ -1,7 +1,15 @@
 'use server'
 import 'server-only'
 
+import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
+
+import { db } from '@/db/client'
+import { withTenant } from '@/db/helpers/withTenant'
+import { files } from '@/db/schema/files'
+import { projects } from '@/db/schema/projects'
+import { getCurrentUser } from '@/lib/auth/getCurrentUser'
+import type { ActionResult } from '@/types/actionResult'
 
 export type BreadcrumbEntities = {
   projectName?: string | undefined
@@ -15,20 +23,46 @@ const breadcrumbInputSchema = z.object({
 
 export async function getBreadcrumbEntities(
   input: z.input<typeof breadcrumbInputSchema>,
-): Promise<BreadcrumbEntities> {
+): Promise<ActionResult<BreadcrumbEntities>> {
   const parsed = breadcrumbInputSchema.safeParse(input)
-  if (!parsed.success) return {}
+  if (!parsed.success) {
+    return { success: false, error: 'Invalid input', code: 'INVALID_INPUT' }
+  }
+
+  const user = await getCurrentUser()
+  if (!user) {
+    return { success: false, error: 'Unauthorized', code: 'UNAUTHORIZED' }
+  }
 
   const result: BreadcrumbEntities = {}
 
-  // TODO(TD-TODO-001): Implement DB queries with withTenant() when review routes are created (Epic 4)
-  // For now, return raw IDs as display names — tests mock this entirely
+  // Fetch project name (with tenant isolation — Guardrail #1)
   if (parsed.data.projectId) {
-    result.projectName = parsed.data.projectId
-  }
-  if (parsed.data.sessionId) {
-    result.sessionName = parsed.data.sessionId
+    const rows = await db
+      .select({ name: projects.name })
+      .from(projects)
+      .where(
+        and(withTenant(projects.tenantId, user.tenantId), eq(projects.id, parsed.data.projectId)),
+      )
+      .limit(1)
+
+    if (rows.length > 0) {
+      result.projectName = rows[0]!.name
+    }
   }
 
-  return result
+  // Fetch file name as session name (with tenant isolation — Guardrail #1)
+  if (parsed.data.sessionId) {
+    const rows = await db
+      .select({ fileName: files.fileName })
+      .from(files)
+      .where(and(withTenant(files.tenantId, user.tenantId), eq(files.id, parsed.data.sessionId)))
+      .limit(1)
+
+    if (rows.length > 0) {
+      result.sessionName = rows[0]!.fileName
+    }
+  }
+
+  return { success: true, data: result }
 }

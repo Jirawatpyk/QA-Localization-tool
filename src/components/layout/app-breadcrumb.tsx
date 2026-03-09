@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 
 import {
   getBreadcrumbEntities,
@@ -107,8 +107,9 @@ function truncateSegments(segments: ParsedSegment[]): DisplayItem[] {
     return segments
   }
   const first = segments[0]!
+  const secondToLast = segments[segments.length - 2]!
   const last = segments[segments.length - 1]!
-  return [first, { ellipsis: true as const }, last]
+  return [first, { ellipsis: true as const }, secondToLast, last]
 }
 
 export function AppBreadcrumb() {
@@ -130,18 +131,23 @@ export function AppBreadcrumb() {
     setEntities({})
   }
 
-  const fetchEntities = useCallback(() => {
+  useEffect(() => {
+    if (!hasDynamic) return
+
+    let cancelled = false
+
     getBreadcrumbEntities({ projectId, sessionId })
-      .then(setEntities)
+      .then((result) => {
+        if (!cancelled && result.success) setEntities(result.data)
+      })
       .catch(() => {
         /* non-critical — breadcrumb falls back to raw IDs */
       })
-  }, [projectId, sessionId])
 
-  useEffect(() => {
-    if (!hasDynamic) return
-    fetchEntities()
-  }, [hasDynamic, fetchEntities])
+    return () => {
+      cancelled = true
+    }
+  }, [hasDynamic, projectId, sessionId])
 
   const resolved = resolveSegments(rawSegments, entities)
   const displayItems = truncateSegments(resolved)

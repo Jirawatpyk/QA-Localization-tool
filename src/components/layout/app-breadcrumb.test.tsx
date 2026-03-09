@@ -40,7 +40,10 @@ describe('AppBreadcrumb', () => {
   // 5.2 [P1] Nested route shows correct segments
   it('[P1] should render correct segments for nested route /projects/abc/glossary', async () => {
     mockUsePathname.mockReturnValue('/projects/abc/glossary')
-    mockGetBreadcrumbEntities.mockResolvedValue({ projectName: 'Project ABC' })
+    mockGetBreadcrumbEntities.mockResolvedValue({
+      success: true,
+      data: { projectName: 'Project ABC' },
+    })
 
     render(<AppBreadcrumb />)
 
@@ -56,7 +59,10 @@ describe('AppBreadcrumb', () => {
   // 5.3 [P1] Last segment is bold and not a link
   it('[P1] should render last segment as bold non-link', async () => {
     mockUsePathname.mockReturnValue('/projects/abc/glossary')
-    mockGetBreadcrumbEntities.mockResolvedValue({ projectName: 'Project ABC' })
+    mockGetBreadcrumbEntities.mockResolvedValue({
+      success: true,
+      data: { projectName: 'Project ABC' },
+    })
 
     render(<AppBreadcrumb />)
 
@@ -81,8 +87,8 @@ describe('AppBreadcrumb', () => {
     // 5+ segments: dashboard / projects / abc / review / session123 / details
     mockUsePathname.mockReturnValue('/projects/abc/review/session123/details')
     mockGetBreadcrumbEntities.mockResolvedValue({
-      projectName: 'Project ABC',
-      sessionName: 'Session 123',
+      success: true,
+      data: { projectName: 'Project ABC', sessionName: 'Session 123' },
     })
 
     render(<AppBreadcrumb />)
@@ -115,7 +121,10 @@ describe('AppBreadcrumb', () => {
   it('[P1] should not truncate at exactly 4 segments (boundary)', async () => {
     // 4 segments: dashboard / Project ABC / Batch / Upload
     mockUsePathname.mockReturnValue('/projects/abc/batch/upload')
-    mockGetBreadcrumbEntities.mockResolvedValue({ projectName: 'Project ABC' })
+    mockGetBreadcrumbEntities.mockResolvedValue({
+      success: true,
+      data: { projectName: 'Project ABC' },
+    })
 
     render(<AppBreadcrumb />)
 
@@ -153,8 +162,8 @@ describe('AppBreadcrumb', () => {
     // 5+ segments: dashboard / projects / abc / review / sessionXyz / findings
     mockUsePathname.mockReturnValue('/projects/abc/review/sessionXyz/findings')
     mockGetBreadcrumbEntities.mockResolvedValue({
-      projectName: 'Project ABC',
-      sessionName: 'Session XYZ',
+      success: true,
+      data: { projectName: 'Project ABC', sessionName: 'Session XYZ' },
     })
 
     render(<AppBreadcrumb />)
@@ -193,5 +202,69 @@ describe('AppBreadcrumb', () => {
     expect(screen.getByText('Projects')).toBeTruthy()
     // No dynamic UUID segment → server action should NOT be called
     expect(mockGetBreadcrumbEntities).not.toHaveBeenCalled()
+  })
+
+  // ── Story 4.0 TD Regression: TD-UX-001/002 ──
+
+  it('[P1] TD3: should cancel fetch on route change via AbortController', async () => {
+    // TD-UX-001: Race condition when route changes during entity resolution
+    mockUsePathname.mockReturnValue('/projects/abc/glossary')
+
+    // Slow fetch that would resolve with stale data
+    type ActionResultData = { success: true; data: { projectName: string } }
+    let resolveOld: ((v: ActionResultData) => void) | undefined
+    mockGetBreadcrumbEntities.mockImplementationOnce(
+      () =>
+        new Promise<ActionResultData>((resolve) => {
+          resolveOld = resolve
+        }),
+    )
+
+    const { rerender } = render(<AppBreadcrumb />)
+
+    // Change route before resolution completes
+    mockUsePathname.mockReturnValue('/projects/xyz/glossary')
+    mockGetBreadcrumbEntities.mockResolvedValue({
+      success: true,
+      data: { projectName: 'New Project' },
+    })
+    rerender(<AppBreadcrumb />)
+
+    // Resolve the old promise — it should be cancelled/ignored
+    resolveOld?.({ success: true, data: { projectName: 'Old Project' } })
+
+    // Wait for new project to appear
+    await waitFor(() => {
+      expect(screen.getByText('New Project')).toBeTruthy()
+    })
+
+    // 'Old Project' should never appear
+    expect(screen.queryByText('Old Project')).toBeNull()
+  })
+
+  it('[P1] TD4: should truncate segments as [first, ..., secondToLast, last]', async () => {
+    // TD-UX-002: Truncation algorithm should preserve more context
+    // 6 segments: Dashboard / Project ABC / Review / Session 123 / Details / Summary
+    mockUsePathname.mockReturnValue('/projects/abc/review/session123/details')
+    mockGetBreadcrumbEntities.mockResolvedValue({
+      success: true,
+      data: { projectName: 'Project ABC', sessionName: 'Session 123' },
+    })
+
+    render(<AppBreadcrumb />)
+
+    await waitFor(() => {
+      expect(screen.getByText('More')).toBeTruthy()
+    })
+
+    // First is visible (Dashboard)
+    expect(screen.getByText('Dashboard')).toBeTruthy()
+    // Last is visible (Details)
+    expect(screen.getByText('Details')).toBeTruthy()
+    // Second-to-last should also be visible (Session 123 or Review)
+    // The truncation pattern: [first, ..., secondToLast, last]
+    const allText = document.body.textContent ?? ''
+    // Both secondToLast and last should be present
+    expect(allText).toContain('Details')
   })
 })

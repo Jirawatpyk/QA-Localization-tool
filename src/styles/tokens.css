@@ -16,7 +16,7 @@
   --color-text-muted: #94a3b8;
 
   /* Semantic */
-  --color-success: #10b981;
+  --color-success: #047857;
   --color-warning: #f59e0b;
   --color-warning-light: #fffbeb;
   --color-warning-border: #fde68a;
@@ -29,18 +29,29 @@
 
   /* Finding Severity */
   --color-severity-critical: #dc2626;
-  --color-severity-major: #f59e0b;
+  --color-severity-major: #b45309;
   --color-severity-minor: #3b82f6;
-  --color-severity-enhancement: #10b981;
+  --color-severity-enhancement: #047857;
 
   /* Score Status */
-  --color-status-pass: #10b981;
-  --color-status-pending: #f59e0b;
+  --color-status-pass: #047857;
+  --color-status-pending: #b45309;
   --color-status-fail: #ef4444;
   --color-status-analyzing: #4f46e5;
   --color-status-ai-screened: #8b5cf6;
   --color-status-deep-analyzed: #d97706;
   --color-status-partial: #ea580c;
+
+  /* Focus */
+  --color-focus-ring: var(--color-primary);
+
+  /* Finding State Backgrounds */
+  --color-finding-accepted: #dcfce7;
+  --color-finding-rejected: #fee2e2;
+  --color-finding-flagged: #fef3c7;
+  --color-finding-noted: #dbeafe;
+  --color-finding-source-issue: #ede9fe;
+  --color-source-issue: #7c3aed; /* purple-600 equivalent — 4.6:1 on white */
 
   /* Layout */
   --sidebar-width: 240px;

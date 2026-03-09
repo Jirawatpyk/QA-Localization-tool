@@ -139,7 +139,9 @@ describe('useScoreSubscription', () => {
     // First poll fires immediately, then schedules next at 5s
     await vi.advanceTimersByTimeAsync(0)
     expect(mockFrom).toHaveBeenCalledWith('scores')
-    expect(mockSelect).toHaveBeenCalledWith('mqm_score, status, layer_completed')
+    expect(mockSelect).toHaveBeenCalledWith(
+      'mqm_score, status, layer_completed, auto_pass_rationale',
+    )
     expect(mockEq).toHaveBeenCalledWith('file_id', 'file-123')
 
     // Verify store updated from poll data
@@ -438,5 +440,33 @@ describe('useScoreSubscription', () => {
     // Store should remain at default values (no update from empty poll)
     expect(useReviewStore.getState().currentScore).toBeNull()
     expect(useReviewStore.getState().scoreStatus).toBe('na')
+  })
+
+  // ── Story 4.0 TD Regression ──
+
+  it('[P1] TD7: should update autoPassRationale on Realtime transition to auto_passed', () => {
+    renderHook(() => useScoreSubscription('file-123'))
+
+    const insertCall = mockChannel.on.mock.calls.find(
+      (call: unknown[]) => (call[1] as Record<string, unknown>)?.event === 'INSERT',
+    )
+    const onInsertHandler = insertCall![2] as (payload: { new: Record<string, unknown> }) => void
+
+    act(() => {
+      onInsertHandler({
+        new: {
+          mqm_score: 98.5,
+          status: 'auto_passed',
+          layer_completed: 'L1L2',
+          auto_pass_rationale: 'Score 98.5 exceeds threshold 95.0 with 0 critical findings',
+        },
+      })
+    })
+
+    expect(useReviewStore.getState().currentScore).toBe(98.5)
+    expect(useReviewStore.getState().scoreStatus).toBe('auto_passed')
+    expect(useReviewStore.getState().autoPassRationale).toBe(
+      'Score 98.5 exceeds threshold 95.0 with 0 critical findings',
+    )
   })
 })

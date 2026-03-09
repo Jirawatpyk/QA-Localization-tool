@@ -175,6 +175,16 @@
 - **Origin:** Story 1.7, flagged by tenant-isolation-checker
 - **Status:** RESOLVED (2026-02-25 — verified: filter already includes tenant_id; tracker had wrong file path)
 
+### TD-TENANT-003: Realtime score/findings subscriptions missing tenant_id filter
+- **Severity:** Medium (defense-in-depth — RLS protects data)
+- **Date:** 2026-03-09
+- **Story:** 4.0 (flagged by tenant-isolation-checker)
+- **Phase:** pre-CR
+- **Files:** `src/features/review/hooks/use-score-subscription.ts`, `src/features/review/hooks/use-findings-subscription.ts`
+- **Description:** Both hooks subscribe to Realtime with `file_id=eq.${fileId}` only — missing `&tenant_id=eq.${tenantId}`. Polling fallback also queries without tenant_id. Pattern differs from `useNotifications.ts` which correctly includes tenant_id compound filter.
+- **Fix:** Thread `tenantId` from page.tsx → ReviewPageClient → subscription hooks. Add compound Realtime filter + `.eq('tenant_id', tenantId)` on polling.
+- **Status:** DEFERRED — Story 4.1a (file navigation will refactor ReviewPageClient props, natural place to add tenantId)
+
 ### TD-TENANT-002: glossary_terms duplicate-check by glossaryId only
 - **Severity:** Low
 - **Files:** `createTerm.action.ts`, `updateTerm.action.ts`
@@ -219,23 +229,20 @@
 
 ## Category 7: UX & Component Consistency
 
-### TD-UX-001: AppBreadcrumb missing AbortController on entity fetch
+### ~~TD-UX-001: AppBreadcrumb missing AbortController on entity fetch~~
 - **Severity:** Low
 - **File:** `src/components/layout/app-breadcrumb.tsx`
 - **Risk:** Rapid navigation can cause race condition — stale entity names rendered for wrong route
-- **Mitigation:** Render-time state reset (`if (pathname !== prevPathname) setEntities({})`) clears stale data on route change, but in-flight fetch can still resolve after
-- **Fix:** Add `AbortController` to `fetchEntities()` with cleanup in `useEffect` return
+- **Fix:** Replaced `useCallback` + `.then()` with `useEffect` + `cancelled` flag pattern. Cleanup function sets `cancelled = true` on route change, preventing stale data from overwriting state.
 - **Origin:** Story 3.0.5 CR R1, flagged by code-quality-analyzer (M3)
-- **Status:** DEFERRED → **Story 4.0 — Review Infrastructure Setup** (breadcrumb component refactored with real DB queries in same story as TD-TODO-001)
+- **Status:** RESOLVED (2026-03-09) — Story 4.0 Task 7.3. TD3 test activated and passing.
 
-### TD-UX-002: truncateSegments shows only first+last, loses context
+### ~~TD-UX-002: truncateSegments shows only first+last, loses context~~
 - **Severity:** Low
 - **File:** `src/components/layout/app-breadcrumb.tsx`
-- **Risk:** UX only — deeply nested routes (5+ segments) lose the second-to-last segment which provides navigation context
-- **Current:** `[first, ellipsis, last]`
-- **Better:** `[first, ellipsis, secondToLast, last]`
+- **Fix:** Updated `truncateSegments()` from `[first, ..., last]` to `[first, ..., secondToLast, last]`, preserving navigation context on deeply nested routes.
 - **Origin:** Story 3.0.5 CR R1, flagged by code-quality-analyzer (M5)
-- **Status:** DEFERRED → **Story 4.0 — Review Infrastructure Setup** (same breadcrumb refactor as TD-UX-001 + TD-TODO-001)
+- **Status:** RESOLVED (2026-03-09) — Story 4.0 Task 7.4. TD4 test activated and passing.
 
 ---
 
@@ -327,13 +334,12 @@
 ### ~~TD-ORPHAN-003: getUploadedFiles action superseded — dead code~~
 - **Status:** RESOLVED (2026-03-02) — Story 3.2b6 Task 2 deleted `getUploadedFiles.action.ts` + test, removed `getUploadedFilesSchema` + `GetUploadedFilesInput` from `uploadSchemas.ts`. Type-check + 2048 unit tests pass.
 
-### TD-TODO-001: Breadcrumb DB queries deferred to Epic 4
+### ~~TD-TODO-001: Breadcrumb DB queries deferred to Epic 4~~
 - **Severity:** Low
-- **Risk:** `getBreadcrumbEntities` returns hardcoded null for review session/finding names — breadcrumb shows IDs instead of names on review pages
-- **File:** `src/components/layout/actions/getBreadcrumbEntities.action.ts:24`
-- **Fix:** Implement DB queries with `withTenant()` when review routes are created (Epic 4)
+- **File:** `src/components/layout/actions/getBreadcrumbEntities.action.ts`
+- **Fix:** Replaced stub with real DB queries using Drizzle + `withTenant()`. Fetches project name from `projects` table and file name (as session name) from `files` table with tenant isolation.
 - **Origin:** Story 3.0, identified during TODO scan (2026-03-02)
-- **Status:** DEFERRED → **Story 4.0 — Review Infrastructure Setup** (same breadcrumb refactor as TD-UX-001/UX-002)
+- **Status:** RESOLVED (2026-03-09) — Story 4.0 Task 7.2. TD2 test activated and passing.
 
 ### TD-TODO-002: getFileHistory reviewer name deferred to Epic 4
 - **Severity:** Low
@@ -419,13 +425,13 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 
 ## CR Sprint — parity/dashboard/project (2026-03-03)
 
-### TD-DASH-001: Dashboard findingsCount hardcoded to 0
+### ~~TD-DASH-001: Dashboard findingsCount hardcoded to 0~~
 - **Date:** 2026-03-03
 - **Story:** Story 3.2b (Dashboard feature)
 - **Phase:** CR
 - **Severity:** Medium
 - **Description:** `getDashboardData.action.ts` returns `findingsCount: 0` as placeholder. Should query actual `COUNT(*)` from findings table with tenant filter.
-- **Status:** DEFERRED → **Story 4.0 — Review Infrastructure Setup** (wire findings COUNT query with withTenant)
+- **Status:** RESOLVED (2026-03-09) — Story 4.0 Task 7.5. Added findings COUNT query grouped by fileId with `withTenant()` and `ANY(fileIds)`. TD5 test activated and passing.
 
 ### TD-DASH-002: 5 AI-related actions missing ActionResult<T> return type
 - **Date:** 2026-03-03
@@ -435,13 +441,13 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** `getAiUsageSummary`, `getAiSpendByProject`, `getAiSpendByModel`, `getAiSpendTrend`, `exportAiUsage` actions return raw objects instead of `ActionResult<T>`. Should standardize for consistency.
 - **Status:** RESOLVED (2026-03-08) — All 5 actions now use `ActionResult<T>` from `@/types/actionResult`. Removed inline result type aliases (`GetAiUsageSummaryResult`, `GetAiSpendByModelResult`, `GetAiSpendTrendResult`, `GetAiUsageByProjectResult`, `ExportAiUsageResult`). Return shape unchanged (structurally identical), no test changes needed.
 
-### TD-DASH-003: Realtime notification payload lacks Zod validation
+### ~~TD-DASH-003: Realtime notification payload lacks Zod validation~~
 - **Date:** 2026-03-03
 - **Story:** Story 3.2b (Notifications)
 - **Phase:** CR
 - **Severity:** Medium
 - **Description:** `useNotifications.ts` casts Realtime payload via `as RawNotificationPayload` without runtime validation. Should add a Zod schema to validate incoming data from Supabase Realtime channel.
-- **Status:** DEFERRED → **Story 4.0 — Review Infrastructure Setup** (Zod schema for Realtime payloads as part of review infrastructure)
+- **Status:** RESOLVED (2026-03-09) — Story 4.0 Task 7.6. Added `rawNotificationSchema` Zod schema with `safeParse()`. Invalid payloads silently skipped. TD6 test activated and passing.
 
 ### TD-E2E-011: Pipeline resilience E2E — chaos test for real fallback failure
 - **Date:** 2026-03-07
@@ -522,13 +528,12 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 ### ~~TD-ORPHAN-004: NotificationDropdown component not wired to any page~~
 - **Status:** RESOLVED (2026-03-09) — Already wired in `src/components/layout/app-header.tsx:4,20`. Import + mount confirmed. Orphan scan false positive — component was wired before tracker entry was created.
 
-### TD-REVIEW-002: Realtime auto_passed transition doesn't show rationale
+### ~~TD-REVIEW-002: Realtime auto_passed transition doesn't show rationale~~
 - **Date:** 2026-03-08
 - **Story:** Story 3.5 (Score Lifecycle & Confidence Display)
 - **Phase:** CR R1
 - **Severity:** Medium
-- **File:** `src/features/review/components/ReviewPageClient.tsx:250-252`
-- **Description:** `AutoPassRationale` renders from `initialData.autoPassRationale` (server-side SSR data). If score transitions to `auto_passed` via Realtime after page load, `isAutoPassedStatus` becomes true (store-driven) but `initialData.autoPassRationale` remains null (stale). Result: Approve button correctly hidden, but no rationale shown until page refresh.
-- **Mitigation:** Edge case requiring page loaded before pipeline completes AND pipeline auto-passes the file AND Realtime pushes status. User can refresh page to see rationale. Approve button behavior is correct regardless.
-- **Fix:** Track `autoPassRationale` in Zustand store via `useScoreSubscription` (subscribe to `auto_pass_rationale` column changes), or trigger `getFileReviewData` re-fetch when `scoreStatus` transitions to `auto_passed`.
-- **Status:** DEFERRED → **Story 4.0 — Review Infrastructure Setup** (review page data re-fetch + Realtime store patterns)
+- **File:** `src/features/review/hooks/use-score-subscription.ts`, `src/features/review/stores/review.store.ts`
+- **Description:** `AutoPassRationale` renders from `initialData.autoPassRationale` (server-side SSR data). If score transitions to `auto_passed` via Realtime after page load, rationale wasn't propagated to store.
+- **Fix:** Added `autoPassRationale` field to ScoreSlice in review store. `useScoreSubscription` now extracts `auto_pass_rationale` from Realtime INSERT payload and polling fallback, passes to `updateScore()`. Store-driven rationale display works even on live transition.
+- **Status:** RESOLVED (2026-03-09) — Story 4.0 Task 7.7. TD7 test activated and passing.

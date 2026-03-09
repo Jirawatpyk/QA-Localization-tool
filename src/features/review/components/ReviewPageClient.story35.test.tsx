@@ -22,10 +22,24 @@ vi.mock('@/features/review/hooks/use-threshold-subscription', () => ({
   useThresholdSubscription: vi.fn(),
 }))
 
+// Mock Story 4.0 components — not under test in this suite
+vi.mock('@/features/review/components/FindingDetailSheet', () => ({
+  FindingDetailSheet: () => null,
+}))
+vi.mock('@/features/review/components/KeyboardCheatSheet', () => ({
+  KeyboardCheatSheet: () => null,
+}))
+vi.mock('@/features/review/components/ReviewActionBar', () => ({
+  ReviewActionBar: () => null,
+}))
+vi.mock('@/features/review/utils/announce', () => ({
+  mountAnnouncer: vi.fn(),
+}))
+
 // Configurable store state for each test
 const storeMockState = {
   resetForFile: vi.fn(),
-  setFinding: vi.fn(),
+  setFindings: vi.fn(),
   findingsMap: new Map(),
   currentScore: null as number | null,
   layerCompleted: null as LayerCompleted | null,

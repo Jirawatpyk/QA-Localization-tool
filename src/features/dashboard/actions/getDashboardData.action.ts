@@ -1,11 +1,12 @@
 'use server'
 import 'server-only'
 
-import { desc, eq, and, sql, isNull, gte } from 'drizzle-orm'
+import { desc, eq, and, sql, isNull, gte, inArray } from 'drizzle-orm'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { files } from '@/db/schema/files'
+import { findings } from '@/db/schema/findings'
 import { projects } from '@/db/schema/projects'
 import { reviewActions } from '@/db/schema/reviewActions'
 import { scores } from '@/db/schema/scores'
@@ -44,6 +45,24 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
       .orderBy(desc(files.createdAt))
       .limit(10)
 
+    // Count findings per file for recent files
+    const fileIds = recentFilesRows.map((r) => r.id)
+    const findingsCountMap = new Map<string, number>()
+    if (fileIds.length > 0) {
+      const countRows = await db
+        .select({
+          fileId: findings.fileId,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(findings)
+        .where(and(withTenant(findings.tenantId, tenantId), inArray(findings.fileId, fileIds)))
+        .groupBy(findings.fileId)
+
+      for (const row of countRows) {
+        if (row.fileId) findingsCountMap.set(row.fileId, row.count)
+      }
+    }
+
     // SAFETY: Drizzle infers varchar → string; DB CHECK constraint guarantees valid DbFileStatus
     const recentFiles: RecentFileRow[] = recentFilesRows.map((row) => ({
       id: row.id,
@@ -53,7 +72,7 @@ export async function getDashboardData(): Promise<ActionResult<DashboardData>> {
       status: row.status as DbFileStatus,
       createdAt: row.createdAt.toISOString(),
       mqmScore: row.mqmScore ?? null,
-      findingsCount: 0, // TODO(TD-DASH-001): wire findingsCount from findings COUNT query
+      findingsCount: findingsCountMap.get(row.id) ?? 0,
     }))
 
     // Pending reviews: COUNT files WHERE status = 'parsed' AND no score record yet

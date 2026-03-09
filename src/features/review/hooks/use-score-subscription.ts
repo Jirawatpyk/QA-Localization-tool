@@ -46,7 +46,7 @@ export function useScoreSubscription(fileId: string) {
         try {
           const { data } = await supabase
             .from('scores')
-            .select('mqm_score, status, layer_completed')
+            .select('mqm_score, status, layer_completed, auto_pass_rationale')
             .eq('file_id', fileId)
             .single()
           if (data && isValidScoreStatus(data.status)) {
@@ -54,7 +54,11 @@ export function useScoreSubscription(fileId: string) {
               typeof data.layer_completed === 'string'
                 ? (data.layer_completed as LayerCompleted)
                 : null
-            useReviewStore.getState().updateScore(data.mqm_score, data.status, layerCompleted)
+            const autoPassRationale =
+              typeof data.auto_pass_rationale === 'string' ? data.auto_pass_rationale : null
+            useReviewStore
+              .getState()
+              .updateScore(data.mqm_score, data.status, layerCompleted, autoPassRationale)
           }
         } catch {
           // Polling errors are non-fatal — next poll will retry
@@ -87,7 +91,9 @@ export function useScoreSubscription(fileId: string) {
       if (mqm_score === null || status === null || !isValidScoreStatus(status)) return
       const layerCompleted =
         typeof row.layer_completed === 'string' ? (row.layer_completed as LayerCompleted) : null
-      useReviewStore.getState().updateScore(mqm_score, status, layerCompleted)
+      const autoPassRationale =
+        typeof row.auto_pass_rationale === 'string' ? row.auto_pass_rationale : null
+      useReviewStore.getState().updateScore(mqm_score, status, layerCompleted, autoPassRationale)
     }
 
     const channel = supabase

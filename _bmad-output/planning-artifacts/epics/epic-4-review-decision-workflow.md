@@ -5,6 +5,7 @@
 **FRs covered:** FR24, FR25, FR26, FR27, FR28, FR30, FR31, FR34, FR42, FR76, FR77, FR78, FR79, FR80
 **NFRs addressed:** NFR17 (no progress lost on crash), NFR25 (WCAG 2.1 AA), NFR26 (all 7 actions keyboard-reachable), NFR27 (severity icon+text+color), NFR28 (contrast 4.5:1)
 **Architecture:** FindingCard (P0), FindingCardCompact (P0), ReviewProgress (P0), Zustand `useReviewStore`, Supabase Realtime for live updates, immutable audit log per action
+**Stories:** 4.0 (infra) → 4.1a-d (display/keyboard/detail/responsive) → 4.2 (core actions) → 4.3 (extended actions) → 4.4a-b (bulk/undo) → 4.5 (filter/search/command palette) → 4.6 (suppress) → 4.7 (glossary) → 4.8 (verification)
 
 ### Story 4.0: Review Infrastructure Setup
 
@@ -433,9 +434,87 @@ So that I can build the glossary organically as I discover terminology issues du
 **Then** the system does NOT automatically re-run QA (to avoid disrupting the current review)
 **And** a subtle note appears: "New glossary term will apply to future QA runs"
 
+### Story 4.8: Accessibility & Integration Verification
+
+As a QA Team Lead,
+I want the complete review workflow verified for accessibility compliance, keyboard-only usability, and cross-story integration,
+So that the review interface meets WCAG 2.1 AA standards and all components work together seamlessly.
+
+**Acceptance Criteria:**
+
+**Given** the complete review workflow (Stories 4.0–4.7 done)
+**When** a keyboard-only end-to-end review is performed
+**Then** a reviewer can complete an entire file review (navigate findings, accept/reject/flag, bulk operations, undo, search/filter, suppress pattern, add glossary term) using ONLY keyboard — zero mouse interactions required
+**And** all hotkey combinations are conflict-free: single-key (A/R/F/N/S/+/-/J/K), modified (Ctrl+Z/Shift+Z/Ctrl+A/Ctrl+K/Ctrl+?), and Shift+Click bulk selection all work without interference
+**And** Esc hierarchy works correctly: innermost layer closes first (dropdown > expanded card > detail panel > page), one layer per Esc press
+
+**Given** the accessibility baseline audit (5 Critical, 14 Major, 11 Minor issues from 2026-03-08)
+**When** a closure audit is performed against the same checklist
+**Then** all 5 Critical issues are resolved (color-only indicators, contrast failures, keyboard inaccessibility)
+**And** all 14 Major issues are resolved (contrast, focus indicators, lang attributes, ARIA roles)
+**And** Minor issues are resolved or documented as ACCEPTED with mitigation
+**And** results documented in `accessibility-audit-epic4-closure-2026-XX-XX.md`
+
+**Given** the WCAG 2.1 AA contrast requirements
+**When** an automated contrast audit runs against all review components
+**Then** all text colors pass 4.5:1 ratio on their backgrounds (normal text) and 3:1 (large text)
+**And** all non-text UI elements (icons, focus rings, borders) pass 3:1 ratio
+**And** tinted state backgrounds (green/accepted, red/rejected, yellow/flagged, blue/noted) pass contrast against their text colors
+
+**Given** a file with 300+ findings (realistic performance benchmark)
+**When** the review page renders
+**Then** initial render completes in < 2 seconds (including finding list, filters, action bar)
+**And** keyboard navigation response (J/K between findings) < 100ms
+**And** hotkey action response (A/R/F) < 200ms including optimistic UI update
+**And** bulk action (50 findings) completes in < 3 seconds including score recalculation
+
+**Given** screen reader compatibility
+**When** the review page is navigated via VoiceOver (macOS) or NVDA (Windows)
+**Then** all ARIA landmarks are announced: navigation, main content (finding list), complementary (detail panel)
+**And** finding list announces as grid with row count, each row announces severity + category + status
+**And** score changes are announced via `aria-live="polite"` regions
+**And** all action buttons announce their hotkey label and current state
+
+**Given** a real localization file with 500+ segments uploaded through the full pipeline (L1→L2→L3)
+**When** the pipeline completes and findings are displayed in the review UI
+**Then** L2 precision is measured against human-reviewed baseline: target ≥70% precision (true positives / total L2 findings) on the test file
+**And** L2 recall is measured: target ≥60% recall (true positives / total known issues in baseline)
+**And** L3 findings that overlap with L2 are deduplicated correctly (no duplicate findings for same segment+category)
+**And** pipeline completes within 5 minutes for a 500-segment file in Economy mode, 10 minutes in Thorough mode
+**And** results documented in `pipeline-verification-epic4-2026-XX-XX.md` with per-layer breakdown
+
+**Given** the AI cost tracking system across a full pipeline run
+**When** the pipeline processes the 500+ segment test file
+**Then** `ai_usage_logs` total tokens (input + output) for L2 and L3 match the values returned by provider APIs (verified via `result.usage` in each `generateText` call)
+**And** estimated cost in `ai_usage_logs` is within ±5% of actual provider billing for the same run
+**And** the AI Usage Dashboard (`/admin/ai-usage`) displays the correct totals matching `ai_usage_logs` aggregation
+**And** budget threshold alerts fire correctly when spend exceeds configured threshold
+
+**Prep task (before Story 4.8):** Create 500-segment test file + human-reviewed baseline with known true positives/negatives per segment. Use real localization file from Golden Corpus (Thai or CJK) + manual QA annotation. Baseline stored in `docs/test-data/verification-baseline/`.
+
 ---
 
 ## Epic 4 Gap Analysis (2026-03-08)
+
+### Story Dependencies
+
+| Story | Depends on | Produces for |
+|-------|-----------|-------------|
+| 4.0 | — | hooks + shell → 4.1a, 4.1b, 4.1c, 4.1d, 4.2 |
+| 4.1a | 4.0 (shell, ARIA grid) | FindingCard/Compact → 4.2, 4.3, 4.4a |
+| 4.1b | 4.0 (useKeyboardActions, useFocusManagement) | keyboard nav → 4.2, 4.4a |
+| 4.1c | 4.0 (shell), 4.1a (finding focus) | detail panel → 4.3, 4.7 |
+| 4.1d | 4.0 (shell) | responsive layout (independent) |
+| 4.2 | 4.0, 4.1a, 4.1b | state lifecycle → 4.3, 4.4a, 4.4b |
+| 4.3 | 4.2 (state lifecycle) | extended actions → 4.4a, 4.6 |
+| 4.4a | 4.2 (review_actions), 4.1b (Shift+J/K) | bulk ops → 4.4b (undo batch) |
+| 4.4b | 4.4a (batch_id) | undo/redo (independent) |
+| 4.5 | 4.1a (finding list) | filter + command palette + AI toggle (independent) |
+| 4.6 | 4.2 (reject action), 4.3 (state) | suppression rules (independent) |
+| 4.7 | 4.1c (detail panel) | glossary integration (independent) |
+| 4.8 | **ALL 4.0–4.7** | verification (terminal) |
+
+**Suggested sprint order:** 4.0 → 4.1a → 4.1b/4.1c/4.1d (parallel) → 4.2 → 4.3 → 4.4a → 4.4b/4.5 (parallel) → 4.6/4.7 (parallel) → 4.8
 
 ### Route Decision
 - **KEEP** existing route: `/projects/[projectId]/review/[fileId]/` (NOT `/files/[fileId]/review/` as originally spec'd)

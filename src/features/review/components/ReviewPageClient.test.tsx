@@ -17,6 +17,21 @@ vi.mock('@/features/review/hooks/use-score-subscription', () => ({
 vi.mock('@/features/review/hooks/use-threshold-subscription', () => ({
   useThresholdSubscription: vi.fn(),
 }))
+
+// Mock Story 4.0 components — not under test in this suite
+vi.mock('@/features/review/components/FindingDetailSheet', () => ({
+  FindingDetailSheet: () => null,
+}))
+vi.mock('@/features/review/components/KeyboardCheatSheet', () => ({
+  KeyboardCheatSheet: () => null,
+}))
+vi.mock('@/features/review/components/ReviewActionBar', () => ({
+  ReviewActionBar: () => null,
+}))
+vi.mock('@/features/review/utils/announce', () => ({
+  mountAnnouncer: vi.fn(),
+}))
+
 vi.mock('@/features/pipeline/actions/retryAiAnalysis.action', () => ({
   retryAiAnalysis: vi.fn((..._args: unknown[]) =>
     Promise.resolve({ success: true, data: { retriedLayers: [] } }),

@@ -90,9 +90,12 @@ export function FindingListItem({
 
   return (
     <div
+      role="row"
       data-testid="finding-list-item"
+      data-finding-id={finding.id}
       data-new={isNew === true ? 'true' : undefined}
-      className={`border rounded-lg p-3 ${showAnimation ? 'animate-fade-in' : ''}`}
+      tabIndex={-1}
+      className={`border rounded-lg p-3 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 ${showAnimation ? 'animate-fade-in' : ''}`}
     >
       <div className="flex items-center gap-2 flex-wrap">
         {/* Severity badge */}

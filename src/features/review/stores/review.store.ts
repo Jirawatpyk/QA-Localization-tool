@@ -61,11 +61,13 @@ type ScoreSlice = {
   currentScore: number | null
   scoreStatus: ScoreStatus
   layerCompleted: LayerCompleted | null
+  autoPassRationale: string | null
   isRecalculating: boolean
   updateScore: (
     score: number,
     status: ScoreStatus,
     layerCompleted?: LayerCompleted | null | undefined,
+    autoPassRationale?: string | null | undefined,
   ) => void
   setRecalculating: () => void
 }
@@ -76,13 +78,15 @@ const createScoreSlice = (
   currentScore: null,
   scoreStatus: 'na',
   layerCompleted: null,
+  autoPassRationale: null,
   isRecalculating: false,
-  updateScore: (score, status, layerCompleted) =>
+  updateScore: (score, status, layerCompleted, autoPassRationale) =>
     set({
       currentScore: score,
       scoreStatus: status,
       isRecalculating: false,
       ...(layerCompleted !== undefined ? { layerCompleted } : {}),
+      ...(autoPassRationale !== undefined ? { autoPassRationale } : {}),
     }),
   setRecalculating: () => set({ isRecalculating: true, scoreStatus: 'calculating' }),
 })
@@ -175,6 +179,7 @@ export const useReviewStore = create<ReviewState>()((set, _get) => {
         currentScore: null,
         scoreStatus: 'na',
         layerCompleted: null,
+        autoPassRationale: null,
         isRecalculating: false,
         l2ConfidenceMin: null,
         l3ConfidenceMin: null,

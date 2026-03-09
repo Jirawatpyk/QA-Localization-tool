@@ -63,6 +63,10 @@ vi.mock('@/db/schema/reviewActions', () => ({
   reviewActions: { tenantId: 'tenant_id', createdAt: 'created_at' },
 }))
 
+vi.mock('@/db/schema/findings', () => ({
+  findings: { fileId: 'file_id', tenantId: 'tenant_id' },
+}))
+
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
 
 import { getDashboardData } from './getDashboardData.action'
@@ -122,6 +126,7 @@ describe('getDashboardData', () => {
           mqmScore: 97.5,
         },
       ],
+      [], // findings count (none)
       [{ count: 1 }],
       [{ count: 5 }],
     )
@@ -151,6 +156,7 @@ describe('getDashboardData', () => {
           mqmScore: null,
         },
       ],
+      [], // findings count (none)
       [{ count: 0 }],
       [{ count: 0 }],
     )
@@ -173,13 +179,43 @@ describe('getDashboardData', () => {
       createdAt: new Date(),
       mqmScore: 95,
     }))
-    queryResults.push(files, [{ count: 0 }], [{ count: 0 }])
+    queryResults.push(files, [], [{ count: 0 }], [{ count: 0 }])
 
     const result = await getDashboardData()
 
     expect(result.success).toBe(true)
     if (result.success) {
       expect(result.data.recentFiles).toHaveLength(10)
+    }
+  })
+
+  // ── Story 4.0 TD Regression ──
+
+  it('[P1] TD5: should return non-zero findingsCount when findings exist', async () => {
+    // Query 1: recent files
+    queryResults.push([
+      {
+        id: 'file-1',
+        fileName: 'doc-with-findings.xlf',
+        projectId: 'proj-1',
+        projectName: 'Project A',
+        status: 'l2_completed',
+        createdAt: new Date(),
+        mqmScore: 78,
+      },
+    ])
+    // Query 2: findings count grouped by fileId
+    queryResults.push([{ fileId: 'file-1', count: 5 }])
+    // Query 3: pending reviews count
+    queryResults.push([{ count: 1 }])
+    // Query 4: team activity count
+    queryResults.push([{ count: 3 }])
+
+    const result = await getDashboardData()
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.recentFiles[0]?.findingsCount).toBe(5)
     }
   })
 })

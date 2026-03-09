@@ -1,23 +1,26 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { z } from 'zod'
 
 import { getNotifications } from '@/features/dashboard/actions/getNotifications.action'
 import { markNotificationRead as markNotificationReadAction } from '@/features/dashboard/actions/markNotificationRead.action'
 import type { AppNotification } from '@/features/dashboard/types'
 import { createBrowserClient } from '@/lib/supabase/client'
 
-/** Raw Supabase Realtime payload uses snake_case DB column names */
-type RawNotificationPayload = {
-  id: string
-  tenant_id: string
-  user_id: string
-  type: string
-  title: string
-  body: string
-  is_read: boolean
-  metadata: Record<string, unknown> | null
-  created_at: string
-}
+/** Zod schema for validating raw Supabase Realtime payload (snake_case DB columns) */
+const rawNotificationSchema = z.object({
+  id: z.string(),
+  tenant_id: z.string(),
+  user_id: z.string(),
+  type: z.string(),
+  title: z.string(),
+  body: z.string(),
+  is_read: z.boolean(),
+  metadata: z.record(z.string(), z.unknown()).nullable(),
+  created_at: z.string(),
+})
+
+type RawNotificationPayload = z.infer<typeof rawNotificationSchema>
 
 /** Map snake_case Realtime payload to camelCase AppNotification */
 function mapRealtimePayload(raw: RawNotificationPayload): AppNotification {
@@ -66,7 +69,9 @@ export function useNotifications(userId: string, tenantId: string) {
           filter: `user_id=eq.${userId}&tenant_id=eq.${tenantId}`,
         },
         (payload) => {
-          const raw = payload.new as RawNotificationPayload
+          const parsed = rawNotificationSchema.safeParse(payload.new)
+          if (!parsed.success) return // Skip invalid payloads silently
+          const raw = parsed.data
           // Client-side tenant guard (defense-in-depth)
           if (raw.tenant_id !== tenantId) return
           const newNotif = mapRealtimePayload(raw)
