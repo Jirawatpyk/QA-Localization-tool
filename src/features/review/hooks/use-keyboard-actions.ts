@@ -372,6 +372,9 @@ export function useReviewHotkeys(): void {
   const { register } = useKeyboardActions()
 
   useEffect(() => {
+    // Reset registry on mount to avoid phantom bindings from previous file
+    _resetRegistry()
+
     const cleanups: Array<() => void> = []
 
     for (const hotkey of REVIEW_HOTKEYS) {

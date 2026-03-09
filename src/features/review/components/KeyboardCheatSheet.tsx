@@ -40,6 +40,8 @@ const SHORTCUT_CATEGORIES: ShortcutCategory[] = [
       { keys: ['F'], description: 'Flag finding' },
       { keys: ['N'], description: 'Add note' },
       { keys: ['S'], description: 'Source issue' },
+      { keys: ['-'], description: 'Severity override' },
+      { keys: ['+'], description: 'Add finding' },
     ],
   },
   {
@@ -54,7 +56,7 @@ const SHORTCUT_CATEGORIES: ShortcutCategory[] = [
     name: 'Search',
     shortcuts: [
       { keys: ['Ctrl+K'], description: 'Command palette' },
-      { keys: ['Ctrl+F'], description: 'Find in findings' },
+      { keys: ['Ctrl+F'], description: 'Find in page (browser)' },
     ],
   },
   {

@@ -528,6 +528,33 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 ### ~~TD-ORPHAN-004: NotificationDropdown component not wired to any page~~
 - **Status:** RESOLVED (2026-03-09) — Already wired in `src/components/layout/app-header.tsx:4,20`. Import + mount confirmed. Orphan scan false positive — component was wired before tracker entry was created.
 
+### TD-E2E-013: F5e — Esc hierarchy with dropdown inside Sheet (review-keyboard E2E)
+- **Date:** 2026-03-09
+- **Story:** Story 4.0 (Review Infrastructure Setup)
+- **Phase:** CR R1
+- **Severity:** Low
+- **File:** `e2e/review-keyboard.spec.ts` — test F5e
+- **Description:** E2E test for Esc key hierarchy (dropdown inside Sheet closes before Sheet) is skipped because FindingDetailSheet has no interactive dropdowns yet. Requires Story 4.2 (Core Review Actions) to add severity override dropdown inside Sheet.
+- **Status:** DEFERRED → **Story 4.2 — Core Review Actions** (dropdown controls inside Sheet)
+
+### TD-E2E-014: E1 — Full keyboard review flow (review-keyboard E2E)
+- **Date:** 2026-03-09
+- **Story:** Story 4.0 (Review Infrastructure Setup)
+- **Phase:** CR R1
+- **Severity:** Low
+- **File:** `e2e/review-keyboard.spec.ts` — test E1
+- **Description:** E2E test for full keyboard review flow (J/K navigation → Enter to open Sheet → Esc → focus restore) is skipped because J/K roving tabindex navigation is not wired to DOM focus yet. Requires Story 4.1a (file navigation + keyboard wiring).
+- **Status:** DEFERRED → **Story 4.1a — File Navigation & Keyboard Wiring**
+
+### TD-E2E-015: TD2 — Score recalculate after finding action (review-score E2E)
+- **Date:** 2026-03-09
+- **Story:** Story 4.0 (Review Infrastructure Setup)
+- **Phase:** CR R1
+- **Severity:** Low
+- **File:** `e2e/review-score.spec.ts` — test TD2
+- **Description:** E2E test for score recalculation after accepting a finding is skipped because review actions (accept/reject) are not implemented yet. Requires Story 4.2 (Core Review Actions).
+- **Status:** DEFERRED → **Story 4.2 — Core Review Actions**
+
 ### ~~TD-REVIEW-002: Realtime auto_passed transition doesn't show rationale~~
 - **Date:** 2026-03-08
 - **Story:** Story 3.5 (Score Lifecycle & Confidence Display)

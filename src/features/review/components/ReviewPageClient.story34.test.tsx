@@ -33,6 +33,10 @@ vi.mock('@/features/review/components/ReviewActionBar', () => ({
 }))
 vi.mock('@/features/review/utils/announce', () => ({
   mountAnnouncer: vi.fn(),
+  unmountAnnouncer: vi.fn(),
+}))
+vi.mock('@/features/review/hooks/use-keyboard-actions', () => ({
+  useReviewHotkeys: vi.fn(),
 }))
 
 // Mock retryAiAnalysis server action (Story 3.4)

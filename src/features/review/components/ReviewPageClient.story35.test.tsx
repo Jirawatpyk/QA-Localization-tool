@@ -34,6 +34,10 @@ vi.mock('@/features/review/components/ReviewActionBar', () => ({
 }))
 vi.mock('@/features/review/utils/announce', () => ({
   mountAnnouncer: vi.fn(),
+  unmountAnnouncer: vi.fn(),
+}))
+vi.mock('@/features/review/hooks/use-keyboard-actions', () => ({
+  useReviewHotkeys: vi.fn(),
 }))
 
 // Configurable store state for each test

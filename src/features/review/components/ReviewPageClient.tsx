@@ -15,11 +15,11 @@ import { KeyboardCheatSheet } from '@/features/review/components/KeyboardCheatSh
 import { ReviewActionBar } from '@/features/review/components/ReviewActionBar'
 import { ReviewProgress } from '@/features/review/components/ReviewProgress'
 import { useFindingsSubscription } from '@/features/review/hooks/use-findings-subscription'
-import { _resetRegistry } from '@/features/review/hooks/use-keyboard-actions'
+import { useReviewHotkeys } from '@/features/review/hooks/use-keyboard-actions'
 import { useScoreSubscription } from '@/features/review/hooks/use-score-subscription'
 import { useThresholdSubscription } from '@/features/review/hooks/use-threshold-subscription'
 import { useReviewStore } from '@/features/review/stores/review.store'
-import { mountAnnouncer } from '@/features/review/utils/announce'
+import { mountAnnouncer, unmountAnnouncer } from '@/features/review/utils/announce'
 import type {
   Finding,
   FindingSeverity,
@@ -70,13 +70,17 @@ export function ReviewPageClient({ fileId, projectId, initialData }: ReviewPageC
   // Mount announcer for screen reader (Guardrail #33 — pre-exist in DOM)
   useEffect(() => {
     mountAnnouncer()
+    return () => {
+      unmountAnnouncer()
+    }
   }, [])
+
+  // Register review hotkeys (Task 1.2 — no-op until Story 4.2)
+  useReviewHotkeys()
 
   // Initialize store on mount
   useEffect(() => {
     resetForFile(fileId)
-    // Reset keyboard registry to avoid phantom bindings from previous file (H1)
-    _resetRegistry()
 
     // Populate initial findings — build batch Map for single store update (M5)
     const initialMap = new Map<string, Finding>()
@@ -319,10 +323,13 @@ export function ReviewPageClient({ fileId, projectId, initialData }: ReviewPageC
             {sortedFindings.length === 0 ? (
               <p className="text-muted-foreground text-sm py-4">No findings for this file.</p>
             ) : (
-              sortedFindings.map((finding) => (
+              sortedFindings.map((finding, index) => (
                 <FindingListItem
                   key={finding.id}
                   finding={finding}
+                  isFirstRow={index === 0}
+                  sourceLang={sourceLang}
+                  targetLang={targetLang ?? undefined}
                   l2ConfidenceMin={storeL2ConfidenceMin ?? initialData.l2ConfidenceMin}
                   l3ConfidenceMin={storeL3ConfidenceMin ?? initialData.l3ConfidenceMin}
                 />

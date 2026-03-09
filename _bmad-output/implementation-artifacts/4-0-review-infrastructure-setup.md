@@ -442,7 +442,7 @@ Claude Opus 4.6
 
 ### File List
 
-**New files (14):**
+**New files (16):**
 - `src/features/review/hooks/use-keyboard-actions.ts`
 - `src/features/review/hooks/use-keyboard-actions.test.ts`
 - `src/features/review/hooks/use-focus-management.ts`
@@ -454,14 +454,20 @@ Claude Opus 4.6
 - `src/features/review/components/KeyboardCheatSheet.test.tsx`
 - `src/features/review/components/ReviewPageClient.story40.test.tsx`
 - `src/features/review/utils/announce.ts`
+- `src/styles/tokens.test.ts`
 - `src/components/ui/sheet.tsx`
 - `src/app/(app)/projects/[projectId]/review/layout.tsx`
 - `e2e/review-keyboard.spec.ts`
+- `e2e/helpers/review-page.ts`
 
-**Modified files (16):**
+**Modified files (20):**
 - `src/styles/tokens.css` — contrast fix + new tokens (source-issue)
-- `src/features/review/components/ReviewPageClient.tsx` — 3-zone layout, ARIA, action bar, cheat sheet
-- `src/features/review/components/FindingListItem.tsx` — ARIA roles (row, rowgroup, aria-expanded)
+- `src/features/review/components/ReviewPageClient.tsx` — 3-zone layout, ARIA, action bar, cheat sheet, announcer cleanup, severity icons, lang attributes
+- `src/features/review/components/FindingListItem.tsx` — ARIA roles (row, rowgroup, aria-expanded), severity icons, lang attributes, roving tabindex
+- `src/features/review/components/ReviewPageClient.test.tsx` — updated mocks (unmountAnnouncer, useReviewHotkeys)
+- `src/features/review/components/ReviewPageClient.story33.test.tsx` — updated mocks (unmountAnnouncer, useReviewHotkeys)
+- `src/features/review/components/ReviewPageClient.story34.test.tsx` — updated mocks (unmountAnnouncer, useReviewHotkeys)
+- `src/features/review/components/ReviewPageClient.story35.test.tsx` — updated mocks (unmountAnnouncer, useReviewHotkeys)
 - `src/features/review/stores/review.store.ts` — autoPassRationale in ScoreSlice
 - `src/features/review/hooks/use-score-subscription.ts` — autoPassRationale tracking
 - `src/features/review/hooks/use-score-subscription.test.ts` — TD7 activated
@@ -473,8 +479,8 @@ Claude Opus 4.6
 - `src/features/dashboard/actions/getDashboardData.action.test.ts` — TD5 activated
 - `src/features/dashboard/hooks/useNotifications.ts` — Zod validation
 - `src/features/dashboard/hooks/useNotifications.test.ts` — TD6 activated
-- `e2e/review-score.spec.ts` — TD1 unskipped
-- `_bmad-output/implementation-artifacts/tech-debt-tracker.md` — 6 TDs marked RESOLVED
+- `e2e/review-score.spec.ts` — TD1 unskipped, TD3 unskipped, console.warn→stderr, shared helper
+- `_bmad-output/implementation-artifacts/tech-debt-tracker.md` — 6 TDs RESOLVED + 3 new E2E TD entries
 
 ### Change Log
 

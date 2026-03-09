@@ -2,7 +2,7 @@
  * TDD GREEN PHASE — Story 4.0: Review Infrastructure Setup
  * Component: ReviewPageClient — ARIA Foundation, Layout, reduced-motion
  */
-import { render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
@@ -46,6 +46,7 @@ import type { FileReviewData } from '@/features/review/actions/getFileReviewData
 import { ReviewPageClient } from '@/features/review/components/ReviewPageClient'
 import { useReviewStore } from '@/features/review/stores/review.store'
 import { buildFinding } from '@/test/factories'
+import type { DbFileStatus } from '@/types/pipeline'
 
 // Setup matchMedia for useReducedMotion
 function setupMatchMedia(prefersReducedMotion = false) {
@@ -66,7 +67,7 @@ function setupMatchMedia(prefersReducedMotion = false) {
 
 function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
   return {
-    file: { fileId: 'f1', fileName: 'test.sdlxliff', status: 'l2_completed' as never },
+    file: { fileId: 'f1', fileName: 'test.sdlxliff', status: 'l2_completed' as DbFileStatus },
     findings: [],
     score: {
       mqmScore: 85,
@@ -76,7 +77,7 @@ function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
       majorCount: 1,
       minorCount: 2,
     },
-    processingMode: 'economy' as never,
+    processingMode: 'economy',
     l2ConfidenceMin: 70,
     l3ConfidenceMin: null,
     autoPassRationale: null,
@@ -165,13 +166,37 @@ describe('ReviewPageClient — Story 4.0 ARIA Foundation', () => {
   })
 
   it('[P2] A5: should debounce rapid announcements in announce utility', async () => {
-    // Test the announce utility directly (pure logic test)
-    const { announce, unmountAnnouncer: cleanup } = await import('@/features/review/utils/announce')
+    vi.useFakeTimers()
 
-    // Since announce is mocked, we verify the mock was imported correctly
-    // The real debounce logic is tested by verifying the utility exists and is callable
-    expect(typeof announce).toBe('function')
-    expect(typeof cleanup).toBe('function')
+    // Import real module (bypassing mock) to test actual debounce behavior
+    const actual = await vi.importActual<typeof import('@/features/review/utils/announce')>(
+      '@/features/review/utils/announce',
+    )
+
+    actual.mountAnnouncer()
+
+    // Fire 3 rapid polite announcements — only last should survive debounce
+    actual.announce('Message 1', 'polite')
+    actual.announce('Message 2', 'polite')
+    actual.announce('Message 3', 'polite')
+
+    // Advance past debounce (150ms) + requestAnimationFrame
+    await vi.advanceTimersByTimeAsync(200)
+
+    const politeEl = document.getElementById('sr-announcer')
+    expect(politeEl).not.toBeNull()
+    expect(politeEl!.textContent).toBe('Message 3')
+
+    // Assertive bypasses debounce — immediate
+    actual.announce('Error!', 'assertive')
+    await vi.advanceTimersByTimeAsync(20) // rAF tick
+
+    const assertiveEl = document.getElementById('sr-announcer-assertive')
+    expect(assertiveEl).not.toBeNull()
+    expect(assertiveEl!.textContent).toBe('Error!')
+
+    actual.unmountAnnouncer()
+    vi.useRealTimers()
   })
 })
 
@@ -183,7 +208,7 @@ describe('ReviewPageClient — Story 4.0 Layout', () => {
     useReviewStore.getState().resetForFile('test')
   })
 
-  it('[P0] L1: should open FindingDetailSheet when finding selected in store', () => {
+  it('[P0] L1: should open FindingDetailSheet when finding selected in store', async () => {
     render(
       <ReviewPageClient
         fileId="f1"
@@ -197,14 +222,19 @@ describe('ReviewPageClient — Story 4.0 Layout', () => {
     // Sheet should not be open initially
     expect(screen.queryByTestId('finding-detail-sheet')).toBeNull()
 
-    // Select a finding in store
-    useReviewStore.getState().setSelectedFinding('find1')
+    // Select a finding in store — triggers re-render via Zustand subscription
+    act(() => {
+      useReviewStore.getState().setSelectedFinding('find1')
+    })
 
-    // Re-render and check — Sheet opens via portal
-    // Note: Radix Sheet uses portal, may need to check document
-    // For unit test, we verify the Sheet component receives open=true
-    // by checking the store state
-    expect(useReviewStore.getState().selectedId).toBe('find1')
+    // Sheet renders via Radix portal — wait for DOM update
+    await waitFor(() => {
+      expect(screen.getByTestId('finding-detail-sheet')).toBeDefined()
+    })
+
+    // Sheet should have role="complementary" (Guardrail #38)
+    const sheet = screen.getByTestId('finding-detail-sheet')
+    expect(sheet.getAttribute('role')).toBe('complementary')
   })
 
   it('[P1] L2: should not render global DetailPanel content on review page', () => {
@@ -258,7 +288,7 @@ describe('ReviewPageClient — Story 4.0 reduced-motion', () => {
     vi.restoreAllMocks()
   })
 
-  it('[P1] RM1: should render Sheet without slide transition when prefers-reduced-motion', () => {
+  it('[P1] RM1: should render Sheet without slide transition when prefers-reduced-motion', async () => {
     setupMatchMedia(true)
 
     render(
@@ -272,13 +302,18 @@ describe('ReviewPageClient — Story 4.0 reduced-motion', () => {
     )
 
     // Select a finding AFTER render (so resetForFile has already run)
-    useReviewStore.getState().setSelectedFinding('find1')
+    act(() => {
+      useReviewStore.getState().setSelectedFinding('find1')
+    })
 
-    // Verify store state — Sheet should receive open=true with reduced motion
-    expect(useReviewStore.getState().selectedId).toBe('find1')
+    // Sheet renders via Radix portal — wait for DOM update
+    await waitFor(() => {
+      expect(screen.getByTestId('finding-detail-sheet')).toBeDefined()
+    })
 
-    // The FindingDetailSheet component checks useReducedMotion and applies
-    // duration-0/animate-none CSS classes. Since Sheet renders via Radix portal,
-    // we verify the intent by confirming the store triggers and reduced-motion is active.
+    // Sheet should have reduced-motion CSS classes (Guardrail #37)
+    const sheet = screen.getByTestId('finding-detail-sheet')
+    expect(sheet.className).toContain('duration-0')
+    expect(sheet.className).toContain('animate-none')
   })
 })

@@ -1,5 +1,7 @@
 'use client'
 
+import { AlertTriangle, Info, XCircle } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 
 import { ConfidenceBadge } from '@/features/review/components/ConfidenceBadge'
@@ -24,8 +26,18 @@ type FindingForDisplay = {
 type FindingListItemProps = {
   finding: FindingForDisplay
   isNew?: boolean | undefined
+  isFirstRow?: boolean | undefined
+  sourceLang?: string | undefined
+  targetLang?: string | undefined
   l2ConfidenceMin?: number | null | undefined
   l3ConfidenceMin?: number | null | undefined
+}
+
+/** Severity icon mapping — Guardrail #36: icon shape + text + color */
+const SEVERITY_ICONS: Record<FindingSeverity, LucideIcon> = {
+  critical: XCircle,
+  major: AlertTriangle,
+  minor: Info,
 }
 
 const SEVERITY_CLASSES: Record<FindingSeverity, string> = {
@@ -49,6 +61,9 @@ function truncate(text: string, maxLength: number): string {
 export function FindingListItem({
   finding,
   isNew,
+  isFirstRow,
+  sourceLang,
+  targetLang,
   l2ConfidenceMin,
   l3ConfidenceMin,
 }: FindingListItemProps) {
@@ -83,7 +98,7 @@ export function FindingListItem({
   // Tooltip text for confidence badge
   const confidenceTooltipText = (() => {
     if (finding.aiConfidence === null) return null
-    if (confidenceMin === null || confidenceMin === undefined) return 'Threshold not configured'
+    if (confidenceMin === null) return 'Threshold not configured'
     const status = finding.aiConfidence >= confidenceMin ? 'Meets threshold' : 'Below threshold'
     return `Threshold: ${confidenceMin}% | Status: ${status}`
   })()
@@ -94,14 +109,18 @@ export function FindingListItem({
       data-testid="finding-list-item"
       data-finding-id={finding.id}
       data-new={isNew === true ? 'true' : undefined}
-      tabIndex={-1}
+      tabIndex={isFirstRow === true ? 0 : -1}
       className={`border rounded-lg p-3 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 ${showAnimation ? 'animate-fade-in' : ''}`}
     >
       <div className="flex items-center gap-2 flex-wrap">
-        {/* Severity badge */}
+        {/* Severity badge — Guardrail #36: icon shape + text + color */}
         <span
-          className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium border capitalize ${SEVERITY_CLASSES[finding.severity]}`}
+          className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium border capitalize ${SEVERITY_CLASSES[finding.severity]}`}
         >
+          {(() => {
+            const SeverityIcon = SEVERITY_ICONS[finding.severity]
+            return <SeverityIcon className="h-4 w-4" aria-hidden="true" />
+          })()}
           {finding.severity}
         </span>
 
@@ -171,12 +190,14 @@ export function FindingListItem({
           {cleanDescription.length > 100 && <p className="text-foreground">{cleanDescription}</p>}
           {finding.sourceTextExcerpt !== null && (
             <p className="text-muted-foreground">
-              <span className="font-medium">Source:</span> {finding.sourceTextExcerpt}
+              <span className="font-medium">Source:</span>{' '}
+              <span lang={sourceLang}>{finding.sourceTextExcerpt}</span>
             </p>
           )}
           {finding.targetTextExcerpt !== null && (
             <p className="text-muted-foreground">
-              <span className="font-medium">Target:</span> {finding.targetTextExcerpt}
+              <span className="font-medium">Target:</span>{' '}
+              <span lang={targetLang}>{finding.targetTextExcerpt}</span>
             </p>
           )}
           {finding.suggestedFix !== null && (

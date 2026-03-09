@@ -1,37 +1,75 @@
 /**
  * Centralized screen reader announcer — Story 4.0 AC3
  *
- * Creates and manages an aria-live region for dynamic announcements.
- * The container is pre-mounted in the DOM (Guardrail #33) so content changes
+ * Creates and manages two aria-live regions for dynamic announcements:
+ * - Polite container (default): score changes, progress, filter counts
+ * - Assertive container: errors, conflicts, budget alerts
+ *
+ * Separate containers per Guardrail #33 — screen readers may not pick up
+ * politeness level changes on the same element.
+ *
+ * Containers are pre-mounted in the DOM (Guardrail #33) so content changes
  * are reliably picked up by screen readers.
  */
 
-const ANNOUNCER_ID = 'sr-announcer'
+const POLITE_ID = 'sr-announcer'
+const ASSERTIVE_ID = 'sr-announcer-assertive'
 const DEBOUNCE_MS = 150
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
-/** Get or create the announcer element */
-function getAnnouncerElement(): HTMLElement | null {
+/** Shared visually-hidden styles for screen reader containers */
+const SR_ONLY_STYLES: Record<string, string> = {
+  position: 'absolute',
+  width: '1px',
+  height: '1px',
+  padding: '0',
+  margin: '-1px',
+  overflow: 'hidden',
+  clip: 'rect(0,0,0,0)',
+  whiteSpace: 'nowrap',
+  borderWidth: '0',
+}
+
+function applyHiddenStyles(el: HTMLElement): void {
+  for (const [key, value] of Object.entries(SR_ONLY_STYLES)) {
+    el.style.setProperty(
+      key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`),
+      value,
+    )
+  }
+}
+
+/** Get or create the polite announcer element */
+function getPoliteElement(): HTMLElement | null {
   if (typeof document === 'undefined') return null
 
-  let el = document.getElementById(ANNOUNCER_ID)
+  let el = document.getElementById(POLITE_ID)
   if (!el) {
     el = document.createElement('div')
-    el.id = ANNOUNCER_ID
+    el.id = POLITE_ID
     el.setAttribute('aria-live', 'polite')
     el.setAttribute('aria-atomic', 'true')
     el.setAttribute('role', 'status')
-    // Visually hidden but accessible
-    el.style.position = 'absolute'
-    el.style.width = '1px'
-    el.style.height = '1px'
-    el.style.padding = '0'
-    el.style.margin = '-1px'
-    el.style.overflow = 'hidden'
-    el.style.clip = 'rect(0,0,0,0)'
-    el.style.whiteSpace = 'nowrap'
-    el.style.borderWidth = '0'
+    applyHiddenStyles(el)
+    el.textContent = ''
+    document.body.appendChild(el)
+  }
+  return el
+}
+
+/** Get or create the assertive announcer element */
+function getAssertiveElement(): HTMLElement | null {
+  if (typeof document === 'undefined') return null
+
+  let el = document.getElementById(ASSERTIVE_ID)
+  if (!el) {
+    el = document.createElement('div')
+    el.id = ASSERTIVE_ID
+    el.setAttribute('aria-live', 'assertive')
+    el.setAttribute('aria-atomic', 'true')
+    el.setAttribute('role', 'alert')
+    applyHiddenStyles(el)
     el.textContent = ''
     document.body.appendChild(el)
   }
@@ -40,14 +78,13 @@ function getAnnouncerElement(): HTMLElement | null {
 
 /**
  * Announce a message to screen readers via aria-live region.
- * Debounces rapid successive calls — only the last message is announced.
+ * Polite messages are debounced — only the last message is announced.
+ * Assertive messages bypass debounce — never swallow errors/alerts.
  */
 export function announce(message: string, politeness: 'polite' | 'assertive' = 'polite'): void {
-  // Assertive messages bypass debounce — never swallow errors/alerts (M7)
   if (politeness === 'assertive') {
-    const el = getAnnouncerElement()
+    const el = getAssertiveElement()
     if (!el) return
-    el.setAttribute('aria-live', 'assertive')
     el.textContent = ''
     requestAnimationFrame(() => {
       el.textContent = message
@@ -60,9 +97,8 @@ export function announce(message: string, politeness: 'polite' | 'assertive' = '
   }
 
   debounceTimer = setTimeout(() => {
-    const el = getAnnouncerElement()
+    const el = getPoliteElement()
     if (!el) return
-    el.setAttribute('aria-live', politeness)
     // Clear then set — forces re-announcement for identical messages
     el.textContent = ''
     requestAnimationFrame(() => {
@@ -73,21 +109,22 @@ export function announce(message: string, politeness: 'polite' | 'assertive' = '
 }
 
 /**
- * Mount the announcer container in the DOM.
- * Call this during layout mount to ensure the container exists before any content changes.
+ * Mount both announcer containers in the DOM.
+ * Call this during layout mount to ensure containers exist before any content changes.
  */
 export function mountAnnouncer(): void {
-  getAnnouncerElement()
+  getPoliteElement()
+  getAssertiveElement()
 }
 
-/** Clean up the announcer (for testing) */
+/** Clean up both announcers (for testing and unmount) */
 export function unmountAnnouncer(): void {
   if (debounceTimer !== null) {
     clearTimeout(debounceTimer)
     debounceTimer = null
   }
-  const el = document.getElementById(ANNOUNCER_ID)
-  if (el) {
-    el.remove()
-  }
+  const polite = document.getElementById(POLITE_ID)
+  if (polite) polite.remove()
+  const assertive = document.getElementById(ASSERTIVE_ID)
+  if (assertive) assertive.remove()
 }

@@ -21,6 +21,7 @@
 import { test, expect } from '@playwright/test'
 
 import { cleanupTestProject, queryScore } from './helpers/pipeline-admin'
+import { waitForReviewPageReady } from './helpers/review-page'
 import {
   SUPABASE_URL,
   adminHeaders,
@@ -138,25 +139,6 @@ async function seedFileWithFindingsForKeyboard(opts: {
   return fileId
 }
 
-// ── Page-Ready Guard ─────────────────────────────────────────────────────────
-
-/**
- * Wait for the review page to fully render by checking for a positive indicator.
- * Fails fast on SSR errors instead of timing out.
- */
-async function waitForReviewPageReady(page: import('@playwright/test').Page) {
-  const heading = page.locator('h1')
-  await expect(heading).toBeVisible({ timeout: 30_000 })
-
-  // Fail fast if SSR returned an error
-  const errorText = page.locator('.text-destructive')
-  const errorCount = await errorText.count()
-  if (errorCount > 0) {
-    const msg = await errorText.first().textContent()
-    throw new Error(`Review page SSR error: "${msg}"`)
-  }
-}
-
 // ── Test Suite ─────────────────────────────────────────────────────────────────
 
 // Ephemeral user — auto-cleaned by global-teardown (matches /^e2e-.*\d{13,}@test\.local$/)
@@ -207,7 +189,7 @@ test.describe.serial('Review Keyboard & Focus — Story 4.0 ATDD', () => {
   })
 
   // ── 4.0-E-F1e [P0]: Modal focus trap ──────────────────────────────────────
-  test.skip('[P0] F1e: should trap Tab within modal on review page', async ({ page }) => {
+  test('[P0] F1e: should trap Tab within modal on review page', async ({ page }) => {
     // Navigate to review page with seeded findings
     await signupOrLogin(page, TEST_EMAIL)
     await page.goto(`/projects/${projectId}/review/${seededFileId}`)
@@ -238,6 +220,7 @@ test.describe.serial('Review Keyboard & Focus — Story 4.0 ATDD', () => {
   })
 
   // ── 4.0-E-F5e [P1]: Escape key hierarchy ─────────────────────────────────
+  // TODO(TD-E2E-013): Unskip when Story 4.2 adds dropdown controls inside FindingDetailSheet
   test.skip('[P1] F5e: should close dropdown inside Sheet before closing Sheet on Esc', async ({
     page,
   }) => {
@@ -282,7 +265,7 @@ test.describe.serial('Review Keyboard & Focus — Story 4.0 ATDD', () => {
   })
 
   // ── 4.0-E-C1e [P1]: Keyboard cheat sheet modal ───────────────────────────
-  test.skip('[P1] C1e: should open keyboard cheat sheet with Ctrl+Shift+/ keypress', async ({
+  test('[P1] C1e: should open keyboard cheat sheet with Ctrl+Shift+/ keypress', async ({
     page,
   }) => {
     // Navigate to review page
@@ -311,6 +294,7 @@ test.describe.serial('Review Keyboard & Focus — Story 4.0 ATDD', () => {
   })
 
   // ── 4.0-E-E1 [P0]: Full keyboard review flow ─────────────────────────────
+  // TODO(TD-E2E-014): Unskip when Story 4.1a wires J/K roving tabindex navigation
   test.skip('[P0] E1: should complete keyboard review flow: page load → hotkey → Sheet → Esc → focus restore', async ({
     page,
   }) => {
@@ -367,8 +351,8 @@ test.describe.serial('Review Keyboard & Focus — Story 4.0 ATDD', () => {
         await cleanupTestProject(projectId)
       } catch (err) {
         // Non-critical — global teardown will clean up the ephemeral user
-        // NOTE: console.warn used — E2E runs in Playwright Node.js process, pino not importable
-        console.warn(`[cleanup] Failed to clean project ${projectId}:`, err)
+        // NOTE: process.stderr.write used — E2E runs in Playwright Node.js process, pino not importable
+        process.stderr.write(`[cleanup] Failed to clean project ${projectId}: ${String(err)}\n`)
       }
     }
   })

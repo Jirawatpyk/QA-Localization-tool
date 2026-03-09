@@ -18,6 +18,7 @@
 import { test, expect } from '@playwright/test'
 
 import { cleanupTestProject, queryScore } from './helpers/pipeline-admin'
+import { waitForReviewPageReady } from './helpers/review-page'
 import {
   SUPABASE_URL,
   adminHeaders,
@@ -146,25 +147,6 @@ async function seedFileWithScoreForReview(opts: {
   return fileId
 }
 
-// ── Page-Ready Guard ─────────────────────────────────────────────────────────
-
-/**
- * Wait for the review page to fully render by checking for a positive indicator.
- * Fails fast on SSR errors instead of timing out.
- */
-async function waitForReviewPageReady(page: import('@playwright/test').Page) {
-  const heading = page.locator('h1')
-  await expect(heading).toBeVisible({ timeout: 30_000 })
-
-  // Fail fast if SSR returned an error
-  const errorText = page.locator('.text-destructive')
-  const errorCount = await errorText.count()
-  if (errorCount > 0) {
-    const msg = await errorText.first().textContent()
-    throw new Error(`Review page SSR error: "${msg}"`)
-  }
-}
-
 // ── Test Suite ─────────────────────────────────────────────────────────────────
 
 // Ephemeral user — auto-cleaned by global-teardown (matches /^e2e-.*\d{13,}@test\.local$/)
@@ -235,6 +217,7 @@ test.describe.serial('Review to Score — Story 4.0 ATDD', () => {
   })
 
   // ── 4.0-E-TD2 [P1]: Score recalculate after finding action ──────────────
+  // TODO(TD-E2E-015): Unskip when Story 4.2 implements accept/reject review actions
   test.skip('[P1] TD2: should recalculate score after finding action on review page', async ({
     page,
   }) => {
@@ -270,7 +253,7 @@ test.describe.serial('Review to Score — Story 4.0 ATDD', () => {
   })
 
   // ── 4.0-E-TD3 [P1]: Finding list shows severity icons + text ─────────────
-  test.skip('[P1] TD3: should display findings with severity icons and text labels', async ({
+  test('[P1] TD3: should display findings with severity icons and text labels', async ({
     page,
   }) => {
     // Guardrail #25: Color never sole information carrier
@@ -301,8 +284,8 @@ test.describe.serial('Review to Score — Story 4.0 ATDD', () => {
         await cleanupTestProject(projectId)
       } catch (err) {
         // Non-critical — global teardown will clean up the ephemeral user
-        // NOTE: console.warn used — E2E runs in Playwright Node.js process, pino not importable
-        console.warn(`[cleanup] Failed to clean project ${projectId}:`, err)
+        // NOTE: process.stderr.write used — E2E runs in Playwright Node.js process, pino not importable
+        process.stderr.write(`[cleanup] Failed to clean project ${projectId}: ${String(err)}\n`)
       }
     }
   })
