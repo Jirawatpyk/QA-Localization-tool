@@ -68,7 +68,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await cleanupTestTenant(tenantA)
   await cleanupTestTenant(tenantB)
-})
+}, 30_000)
 
 describe('files RLS', () => {
   it('should allow Tenant A to see only their own files', async () => {

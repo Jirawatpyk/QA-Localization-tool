@@ -76,7 +76,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await cleanupTestTenant(tenantA)
   await cleanupTestTenant(tenantB)
-})
+}, 30_000)
 
 describe('findings RLS', () => {
   it('should allow Tenant A to see their own findings', async () => {

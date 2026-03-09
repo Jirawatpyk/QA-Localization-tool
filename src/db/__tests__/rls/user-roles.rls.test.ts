@@ -18,7 +18,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await cleanupTestTenant(tenantA)
   await cleanupTestTenant(tenantB)
-})
+}, 30_000)
 
 describe('user_roles RLS', () => {
   it('should allow Tenant A to see only their own roles', async () => {

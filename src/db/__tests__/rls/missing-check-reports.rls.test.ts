@@ -56,7 +56,7 @@ afterAll(async () => {
   }
   await cleanupTestTenant(tenantA)
   await cleanupTestTenant(tenantB)
-})
+}, 30_000)
 
 describe('missing_check_reports RLS', () => {
   it('should allow Tenant A to see their own reports', async () => {

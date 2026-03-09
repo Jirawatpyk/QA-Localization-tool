@@ -82,7 +82,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await cleanupTestTenant(testTenant)
-})
+}, 30_000)
 
 describe('audit_logs RLS — INSERT-only enforcement', () => {
   it('should allow INSERT via authenticated client', async () => {
