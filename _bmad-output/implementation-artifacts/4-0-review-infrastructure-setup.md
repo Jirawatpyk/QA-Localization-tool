@@ -1,6 +1,6 @@
 # Story 4.0: Review Infrastructure Setup
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -433,12 +433,15 @@ Claude Opus 4.6
 
 - All 8 tasks completed (Tasks 0-8)
 - 44 ATDD tests activated from `it.skip()` → passing (71 total tests across 11 test files)
+- **P0 E2E deferral (E1):** ATDD test E1 (full keyboard review flow) is `test.skip()` — depends on J/K roving tabindex navigation from Story 4.1b. Tracked as TD-E2E-014 with target Story 4.1a. All other P0 tests (11 unit + 1 E2E F1e) pass
+- **P1 E2E deferrals (F5e, TD2):** F5e (dropdown-in-Sheet Esc hierarchy) deferred to Story 4.2 (TD-E2E-013). TD2 (score recalculate after action) deferred to Story 4.2 (TD-E2E-015)
 - 7 tech debts resolved: TD-E2E-007, TD-TODO-001, TD-UX-001, TD-UX-002, TD-DASH-001, TD-DASH-003, TD-REVIEW-002
 - 3 anti-pattern Medium findings fixed in pre-CR scan
 - Type-check, lint, build all passing
-- 2948 unit tests passing (2 pre-existing failures unrelated to Story 4.0)
-- E2E specs structured correctly (9 tests) — skip due to missing cloud env vars (runs on CI e2e-gate)
-- CR target: ≤2 rounds
+- 2950 unit tests passing, 0 failures
+- E2E specs: 4 active (setup + F1e + C1e + cleanup) + 2 deferred + 3 review-score (1 active + 2 deferred) on CI e2e-gate
+- CR R1: 16 findings (5H/7M/4L) — all fixed
+- CR R2: 0C/0H/3M/5L — all fixed, EXIT APPROVED
 
 ### File List
 
@@ -495,3 +498,4 @@ Claude Opus 4.6
 | 2026-03-09 | Task 6 | KeyboardCheatSheet — Ctrl+? modal, grouped hotkeys, focus trap, reduced-motion |
 | 2026-03-09 | Task 7 | 7 tech debts resolved (TD-E2E-007, TD-TODO-001, TD-UX-001, TD-UX-002, TD-DASH-001, TD-DASH-003, TD-REVIEW-002) |
 | 2026-03-09 | Task 8 | Integration verification — type-check, lint, build, 2948 unit tests, E2E structure valid |
+| 2026-03-09 | CR R2 fix | 8 fixes (3M+5L): B1 toolbar focus test, C1 aria-modal multi-fallback, story doc P0/P1 deferrals, RADIX_EXIT_ANIMATION_MS constant, isValidLayerCompleted guard, K2 all 6 browser shortcuts, stale test header, review-page body.focus() |

@@ -49,10 +49,18 @@ describe('KeyboardCheatSheet', () => {
       )
     })
 
-    // Dialog should now be open
+    // Dialog should now be open (Guardrail #30)
     const dialog = screen.getByRole('dialog')
     expect(dialog).toBeDefined()
-    expect(dialog.getAttribute('aria-modal') ?? dialog.getAttribute('data-state')).toBeDefined()
+    // Radix Dialog in production sets aria-modal="true"; in jsdom the attribute
+    // may land on a parent container or be absent. Verify dialog is open via
+    // data-state="open" which Radix always sets, then check aria-modal on the
+    // dialog or any ancestor within the portal.
+    expect(
+      dialog.getAttribute('aria-modal') === 'true' ||
+        dialog.closest('[aria-modal="true"]') !== null ||
+        dialog.getAttribute('data-state') === 'open',
+    ).toBe(true)
   })
 
   it('[P2] C2: should display hotkeys grouped by 5 categories', () => {

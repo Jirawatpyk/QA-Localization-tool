@@ -64,15 +64,24 @@ describe('useKeyboardActions', () => {
   // ── P0: Browser Shortcut Passthrough ──
 
   it('[P0] K2: should not preventDefault on browser shortcuts Ctrl+S/P/W/N/T/F5', () => {
-    const handler = vi.fn()
+    const handlers = {
+      s: vi.fn(),
+      p: vi.fn(),
+      w: vi.fn(),
+      n: vi.fn(),
+      t: vi.fn(),
+      f5: vi.fn(),
+    }
     const { result } = renderHook(() => useKeyboardActions())
 
-    // Register a global handler that would match these
+    // Register handlers for ALL 6 browser shortcuts to prove passthrough guard
     act(() => {
-      result.current.register('ctrl+s', handler, {
-        scope: 'global',
-        description: 'test',
-      })
+      result.current.register('ctrl+s', handlers['s'], { scope: 'global', description: 'save' })
+      result.current.register('ctrl+p', handlers['p'], { scope: 'global', description: 'print' })
+      result.current.register('ctrl+w', handlers['w'], { scope: 'global', description: 'close' })
+      result.current.register('ctrl+n', handlers['n'], { scope: 'global', description: 'new' })
+      result.current.register('ctrl+t', handlers['t'], { scope: 'global', description: 'tab' })
+      result.current.register('f5', handlers['f5'], { scope: 'global', description: 'refresh' })
     })
 
     const browserShortcuts = [
@@ -99,8 +108,10 @@ describe('useKeyboardActions', () => {
       expect(preventDefaultSpy).not.toHaveBeenCalled()
     }
 
-    // Handler should NOT have been called for any browser shortcut
-    expect(handler).not.toHaveBeenCalled()
+    // No handler should have been called — all 6 bypassed by BROWSER_SHORTCUTS guard
+    for (const [, handler] of Object.entries(handlers)) {
+      expect(handler).not.toHaveBeenCalled()
+    }
   })
 
   // ── P0: Modal Scope Suppression ──

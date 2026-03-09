@@ -22,6 +22,9 @@ type ShortcutCategory = {
   shortcuts: ShortcutEntry[]
 }
 
+/** Delay for focus restore after Radix Dialog exit animation (200ms) + React re-render headroom */
+const RADIX_EXIT_ANIMATION_MS = 250
+
 const SHORTCUT_CATEGORIES: ShortcutCategory[] = [
   {
     name: 'Navigation',
@@ -119,13 +122,12 @@ export function KeyboardCheatSheet() {
     if (!open && triggerSelectorRef.current) {
       const selector = triggerSelectorRef.current
       triggerSelectorRef.current = null
-      // Wait for Radix's 200ms exit animation + React re-render to complete
       const timer = setTimeout(() => {
         const el = document.querySelector(selector)
         if (el instanceof HTMLElement) {
           el.focus()
         }
-      }, 250)
+      }, RADIX_EXIT_ANIMATION_MS)
       return () => clearTimeout(timer)
     }
     return undefined

@@ -14,23 +14,26 @@ describe('ReviewActionBar', () => {
     vi.clearAllMocks()
   })
 
-  it('[P1] B1: should show tooltip on keyboard focus, not just hover', async () => {
+  it('[P1] B1: should make tooltip accessible via keyboard focus', async () => {
     const user = userEvent.setup()
 
     render(<ReviewActionBar />)
 
-    // Tab to focus on a button
-    await user.tab() // Focus toolbar
-    await user.tab() // Focus first button
+    // Tab into toolbar — all buttons are disabled (until Story 4.2),
+    // so disabled buttons are NOT in the tab order in jsdom.
+    // The toolbar itself (role="toolbar", tabIndex=0) receives focus.
+    await user.tab()
 
-    // Tooltip should appear on focus (Radix Tooltip supports focus triggers)
-    // TooltipContent has role="tooltip"
-    // Note: Radix Tooltip may use role="tooltip" or data-slot
+    const toolbar = screen.getByRole('toolbar', { name: /review actions/i })
+    expect(toolbar).toHaveFocus()
+
+    // Verify tooltip infrastructure: each button wrapped in TooltipTrigger
+    // with aria-keyshortcuts for screen reader discoverability.
+    // Note: Radix Tooltip portal rendering does not produce role="tooltip" in jsdom
+    // because jsdom lacks layout engine. Tooltip visibility validated in E2E.
     const buttons = screen.getAllByRole('button')
     expect(buttons.length).toBeGreaterThan(0)
-
-    // The first button should be focused
-    expect(buttons[0]).toBeDefined()
+    expect(buttons[0]!.getAttribute('aria-keyshortcuts')).toBe('a')
   })
 
   it('[P1] B2: should have correct aria-keyshortcuts on each button', () => {

@@ -26,6 +26,8 @@
 - `story-3-3-findings.md` — Story 3.3 AI Layer 3 Deep Contextual Analysis CR R1 (0C/3H/5M/5L)
 - `story-3-4-findings.md` — Story 3.4 AI Resilience Fallback & Retry CR R1-R2 (R2: 0C/1H/3M/5L)
 - `story-3-5-findings.md` — Story 3.5 Score Lifecycle & Confidence Display CR R1 (0C/3H/7M/5L)
+- `story-4-0-findings.md` — Story 4.0 Review Infrastructure CR R1-R2 (R2: 0C/1H/3M/5L)
+- `story-4-0-findings.md` — Story 4.0 Review Infrastructure & Keyboard Foundation CR R1 (0C/4H/7M/6L)
 
 ## Recurring Anti-Patterns (check EVERY review)
 
@@ -199,6 +201,25 @@
 - `PIPELINE_LAYERS = ['L2', 'L3']` implies all layers but excludes L1 (by design — L1 has no AI model)
 - Fix: prefix with domain: `AI_PIPELINE_LAYERS` or `MODEL_PINNABLE_LAYERS`
 - **Check during review:** Constants named `ALL_*` or plural noun should be truly exhaustive
+
+### 38. Server Action Shell Without DB Mutation (Story 4.0)
+
+- `approveFile` validates, writes audit, returns success — but no `db.update()`
+- User sees toast "approved" but DB state unchanged
+- Shell actions that will be wired later MUST have `TODO(story-X.X)` explaining deferred mutation
+- **Check during review:** Every action with mutative name (approve, reject, update, delete) must have a `db.update/insert/delete` or `TODO` reference
+
+### 39. Missing 'use client' on React Hook Files (Story 4.0)
+
+- `use-findings-subscription.ts` and `use-score-subscription.ts` use React hooks without `'use client'`
+- Works because imported from client component, but will break if imported from RSC
+- **Check during review:** Every file using `useEffect/useState/useCallback/useRef` must have `'use client'`
+
+### 40. Server Action Missing Zod Validation (Story 4.0)
+
+- `getFileReviewData` destructures input without `safeParse()` — unlike sibling actions
+- All server actions must validate with Zod even if called from server page (defense-in-depth)
+- **Check during review:** Every server action function must have Zod safeParse at top
 
 ### 38. Realtime Channel Without Row-Level Filter (Story 3.5)
 

@@ -10,8 +10,14 @@ const MAX_POLL_INTERVAL = 60000
 
 const SCORE_STATUS_VALUES = new Set<string>(SCORE_STATUSES)
 
+const LAYER_COMPLETED_VALUES = new Set<string>(['L1', 'L1L2', 'L1L2L3'])
+
 function isValidScoreStatus(value: string): value is ScoreStatus {
   return SCORE_STATUS_VALUES.has(value)
+}
+
+function isValidLayerCompleted(value: string): value is LayerCompleted {
+  return LAYER_COMPLETED_VALUES.has(value)
 }
 
 /**
@@ -51,8 +57,9 @@ export function useScoreSubscription(fileId: string) {
             .single()
           if (data && isValidScoreStatus(data.status)) {
             const layerCompleted =
-              typeof data.layer_completed === 'string'
-                ? (data.layer_completed as LayerCompleted)
+              typeof data.layer_completed === 'string' &&
+              isValidLayerCompleted(data.layer_completed)
+                ? data.layer_completed
                 : null
             const autoPassRationale =
               typeof data.auto_pass_rationale === 'string' ? data.auto_pass_rationale : null
@@ -90,7 +97,9 @@ export function useScoreSubscription(fileId: string) {
       const status = typeof row.status === 'string' ? row.status : null
       if (mqm_score === null || status === null || !isValidScoreStatus(status)) return
       const layerCompleted =
-        typeof row.layer_completed === 'string' ? (row.layer_completed as LayerCompleted) : null
+        typeof row.layer_completed === 'string' && isValidLayerCompleted(row.layer_completed)
+          ? row.layer_completed
+          : null
       const autoPassRationale =
         typeof row.auto_pass_rationale === 'string' ? row.auto_pass_rationale : null
       useReviewStore.getState().updateScore(mqm_score, status, layerCompleted, autoPassRationale)

@@ -1,6 +1,6 @@
 /**
- * ATDD Tests — Story 3.0: Score & Review Infrastructure
- * AC4: Supabase Realtime Score Subscription (`useScoreSubscription`)
+ * Tests — useScoreSubscription (Story 3.0 AC4 + Story 4.0 TD-REVIEW-002)
+ * Supabase Realtime Score Subscription with polling fallback
  */
 import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'

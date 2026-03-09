@@ -41,6 +41,7 @@ See `patterns.md` for detailed notes on all findings and architecture patterns.
 | 3.4 R1                           | 0C/1H/0M/0L     | HIGH: retryAiAnalysis cross-project contamination → FIXED in R2                              |
 | 3.4 R2                           | 0C/0H/0M/0L     | SECURE — all 6 files PASS                                                                    |
 | **3.5**                          | **0C/2H/0M/0L** | **AT RISK — use-threshold-subscription.ts: Realtime no tenant filter + prop tenantId trust** |
+| **4.0 pre-CR**                   | **0C/0H/2M/1L** | **AT RISK — use-score-subscription.ts: Realtime+polling missing tenant_id filter**           |
 
 ## OPEN FINDINGS (unresolved)
 
@@ -48,6 +49,8 @@ See `patterns.md` for detailed notes on all findings and architecture patterns.
 2. LOW — `updateTerm.action.ts` L79-93: same pattern. ACCEPTED.
 3. Story 3.2c findings (4M/3L) — status unknown (may have been fixed in 3.5; re-verify at Epic 4 sign-off).
 4. **Story 3.5 HIGH x2** — `use-threshold-subscription.ts`: (a) Realtime channel missing `filter: tenant_id=eq.${tenantId}`; (b) polling fallback trusts prop `tenantId` instead of session. **MUST fix before sign-off.**
+5. **Story 4.0 MEDIUM x2** — `use-score-subscription.ts`: (a) Realtime channel filters `file_id` only, no `tenant_id=eq.${tenantId}`; (b) polling fallback `.eq('file_id', fileId)` only, no `.eq('tenant_id', tenantId)`. Fix: add `tenantId` param, compound filter on both paths. **MUST fix before sign-off.**
+6. **Story 4.0 LOW x1** — `getDashboardData.action.ts` L61-62: raw SQL `ANY()` instead of Drizzle `inArray()`. No isolation impact. Anti-pattern only.
 
 ## Key Patterns to Watch
 

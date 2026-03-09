@@ -37,7 +37,11 @@ export async function waitForReviewPageHydrated(page: Page) {
   await expect(grid).toBeVisible({ timeout: 30_000 })
   await expect(grid.getByRole('row').first()).toBeVisible({ timeout: 10_000 })
 
-  // Click body to ensure the page has keyboard focus (headless Chromium may
-  // not auto-focus the page after navigation)
-  await page.locator('body').click()
+  // Ensure the page has keyboard focus (headless Chromium may not auto-focus
+  // after navigation). Use focus() instead of click() to avoid triggering
+  // unintended side effects (dismiss tooltips, close popovers)
+  await page.evaluate(() => {
+    ;(document.activeElement as HTMLElement)?.blur()
+    document.body.focus()
+  })
 }
