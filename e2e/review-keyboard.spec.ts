@@ -309,9 +309,9 @@ test.describe.serial('Review Keyboard & Focus — Story 4.0 ATDD', () => {
     await expect(modal.getByText(/Review Actions/i)).toBeVisible()
 
     // Verify at least some hotkey entries are listed
-    // J/K for navigation, A for accept, R for reject
-    await expect(modal.getByText(/J/)).toBeVisible()
-    await expect(modal.getByText(/K/)).toBeVisible()
+    // Use exact text match to avoid strict mode violations (e.g. /K/ matches "Keyboard Shortcuts")
+    await expect(modal.getByText('J', { exact: true })).toBeVisible()
+    await expect(modal.getByText('K', { exact: true })).toBeVisible()
 
     // Close modal with Esc
     await page.keyboard.press('Escape')
