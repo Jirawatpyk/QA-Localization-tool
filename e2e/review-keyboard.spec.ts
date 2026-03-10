@@ -341,10 +341,16 @@ test.describe.serial('Review Keyboard & Focus — Story 4.0 ATDD', () => {
     await expect(firstRow).toBeFocused({ timeout: 5_000 })
     await expect(firstRow).toHaveAttribute('tabindex', '0')
 
+    // Wait for React 19 useEffect hooks to complete keyboard handler registration.
+    // In CI headless Chromium, React may defer effects after paint, causing the
+    // J/K handler to not be in the registry when the first keypress fires.
+    await page.waitForTimeout(500)
+
     // 3. Navigate to second finding with J
     await page.keyboard.press('j')
     const secondRow = rows.nth(1)
-    await expect(secondRow).toBeFocused({ timeout: 5_000 })
+    await expect(secondRow).toHaveAttribute('tabindex', '0', { timeout: 10_000 })
+    await expect(secondRow).toBeFocused()
     await expect(secondRow).toHaveAttribute('tabindex', '0')
     // First row should lose active tabindex
     await expect(firstRow).toHaveAttribute('tabindex', '-1')

@@ -92,7 +92,7 @@ export function ReviewProgress({
   return (
     <div data-testid="review-progress" className="flex flex-col gap-2">
       {/* Track 1: Review progress */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3" data-testid="review-count-track">
         <span className="text-sm font-medium min-w-[120px]">{reviewLabel}</span>
         <div
           data-testid="review-progress-bar"
