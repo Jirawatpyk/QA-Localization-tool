@@ -167,6 +167,9 @@ test.describe.serial('Review Findings — Story 3.2c', () => {
     await page.goto(`/projects/${projectId}/review/${fileId}`)
 
     if (l2Count > 0) {
+      // Wait for findings to load + expand minor accordion if needed
+      await waitForFindingsVisible(page)
+
       // At least one finding should have a confidence badge
       const confidenceBadge = page.getByTestId('confidence-badge')
       await expect(confidenceBadge.first()).toBeVisible({ timeout: 15_000 })
@@ -231,6 +234,9 @@ test.describe.serial('Review Findings — Story 3.2c', () => {
     await page.goto(`/projects/${projectId}/review/${fileId}`)
 
     if (totalFindings > 0) {
+      // Wait for findings to load + expand minor accordion if needed
+      await waitForFindingsVisible(page)
+
       // Each finding item should display which layer detected it
       const layerBadge = page.getByTestId('layer-badge')
       await expect(layerBadge.first()).toBeVisible({ timeout: 15_000 })
