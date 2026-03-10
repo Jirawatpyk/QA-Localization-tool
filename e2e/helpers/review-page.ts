@@ -1,7 +1,7 @@
 /**
  * Review Page E2E helpers — shared utilities for review-keyboard and review-score specs.
  */
-import type { Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 import { expect } from '@playwright/test'
 
 /**
@@ -31,11 +31,10 @@ export async function waitForReviewPageReady(page: Page) {
 export async function waitForReviewPageHydrated(page: Page) {
   await waitForReviewPageReady(page)
 
-  // Finding rows are populated via useEffect → Zustand store → render,
-  // so their presence confirms all effects (including keyboard bindings) have run
-  const grid = page.getByRole('grid', { name: /finding/i })
-  await expect(grid).toBeVisible({ timeout: 30_000 })
-  await expect(grid.getByRole('row').first()).toBeVisible({ timeout: 10_000 })
+  // Finding rows are populated via useEffect → Zustand store → render.
+  // Story 4.1a: minor findings are inside a collapsed accordion, so we
+  // must wait for findings to load + expand accordion before checking rows.
+  await waitForFindingsVisible(page)
 
   // Ensure the page has keyboard focus (headless Chromium may not auto-focus
   // after navigation). Use focus() instead of click() to avoid triggering
@@ -44,4 +43,42 @@ export async function waitForReviewPageHydrated(page: Page) {
     ;(document.activeElement as HTMLElement)?.blur()
     document.body.focus()
   })
+}
+
+/**
+ * Wait for findings to load in the Zustand store, expand minor accordion
+ * if needed, and return the finding rows locator.
+ *
+ * Fixes race condition: store populates async via useEffect, accordion
+ * visibility check runs before findings appear → misses the expand →
+ * finding-compact-row elements stay hidden in collapsed accordion.
+ *
+ * Pattern:
+ *  1. Wait for finding-list container
+ *  2. Wait for finding-count-summary to show non-zero Total (store populated)
+ *  3. Expand minor accordion if all/some findings are minor
+ *  4. Assert finding rows are visible
+ */
+export async function waitForFindingsVisible(page: Page): Promise<Locator> {
+  // 1. Wait for finding-list container
+  const findingList = page.getByTestId('finding-list')
+  await expect(findingList).toBeVisible({ timeout: 15_000 })
+
+  // 2. Wait for findings to load in the store
+  //    finding-count-summary shows "Total: N" — wait until N > 0
+  const countSummary = page.getByTestId('finding-count-summary')
+  await expect(countSummary).not.toContainText('Total: 0', { timeout: 15_000 })
+
+  // 3. Expand minor accordion if present (Story 4.1a: minor findings hidden by default)
+  const minorAccordion = page.getByText(/Minor \(\d+\)/i)
+  if (await minorAccordion.isVisible().catch(() => false)) {
+    await minorAccordion.click()
+    await page.waitForTimeout(500)
+  }
+
+  // 4. Finding rows should now be visible
+  const findingRows = page.getByTestId('finding-compact-row')
+  await expect(findingRows.first()).toBeVisible({ timeout: 10_000 })
+
+  return findingRows
 }

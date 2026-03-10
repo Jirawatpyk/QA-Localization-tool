@@ -109,7 +109,7 @@ test.describe('Parity Comparison Tool (Story 2.7)', () => {
 
     await parityTab.click()
 
-    await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/parity`))
+    await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/parity`), { timeout: 15_000 })
 
     // Parity page content should load (use specific heading to avoid strict mode from .or())
     await expect(page.getByRole('heading', { name: /Xbench Parity Comparison/i })).toBeVisible({

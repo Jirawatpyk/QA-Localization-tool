@@ -14,6 +14,7 @@ import {
   queryFindingsCount,
   queryScore,
 } from './helpers/pipeline-admin'
+import { waitForFindingsVisible } from './helpers/review-page'
 import {
   signupOrLogin,
   getUserInfo,
@@ -144,20 +145,9 @@ test.describe.serial('Review Findings — Story 3.2c', () => {
 
     // If pipeline produced findings, the findings list should have items
     if (totalFindings > 0) {
-      // Wait for finding list to render (either rows or minor accordion)
-      const findingList = page.getByTestId('finding-list')
-      await expect(findingList).toBeVisible({ timeout: 15_000 })
-
-      // Expand minor accordion if present (Story 4.1a: minor findings hidden by default)
-      const minorAccordion = page.getByText(/Minor \(\d+\)/i)
-      if (await minorAccordion.isVisible().catch(() => false)) {
-        await minorAccordion.click()
-        await page.waitForTimeout(500)
-      }
-
-      // Now finding rows should be visible
-      const findingRows = page.getByTestId('finding-compact-row')
-      await expect(findingRows.first()).toBeVisible({ timeout: 10_000 })
+      // Wait for findings to load in store + expand minor accordion if needed
+      // (fixes race condition: store populates async, accordion check must wait)
+      const findingRows = await waitForFindingsVisible(page)
 
       // Count of rendered findings should match DB count
       const renderedCount = await findingRows.count()
