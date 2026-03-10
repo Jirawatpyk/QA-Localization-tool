@@ -29,6 +29,8 @@ describe('FindingCardCompact', () => {
         isActive={true}
         sourceLang="en"
         targetLang="th"
+        findingIndex={0}
+        totalFindings={1}
         onExpand={() => {}}
       />,
     )
@@ -60,6 +62,8 @@ describe('FindingCardCompact', () => {
         isActive={false}
         sourceLang="en"
         targetLang="th"
+        findingIndex={0}
+        totalFindings={1}
         onExpand={() => {}}
       />,
     )
@@ -84,6 +88,8 @@ describe('FindingCardCompact', () => {
         isActive={true}
         sourceLang="en"
         targetLang="th"
+        findingIndex={0}
+        totalFindings={1}
         onExpand={() => {}}
       />,
     )
@@ -98,6 +104,8 @@ describe('FindingCardCompact', () => {
         isActive={false}
         sourceLang="en"
         targetLang="th"
+        findingIndex={0}
+        totalFindings={1}
         onExpand={() => {}}
       />,
     )
@@ -116,6 +124,8 @@ describe('FindingCardCompact', () => {
         isActive={true}
         sourceLang="en"
         targetLang="th"
+        findingIndex={0}
+        totalFindings={1}
         onExpand={() => {}}
       />,
     )
@@ -140,6 +150,8 @@ describe('FindingCardCompact', () => {
         isActive={false}
         sourceLang="en"
         targetLang="th"
+        findingIndex={0}
+        totalFindings={1}
         onExpand={() => {}}
       />,
     )
@@ -158,6 +170,8 @@ describe('FindingCardCompact', () => {
         isActive={false}
         sourceLang="en"
         targetLang="th"
+        findingIndex={0}
+        totalFindings={1}
         onExpand={() => {}}
       />,
     )
@@ -179,6 +193,8 @@ describe('FindingCardCompact', () => {
         isActive={false}
         sourceLang="en"
         targetLang="th"
+        findingIndex={0}
+        totalFindings={1}
         onExpand={() => {}}
       />,
     )
@@ -199,6 +215,8 @@ describe('FindingCardCompact', () => {
         isExpanded={false}
         sourceLang="en"
         targetLang="th"
+        findingIndex={0}
+        totalFindings={1}
         onExpand={onExpand}
       />,
     )
@@ -224,6 +242,8 @@ describe('FindingCardCompact', () => {
         isActive={false}
         sourceLang="en"
         targetLang="th"
+        findingIndex={0}
+        totalFindings={1}
         onExpand={() => {}}
       />,
     )
@@ -248,6 +268,8 @@ describe('FindingCardCompact', () => {
         isActive={false}
         sourceLang="en"
         targetLang="th"
+        findingIndex={0}
+        totalFindings={1}
         onExpand={() => {}}
       />,
     )
@@ -268,6 +290,8 @@ describe('FindingCardCompact', () => {
         isActive={true}
         sourceLang="en"
         targetLang="th"
+        findingIndex={0}
+        totalFindings={1}
         onExpand={onExpand}
       />,
     )
@@ -294,6 +318,8 @@ describe('FindingCardCompact', () => {
         isNew={true}
         sourceLang="en"
         targetLang="th"
+        findingIndex={0}
+        totalFindings={1}
         onExpand={() => {}}
       />,
     )
@@ -314,6 +340,8 @@ describe('FindingCardCompact', () => {
         isActive={false}
         sourceLang="en"
         targetLang="th"
+        findingIndex={0}
+        totalFindings={1}
         onExpand={() => {}}
       />,
     )
@@ -334,6 +362,8 @@ describe('FindingCardCompact', () => {
         isActive={false}
         sourceLang="en"
         targetLang="th"
+        findingIndex={0}
+        totalFindings={1}
         onExpand={() => {}}
       />,
     )
@@ -357,6 +387,8 @@ describe('FindingCardCompact', () => {
         isActive={false}
         sourceLang="en"
         targetLang="th"
+        findingIndex={0}
+        totalFindings={1}
         onExpand={() => {}}
       />,
     )
@@ -376,6 +408,8 @@ describe('FindingCardCompact', () => {
         isActive={false}
         sourceLang="en"
         targetLang="th"
+        findingIndex={0}
+        totalFindings={1}
         onExpand={() => {}}
       />,
     )

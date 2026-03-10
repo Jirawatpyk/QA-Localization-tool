@@ -43,13 +43,14 @@ See `patterns.md` for detailed notes on all findings and architecture patterns.
 | **3.5**                          | **0C/2H/0M/0L** | **AT RISK — use-threshold-subscription.ts: Realtime no tenant filter + prop tenantId trust**                        |
 | **4.0 pre-CR**                   | **0C/0H/2M/1L** | **AT RISK — use-score-subscription.ts: Realtime+polling missing tenant_id filter**                                  |
 | **4.1a**                         | **0C/0H/0M/1L** | SECURE — TD-TENANT-003 fixed (score+findings hooks). 1 LOW pre-existing: use-threshold-subscription.ts no tenant_id |
+| **4.1b**                         | **0C/0H/0M/0L** | SECURE — pure UI/keyboard story, zero new DB paths. tenantId prop chain verified clean end-to-end.                  |
 
 ## OPEN FINDINGS (unresolved)
 
 1. LOW — `createTerm.action.ts` L57-65: dup-check on `glossary_terms` by `glossaryId` only. Safe via FK chain. ACCEPTED.
 2. LOW — `updateTerm.action.ts` L79-93: same pattern. ACCEPTED.
 3. Story 3.2c findings (4M/3L) — status unknown (may have been fixed in 3.5; re-verify at Epic 4 sign-off).
-4. **LOW (downgraded from HIGH)** — `use-threshold-subscription.ts`: Realtime channel on `language_pair_configs` has no `tenant_id` filter; polling query also has no `.eq('tenant_id', tenantId)`. Hook has no `tenantId` parameter at all. Story 4.1a did NOT fix this (out of scope). Severity downgraded to LOW because: (a) thresholds are non-sensitive config (no PII); (b) initial server-rendered thresholds come from `getFileReviewData` via `withTenant()` so are always correct; (c) RLS is primary enforcement layer. **MUST fix before Epic 4 sign-off.** Fix: add `tenantId: string` param; add `.eq('tenant_id', tenantId)` to polling; change Realtime filter to `source_lang=eq.${sourceLang}&tenant_id=eq.${tenantId}`; update `ReviewPageClient` call site.
+4. **LOW** — `use-threshold-subscription.ts`: Realtime filter falls back to `source_lang=eq.${sourceLang}` only (no tenant scoping) and polling skips `.eq('tenant_id', tenantId)` when `tenantId` is falsy. Hook accepts `tenantId` as `string | undefined`. Story 4.1a+4.1b both did NOT fix this (out of scope). Call site in `ReviewPageClient` always passes a non-empty server-derived string so the falsy branch is unreachable in production, but the hook contract is still unsafe for future callers. **MUST fix before Epic 4 sign-off.** Fix: change hook signature to `tenantId: string` (required); remove conditional branches; always apply compound Realtime filter + polling `.eq('tenant_id', tenantId)`.
 5. ~~**Story 4.0 MEDIUM x2** — `use-score-subscription.ts`~~ **RESOLVED in Story 4.1a** — compound Realtime filter and polling `.eq('tenant_id', tenantId)` both confirmed present.
 6. **Story 4.0 LOW x1** — `getDashboardData.action.ts` L61-62: raw SQL `ANY()` instead of Drizzle `inArray()`. No isolation impact. Anti-pattern only.
 

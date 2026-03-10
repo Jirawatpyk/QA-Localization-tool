@@ -372,13 +372,8 @@ export function ReviewPageClient({
           <span className="text-muted-foreground">Total: {findingsMap.size}</span>
         </div>
 
-        {/* Findings list — grid role with ARIA (Guardrail #29, #38) */}
-        <div
-          role="grid"
-          aria-label="Finding list"
-          data-testid="finding-list"
-          className="mt-4 space-y-2"
-        >
+        {/* Findings list — grid role moved to FindingList (Story 4.1b, Guardrail #29, #38) */}
+        <div data-testid="finding-list" className="mt-4 space-y-2">
           <FindingList
             findings={findingsForDisplay}
             expandedIds={expandedIds}

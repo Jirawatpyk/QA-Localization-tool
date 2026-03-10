@@ -79,8 +79,8 @@ async function seedFileWithFindingsForKeyboard(opts: {
       layer_completed: 'L1L2',
       total_words: 800,
       critical_count: 0,
-      major_count: 1,
-      minor_count: 3,
+      major_count: 3,
+      minor_count: 0,
       npt: 0.085,
       calculated_at: new Date().toISOString(),
     }),
@@ -92,7 +92,7 @@ async function seedFileWithFindingsForKeyboard(opts: {
     )
   }
 
-  // 3. Insert findings (3 findings for keyboard navigation testing)
+  // 3. Insert findings (3 major findings — all navigable without accordion)
   const findings = [
     {
       severity: 'major',
@@ -102,16 +102,16 @@ async function seedFileWithFindingsForKeyboard(opts: {
       status: 'pending',
     },
     {
-      severity: 'minor',
+      severity: 'major',
       category: 'fluency',
       description: 'Awkward phrasing in target',
-      detected_by_layer: 'L1',
+      detected_by_layer: 'L2',
       status: 'pending',
     },
     {
-      severity: 'minor',
-      category: 'Whitespace',
-      description: 'Trailing whitespace',
+      severity: 'major',
+      category: 'terminology',
+      description: 'Wrong glossary term used',
       detected_by_layer: 'L1',
       status: 'pending',
     },
@@ -318,55 +318,62 @@ test.describe.serial('Review Keyboard & Focus — Story 4.0 ATDD', () => {
     await expect(modal).not.toBeVisible()
   })
 
-  // ── 4.0-E-E1 [P0]: Full keyboard review flow ─────────────────────────────
-  // TODO(TD-E2E-014): Unskip when Story 4.1a wires J/K roving tabindex navigation
-  test.skip('[P0] E1: should complete keyboard review flow: page load → hotkey → Sheet → Esc → focus restore', async ({
+  // ── 4.1b-E1 [P0]: Full keyboard review flow (GREEN — TD-E2E-014 resolved) ──
+  // Story 4.1b: J/K navigate → Enter inline expand → Esc collapse → focus restore
+  test('[P0] E1: should complete keyboard review flow: J/K navigate → Enter expand inline → Esc collapse → focus restore', async ({
     page,
   }) => {
     // Full integration test covering the keyboard review workflow
     await signupOrLogin(page, TEST_EMAIL)
     await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageReady(page)
+    await waitForReviewPageHydrated(page)
 
     // 1. Finding list visible with grid role (Guardrail #29, #38)
-    const findingList = page.getByRole('grid', { name: /finding/i })
-    await expect(findingList).toBeVisible({ timeout: 30_000 })
+    const grid = page.getByRole('grid')
+    await expect(grid).toBeVisible({ timeout: 30_000 })
 
-    // 2. Score badge visible (seeded score = 91.5)
-    const scoreBadge = page.getByTestId('score-badge')
-    await expect(scoreBadge).toBeVisible({ timeout: 10_000 })
+    const rows = grid.getByRole('row')
+    await expect(rows).toHaveCount(3)
 
-    // 3. Navigate with J key (roving tabindex pattern — Guardrail #29)
-    await page.keyboard.press('j')
-
-    // 4. First finding row should receive focus (tabindex="0")
-    const rows = findingList.getByRole('row')
+    // 2. Focus first row explicitly (body focus after hydration helper)
     const firstRow = rows.first()
+    await firstRow.focus()
     await expect(firstRow).toBeFocused({ timeout: 5_000 })
+    await expect(firstRow).toHaveAttribute('tabindex', '0')
 
-    // 5. Press Enter to open detail Sheet
-    await page.keyboard.press('Enter')
-    const sheet = page.getByRole('complementary')
-    await expect(sheet).toBeVisible({ timeout: 5_000 })
-
-    // 6. Sheet should show finding details
-    await expect(sheet.getByText(/accuracy|fluency|whitespace/i)).toBeVisible()
-
-    // 7. Esc closes Sheet (single layer — Guardrail #31)
-    await page.keyboard.press('Escape')
-    await expect(sheet).not.toBeVisible()
-
-    // 8. Focus returns to the finding row that opened the Sheet (Guardrail #30)
-    await expect(firstRow).toBeFocused({ timeout: 5_000 })
-
-    // 9. Navigate down with J key
+    // 3. Navigate to second finding with J
     await page.keyboard.press('j')
     const secondRow = rows.nth(1)
     await expect(secondRow).toBeFocused({ timeout: 5_000 })
+    await expect(secondRow).toHaveAttribute('tabindex', '0')
+    // First row should lose active tabindex
+    await expect(firstRow).toHaveAttribute('tabindex', '-1')
 
-    // 10. Navigate up with K key
+    // 4. Navigate back up with K
     await page.keyboard.press('k')
     await expect(firstRow).toBeFocused({ timeout: 5_000 })
+
+    // 5. Press Enter to INLINE expand (NOT Sheet open — Story 4.1b AC2)
+    await page.keyboard.press('Enter')
+    await expect(firstRow).toHaveAttribute('aria-expanded', 'true')
+    // Focus stays on same row after expand
+    await expect(firstRow).toBeFocused()
+
+    // 6. Esc collapses the expanded finding (Guardrail #31 — innermost layer)
+    await page.keyboard.press('Escape')
+    await expect(firstRow).toHaveAttribute('aria-expanded', 'false')
+    // Focus stays on same row after collapse
+    await expect(firstRow).toBeFocused()
+
+    // 7. Navigate to third finding (verify J navigates through list)
+    await page.keyboard.press('j') // → second
+    await page.keyboard.press('j') // → third
+    const thirdRow = rows.nth(2)
+    await expect(thirdRow).toBeFocused({ timeout: 5_000 })
+
+    // 8. Verify aria-label includes finding position
+    const ariaLabel = await thirdRow.getAttribute('aria-label')
+    expect(ariaLabel).toContain('Finding 3 of')
   })
 
   // ── Cleanup ───────────────────────────────────────────────────────────────

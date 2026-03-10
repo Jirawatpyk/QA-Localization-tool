@@ -41,6 +41,13 @@ vi.mock('@/features/review/utils/announce', () => ({
   announce: (...args: unknown[]) => mockAnnounce(...args),
   unmountAnnouncer: (...args: unknown[]) => mockUnmountAnnouncer(...args),
 }))
+vi.mock('@/features/review/hooks/use-keyboard-actions', () => ({
+  useReviewHotkeys: vi.fn(),
+  useKeyboardActions: () => ({ register: vi.fn(() => vi.fn()) }),
+}))
+vi.mock('@/features/review/hooks/use-focus-management', () => ({
+  useFocusManagement: () => ({ pushEscapeLayer: vi.fn(), popEscapeLayer: vi.fn() }),
+}))
 
 import type { FileReviewData } from '@/features/review/actions/getFileReviewData.action'
 import { ReviewPageClient } from '@/features/review/components/ReviewPageClient'
@@ -265,12 +272,13 @@ describe('ReviewPageClient — Story 4.0 Layout', () => {
   })
 
   it('[P0] L3: should render 3-zone layout with nav, finding list, and sheet zones', () => {
+    const finding = buildFinding({ severity: 'major' })
     render(
       <ReviewPageClient
         fileId="f1"
         projectId="p1"
         tenantId="t1"
-        initialData={buildInitialData()}
+        initialData={buildInitialData({ findings: [finding] })}
       />,
     )
 

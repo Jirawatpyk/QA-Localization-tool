@@ -34,6 +34,10 @@ vi.mock('@/features/review/utils/announce', () => ({
 }))
 vi.mock('@/features/review/hooks/use-keyboard-actions', () => ({
   useReviewHotkeys: vi.fn(),
+  useKeyboardActions: () => ({ register: vi.fn(() => vi.fn()) }),
+}))
+vi.mock('@/features/review/hooks/use-focus-management', () => ({
+  useFocusManagement: () => ({ pushEscapeLayer: vi.fn(), popEscapeLayer: vi.fn() }),
 }))
 
 vi.mock('@/features/pipeline/actions/retryAiAnalysis.action', () => ({

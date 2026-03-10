@@ -540,11 +540,11 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 ### TD-E2E-014: E1 — Full keyboard review flow (review-keyboard E2E)
 - **Date:** 2026-03-09
 - **Story:** Story 4.0 (Review Infrastructure Setup)
-- **Phase:** CR R1
+- **Phase:** CR R1 → ATDD 4.1b (rewritten 2026-03-10)
 - **Severity:** Low
 - **File:** `e2e/review-keyboard.spec.ts` — test E1
-- **Description:** E2E test for full keyboard review flow (J/K navigation → Enter to open Sheet → Esc → focus restore) is skipped because J/K roving tabindex navigation is not wired to DOM focus yet. Story 4.1a added roving tabindex on FindingCardCompact rows, but DOM focus wiring for J/K hotkeys requires keyboard actions integration.
-- **Status:** DEFERRED → **Story 4.1b — Keyboard Navigation Wiring** (J/K moves active row + DOM focus)
+- **Description:** E2E test for full keyboard review flow. Rewritten during ATDD 4.1b from Sheet-open assertions → inline expand assertions (J/K navigate → Enter expand `aria-expanded="true"` → Esc collapse → focus restore). `test.skip()` removed — test E1 unskipped with seed data updated (3 major findings, no accordion dependency).
+- **Status:** RESOLVED (2026-03-10) — Story 4.1b GREEN phase
 
 ### TD-E2E-015: TD2 — Score recalculate after finding action (review-score E2E)
 - **Date:** 2026-03-09

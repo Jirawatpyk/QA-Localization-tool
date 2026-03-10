@@ -22,6 +22,8 @@ export type FindingCardCompactProps = {
   isActive: boolean
   isExpanded?: boolean | undefined
   isNew?: boolean | undefined
+  findingIndex: number
+  totalFindings: number
   sourceLang?: string | undefined
   targetLang?: string | undefined
   l2ConfidenceMin?: number | null | undefined
@@ -34,6 +36,8 @@ export function FindingCardCompact({
   isActive,
   isExpanded = false,
   isNew,
+  findingIndex,
+  totalFindings,
   sourceLang,
   targetLang,
   l2ConfidenceMin,
@@ -71,6 +75,9 @@ export function FindingCardCompact({
     }
   }
 
+  // Build accessible label: "Finding N of M, severity, category, status" (AC6 T6.1)
+  const ariaLabel = `Finding ${findingIndex + 1} of ${totalFindings}, ${finding.severity} severity, ${finding.category}, ${finding.status}`
+
   return (
     <div
       role="row"
@@ -78,6 +85,8 @@ export function FindingCardCompact({
       data-finding-id={finding.id}
       tabIndex={isActive ? 0 : -1}
       aria-expanded={isExpanded ? 'true' : 'false'}
+      aria-label={ariaLabel}
+      aria-rowindex={findingIndex + 1}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       className={`flex items-center gap-2 border rounded-lg px-3 py-2 cursor-pointer hover:bg-accent/50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 ${showAnimation ? 'animate-fade-in' : ''}`}
