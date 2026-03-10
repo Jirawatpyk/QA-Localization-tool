@@ -49,8 +49,6 @@ async function seedProgressiveDisclosureFile(opts: {
       file_size_bytes: 1024,
       storage_path: `e2e/progressive-disclosure-${Date.now()}.sdlxliff`,
       status: 'l2_completed',
-      source_lang: 'en',
-      target_lang: 'th',
     }),
   })
   if (!fileRes.ok) {
