@@ -281,6 +281,32 @@ export function FindingList({
     [activeFindingId],
   )
 
+  // Grid keydown handler — J/K/Arrow navigation via React synthetic event (AC1)
+  // Primary handler: fires reliably through React's event delegation on the root
+  // container. The useKeyboardActions registration is kept as secondary for cheat
+  // sheet listing, scope management, and suspend/resume integration.
+  const handleGridKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      // IME guard (Guardrail: CJK/Thai composition)
+      if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return
+      // Input guard (Guardrail #28)
+      const target = e.target as HTMLElement
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return
+      if (target.getAttribute('contenteditable') === 'true') return
+
+      if (e.key === 'j' || e.key === 'ArrowDown') {
+        e.preventDefault()
+        e.stopPropagation()
+        navigateNext()
+      } else if (e.key === 'k' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        e.stopPropagation()
+        navigatePrev()
+      }
+    },
+    [navigateNext, navigatePrev],
+  )
+
   // Grid click handler — sync activeFindingId when mouse clicks a finding row (M2 fix)
   const handleGridClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -362,6 +388,7 @@ export function FindingList({
       className="space-y-2"
       onFocus={handleGridFocus}
       onClick={handleGridClick}
+      onKeyDown={handleGridKeyDown}
     >
       {/* Critical section — auto-expanded */}
       {groups.critical.length > 0 && (
