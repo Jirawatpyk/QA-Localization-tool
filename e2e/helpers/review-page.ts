@@ -22,9 +22,12 @@ export async function waitForReviewPageReady(page: Page) {
 }
 
 /**
- * Wait for the review page to fully hydrate — finding grid + rows visible.
- * This confirms React hydration completed and all useEffect callbacks
- * (including keyboard binding registration) have executed.
+ * Wait for the review page to fully hydrate — finding grid + rows visible
+ * AND keyboard handlers registered.
+ *
+ * SSR renders finding rows as HTML before React effects run. The
+ * `data-keyboard-ready` attribute is set by FindingList's useEffect after
+ * J/K/Arrow handlers are registered, guaranteeing the page is interactive.
  *
  * Use this before testing keyboard shortcuts that depend on useEffect hooks.
  */
@@ -35,6 +38,11 @@ export async function waitForReviewPageHydrated(page: Page) {
   // Story 4.1a: minor findings are inside a collapsed accordion, so we
   // must wait for findings to load + expand accordion before checking rows.
   await waitForFindingsVisible(page)
+
+  // Wait for keyboard handler registration to complete (set by FindingList useEffect)
+  await page.waitForSelector('[role="grid"][data-keyboard-ready="true"]', {
+    timeout: 15_000,
+  })
 
   // Ensure the page has keyboard focus (headless Chromium may not auto-focus
   // after navigation). Use focus() instead of click() to avoid triggering

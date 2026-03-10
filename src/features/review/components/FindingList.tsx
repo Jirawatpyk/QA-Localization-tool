@@ -222,6 +222,9 @@ export function FindingList({
         description: 'Previous finding',
       }),
     ]
+    // Signal keyboard readiness — SSR renders rows before effects run,
+    // so E2E tests need this to know when handlers are registered
+    gridRef.current?.setAttribute('data-keyboard-ready', 'true')
     return () => cleanups.forEach((fn) => fn())
   }, [register, navigateNext, navigatePrev])
 
