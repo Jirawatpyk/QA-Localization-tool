@@ -92,7 +92,7 @@ export function ReviewPageClient({
     for (const f of initialData.findings) {
       const finding: Finding = {
         ...f,
-        tenantId: '',
+        tenantId,
         projectId,
         sessionId: '',
         status: f.status,
@@ -278,7 +278,7 @@ export function ReviewPageClient({
       {/* Zone 1: File Navigation (left, collapsible) */}
       <nav aria-label="File navigation" className="w-60 border-r shrink-0 overflow-y-auto p-4">
         <h2 className="text-sm font-semibold text-muted-foreground mb-2">Files</h2>
-        <p className="text-xs text-muted-foreground">File list will be populated in Story 4.1a.</p>
+        <p className="text-xs text-muted-foreground">File navigation coming soon.</p>
       </nav>
 
       {/* Zone 2: Finding List (center) */}
@@ -344,14 +344,14 @@ export function ReviewPageClient({
           <AutoPassRationale rationale={initialData.autoPassRationale} />
         )}
 
-        {/* Partial status warning */}
-        {partialWarningText && (
-          <div aria-live="assertive" data-testid="error-live-region">
+        {/* Partial status warning — container always in DOM per G#33 */}
+        <div aria-live="assertive" data-testid="error-live-region">
+          {partialWarningText && (
             <p className="text-sm text-warning bg-warning/5 border border-warning/20 rounded-md px-3 py-2">
               {partialWarningText}
             </p>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Dual-track progress (Story 4.1a AC3) */}
         <ReviewProgress

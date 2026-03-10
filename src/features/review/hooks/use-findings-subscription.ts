@@ -10,6 +10,12 @@ import type { DetectedByLayer, Finding, FindingSeverity, FindingStatus } from '@
 const SEVERITY_VALUES = new Set<string>(['critical', 'major', 'minor'])
 const STATUS_VALUES = new Set<string>(FINDING_STATUSES)
 const LAYER_VALUES = new Set<string>(['L1', 'L2', 'L3'])
+const SCOPE_VALUES = new Set<string>(['per-file', 'cross-file'])
+
+type FindingScope = 'per-file' | 'cross-file'
+function isValidScope(value: string): value is FindingScope {
+  return SCOPE_VALUES.has(value)
+}
 
 function isValidSeverity(value: string): value is FindingSeverity {
   return SEVERITY_VALUES.has(value)
@@ -63,7 +69,7 @@ function mapRowToFinding(row: Record<string, unknown>): Finding | null {
     sourceTextExcerpt: typeof row.source_text_excerpt === 'string' ? row.source_text_excerpt : null,
     targetTextExcerpt: typeof row.target_text_excerpt === 'string' ? row.target_text_excerpt : null,
     segmentCount: typeof row.segment_count === 'number' ? row.segment_count : 1,
-    scope: (typeof row.scope === 'string' ? row.scope : 'per-file') as 'per-file' | 'cross-file',
+    scope: typeof row.scope === 'string' && isValidScope(row.scope) ? row.scope : 'per-file',
     reviewSessionId: typeof row.review_session_id === 'string' ? row.review_session_id : null,
     relatedFileIds: Array.isArray(row.related_file_ids) ? (row.related_file_ids as string[]) : null,
   }

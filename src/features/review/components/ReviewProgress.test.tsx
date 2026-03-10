@@ -239,4 +239,104 @@ describe('ReviewProgress — Dual-Track (Story 4.1a)', () => {
     expect(screen.getByText('All reviewed')).toBeInTheDocument()
     expect(screen.getByText('All Done')).toBeInTheDocument()
   })
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // deriveStatusFromLayer + layerCompleted override (CR R2 M1)
+  // ═══════════════════════════════════════════════════════════════════════
+
+  describe('layerCompleted Realtime override', () => {
+    it('should use layerCompleted=L1L2 over stale fileStatus=l1_processing (economy)', () => {
+      render(
+        <ReviewProgress
+          reviewedCount={0}
+          totalCount={10}
+          fileStatus={'l1_processing' as DbFileStatus}
+          processingMode={'economy' as ProcessingMode}
+          layerCompleted="L1L2"
+        />,
+      )
+
+      // L1L2 derives to l2_completed → economy = 100% AI progress
+      const aiBar = screen.getByTestId('ai-progress-bar')
+      expect(aiBar).toHaveAttribute('aria-valuenow', '100')
+      expect(screen.getByText(/AI: complete/)).toBeInTheDocument()
+    })
+
+    it('should use layerCompleted=L1L2L3 over stale fileStatus (thorough)', () => {
+      render(
+        <ReviewProgress
+          reviewedCount={0}
+          totalCount={10}
+          fileStatus={'l2_completed' as DbFileStatus}
+          processingMode={'thorough' as ProcessingMode}
+          layerCompleted="L1L2L3"
+        />,
+      )
+
+      const aiBar = screen.getByTestId('ai-progress-bar')
+      expect(aiBar).toHaveAttribute('aria-valuenow', '100')
+      expect(screen.getByText(/AI: complete/)).toBeInTheDocument()
+    })
+
+    it('should use layerCompleted=L1 for l1_completed progress', () => {
+      render(
+        <ReviewProgress
+          reviewedCount={0}
+          totalCount={10}
+          fileStatus={'pending' as DbFileStatus}
+          processingMode={'economy' as ProcessingMode}
+          layerCompleted="L1"
+        />,
+      )
+
+      // L1 derives to l1_completed → AI pending label
+      expect(screen.getByText(/AI: pending/)).toBeInTheDocument()
+    })
+
+    it('should fall back to fileStatus when layerCompleted is null', () => {
+      render(
+        <ReviewProgress
+          reviewedCount={0}
+          totalCount={10}
+          fileStatus={'l2_processing' as DbFileStatus}
+          processingMode={'economy' as ProcessingMode}
+          layerCompleted={null}
+        />,
+      )
+
+      expect(screen.getByText(/Processing L2/)).toBeInTheDocument()
+    })
+
+    it('should NOT override failed fileStatus with layerCompleted (H1 bug fix)', () => {
+      render(
+        <ReviewProgress
+          reviewedCount={0}
+          totalCount={10}
+          fileStatus={'failed' as DbFileStatus}
+          processingMode={'economy' as ProcessingMode}
+          layerCompleted="L1"
+        />,
+      )
+
+      // Failed must take priority — user must see error
+      expect(screen.getByText(/AI: error/)).toBeInTheDocument()
+      const aiBar = screen.getByTestId('ai-progress-bar')
+      expect(aiBar).toHaveAttribute('aria-valuenow', '0')
+    })
+
+    it('should NOT override ai_partial fileStatus with layerCompleted', () => {
+      render(
+        <ReviewProgress
+          reviewedCount={0}
+          totalCount={10}
+          fileStatus={'ai_partial' as DbFileStatus}
+          processingMode={'economy' as ProcessingMode}
+          layerCompleted="L1L2"
+        />,
+      )
+
+      // ai_partial must take priority
+      expect(screen.getByText(/AI: partial/)).toBeInTheDocument()
+    })
+  })
 })

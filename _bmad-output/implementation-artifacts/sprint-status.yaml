@@ -116,7 +116,7 @@ development_status:
   # ============================================================
   epic-4: in-progress
   4-0-review-infrastructure-setup: done
-  4-1a-finding-list-display-progressive-disclosure: ready-for-dev
+  4-1a-finding-list-display-progressive-disclosure: in-progress
   4-1b-keyboard-navigation-focus-management: backlog
   4-1c-detail-panel-segment-context: backlog
   4-1d-responsive-layout: backlog

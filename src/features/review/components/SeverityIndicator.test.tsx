@@ -22,7 +22,7 @@ describe('SeverityIndicator', () => {
       render(<SeverityIndicator severity="critical" />)
 
       // Text label must always be visible (G#36: never icon-only)
-      expect(screen.getByText('Critical')).toBeTruthy()
+      expect(screen.getByText('Critical')).toBeInTheDocument()
 
       // Icon should be XCircle (octagon shape) — check by SVG test-id or class
       // Severity-critical color class applied to container
@@ -34,7 +34,7 @@ describe('SeverityIndicator', () => {
       render(<SeverityIndicator severity="major" />)
 
       // Text label
-      expect(screen.getByText('Major')).toBeTruthy()
+      expect(screen.getByText('Major')).toBeInTheDocument()
 
       // AlertTriangle icon + severity-major color
       const container = screen.getByText('Major').closest('[class]')
@@ -45,7 +45,7 @@ describe('SeverityIndicator', () => {
       render(<SeverityIndicator severity="minor" />)
 
       // Text label
-      expect(screen.getByText('Minor')).toBeTruthy()
+      expect(screen.getByText('Minor')).toBeInTheDocument()
 
       // Info icon + severity-minor color
       const container = screen.getByText('Minor').closest('[class]')

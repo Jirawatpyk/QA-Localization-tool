@@ -284,7 +284,7 @@ test.describe.serial('Review L3 Findings — Story 3.3', () => {
       expect(confirmCount + disagreeCount).toBeGreaterThan(0)
 
       if (confirmCount > 0) {
-        await expect(confirmBadge.first()).toContainText(/Confirmed by L3/i)
+        await expect(confirmBadge.first()).toContainText(/L3 Confirmed/i)
       }
       if (disagreeCount > 0) {
         await expect(disagreeBadge.first()).toContainText(/L3 disagrees/i)

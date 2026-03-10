@@ -26,6 +26,8 @@
 - `story-3-3-findings.md` — Story 3.3 AI Layer 3 Deep Contextual Analysis CR R1 (0C/3H/5M/5L)
 - `story-3-4-findings.md` — Story 3.4 AI Resilience Fallback & Retry CR R1-R2 (R2: 0C/1H/3M/5L)
 - `story-3-5-findings.md` — Story 3.5 Score Lifecycle & Confidence Display CR R1 (0C/3H/7M/5L)
+- `story-4-1a-findings.md` — Story 4.1a Finding List Display CR R1-R2 (R2: 0C/3H/5M/4L)
+- `story-4-1a-findings.md` — Story 4.1a Finding List Display & Progressive Disclosure CR R1 (0C/3H/5M/5L)
 - `story-4-0-findings.md` — Story 4.0 Review Infrastructure CR R1-R2 (R2: 0C/1H/3M/5L)
 - `story-4-0-findings.md` — Story 4.0 Review Infrastructure & Keyboard Foundation CR R1 (0C/4H/7M/6L)
 

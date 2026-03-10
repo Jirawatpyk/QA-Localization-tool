@@ -135,7 +135,7 @@ describe('FindingList', () => {
       render(<FindingList {...defaultProps({ findings })} />)
 
       // Accordion trigger should show "Minor (1)"
-      expect(screen.getByText(/Minor \(1\)/)).toBeTruthy()
+      expect(screen.getByText(/Minor \(1\)/)).toBeInTheDocument()
     })
 
     it('[T1.6][P1] should sort within-group by confidence descending', () => {
@@ -246,7 +246,7 @@ describe('FindingList', () => {
       const newRow = screen
         .getAllByTestId('finding-compact-row')
         .find((r) => r.getAttribute('data-finding-id') === 'c-new')
-      expect(newRow?.className).toMatch(/animate-fade/)
+      expect(newRow?.className).toMatch(/animate-fade-in/)
     })
 
     it('[T1.13][P1] should show empty state message when findings array is empty', () => {
@@ -255,7 +255,7 @@ describe('FindingList', () => {
       // No rowgroups when empty
       expect(screen.queryAllByRole('rowgroup').length).toBe(0)
       // Empty state message should appear
-      expect(screen.getByText(/no findings/i)).toBeTruthy()
+      expect(screen.getByText(/no findings/i)).toBeInTheDocument()
     })
 
     it('[T1.14][P1] should render single rowgroup when all findings have same severity', () => {
@@ -301,18 +301,26 @@ describe('FindingList', () => {
       const f3Row = screen
         .getAllByTestId('finding-compact-row')
         .find((r) => r.getAttribute('data-finding-id') === 'f3')
-      expect(f3Row?.className).toMatch(/animate-fade/)
+      expect(f3Row?.className).toMatch(/animate-fade-in/)
     })
 
-    it('[T3.11][P1] should show correct minor count after new minor finding arrives', () => {
+    it('[T3.11][P1] should keep accordion open and update count after new minor finding arrives', () => {
       const findings = [buildFindingForUI({ id: 'n1', severity: 'minor', aiConfidence: 50 })]
 
       const { rerender } = render(<FindingList {...defaultProps({ findings })} />)
 
       // Accordion should show "Minor (1)"
-      expect(screen.getByText(/Minor \(1\)/)).toBeTruthy()
+      expect(screen.getByText(/Minor \(1\)/)).toBeInTheDocument()
 
-      // Rerender with +1 minor finding
+      // Open the accordion by clicking the trigger
+      const trigger = screen.getByText(/Minor \(1\)/)
+      fireEvent.click(trigger)
+
+      // Verify accordion content is visible (finding row inside accordion)
+      const rows = screen.getAllByTestId('finding-compact-row')
+      expect(rows.length).toBe(1)
+
+      // Rerender with +1 minor finding (simulating Realtime push)
       const updatedFindings = [
         ...findings,
         buildFindingForUI({ id: 'n2', severity: 'minor', aiConfidence: 40 }),
@@ -321,7 +329,11 @@ describe('FindingList', () => {
       rerender(<FindingList {...defaultProps({ findings: updatedFindings })} />)
 
       // Count should update to "Minor (2)"
-      expect(screen.getByText(/Minor \(2\)/)).toBeTruthy()
+      expect(screen.getByText(/Minor \(2\)/)).toBeInTheDocument()
+
+      // Accordion should STAY OPEN — both rows visible
+      const updatedRows = screen.getAllByTestId('finding-compact-row')
+      expect(updatedRows.length).toBe(2)
     })
   })
 
@@ -398,7 +410,7 @@ describe('FindingList', () => {
       render(<FindingList {...defaultProps({ findings })} />)
 
       // Minor accordion should show exactly "Minor (7)"
-      expect(screen.getByText(/Minor \(7\)/)).toBeTruthy()
+      expect(screen.getByText(/Minor \(7\)/)).toBeInTheDocument()
     })
 
     it('[B10][P1] should maintain stable sort order when findings have equal confidence', () => {

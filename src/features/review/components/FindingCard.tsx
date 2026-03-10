@@ -151,7 +151,7 @@ export function FindingCard({
         <ConfidenceBadge confidence={finding.aiConfidence} confidenceMin={confidenceMin} />
 
         {/* Quick action icons — disabled until Story 4.2 */}
-        <div className="flex items-center gap-1 shrink-0">
+        <div role="group" className="flex items-center gap-1 shrink-0" aria-label="Quick actions">
           <button
             type="button"
             disabled

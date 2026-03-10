@@ -11,6 +11,7 @@ import {
   L3_CONFIRMED_MARKER,
   L3_DISAGREES_MARKER,
   computeConfidenceMin,
+  isCjkLang,
   isFallbackModel,
   truncate,
 } from '@/features/review/utils/finding-display'
@@ -95,11 +96,15 @@ export function FindingCardCompact({
       {/* Source→Target preview (truncated) — Guardrail #39: lang attr */}
       <span className="flex-1 min-w-0 text-xs text-muted-foreground truncate">
         {finding.sourceTextExcerpt && (
-          <span lang={sourceLang}>{truncate(finding.sourceTextExcerpt, 60)}</span>
+          <span lang={sourceLang} className={isCjkLang(sourceLang) ? 'text-cjk-scale' : undefined}>
+            {truncate(finding.sourceTextExcerpt, 60)}
+          </span>
         )}
         {finding.sourceTextExcerpt && finding.targetTextExcerpt && ' → '}
         {finding.targetTextExcerpt && (
-          <span lang={targetLang}>{truncate(finding.targetTextExcerpt, 60)}</span>
+          <span lang={targetLang} className={isCjkLang(targetLang) ? 'text-cjk-scale' : undefined}>
+            {truncate(finding.targetTextExcerpt, 60)}
+          </span>
         )}
       </span>
 

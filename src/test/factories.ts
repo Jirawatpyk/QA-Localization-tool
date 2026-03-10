@@ -604,7 +604,7 @@ export function buildFindingForUI(overrides?: Record<string, unknown>): FindingF
   })
 
   return {
-    id: (overrides?.['id'] as string) ?? dbFinding.segmentId ?? `finding-${Date.now()}`,
+    id: (overrides?.['id'] as string) ?? faker.string.uuid(),
     severity: (dbFinding.severity ?? 'major') as FindingSeverity,
     category: dbFinding.category ?? 'accuracy',
     description: dbFinding.description ?? 'Test finding',

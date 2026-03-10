@@ -299,7 +299,7 @@ describe('FindingCardCompact', () => {
     )
 
     const row = screen.getByRole('row')
-    expect(row.className).toMatch(/animate-fade/)
+    expect(row.className).toMatch(/animate-fade-in/)
   })
 
   // ── B1 [P1]: Category exactly 20 chars → no truncation ──

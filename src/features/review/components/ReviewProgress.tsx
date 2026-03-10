@@ -2,6 +2,7 @@
 
 import { Progress } from '@/components/ui/progress'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import type { LayerCompleted } from '@/types/finding'
 import type { DbFileStatus, ProcessingMode } from '@/types/pipeline'
 
 export type ReviewProgressProps = {
@@ -9,11 +10,13 @@ export type ReviewProgressProps = {
   totalCount: number
   fileStatus: DbFileStatus
   processingMode: ProcessingMode
-  layerCompleted?: string | null | undefined
+  layerCompleted?: LayerCompleted | null | undefined
 }
 
 /** Map layerCompleted to an equivalent DbFileStatus for progress derivation */
-function deriveStatusFromLayer(layerCompleted: string | null | undefined): DbFileStatus | null {
+function deriveStatusFromLayer(
+  layerCompleted: LayerCompleted | null | undefined,
+): DbFileStatus | null {
   if (layerCompleted === 'L1L2L3') return 'l3_completed'
   if (layerCompleted === 'L1L2') return 'l2_completed'
   if (layerCompleted === 'L1') return 'l1_completed'
@@ -69,9 +72,11 @@ export function ReviewProgress({
 }: ReviewProgressProps) {
   const reducedMotion = useReducedMotion()
 
-  // Use layerCompleted (Realtime) over stale fileStatus when it shows more progress
-  const layerDerivedStatus = deriveStatusFromLayer(layerCompleted)
-  const effectiveStatus = layerDerivedStatus ?? fileStatus
+  // Failed/partial statuses take priority — never hide error state behind Realtime override
+  const effectiveStatus =
+    fileStatus === 'failed' || fileStatus === 'ai_partial'
+      ? fileStatus
+      : (deriveStatusFromLayer(layerCompleted) ?? fileStatus)
 
   const reviewPercent = totalCount > 0 ? Math.round((reviewedCount / totalCount) * 100) : 0
   const aiProgress = getAiProgress(effectiveStatus, processingMode)

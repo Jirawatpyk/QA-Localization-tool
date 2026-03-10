@@ -509,10 +509,57 @@ Pattern: Conventional Commits, `fix(scope): description`. Recent focus on E2E st
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
+None
+
 ### Completion Notes List
 
+1. **FindingCard/FindingCardCompact split** — Refactored FindingListItem into 2 components: FindingCard (expanded detail) + FindingCardCompact (compact scanning row). FindingListItem + 5 test files deleted (−1,259 lines dead code).
+2. **finding-display.ts utility extraction** — 5 pure functions (stripL3Markers, isCjkLang, isFallbackModel, computeConfidenceMin, truncate) extracted for DRY across Card/Compact. 32 dedicated unit tests.
+3. **Progressive disclosure** — FindingList sorts by severity→confidence, groups into Critical (auto-expanded)/Major (compact)/Minor (accordion). Accordion state preserved across Realtime re-renders.
+4. **ReviewProgress dual-track** — Redesigned to show "Reviewed: X/N" + "AI: status" tracks. `deriveStatusFromLayer()` maps Realtime `layerCompleted` to `DbFileStatus` with failed/partial priority guard.
+5. **TD-TENANT-003 resolved** — tenantId threaded through page.tsx → ReviewPageClient → all 3 subscription hooks (findings, score, threshold). Compound Realtime filter + polling fallback.
+6. **TD-E2E-014 deferred** — J/K keyboard nav E2E skipped → Story 4.1b target.
+7. **buildFindingForUI factory** — Shared factory extracted to `src/test/factories.ts`, used by 3 test files.
+8. **CR R1 (12 findings)** — All fixed: DRY extraction (M1), dead code deletion (H2+M5), STATUS_BG typing (H1), role="row" consolidation (M3), announce tests (M4), SeverityIndicator cleanup (M2).
+9. **CR R2 (12 findings)** — All fixed: failed status priority (H1), E2E text mismatch (H2), finding-display tests (H3), deriveStatusFromLayer tests (M1), CJK scale on compact (M2), toBeTruthy→toBeInTheDocument (M3), animate-fade-in regex (M4), aria-live container (M5), role="group" on FindingCard (L2), layerCompleted type tightened (L3), factory id fix (L4).
+
 ### File List
+
+**New files:**
+- `src/features/review/components/FindingCard.tsx` — Expanded detail view
+- `src/features/review/components/FindingCard.test.tsx` — 22 tests
+- `src/features/review/components/FindingCardCompact.tsx` — Compact scanning row
+- `src/features/review/components/FindingCardCompact.test.tsx` — 16 tests
+- `src/features/review/components/FindingList.tsx` — Progressive disclosure container
+- `src/features/review/components/FindingList.test.tsx` — 20 tests
+- `src/features/review/components/SeverityIndicator.tsx` — Pure severity badge
+- `src/features/review/components/SeverityIndicator.test.tsx` — 4 tests
+- `src/features/review/utils/finding-display.ts` — Shared utility functions
+- `src/features/review/utils/finding-display.test.ts` — 32 tests
+- `src/features/review/types.ts` — FindingForDisplay type
+
+**Modified files:**
+- `src/features/review/components/ReviewPageClient.tsx` — Progressive disclosure rendering, tenantId prop, aria-live fix
+- `src/features/review/components/ReviewProgress.tsx` — Dual-track redesign, deriveStatusFromLayer, failed priority guard
+- `src/features/review/components/ReviewProgress.test.tsx` — 18 tests (12 original + 6 layerCompleted override)
+- `src/features/review/hooks/use-findings-subscription.ts` — TD-TENANT-003 tenantId filter + announce()
+- `src/features/review/hooks/use-findings-subscription.test.ts` — 18 tests (+2 announce)
+- `src/features/review/hooks/use-score-subscription.ts` — TD-TENANT-003 tenantId filter
+- `src/features/review/hooks/use-score-subscription.test.ts` — 21 tests (+1 tenantId)
+- `src/features/review/hooks/use-threshold-subscription.ts` — TD-TENANT-003 tenantId filter
+- `src/app/(app)/projects/[projectId]/review/[fileId]/page.tsx` — Pass tenantId
+- `src/test/factories.ts` — buildFindingForUI shared factory
+- `e2e/review-l3-findings.spec.ts` — L3 Confirmed text fix
+- `_bmad-output/implementation-artifacts/tech-debt-tracker.md` — TD-TENANT-003 RESOLVED
+
+**Deleted files:**
+- `src/features/review/components/FindingListItem.tsx` (212 lines)
+- `src/features/review/components/FindingListItem.test.tsx` (224 lines)
+- `src/features/review/components/FindingListItem.story33.test.tsx` (113 lines)
+- `src/features/review/components/FindingListItem.story34.test.tsx` (181 lines)
+- `src/features/review/components/FindingListItem.story35.test.tsx` (314 lines)
+- `src/features/review/hooks/use-announce.ts` (10 lines)
