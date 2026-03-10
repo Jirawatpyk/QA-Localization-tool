@@ -53,6 +53,7 @@ export function FindingList({
   const { register } = useKeyboardActions()
   const { pushEscapeLayer, popEscapeLayer } = useFocusManagement()
   const gridRef = useRef<HTMLDivElement>(null)
+  const gridFocusRafRef = useRef<number>(0)
 
   // Track previous finding IDs to detect new findings (for announce + new-finding animation)
   const [prevIds, setPrevIds] = useState<Set<string>>(new Set<string>())
@@ -261,9 +262,10 @@ export function FindingList({
       const isRowFocused = (e.target as HTMLElement).closest('[data-finding-id]') !== null
       if (isRowFocused) return
 
-      // Edge case: grid container itself received focus — redirect to active row (L1: rAF safe — gridRef null = no-op)
+      // Edge case: grid container itself received focus — redirect to active row
       if (activeFindingId) {
-        requestAnimationFrame(() => {
+        cancelAnimationFrame(gridFocusRafRef.current)
+        gridFocusRafRef.current = requestAnimationFrame(() => {
           const row = gridRef.current?.querySelector(
             `[data-finding-id="${CSS.escape(activeFindingId)}"]`,
           ) as HTMLElement | null

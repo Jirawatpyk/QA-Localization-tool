@@ -382,16 +382,15 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       expect(rows[2]!).toHaveAttribute('tabindex', '0')
     })
 
-    it('[T3.2][P1] should restore previously active row on Shift+Tab re-entry', () => {
-      // GIVEN: User navigated to m1
+    it('[T3.2][P1] should persist activeFindingId after J navigation (roving tabindex)', () => {
+      // GIVEN: Default findings rendered, active on c1 (index 0)
       render(<FindingList {...defaultProps()} />)
 
-      // Navigate to m1 (index 2)
+      // WHEN: Navigate J once → moves to c2 (index 1, sorted by confidence desc)
       pressKey('j')
 
-      // activeFindingId persists — c2 should stay active (J navigated once → index 1)
+      // THEN: c2 has tabindex=0 (activeFindingId persists across renders)
       const rows = screen.getAllByTestId('finding-compact-row')
-      // c2 is at index 1 (sorted by confidence desc)
       expect(rows[1]!).toHaveAttribute('tabindex', '0')
     })
 
@@ -429,6 +428,28 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
 
       // THEN: m1 becomes active (tabindex=0), c1 becomes inactive (tabindex=-1)
       expect(rows[1]!).toHaveAttribute('tabindex', '0')
+      expect(rows[0]!).toHaveAttribute('tabindex', '-1')
+    })
+
+    it('[T3.6][P1] should sync activeFindingId when clicking Minor row with accordion OPEN', () => {
+      // GIVEN: accordion OPEN, active on c1
+      render(<FindingList {...defaultProps()} />)
+      const trigger = screen.getByText(/Minor \(2\)/)
+      fireEvent.click(trigger)
+
+      const rows = screen.getAllByTestId('finding-compact-row')
+      // c1 is active
+      expect(rows[0]!).toHaveAttribute('tabindex', '0')
+
+      // Find Minor row n1 (now in DOM + flattenedIds since accordion is open)
+      const minorRow = rows.find((r) => r.getAttribute('data-finding-id') === 'n1')
+      expect(minorRow).toBeDefined()
+
+      // WHEN: Click the Minor row
+      fireEvent.click(minorRow!)
+
+      // THEN: n1 becomes active (in flattenedIds when accordion open)
+      expect(minorRow!).toHaveAttribute('tabindex', '0')
       expect(rows[0]!).toHaveAttribute('tabindex', '-1')
     })
 
@@ -721,10 +742,8 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
 
       pressKey('j')
 
-      // When reduced motion, scrollIntoView should be called with 'instant'
-      if (scrollSpy.mock.calls.length > 0) {
-        expect(scrollSpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'instant' }))
-      }
+      // When reduced motion, scrollIntoView MUST be called with 'instant' (no conditional — anti-pattern #39)
+      expect(scrollSpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'instant' }))
 
       rafSpy.mockRestore()
       scrollSpy.mockRestore()
@@ -853,30 +872,41 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
   // ═══════════════════════════════════════════════════════════════════════
 
   describe('Party Mode: Additional Tests', () => {
-    it('[T-IME-01][P1] should suppress J/K during IME composition (Thai/CJK input)', () => {
+    it('[T-IME-01][P1] should delegate J/K to useKeyboardActions which handles IME guard', () => {
       // GIVEN: FindingList rendered with findings
       render(<FindingList {...defaultProps()} />)
 
-      // THEN: J handler is registered via useKeyboardActions which has IME guard
-      const jCall = mockRegister.mock.calls.find((call: RegisterCall) => call[0] === 'j')
-      expect(jCall).toBeDefined()
-      // IME guard is handled by useKeyboardActions (isComposing || keyCode===229)
-      // FindingList delegates to the hook — no bypass possible
+      // THEN: J/K registered via useKeyboardActions (which has built-in IME guard)
+      // Verify all 4 navigation keys are registered (no direct keydown bypass)
+      const registeredKeys = mockRegister.mock.calls.map((call: RegisterCall) => call[0])
+      expect(registeredKeys).toContain('j')
+      expect(registeredKeys).toContain('k')
+      expect(registeredKeys).toContain('ArrowDown')
+      expect(registeredKeys).toContain('ArrowUp')
+      // IME suppression (isComposing || keyCode===229) is handled by the hook internally
+      // No direct keydown handler on grid means no IME bypass path exists
     })
 
-    it('[T-SCROLL-01][P1] should call scrollIntoView when navigating to off-screen finding', () => {
+    it('[T-SCROLL-01][P1] should call focus() on target row after J navigation via rAF', () => {
       const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
         cb(0)
         return 0
       })
+      const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus')
 
-      render(<FindingList {...defaultProps()} />)
+      const findings = [
+        buildFindingForUI({ id: 'c1', severity: 'critical', aiConfidence: 95 }),
+        buildFindingForUI({ id: 'm1', severity: 'major', aiConfidence: 80 }),
+      ]
+      render(<FindingList {...defaultProps({ findings })} />)
 
-      // After J navigation, DOM focus is triggered via requestAnimationFrame
       pressKey('j')
-      expect(rafSpy).toHaveBeenCalled()
+
+      // focus() should have been called on the target row (via rAF)
+      expect(focusSpy).toHaveBeenCalled()
 
       rafSpy.mockRestore()
+      focusSpy.mockRestore()
     })
 
     it('[T-CLEANUP-01][P1] should call cleanup functions on unmount (no memory leak)', () => {

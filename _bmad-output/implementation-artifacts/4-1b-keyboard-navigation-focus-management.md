@@ -1,6 +1,6 @@
 # Story 4.1b: Keyboard Navigation & Focus Management
 
-Status: review
+Status: done
 
 > **BLOCKED BY:** Story 4.1a must be `done` (currently `done` ✓). Verify latest main includes all 4.1a changes before starting.
 
@@ -516,13 +516,22 @@ Ran 3 mandatory pre-CR agents before CR R1 submission:
   - L2: Escape layer comment clarifying hierarchy intent
   - React Compiler lint fix: `activeFindingIdRef.current` assignment moved to useEffect
   - Post-fix: 45 keyboard tests pass, 399 review tests pass, type-check + lint clean
+- **CR R2 fix (6 findings: 0C+1H+2M+3L):**
+  - H1: T6.4 conditional assertion removed — unconditional `expect(scrollSpy)` (anti-pattern #39)
+  - M1: T3.2 test renamed to match actual behavior (`roving tabindex` not `DOM focus`)
+  - M2: T3.6 new test — Minor click with accordion OPEN syncs activeFindingId
+  - L1: `gridFocusRafRef` + `cancelAnimationFrame` in handleGridFocus (leak prevention)
+  - L2: T-IME-01 improved — asserts all 4 registered keys (j/k/ArrowDown/ArrowUp)
+  - L3: T-SCROLL-01 deduplicated — focus spy assertion replaces coverage-only test
+  - Post-fix: 46 keyboard tests pass, 400 review tests pass, type-check + lint clean
+- **CR exit: 0C+0H after R2 fixes — Story DONE**
 
 ### File List
 
 | File | Action | Description |
 |------|--------|-------------|
-| `src/features/review/components/FindingList.tsx` | MODIFIED | Core keyboard navigation: flattenedIds, ID-based focus tracking, J/K/Arrow registration, auto-collapse (DD#11), escape layers, Tab re-entry, Minor accordion integration, focus stability (AC5). CR R1: mount guard (H1), rAF cleanup (H3), mouse sync (M2), escape layer fix (M3), ref-in-useEffect lint fix |
-| `src/features/review/components/FindingList.keyboard.test.tsx` | MODIFIED | 45 ATDD tests (44 original + 1 new T3.5). CR R1: T3.3 rAF mock (H2), T3.5 mouse click sync (M2) |
+| `src/features/review/components/FindingList.tsx` | MODIFIED | Core keyboard navigation: flattenedIds, ID-based focus tracking, J/K/Arrow registration, auto-collapse (DD#11), escape layers, Tab re-entry, Minor accordion integration, focus stability (AC5). CR R1: mount guard (H1), rAF cleanup (H3), mouse sync (M2), escape layer fix (M3), ref-in-useEffect lint fix. CR R2: gridFocusRafRef leak fix (L1) |
+| `src/features/review/components/FindingList.keyboard.test.tsx` | MODIFIED | 46 ATDD tests (44 original + T3.5 + T3.6). CR R1: T3.3 rAF mock (H2), T3.5 mouse click sync (M2). CR R2: T6.4 unconditional assertion (H1), T3.2 rename (M1), T3.6 Minor accordion click (M2), T-IME-01 improved (L2), T-SCROLL-01 deduplicated (L3) |
 | `src/features/review/components/FindingCardCompact.tsx` | MODIFIED | Added `findingIndex`/`totalFindings` props, `aria-label`, `aria-rowindex`. CR R1: `role="gridcell"` wrapper (M1) |
 | `src/features/review/components/FindingCardCompact.test.tsx` | MODIFIED | Updated all renders with new required props |
 | `src/features/review/components/ReviewPageClient.tsx` | MODIFIED | Removed `role="grid"` from wrapper (moved to FindingList) |
