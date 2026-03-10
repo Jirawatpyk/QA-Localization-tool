@@ -30,7 +30,7 @@
 - `story-4-1a-findings.md` — Story 4.1a Finding List Display & Progressive Disclosure CR R1 (0C/3H/5M/5L)
 - `story-4-0-findings.md` — Story 4.0 Review Infrastructure CR R1-R2 (R2: 0C/1H/3M/5L)
 - `story-4-0-findings.md` — Story 4.0 Review Infrastructure & Keyboard Foundation CR R1 (0C/4H/7M/6L)
-- `story-4-1b-findings.md` — Story 4.1b Keyboard Navigation & Focus Management CR R1 (0C/4H/6M/5L)
+- `story-4-1b-findings.md` — Story 4.1b Keyboard Navigation & Focus Management CR R1 (1C/3H/8M/4L)
 
 ## Recurring Anti-Patterns (check EVERY review)
 
@@ -252,6 +252,13 @@
 - Pattern recurs with @dnd-kit (getBoundingClientRect = 0 in jsdom)
 - Fix: extract pure function and test directly, or use `it.skipIf` with explicit reason
 - **Check during review:** Search for `if.*mock.*calls.*length.*>.*0` in test files
+
+### 41. requestAnimationFrame in useEffect Without Cleanup (Story 4.1b)
+
+- useEffect calls rAF but no `cancelAnimationFrame(rafId)` in cleanup
+- Rapid state changes queue multiple rAF callbacks; unmount fires them on stale refs
+- Fix: `const rafId = requestAnimationFrame(...); return () => cancelAnimationFrame(rafId)`
+- **Check during review:** Every `requestAnimationFrame` inside `useEffect` must have cleanup
 
 ### 40. queueMicrotask Buffer Race with Synchronous Handlers (Story 3.2c R3)
 

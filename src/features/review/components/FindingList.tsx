@@ -161,11 +161,18 @@ export function FindingList({
 
   // DOM focus wiring — focus the active row after activeFindingId changes
   const prevActiveFindingIdRef = useRef<string | null>(null)
+  const focusRafRef = useRef<number>(0)
   useEffect(() => {
-    if (activeFindingId === null || activeFindingId === prevActiveFindingIdRef.current) return
+    if (activeFindingId === null) return
+    // G#40: Skip focus on initial mount (null → first ID transition)
+    if (prevActiveFindingIdRef.current === null) {
+      prevActiveFindingIdRef.current = activeFindingId
+      return
+    }
+    if (activeFindingId === prevActiveFindingIdRef.current) return
     prevActiveFindingIdRef.current = activeFindingId
 
-    requestAnimationFrame(() => {
+    focusRafRef.current = requestAnimationFrame(() => {
       const row = gridRef.current?.querySelector(
         `[data-finding-id="${CSS.escape(activeFindingId)}"]`,
       ) as HTMLElement | null
@@ -178,6 +185,7 @@ export function FindingList({
         }
       }
     })
+    return () => cancelAnimationFrame(focusRafRef.current)
   }, [activeFindingId, reducedMotion])
 
   // Navigate to next finding (J / ArrowDown)
@@ -217,36 +225,43 @@ export function FindingList({
   }, [register, navigateNext, navigatePrev])
 
   // Escape layer management for expanded cards (AC2, Guardrail #31)
-  const prevExpandedForEscape = useRef<Set<string>>(new Set())
+  // Tracks "any finding expanded" as a single layer. Close callback uses ref for latest
+  // activeFindingId to avoid stale closure. Per-row Esc handler (FindingCardCompact.handleKeyDown)
+  // handles actual collapse; this layer maintains hierarchy state for future integration (L2 note).
+  const activeFindingIdRef = useRef<string | null>(null)
   useEffect(() => {
-    // Push escape layer when active finding becomes expanded
-    if (
-      activeFindingId &&
-      expandedIds.has(activeFindingId) &&
-      !prevExpandedForEscape.current.has(activeFindingId)
-    ) {
+    activeFindingIdRef.current = activeFindingId
+  }, [activeFindingId])
+  const prevExpandedForEscape = useRef<boolean>(false)
+  useEffect(() => {
+    const hasExpanded = expandedIds.size > 0
+    const hadExpanded = prevExpandedForEscape.current
+    if (hasExpanded && !hadExpanded) {
       pushEscapeLayer('expanded', () => {
-        onToggleExpand(activeFindingId)
+        const currentId = activeFindingIdRef.current
+        if (currentId) {
+          onToggleExpand(currentId)
+        }
       })
     }
-    // Pop escape layer when active finding becomes collapsed
-    if (
-      activeFindingId &&
-      !expandedIds.has(activeFindingId) &&
-      prevExpandedForEscape.current.has(activeFindingId)
-    ) {
+    if (!hasExpanded && hadExpanded) {
       popEscapeLayer('expanded')
     }
-    prevExpandedForEscape.current = new Set(expandedIds)
-  }, [activeFindingId, expandedIds, onToggleExpand, pushEscapeLayer, popEscapeLayer])
+    prevExpandedForEscape.current = hasExpanded
+  }, [expandedIds, onToggleExpand, pushEscapeLayer, popEscapeLayer])
 
-  // Grid focus handler — restore active row on Tab re-entry (AC3)
+  // Grid focus handler — redirect to active row only if grid container itself received focus (AC3)
+  // Roving tabindex handles Tab/Shift+Tab entry natively (active row has tabIndex=0)
   const handleGridFocus = useCallback(
     (e: React.FocusEvent<HTMLDivElement>) => {
-      // Only handle focus entering the grid (not focus moving between rows)
+      // Skip internal focus moves (between rows within grid)
       if (gridRef.current?.contains(e.relatedTarget as Node)) return
 
-      // Restore focus to the active row
+      // Tab/click on a finding row — roving tabindex already handled, no redirect needed
+      const isRowFocused = (e.target as HTMLElement).closest('[data-finding-id]') !== null
+      if (isRowFocused) return
+
+      // Edge case: grid container itself received focus — redirect to active row (L1: rAF safe — gridRef null = no-op)
       if (activeFindingId) {
         requestAnimationFrame(() => {
           const row = gridRef.current?.querySelector(
@@ -259,6 +274,19 @@ export function FindingList({
       }
     },
     [activeFindingId],
+  )
+
+  // Grid click handler — sync activeFindingId when mouse clicks a finding row (M2 fix)
+  const handleGridClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const targetRow = (e.target as HTMLElement).closest('[data-finding-id]') as HTMLElement | null
+      if (!targetRow) return
+      const clickedId = targetRow.getAttribute('data-finding-id')
+      if (clickedId && clickedId !== activeFindingId && flattenedIds.includes(clickedId)) {
+        setActiveFindingId(clickedId)
+      }
+    },
+    [activeFindingId, flattenedIds],
   )
 
   // Pre-compute global index map for all findings (including closed accordion)
@@ -328,6 +356,7 @@ export function FindingList({
       aria-rowcount={totalFindings}
       className="space-y-2"
       onFocus={handleGridFocus}
+      onClick={handleGridClick}
     >
       {/* Critical section — auto-expanded */}
       {groups.critical.length > 0 && (

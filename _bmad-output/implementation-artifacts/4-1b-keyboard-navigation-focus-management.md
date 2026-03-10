@@ -490,6 +490,13 @@ Claude Opus 4.6
 - 39 regressions in ReviewPageClient tests → missing `useKeyboardActions`/`useFocusManagement` mocks
 - 1 regression in story40 test → `role="grid"` moved to FindingList, need findings to render grid
 
+### Pre-CR Scan Documentation
+
+Ran 3 mandatory pre-CR agents before CR R1 submission:
+1. **code-quality-analyzer** — Identified: 1C (false positive — mount guard present), 3H, 8M, 4L
+2. **anti-pattern-detector** — No anti-pattern violations found
+3. **tenant-isolation-checker** — N/A (no DB queries in 4.1b)
+
 ### Completion Notes List
 
 - All 44 ATDD keyboard tests pass (0 skipped)
@@ -497,14 +504,26 @@ Claude Opus 4.6
 - Type-check clean, lint clean on modified files
 - TD-E2E-014 resolved — E1 test unskipped with inline expand assertions
 - Pre-existing flaky tests (TaxonomyManager DnD) pass individually — not a regression
+- **CR R1 fix (9 findings: 3H+4M+2L):**
+  - H1: DOM focus useEffect mount guard — skip `.focus()` on null→first ID transition (G#40)
+  - H2: T3.3 test strengthened with rAF mock for proper focus stealing detection
+  - H3: `cancelAnimationFrame` cleanup added to DOM focus useEffect
+  - M1: Added `role="gridcell"` wrapper in FindingCardCompact (ARIA Grid Pattern)
+  - M2: Mouse click → activeFindingId sync via handleGridClick + new T3.5 test
+  - M3: Escape layer boolean tracking with ref for latest activeFindingId (prevents accumulation)
+  - M4: Pre-CR scan documentation added to story file
+  - L1: handleGridFocus simplified with comment (rAF null safety)
+  - L2: Escape layer comment clarifying hierarchy intent
+  - React Compiler lint fix: `activeFindingIdRef.current` assignment moved to useEffect
+  - Post-fix: 45 keyboard tests pass, 399 review tests pass, type-check + lint clean
 
 ### File List
 
 | File | Action | Description |
 |------|--------|-------------|
-| `src/features/review/components/FindingList.tsx` | MODIFIED | Core keyboard navigation: flattenedIds, ID-based focus tracking, J/K/Arrow registration, auto-collapse (DD#11), escape layers, Tab re-entry, Minor accordion integration, focus stability (AC5) |
-| `src/features/review/components/FindingList.keyboard.test.tsx` | MODIFIED | All 44 ATDD test stubs activated (removed `it.skip()`), handler-capturing mock pattern |
-| `src/features/review/components/FindingCardCompact.tsx` | MODIFIED | Added `findingIndex`/`totalFindings` props, `aria-label`, `aria-rowindex` |
+| `src/features/review/components/FindingList.tsx` | MODIFIED | Core keyboard navigation: flattenedIds, ID-based focus tracking, J/K/Arrow registration, auto-collapse (DD#11), escape layers, Tab re-entry, Minor accordion integration, focus stability (AC5). CR R1: mount guard (H1), rAF cleanup (H3), mouse sync (M2), escape layer fix (M3), ref-in-useEffect lint fix |
+| `src/features/review/components/FindingList.keyboard.test.tsx` | MODIFIED | 45 ATDD tests (44 original + 1 new T3.5). CR R1: T3.3 rAF mock (H2), T3.5 mouse click sync (M2) |
+| `src/features/review/components/FindingCardCompact.tsx` | MODIFIED | Added `findingIndex`/`totalFindings` props, `aria-label`, `aria-rowindex`. CR R1: `role="gridcell"` wrapper (M1) |
 | `src/features/review/components/FindingCardCompact.test.tsx` | MODIFIED | Updated all renders with new required props |
 | `src/features/review/components/ReviewPageClient.tsx` | MODIFIED | Removed `role="grid"` from wrapper (moved to FindingList) |
 | `src/features/review/components/ReviewPageClient.test.tsx` | MODIFIED | Added `useKeyboardActions`/`useFocusManagement` mocks |

@@ -389,19 +389,47 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       // Navigate to m1 (index 2)
       pressKey('j')
 
-      // activeFindingId persists — m1 should stay active
+      // activeFindingId persists — c2 should stay active (J navigated once → index 1)
       const rows = screen.getAllByTestId('finding-compact-row')
-      const m1Row = rows.find((r) => r.getAttribute('data-finding-id') === 'm1')
-      // c2 is at index 1 (sorted by confidence desc), m1 at index 2
+      // c2 is at index 1 (sorted by confidence desc)
       expect(rows[1]!).toHaveAttribute('tabindex', '0')
     })
 
-    it('[T3.3][P0] should NOT auto-focus grid on mount (G#40) — verify unchanged', () => {
-      // GIVEN: Fresh render
+    it('[T3.3][P0] should NOT auto-focus grid on mount (G#40) — rAF flushed', () => {
+      // H2 fix: Mock rAF to execute synchronously so focus stealing would be detected
+      const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+        cb(0)
+        return 0
+      })
+
+      // GIVEN: Fresh render with rAF executing inline
       render(<FindingList {...defaultProps()} />)
 
-      // THEN: No element inside FindingList is focused
+      // THEN: No element inside FindingList is focused (G#40 mount guard prevents it)
       expect(document.activeElement).toBe(document.body)
+
+      rafSpy.mockRestore()
+    })
+
+    it('[T3.5][P1] should sync activeFindingId when mouse clicks a different finding row (M2)', () => {
+      // GIVEN: Active on c1, 3 findings
+      const findings = [
+        buildFindingForUI({ id: 'c1', severity: 'critical', aiConfidence: 95 }),
+        buildFindingForUI({ id: 'm1', severity: 'major', aiConfidence: 90 }),
+        buildFindingForUI({ id: 'm2', severity: 'major', aiConfidence: 70 }),
+      ]
+      render(<FindingList {...defaultProps({ findings })} />)
+
+      const rows = screen.getAllByTestId('finding-compact-row')
+      // Initially c1 is active
+      expect(rows[0]!).toHaveAttribute('tabindex', '0')
+
+      // WHEN: Mouse click on m1 row
+      fireEvent.click(rows[1]!)
+
+      // THEN: m1 becomes active (tabindex=0), c1 becomes inactive (tabindex=-1)
+      expect(rows[1]!).toHaveAttribute('tabindex', '0')
+      expect(rows[0]!).toHaveAttribute('tabindex', '-1')
     })
 
     it('[T3.4][P2] should let Tab exit grid to next landmark (native behavior)', () => {
