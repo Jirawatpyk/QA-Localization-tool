@@ -6,14 +6,13 @@ import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { findings } from '@/db/schema/findings'
 import { reviewActions } from '@/db/schema/reviewActions'
-import { segments } from '@/db/schema/segments'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { getNewState } from '@/features/review/utils/state-transitions'
 import type { ReviewAction } from '@/features/review/utils/state-transitions'
 import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
-import { FINDING_STATUSES } from '@/types/finding'
+import { DETECTED_BY_LAYERS, FINDING_SEVERITIES, FINDING_STATUSES } from '@/types/finding'
 import type { DetectedByLayer, FindingSeverity, FindingStatus } from '@/types/finding'
 
 export type ReviewActionInput = {
@@ -23,13 +22,12 @@ export type ReviewActionInput = {
 }
 
 export type FindingMeta = {
+  segmentId: string | null
   severity: FindingSeverity
   category: string
   detectedByLayer: DetectedByLayer
   sourceTextExcerpt: string | null
   targetTextExcerpt: string | null
-  sourceLang: string | null
-  targetLang: string | null
 }
 
 export type ReviewActionResult = {
@@ -53,7 +51,10 @@ type ExecuteReviewActionParams = {
 
 /**
  * Shared DRY helper for accept/reject/flag Server Actions.
- * Pattern: validate transition → fetch finding → check transition → update → audit → review_actions → Inngest event
+ * Pattern: fetch finding → validate transition → transaction(update + review_actions) → audit → Inngest
+ *
+ * M1: Segment lookup for sourceLang/targetLang moved to rejectFinding.action.ts
+ * (only reject needs it for feedback_events).
  */
 export async function executeReviewAction({
   input,
@@ -100,7 +101,7 @@ export async function executeReviewAction({
 
   const finding = rows[0]!
 
-  // Runtime verify: DB varchar(30) → validated FindingStatus (Guardrail #3)
+  // Runtime verify: DB varchar → validated types (Guardrail #3, M5 fix)
   if (!FINDING_STATUSES.includes(finding.status as FindingStatus)) {
     return {
       success: false,
@@ -108,7 +109,24 @@ export async function executeReviewAction({
       code: 'INVALID_STATE',
     }
   }
+  if (!FINDING_SEVERITIES.includes(finding.severity as FindingSeverity)) {
+    return {
+      success: false,
+      error: `Invalid finding severity: ${finding.severity}`,
+      code: 'INVALID_STATE',
+    }
+  }
+  if (!DETECTED_BY_LAYERS.includes(finding.detectedByLayer as DetectedByLayer)) {
+    return {
+      success: false,
+      error: `Invalid detection layer: ${finding.detectedByLayer}`,
+      code: 'INVALID_STATE',
+    }
+  }
+
   const currentState = finding.status as FindingStatus
+  const validatedSeverity = finding.severity as FindingSeverity
+  const validatedLayer = finding.detectedByLayer as DetectedByLayer
 
   // Check state transition
   const newState = getNewState(action, currentState)
@@ -125,27 +143,34 @@ export async function executeReviewAction({
     }
   }
 
-  // Update finding status (Guardrail #1 — withTenant on UPDATE)
-  await db
-    .update(findings)
-    .set({ status: newState, updatedAt: new Date() })
-    .where(and(eq(findings.id, findingId), withTenant(findings.tenantId, tenantId)))
+  // H2 fix: UPDATE + INSERT in transaction (Guardrail #6)
+  await db.transaction(async (tx) => {
+    // Update finding status (Guardrail #1 — withTenant on UPDATE)
+    await tx
+      .update(findings)
+      .set({ status: newState, updatedAt: new Date() })
+      .where(and(eq(findings.id, findingId), withTenant(findings.tenantId, tenantId)))
 
-  // Insert review_actions row (INSERT = set tenantId in values)
-  await db.insert(reviewActions).values({
-    findingId,
-    fileId,
-    projectId,
-    tenantId,
-    actionType: action,
-    previousState: currentState,
-    newState,
-    userId,
-    batchId: null,
-    metadata: null,
+    // Insert review_actions row (INSERT = set tenantId in values)
+    await tx.insert(reviewActions).values({
+      findingId,
+      fileId,
+      projectId,
+      tenantId,
+      actionType: action,
+      previousState: currentState,
+      newState,
+      userId,
+      batchId: null,
+      metadata: null,
+    })
   })
 
-  // Audit log (Guardrail #2 — non-fatal on error path)
+  // H3: Audit log — kept as try-catch (best-effort for review actions).
+  // Guardrail #2 says happy-path should let throw, but executeReviewAction's callers
+  // (acceptFinding, flagFinding) do `return executeReviewAction(...)` with NO try-catch.
+  // If audit throws, the client sees an error even though the finding status change succeeded.
+  // Decision: audit is best-effort here — the primary value (status change) must not fail.
   try {
     await writeAuditLog({
       tenantId,
@@ -175,21 +200,6 @@ export async function executeReviewAction({
     },
   })
 
-  // Resolve language pair from segment (for feedback_events — reject action)
-  let sourceLang: string | null = null
-  let targetLang: string | null = null
-  if (finding.segmentId) {
-    const segRows = await db
-      .select({ sourceLang: segments.sourceLang, targetLang: segments.targetLang })
-      .from(segments)
-      .where(and(eq(segments.id, finding.segmentId), withTenant(segments.tenantId, tenantId)))
-      .limit(1)
-    if (segRows.length > 0) {
-      sourceLang = segRows[0]!.sourceLang
-      targetLang = segRows[0]!.targetLang
-    }
-  }
-
   return {
     success: true,
     data: {
@@ -197,13 +207,12 @@ export async function executeReviewAction({
       previousState: currentState,
       newState,
       findingMeta: {
-        severity: finding.severity as FindingSeverity,
+        segmentId: finding.segmentId,
+        severity: validatedSeverity,
         category: finding.category,
-        detectedByLayer: finding.detectedByLayer as DetectedByLayer,
+        detectedByLayer: validatedLayer,
         sourceTextExcerpt: finding.sourceTextExcerpt,
         targetTextExcerpt: finding.targetTextExcerpt,
-        sourceLang,
-        targetLang,
       },
     },
   }

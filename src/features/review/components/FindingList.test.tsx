@@ -12,6 +12,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { FindingList } from '@/features/review/components/FindingList'
+import { useReviewStore } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import { buildFindingForUI } from '@/test/factories'
 
@@ -44,6 +45,8 @@ function defaultProps(overrides?: Record<string, unknown>) {
 describe('FindingList', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // CR-C1: reset store to prevent state leakage (FindingList syncs activeFindingId → store)
+    useReviewStore.getState().setSelectedFinding(null)
   })
 
   // ═══════════════════════════════════════════════════════════════════════

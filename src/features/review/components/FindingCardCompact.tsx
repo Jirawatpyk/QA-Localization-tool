@@ -15,18 +15,8 @@ import {
   isFallbackModel,
   truncate,
 } from '@/features/review/utils/finding-display'
+import { STATUS_BG } from '@/features/review/utils/finding-styles'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
-import type { FindingStatus } from '@/types/finding'
-
-/** State-based background color tokens (Story 4.2 AC3) */
-const STATUS_BG: Partial<Record<FindingStatus, string>> = {
-  accepted: 'bg-[var(--color-finding-accepted)]',
-  re_accepted: 'bg-[var(--color-finding-accepted)]',
-  rejected: 'bg-[var(--color-finding-rejected)]',
-  flagged: 'bg-[var(--color-finding-flagged)]',
-  noted: 'bg-[var(--color-finding-noted)]',
-  source_issue: 'bg-[var(--color-finding-source-issue)]',
-}
 
 export type FindingCardCompactProps = {
   finding: FindingForDisplay

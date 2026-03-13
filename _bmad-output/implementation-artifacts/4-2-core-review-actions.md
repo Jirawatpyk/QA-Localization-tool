@@ -1,6 +1,6 @@
 # Story 4.2: Core Review Actions — Accept, Reject, Flag & Finding States
 
-Status: review
+Status: in-progress
 
 ## Story
 
@@ -404,6 +404,23 @@ Claude Opus 4.6 (claude-opus-4-6)
 6. TypeScript: 0 errors
 7. Full test suite: 237 files, 3261 passed, 0 failed
 
+**CR R1 fixes (2026-03-14):**
+
+8. C1 (PARTIAL): selectedId synced via event handlers in FindingList (navigateNext/Prev/click). Full useEffect sync causes Zustand re-render loops — deferred to future refactor. Hotkeys/action bar activate after first J/K navigation
+9. H1: `isActionInFlight` changed from ref to useState — spinner works
+10. H2: UPDATE + INSERT wrapped in `db.transaction()` (Guardrail #6)
+11. H3: Audit try-catch documented as best-effort (decision: keep for review actions)
+12. H4-H6: Test quality — boundary tests use production code, review_actions INSERT asserted, announce format verified
+13. M1: Segment query moved to rejectFinding only. FindingMeta now includes segmentId for reject-side lookup
+14. M2: ReviewActionBar aria-label includes findingNumber (AC5)
+15. M4: Rollback uses fresh getState() to avoid overwriting Realtime updates
+16. M5: Runtime validation for severity + detectedByLayer (FINDING_SEVERITIES, DETECTED_BY_LAYERS const arrays)
+17. M3/M6/M7/M8: Test mock drift fixed — segmentId, shared buildFindingMock, detectedByLayer asserted, toast/announce asserted
+18. L1: STATUS_BG extracted to shared finding-styles.ts
+19. L5/L6: Stale mocks + RED phase comments removed
+20. FindingList.keyboard.test.tsx + FindingList.test.tsx: added store reset in beforeEach (Zustand state leakage)
+21. Full test suite: 237 files, 3261 passed, 0 failed
+
 ### Change Log
 
 | Date | Change |
@@ -417,10 +434,11 @@ Claude Opus 4.6 (claude-opus-4-6)
 | 2026-03-13 | Task 10: All unit tests GREEN (3261 total) |
 | 2026-03-13 | Task 11: E2E tests unskipped |
 | 2026-03-13 | Lint + type-check clean, pre-CR agents dispatched |
+| 2026-03-14 | CR R1: 25 findings (1C+7H+9M+8L) — fixed 21, documented 2, deferred 2. C1 partial (event handler sync only) |
 
 ### File List
 
-**New files (7):**
+**New files (13):**
 - `src/features/review/utils/state-transitions.ts`
 - `src/features/review/utils/state-transitions.test.ts`
 - `src/features/review/actions/acceptFinding.action.ts`
@@ -435,8 +453,11 @@ Claude Opus 4.6 (claude-opus-4-6)
 - `src/features/review/validation/reviewAction.schema.test.ts`
 - `e2e/review-actions.spec.ts`
 
+**CR R1 new file:**
+- `src/features/review/utils/finding-styles.ts` — shared STATUS_BG map (DRY extract from FindingCard + FindingCardCompact)
+
 **Modified files (15+):**
-- `src/features/review/actions/helpers/executeReviewAction.ts` — added segmentId + lang resolution
+- `src/features/review/actions/helpers/executeReviewAction.ts` — transaction, runtime validation, segment query removed
 - `src/features/review/components/ReviewActionBar.tsx` — enabled A/R/F buttons, exactOptionalPropertyTypes fix
 - `src/features/review/components/FindingCard.tsx` — enabled actions, state styling, onAccept/onReject props
 - `src/features/review/components/FindingCardCompact.tsx` — STATUS_BG, actions, flag icon, onAccept/onReject

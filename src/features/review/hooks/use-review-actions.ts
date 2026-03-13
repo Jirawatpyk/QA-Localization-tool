@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { acceptFinding } from '@/features/review/actions/acceptFinding.action'
@@ -33,7 +33,10 @@ const ACTION_LABELS: Record<ReviewAction, { past: string; toast: ToastFn }> = {
 
 export function useReviewActions({ fileId, projectId }: UseReviewActionsOptions) {
   const { autoAdvance } = useFocusManagement()
+  // H1 fix: useState for UI-facing loading state (triggers re-render for spinner)
+  // Ref kept for synchronous double-click guard (checked before await)
   const inFlightRef = useRef(false)
+  const [isInFlight, setIsInFlight] = useState(false)
 
   const executeAction = useCallback(
     async (findingId: string, action: ReviewAction) => {
@@ -60,13 +63,19 @@ export function useReviewActions({ fileId, projectId }: UseReviewActionsOptions)
       state.setFinding(findingId, { ...finding, status: newState })
 
       inFlightRef.current = true
+      setIsInFlight(true)
       try {
         const actionFn = ACTION_FN_MAP[action]
         const result = await actionFn({ findingId, fileId, projectId })
 
         if (!result.success) {
-          // Rollback optimistic update
-          state.setFinding(findingId, { ...finding, status: currentStatus })
+          // M4 fix: get fresh state before rollback to avoid overwriting Realtime updates
+          const currentState = useReviewStore.getState()
+          const currentFinding = currentState.findingsMap.get(findingId)
+          // Only rollback if the current status is still our optimistic value
+          if (currentFinding && currentFinding.status === newState) {
+            currentState.setFinding(findingId, { ...currentFinding, status: currentStatus })
+          }
           toast.error(`Action failed: ${result.error}`)
           return
         }
@@ -91,11 +100,16 @@ export function useReviewActions({ fileId, projectId }: UseReviewActionsOptions)
           findingId,
         )
       } catch {
-        // Rollback on unexpected error
-        state.setFinding(findingId, { ...finding, status: currentStatus })
+        // M4 fix: fresh state for rollback on unexpected error
+        const currentState = useReviewStore.getState()
+        const currentFinding = currentState.findingsMap.get(findingId)
+        if (currentFinding && currentFinding.status === newState) {
+          currentState.setFinding(findingId, { ...currentFinding, status: currentStatus })
+        }
         toast.error('Action failed unexpectedly')
       } finally {
         inFlightRef.current = false
+        setIsInFlight(false)
       }
     },
     [fileId, projectId, autoAdvance],
@@ -120,6 +134,6 @@ export function useReviewActions({ fileId, projectId }: UseReviewActionsOptions)
     handleAccept,
     handleReject,
     handleFlag,
-    isActionInFlight: inFlightRef.current,
+    isActionInFlight: isInFlight,
   }
 }

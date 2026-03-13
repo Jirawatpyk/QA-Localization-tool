@@ -18,6 +18,7 @@ import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 import { FindingList } from '@/features/review/components/FindingList'
+import { useReviewStore } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import { buildFindingForUI } from '@/test/factories'
 
@@ -127,6 +128,9 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
     registeredHandlers.clear()
     mockCleanups.length = 0
     mockReducedMotion = false
+    // CR-C1 fix: reset store selectedId to prevent state leakage between tests
+    // (FindingList now syncs activeFindingId → store.selectedId)
+    useReviewStore.getState().setSelectedFinding(null)
   })
 
   afterEach(() => {

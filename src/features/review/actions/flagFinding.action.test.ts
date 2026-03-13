@@ -1,6 +1,5 @@
 /**
- * TDD RED PHASE — Story 4.2: Core Review Actions
- * Server Action: flagFinding
+ * Story 4.2: Core Review Actions — flagFinding Server Action
  * Tests: success path with DB update + audit + review_actions + Inngest (no feedback_events)
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -32,10 +31,6 @@ vi.mock('@/lib/auth/requireRole', () => ({
   requireRole: (...args: unknown[]) => mockRequireRole(...args),
 }))
 
-vi.mock('@/features/audit/helpers/writeAuditLog', () => ({
-  writeAuditLog: (...args: unknown[]) => mockWriteAuditLog(...args),
-}))
-
 vi.mock('@/features/audit/actions/writeAuditLog', () => ({
   writeAuditLog: (...args: unknown[]) => mockWriteAuditLog(...args),
 }))
@@ -59,6 +54,7 @@ vi.mock('@/db/schema/findings', () => ({
     fileId: 'file_id',
     projectId: 'project_id',
     tenantId: 'tenant_id',
+    segmentId: 'segment_id',
     status: 'status',
     severity: 'severity',
     category: 'category',
@@ -89,7 +85,6 @@ vi.mock('@/lib/logger', () => ({
   logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }))
 
-// Will fail: module doesn't exist yet
 import { flagFinding } from '@/features/review/actions/flagFinding.action'
 
 // ── Constants ──
@@ -99,13 +94,16 @@ const VALID_FILE_ID = 'f1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
 const VALID_PROJECT_ID = 'b1c2d3e4-f5a6-4b2c-9d3e-4f5a6b7c8d9e'
 const VALID_TENANT_ID = 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f'
 const VALID_USER_ID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
+const VALID_SEGMENT_ID = 'd1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5a'
 
+// M3+M6 fix: shared mock shape with segmentId
 function buildFindingMock(overrides?: Record<string, unknown>) {
   return {
     id: VALID_FINDING_ID,
     fileId: VALID_FILE_ID,
     projectId: VALID_PROJECT_ID,
     tenantId: VALID_TENANT_ID,
+    segmentId: VALID_SEGMENT_ID,
     status: 'pending',
     severity: 'major',
     category: 'accuracy',
@@ -135,23 +133,17 @@ describe('flagFinding.action', () => {
   })
 
   it('[P0] U-SA8: should update finding status to flagged, write audit + review_actions, and send Inngest event', async () => {
-    // Arrange: finding exists with pending status
     const findingMock = buildFindingMock({ status: 'pending' })
-    const updatedFindingMock = buildFindingMock({ status: 'flagged' })
-    // Call order: 1) select finding, 2) update finding, 3) insert review_actions
-    dbState.returnValues = [[findingMock], [updatedFindingMock], []]
+    dbState.returnValues = [[findingMock], []]
 
-    // Act
     const result = await flagFinding({
       findingId: VALID_FINDING_ID,
       fileId: VALID_FILE_ID,
       projectId: VALID_PROJECT_ID,
     })
 
-    // Assert: success
     expect(result.success).toBe(true)
 
-    // Assert: audit log written
     expect(mockWriteAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({
         entityType: 'finding',
@@ -160,10 +152,24 @@ describe('flagFinding.action', () => {
       }),
     )
 
-    // Assert: review_actions row inserted (captured via valuesCaptures)
+    // H5 fix: assert review_actions INSERT payload
     expect(dbState.valuesCaptures.length).toBeGreaterThan(0)
+    const reviewActionValues = dbState.valuesCaptures.find(
+      (capture: unknown) =>
+        typeof capture === 'object' &&
+        capture !== null &&
+        'actionType' in (capture as Record<string, unknown>) &&
+        (capture as Record<string, string>).actionType === 'flag',
+    ) as Record<string, unknown> | undefined
+    expect(reviewActionValues).toBeDefined()
+    expect(reviewActionValues).toMatchObject({
+      findingId: VALID_FINDING_ID,
+      actionType: 'flag',
+      previousState: 'pending',
+      newState: 'flagged',
+      userId: VALID_USER_ID,
+    })
 
-    // Assert: Inngest event sent for score recalculation
     expect(mockInngestSend).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'finding.changed',
@@ -177,20 +183,15 @@ describe('flagFinding.action', () => {
   })
 
   it('[P0] U-SA8b: should NOT insert feedback_events for flag action (only reject does)', async () => {
-    // Arrange: pending finding
     const findingMock = buildFindingMock({ status: 'pending' })
-    const updatedFindingMock = buildFindingMock({ status: 'flagged' })
-    dbState.returnValues = [[findingMock], [updatedFindingMock], []]
+    dbState.returnValues = [[findingMock], []]
 
-    // Act
     await flagFinding({
       findingId: VALID_FINDING_ID,
       fileId: VALID_FILE_ID,
       projectId: VALID_PROJECT_ID,
     })
 
-    // Assert: no feedback_events INSERT — only reject writes feedback
-    // The valuesCaptures should NOT contain any entry with action='flag' in feedbackEvents
     const feedbackCapture = dbState.valuesCaptures.find(
       (capture: unknown) =>
         typeof capture === 'object' &&
@@ -201,17 +202,14 @@ describe('flagFinding.action', () => {
   })
 
   it('[P0] U-SA8c: should return NOT_FOUND when finding does not exist', async () => {
-    // Arrange: DB returns empty
     dbState.returnValues = [[]]
 
-    // Act
     const result = await flagFinding({
       findingId: VALID_FINDING_ID,
       fileId: VALID_FILE_ID,
       projectId: VALID_PROJECT_ID,
     })
 
-    // Assert
     expect(result.success).toBe(false)
     if (!result.success) {
       expect(result.code).toMatch(/NOT_FOUND/)
@@ -219,37 +217,32 @@ describe('flagFinding.action', () => {
   })
 
   it('[P1] U-SA8d: should return success with no state change when already flagged (no-op)', async () => {
-    // Arrange: finding already flagged
     const findingMock = buildFindingMock({ status: 'flagged' })
     dbState.returnValues = [[findingMock]]
 
-    // Act
     const result = await flagFinding({
       findingId: VALID_FINDING_ID,
       fileId: VALID_FILE_ID,
       projectId: VALID_PROJECT_ID,
     })
 
-    // Assert: no-op — no Inngest event
     expect(result.success).toBe(true)
     expect(mockInngestSend).not.toHaveBeenCalled()
   })
 
-  it('[P0] U-SA8e: should return error when user has insufficient role', async () => {
-    // Arrange: requireRole rejects
+  it('[P0] U-SA8e: should return UNAUTHORIZED error when user has insufficient role', async () => {
     mockRequireRole.mockRejectedValue(new Error('Forbidden: insufficient role'))
 
-    // Act
     const result = await flagFinding({
       findingId: VALID_FINDING_ID,
       fileId: VALID_FILE_ID,
       projectId: VALID_PROJECT_ID,
     })
 
-    // Assert: unauthorized
     expect(result.success).toBe(false)
     if (!result.success) {
-      expect(result.error).toBeDefined()
+      expect(result.code).toBe('UNAUTHORIZED')
+      expect(result.error).toBe('Unauthorized')
     }
   })
 })

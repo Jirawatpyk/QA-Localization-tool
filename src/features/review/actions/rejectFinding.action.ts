@@ -2,8 +2,12 @@
 
 import 'server-only'
 
+import { and, eq } from 'drizzle-orm'
+
 import { db } from '@/db/client'
+import { withTenant } from '@/db/helpers/withTenant'
 import { feedbackEvents } from '@/db/schema/feedbackEvents'
+import { segments } from '@/db/schema/segments'
 import { executeReviewAction } from '@/features/review/actions/helpers/executeReviewAction'
 import type {
   ReviewActionNoOp,
@@ -51,9 +55,25 @@ export async function rejectFinding(
   if (!result.success) return result
   if (!('findingMeta' in result.data)) return result
 
+  // M1 fix: Segment lookup for language pair — only reject needs this for feedback_events
+  const meta = result.data.findingMeta
+  let sourceLang: string | null = null
+  let targetLang: string | null = null
+  if (meta.segmentId) {
+    const segRows = await db
+      .select({ sourceLang: segments.sourceLang, targetLang: segments.targetLang })
+      .from(segments)
+      .where(and(eq(segments.id, meta.segmentId), withTenant(segments.tenantId, user.tenantId)))
+      .limit(1)
+    if (segRows.length > 0) {
+      sourceLang = segRows[0]!.sourceLang
+      targetLang = segRows[0]!.targetLang
+    }
+  }
+
   // Insert feedback_events for AI training data (reject-specific, AC2)
   // ALL NOT NULL columns must be provided per feedbackEvents schema
-  const meta = result.data.findingMeta
+  // L4: Both `layer` and `detectedByLayer` columns exist in schema — same value by design
   try {
     await db.insert(feedbackEvents).values({
       tenantId: user.tenantId,
@@ -68,8 +88,8 @@ export async function rejectFinding(
       reviewerIsNative: false, // TODO(story-5.2): wire from user profile
       layer: meta.detectedByLayer,
       detectedByLayer: meta.detectedByLayer,
-      sourceLang: meta.sourceLang ?? 'unknown',
-      targetLang: meta.targetLang ?? 'unknown',
+      sourceLang: sourceLang ?? 'unknown',
+      targetLang: targetLang ?? 'unknown',
       sourceText: meta.sourceTextExcerpt ?? '',
       originalTarget: meta.targetTextExcerpt ?? '',
     })

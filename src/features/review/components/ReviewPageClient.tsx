@@ -452,6 +452,9 @@ export function ReviewPageClient({
           onFlag={() => selectedId && handleFlag(selectedId)}
           isDisabled={!selectedId || isActionInFlight}
           isInFlight={isActionInFlight}
+          findingNumber={
+            selectedId ? findingsForDisplay.findIndex((f) => f.id === selectedId) + 1 : undefined
+          }
         />
       </div>
 

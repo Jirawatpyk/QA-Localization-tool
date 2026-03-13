@@ -1,5 +1,7 @@
 // Finding types — canonical source of truth (DB-aligned)
-export type FindingSeverity = 'critical' | 'major' | 'minor'
+// Const array for runtime validation (Guardrail #3), type derived from it
+export const FINDING_SEVERITIES = ['critical', 'major', 'minor'] as const
+export type FindingSeverity = (typeof FINDING_SEVERITIES)[number]
 
 // All 8 valid finding statuses from DB schema (varchar(30))
 // Const array for runtime validation (Zod enum, Set membership), type derived from it
@@ -17,7 +19,9 @@ export const FINDING_STATUSES = [
 export type FindingStatus = (typeof FINDING_STATUSES)[number]
 
 // Pipeline detection layer (findings.detected_by_layer column)
-export type DetectedByLayer = 'L1' | 'L2' | 'L3'
+// Const array for runtime validation (Guardrail #3), type derived from it
+export const DETECTED_BY_LAYERS = ['L1', 'L2', 'L3'] as const
+export type DetectedByLayer = (typeof DETECTED_BY_LAYERS)[number]
 
 // Score lifecycle statuses (from scores.status column)
 // Const array for runtime validation, type derived from it

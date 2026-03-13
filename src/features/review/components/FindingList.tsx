@@ -194,6 +194,11 @@ export function FindingList({
     return () => cancelAnimationFrame(focusRafRef.current)
   }, [activeFindingId, reducedMotion])
 
+  // ── Story 4.2 CR-C1: Sync activeFindingId → store selectedId ──
+  // Enables hotkeys (A/R/F) and action bar buttons that depend on store selectedId.
+  // Synced directly in event handlers + initialization (navigateNext, navigatePrev,
+  // handleGridClick, initial setup) to avoid Zustand re-render loops with effects.
+
   // ── Story 4.1c: Sync selectedId from review store → activeFindingId ──
   // Enables click-to-navigate from SegmentContextList → FindingList (AC5).
   // setState in effect is intentional: Zustand store is an external system (React docs pattern).
@@ -223,7 +228,9 @@ export function FindingList({
       onToggleExpand(activeFindingId)
     }
     const nextIndex = (activeIndex + 1) % flattenedIds.length
-    setActiveFindingId(flattenedIds[nextIndex] ?? null)
+    const nextId = flattenedIds[nextIndex] ?? null
+    setActiveFindingId(nextId)
+    useReviewStore.getState().setSelectedFinding(nextId) // CR-C1: sync to store
   }, [activeIndex, activeFindingId, expandedIds, flattenedIds, onToggleExpand])
 
   // Navigate to previous finding (K / ArrowUp)
@@ -234,7 +241,9 @@ export function FindingList({
       onToggleExpand(activeFindingId)
     }
     const prevIndex = (activeIndex - 1 + flattenedIds.length) % flattenedIds.length
-    setActiveFindingId(flattenedIds[prevIndex] ?? null)
+    const prevId = flattenedIds[prevIndex] ?? null
+    setActiveFindingId(prevId)
+    useReviewStore.getState().setSelectedFinding(prevId) // CR-C1: sync to store
   }, [activeIndex, activeFindingId, expandedIds, flattenedIds, onToggleExpand])
 
   // Register J/K/Arrow keyboard handlers (AC1)
@@ -341,6 +350,7 @@ export function FindingList({
       const clickedId = targetRow.getAttribute('data-finding-id')
       if (clickedId && clickedId !== activeFindingId && flattenedIds.includes(clickedId)) {
         setActiveFindingId(clickedId)
+        useReviewStore.getState().setSelectedFinding(clickedId) // CR-C1: sync to store
       }
     },
     [activeFindingId, flattenedIds],

@@ -91,6 +91,7 @@ type ReviewActionBarProps = {
   onFlag?: (() => void) | undefined
   isDisabled?: boolean | undefined
   isInFlight?: boolean | undefined
+  findingNumber?: number | undefined
 }
 
 const ACTION_HANDLER_MAP: Record<
@@ -112,6 +113,7 @@ export function ReviewActionBar({
   onFlag,
   isDisabled = false,
   isInFlight = false,
+  findingNumber,
 }: ReviewActionBarProps) {
   const handlers: ReviewActionBarProps = { onAccept, onReject, onFlag }
 
@@ -139,7 +141,7 @@ export function ReviewActionBar({
                   disabled={btnDisabled}
                   onClick={handler}
                   aria-keyshortcuts={btn.ariaKeyshortcuts}
-                  aria-label={`${btn.label} finding, press ${btn.hotkey}`}
+                  aria-label={`${btn.label}${findingNumber !== undefined ? ` finding ${findingNumber}` : ' finding'}, press ${btn.hotkey}`}
                   className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 hover:brightness-110 ${btn.colorClass}`}
                 >
                   {isInFlight && isEnabled && !btnDisabled ? (

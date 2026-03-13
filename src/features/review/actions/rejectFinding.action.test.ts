@@ -1,7 +1,6 @@
 /**
- * TDD RED PHASE — Story 4.2: Core Review Actions
- * Server Action: rejectFinding
- * Tests: success path, feedback_events INSERT with ALL 15 NOT NULL columns
+ * Story 4.2: Core Review Actions — rejectFinding Server Action
+ * Tests: success path, feedback_events INSERT with ALL NOT NULL columns
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
@@ -32,10 +31,6 @@ vi.mock('@/lib/auth/requireRole', () => ({
   requireRole: (...args: unknown[]) => mockRequireRole(...args),
 }))
 
-vi.mock('@/features/audit/helpers/writeAuditLog', () => ({
-  writeAuditLog: (...args: unknown[]) => mockWriteAuditLog(...args),
-}))
-
 vi.mock('@/features/audit/actions/writeAuditLog', () => ({
   writeAuditLog: (...args: unknown[]) => mockWriteAuditLog(...args),
 }))
@@ -59,6 +54,7 @@ vi.mock('@/db/schema/findings', () => ({
     fileId: 'file_id',
     projectId: 'project_id',
     tenantId: 'tenant_id',
+    segmentId: 'segment_id',
     status: 'status',
     severity: 'severity',
     category: 'category',
@@ -99,6 +95,7 @@ vi.mock('@/db/schema/feedbackEvents', () => ({
     isFalsePositive: 'is_false_positive',
     reviewerIsNative: 'reviewer_is_native',
     layer: 'layer',
+    detectedByLayer: 'detected_by_layer',
     sourceLang: 'source_lang',
     targetLang: 'target_lang',
     sourceText: 'source_text',
@@ -106,11 +103,19 @@ vi.mock('@/db/schema/feedbackEvents', () => ({
   },
 }))
 
+vi.mock('@/db/schema/segments', () => ({
+  segments: {
+    id: 'id',
+    tenantId: 'tenant_id',
+    sourceLang: 'source_lang',
+    targetLang: 'target_lang',
+  },
+}))
+
 vi.mock('@/lib/logger', () => ({
   logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }))
 
-// Will fail: module doesn't exist yet
 import { rejectFinding } from '@/features/review/actions/rejectFinding.action'
 
 // ── Constants ──
@@ -120,13 +125,16 @@ const VALID_FILE_ID = 'f1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
 const VALID_PROJECT_ID = 'b1c2d3e4-f5a6-4b2c-9d3e-4f5a6b7c8d9e'
 const VALID_TENANT_ID = 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f'
 const VALID_USER_ID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
+const VALID_SEGMENT_ID = 'd1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5a'
 
+// M3+M6 fix: shared mock shape with segmentId
 function buildFindingMock(overrides?: Record<string, unknown>) {
   return {
     id: VALID_FINDING_ID,
     fileId: VALID_FILE_ID,
     projectId: VALID_PROJECT_ID,
     tenantId: VALID_TENANT_ID,
+    segmentId: VALID_SEGMENT_ID,
     status: 'pending',
     severity: 'major',
     category: 'accuracy',
@@ -156,23 +164,19 @@ describe('rejectFinding.action', () => {
   })
 
   it('[P0] U-SA6: should update finding status, write audit + review_actions + feedback_events, and send Inngest event', async () => {
-    // Arrange: finding exists with pending status
     const findingMock = buildFindingMock({ status: 'pending' })
-    const updatedFindingMock = buildFindingMock({ status: 'rejected' })
-    // Call order: 1) select finding, 2) update finding, 3) insert review_actions, 4) insert feedback_events
-    dbState.returnValues = [[findingMock], [updatedFindingMock], [], []]
+    // Call order: 1) SELECT finding (executeReviewAction) → transaction is mocked as single call
+    // 2) segment lookup 3) INSERT feedback_events
+    dbState.returnValues = [[findingMock], [], [{ sourceLang: 'en', targetLang: 'th' }], []]
 
-    // Act
     const result = await rejectFinding({
       findingId: VALID_FINDING_ID,
       fileId: VALID_FILE_ID,
       projectId: VALID_PROJECT_ID,
     })
 
-    // Assert: success
     expect(result.success).toBe(true)
 
-    // Assert: audit log written
     expect(mockWriteAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({
         entityType: 'finding',
@@ -181,7 +185,6 @@ describe('rejectFinding.action', () => {
       }),
     )
 
-    // Assert: Inngest event sent for score recalculation
     expect(mockInngestSend).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'finding.changed',
@@ -194,31 +197,21 @@ describe('rejectFinding.action', () => {
     )
   })
 
-  it('[P0] U-SA7: should insert feedback_events with ALL 15 NOT NULL columns', async () => {
-    // Arrange: finding with rich metadata for feedback capture
+  it('[P0] U-SA7: should insert feedback_events with ALL NOT NULL columns including detectedByLayer', async () => {
     const findingMock = buildFindingMock({
       status: 'pending',
       severity: 'major',
       category: 'accuracy',
       detectedByLayer: 'L2',
-      sourceTextExcerpt: 'Hello world',
-      targetTextExcerpt: 'สวัสดีชาวโลก',
     })
-    const updatedFindingMock = buildFindingMock({ status: 'rejected' })
-    dbState.returnValues = [[findingMock], [updatedFindingMock], [], []]
+    dbState.returnValues = [[findingMock], [], [{ sourceLang: 'en', targetLang: 'th' }], []]
 
-    // Act
     await rejectFinding({
       findingId: VALID_FINDING_ID,
       fileId: VALID_FILE_ID,
       projectId: VALID_PROJECT_ID,
     })
 
-    // Assert: feedback_events INSERT captured via valuesCaptures
-    // The values should contain all 15 NOT NULL columns:
-    // tenantId, fileId, projectId, findingId, reviewerId, action='reject',
-    // findingCategory, originalSeverity, isFalsePositive=true, reviewerIsNative,
-    // layer, sourceLang, targetLang, sourceText, originalTarget
     expect(dbState.valuesCaptures.length).toBeGreaterThan(0)
 
     const feedbackValues = dbState.valuesCaptures.find(
@@ -230,6 +223,7 @@ describe('rejectFinding.action', () => {
     ) as Record<string, unknown> | undefined
 
     expect(feedbackValues).toBeDefined()
+    // M7 fix: assert ALL NOT NULL columns including detectedByLayer
     expect(feedbackValues).toMatchObject({
       tenantId: VALID_TENANT_ID,
       fileId: VALID_FILE_ID,
@@ -241,28 +235,26 @@ describe('rejectFinding.action', () => {
       originalSeverity: 'major',
       isFalsePositive: true,
       layer: 'L2',
+      detectedByLayer: 'L2',
       sourceText: 'Hello world',
       originalTarget: 'สวัสดีชาวโลก',
     })
 
-    // Assert: reviewerIsNative, sourceLang, targetLang present (values may vary)
+    // Assert: reviewerIsNative, sourceLang, targetLang present
     expect(feedbackValues).toHaveProperty('reviewerIsNative')
     expect(feedbackValues).toHaveProperty('sourceLang')
     expect(feedbackValues).toHaveProperty('targetLang')
   })
 
   it('[P0] U-SA6b: should return NOT_FOUND when finding does not exist', async () => {
-    // Arrange: DB returns empty
     dbState.returnValues = [[]]
 
-    // Act
     const result = await rejectFinding({
       findingId: VALID_FINDING_ID,
       fileId: VALID_FILE_ID,
       projectId: VALID_PROJECT_ID,
     })
 
-    // Assert
     expect(result.success).toBe(false)
     if (!result.success) {
       expect(result.code).toMatch(/NOT_FOUND/)
@@ -270,18 +262,15 @@ describe('rejectFinding.action', () => {
   })
 
   it('[P1] U-SA6c: should return success with no state change when already rejected (no-op)', async () => {
-    // Arrange: finding already rejected
     const findingMock = buildFindingMock({ status: 'rejected' })
     dbState.returnValues = [[findingMock]]
 
-    // Act
     const result = await rejectFinding({
       findingId: VALID_FINDING_ID,
       fileId: VALID_FILE_ID,
       projectId: VALID_PROJECT_ID,
     })
 
-    // Assert: no-op — no Inngest, no feedback_events
     expect(result.success).toBe(true)
     expect(mockInngestSend).not.toHaveBeenCalled()
   })
