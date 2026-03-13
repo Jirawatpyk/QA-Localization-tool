@@ -45,8 +45,8 @@ function defaultProps(overrides?: Record<string, unknown>) {
 describe('FindingList', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // CR-C1: reset store to prevent state leakage (FindingList syncs activeFindingId → store)
-    useReviewStore.getState().setSelectedFinding(null)
+    // CR-C1: reset store activeFindingId + selectedId to prevent state leakage
+    useReviewStore.getState().resetForFile('test')
   })
 
   // ═══════════════════════════════════════════════════════════════════════

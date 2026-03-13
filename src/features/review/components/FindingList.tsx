@@ -27,6 +27,8 @@ export type FindingListProps = {
   l3ConfidenceMin?: number | null | undefined
   onAccept?: ((findingId: string) => void) | undefined
   onReject?: ((findingId: string) => void) | undefined
+  // CR-C1: callback to notify parent when active finding changes
+  onActiveFindingChange?: ((id: string | null) => void) | undefined
 }
 
 const SEVERITY_ORDER: Record<FindingSeverity, number> = { critical: 0, major: 1, minor: 2 }
@@ -35,7 +37,6 @@ function sortFindings(items: FindingForDisplay[]): FindingForDisplay[] {
   return [...items].sort((a, b) => {
     const severityDiff = (SEVERITY_ORDER[a.severity] ?? 99) - (SEVERITY_ORDER[b.severity] ?? 99)
     if (severityDiff !== 0) return severityDiff
-    // Within same severity: confidence DESC, nulls last
     if (a.aiConfidence === null && b.aiConfidence === null) return 0
     if (a.aiConfidence === null) return 1
     if (b.aiConfidence === null) return -1
@@ -53,6 +54,7 @@ export function FindingList({
   l3ConfidenceMin,
   onAccept,
   onReject,
+  onActiveFindingChange,
 }: FindingListProps) {
   const reducedMotion = useReducedMotion()
   const { register } = useKeyboardActions()
@@ -118,7 +120,6 @@ export function FindingList({
   const minorAccordionOpen = minorAccordionValue.includes('minor-group')
 
   // Compute flattenedIds: all navigable finding IDs in display order
-  // Exclude Minor findings when accordion is closed (AC4)
   const flattenedIds = useMemo(() => {
     const ids = [...groups.critical.map((f) => f.id), ...groups.major.map((f) => f.id)]
     if (minorAccordionOpen) {
@@ -127,7 +128,7 @@ export function FindingList({
     return ids
   }, [groups.critical, groups.major, groups.minor, minorAccordionOpen])
 
-  // ID-based focus tracking (AC5) — replaces old index-only approach
+  // ID-based focus tracking — local state (no Zustand to avoid re-render loops)
   const [activeFindingId, setActiveFindingId] = useState<string | null>(null)
 
   // Derive activeIndex from activeFindingId + flattenedIds
@@ -143,7 +144,6 @@ export function FindingList({
   }
 
   // Focus stability: recalculate when flattenedIds changes (AC5)
-  // "Adjust state during render" pattern (React 19) — avoids setState-in-effect
   const flattenedIdsKey = flattenedIds.join(',')
   const [prevFlattenedState, setPrevFlattenedState] = useState<{
     key: string
@@ -153,8 +153,6 @@ export function FindingList({
   if (flattenedIdsKey !== prevFlattenedState.key) {
     const prevFlattenedIds = prevFlattenedState.ids
     setPrevFlattenedState({ key: flattenedIdsKey, ids: flattenedIds })
-
-    // Only adjust if we had previous findings AND current finding was removed
     if (prevFlattenedIds.length > 0 && activeFindingId !== null) {
       const newIndex = flattenedIds.indexOf(activeFindingId)
       if (newIndex === -1) {
@@ -165,12 +163,34 @@ export function FindingList({
     }
   }
 
+  // CR-C1: Notify parent when activeFindingId changes (enables hotkeys + action bar + detail panel)
+  // This replaces the bidirectional Zustand sync that caused re-render loops.
+  useEffect(() => {
+    onActiveFindingChange?.(activeFindingId)
+  }, [activeFindingId, onActiveFindingChange])
+
+  // ── Story 4.1c: Sync selectedId from review store → activeFindingId ──
+  // Enables click-to-navigate from SegmentContextList → FindingList (AC5).
+  const storeSelectedId = useReviewStore((s) => s.selectedId)
+  useEffect(() => {
+    if (storeSelectedId === null) return
+    if (storeSelectedId === activeFindingId) return
+    if (!flattenedIds.includes(storeSelectedId)) {
+      const isMinorFinding = groups.minor.some((f) => f.id === storeSelectedId)
+      if (isMinorFinding && !minorAccordionOpen) {
+        setMinorAccordionValue(['minor-group']) // eslint-disable-line react-hooks/set-state-in-effect -- syncing from Zustand external store
+      } else {
+        return
+      }
+    }
+    setActiveFindingId(storeSelectedId)
+  }, [storeSelectedId, activeFindingId, flattenedIds, groups.minor, minorAccordionOpen])
+
   // DOM focus wiring — focus the active row after activeFindingId changes
   const prevActiveFindingIdRef = useRef<string | null>(null)
   const focusRafRef = useRef<number>(0)
   useEffect(() => {
     if (activeFindingId === null) return
-    // G#40: Skip focus on initial mount (null → first ID transition)
     if (prevActiveFindingIdRef.current === null) {
       prevActiveFindingIdRef.current = activeFindingId
       return
@@ -194,56 +214,24 @@ export function FindingList({
     return () => cancelAnimationFrame(focusRafRef.current)
   }, [activeFindingId, reducedMotion])
 
-  // ── Story 4.2 CR-C1: Sync activeFindingId → store selectedId ──
-  // Enables hotkeys (A/R/F) and action bar buttons that depend on store selectedId.
-  // Synced directly in event handlers + initialization (navigateNext, navigatePrev,
-  // handleGridClick, initial setup) to avoid Zustand re-render loops with effects.
-
-  // ── Story 4.1c: Sync selectedId from review store → activeFindingId ──
-  // Enables click-to-navigate from SegmentContextList → FindingList (AC5).
-  // setState in effect is intentional: Zustand store is an external system (React docs pattern).
-  const storeSelectedId = useReviewStore((s) => s.selectedId)
-  useEffect(() => {
-    if (storeSelectedId === null) return
-    if (storeSelectedId === activeFindingId) return
-    // Guard: only sync if the finding is in the current list
-    if (!flattenedIds.includes(storeSelectedId)) {
-      // Check if it's a minor finding hidden in closed accordion
-      const isMinorFinding = groups.minor.some((f) => f.id === storeSelectedId)
-      if (isMinorFinding && !minorAccordionOpen) {
-        // Auto-expand minor accordion so the finding becomes visible
-        setMinorAccordionValue(['minor-group']) // eslint-disable-line react-hooks/set-state-in-effect -- syncing from Zustand external store
-      } else {
-        return // Finding not in list at all (filtered out)
-      }
-    }
-    setActiveFindingId(storeSelectedId)
-  }, [storeSelectedId, activeFindingId, flattenedIds, groups.minor, minorAccordionOpen])
-
   // Navigate to next finding (J / ArrowDown)
   const navigateNext = useCallback(() => {
     if (flattenedIds.length === 0) return
-    // Auto-collapse current expanded finding before moving (DD#11)
     if (activeFindingId && expandedIds.has(activeFindingId)) {
       onToggleExpand(activeFindingId)
     }
     const nextIndex = (activeIndex + 1) % flattenedIds.length
-    const nextId = flattenedIds[nextIndex] ?? null
-    setActiveFindingId(nextId)
-    useReviewStore.getState().setSelectedFinding(nextId) // CR-C1: sync to store
+    setActiveFindingId(flattenedIds[nextIndex] ?? null)
   }, [activeIndex, activeFindingId, expandedIds, flattenedIds, onToggleExpand])
 
   // Navigate to previous finding (K / ArrowUp)
   const navigatePrev = useCallback(() => {
     if (flattenedIds.length === 0) return
-    // Auto-collapse current expanded finding before moving (DD#11)
     if (activeFindingId && expandedIds.has(activeFindingId)) {
       onToggleExpand(activeFindingId)
     }
     const prevIndex = (activeIndex - 1 + flattenedIds.length) % flattenedIds.length
-    const prevId = flattenedIds[prevIndex] ?? null
-    setActiveFindingId(prevId)
-    useReviewStore.getState().setSelectedFinding(prevId) // CR-C1: sync to store
+    setActiveFindingId(flattenedIds[prevIndex] ?? null)
   }, [activeIndex, activeFindingId, expandedIds, flattenedIds, onToggleExpand])
 
   // Register J/K/Arrow keyboard handlers (AC1)
@@ -257,16 +245,11 @@ export function FindingList({
         description: 'Previous finding',
       }),
     ]
-    // Signal keyboard readiness — SSR renders rows before effects run,
-    // so E2E tests need this to know when handlers are registered
     gridRef.current?.setAttribute('data-keyboard-ready', 'true')
     return () => cleanups.forEach((fn) => fn())
   }, [register, navigateNext, navigatePrev])
 
   // Escape layer management for expanded cards (AC2, Guardrail #31)
-  // Tracks "any finding expanded" as a single layer. Close callback uses ref for latest
-  // activeFindingId to avoid stale closure. Per-row Esc handler (FindingCardCompact.handleKeyDown)
-  // handles actual collapse; this layer maintains hierarchy state for future integration (L2 note).
   const activeFindingIdRef = useRef<string | null>(null)
   useEffect(() => {
     activeFindingIdRef.current = activeFindingId
@@ -289,46 +272,32 @@ export function FindingList({
     prevExpandedForEscape.current = hasExpanded
   }, [expandedIds, onToggleExpand, pushEscapeLayer, popEscapeLayer])
 
-  // Grid focus handler — redirect to active row only if grid container itself received focus (AC3)
-  // Roving tabindex handles Tab/Shift+Tab entry natively (active row has tabIndex=0)
+  // Grid focus handler
   const handleGridFocus = useCallback(
     (e: React.FocusEvent<HTMLDivElement>) => {
-      // Skip internal focus moves (between rows within grid)
       if (gridRef.current?.contains(e.relatedTarget as Node)) return
-
-      // Tab/click on a finding row — roving tabindex already handled, no redirect needed
       const isRowFocused = (e.target as HTMLElement).closest('[data-finding-id]') !== null
       if (isRowFocused) return
-
-      // Edge case: grid container itself received focus — redirect to active row
       if (activeFindingId) {
         cancelAnimationFrame(gridFocusRafRef.current)
         gridFocusRafRef.current = requestAnimationFrame(() => {
           const row = gridRef.current?.querySelector(
             `[data-finding-id="${CSS.escape(activeFindingId)}"]`,
           ) as HTMLElement | null
-          if (row) {
-            row.focus()
-          }
+          if (row) row.focus()
         })
       }
     },
     [activeFindingId],
   )
 
-  // Grid keydown handler — J/K/Arrow navigation via React synthetic event (AC1)
-  // Primary handler: fires reliably through React's event delegation on the root
-  // container. The useKeyboardActions registration is kept as secondary for cheat
-  // sheet listing, scope management, and suspend/resume integration.
+  // Grid keydown handler
   const handleGridKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
-      // IME guard (Guardrail: CJK/Thai composition)
       if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return
-      // Input guard (Guardrail #28)
       const target = e.target as HTMLElement
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return
       if (target.getAttribute('contenteditable') === 'true') return
-
       if (e.key === 'j' || e.key === 'ArrowDown') {
         e.preventDefault()
         e.stopPropagation()
@@ -342,7 +311,7 @@ export function FindingList({
     [navigateNext, navigatePrev],
   )
 
-  // Grid click handler — sync activeFindingId when mouse clicks a finding row (M2 fix)
+  // Grid click handler
   const handleGridClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       const targetRow = (e.target as HTMLElement).closest('[data-finding-id]') as HTMLElement | null
@@ -350,13 +319,12 @@ export function FindingList({
       const clickedId = targetRow.getAttribute('data-finding-id')
       if (clickedId && clickedId !== activeFindingId && flattenedIds.includes(clickedId)) {
         setActiveFindingId(clickedId)
-        useReviewStore.getState().setSelectedFinding(clickedId) // CR-C1: sync to store
       }
     },
     [activeFindingId, flattenedIds],
   )
 
-  // Pre-compute global index map for all findings (including closed accordion)
+  // Pre-compute global index map
   const allIndexMap = useMemo(() => {
     const map = new Map<string, number>()
     const allIds = [
@@ -370,20 +338,16 @@ export function FindingList({
     return map
   }, [groups])
 
-  // Total findings count (all, including Minor whether accordion is open or not)
   const totalFindings = groups.critical.length + groups.major.length + groups.minor.length
 
-  // Empty state — all hooks must be above this early return
   if (sorted.length === 0) {
     return <p className="text-muted-foreground text-sm py-4">No findings for this file.</p>
   }
 
-  // Rendering helpers
   function renderCompactWithCard(finding: FindingForDisplay, isExpanded: boolean) {
     const currentGlobalIndex = allIndexMap.get(finding.id) ?? 0
     const isActive = finding.id === activeFindingId
     const isNew = newIds.has(finding.id)
-
     return (
       <div key={finding.id}>
         <FindingCardCompact
@@ -430,21 +394,16 @@ export function FindingList({
       onClick={handleGridClick}
       onKeyDown={handleGridKeyDown}
     >
-      {/* Critical section — auto-expanded */}
       {groups.critical.length > 0 && (
         <div role="rowgroup" aria-label="Critical findings">
           {groups.critical.map((f) => renderCompactWithCard(f, expandedIds.has(f.id)))}
         </div>
       )}
-
-      {/* Major section — collapsed */}
       {groups.major.length > 0 && (
         <div role="rowgroup" aria-label="Major findings">
           {groups.major.map((f) => renderCompactWithCard(f, expandedIds.has(f.id)))}
         </div>
       )}
-
-      {/* Minor section — under accordion */}
       {groups.minor.length > 0 && (
         <div role="rowgroup" aria-label="Minor findings">
           <Accordion

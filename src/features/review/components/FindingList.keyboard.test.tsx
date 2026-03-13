@@ -128,9 +128,8 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
     registeredHandlers.clear()
     mockCleanups.length = 0
     mockReducedMotion = false
-    // CR-C1 fix: reset store selectedId to prevent state leakage between tests
-    // (FindingList now syncs activeFindingId → store.selectedId)
-    useReviewStore.getState().setSelectedFinding(null)
+    // CR-C1: reset store activeFindingId + selectedId to prevent state leakage
+    useReviewStore.getState().resetForFile('test')
   })
 
   afterEach(() => {

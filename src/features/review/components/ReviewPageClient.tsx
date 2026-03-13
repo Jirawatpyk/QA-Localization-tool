@@ -1,7 +1,7 @@
 'use client'
 
 import { PanelRight } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
@@ -103,8 +103,20 @@ export function ReviewPageClient({
     projectId,
   })
 
+  // CR-C1: Track active finding via ref (for hotkeys) + state (for action bar re-render)
+  const activeFindingIdRef = useRef<string | null>(null)
+  const [activeFindingState, setActiveFindingState] = useState<string | null>(null)
+  const handleActiveFindingChange = useCallback((id: string | null) => {
+    activeFindingIdRef.current = id
+    setActiveFindingState(id)
+    // Note: NOT calling setSelectedFinding here — selectedId is for detail panel/Sheet
+    // which should only open on explicit user action (SegmentContextList navigation).
+    // Hotkeys use activeFindingIdRef, action bar uses activeFindingState.
+  }, [])
+
   // Register review hotkeys — A/R/F wired to real handlers (Story 4.2)
-  const getSelectedId = useCallback(() => useReviewStore.getState().selectedId, [])
+  // CR-C1: use ref (synchronous, no re-render dependency) for hotkey dispatch
+  const getSelectedId = useCallback(() => activeFindingIdRef.current, [])
   useReviewHotkeys({ accept: handleAccept, reject: handleReject, flag: handleFlag }, getSelectedId)
 
   // Initialize store on mount
@@ -443,17 +455,20 @@ export function ReviewPageClient({
             l3ConfidenceMin={storeL3ConfidenceMin ?? initialData.l3ConfidenceMin}
             onAccept={handleAccept}
             onReject={handleReject}
+            onActiveFindingChange={handleActiveFindingChange}
           />
         </div>
         {/* Action Bar (Task 5 — below finding list) */}
         <ReviewActionBar
-          onAccept={() => selectedId && handleAccept(selectedId)}
-          onReject={() => selectedId && handleReject(selectedId)}
-          onFlag={() => selectedId && handleFlag(selectedId)}
-          isDisabled={!selectedId || isActionInFlight}
+          onAccept={() => activeFindingState && handleAccept(activeFindingState)}
+          onReject={() => activeFindingState && handleReject(activeFindingState)}
+          onFlag={() => activeFindingState && handleFlag(activeFindingState)}
+          isDisabled={!activeFindingState || isActionInFlight}
           isInFlight={isActionInFlight}
           findingNumber={
-            selectedId ? findingsForDisplay.findIndex((f) => f.id === selectedId) + 1 : undefined
+            activeFindingState
+              ? findingsForDisplay.findIndex((f) => f.id === activeFindingState) + 1
+              : undefined
           }
         />
       </div>
