@@ -82,7 +82,7 @@ export function SegmentContextList({
         data-testid={isCurrent ? 'current-segment' : 'context-segment'}
       >
         {/* Source column */}
-        <div className="min-w-0 overflow-wrap-break-word">
+        <div className="min-w-0 break-words">
           <span className="text-xs text-muted-foreground block mb-0.5">
             Seg {segment.segmentNumber}
             {isClickable && <MessageSquare className="inline h-3 w-3 ml-1" aria-hidden="true" />}
@@ -95,7 +95,7 @@ export function SegmentContextList({
           />
         </div>
         {/* Target column */}
-        <div className="min-w-0 overflow-wrap-break-word">
+        <div className="min-w-0 break-words">
           <SegmentTextDisplay
             fullText={segment.targetText}
             excerpt={isCurrent ? (targetExcerpt ?? null) : null}

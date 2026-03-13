@@ -193,6 +193,7 @@ export function FindingDetailSheet({
                 <button
                   type="button"
                   disabled
+                  title="Review actions available in Story 4.2"
                   className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-sm font-medium bg-success/10 text-success border border-success/20 cursor-not-allowed opacity-60"
                 >
                   <Check className="h-4 w-4" aria-hidden="true" />
@@ -201,6 +202,7 @@ export function FindingDetailSheet({
                 <button
                   type="button"
                   disabled
+                  title="Review actions available in Story 4.2"
                   className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-sm font-medium bg-error/10 text-error border border-error/20 cursor-not-allowed opacity-60"
                 >
                   <X className="h-4 w-4" aria-hidden="true" />
@@ -209,6 +211,7 @@ export function FindingDetailSheet({
                 <button
                   type="button"
                   disabled
+                  title="Review actions available in Story 4.2"
                   className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-sm font-medium bg-warning/10 text-warning border border-warning/20 cursor-not-allowed opacity-60"
                 >
                   <Flag className="h-4 w-4" aria-hidden="true" />

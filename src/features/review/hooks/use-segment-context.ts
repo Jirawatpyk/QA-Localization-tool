@@ -21,6 +21,7 @@ type UseSegmentContextResult = {
 }
 
 const DEBOUNCE_MS = 150
+const MAX_CACHE_SIZE = 50
 
 /**
  * Fetches segment context (current + surrounding segments) for the detail panel.
@@ -112,6 +113,11 @@ export function useSegmentContext({
 
         const cacheKey = `${fetchRequest.segmentId}:${fetchRequest.contextRange}`
         if (result.success) {
+          // Evict oldest entry if cache is full
+          if (cacheRef.current.size >= MAX_CACHE_SIZE) {
+            const oldestKey = cacheRef.current.keys().next().value as string
+            cacheRef.current.delete(oldestKey)
+          }
           cacheRef.current.set(cacheKey, result.data)
           setData(result.data)
           setError(null)

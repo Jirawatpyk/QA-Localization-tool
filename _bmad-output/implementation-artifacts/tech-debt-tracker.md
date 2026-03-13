@@ -564,3 +564,18 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** `AutoPassRationale` renders from `initialData.autoPassRationale` (server-side SSR data). If score transitions to `auto_passed` via Realtime after page load, rationale wasn't propagated to store.
 - **Fix:** Added `autoPassRationale` field to ScoreSlice in review store. `useScoreSubscription` now extracts `auto_pass_rationale` from Realtime INSERT payload and polling fallback, passes to `updateScore()`. Store-driven rationale display works even on live transition.
 - **Status:** RESOLVED (2026-03-09) — Story 4.0 Task 7.7. TD7 test activated and passing.
+
+---
+
+## CR Sprint — Story 4.1c (2026-03-13)
+
+### TD-E2E-016: Detail Panel E2E tests skipped — 7 `test.skip` without TD ref
+- **Date:** 2026-03-13
+- **Story:** Story 4.1c (Detail Panel & Segment Context)
+- **Phase:** CR R1
+- **Severity:** Medium
+- **File:** `e2e/review-detail-panel.spec.ts` — 7 tests (`E1` through `E7`)
+- **Description:** All 7 assertion E2E tests use `test.skip()`. Setup test seeds data correctly, but the 7 behavioral tests (metadata display, `<mark>` highlight, context segments, click-to-navigate, range selector, CJK/Thai lang, focus trap+Esc) are all skipped. No TD ref in code comments.
+- **Risk:** No E2E coverage for detail panel — integration gaps hidden until Story 4.2 wires actions
+- **Fix:** Unskip and activate when review page keyboard J/K → Sheet open wiring is stable. Requires: (1) Finding focus → Sheet auto-open behavior working in E2E, (2) PostgREST seeded data visible in review page
+- **Status:** DEFERRED → **Story 4.2 — Core Review Actions** (E2E activation after action buttons are wired + Sheet open flow confirmed in CI)

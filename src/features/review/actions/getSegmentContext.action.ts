@@ -2,7 +2,8 @@
 
 import 'server-only'
 
-import { and, eq, gte, lte, inArray, asc } from 'drizzle-orm'
+import { and, eq, gte, lte, inArray, asc, sql } from 'drizzle-orm'
+import { z } from 'zod'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
@@ -52,22 +53,27 @@ const SEGMENT_COLUMNS = {
   wordCount: segments.wordCount,
 } as const
 
+// ── Validation ──
+
+const getSegmentContextSchema = z.object({
+  fileId: z.string().uuid(),
+  segmentId: z.string().uuid(),
+  contextRange: z.number().int().min(0).max(10).optional(),
+})
+
 // ── Action ──
 
-type GetSegmentContextInput = {
-  fileId: string
-  segmentId: string
-  contextRange?: number | undefined
-}
-
-export async function getSegmentContext(
-  input: GetSegmentContextInput,
-): Promise<ActionResult<SegmentContextData>> {
+export async function getSegmentContext(input: unknown): Promise<ActionResult<SegmentContextData>> {
   try {
+    const parsed = getSegmentContextSchema.safeParse(input)
+    if (!parsed.success) {
+      return { success: false, error: 'Invalid input', code: 'VALIDATION_ERROR' }
+    }
+
     const currentUser = await requireRole('qa_reviewer')
     const tenantId = currentUser.tenantId
-    const { fileId, segmentId } = input
-    const contextRange = clampRange(input.contextRange)
+    const { fileId, segmentId } = parsed.data
+    const contextRange = clampRange(parsed.data.contextRange)
 
     // Query 1: Fetch target segment
     const targetRows = await db
@@ -123,6 +129,7 @@ export async function getSegmentContext(
 
     // Guardrail #5: inArray with empty array = invalid SQL
     if (allContextSegmentIds.length > 0) {
+      // ORDER BY severity priority (critical first) so findingIds[0] matches UI sort order (AC5)
       const findingRows = await db
         .select({
           segmentId: findings.segmentId,
@@ -136,8 +143,16 @@ export async function getSegmentContext(
             inArray(findings.segmentId, allContextSegmentIds),
           ),
         )
+        .orderBy(
+          sql`CASE ${findings.severity}
+            WHEN 'critical' THEN 0
+            WHEN 'major' THEN 1
+            WHEN 'minor' THEN 2
+            ELSE 3
+          END`,
+        )
 
-      // Group by segmentId
+      // Group by segmentId — order preserved from query (critical first)
       for (const row of findingRows) {
         if (row.segmentId) {
           if (!findingsBySegmentId[row.segmentId]) {

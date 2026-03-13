@@ -253,8 +253,8 @@ describe('getSegmentContext', () => {
     ]
 
     await getSegmentContext({ fileId: mockFileId, segmentId: mockSegmentId })
-    // 3 queries — each uses withTenant (but query 2 also uses the target segment's check)
-    expect(mockWithTenant.mock.calls.length).toBeGreaterThanOrEqual(3)
+    // Exactly 3 queries — each uses withTenant once
+    expect(mockWithTenant).toHaveBeenCalledTimes(3)
     for (const call of mockWithTenant.mock.calls) {
       expect(call[1]).toBe(mockTenantId)
     }
@@ -338,6 +338,11 @@ describe('getSegmentContext', () => {
       contextRange: 0,
     })
     expect(result.success).toBe(true)
+    if (result.success) {
+      // Clamped to 1: should have at most 1 before + 1 after
+      expect(result.data.contextBefore.length).toBeLessThanOrEqual(1)
+      expect(result.data.contextAfter.length).toBeLessThanOrEqual(1)
+    }
   })
 
   it('[T-SA.11][P1] should clamp contextRange=4 to 3 (above-max boundary)', async () => {
@@ -368,9 +373,9 @@ describe('getSegmentContext', () => {
     })
     expect(result.success).toBe(true)
     if (result.success) {
-      // Clamped to 3: should have at most 3 before + 3 after
-      expect(result.data.contextBefore.length).toBeLessThanOrEqual(3)
-      expect(result.data.contextAfter.length).toBeLessThanOrEqual(3)
+      // Clamped to 3: exactly 3 before + 3 after (all 6 segments in range)
+      expect(result.data.contextBefore).toHaveLength(3)
+      expect(result.data.contextAfter).toHaveLength(3)
     }
   })
 })
