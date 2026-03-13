@@ -30,7 +30,8 @@
 - `story-4-1a-findings.md` — Story 4.1a Finding List Display & Progressive Disclosure CR R1 (0C/3H/5M/5L)
 - `story-4-0-findings.md` — Story 4.0 Review Infrastructure CR R1-R2 (R2: 0C/1H/3M/5L)
 - `story-4-0-findings.md` — Story 4.0 Review Infrastructure & Keyboard Foundation CR R1 (0C/4H/7M/6L)
-- `story-4-1b-findings.md` — Story 4.1b Keyboard Navigation & Focus Management CR R1 (1C/3H/8M/4L)
+- `story-4-1b-findings.md` — Story 4.1b Keyboard Navigation & Focus Management CR R1-R2 (R2: 0C/2H/3S)
+- `story-4-1c-findings.md` — Story 4.1c Detail Panel & Segment Context CR R1-R2 (R2: 0C/3H/5M/5L)
 
 ## Recurring Anti-Patterns (check EVERY review)
 

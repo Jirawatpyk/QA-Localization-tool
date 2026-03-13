@@ -1,6 +1,6 @@
 # Story 4.1c: Detail Panel & Segment Context
 
-Status: review
+Status: done
 
 > **BLOCKED BY:** Story 4.1a must be `done` (currently `done` ✓) and Story 4.0 must be `done` (currently `done` ✓). Verify latest main includes all 4.1b changes before starting.
 
@@ -90,32 +90,32 @@ So that I can understand each issue in its translation context and make informed
 ## Tasks / Subtasks
 
 ### Task 0: Prerequisites (AC: all)
-- [ ] 0.1 Verify Story 4.1b is merged to main (status: `done`). Pull latest main before starting
-- [ ] 0.2 Run existing tests to establish baseline: `npm run test:unit` + `npm run type-check`
-- [ ] 0.3 Verify `FindingDetailSheet` shell exists with placeholder content at `src/features/review/components/FindingDetailSheet.tsx`
-- [ ] 0.4 Verify `segments` table schema has: `sourceText`, `targetText`, `sourceLang`, `targetLang`, `segmentNumber`, `tenantId` columns
+- [x] 0.1 Verify Story 4.1b is merged to main (status: `done`). Pull latest main before starting
+- [x] 0.2 Run existing tests to establish baseline: `npm run test:unit` + `npm run type-check`
+- [x] 0.3 Verify `FindingDetailSheet` shell exists with placeholder content at `src/features/review/components/FindingDetailSheet.tsx`
+- [x] 0.4 Verify `segments` table schema has: `sourceText`, `targetText`, `sourceLang`, `targetLang`, `segmentNumber`, `tenantId` columns
 
 ### Task 1: Create `getSegmentContext` Server Action (AC: 2, 3, 4)
-- [ ] 1.1 Create `src/features/review/actions/getSegmentContext.action.ts`:
+- [x] 1.1 Create `src/features/review/actions/getSegmentContext.action.ts`:
   - Input: `{ fileId: string, segmentId: string, contextRange?: number }` (default 2)
   - `'use server'` + `import 'server-only'`
   - Call `requireRole('qa_reviewer')` for auth — role hierarchy (`admin > qa_reviewer > native_reviewer`) means admin access is automatic. No `project_manager` role exists in the system. `requireRole` takes single `AppRole` string, not array
   - Return `ActionResult<SegmentContextData>`
-- [ ] 1.2 Fetch the target segment (finding's segment):
+- [x] 1.2 Fetch the target segment (finding's segment):
   - `db.select().from(segments).where(and(withTenant(segments.tenantId, tenantId), eq(segments.id, segmentId)))`
   - Guard: `if (rows.length === 0) return { success: false, error: 'Segment not found', code: 'NOT_FOUND' }`
   - Extract `segmentNumber`, `fileId` from result
-- [ ] 1.3 Fetch surrounding segments:
+- [x] 1.3 Fetch surrounding segments:
   - Context before: `segmentNumber >= (targetNumber - contextRange) AND segmentNumber < targetNumber`
   - Context after: `segmentNumber > targetNumber AND segmentNumber <= (targetNumber + contextRange)`
   - Filter by same `fileId` + `withTenant()`
   - Order by `segmentNumber ASC`
-- [ ] 1.4 Fetch finding IDs per context segment (for click-to-navigate):
+- [x] 1.4 Fetch finding IDs per context segment (for click-to-navigate):
   - Query `findings` table: `SELECT segment_id, id FROM findings WHERE segment_id IN (contextSegmentIds) AND file_id = fileId`
   - Guard: `if (contextSegmentIds.length === 0) return` before `inArray()` (Guardrail #5)
   - `withTenant()` on findings query
   - Group results in JS by `segmentId` → `findingId[]`. Return as `Record<string, string[]>` so detail panel knows which context segments are clickable
-- [ ] 1.5 Define `SegmentContextData` type:
+- [x] 1.5 Define `SegmentContextData` type:
   ```typescript
   type SegmentForContext = {
     id: string
@@ -133,7 +133,7 @@ So that I can understand each issue in its translation context and make informed
     findingsBySegmentId: Record<string, string[]> // segmentId → findingIds
   }
   ```
-- [ ] 1.6 Unit tests for getSegmentContext: `getSegmentContext.action.test.ts`
+- [x] 1.6 Unit tests for getSegmentContext: `getSegmentContext.action.test.ts`
   - Fetches target segment + context segments (happy path)
   - Returns NOT_FOUND when segment doesn't exist
   - Respects contextRange parameter (1, 2, 3)
@@ -144,7 +144,7 @@ So that I can understand each issue in its translation context and make informed
   - Handles `inArray` with empty array (Guardrail #5)
 
 ### Task 2: Create `useSegmentContext` Hook (AC: 2, 3, 4)
-- [ ] 2.1 Create `src/features/review/hooks/use-segment-context.ts`:
+- [x] 2.1 Create `src/features/review/hooks/use-segment-context.ts`:
   - Params: `{ fileId: string | null, segmentId: string | null, contextRange: number }`
   - Returns: `{ data: SegmentContextData | null, isLoading: boolean, error: string | null, retry: () => void }`
   - **Early return guard for cross-file findings:** `if (!segmentId || !fileId) return { data: null, isLoading: false, error: null }` — do NOT call server action when segmentId is null (cross-file findings have no segment context)
@@ -152,7 +152,7 @@ So that I can understand each issue in its translation context and make informed
   - Debounce: 150ms delay before fetching (prevents rapid re-fetches during J/K navigation). If 150ms causes stale context during rapid J/K, increase to 250ms or remove debounce and rely on AbortController cancellation only — test during E2E
   - Abort controller: cancel previous request when new finding is selected
   - Error handling: set `error` state, log via `logger` (no throw)
-- [ ] 2.2 Cache strategy:
+- [x] 2.2 Cache strategy:
   - Use a `Map<string, SegmentContextData>` ref to cache results by `segmentId+contextRange` key
   - Return cached data instantly if available (avoids re-fetch when navigating back to a finding)
   - Cache cleared on `fileId` change via explicit useEffect:
@@ -161,7 +161,7 @@ So that I can understand each issue in its translation context and make informed
       cacheRef.current.clear()
     }, [fileId])
     ```
-- [ ] 2.3 Unit tests: `use-segment-context.test.ts`
+- [x] 2.3 Unit tests: `use-segment-context.test.ts`
   - Returns null initially, then data after fetch
   - Shows loading state during fetch
   - Debounces rapid changes (only final segmentId fetched)
@@ -173,11 +173,11 @@ So that I can understand each issue in its translation context and make informed
   - Retry after error → clears error state → shows loading → returns data (full cycle)
 
 ### Task 3: Populate FindingDetailSheet — Finding Metadata (AC: 1)
-- [ ] 3.1 Update `FindingDetailSheet` props:
+- [x] 3.1 Update `FindingDetailSheet` props:
   - **IMPORTANT:** Current props: `{ open, onOpenChange, findingId }`. Add `finding: FindingForDisplay | null` prop — ReviewPageClient passes the finding data from its sorted findings array (already available)
   - Also add `sourceLang: string` and `targetLang: string | null` props (from `FileReviewData`)
   - Also add `fileId: string` prop (needed for useSegmentContext)
-- [ ] 3.2 Render finding metadata section:
+- [x] 3.2 Render finding metadata section:
   - Status badge at top (Pending = gray, Accepted = green, Rejected = red, Flagged = yellow, etc.)
   - Severity badge: icon (XCircle/AlertTriangle/Info/Lightbulb per Guardrail #36) + text + color
   - Category label
@@ -185,15 +185,15 @@ So that I can understand each issue in its translation context and make informed
   - Description text
   - If AI: confidence percentage badge + model name
   - If suggestion: styled suggestion section with light background
-- [ ] 3.3 Empty state:
+- [x] 3.3 Empty state:
   - When `finding === null`: show "Select a finding to view details" with muted text and an icon
-- [ ] 3.4 Action button bar placeholder:
+- [x] 3.4 Action button bar placeholder:
   - Render 3 disabled buttons: "[A] Accept", "[R] Reject", "[F] Flag"
   - All disabled with `cursor-not-allowed` + `opacity-50`
   - Show button labels WITHOUT keyboard shortcut hints (no "[A]", "[R]", "[F]") — key hints appear only after Story 4.2 wires the handlers. Showing key hints on disabled buttons creates false affordance
   - Tooltip on hover: "Actions available in Story 4.2"
   - `role="toolbar"` + `aria-label="Review actions"` on the container
-- [ ] 3.5 Unit tests: `FindingDetailSheet.test.tsx`
+- [x] 3.5 Unit tests: `FindingDetailSheet.test.tsx`
   - Renders finding metadata correctly
   - Shows empty state when no finding selected
   - Shows confidence/model for AI findings
@@ -204,7 +204,7 @@ So that I can understand each issue in its translation context and make informed
   - Announces "Finding details: [severity] [category]" via aria-live when finding changes
 
 ### Task 4: Display Full Segment Text with Highlights (AC: 2)
-- [ ] 4.1 Create `src/features/review/components/SegmentTextDisplay.tsx`:
+- [x] 4.1 Create `src/features/review/components/SegmentTextDisplay.tsx`:
   - Props: `{ fullText: string, excerpt: string | null, lang: string, label: string }`
   - If excerpt found in fullText → split into [before, highlight, after] → render with `<mark>` on highlight
   - If excerpt not found → render fullText without highlight
@@ -212,17 +212,17 @@ So that I can understand each issue in its translation context and make informed
   - Outermost text container `<div lang={lang}>` wraps all content (Guardrail #39). CJK `text-[110%]` class applied on this outer container so both full text and `<mark>` highlight inherit the scale. Do NOT apply scale on `<mark>` separately
   - CJK detection: use existing `isCjkLang(lang)` from `@/features/review/utils/finding-display.ts` — if true → apply `text-[110%]` on outer `<div>`
   - Thai: if `lang` starts with `th` → `lang="th"` for proper line-breaking (NO CJK scale)
-- [ ] 4.2 Highlight algorithm:
+- [x] 4.2 Highlight algorithm:
   - Strip trailing "..." from excerpt if present (truncation indicator)
   - Use `fullText.indexOf(cleanedExcerpt)` for case-sensitive match
   - If not found: try `fullText.toLowerCase().indexOf(cleanedExcerpt.toLowerCase())` as fallback
   - If still not found: no highlight (render full text as-is)
   - **Skip NFKC normalization** — both `sourceTextExcerpt` and `sourceText` originate from the same DB record (excerpt is a substring of full text). They are already in the same normalization form. NFKC is for cross-source comparison (glossary matching, dedup) per CLAUDE.md, NOT for excerpt-within-own-text search. Applying NFKC here could break matching if DB stores non-NFKC text
-- [ ] 4.3 Wire into FindingDetailSheet:
+- [x] 4.3 Wire into FindingDetailSheet:
   - Use `useSegmentContext` hook result: `data.currentSegment.sourceText` + `data.currentSegment.targetText`
   - Render 2-column grid: source (left) + target (right)
   - Pass `finding.sourceTextExcerpt` and `finding.targetTextExcerpt` as highlight excerpts
-- [ ] 4.4 Unit tests: `SegmentTextDisplay.test.tsx`
+- [x] 4.4 Unit tests: `SegmentTextDisplay.test.tsx`
   - Highlights exact substring match
   - Highlights case-insensitive fallback
   - No highlight when excerpt not found in text
@@ -240,7 +240,7 @@ So that I can understand each issue in its translation context and make informed
   - **Contrast verification:** mark highlight `bg-amber-200` (#fde68a) against `text-foreground` (#0a0a0a). Pre-calculated ratios: vs white=1.16:1 (mark bg contrast irrelevant — text-on-mark matters). Actual check: dark text (#0a0a0a) on amber-200 (#fde68a) = **14.3:1** ✓. Dark text on amber-700/50 in dark mode: verify with DevTools contrast checker (`Elements > Styles > color swatch`). If dark mode fails → use `dark:bg-amber-600/40`
 
 ### Task 5: Render Surrounding Segment Context (AC: 3)
-- [ ] 5.1 Create `src/features/review/components/SegmentContextList.tsx`:
+- [x] 5.1 Create `src/features/review/components/SegmentContextList.tsx`:
   - Props: `{ contextBefore: SegmentForContext[], currentSegment: SegmentForContext, contextAfter: SegmentForContext[], findingsBySegmentId: Record<string, string[]>, onNavigateToFinding: (findingId: string) => void }`
   - **NOTE: `sourceLang`/`targetLang` removed from props** — each segment carries its own `sourceLang`/`targetLang` in `SegmentForContext`. Use per-segment language, NOT parent-level (supports multi-language files correctly)
   - Add `data-testid="segment-context-loaded"` on the root element when data is rendered (E2E tests wait for this)
@@ -250,16 +250,16 @@ So that I can understand each issue in its translation context and make informed
   - Current segment row: normal opacity, `text-base`, background `bg-primary/5` (subtle highlight using design token)
   - Segment number label on each row (e.g., "Seg 42") — `text-xs text-muted-foreground`
   - Visual separator: `border-t border-border` between context and current segment
-- [ ] 5.2 Context segment styling:
+- [x] 5.2 Context segment styling:
   - All source text: `lang={segment.sourceLang}` attribute — **per-segment language from SegmentForContext, NOT parent-level prop** (multi-language file support)
   - All target text: `lang={segment.targetLang}` attribute — same per-segment
   - CJK font scale: use `isCjkLang(segment.sourceLang)` / `isCjkLang(segment.targetLang)` — applied per-segment text container (same SegmentTextDisplay reuse or inline logic)
   - Context rows with findings: `underline decoration-dotted cursor-pointer hover:bg-accent/50` + small icon indicator (e.g., `MessageSquare` 12px)
   - Context rows without findings: `cursor-default`, no click affordance, no underline
-- [ ] 5.3 Cross-file finding fallback:
+- [x] 5.3 Cross-file finding fallback:
   - When `segmentId === null`: render a muted message: "Cross-file finding — no specific segment context available"
   - Still show finding metadata (AC1) but no segment context section
-- [ ] 5.4 Loading state:
+- [x] 5.4 Loading state:
   - While `useSegmentContext` is loading: show skeleton placeholder matching the 2-column layout. Row count = `contextRange * 2 + 1` (e.g., range 2 → 5 skeleton rows)
   - Use shadcn Skeleton component
   - Verify shadcn Skeleton respects `prefers-reduced-motion` automatically. If not, add explicit override:
@@ -269,12 +269,12 @@ So that I can understand each issue in its translation context and make informed
     }
     ```
   - (Guardrail #37)
-- [ ] 5.5 Error state:
+- [x] 5.5 Error state:
   - When `useSegmentContext` returns `error`: show inline error message in the segment context area: "Failed to load segment context" with a "Retry" button
   - Retry button calls the hook's refetch (clear cache entry + re-trigger useEffect)
   - Finding metadata (Section 1) remains visible above — only Section 3 (segment context) shows the error
   - `aria-live="assertive"` on error message (Guardrail #33)
-- [ ] 5.6 Unit tests: `SegmentContextList.test.tsx`
+- [x] 5.6 Unit tests: `SegmentContextList.test.tsx`
   - Renders context before + current + context after in correct order
   - Current segment is visually distinct (has highlight class)
   - Context segments with findings show clickable affordance
@@ -288,27 +288,27 @@ So that I can understand each issue in its translation context and make informed
   - Error state preserves finding metadata above
 
 ### Task 6: Context Range Selector (AC: 4)
-- [ ] 6.1 Add context range button group to FindingDetailSheet:
+- [x] 6.1 Add context range button group to FindingDetailSheet:
   - Above the segment context area
   - Label: "Context" with 3 toggle buttons: [1] [2] [3]
   - Default: 2 selected (active state: `bg-primary text-primary-foreground`, inactive: `bg-muted text-muted-foreground`)
   - Uses `useState(2)` in FindingDetailSheet — local state, resets on page reload
   - Changing range triggers `useSegmentContext` re-fetch with new `contextRange`
-- [ ] 6.2 Button group accessibility:
+- [x] 6.2 Button group accessibility:
   - `role="radiogroup"` + `aria-label="Segment context range"`
   - Each button: `role="radio"` + `aria-checked={isActive}`
   - Keyboard: Arrow left/right to navigate, Enter/Space to select
-- [ ] 6.3 Unit tests:
+- [x] 6.3 Unit tests:
   - Default range is 2
   - Clicking 1/3 updates range
   - Triggers re-fetch with new range value
   - ARIA roles correct
 
 ### Task 7: Click-to-Navigate on Context Segments (AC: 5)
-- [ ] 7.1 Implement navigation in SegmentContextList:
+- [x] 7.1 Implement navigation in SegmentContextList:
   - When a context segment row with findings is clicked: find the first finding ID from `findingsBySegmentId[segmentId]` that exists in the current `flattenedIds` (sorted finding list), then call `onNavigateToFinding(matchedId)`. This ensures "first" means first in the user's visible sorted order, not arbitrary DB order
   - `onNavigateToFinding` is passed from ReviewPageClient through FindingDetailSheet
-- [ ] 7.2 Wire in ReviewPageClient:
+- [x] 7.2 Wire in ReviewPageClient:
   - Create `handleNavigateToFinding(findingId: string)` callback:
     - Find the finding in the sorted/flattened list
     - Update `activeFindingId` in FindingList (need to expose a setter or use a shared mechanism)
@@ -318,35 +318,35 @@ So that I can understand each issue in its translation context and make informed
       - (c) Use `useReviewStore.setSelectedFinding(id)` in store → FindingList watches `selectedId` and syncs `activeFindingId` to it
     - **RECOMMENDED: Option (c)** — `setSelectedFinding(findingId)` → FindingList already watches `selectedId` for detail panel sync. Add a `useEffect` in FindingList that syncs `activeFindingId` when `selectedId` changes externally (from click-to-navigate). **CRITICAL: guard against circular sync** — FindingList's keyboard/click handlers set BOTH `activeFindingId` AND `setSelectedFinding(id)`. The new useEffect MUST guard: `if (selectedId !== null && selectedId !== activeFindingId) { setActiveFindingId(selectedId) }`. Without this guard, user click → setSelectedFinding → useEffect → setActiveFindingId → redundant re-render loop. Also beware interaction with the existing "adjust state during render" pattern at lines 136-148 of FindingList
   - Verify: clicking a context segment → finding list scrolls to and focuses the target finding → detail panel updates to new finding
-- [ ] 7.3 Unit tests:
+- [x] 7.3 Unit tests:
   - Clicking context segment with findings triggers onNavigateToFinding
   - Clicking context segment without findings does nothing
   - Navigation updates store selectedId
   - FindingList syncs activeFindingId from store selectedId
 
 ### Task 8: Integration with ReviewPageClient (AC: 1, 5)
-- [ ] 8.1 Update ReviewPageClient to pass additional props to FindingDetailSheet:
+- [x] 8.1 Update ReviewPageClient to pass additional props to FindingDetailSheet:
   - `finding`: look up from sorted findings using `selectedId`
   - `sourceLang`: from `FileReviewData`
   - `targetLang`: from `FileReviewData`
   - `fileId`: from `FileReviewData`
   - `onNavigateToFinding`: callback from Task 7
-- [ ] 8.2 Update FindingDetailSheet import and wire all new content:
+- [x] 8.2 Update FindingDetailSheet import and wire all new content:
   - Metadata section (Task 3)
   - Segment text display with highlights (Task 4)
   - Context segment list (Task 5)
   - Context range selector (Task 6)
   - Navigation callback (Task 7)
-- [ ] 8.3 Ensure `prefers-reduced-motion` is respected on all new content (Guardrail #37):
+- [x] 8.3 Ensure `prefers-reduced-motion` is respected on all new content (Guardrail #37):
   - No slide/fade animations on context loading
   - Skeleton animation disabled if reduced motion
-- [ ] 8.4 Add `aria-live="polite"` announcement when detail panel content changes (Guardrail #33):
+- [x] 8.4 Add `aria-live="polite"` announcement when detail panel content changes (Guardrail #33):
   - When a new finding is focused and detail panel updates, announce: "Finding details: [severity] [category]"
   - Use existing `announce()` from `features/review/utils/announce.ts`
   - Do NOT announce on initial mount (only on finding change)
 
 ### Task 9: E2E Test — Detail Panel Content (AC: all)
-- [ ] 9.1 Add E2E tests in `e2e/review-detail-panel.spec.ts` (new file):
+- [x] 9.1 Add E2E tests in `e2e/review-detail-panel.spec.ts` (new file):
   - **Setup:** Same as review E2E — seed project with file + findings + segments
   - **E1 (P0):** Focus a finding via keyboard → detail panel shows finding metadata (severity, category, layer, description)
   - **E2 (P0):** Detail panel shows full segment text (not truncated) with source and target
@@ -355,19 +355,19 @@ So that I can understand each issue in its translation context and make informed
   - **E5 (P2):** Context range selector changes number of context segments displayed
   - **E6 (P1):** CJK/Thai text has `lang` attribute on text elements
   - **E7 (P1):** Radix Sheet focus trap: click finding → Sheet opens + focus inside → press Esc → focus restores to grid row (verify no conflict between Sheet focus trap and grid roving tabindex)
-- [ ] 9.2 Use E2E patterns from `e2e-testing-gotchas.md`:
+- [x] 9.2 Use E2E patterns from `e2e-testing-gotchas.md`:
   - Wait for `data-keyboard-ready` signal before keyboard interaction
   - Use `page.keyboard.press('j')` for navigation
   - **Wait for segment context to load:** `await page.waitForSelector('[data-testid="segment-context-loaded"]', { timeout: 5000 })` — because useSegmentContext has async fetch + debounce, do NOT assert context content until this attribute is present
   - Wait for detail panel content to appear: `page.getByTestId('finding-detail-sheet').getByText(...)`
 
 ### Task 10: Integration Verification
-- [ ] 10.1 Verify all existing unit tests pass: `npm run test:unit`
-- [ ] 10.2 Verify type-check passes: `npm run type-check`
-- [ ] 10.3 Verify lint passes: `npm run lint`
-- [ ] 10.4 Verify build succeeds: `npm run build`
-- [ ] 10.5 Verify E2E tests pass: `npx playwright test e2e/review-detail-panel.spec.ts e2e/review-keyboard.spec.ts e2e/review-findings.spec.ts`
-- [ ] 10.6 Manual verification:
+- [x] 10.1 Verify all existing unit tests pass: `npm run test:unit`
+- [x] 10.2 Verify type-check passes: `npm run type-check`
+- [x] 10.3 Verify lint passes: `npm run lint`
+- [x] 10.4 Verify build succeeds: `npm run build`
+- [x] 10.5 Verify E2E tests pass: `npx playwright test e2e/review-detail-panel.spec.ts e2e/review-keyboard.spec.ts e2e/review-findings.spec.ts`
+- [x] 10.6 Manual verification:
   - Open review page with findings → focus finding → see detail panel content
   - Verify segment context loads (±2 segments)
   - Change context range → verify segment count changes

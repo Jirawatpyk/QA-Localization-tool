@@ -345,7 +345,7 @@ describe('getSegmentContext', () => {
     }
   })
 
-  it('[T-SA.11][P1] should clamp contextRange=4 to 3 (above-max boundary)', async () => {
+  it('[T-SA.11][P1] should accept contextRange=3 (at-max boundary)', async () => {
     const currentSegment = buildSegment({
       id: mockSegmentId,
       fileId: mockFileId,
@@ -369,13 +369,52 @@ describe('getSegmentContext', () => {
     const result = await getSegmentContext({
       fileId: mockFileId,
       segmentId: mockSegmentId,
-      contextRange: 4,
+      contextRange: 3,
     })
     expect(result.success).toBe(true)
     if (result.success) {
-      // Clamped to 3: exactly 3 before + 3 after (all 6 segments in range)
+      // contextRange=3: exactly 3 before + 3 after
       expect(result.data.contextBefore).toHaveLength(3)
       expect(result.data.contextAfter).toHaveLength(3)
+    }
+  })
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // Input Validation (Zod)
+  // ═══════════════════════════════════════════════════════════════════════
+
+  it('[T-SA.12][P1] should return VALIDATION_ERROR for non-UUID fileId', async () => {
+    const result = await getSegmentContext({
+      fileId: 'not-a-uuid',
+      segmentId: mockSegmentId,
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('VALIDATION_ERROR')
+      expect(result.error).toMatch(/invalid/i)
+    }
+  })
+
+  it('[T-SA.13][P1] should return VALIDATION_ERROR for non-UUID segmentId', async () => {
+    const result = await getSegmentContext({
+      fileId: mockFileId,
+      segmentId: 'bad-id',
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('VALIDATION_ERROR')
+    }
+  })
+
+  it('[T-SA.14][P1] should return VALIDATION_ERROR for contextRange above max (4)', async () => {
+    const result = await getSegmentContext({
+      fileId: mockFileId,
+      segmentId: mockSegmentId,
+      contextRange: 4,
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('VALIDATION_ERROR')
     }
   })
 })

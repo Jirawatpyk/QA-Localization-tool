@@ -58,7 +58,7 @@ const SEGMENT_COLUMNS = {
 const getSegmentContextSchema = z.object({
   fileId: z.string().uuid(),
   segmentId: z.string().uuid(),
-  contextRange: z.number().int().min(0).max(10).optional(),
+  contextRange: z.number().int().min(0).max(3).optional(),
 })
 
 // ── Action ──

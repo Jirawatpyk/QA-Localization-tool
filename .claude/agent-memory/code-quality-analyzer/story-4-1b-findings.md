@@ -1,7 +1,8 @@
-# Story 4.1b Keyboard Navigation & Focus Management CR R1
+# Story 4.1b Keyboard Navigation & Focus Management CR R1-R2
 
 **Date:** 2026-03-10
-**Result:** 1C / 3H / 8M / 4L
+**R1 Result:** 1C / 3H / 8M / 4L
+**R2 Result:** 0C / 2H / 3S
 
 ## Critical Findings
 
@@ -68,3 +69,27 @@
 - When useEffect calls rAF, MUST cancel in cleanup function
 - Especially important when effect deps change frequently (focus tracking)
 - Pattern: `const rafId = requestAnimationFrame(...); return () => cancelAnimationFrame(rafId)`
+
+---
+
+## CR R2 Findings (2026-03-10)
+
+### R1 Fix Verification — All 7 CORRECT
+
+| Fix                                                    | Status  | Notes                                                         |
+| ------------------------------------------------------ | ------- | ------------------------------------------------------------- |
+| H1: Mount guard (L167-171)                             | CORRECT | `prevActiveFindingIdRef.current === null` skip works          |
+| H3: cancelAnimationFrame cleanup (L164, 175, 188)      | CORRECT | ref initialized to 0 (safe no-op)                             |
+| M1: role="gridcell" (L94, 170)                         | CORRECT | APG compliant single-cell row                                 |
+| M2: handleGridClick (L280-290)                         | CORRECT | guards: closest + !== activeFindingId + flattenedIds.includes |
+| M3: Escape layer boolean ref (L231-251)                | CORRECT | transition tracking prevents duplicate push/pop               |
+| H2: T3.3 rAF mock (L399-411)                           | CORRECT | inline rAF + body check = deterministic                       |
+| React Compiler: ref assignment in useEffect (L232-234) | CORRECT | No render-phase mutation                                      |
+
+### R2 New Findings
+
+- **H-R2-1:** T6.4 conditional assertion `if (scrollSpy.mock.calls.length > 0)` = false positive risk (Anti-Pattern #39 recurrence)
+- **H-R2-2:** handleGridFocus rAF (L266) has no cleanup — inconsistent with focusRafRef pattern (low severity, null guard protects)
+- **S-R2-1:** Wrapper div between rowgroup and row breaks strict ARIA hierarchy — add `role="presentation"`
+- **S-R2-2:** T-IME-01 and T-SCROLL-01 are duplicates of T1.1/T1.12
+- **S-R2-3:** buildFindingForUI uses `Record<string,unknown>` — loses type safety (pre-existing)

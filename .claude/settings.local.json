@@ -154,7 +154,9 @@
       "Bash(__NEW_LINE_206a05c7682ac739__:*)",
       "Read(//tmp/**)",
       "Bash(npx next:*)",
-      "Bash(git lfs:*)"
+      "Bash(git lfs:*)",
+      "Bash(ls -la /c/Users/Jiraw/OneDrive/Documents/qa-localization-tool/src/app/\\\\\\(app\\\\\\)/projects/\\\\[projectId\\\\]/review/\\\\[fileId\\\\\\)/)",
+      "Bash(grep -c '\"type\":\"result\"' \"C:\\\\Users\\\\Jiraw\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Jiraw-OneDrive-Documents-qa-localization-tool\\\\adec94eb-ee7c-4174-b898-b729ac26df74\\\\tasks\\\\aac738465b06a3d09.output\" 2>/dev/null; grep -c '\"type\":\"result\"' \"C:\\\\Users\\\\Jiraw\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Jiraw-OneDrive-Documents-qa-localization-tool\\\\adec94eb-ee7c-4174-b898-b729ac26df74\\\\tasks\\\\a78c08b4e2aba73fb.output\" 2>/dev/null; grep -c '\"type\":\"result\"' \"C:\\\\Users\\\\Jiraw\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Jiraw-OneDrive-Documents-qa-localization-tool\\\\adec94eb-ee7c-4174-b898-b729ac26df74\\\\tasks\\\\aeb49075d6f972674.output\" 2>/dev/null)"
     ]
   }
 }
