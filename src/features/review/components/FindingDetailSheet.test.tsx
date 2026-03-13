@@ -254,7 +254,7 @@ describe('FindingDetailSheet', () => {
     expect(screen.getByText('Mistranslation of key term')).toBeInTheDocument()
 
     // Finding becomes null (deleted via realtime)
-    rerender(<FindingDetailSheet {...defaultProps({ findingId: null, finding: null })} />)
+    rerender(<FindingDetailSheet {...defaultProps({ finding: null })} />)
 
     const matches = screen.getAllByText(/Select a finding to view details/)
     expect(matches.length).toBeGreaterThanOrEqual(1)
