@@ -1,5 +1,6 @@
 'use client'
 
+import { PanelRight } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
@@ -9,6 +10,8 @@ import { retryAiAnalysis } from '@/features/pipeline/actions/retryAiAnalysis.act
 import { approveFile } from '@/features/review/actions/approveFile.action'
 import type { FileReviewData } from '@/features/review/actions/getFileReviewData.action'
 import { AutoPassRationale } from '@/features/review/components/AutoPassRationale'
+import { FileNavigationDropdown } from '@/features/review/components/FileNavigationDropdown'
+import { FindingDetailContent } from '@/features/review/components/FindingDetailContent'
 import { FindingDetailSheet } from '@/features/review/components/FindingDetailSheet'
 import { FindingList } from '@/features/review/components/FindingList'
 import { KeyboardCheatSheet } from '@/features/review/components/KeyboardCheatSheet'
@@ -21,6 +24,7 @@ import { useThresholdSubscription } from '@/features/review/hooks/use-threshold-
 import { useReviewStore } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import { mountAnnouncer, unmountAnnouncer } from '@/features/review/utils/announce'
+import { useIsDesktop, useIsLaptop } from '@/hooks/useMediaQuery'
 import type {
   Finding,
   FindingSeverity,
@@ -54,6 +58,13 @@ function deriveScoreBadgeState(
 /** Score statuses that allow manual approval */
 const APPROVABLE_STATUSES = new Set<ScoreStatus>(['calculated', 'overridden'])
 
+/** Derive layout mode string for data-layout-mode attribute */
+function getLayoutMode(isDesktop: boolean, isLaptop: boolean): 'desktop' | 'laptop' | 'mobile' {
+  if (isDesktop) return 'desktop'
+  if (isLaptop) return 'laptop'
+  return 'mobile'
+}
+
 export function ReviewPageClient({
   fileId,
   projectId,
@@ -71,6 +82,11 @@ export function ReviewPageClient({
   const storeL3ConfidenceMin = useReviewStore((s) => s.l3ConfidenceMin)
   const selectedId = useReviewStore((s) => s.selectedId)
   const setSelectedFinding = useReviewStore((s) => s.setSelectedFinding)
+
+  // Responsive breakpoint hooks
+  const isDesktop = useIsDesktop()
+  const isLaptop = useIsLaptop()
+  const layoutMode = getLayoutMode(isDesktop, isLaptop)
 
   // Mount announcer for screen reader (Guardrail #33 — pre-exist in DOM)
   useEffect(() => {
@@ -266,24 +282,58 @@ export function ReviewPageClient({
     [allFindings],
   )
 
-  // Sheet open state — driven by store selectedId
-  const isSheetOpen = selectedId !== null
-  function handleSheetOpenChange(open: boolean) {
+  // Selected finding for detail panel
+  const selectedFinding = selectedId
+    ? (findingsForDisplay.find((f) => f.id === selectedId) ?? null)
+    : null
+
+  // Toggle button for mobile drawer (visible when finding selected but sheet closed)
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
+  const showToggleButton = !isDesktop && !isLaptop && selectedId !== null && !mobileDrawerOpen
+
+  function handleToggleDrawer() {
+    setMobileDrawerOpen(true)
+  }
+
+  // Derive Sheet open state for non-desktop: laptop auto-opens on select, mobile uses toggle
+  const sheetOpen = isDesktop
+    ? false
+    : isLaptop
+      ? selectedId !== null
+      : mobileDrawerOpen && selectedId !== null
+
+  function handleSheetChange(open: boolean) {
     if (!open) {
+      if (!isLaptop) {
+        setMobileDrawerOpen(false)
+      }
       setSelectedFinding(null)
     }
   }
 
   return (
-    <div className="flex h-full" data-testid="review-3-zone">
-      {/* Zone 1: File Navigation (left, collapsible) */}
-      <nav aria-label="File navigation" className="w-60 border-r shrink-0 overflow-y-auto p-4">
-        <h2 className="text-sm font-semibold text-muted-foreground mb-2">Files</h2>
-        <p className="text-xs text-muted-foreground">File navigation coming soon.</p>
-      </nav>
+    <div className="flex h-full" data-testid="review-3-zone" data-layout-mode={layoutMode}>
+      {/* Zone 1: File Navigation — desktop: sidebar, laptop: dropdown, mobile: hidden */}
+      {isDesktop && (
+        <nav
+          aria-label="File navigation"
+          className="w-60 border-r shrink-0 overflow-y-auto p-4"
+          data-testid="file-sidebar-nav"
+        >
+          <h2 className="text-sm font-semibold text-muted-foreground mb-2">Files</h2>
+          <p className="text-xs text-muted-foreground">File navigation coming soon.</p>
+        </nav>
+      )}
 
       {/* Zone 2: Finding List (center) */}
       <div className="flex-1 overflow-y-auto p-6">
+        {/* Laptop dropdown nav — replaces sidebar */}
+        {!isDesktop && isLaptop && (
+          <div className="mb-4">
+            <FileNavigationDropdown currentFileName={initialData.file.fileName} />
+          </div>
+        )}
+
         {/* Header: file name + score badge + approve button */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -389,17 +439,54 @@ export function ReviewPageClient({
         <ReviewActionBar />
       </div>
 
-      {/* Zone 3: Finding Detail Sheet (right, Radix Sheet via portal) */}
-      <FindingDetailSheet
-        open={isSheetOpen}
-        onOpenChange={handleSheetOpenChange}
-        findingId={selectedId}
-        finding={selectedId ? (findingsForDisplay.find((f) => f.id === selectedId) ?? null) : null}
-        sourceLang={sourceLang}
-        targetLang={targetLang ?? ''}
-        fileId={fileId}
-        onNavigateToFinding={setSelectedFinding}
-      />
+      {/* Zone 3: Detail Panel — desktop: static aside, non-desktop: Sheet */}
+      {isDesktop ? (
+        <aside
+          role="complementary"
+          aria-label="Finding detail"
+          className="w-[var(--detail-panel-width)] shrink-0 border-l border-border overflow-y-auto"
+          data-testid="finding-detail-aside"
+        >
+          <div className="p-4">
+            <h2 className="font-semibold text-foreground">Finding Detail</h2>
+            <p className="text-sm text-muted-foreground">
+              Review finding details, segment context, and take actions
+            </p>
+          </div>
+          <FindingDetailContent
+            finding={selectedFinding}
+            sourceLang={sourceLang}
+            targetLang={targetLang ?? ''}
+            fileId={fileId}
+            contextRange={undefined}
+            onNavigateToFinding={setSelectedFinding}
+          />
+        </aside>
+      ) : (
+        <FindingDetailSheet
+          open={sheetOpen}
+          onOpenChange={handleSheetChange}
+          findingId={selectedId}
+          finding={selectedFinding}
+          sourceLang={sourceLang}
+          targetLang={targetLang ?? ''}
+          fileId={fileId}
+          onNavigateToFinding={setSelectedFinding}
+        />
+      )}
+
+      {/* Mobile toggle button — opens drawer when finding selected */}
+      {showToggleButton && (
+        <button
+          type="button"
+          onClick={handleToggleDrawer}
+          className="fixed bottom-4 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
+          aria-label="Open finding detail"
+          data-testid="detail-panel-toggle"
+        >
+          <PanelRight className="h-5 w-5" aria-hidden="true" />
+        </button>
+      )}
 
       {/* Keyboard Cheat Sheet Modal (Ctrl+?) */}
       <KeyboardCheatSheet />

@@ -10,6 +10,16 @@ import type { FileReviewData } from '@/features/review/actions/getFileReviewData
 import { ReviewPageClient } from '@/features/review/components/ReviewPageClient'
 import type { Finding, LayerCompleted, ScoreStatus } from '@/types/finding'
 
+vi.mock('server-only', () => ({}))
+
+// Mock responsive hooks — default laptop mode for Story 3.5 tests
+vi.mock('@/hooks/useMediaQuery', () => ({
+  useMediaQuery: vi.fn(() => false),
+  useIsDesktop: vi.fn(() => false),
+  useIsLaptop: vi.fn(() => true),
+  useIsMobile: vi.fn(() => false),
+}))
+
 // ── Mocks ──
 
 vi.mock('@/features/review/hooks/use-findings-subscription', () => ({
@@ -31,6 +41,12 @@ vi.mock('@/features/review/components/KeyboardCheatSheet', () => ({
 }))
 vi.mock('@/features/review/components/ReviewActionBar', () => ({
   ReviewActionBar: () => null,
+}))
+vi.mock('@/features/review/components/FindingDetailContent', () => ({
+  FindingDetailContent: () => null,
+}))
+vi.mock('@/features/review/components/FileNavigationDropdown', () => ({
+  FileNavigationDropdown: () => null,
 }))
 vi.mock('@/features/review/utils/announce', () => ({
   mountAnnouncer: vi.fn(),

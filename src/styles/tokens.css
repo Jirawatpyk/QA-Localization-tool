@@ -60,6 +60,8 @@
   --sidebar-width: 240px;
   --sidebar-width-collapsed: 48px;
   --detail-panel-width: 400px;
+  --detail-panel-width-laptop: 360px;
+  --detail-panel-width-tablet: 300px;
   --content-max-width: 1400px;
 
   /* Spacing (4px base, compact 0.75x) */

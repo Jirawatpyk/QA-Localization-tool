@@ -55,6 +55,22 @@ import { useReviewStore } from '@/features/review/stores/review.store'
 import { buildFinding } from '@/test/factories'
 import type { DbFileStatus } from '@/types/pipeline'
 
+// Mock responsive hooks — these tests were written for Story 4.0 assuming Sheet behavior.
+// Default to laptop mode (isDesktop=false, isLaptop=true) so Sheet auto-opens on select.
+vi.mock('@/hooks/useMediaQuery', () => ({
+  useMediaQuery: vi.fn(() => false),
+  useIsDesktop: vi.fn(() => false),
+  useIsLaptop: vi.fn(() => true),
+  useIsMobile: vi.fn(() => false),
+}))
+
+// Mock useReducedMotion — since it delegates to useMediaQuery (which is mocked above),
+// we need a separate controllable mock for reduced-motion tests.
+const mockUseReducedMotion = vi.fn(() => false)
+vi.mock('@/hooks/useReducedMotion', () => ({
+  useReducedMotion: () => mockUseReducedMotion(),
+}))
+
 // Setup matchMedia for useReducedMotion
 function setupMatchMedia(prefersReducedMotion = false) {
   Object.defineProperty(window, 'matchMedia', {
@@ -338,6 +354,7 @@ describe('ReviewPageClient — Story 4.0 reduced-motion', () => {
 
   it('[P1] RM1: should render Sheet without slide transition when prefers-reduced-motion', async () => {
     setupMatchMedia(true)
+    mockUseReducedMotion.mockReturnValue(true)
 
     render(
       <ReviewPageClient

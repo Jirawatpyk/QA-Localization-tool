@@ -61,14 +61,17 @@ export function FindingCard({
     l3ConfidenceMin,
   )
 
-  const showAnimation = isNew === true && !reducedMotion
+  const showNewAnimation = isNew === true && !reducedMotion
   const bgClass = STATUS_BG[finding.status] ?? ''
+
+  // Expand/collapse transition (AC5): 150ms ease-out, disabled when reduced motion
+  const transitionClass = reducedMotion ? 'duration-0' : 'transition-all duration-150 ease-out'
 
   return (
     <div
       data-testid="finding-card"
       data-finding-id={finding.id}
-      className={`border rounded-lg p-3 ${bgClass} ${showAnimation ? 'animate-fade-in' : ''}`}
+      className={`border rounded-lg p-3 ${bgClass} ${transitionClass} ${showNewAnimation ? 'animate-fade-in' : ''}`}
     >
       {/* Header row: severity + category + layer + finding number */}
       <div className="flex items-center gap-2 flex-wrap">
@@ -155,7 +158,7 @@ export function FindingCard({
           <button
             type="button"
             disabled
-            className="opacity-50 cursor-not-allowed p-0.5 rounded"
+            className="opacity-50 cursor-not-allowed lg:p-0.5 p-2.5 min-h-[44px] min-w-[44px] lg:min-h-0 lg:min-w-0 rounded flex items-center justify-center"
             aria-label="Accept finding"
           >
             <Check className="h-3.5 w-3.5" aria-hidden="true" />
@@ -163,7 +166,7 @@ export function FindingCard({
           <button
             type="button"
             disabled
-            className="opacity-50 cursor-not-allowed p-0.5 rounded"
+            className="opacity-50 cursor-not-allowed lg:p-0.5 p-2.5 min-h-[44px] min-w-[44px] lg:min-h-0 lg:min-w-0 rounded flex items-center justify-center"
             aria-label="Reject finding"
           >
             <X className="h-3.5 w-3.5" aria-hidden="true" />
