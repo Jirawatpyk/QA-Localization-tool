@@ -579,3 +579,14 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Risk:** No E2E coverage for detail panel — integration gaps hidden until Story 4.2 wires actions
 - **Fix:** Unskip and activate when review page keyboard J/K → Sheet open wiring is stable. Requires: (1) Finding focus → Sheet auto-open behavior working in E2E, (2) PostgREST seeded data visible in review page
 - **Status:** DEFERRED → **Story 4.2 — Core Review Actions** (E2E activation after action buttons are wired + Sheet open flow confirmed in CI)
+
+### TD-E2E-017: Responsive Layout E2E tests skipped — 30 `test.skip` without TD ref
+- **Date:** 2026-03-13
+- **Story:** Story 4.1d (Responsive Layout)
+- **Phase:** CR R1
+- **Severity:** Medium
+- **File:** `e2e/review-responsive.spec.ts` — 30 tests (desktop×10, laptop×10, mobile×10)
+- **Description:** All 30 E2E tests use `test.skip()`. Spec covers 3 breakpoint suites (desktop ≥1440, laptop 1024-1439, mobile <768) including layout zones, detail panel mode, ARIA landmarks, touch targets, animations, and boundary tests. No `// TODO(TD-XXX)` ref in code comments.
+- **Risk:** No E2E coverage for responsive layout — breakpoint regressions hidden until activated
+- **Fix:** Unskip and activate when review page is stable with real data in E2E environment. Requires: (1) PostgREST seeded findings visible, (2) Playwright viewport resize + element assertions, (3) Story 4.2 action buttons wired for full flow
+- **Status:** DEFERRED → **Story 4.2 — Core Review Actions** (E2E activation after responsive + actions are end-to-end testable)

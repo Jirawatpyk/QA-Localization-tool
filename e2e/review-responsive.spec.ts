@@ -1,7 +1,8 @@
 /**
  * Story 4.1d ATDD — E2E: Responsive Layout
  *
- * RED PHASE: All tests will pass after Story 4.1d implementation
+ * TODO(TD-E2E-017): All 30 tests skipped — activate when review page is
+ * stable with real data in E2E and Story 4.2 action buttons are wired.
  *
  * Tests the responsive 3-zone layout for the review page:
  *   - Desktop (1440px+): nav sidebar + finding list + static aside

@@ -466,7 +466,6 @@ export function ReviewPageClient({
         <FindingDetailSheet
           open={sheetOpen}
           onOpenChange={handleSheetChange}
-          findingId={selectedId}
           finding={selectedFinding}
           sourceLang={sourceLang}
           targetLang={targetLang ?? ''}

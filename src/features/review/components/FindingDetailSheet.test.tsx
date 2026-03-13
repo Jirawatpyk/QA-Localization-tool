@@ -51,7 +51,6 @@ function defaultProps(overrides?: Record<string, unknown>) {
   return {
     open: true,
     onOpenChange: vi.fn(),
-    findingId: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
     finding: buildFindingForUI({
       id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
       severity: 'major',
@@ -162,7 +161,6 @@ describe('FindingDetailSheet', () => {
     render(
       <FindingDetailSheet
         {...defaultProps({
-          findingId: null,
           finding: null,
         })}
       />,
@@ -217,7 +215,6 @@ describe('FindingDetailSheet', () => {
     rerender(
       <FindingDetailSheet
         {...defaultProps({
-          findingId: 'new-id',
           finding: buildFindingForUI({
             id: 'new-id',
             severity: 'critical',

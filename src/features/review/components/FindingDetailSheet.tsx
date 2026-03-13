@@ -17,7 +17,6 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 type FindingDetailSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  findingId: string | null
   finding: FindingForDisplay | null
   sourceLang: string
   targetLang: string
@@ -36,7 +35,6 @@ type FindingDetailSheetProps = {
 export function FindingDetailSheet({
   open,
   onOpenChange,
-  findingId: _findingId,
   finding,
   sourceLang,
   targetLang,
@@ -86,14 +84,16 @@ export function FindingDetailSheet({
           {announcement}
         </div>
 
-        <FindingDetailContent
-          finding={finding}
-          sourceLang={sourceLang}
-          targetLang={targetLang}
-          fileId={fileId ?? ''}
-          contextRange={contextRange}
-          onNavigateToFinding={onNavigateToFinding}
-        />
+        {fileId ? (
+          <FindingDetailContent
+            finding={finding}
+            sourceLang={sourceLang}
+            targetLang={targetLang}
+            fileId={fileId}
+            contextRange={contextRange}
+            onNavigateToFinding={onNavigateToFinding}
+          />
+        ) : null}
       </SheetContent>
     </Sheet>
   )

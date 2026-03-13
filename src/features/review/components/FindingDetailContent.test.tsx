@@ -14,6 +14,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 
 import { FindingDetailContent } from '@/features/review/components/FindingDetailContent'
+import { buildFindingForUI } from '@/test/factories'
 
 // Mock useReducedMotion to avoid matchMedia issues in jsdom
 vi.mock('@/hooks/useReducedMotion', () => ({
@@ -30,22 +31,22 @@ vi.mock('@/features/review/hooks/use-segment-context', () => ({
   }),
 }))
 
-// ── Mock finding data ──
+// ── Factory-built finding data ──
 
-const mockFinding = {
+const mockFinding = buildFindingForUI({
   id: 'f-001',
   segmentId: 'seg-001',
-  severity: 'major' as const,
+  severity: 'major',
   category: 'accuracy',
   description: 'Incorrect translation of term',
-  status: 'pending' as const,
-  detectedByLayer: 'L2' as const,
+  status: 'pending',
+  detectedByLayer: 'L2',
   aiConfidence: 85,
   sourceTextExcerpt: 'Hello world',
   targetTextExcerpt: 'สวัสดีโลก',
   suggestedFix: 'Use สวัสดีชาวโลก instead',
   aiModel: 'gpt-4o-mini',
-}
+})
 
 // ── Default props ──
 

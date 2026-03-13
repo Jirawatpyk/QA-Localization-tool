@@ -2,12 +2,8 @@
 
 import { ChevronDown } from 'lucide-react'
 
-import type { DbFileStatus } from '@/types/pipeline'
-
 type FileNavigationDropdownProps = {
   currentFileName: string
-  files?: Array<{ fileId: string; fileName: string; status: DbFileStatus }>
-  onFileSelect?: (fileId: string) => void
 }
 
 /**

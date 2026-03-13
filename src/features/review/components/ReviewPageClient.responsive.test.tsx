@@ -209,6 +209,9 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     const asides = screen.queryAllByRole('complementary')
     const staticAside = asides.find((el) => el.tagName.toLowerCase() === 'aside')
     expect(staticAside).toBeUndefined()
+
+    // Positive: Sheet IS rendered
+    expect(screen.getByTestId('mock-finding-detail-sheet')).toBeInTheDocument()
   })
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -242,6 +245,9 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     const asides = screen.queryAllByRole('complementary')
     const staticAside = asides.find((el) => el.tagName.toLowerCase() === 'aside')
     expect(staticAside).toBeUndefined()
+
+    // Positive: Sheet IS rendered
+    expect(screen.getByTestId('mock-finding-detail-sheet')).toBeInTheDocument()
   })
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -312,6 +318,22 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     )
 
     expect(container.getAttribute('data-layout-mode')).toBe('laptop')
+
+    // Switch to mobile
+    mockUseIsDesktop.mockReturnValue(false)
+    mockUseIsLaptop.mockReturnValue(false)
+    mockUseIsMobile.mockReturnValue(true)
+
+    rerender(
+      <ReviewPageClient
+        fileId="f1"
+        projectId="p1"
+        tenantId="t1"
+        initialData={buildInitialData()}
+      />,
+    )
+
+    expect(container.getAttribute('data-layout-mode')).toBe('mobile')
   })
 
   // ═══════════════════════════════════════════════════════════════════════

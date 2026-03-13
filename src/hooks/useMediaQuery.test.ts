@@ -228,4 +228,41 @@ describe('useMediaQuery', () => {
     // Assert
     expect(result.current).toBe(true)
   })
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // Negative boundary tests (preset hooks return false at boundary-1)
+  // ═══════════════════════════════════════════════════════════════════════
+
+  it('[P1] useIsDesktop — should return false below 1440px', () => {
+    // Arrange: matchMedia returns false for all queries (viewport < 1440px)
+    vi.stubGlobal('matchMedia', createMatchMediaMock(false))
+
+    // Act
+    const { result } = renderHook(() => useIsDesktop())
+
+    // Assert
+    expect(result.current).toBe(false)
+  })
+
+  it('[P1] useIsLaptop — should return false below 1024px', () => {
+    // Arrange: matchMedia returns false for all queries (viewport < 1024px)
+    vi.stubGlobal('matchMedia', createMatchMediaMock(false))
+
+    // Act
+    const { result } = renderHook(() => useIsLaptop())
+
+    // Assert
+    expect(result.current).toBe(false)
+  })
+
+  it('[P1] useIsMobile — should return false above 767px', () => {
+    // Arrange: matchMedia returns false for all queries (viewport >= 768px)
+    vi.stubGlobal('matchMedia', createMatchMediaMock(false))
+
+    // Act
+    const { result } = renderHook(() => useIsMobile())
+
+    // Assert
+    expect(result.current).toBe(false)
+  })
 })

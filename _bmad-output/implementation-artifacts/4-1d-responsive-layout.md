@@ -328,6 +328,11 @@ Claude Opus 4.6
 - Responsive test empty state assertion → changed to check `mock-finding-detail-content` testid (component is mocked)
 - Pre-existing flaky: TaxonomyManager.test.tsx (1 fail), ProjectTour.test.tsx (2 fails) — confirmed via `git stash` not caused by this story
 
+### Pre-CR Scan Results
+- **anti-pattern-detector:** 0 violations
+- **tenant-isolation-checker:** 0 violations
+- **code-quality-analyzer:** 0C, 3H, 5M, 5L (merged into CR findings)
+
 ### Completion Notes List
 - 27 ATDD unit tests activated and GREEN (8 useMediaQuery + 4 FileNavigationDropdown + 5 FindingDetailContent + 6 ReviewPageClient.responsive + 4 FindingCard.animation)
 - All existing tests pass with added mocks for new dependencies
@@ -341,4 +346,5 @@ Claude Opus 4.6
 - 2026-03-13: Validation applied — 5C+7E+4O fixes (dual rendering, Sheet max-w override, UX spec deviation docs, max-width constraint, token naming, touch target audit, consolidated DO NOT list)
 - 2026-03-13: Implementation by Dev agent — Tasks 0-7, 9 completed. Task 8 (E2E) stubs created, activation deferred
 - 2026-03-13: New files: useMediaQuery.ts/test.ts, FileNavigationDropdown.tsx/test.tsx, FindingDetailContent.tsx/test.tsx, ReviewPageClient.responsive.test.tsx, FindingCard.animation.test.tsx, e2e/review-responsive.spec.ts
-- 2026-03-13: Modified files: ReviewPageClient.tsx (responsive layout), FindingDetailSheet.tsx (extract content + responsive width), FindingCard.tsx (animation + touch targets), tokens.css (responsive tokens), ReviewPageClient.story40.test.tsx + story35.test.tsx (regression fixes)
+- 2026-03-13: Modified files: ReviewPageClient.tsx (responsive layout), FindingDetailSheet.tsx (extract content + responsive width), FindingCard.tsx (animation + touch targets), tokens.css (responsive tokens), useReducedMotion.ts (refactored to delegate to useMediaQuery), ReviewPageClient.story40.test.tsx + story35.test.tsx (regression fixes)
+- 2026-03-13: CR R1 fixes — removed unused `findingId` prop from FindingDetailSheet, fixed `fileId ?? ''` empty string fallback (Guardrail #8), removed unused type props from FileNavigationDropdown, fixed StatusBadge underscore handling, replaced hardcoded mockFinding with `buildFindingForUI()` factory, added TODO(story-4.2) for sourceLang/targetLang wiring (Guardrail #39), created TD-E2E-017 for 30 E2E test.skip stubs

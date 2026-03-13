@@ -1,7 +1,7 @@
 'use client'
 
 import { Check, Flag, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { ConfidenceBadge } from '@/features/review/components/ConfidenceBadge'
 import { LayerBadge } from '@/features/review/components/LayerBadge'
@@ -38,13 +38,24 @@ type FindingDetailContentProps = {
  */
 export function FindingDetailContent({
   finding,
-  sourceLang: _sourceLang,
-  targetLang: _targetLang,
+  sourceLang,
+  targetLang,
   fileId,
   contextRange: contextRangeProp,
   onNavigateToFinding,
 }: FindingDetailContentProps) {
   const [contextRange, setContextRange] = useState(contextRangeProp ?? 2)
+
+  // Sync contextRange when prop changes (Guardrail #12 — ref/state not reset on prop change)
+  useEffect(() => {
+    if (contextRangeProp !== undefined) {
+      setContextRange(contextRangeProp) // eslint-disable-line react-hooks/set-state-in-effect -- sync prop-driven initial value after parent changes (external system subscription pattern)
+    }
+  }, [contextRangeProp])
+
+  // TODO(story-4.2): wire sourceLang/targetLang to segment text elements (Guardrail #39 — lang attribute)
+  void sourceLang
+  void targetLang
 
   // Segment context hook
   const segmentCtx = useSegmentContext({
@@ -179,7 +190,10 @@ export function FindingDetailContent({
 // ── Internal status badge ──
 
 function StatusBadge({ status }: { status: FindingStatus }) {
-  const label = status.charAt(0).toUpperCase() + status.slice(1)
+  const label = status
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
   return (
     <span className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium border bg-muted/50 text-muted-foreground border-border">
       {label}
