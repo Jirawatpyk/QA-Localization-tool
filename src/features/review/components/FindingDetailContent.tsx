@@ -17,9 +17,7 @@ import type { FindingForDisplay } from '@/features/review/types'
 import type { FindingStatus } from '@/types/finding'
 
 // Stable noop to avoid re-renders from inline arrow
-function noop(_findingId: string) {
-  // TODO(story-4.2): wire real navigate-to-finding handler
-}
+function noop(_findingId: string) {}
 
 type FindingDetailContentProps = {
   finding: FindingForDisplay | null
@@ -28,6 +26,9 @@ type FindingDetailContentProps = {
   fileId: string
   contextRange: number | undefined
   onNavigateToFinding: ((findingId: string) => void) | undefined
+  onAccept?: ((findingId: string) => void) | undefined
+  onReject?: ((findingId: string) => void) | undefined
+  onFlag?: ((findingId: string) => void) | undefined
 }
 
 /**
@@ -38,11 +39,14 @@ type FindingDetailContentProps = {
  */
 export function FindingDetailContent({
   finding,
-  sourceLang,
-  targetLang,
+  sourceLang: _sourceLang,
+  targetLang: _targetLang,
   fileId,
   contextRange: contextRangeProp,
   onNavigateToFinding,
+  onAccept,
+  onReject,
+  onFlag,
 }: FindingDetailContentProps) {
   const [contextRange, setContextRange] = useState(contextRangeProp ?? 2)
 
@@ -52,10 +56,6 @@ export function FindingDetailContent({
       setContextRange(contextRangeProp) // eslint-disable-line react-hooks/set-state-in-effect -- sync prop-driven initial value after parent changes (external system subscription pattern)
     }
   }, [contextRangeProp])
-
-  // TODO(story-4.2): wire sourceLang/targetLang to segment text elements (Guardrail #39 — lang attribute)
-  void sourceLang
-  void targetLang
 
   // Segment context hook
   const segmentCtx = useSegmentContext({
@@ -145,7 +145,7 @@ export function FindingDetailContent({
             ) : null}
           </section>
 
-          {/* ── Action Buttons (disabled, wired in Story 4.2) ── */}
+          {/* ── Action Buttons (Story 4.2) ── */}
           <div
             role="toolbar"
             aria-label="Review actions"
@@ -153,27 +153,27 @@ export function FindingDetailContent({
           >
             <button
               type="button"
-              disabled
-              title="Review actions available in Story 4.2"
-              className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-sm font-medium bg-success/10 text-success border border-success/20 cursor-not-allowed opacity-60"
+              disabled={finding.status === 'manual'}
+              onClick={() => onAccept?.(finding.id)}
+              className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-sm font-medium bg-success/10 text-success border border-success/20 hover:bg-success/20 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
             >
               <Check className="h-4 w-4" aria-hidden="true" />
               Accept
             </button>
             <button
               type="button"
-              disabled
-              title="Review actions available in Story 4.2"
-              className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-sm font-medium bg-error/10 text-error border border-error/20 cursor-not-allowed opacity-60"
+              disabled={finding.status === 'manual'}
+              onClick={() => onReject?.(finding.id)}
+              className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-sm font-medium bg-error/10 text-error border border-error/20 hover:bg-error/20 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
             >
               <X className="h-4 w-4" aria-hidden="true" />
               Reject
             </button>
             <button
               type="button"
-              disabled
-              title="Review actions available in Story 4.2"
-              className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-sm font-medium bg-warning/10 text-warning border border-warning/20 cursor-not-allowed opacity-60"
+              disabled={finding.status === 'manual'}
+              onClick={() => onFlag?.(finding.id)}
+              className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-sm font-medium bg-warning/10 text-warning border border-warning/20 hover:bg-warning/20 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
             >
               <Flag className="h-4 w-4" aria-hidden="true" />
               Flag

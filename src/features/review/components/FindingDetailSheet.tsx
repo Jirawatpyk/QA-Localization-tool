@@ -23,6 +23,9 @@ type FindingDetailSheetProps = {
   fileId: string | null
   contextRange?: number
   onNavigateToFinding?: (findingId: string) => void
+  onAccept?: ((findingId: string) => void) | undefined
+  onReject?: ((findingId: string) => void) | undefined
+  onFlag?: ((findingId: string) => void) | undefined
 }
 
 /**
@@ -41,6 +44,9 @@ export function FindingDetailSheet({
   fileId,
   contextRange,
   onNavigateToFinding,
+  onAccept,
+  onReject,
+  onFlag,
 }: FindingDetailSheetProps) {
   const reducedMotion = useReducedMotion()
   const isLaptop = useIsLaptop()
@@ -92,6 +98,9 @@ export function FindingDetailSheet({
             fileId={fileId}
             contextRange={contextRange}
             onNavigateToFinding={onNavigateToFinding}
+            onAccept={onAccept}
+            onReject={onReject}
+            onFlag={onFlag}
           />
         ) : null}
       </SheetContent>

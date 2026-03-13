@@ -10,10 +10,11 @@
  *
  * Guardrails referenced: #36 (severity icons), #38 (ARIA landmarks), #39 (lang attribute)
  */
-import { render, screen } from '@testing-library/react'
-import { describe, it, expect, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { FindingDetailContent } from '@/features/review/components/FindingDetailContent'
+import type { FindingForDisplay } from '@/features/review/types'
 import { buildFindingForUI } from '@/test/factories'
 
 // Mock useReducedMotion to avoid matchMedia issues in jsdom
@@ -21,14 +22,16 @@ vi.mock('@/hooks/useReducedMotion', () => ({
   useReducedMotion: () => false,
 }))
 
-// Mock useSegmentContext to isolate from server action
+// Mock useSegmentContext — vi.fn() allows per-test overrides
+const mockUseSegmentContext = vi.fn((..._args: unknown[]) => ({
+  data: null as unknown,
+  isLoading: false,
+  error: null as string | null,
+  retry: vi.fn(),
+}))
+
 vi.mock('@/features/review/hooks/use-segment-context', () => ({
-  useSegmentContext: () => ({
-    data: null,
-    isLoading: false,
-    error: null,
-    retry: vi.fn(),
-  }),
+  useSegmentContext: (...args: unknown[]) => mockUseSegmentContext(...args),
 }))
 
 // ── Factory-built finding data ──
@@ -63,6 +66,16 @@ function defaultProps(overrides?: Record<string, unknown>) {
 }
 
 describe('FindingDetailContent', () => {
+  beforeEach(() => {
+    mockUseSegmentContext.mockClear()
+    mockUseSegmentContext.mockImplementation((..._args: unknown[]) => ({
+      data: null,
+      isLoading: false,
+      error: null,
+      retry: vi.fn(),
+    }))
+  })
+
   // ═══════════════════════════════════════════════════════════════════════
   // Core rendering
   // ═══════════════════════════════════════════════════════════════════════
@@ -136,5 +149,144 @@ describe('FindingDetailContent', () => {
 
     // Assert
     expect(screen.getByTestId('finding-detail-content')).toBeInTheDocument()
+  })
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // Coverage gaps: Story 4.1c G8, G9, G3
+  // ═══════════════════════════════════════════════════════════════════════
+
+  it('[TA-G8][P1] should render cross-file fallback when finding.segmentId is null', () => {
+    // Build finding manually — buildFindingForUI uses `??` on segmentId which coalesces null to UUID
+    const crossFileFinding: FindingForDisplay = {
+      id: 'f-cross',
+      segmentId: null,
+      severity: 'minor',
+      category: 'fluency',
+      description: 'Cross-file issue',
+      status: 'pending',
+      detectedByLayer: 'L1',
+      aiConfidence: null,
+      sourceTextExcerpt: null,
+      targetTextExcerpt: null,
+      suggestedFix: null,
+      aiModel: null,
+    }
+
+    render(<FindingDetailContent {...defaultProps({ finding: crossFileFinding })} />)
+
+    // Cross-file fallback message should appear
+    expect(screen.getByTestId('cross-file-message')).toBeInTheDocument()
+    expect(screen.getByText(/Cross-file finding/)).toBeInTheDocument()
+    // Context range selector should NOT appear (cross-file has no context)
+    expect(screen.queryByTestId('context-range-selector')).not.toBeInTheDocument()
+  })
+
+  it('[TA-G9][P2] should format multi-word status correctly (source_issue → "Source Issue")', () => {
+    const sourceIssueFinding = buildFindingForUI({
+      id: 'f-si',
+      status: 'source_issue',
+      severity: 'minor',
+      category: 'style',
+      description: 'Source issue test',
+      detectedByLayer: 'L1',
+    })
+
+    render(<FindingDetailContent {...defaultProps({ finding: sourceIssueFinding })} />)
+
+    expect(screen.getByText('Source Issue')).toBeInTheDocument()
+  })
+
+  it('[TA-G3][P1] should update context range when selector changes', () => {
+    render(<FindingDetailContent {...defaultProps()} />)
+
+    // Default: context range selector shows ±2 (defaultProps has contextRange=undefined → defaults to 2)
+    const selector = screen.getByTestId('context-range-selector')
+    expect(selector).toHaveValue('2')
+
+    // Change to ±1
+    fireEvent.change(selector, { target: { value: '1' } })
+    expect(selector).toHaveValue('1')
+
+    // Change to ±3
+    fireEvent.change(selector, { target: { value: '3' } })
+    expect(selector).toHaveValue('3')
+  })
+
+  // ═══ TA Coverage: Story 4.1d gaps ═══
+
+  it('[TA-G3][P1] should render loading indicator when segment context is loading', () => {
+    // Arrange: override mock to return loading state
+    mockUseSegmentContext.mockReturnValue({
+      data: null,
+      isLoading: true,
+      error: null,
+      retry: vi.fn(),
+    })
+
+    // Act
+    render(<FindingDetailContent {...defaultProps()} />)
+
+    // Assert: skeleton loading indicator renders
+    expect(screen.getByTestId('segment-context-skeleton')).toBeInTheDocument()
+    // Should NOT show error or loaded content
+    expect(screen.queryByTestId('segment-context-error')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('segment-context-loaded')).not.toBeInTheDocument()
+  })
+
+  it('[TA-G4][P1] should render error message and retry button when segment context fails', () => {
+    // Arrange: override mock to return error state
+    const mockRetry = vi.fn()
+    mockUseSegmentContext.mockReturnValue({
+      data: null,
+      isLoading: false,
+      error: 'Network error',
+      retry: mockRetry,
+    })
+
+    // Act
+    render(<FindingDetailContent {...defaultProps()} />)
+
+    // Assert: error container renders with message
+    expect(screen.getByTestId('segment-context-error')).toBeInTheDocument()
+    expect(screen.getByText('Network error')).toBeInTheDocument()
+
+    // Assert: retry button is present and clickable
+    const retryButton = screen.getByRole('button', { name: /retry/i })
+    expect(retryButton).toBeInTheDocument()
+    fireEvent.click(retryButton)
+    expect(mockRetry).toHaveBeenCalledOnce()
+
+    // Should NOT show skeleton or loaded content
+    expect(screen.queryByTestId('segment-context-skeleton')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('segment-context-loaded')).not.toBeInTheDocument()
+  })
+
+  it('[TA-G9][P2] should sync contextRange selector when contextRange prop changes via rerender', () => {
+    // Arrange: render with contextRange=3
+    const { rerender } = render(<FindingDetailContent {...defaultProps({ contextRange: 3 })} />)
+
+    const selector = screen.getByTestId('context-range-selector')
+    expect(selector).toHaveValue('3')
+
+    // Act: rerender with contextRange=1
+    rerender(<FindingDetailContent {...defaultProps({ contextRange: 1 })} />)
+
+    // Assert: selector updated to reflect new prop
+    expect(selector).toHaveValue('1')
+  })
+
+  it('[TA-G12][P2] should preserve contextRange=0 via nullish coalescing (0 is not nullish)', () => {
+    // Arrange & Act: render with contextRange=0
+    // useState(contextRangeProp ?? 2) — 0 ?? 2 === 0 (NOT 2)
+    render(<FindingDetailContent {...defaultProps({ contextRange: 0 })} />)
+
+    // Assert: useSegmentContext was called with contextRange=0, NOT 2
+    // (The <select> has no <option value="0">, so DOM falls back to first option.
+    //  We verify the internal state via the hook call argument instead.)
+    const lastCall = mockUseSegmentContext.mock.calls[mockUseSegmentContext.mock.calls.length - 1]!
+    const hookArgs = lastCall[0] as { contextRange: number }
+    expect(hookArgs.contextRange).toBe(0)
+    // Must NOT be the default value 2 (would happen if || was used instead of ??)
+    expect(hookArgs.contextRange).not.toBe(2)
   })
 })

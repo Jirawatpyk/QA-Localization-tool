@@ -32,6 +32,7 @@ vi.mock('@/features/review/components/ReviewActionBar', () => ({
   ReviewActionBar: () => null,
 }))
 vi.mock('@/features/review/utils/announce', () => ({
+  announce: vi.fn(),
   mountAnnouncer: vi.fn(),
   unmountAnnouncer: vi.fn(),
 }))
@@ -40,7 +41,23 @@ vi.mock('@/features/review/hooks/use-keyboard-actions', () => ({
   useKeyboardActions: () => ({ register: vi.fn(() => vi.fn()) }),
 }))
 vi.mock('@/features/review/hooks/use-focus-management', () => ({
-  useFocusManagement: () => ({ pushEscapeLayer: vi.fn(), popEscapeLayer: vi.fn() }),
+  useFocusManagement: () => ({
+    pushEscapeLayer: vi.fn(),
+    popEscapeLayer: vi.fn(),
+    autoAdvance: vi.fn(),
+    focusActionBar: vi.fn(),
+  }),
+}))
+
+// Mock review action server actions (Story 4.2 deps)
+vi.mock('@/features/review/actions/acceptFinding.action', () => ({
+  acceptFinding: vi.fn((..._args: unknown[]) => Promise.resolve({ success: true, data: {} })),
+}))
+vi.mock('@/features/review/actions/rejectFinding.action', () => ({
+  rejectFinding: vi.fn((..._args: unknown[]) => Promise.resolve({ success: true, data: {} })),
+}))
+vi.mock('@/features/review/actions/flagFinding.action', () => ({
+  flagFinding: vi.fn((..._args: unknown[]) => Promise.resolve({ success: true, data: {} })),
 }))
 
 // Mock retryAiAnalysis server action (Story 3.4)
@@ -55,6 +72,7 @@ vi.mock('@/features/pipeline/actions/retryAiAnalysis.action', () => ({
 const storeMockState = {
   resetForFile: vi.fn(),
   setFindings: vi.fn(),
+  setFinding: vi.fn(),
   findingsMap: new Map(),
   currentScore: null as number | null,
   layerCompleted: null as LayerCompleted | null,
@@ -62,11 +80,18 @@ const storeMockState = {
   scoreStatus: null as string | null, // Story 3.4: new field
   l2ConfidenceMin: null as number | null,
   l3ConfidenceMin: null as number | null,
+  selectedId: null as string | null,
+  setSelectedFinding: vi.fn(),
 }
 
 vi.mock('@/features/review/stores/review.store', () => ({
-  useReviewStore: vi.fn((selector: (state: typeof storeMockState) => unknown) =>
-    selector(storeMockState),
+  useReviewStore: Object.assign(
+    vi.fn((selector?: (state: typeof storeMockState) => unknown) =>
+      selector ? selector(storeMockState) : storeMockState,
+    ),
+    {
+      getState: vi.fn(() => storeMockState),
+    },
   ),
 }))
 

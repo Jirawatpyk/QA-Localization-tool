@@ -11,7 +11,7 @@
  *
  * Guardrails referenced: #38 (ARIA landmarks), #37 (reduced motion)
  */
-import { render, screen, act } from '@testing-library/react'
+import { render, screen, act, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('server-only', () => ({}))
@@ -43,8 +43,12 @@ vi.mock('@/features/review/hooks/use-threshold-subscription', () => ({
 
 // ── Mock child components not under test ──
 
+const findingDetailSheetProps = vi.fn()
 vi.mock('@/features/review/components/FindingDetailSheet', () => ({
-  FindingDetailSheet: () => <div data-testid="mock-finding-detail-sheet" />,
+  FindingDetailSheet: (props: Record<string, unknown>) => {
+    findingDetailSheetProps(props)
+    return (props.open as boolean) ? <div data-testid="mock-finding-detail-sheet" /> : null
+  },
 }))
 vi.mock('@/features/review/components/FindingDetailContent', () => ({
   FindingDetailContent: () => <div data-testid="mock-finding-detail-content" />,
@@ -138,6 +142,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
   beforeEach(() => {
     setupMatchMedia()
     useReviewStore.getState().resetForFile('test')
+    findingDetailSheetProps.mockClear()
     vi.clearAllMocks()
   })
 
@@ -236,7 +241,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
       />,
     )
 
-    // Select finding to open detail
+    // Select finding — but mobileDrawerOpen is false by default, so Sheet open=false
     act(() => {
       useReviewStore.getState().setSelectedFinding('find1')
     })
@@ -246,7 +251,18 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     const staticAside = asides.find((el) => el.tagName.toLowerCase() === 'aside')
     expect(staticAside).toBeUndefined()
 
-    // Positive: Sheet IS rendered
+    // Sheet component is rendered but with open=false (mobileDrawerOpen not toggled yet)
+    // Verify Sheet was called with open=false (mock returns null when open=false)
+    expect(screen.queryByTestId('mock-finding-detail-sheet')).not.toBeInTheDocument()
+    const lastCall = findingDetailSheetProps.mock.calls.at(-1)?.[0]
+    expect(lastCall).toBeDefined()
+    expect(lastCall.open).toBe(false)
+
+    // Toggle the drawer via the toggle button
+    const toggleButton = screen.getByTestId('detail-panel-toggle')
+    fireEvent.click(toggleButton)
+
+    // Now Sheet should be open
     expect(screen.getByTestId('mock-finding-detail-sheet')).toBeInTheDocument()
   })
 
@@ -378,5 +394,541 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     // Assert: finding detail should be visible (in Sheet, not aside)
     // The component should not crash or show stale data
     expect(screen.queryByTestId('review-3-zone')).toBeInTheDocument()
+  })
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // G5: Sidebar nav at desktop vs hidden
+  // ═══════════════════════════════════════════════════════════════════════
+
+  it('[TA-G5][P1] desktop mode: should render file-sidebar-nav; laptop and mobile should not', () => {
+    // Arrange: desktop
+    mockUseIsDesktop.mockReturnValue(true)
+    mockUseIsLaptop.mockReturnValue(true)
+    mockUseIsMobile.mockReturnValue(false)
+
+    const { rerender } = render(
+      <ReviewPageClient
+        fileId="f1"
+        projectId="p1"
+        tenantId="t1"
+        initialData={buildInitialData()}
+      />,
+    )
+
+    // Assert: sidebar nav exists at desktop
+    expect(screen.getByTestId('file-sidebar-nav')).toBeInTheDocument()
+    expect(screen.getByTestId('file-sidebar-nav').tagName.toLowerCase()).toBe('nav')
+
+    // Switch to laptop
+    mockUseIsDesktop.mockReturnValue(false)
+    mockUseIsLaptop.mockReturnValue(true)
+    mockUseIsMobile.mockReturnValue(false)
+
+    rerender(
+      <ReviewPageClient
+        fileId="f1"
+        projectId="p1"
+        tenantId="t1"
+        initialData={buildInitialData()}
+      />,
+    )
+
+    // Assert: sidebar nav NOT present at laptop
+    expect(screen.queryByTestId('file-sidebar-nav')).not.toBeInTheDocument()
+
+    // Switch to mobile
+    mockUseIsDesktop.mockReturnValue(false)
+    mockUseIsLaptop.mockReturnValue(false)
+    mockUseIsMobile.mockReturnValue(true)
+
+    rerender(
+      <ReviewPageClient
+        fileId="f1"
+        projectId="p1"
+        tenantId="t1"
+        initialData={buildInitialData()}
+      />,
+    )
+
+    // Assert: sidebar nav NOT present at mobile
+    expect(screen.queryByTestId('file-sidebar-nav')).not.toBeInTheDocument()
+  })
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // G6: FileNavigationDropdown at laptop only
+  // ═══════════════════════════════════════════════════════════════════════
+
+  it('[TA-G6][P1] FileNavigationDropdown should show only at laptop (not desktop, not mobile)', () => {
+    // Arrange: desktop
+    mockUseIsDesktop.mockReturnValue(true)
+    mockUseIsLaptop.mockReturnValue(true)
+    mockUseIsMobile.mockReturnValue(false)
+
+    const { rerender } = render(
+      <ReviewPageClient
+        fileId="f1"
+        projectId="p1"
+        tenantId="t1"
+        initialData={buildInitialData()}
+      />,
+    )
+
+    // Assert: dropdown NOT at desktop (uses sidebar instead)
+    expect(screen.queryByTestId('mock-file-nav-dropdown')).not.toBeInTheDocument()
+
+    // Switch to laptop
+    mockUseIsDesktop.mockReturnValue(false)
+    mockUseIsLaptop.mockReturnValue(true)
+    mockUseIsMobile.mockReturnValue(false)
+
+    rerender(
+      <ReviewPageClient
+        fileId="f1"
+        projectId="p1"
+        tenantId="t1"
+        initialData={buildInitialData()}
+      />,
+    )
+
+    // Assert: dropdown IS present at laptop
+    expect(screen.getByTestId('mock-file-nav-dropdown')).toBeInTheDocument()
+
+    // Switch to mobile
+    mockUseIsDesktop.mockReturnValue(false)
+    mockUseIsLaptop.mockReturnValue(false)
+    mockUseIsMobile.mockReturnValue(true)
+
+    rerender(
+      <ReviewPageClient
+        fileId="f1"
+        projectId="p1"
+        tenantId="t1"
+        initialData={buildInitialData()}
+      />,
+    )
+
+    // Assert: dropdown NOT at mobile
+    expect(screen.queryByTestId('mock-file-nav-dropdown')).not.toBeInTheDocument()
+  })
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // G7: Mobile toggle button visibility
+  // ═══════════════════════════════════════════════════════════════════════
+
+  it('[TA-G7][P1] mobile toggle button shows when !isDesktop && !isLaptop && selectedId && !mobileDrawerOpen', () => {
+    // Arrange: mobile breakpoint
+    mockUseIsDesktop.mockReturnValue(false)
+    mockUseIsLaptop.mockReturnValue(false)
+    mockUseIsMobile.mockReturnValue(true)
+
+    const finding = buildFinding({ id: 'find1', severity: 'major' })
+
+    render(
+      <ReviewPageClient
+        fileId="f1"
+        projectId="p1"
+        tenantId="t1"
+        initialData={buildInitialData({ findings: [finding] })}
+      />,
+    )
+
+    // Before selecting: toggle button should NOT be visible (selectedId is null)
+    expect(screen.queryByTestId('detail-panel-toggle')).not.toBeInTheDocument()
+
+    // Select a finding
+    act(() => {
+      useReviewStore.getState().setSelectedFinding('find1')
+    })
+
+    // Now toggle button SHOULD appear (selectedId set, mobileDrawerOpen=false)
+    expect(screen.getByTestId('detail-panel-toggle')).toBeInTheDocument()
+    expect(screen.getByTestId('detail-panel-toggle')).toHaveAttribute(
+      'aria-label',
+      'Open finding detail',
+    )
+
+    // Click toggle to open drawer
+    fireEvent.click(screen.getByTestId('detail-panel-toggle'))
+
+    // Toggle button should HIDE now (mobileDrawerOpen=true)
+    expect(screen.queryByTestId('detail-panel-toggle')).not.toBeInTheDocument()
+  })
+
+  it('[TA-G7][P1] toggle button should NOT show at desktop or laptop breakpoints', () => {
+    const finding = buildFinding({ id: 'find1', severity: 'major' })
+
+    // Desktop
+    mockUseIsDesktop.mockReturnValue(true)
+    mockUseIsLaptop.mockReturnValue(true)
+    mockUseIsMobile.mockReturnValue(false)
+
+    const { rerender } = render(
+      <ReviewPageClient
+        fileId="f1"
+        projectId="p1"
+        tenantId="t1"
+        initialData={buildInitialData({ findings: [finding] })}
+      />,
+    )
+
+    act(() => {
+      useReviewStore.getState().setSelectedFinding('find1')
+    })
+
+    expect(screen.queryByTestId('detail-panel-toggle')).not.toBeInTheDocument()
+
+    // Laptop
+    mockUseIsDesktop.mockReturnValue(false)
+    mockUseIsLaptop.mockReturnValue(true)
+    mockUseIsMobile.mockReturnValue(false)
+
+    rerender(
+      <ReviewPageClient
+        fileId="f1"
+        projectId="p1"
+        tenantId="t1"
+        initialData={buildInitialData({ findings: [finding] })}
+      />,
+    )
+
+    expect(screen.queryByTestId('detail-panel-toggle')).not.toBeInTheDocument()
+  })
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // G8: Sheet open behavior — full sheetOpen truth table
+  // ═══════════════════════════════════════════════════════════════════════
+
+  it('[TA-G8][P2] Sheet open truth table: desktop=not rendered, laptop=auto-open on select, mobile=toggle-gated', () => {
+    const finding = buildFinding({ id: 'find1', severity: 'major' })
+
+    // ── Desktop: Sheet component is NOT rendered (aside is used instead) ──
+    mockUseIsDesktop.mockReturnValue(true)
+    mockUseIsLaptop.mockReturnValue(true)
+    mockUseIsMobile.mockReturnValue(false)
+
+    findingDetailSheetProps.mockClear()
+    const { unmount } = render(
+      <ReviewPageClient
+        fileId="f1"
+        projectId="p1"
+        tenantId="t1"
+        initialData={buildInitialData({ findings: [finding] })}
+      />,
+    )
+
+    act(() => {
+      useReviewStore.getState().setSelectedFinding('find1')
+    })
+
+    // At desktop, FindingDetailSheet should NOT be called at all (it's the else branch)
+    // The component renders aside, not Sheet
+    const desktopCalls = findingDetailSheetProps.mock.calls
+    // Filter calls that happened after selection (latest re-render)
+    // At desktop the ternary picks aside, so Sheet is never mounted
+    const desktopCallsWithOpenTrue = desktopCalls.filter(
+      (call: Record<string, unknown>[]) => call[0]?.open === true,
+    )
+    expect(desktopCallsWithOpenTrue.length).toBe(0)
+
+    unmount()
+    useReviewStore.getState().resetForFile('test')
+
+    // ── Laptop + selectedId: open=true ──
+    mockUseIsDesktop.mockReturnValue(false)
+    mockUseIsLaptop.mockReturnValue(true)
+    mockUseIsMobile.mockReturnValue(false)
+
+    findingDetailSheetProps.mockClear()
+    const { unmount: unmount2 } = render(
+      <ReviewPageClient
+        fileId="f1"
+        projectId="p1"
+        tenantId="t1"
+        initialData={buildInitialData({ findings: [finding] })}
+      />,
+    )
+
+    act(() => {
+      useReviewStore.getState().setSelectedFinding('find1')
+    })
+
+    const laptopSelectedCall = findingDetailSheetProps.mock.calls.at(-1)?.[0]
+    expect(laptopSelectedCall).toBeDefined()
+    expect(laptopSelectedCall.open).toBe(true)
+    expect(screen.getByTestId('mock-finding-detail-sheet')).toBeInTheDocument()
+
+    // ── Laptop + no selection: open=false ──
+    act(() => {
+      useReviewStore.getState().setSelectedFinding(null)
+    })
+
+    const laptopNoSelectCall = findingDetailSheetProps.mock.calls.at(-1)?.[0]
+    expect(laptopNoSelectCall.open).toBe(false)
+    expect(screen.queryByTestId('mock-finding-detail-sheet')).not.toBeInTheDocument()
+
+    unmount2()
+    useReviewStore.getState().resetForFile('test')
+
+    // ── Mobile + selectedId + mobileDrawerOpen=false: open=false ──
+    mockUseIsDesktop.mockReturnValue(false)
+    mockUseIsLaptop.mockReturnValue(false)
+    mockUseIsMobile.mockReturnValue(true)
+
+    findingDetailSheetProps.mockClear()
+    render(
+      <ReviewPageClient
+        fileId="f1"
+        projectId="p1"
+        tenantId="t1"
+        initialData={buildInitialData({ findings: [finding] })}
+      />,
+    )
+
+    act(() => {
+      useReviewStore.getState().setSelectedFinding('find1')
+    })
+
+    const mobileNoDrawerCall = findingDetailSheetProps.mock.calls.at(-1)?.[0]
+    expect(mobileNoDrawerCall.open).toBe(false)
+    expect(screen.queryByTestId('mock-finding-detail-sheet')).not.toBeInTheDocument()
+
+    // ── Mobile + selectedId + after toggle: open=true ──
+    const toggleButton = screen.getByTestId('detail-panel-toggle')
+    fireEvent.click(toggleButton)
+
+    const mobileAfterToggleCall = findingDetailSheetProps.mock.calls.at(-1)?.[0]
+    expect(mobileAfterToggleCall.open).toBe(true)
+    expect(screen.getByTestId('mock-finding-detail-sheet')).toBeInTheDocument()
+  })
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // G11: mobileDrawerOpen persists across breakpoint transition
+  // ═══════════════════════════════════════════════════════════════════════
+
+  it('[TA-G11][P2] mobileDrawerOpen should persist across breakpoint transition (mobile → desktop → mobile)', () => {
+    const finding = buildFinding({ id: 'find1', severity: 'major' })
+    // Use stable reference to prevent useEffect re-trigger on rerender
+    const stableInitialData = buildInitialData({ findings: [finding] })
+
+    // Start in mobile
+    mockUseIsDesktop.mockReturnValue(false)
+    mockUseIsLaptop.mockReturnValue(false)
+    mockUseIsMobile.mockReturnValue(true)
+
+    const { rerender } = render(
+      <ReviewPageClient fileId="f1" projectId="p1" tenantId="t1" initialData={stableInitialData} />,
+    )
+
+    // Select finding
+    act(() => {
+      useReviewStore.getState().setSelectedFinding('find1')
+    })
+
+    // Toggle drawer open
+    fireEvent.click(screen.getByTestId('detail-panel-toggle'))
+
+    // Verify Sheet is open
+    expect(screen.getByTestId('mock-finding-detail-sheet')).toBeInTheDocument()
+
+    // Switch to desktop
+    mockUseIsDesktop.mockReturnValue(true)
+    mockUseIsLaptop.mockReturnValue(true)
+    mockUseIsMobile.mockReturnValue(false)
+
+    rerender(
+      <ReviewPageClient fileId="f1" projectId="p1" tenantId="t1" initialData={stableInitialData} />,
+    )
+
+    // At desktop, aside is shown (not Sheet)
+    expect(screen.getByRole('complementary')).toBeInTheDocument()
+
+    // Switch back to mobile
+    mockUseIsDesktop.mockReturnValue(false)
+    mockUseIsLaptop.mockReturnValue(false)
+    mockUseIsMobile.mockReturnValue(true)
+
+    findingDetailSheetProps.mockClear()
+    rerender(
+      <ReviewPageClient fileId="f1" projectId="p1" tenantId="t1" initialData={stableInitialData} />,
+    )
+
+    // mobileDrawerOpen is useState — should persist across re-renders (not reset on breakpoint change)
+    // Since selectedId is still set and mobileDrawerOpen persisted, Sheet should be open
+    const lastCall = findingDetailSheetProps.mock.calls.at(-1)?.[0]
+    expect(lastCall).toBeDefined()
+    expect(lastCall.open).toBe(true)
+    expect(screen.getByTestId('mock-finding-detail-sheet')).toBeInTheDocument()
+  })
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // G13: handleSheetChange close + no-op
+  // ═══════════════════════════════════════════════════════════════════════
+
+  it('[TA-G13][P2] onOpenChange(false) at laptop should clear selectedFinding', () => {
+    const finding = buildFinding({ id: 'find1', severity: 'major' })
+
+    // Laptop mode
+    mockUseIsDesktop.mockReturnValue(false)
+    mockUseIsLaptop.mockReturnValue(true)
+    mockUseIsMobile.mockReturnValue(false)
+
+    render(
+      <ReviewPageClient
+        fileId="f1"
+        projectId="p1"
+        tenantId="t1"
+        initialData={buildInitialData({ findings: [finding] })}
+      />,
+    )
+
+    // Select finding
+    act(() => {
+      useReviewStore.getState().setSelectedFinding('find1')
+    })
+
+    // Verify Sheet is open
+    expect(screen.getByTestId('mock-finding-detail-sheet')).toBeInTheDocument()
+
+    // Capture onOpenChange callback from the latest Sheet render
+    const lastCall = findingDetailSheetProps.mock.calls.at(-1)?.[0]
+    expect(lastCall.onOpenChange).toBeDefined()
+    const onOpenChange = lastCall.onOpenChange as (open: boolean) => void
+
+    // Call onOpenChange(false) — simulates user closing the Sheet
+    act(() => {
+      onOpenChange(false)
+    })
+
+    // selectedFinding should be cleared
+    expect(useReviewStore.getState().selectedId).toBeNull()
+    // Sheet should now be closed (open=false because selectedId=null)
+    expect(screen.queryByTestId('mock-finding-detail-sheet')).not.toBeInTheDocument()
+  })
+
+  it('[TA-G13][P2] onOpenChange(false) at mobile should clear selectedFinding AND mobileDrawerOpen', () => {
+    const finding = buildFinding({ id: 'find1', severity: 'major' })
+
+    // Mobile mode
+    mockUseIsDesktop.mockReturnValue(false)
+    mockUseIsLaptop.mockReturnValue(false)
+    mockUseIsMobile.mockReturnValue(true)
+
+    render(
+      <ReviewPageClient
+        fileId="f1"
+        projectId="p1"
+        tenantId="t1"
+        initialData={buildInitialData({ findings: [finding] })}
+      />,
+    )
+
+    // Select finding and open drawer
+    act(() => {
+      useReviewStore.getState().setSelectedFinding('find1')
+    })
+    fireEvent.click(screen.getByTestId('detail-panel-toggle'))
+
+    // Verify Sheet is open
+    expect(screen.getByTestId('mock-finding-detail-sheet')).toBeInTheDocument()
+
+    // Capture onOpenChange
+    const lastCall = findingDetailSheetProps.mock.calls.at(-1)?.[0]
+    const onOpenChange = lastCall.onOpenChange as (open: boolean) => void
+
+    // Call onOpenChange(false)
+    act(() => {
+      onOpenChange(false)
+    })
+
+    // selectedFinding AND mobileDrawerOpen should be cleared
+    expect(useReviewStore.getState().selectedId).toBeNull()
+    // Sheet closed
+    expect(screen.queryByTestId('mock-finding-detail-sheet')).not.toBeInTheDocument()
+    // Toggle button also hidden (selectedId is null)
+    expect(screen.queryByTestId('detail-panel-toggle')).not.toBeInTheDocument()
+  })
+
+  it('[TA-G13][P2] onOpenChange(true) should be a no-op (no state changes)', () => {
+    const finding = buildFinding({ id: 'find1', severity: 'major' })
+
+    // Laptop mode
+    mockUseIsDesktop.mockReturnValue(false)
+    mockUseIsLaptop.mockReturnValue(true)
+    mockUseIsMobile.mockReturnValue(false)
+
+    render(
+      <ReviewPageClient
+        fileId="f1"
+        projectId="p1"
+        tenantId="t1"
+        initialData={buildInitialData({ findings: [finding] })}
+      />,
+    )
+
+    // Select finding
+    act(() => {
+      useReviewStore.getState().setSelectedFinding('find1')
+    })
+
+    // Capture onOpenChange
+    const lastCall = findingDetailSheetProps.mock.calls.at(-1)?.[0]
+    const onOpenChange = lastCall.onOpenChange as (open: boolean) => void
+
+    // Call onOpenChange(true) — should be no-op
+    act(() => {
+      onOpenChange(true)
+    })
+
+    // selectedFinding should remain
+    expect(useReviewStore.getState().selectedId).toBe('find1')
+    // Sheet still open
+    expect(screen.getByTestId('mock-finding-detail-sheet')).toBeInTheDocument()
+  })
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // G14: selectedId persists across desktop↔laptop transition
+  // ═══════════════════════════════════════════════════════════════════════
+
+  it('[TA-G14][P2] selectedId should persist when switching from desktop to laptop', () => {
+    const finding = buildFinding({ id: 'find1', severity: 'major' })
+    // Use stable reference to prevent useEffect re-trigger on rerender
+    const stableInitialData = buildInitialData({ findings: [finding] })
+
+    // Start in desktop
+    mockUseIsDesktop.mockReturnValue(true)
+    mockUseIsLaptop.mockReturnValue(true)
+    mockUseIsMobile.mockReturnValue(false)
+
+    const { rerender } = render(
+      <ReviewPageClient fileId="f1" projectId="p1" tenantId="t1" initialData={stableInitialData} />,
+    )
+
+    // Select finding in desktop mode
+    act(() => {
+      useReviewStore.getState().setSelectedFinding('find1')
+    })
+
+    // Verify aside is showing the content
+    expect(screen.getByRole('complementary')).toBeInTheDocument()
+    expect(useReviewStore.getState().selectedId).toBe('find1')
+
+    // Switch to laptop
+    mockUseIsDesktop.mockReturnValue(false)
+    mockUseIsLaptop.mockReturnValue(true)
+    mockUseIsMobile.mockReturnValue(false)
+
+    findingDetailSheetProps.mockClear()
+    rerender(
+      <ReviewPageClient fileId="f1" projectId="p1" tenantId="t1" initialData={stableInitialData} />,
+    )
+
+    // selectedId should persist in store
+    expect(useReviewStore.getState().selectedId).toBe('find1')
+
+    // Sheet should auto-open with the selected finding (laptop: sheetOpen = selectedId !== null)
+    const lastCall = findingDetailSheetProps.mock.calls.at(-1)?.[0]
+    expect(lastCall).toBeDefined()
+    expect(lastCall.open).toBe(true)
+    expect(screen.getByTestId('mock-finding-detail-sheet')).toBeInTheDocument()
   })
 })

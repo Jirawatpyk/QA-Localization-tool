@@ -1,6 +1,6 @@
 'use client'
 
-import { Check, X } from 'lucide-react'
+import { Check, Flag, X } from 'lucide-react'
 import type { KeyboardEvent, MouseEvent } from 'react'
 
 import { ConfidenceBadge } from '@/features/review/components/ConfidenceBadge'
@@ -16,6 +16,17 @@ import {
   truncate,
 } from '@/features/review/utils/finding-display'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import type { FindingStatus } from '@/types/finding'
+
+/** State-based background color tokens (Story 4.2 AC3) */
+const STATUS_BG: Partial<Record<FindingStatus, string>> = {
+  accepted: 'bg-[var(--color-finding-accepted)]',
+  re_accepted: 'bg-[var(--color-finding-accepted)]',
+  rejected: 'bg-[var(--color-finding-rejected)]',
+  flagged: 'bg-[var(--color-finding-flagged)]',
+  noted: 'bg-[var(--color-finding-noted)]',
+  source_issue: 'bg-[var(--color-finding-source-issue)]',
+}
 
 export type FindingCardCompactProps = {
   finding: FindingForDisplay
@@ -29,6 +40,8 @@ export type FindingCardCompactProps = {
   l2ConfidenceMin?: number | null | undefined
   l3ConfidenceMin?: number | null | undefined
   onExpand: (id: string) => void
+  onAccept?: ((findingId: string) => void) | undefined
+  onReject?: ((findingId: string) => void) | undefined
 }
 
 export function FindingCardCompact({
@@ -43,6 +56,8 @@ export function FindingCardCompact({
   l2ConfidenceMin,
   l3ConfidenceMin,
   onExpand,
+  onAccept,
+  onReject,
 }: FindingCardCompactProps) {
   const reducedMotion = useReducedMotion()
 
@@ -57,6 +72,10 @@ export function FindingCardCompact({
   )
 
   const showAnimation = isNew === true && !reducedMotion
+  const bgClass = STATUS_BG[finding.status] ?? ''
+  const isAccepted = finding.status === 'accepted' || finding.status === 're_accepted'
+  const isRejected = finding.status === 'rejected'
+  const stateClass = isRejected ? 'opacity-60' : ''
 
   function handleClick(e: MouseEvent<HTMLDivElement>) {
     // Don't expand when clicking disabled action buttons (RT#5)
@@ -83,17 +102,27 @@ export function FindingCardCompact({
       role="row"
       data-testid="finding-compact-row"
       data-finding-id={finding.id}
+      data-status={finding.status}
       tabIndex={isActive ? 0 : -1}
       aria-expanded={isExpanded ? 'true' : 'false'}
       aria-label={ariaLabel}
       aria-rowindex={findingIndex + 1}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      className={`border rounded-lg px-3 py-2 cursor-pointer hover:bg-accent/50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 ${showAnimation ? 'animate-fade-in' : ''}`}
+      className={`border rounded-lg px-3 py-2 cursor-pointer hover:bg-accent/50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 ${bgClass} ${stateClass} ${showAnimation ? 'animate-fade-in' : ''}`}
     >
       <div role="gridcell" className="flex items-center gap-2">
         {/* Severity badge — Guardrail #36 */}
         <SeverityIndicator severity={finding.severity} />
+
+        {/* Flag icon for flagged findings (AC3) */}
+        {finding.status === 'flagged' && (
+          <Flag
+            className="h-3.5 w-3.5 text-warning shrink-0"
+            aria-hidden="true"
+            data-testid="flag-icon"
+          />
+        )}
 
         {/* Category (truncate > 20 chars) */}
         <span className="text-xs text-muted-foreground shrink-0">
@@ -104,7 +133,9 @@ export function FindingCardCompact({
         <LayerBadge layer={finding.detectedByLayer} />
 
         {/* Source→Target preview (truncated) — Guardrail #39: lang attr */}
-        <span className="flex-1 min-w-0 text-xs text-muted-foreground truncate">
+        <span
+          className={`flex-1 min-w-0 text-xs text-muted-foreground truncate ${isAccepted ? 'line-through' : ''}`}
+        >
           {finding.sourceTextExcerpt && (
             <span
               lang={sourceLang}
@@ -146,23 +177,29 @@ export function FindingCardCompact({
           </span>
         )}
 
-        {/* Quick action icons — disabled until Story 4.2 */}
+        {/* Quick action icons (Story 4.2) */}
         <div role="group" className="flex items-center gap-1 shrink-0" aria-label="Quick actions">
           <button
             type="button"
-            disabled
-            className="opacity-50 cursor-not-allowed p-0.5 rounded"
+            disabled={finding.status === 'manual'}
+            className="text-success hover:bg-success/10 disabled:opacity-50 disabled:cursor-not-allowed p-0.5 rounded focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
             aria-label="Accept finding"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              onAccept?.(finding.id)
+            }}
           >
             <Check className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
           <button
             type="button"
-            disabled
-            className="opacity-50 cursor-not-allowed p-0.5 rounded"
+            disabled={finding.status === 'manual'}
+            className="text-error hover:bg-error/10 disabled:opacity-50 disabled:cursor-not-allowed p-0.5 rounded focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
             aria-label="Reject finding"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              onReject?.(finding.id)
+            }}
           >
             <X className="h-3.5 w-3.5" aria-hidden="true" />
           </button>

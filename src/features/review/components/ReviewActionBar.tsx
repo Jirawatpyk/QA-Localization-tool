@@ -1,6 +1,15 @@
 'use client'
 
-import { ArrowUpDown, Check, FileWarning, Flag, MessageSquare, Plus, X } from 'lucide-react'
+import {
+  ArrowUpDown,
+  Check,
+  FileWarning,
+  Flag,
+  Loader2,
+  MessageSquare,
+  Plus,
+  X,
+} from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -73,13 +82,39 @@ const ACTION_BUTTONS: ActionButtonConfig[] = [
   },
 ]
 
+// Actions enabled in Story 4.2 — rest deferred to Story 4.3
+const ENABLED_ACTIONS = new Set(['accept', 'reject', 'flag'])
+
+type ReviewActionBarProps = {
+  onAccept?: (() => void) | undefined
+  onReject?: (() => void) | undefined
+  onFlag?: (() => void) | undefined
+  isDisabled?: boolean | undefined
+  isInFlight?: boolean | undefined
+}
+
+const ACTION_HANDLER_MAP: Record<
+  string,
+  keyof Pick<ReviewActionBarProps, 'onAccept' | 'onReject' | 'onFlag'>
+> = {
+  accept: 'onAccept',
+  reject: 'onReject',
+  flag: 'onFlag',
+}
+
 /**
- * Review Action Bar — Story 4.0 AC5
- *
- * 7 action buttons in a toolbar, all disabled until Story 4.2.
- * Each button shows hotkey label, icon (aria-hidden), and tooltip.
+ * Review Action Bar — 7 action buttons in a toolbar.
+ * Accept/Reject/Flag enabled (Story 4.2). Note/Source/Override/Add disabled (Story 4.3).
  */
-export function ReviewActionBar() {
+export function ReviewActionBar({
+  onAccept,
+  onReject,
+  onFlag,
+  isDisabled = false,
+  isInFlight = false,
+}: ReviewActionBarProps) {
+  const handlers: ReviewActionBarProps = { onAccept, onReject, onFlag }
+
   return (
     <TooltipProvider delayDuration={500}>
       <div
@@ -87,19 +122,31 @@ export function ReviewActionBar() {
         aria-label="Review actions"
         className="flex items-center gap-2 border-t pt-4 mt-4"
         tabIndex={0}
+        data-testid="review-action-bar"
       >
         {ACTION_BUTTONS.map((btn) => {
           const Icon = btn.icon
+          const isEnabled = ENABLED_ACTIONS.has(btn.key)
+          const handlerKey = ACTION_HANDLER_MAP[btn.key]
+          const handler = handlerKey ? handlers[handlerKey] : undefined
+          const btnDisabled = !isEnabled || isDisabled
+
           return (
             <Tooltip key={btn.key}>
               <TooltipTrigger asChild>
                 <button
                   type="button"
-                  disabled
+                  disabled={btnDisabled}
+                  onClick={handler}
                   aria-keyshortcuts={btn.ariaKeyshortcuts}
-                  className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 ${btn.colorClass}`}
+                  aria-label={`${btn.label} finding, press ${btn.hotkey}`}
+                  className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 hover:brightness-110 ${btn.colorClass}`}
                 >
-                  <Icon className="h-4 w-4" aria-hidden="true" />
+                  {isInFlight && isEnabled && !btnDisabled ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Icon className="h-4 w-4" aria-hidden="true" />
+                  )}
                   <span>
                     [{btn.hotkey}] {btn.label}
                   </span>

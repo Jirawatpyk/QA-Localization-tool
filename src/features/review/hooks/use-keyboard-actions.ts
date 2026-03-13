@@ -385,19 +385,45 @@ export const REVIEW_HOTKEYS = [
   { key: '+', description: 'Add finding', category: 'Review Actions' },
 ] as const
 
-/** Register 7 review hotkeys with no-op handlers (Task 1.2)
- * TODO(story-4.2): Wire useReviewHotkeys into ReviewPageClient with real action handlers */
-export function useReviewHotkeys(): void {
+type ReviewHotkeyHandlers = {
+  accept?: (findingId: string) => void
+  reject?: (findingId: string) => void
+  flag?: (findingId: string) => void
+}
+
+// Map hotkey key to handler name
+const HOTKEY_ACTION_MAP: Record<string, keyof ReviewHotkeyHandlers> = {
+  a: 'accept',
+  r: 'reject',
+  f: 'flag',
+}
+
+/** Register 7 review hotkeys — A/R/F wired to handlers, N/S/-/+ remain no-op (Story 4.3) */
+export function useReviewHotkeys(
+  handlers: ReviewHotkeyHandlers = {},
+  getSelectedId?: () => string | null,
+): void {
   const { register } = useKeyboardActions()
+  const handlersRef = useRef(handlers)
+
+  useEffect(() => {
+    handlersRef.current = handlers
+  })
 
   useEffect(() => {
     const cleanups: Array<() => void> = []
 
     for (const hotkey of REVIEW_HOTKEYS) {
+      const actionName = HOTKEY_ACTION_MAP[hotkey.key]
       const cleanup = register(
         hotkey.key,
         () => {
-          // No-op until Story 4.2
+          if (!actionName) return // N, S, -, + remain no-op
+          const handler = handlersRef.current[actionName]
+          if (!handler) return
+          const selectedId = getSelectedId?.()
+          if (!selectedId) return // Guard: no finding selected
+          handler(selectedId)
         },
         {
           scope: 'review',
@@ -413,5 +439,5 @@ export function useReviewHotkeys(): void {
         cleanup()
       }
     }
-  }, [register])
+  }, [register, getSelectedId])
 }

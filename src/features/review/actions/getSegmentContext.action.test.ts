@@ -417,4 +417,32 @@ describe('getSegmentContext', () => {
       expect(result.code).toBe('VALIDATION_ERROR')
     }
   })
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // Coverage Gaps: Auth & DB Error Paths
+  // ═══════════════════════════════════════════════════════════════════════
+
+  it('[TA-G5][P1] should return INTERNAL_ERROR when requireRole throws (auth failure)', async () => {
+    // Mock requireRole to throw (user not authenticated)
+    mockRequireRole.mockRejectedValueOnce(new Error('Not authenticated'))
+
+    const result = await getSegmentContext({ fileId: mockFileId, segmentId: mockSegmentId })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('INTERNAL_ERROR')
+      expect(result.error).toMatch(/failed/i)
+    }
+  })
+
+  it('[TA-G6][P1] should return INTERNAL_ERROR when DB query throws unexpected error', async () => {
+    // Mock first query (target segment) to throw
+    dbState.throwAtCallIndex = 0
+
+    const result = await getSegmentContext({ fileId: mockFileId, segmentId: mockSegmentId })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('INTERNAL_ERROR')
+      expect(result.error).toMatch(/failed/i)
+    }
+  })
 })

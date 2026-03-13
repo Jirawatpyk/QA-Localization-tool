@@ -226,10 +226,20 @@ describe('FindingCard', () => {
     expect(screen.queryByTestId('fallback-badge')).not.toBeInTheDocument()
   })
 
-  // ── Quick action buttons (disabled until Story 4.2) ──
+  // ── Quick action buttons (Story 4.2 — enabled) ──
 
-  it('should render disabled accept and reject buttons', () => {
+  it('should render enabled accept and reject buttons for non-manual findings', () => {
     renderCard()
+
+    const acceptBtn = screen.getByRole('button', { name: /Accept finding/i })
+    const rejectBtn = screen.getByRole('button', { name: /Reject finding/i })
+
+    expect(acceptBtn).toBeEnabled()
+    expect(rejectBtn).toBeEnabled()
+  })
+
+  it('should disable accept and reject buttons for manual findings', () => {
+    renderCard({ status: 'manual' })
 
     const acceptBtn = screen.getByRole('button', { name: /Accept finding/i })
     const rejectBtn = screen.getByRole('button', { name: /Reject finding/i })

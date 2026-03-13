@@ -53,7 +53,7 @@ describe('FindingCardCompact', () => {
 
   // ── T2.2 [P1]: Quick action icons disabled ──
 
-  it('[T2.2][P1] should render quick action icons with 50% opacity and cursor-not-allowed', () => {
+  it('[T2.2][P1] should render enabled quick action icons for non-manual findings (Story 4.2)', () => {
     const finding = buildFindingForUI()
 
     render(
@@ -68,12 +68,31 @@ describe('FindingCardCompact', () => {
       />,
     )
 
-    const actionButtons = screen.getAllByRole('button')
-    for (const btn of actionButtons) {
-      expect(btn).toHaveClass('opacity-50')
-      expect(btn).toHaveClass('cursor-not-allowed')
-      expect(btn).toBeDisabled()
-    }
+    const acceptBtn = screen.getByRole('button', { name: /Accept finding/i })
+    const rejectBtn = screen.getByRole('button', { name: /Reject finding/i })
+    expect(acceptBtn).toBeEnabled()
+    expect(rejectBtn).toBeEnabled()
+  })
+
+  it('[T2.2b][P1] should disable quick action icons for manual findings', () => {
+    const finding = buildFindingForUI({ status: 'manual' })
+
+    render(
+      <FindingCardCompact
+        finding={finding}
+        isActive={false}
+        sourceLang="en"
+        targetLang="th"
+        findingIndex={0}
+        totalFindings={1}
+        onExpand={() => {}}
+      />,
+    )
+
+    const acceptBtn = screen.getByRole('button', { name: /Accept finding/i })
+    const rejectBtn = screen.getByRole('button', { name: /Reject finding/i })
+    expect(acceptBtn).toBeDisabled()
+    expect(rejectBtn).toBeDisabled()
   })
 
   // ── T2.3 [P1]: Roving tabindex ──

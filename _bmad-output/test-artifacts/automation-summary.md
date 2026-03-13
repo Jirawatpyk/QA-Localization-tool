@@ -1,7 +1,67 @@
 ---
 stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets', 'step-03-generate-tests', 'step-03c-aggregate', 'step-04-validate-and-summarize']
 lastStep: 'step-04-validate-and-summarize'
-lastSaved: '2026-03-09'
+lastSaved: '2026-03-13'
+taRun41d:
+  stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets', 'step-03-generate-tests', 'step-03c-aggregate', 'step-04-validate-and-summarize']
+  lastStep: 'step-04-validate-and-summarize'
+  lastSaved: '2026-03-13'
+  storyFile: '_bmad-output/implementation-artifacts/4-1d-responsive-layout.md'
+  mode: 'BMad-Integrated'
+  existingTests: 91
+  framework: 'Vitest'
+  gapsTotal: 14
+  gapsP1: 7
+  gapsP2: 7
+  testsPlanned: 14
+  testsAdded: 19
+  testsP1: 9
+  testsP2: 10
+  gapsDropped: 0
+  totalInTargets: 110
+  fullSuitePass: 3259
+  fullSuiteSkip: 1
+  regressions: 0
+  result: 'PASS — 19 new tests (10 ReviewPageClient + 4 FindingDetailContent + 4 FindingDetailSheet + 1 useMediaQuery), 14/14 gaps covered, 110/110 green'
+  elicitationMethods: 'What If Scenarios, Boundary Analysis, Red Team vs Blue Team, Pre-mortem Analysis'
+  codeFixes: 'FindingDetailSheet mock upgraded to prop-capturing spy (RT-A), FindingDetailContent useSegmentContext mock converted to vi.fn()'
+  mockUpgrades:
+    - 'ReviewPageClient.responsive.test.tsx: FindingDetailSheet mock → prop-capturing spy (respects open prop)'
+    - 'FindingDetailContent.test.tsx: useSegmentContext mock → vi.fn() for per-test override'
+    - 'FindingDetailSheet.test.tsx: SheetContent mock → forwards className, useReducedMotion/useIsLaptop → vi.fn()'
+  targetFiles:
+    - 'src/features/review/components/ReviewPageClient.responsive.test.tsx (10 tests: G5-G8,G11,G13,G14)'
+    - 'src/features/review/components/FindingDetailContent.test.tsx (4 tests: G3,G4,G9,G12)'
+    - 'src/features/review/components/FindingDetailSheet.test.tsx (4 tests: G1,G2)'
+    - 'src/hooks/useMediaQuery.test.ts (1 test: G10)'
+  findings:
+    - 'RT-A: FindingDetailSheet mock ignores open prop — all Sheet open/close tests were hollow assertions'
+    - 'G11: mobileDrawerOpen useState persists across breakpoint transitions (What-If)'
+    - 'G12: contextRange=0 nullish coalescing boundary — ?? preserves 0 unlike ||'
+    - 'G14: selectedId Zustand persistence across desktop↔laptop not verified (Pre-mortem)'
+taRun41c:
+  stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets', 'step-03-generate-tests', 'step-03c-aggregate', 'step-04-validate-and-summarize']
+  lastStep: 'step-04-validate-and-summarize'
+  lastSaved: '2026-03-13'
+  storyFile: '_bmad-output/implementation-artifacts/4-1c-detail-panel-segment-context.md'
+  mode: 'BMad-Integrated'
+  existingTests: 71
+  framework: 'Vitest'
+  gapsTotal: 9
+  gapsP1: 7
+  gapsP2: 2
+  testsPlanned: 9
+  testsAdded: 9
+  testsP1: 7
+  testsP2: 2
+  gapsDropped: 0
+  totalInTargets: 80
+  fullSuitePass: 3195
+  fullSuiteSkip: 1
+  regressions: 0
+  result: 'PASS — 9 new tests (2 action + 3 hook + 4 component), 9/9 gaps covered, 80/80 green'
+  elicitationMethods: 'Failure Mode Analysis, Red Team vs Blue Team'
+  codeFixes: 'None — all gaps were test-only coverage holes'
 taRun40:
   stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets', 'step-03-generate-tests', 'step-03c-aggregate', 'step-04-validate-and-summarize']
   lastStep: 'step-04-validate-and-summarize'
@@ -1748,6 +1808,125 @@ Full suite:     2958 passed
 Regressions:       0
 Elicitation:       2 methods (What If, FMEA)
 Gaps covered:      7/7 (100%)
+Gaps dropped:      0
+Result:          PASS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+---
+
+# TA Run 17 — Story 4.1c: Detail Panel & Segment Context
+
+## Step 1: Preflight & Context
+
+### Execution Mode
+- **BMad-Integrated** — Story 4.1c (Detail Panel & Segment Context)
+- Story Status: done (71 unit GREEN, 7 E2E skipped via TD-E2E-016)
+
+### Framework
+- **Vitest 4.0.18** (workspace: unit/jsdom)
+- E2E: Playwright (7 tests skipped, deferred to Story 4.2)
+
+### ATDD Checklist
+- Source: `_bmad-output/test-artifacts/atdd-checklist-4-1c.md`
+- Total planned: 75 (68 unit + 7 E2E)
+- Status: All unit steps completed, E2E deferred
+
+## Step 2: Identify Targets
+
+### Target Files (6 components)
+1. `src/features/review/actions/getSegmentContext.action.ts` — server action (3 DB queries)
+2. `src/features/review/hooks/use-segment-context.ts` — client hook (debounce, cache, abort)
+3. `src/features/review/components/SegmentTextDisplay.tsx` — text highlight + lang attr
+4. `src/features/review/components/SegmentContextList.tsx` — context before/after + click-to-navigate
+5. `src/features/review/components/FindingDetailSheet.tsx` — Radix Sheet wrapper
+6. `src/features/review/components/FindingDetailContent.tsx` — shared content (DRY dual render)
+
+### Elicitation Applied
+1. **Failure Mode Analysis (FMA)** — 29 failure modes across 6 components → 3 new gaps (G5-G7)
+2. **Red Team vs Blue Team** — 6 attack vectors → 2 new gaps (G8-G9)
+
+### Coverage Gaps (9 total)
+
+| Gap | Priority | Component | Description |
+|-----|----------|-----------|-------------|
+| G1 | P2 | use-segment-context | Cache eviction at MAX_CACHE_SIZE=50 |
+| G2 | P1 | use-segment-context | contextRange change → refetch (different cache key) |
+| G3 | P1 | FindingDetailContent | Context range selector onChange state update |
+| G4 | P1 | FindingDetailSheet | fileId=null → no FindingDetailContent rendered |
+| G5 | P1 | getSegmentContext.action | Auth failure (requireRole throws) → INTERNAL_ERROR |
+| G6 | P1 | getSegmentContext.action | DB error (query throws) → INTERNAL_ERROR |
+| G7 | P1 | use-segment-context | Server action throws → hook error state |
+| G8 | P1 | FindingDetailContent | Cross-file fallback (segmentId=null) wiring |
+| G9 | P2 | FindingDetailContent | StatusBadge multi-word format (source_issue → "Source Issue") |
+
+## Step 3: Generate Tests
+
+### Agent A (action + hook: G5, G6, G7, G2, G1)
+- `getSegmentContext.action.test.ts`: +2 tests (G5, G6)
+- `use-segment-context.test.ts`: +3 tests (G7, G2, G1)
+- Result: 31 tests passed ✅
+
+### Agent B (components: G4, G8, G9, G3)
+- `FindingDetailSheet.test.tsx`: +1 test (G4)
+- `FindingDetailContent.test.tsx`: +3 tests (G8, G9, G3)
+- Result: 21 tests passed ✅
+
+## Step 3C: Aggregate
+
+### Verification Checklist
+
+| Check | Status | Detail |
+|-------|--------|--------|
+| All 9 gaps have tests | ✅ | G1-G9 confirmed via grep `[TA-G\d+]` |
+| Tests in correct files | ✅ | 4 files, co-located with source |
+| No duplicate coverage | ✅ | All 9 tests cover scenarios NOT in existing ATDD tests |
+| No hardcoded data | ✅ | Factory functions (`buildFindingForUI`) used |
+| No snapshot tests | ✅ | Assertion-based only |
+| Review feature GREEN | ✅ | 499/499 passed (42 files) |
+
+## Step 4: Validate and Summarize
+
+### Full Suite Results
+
+| Metric | Value |
+|--------|-------|
+| Test files | 231 passed |
+| Tests | 3195 passed, 1 skipped |
+| Regressions | 0 |
+| Duration | ~204s |
+
+### Checklist
+
+| Item | Status | Detail |
+|------|--------|--------|
+| Framework readiness | PASS | vitest.config.ts unit project, jsdom environment |
+| Coverage mapping | PASS | 9 gaps → 9 covered, 0 dropped |
+| Test quality | PASS | Factory data, proper mocking, no snapshots |
+| Fixtures/factories | PASS | `buildFindingForUI()`, manual `FindingForDisplay` for null segmentId |
+| CLI cleanup | N/A | No browser sessions (unit-only) |
+| Temp artifacts | PASS | All output in `_bmad-output/test-artifacts/` |
+| No duplicate coverage | PASS | All 9 tests cover scenarios NOT in ATDD checklist |
+| No regressions | PASS | 3195/3195 passed, 0 failures |
+
+### Key Risks & Assumptions
+
+1. **G1 (cache eviction):** Test fills 51 entries sequentially — may be slow (~10s) but uses 60s timeout
+2. **G8 (cross-file):** `buildFindingForUI` coalesces null segmentId to UUID via `??` — test uses manual `FindingForDisplay` object instead
+3. **E2E deferred:** 7 E2E tests remain skipped (TD-E2E-016) — will be enabled in Story 4.2
+
+### Final Stats
+
+```
+TA Run 17 — Story 4.1c — COMPLETE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Existing tests:    71
+New tests added:    9
+Total in targets:  80
+Full suite:     3195 passed
+Regressions:       0
+Elicitation:       2 methods (FMA, Red Team vs Blue Team)
+Gaps covered:      9/9 (100%)
 Gaps dropped:      0
 Result:          PASS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

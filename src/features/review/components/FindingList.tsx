@@ -25,6 +25,8 @@ export type FindingListProps = {
   targetLang?: string | undefined
   l2ConfidenceMin?: number | null | undefined
   l3ConfidenceMin?: number | null | undefined
+  onAccept?: ((findingId: string) => void) | undefined
+  onReject?: ((findingId: string) => void) | undefined
 }
 
 const SEVERITY_ORDER: Record<FindingSeverity, number> = { critical: 0, major: 1, minor: 2 }
@@ -49,6 +51,8 @@ export function FindingList({
   targetLang,
   l2ConfidenceMin,
   l3ConfidenceMin,
+  onAccept,
+  onReject,
 }: FindingListProps) {
   const reducedMotion = useReducedMotion()
   const { register } = useKeyboardActions()
@@ -384,6 +388,8 @@ export function FindingList({
           l2ConfidenceMin={l2ConfidenceMin}
           l3ConfidenceMin={l3ConfidenceMin}
           onExpand={onToggleExpand}
+          onAccept={onAccept}
+          onReject={onReject}
         />
         {isExpanded && (
           <FindingCard
@@ -395,6 +401,8 @@ export function FindingList({
             l2ConfidenceMin={l2ConfidenceMin}
             l3ConfidenceMin={l3ConfidenceMin}
             isNew={isNew}
+            onAccept={onAccept}
+            onReject={onReject}
           />
         )}
       </div>

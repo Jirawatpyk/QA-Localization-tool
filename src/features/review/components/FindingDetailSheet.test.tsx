@@ -10,9 +10,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { FindingDetailSheet } from '@/features/review/components/FindingDetailSheet'
 import { buildFindingForUI } from '@/test/factories'
 
-// Mock useReducedMotion to avoid matchMedia issues in jsdom
+// Mock useReducedMotion — controllable per-test for G2
+const mockUseReducedMotion = vi.fn((..._args: unknown[]) => false)
 vi.mock('@/hooks/useReducedMotion', () => ({
-  useReducedMotion: () => false,
+  useReducedMotion: (...args: unknown[]) => mockUseReducedMotion(...args),
+}))
+
+// Mock useIsLaptop — controllable per-test for G1
+const mockUseIsLaptop = vi.fn((..._args: unknown[]) => true)
+vi.mock('@/hooks/useMediaQuery', () => ({
+  useIsLaptop: (...args: unknown[]) => mockUseIsLaptop(...args),
 }))
 
 // Mock useSegmentContext to isolate FindingDetailSheet from server action
@@ -36,6 +43,7 @@ vi.mock('@/components/ui/sheet', () => ({
       role={props.role as string}
       aria-label={props['aria-label'] as string}
       data-testid={props['data-testid'] as string}
+      className={props.className as string | undefined}
     >
       {children}
     </div>
@@ -78,6 +86,8 @@ describe('FindingDetailSheet', () => {
       error: null,
       retry: vi.fn(),
     })
+    mockUseReducedMotion.mockReturnValue(false)
+    mockUseIsLaptop.mockReturnValue(true)
   })
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -175,18 +185,18 @@ describe('FindingDetailSheet', () => {
   // AC1: Action Buttons (disabled placeholder — wired in Story 4.2)
   // ═══════════════════════════════════════════════════════════════════════
 
-  it('[T-C3.6][P1] should render disabled action buttons (Accept, Reject, Flag) without key hints', () => {
+  it('[T-C3.6][P1] should render enabled action buttons (Accept, Reject, Flag) for non-manual findings (Story 4.2)', () => {
     render(<FindingDetailSheet {...defaultProps()} />)
 
     const acceptBtn = screen.getByRole('button', { name: /Accept/i })
     const rejectBtn = screen.getByRole('button', { name: /Reject/i })
     const flagBtn = screen.getByRole('button', { name: /Flag/i })
 
-    expect(acceptBtn).toBeDisabled()
-    expect(rejectBtn).toBeDisabled()
-    expect(flagBtn).toBeDisabled()
+    expect(acceptBtn).toBeEnabled()
+    expect(rejectBtn).toBeEnabled()
+    expect(flagBtn).toBeEnabled()
 
-    // No keyboard shortcut hints in button text
+    // No keyboard shortcut hints in button text (those are in ReviewActionBar)
     expect(acceptBtn.textContent).not.toMatch(/\[A\]/)
     expect(rejectBtn.textContent).not.toMatch(/\[R\]/)
     expect(flagBtn.textContent).not.toMatch(/\[F\]/)
@@ -289,5 +299,61 @@ describe('FindingDetailSheet', () => {
 
     expect(screen.getByText(/claude-sonnet/)).toBeInTheDocument()
     expect(screen.queryByText(/gpt-4o-mini/)).not.toBeInTheDocument()
+  })
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // Coverage gap: fileId=null → empty sheet body (Story 4.1c G4)
+  // ═══════════════════════════════════════════════════════════════════════
+
+  it('[TA-G4][P1] should render sheet shell without FindingDetailContent when fileId is null', () => {
+    render(<FindingDetailSheet {...defaultProps({ fileId: null })} />)
+
+    // Sheet is open (shell renders)
+    expect(screen.getByTestId('finding-detail-sheet')).toBeInTheDocument()
+    // But no FindingDetailContent or finding metadata
+    expect(screen.queryByTestId('finding-detail-content')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('finding-metadata')).not.toBeInTheDocument()
+  })
+
+  // ═══ TA Coverage: Story 4.1d gaps ═══
+
+  it('[TA-G1][P1] should apply laptop width class when useIsLaptop returns true', () => {
+    mockUseIsLaptop.mockReturnValue(true)
+
+    render(<FindingDetailSheet {...defaultProps()} />)
+
+    const sheet = screen.getByTestId('finding-detail-sheet')
+    expect(sheet.className).toContain('max-w-[var(--detail-panel-width-laptop)]')
+    expect(sheet.className).not.toContain('max-w-[var(--detail-panel-width-tablet)]')
+  })
+
+  it('[TA-G1][P1] should apply tablet width class when useIsLaptop returns false', () => {
+    mockUseIsLaptop.mockReturnValue(false)
+
+    render(<FindingDetailSheet {...defaultProps()} />)
+
+    const sheet = screen.getByTestId('finding-detail-sheet')
+    expect(sheet.className).toContain('max-w-[var(--detail-panel-width-tablet)]')
+    expect(sheet.className).not.toContain('max-w-[var(--detail-panel-width-laptop)]')
+  })
+
+  it('[TA-G2][P1] should apply reduced-motion classes when useReducedMotion returns true', () => {
+    mockUseReducedMotion.mockReturnValue(true)
+
+    render(<FindingDetailSheet {...defaultProps()} />)
+
+    const sheet = screen.getByTestId('finding-detail-sheet')
+    expect(sheet.className).toContain('[&[data-state]]:duration-0')
+    expect(sheet.className).toContain('[&[data-state]]:animate-none')
+  })
+
+  it('[TA-G2][P1] should not apply reduced-motion classes when useReducedMotion returns false', () => {
+    mockUseReducedMotion.mockReturnValue(false)
+
+    render(<FindingDetailSheet {...defaultProps()} />)
+
+    const sheet = screen.getByTestId('finding-detail-sheet')
+    expect(sheet.className).not.toContain('duration-0')
+    expect(sheet.className).not.toContain('animate-none')
   })
 })

@@ -150,6 +150,59 @@ describe('useMediaQuery', () => {
     expect(removeEventListenerMock).toHaveBeenCalledWith('change', expect.any(Function))
   })
 
+  // ═══ TA Coverage: Story 4.1d gaps ═══
+
+  it('[TA-G10][P2] should re-subscribe when query param changes (remove old listener, add new)', () => {
+    // Arrange: track per-MQL listeners
+    const mqlA: MediaQueryListMock = {
+      matches: true,
+      media: '(min-width: 1024px)',
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }
+    const mqlB: MediaQueryListMock = {
+      matches: false,
+      media: '(min-width: 1440px)',
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }
+
+    const matchMediaMock = vi.fn((query: string) => {
+      if (query === '(min-width: 1024px)') return mqlA
+      if (query === '(min-width: 1440px)') return mqlB
+      return mqlA
+    })
+    vi.stubGlobal('matchMedia', matchMediaMock)
+
+    // Act: render with query A
+    const { result, rerender } = renderHook(
+      ({ query }: { query: string }) => useMediaQuery(query),
+      { initialProps: { query: '(min-width: 1024px)' } },
+    )
+
+    // Assert: initial state from mqlA
+    expect(matchMediaMock).toHaveBeenCalledWith('(min-width: 1024px)')
+    expect(mqlA.addEventListener).toHaveBeenCalledWith('change', expect.any(Function))
+    expect(result.current).toBe(true)
+
+    // Act: change query to B
+    rerender({ query: '(min-width: 1440px)' })
+
+    // Assert: old listener removed, new one added
+    expect(mqlA.removeEventListener).toHaveBeenCalledWith('change', expect.any(Function))
+    expect(matchMediaMock).toHaveBeenCalledWith('(min-width: 1440px)')
+    expect(mqlB.addEventListener).toHaveBeenCalledWith('change', expect.any(Function))
+    expect(result.current).toBe(false)
+  })
+
   // ═══════════════════════════════════════════════════════════════════════
   // Breakpoint presets (boundary tests)
   // ═══════════════════════════════════════════════════════════════════════

@@ -26,6 +26,8 @@ export type FindingCardProps = {
   l2ConfidenceMin?: number | null | undefined
   l3ConfidenceMin?: number | null | undefined
   isNew?: boolean | undefined
+  onAccept?: ((findingId: string) => void) | undefined
+  onReject?: ((findingId: string) => void) | undefined
 }
 
 /** State-based background color tokens from Story 4.0 */
@@ -47,6 +49,8 @@ export function FindingCard({
   l2ConfidenceMin,
   l3ConfidenceMin,
   isNew,
+  onAccept,
+  onReject,
 }: FindingCardProps) {
   const reducedMotion = useReducedMotion()
 
@@ -64,6 +68,12 @@ export function FindingCard({
   const showNewAnimation = isNew === true && !reducedMotion
   const bgClass = STATUS_BG[finding.status] ?? ''
 
+  // State-based visual styling (Story 4.2 AC3)
+  const isAccepted = finding.status === 'accepted' || finding.status === 're_accepted'
+  const isRejected = finding.status === 'rejected'
+  const stateClass = isRejected ? 'opacity-60' : ''
+  const descriptionClass = isAccepted ? 'line-through' : ''
+
   // Expand/collapse transition (AC5): 150ms ease-out, disabled when reduced motion
   const transitionClass = reducedMotion ? 'duration-0' : 'transition-all duration-150 ease-out'
 
@@ -71,7 +81,8 @@ export function FindingCard({
     <div
       data-testid="finding-card"
       data-finding-id={finding.id}
-      className={`border rounded-lg p-3 ${bgClass} ${transitionClass} ${showNewAnimation ? 'animate-fade-in' : ''}`}
+      data-status={finding.status}
+      className={`border rounded-lg p-3 ${bgClass} ${stateClass} ${transitionClass} ${showNewAnimation ? 'animate-fade-in' : ''}`}
     >
       {/* Header row: severity + category + layer + finding number */}
       <div className="flex items-center gap-2 flex-wrap">
@@ -117,7 +128,7 @@ export function FindingCard({
 
       {/* Content row: description + source/target */}
       <div className="mt-2 pt-2 border-t text-sm space-y-1">
-        <p className="text-foreground">{cleanDescription}</p>
+        <p className={`text-foreground ${descriptionClass}`}>{cleanDescription}</p>
 
         {finding.sourceTextExcerpt !== null && (
           <p className="text-muted-foreground">
@@ -153,20 +164,22 @@ export function FindingCard({
 
         <ConfidenceBadge confidence={finding.aiConfidence} confidenceMin={confidenceMin} />
 
-        {/* Quick action icons — disabled until Story 4.2 */}
+        {/* Quick action icons (Story 4.2) */}
         <div role="group" className="flex items-center gap-1 shrink-0" aria-label="Quick actions">
           <button
             type="button"
-            disabled
-            className="opacity-50 cursor-not-allowed lg:p-0.5 p-2.5 min-h-[44px] min-w-[44px] lg:min-h-0 lg:min-w-0 rounded flex items-center justify-center"
+            disabled={finding.status === 'manual'}
+            onClick={() => onAccept?.(finding.id)}
+            className="text-success hover:bg-success/10 disabled:opacity-50 disabled:cursor-not-allowed lg:p-0.5 p-2.5 min-h-[44px] min-w-[44px] lg:min-h-0 lg:min-w-0 rounded flex items-center justify-center focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
             aria-label="Accept finding"
           >
             <Check className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
           <button
             type="button"
-            disabled
-            className="opacity-50 cursor-not-allowed lg:p-0.5 p-2.5 min-h-[44px] min-w-[44px] lg:min-h-0 lg:min-w-0 rounded flex items-center justify-center"
+            disabled={finding.status === 'manual'}
+            onClick={() => onReject?.(finding.id)}
+            className="text-error hover:bg-error/10 disabled:opacity-50 disabled:cursor-not-allowed lg:p-0.5 p-2.5 min-h-[44px] min-w-[44px] lg:min-h-0 lg:min-w-0 rounded flex items-center justify-center focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
             aria-label="Reject finding"
           >
             <X className="h-3.5 w-3.5" aria-hidden="true" />

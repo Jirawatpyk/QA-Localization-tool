@@ -341,13 +341,13 @@
 - **Origin:** Story 3.0, identified during TODO scan (2026-03-02)
 - **Status:** RESOLVED (2026-03-09) — Story 4.0 Task 7.2. TD2 test activated and passing.
 
-### TD-TODO-002: getFileHistory reviewer name deferred to Epic 4
+### TD-TODO-002: getFileHistory reviewer name deferred
 - **Severity:** Low
 - **Risk:** `lastReviewerName` always null — file history doesn't show who last reviewed
 - **File:** `src/features/batch/actions/getFileHistory.action.ts:95`
-- **Fix:** Join `reviewActions` + `users` tables for actual reviewer name
+- **Fix:** Join audit_logs (review actions) + auth.users for actual reviewer name. Story 4.2 creates the audit trail entries but getFileHistory JOIN is a batch/dashboard concern.
 - **Origin:** Story 2.7, identified during TODO scan (2026-03-02)
-- **Status:** DEFERRED → **Story 4.2 — Core Review Actions** (review_actions data available after 4.2 implements actions)
+- **Status:** DEFERRED → **Story 4.3 or Epic 5** (audit trail data now exists from Story 4.2; JOIN query is dashboard feature scope)
 
 ### TD-UX-003: File selection UI before processing — all files auto-selected
 - **Severity:** Low
@@ -534,8 +534,8 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Phase:** CR R1
 - **Severity:** Low
 - **File:** `e2e/review-keyboard.spec.ts` — test F5e
-- **Description:** E2E test for Esc key hierarchy (dropdown inside Sheet closes before Sheet) is skipped because FindingDetailSheet has no interactive dropdowns yet. Requires Story 4.2 (Core Review Actions) to add severity override dropdown inside Sheet.
-- **Status:** DEFERRED → **Story 4.2 — Core Review Actions** (dropdown controls inside Sheet)
+- **Description:** E2E test for Esc key hierarchy (dropdown inside Sheet closes before Sheet) is skipped because FindingDetailSheet has no interactive dropdowns yet. Story 4.2 added action buttons (not dropdowns) inside Sheet. Dropdown (severity override) is a future story.
+- **Status:** DEFERRED → **Story 4.3 — Severity Override & Extended Actions** (dropdown controls inside Sheet)
 
 ### TD-E2E-014: E1 — Full keyboard review flow (review-keyboard E2E)
 - **Date:** 2026-03-09
@@ -552,8 +552,8 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Phase:** CR R1
 - **Severity:** Low
 - **File:** `e2e/review-score.spec.ts` — test TD2
-- **Description:** E2E test for score recalculation after accepting a finding is skipped because review actions (accept/reject) are not implemented yet. Requires Story 4.2 (Core Review Actions).
-- **Status:** DEFERRED → **Story 4.2 — Core Review Actions**
+- **Description:** E2E test for score recalculation after accepting a finding. Review actions are now implemented in Story 4.2. E2E test can be unskipped.
+- **Status:** OPEN → unskip in `e2e/review-score.spec.ts` during next E2E activation pass
 
 ### ~~TD-REVIEW-002: Realtime auto_passed transition doesn't show rationale~~
 - **Date:** 2026-03-08
@@ -575,10 +575,8 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Phase:** CR R1
 - **Severity:** Medium
 - **File:** `e2e/review-detail-panel.spec.ts` — 7 tests (`E1` through `E7`)
-- **Description:** All 7 assertion E2E tests use `test.skip()`. Setup test seeds data correctly, but the 7 behavioral tests (metadata display, `<mark>` highlight, context segments, click-to-navigate, range selector, CJK/Thai lang, focus trap+Esc) are all skipped. No TD ref in code comments.
-- **Risk:** No E2E coverage for detail panel — integration gaps hidden until Story 4.2 wires actions
-- **Fix:** Unskip and activate when review page keyboard J/K → Sheet open wiring is stable. Requires: (1) Finding focus → Sheet auto-open behavior working in E2E, (2) PostgREST seeded data visible in review page
-- **Status:** DEFERRED → **Story 4.2 — Core Review Actions** (E2E activation after action buttons are wired + Sheet open flow confirmed in CI)
+- **Description:** All 7 assertion E2E tests use `test.skip()`. Action buttons are now wired (Story 4.2). Tests can be unskipped.
+- **Status:** OPEN → unskip during next E2E activation pass (action buttons wired, Sheet open flow should work)
 
 ### TD-E2E-017: Responsive Layout E2E tests skipped — 30 `test.skip` without TD ref
 - **Date:** 2026-03-13
@@ -586,7 +584,5 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Phase:** CR R1
 - **Severity:** Medium
 - **File:** `e2e/review-responsive.spec.ts` — 30 tests (desktop×10, laptop×10, mobile×10)
-- **Description:** All 30 E2E tests use `test.skip()`. Spec covers 3 breakpoint suites (desktop ≥1440, laptop 1024-1439, mobile <768) including layout zones, detail panel mode, ARIA landmarks, touch targets, animations, and boundary tests. No `// TODO(TD-XXX)` ref in code comments.
-- **Risk:** No E2E coverage for responsive layout — breakpoint regressions hidden until activated
-- **Fix:** Unskip and activate when review page is stable with real data in E2E environment. Requires: (1) PostgREST seeded findings visible, (2) Playwright viewport resize + element assertions, (3) Story 4.2 action buttons wired for full flow
-- **Status:** DEFERRED → **Story 4.2 — Core Review Actions** (E2E activation after responsive + actions are end-to-end testable)
+- **Description:** All 30 E2E tests use `test.skip()`. Action buttons now wired (Story 4.2). Tests can be unskipped.
+- **Status:** OPEN → unskip during next E2E activation pass (all action buttons wired, responsive layout complete)

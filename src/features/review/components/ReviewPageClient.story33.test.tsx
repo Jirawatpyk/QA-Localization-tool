@@ -29,6 +29,7 @@ vi.mock('@/features/review/components/ReviewActionBar', () => ({
   ReviewActionBar: () => null,
 }))
 vi.mock('@/features/review/utils/announce', () => ({
+  announce: vi.fn(),
   mountAnnouncer: vi.fn(),
   unmountAnnouncer: vi.fn(),
 }))
@@ -37,7 +38,12 @@ vi.mock('@/features/review/hooks/use-keyboard-actions', () => ({
   useKeyboardActions: () => ({ register: vi.fn(() => vi.fn()) }),
 }))
 vi.mock('@/features/review/hooks/use-focus-management', () => ({
-  useFocusManagement: () => ({ pushEscapeLayer: vi.fn(), popEscapeLayer: vi.fn() }),
+  useFocusManagement: () => ({
+    pushEscapeLayer: vi.fn(),
+    popEscapeLayer: vi.fn(),
+    autoAdvance: vi.fn(),
+    focusActionBar: vi.fn(),
+  }),
 }))
 
 vi.mock('@/features/pipeline/actions/retryAiAnalysis.action', () => ({
@@ -45,25 +51,41 @@ vi.mock('@/features/pipeline/actions/retryAiAnalysis.action', () => ({
     Promise.resolve({ success: true, data: { retriedLayers: [] } }),
   ),
 }))
+vi.mock('@/features/review/actions/acceptFinding.action', () => ({
+  acceptFinding: vi.fn((..._args: unknown[]) => Promise.resolve({ success: true, data: {} })),
+}))
+vi.mock('@/features/review/actions/rejectFinding.action', () => ({
+  rejectFinding: vi.fn((..._args: unknown[]) => Promise.resolve({ success: true, data: {} })),
+}))
+vi.mock('@/features/review/actions/flagFinding.action', () => ({
+  flagFinding: vi.fn((..._args: unknown[]) => Promise.resolve({ success: true, data: {} })),
+}))
 vi.mock('@/features/review/stores/review.store', () => {
   const mockResetForFile = vi.fn()
   const mockSetFinding = vi.fn()
   const mockUpdateScore = vi.fn()
+  const storeState = {
+    resetForFile: mockResetForFile,
+    setFindings: mockSetFinding,
+    setFinding: vi.fn(),
+    findingsMap: new Map(),
+    currentScore: null,
+    layerCompleted: null,
+    scoreStatus: null,
+    updateScore: mockUpdateScore,
+    l2ConfidenceMin: null,
+    l3ConfidenceMin: null,
+    selectedId: null,
+    setSelectedFinding: vi.fn(),
+  }
   return {
-    useReviewStore: vi.fn((selector: (state: Record<string, unknown>) => unknown) =>
-      selector({
-        resetForFile: mockResetForFile,
-        setFindings: mockSetFinding,
-        findingsMap: new Map(),
-        currentScore: null,
-        layerCompleted: null,
-        scoreStatus: null,
-        updateScore: mockUpdateScore,
-        l2ConfidenceMin: null,
-        l3ConfidenceMin: null,
-        selectedId: null,
-        setSelectedFinding: vi.fn(),
-      }),
+    useReviewStore: Object.assign(
+      vi.fn((selector?: (state: Record<string, unknown>) => unknown) =>
+        selector ? selector(storeState) : storeState,
+      ),
+      {
+        getState: vi.fn(() => storeState),
+      },
     ),
   }
 })

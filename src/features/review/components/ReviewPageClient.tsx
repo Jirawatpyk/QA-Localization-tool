@@ -19,6 +19,7 @@ import { ReviewActionBar } from '@/features/review/components/ReviewActionBar'
 import { ReviewProgress } from '@/features/review/components/ReviewProgress'
 import { useFindingsSubscription } from '@/features/review/hooks/use-findings-subscription'
 import { useReviewHotkeys } from '@/features/review/hooks/use-keyboard-actions'
+import { useReviewActions } from '@/features/review/hooks/use-review-actions'
 import { useScoreSubscription } from '@/features/review/hooks/use-score-subscription'
 import { useThresholdSubscription } from '@/features/review/hooks/use-threshold-subscription'
 import { useReviewStore } from '@/features/review/stores/review.store'
@@ -96,8 +97,15 @@ export function ReviewPageClient({
     }
   }, [])
 
-  // Register review hotkeys (Task 1.2 — no-op until Story 4.2)
-  useReviewHotkeys()
+  // Wire review actions hook (Story 4.2)
+  const { handleAccept, handleReject, handleFlag, isActionInFlight } = useReviewActions({
+    fileId,
+    projectId,
+  })
+
+  // Register review hotkeys — A/R/F wired to real handlers (Story 4.2)
+  const getSelectedId = useCallback(() => useReviewStore.getState().selectedId, [])
+  useReviewHotkeys({ accept: handleAccept, reject: handleReject, flag: handleFlag }, getSelectedId)
 
   // Initialize store on mount
   useEffect(() => {
@@ -433,10 +441,18 @@ export function ReviewPageClient({
             targetLang={targetLang ?? undefined}
             l2ConfidenceMin={storeL2ConfidenceMin ?? initialData.l2ConfidenceMin}
             l3ConfidenceMin={storeL3ConfidenceMin ?? initialData.l3ConfidenceMin}
+            onAccept={handleAccept}
+            onReject={handleReject}
           />
         </div>
         {/* Action Bar (Task 5 — below finding list) */}
-        <ReviewActionBar />
+        <ReviewActionBar
+          onAccept={() => selectedId && handleAccept(selectedId)}
+          onReject={() => selectedId && handleReject(selectedId)}
+          onFlag={() => selectedId && handleFlag(selectedId)}
+          isDisabled={!selectedId || isActionInFlight}
+          isInFlight={isActionInFlight}
+        />
       </div>
 
       {/* Zone 3: Detail Panel — desktop: static aside, non-desktop: Sheet */}
@@ -460,6 +476,9 @@ export function ReviewPageClient({
             fileId={fileId}
             contextRange={undefined}
             onNavigateToFinding={setSelectedFinding}
+            onAccept={handleAccept}
+            onReject={handleReject}
+            onFlag={handleFlag}
           />
         </aside>
       ) : (
@@ -471,6 +490,9 @@ export function ReviewPageClient({
           targetLang={targetLang ?? ''}
           fileId={fileId}
           onNavigateToFinding={setSelectedFinding}
+          onAccept={handleAccept}
+          onReject={handleReject}
+          onFlag={handleFlag}
         />
       )}
 

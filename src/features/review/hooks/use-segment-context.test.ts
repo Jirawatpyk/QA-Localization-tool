@@ -340,4 +340,100 @@ describe('useSegmentContext', () => {
       expect(result.current.isLoading).toBe(false)
     }, WAIT_OPTS)
   })
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // Coverage Gaps: Error, Refetch, Cache Eviction
+  // ═══════════════════════════════════════════════════════════════════════
+
+  it('[TA-G7][P1] should set error to "Failed to load segment context" when server action throws', async () => {
+    mockGetSegmentContext.mockRejectedValueOnce(new Error('Network failure'))
+
+    const { result } = renderHook(() =>
+      useSegmentContext({ fileId: 'file-1', segmentId: 'seg-1', contextRange: 2 }),
+    )
+    await waitFor(() => {
+      expect(result.current.error).toBe('Failed to load segment context')
+      expect(result.current.data).toBeNull()
+      expect(result.current.isLoading).toBe(false)
+    }, WAIT_OPTS)
+  })
+
+  it('[TA-G2][P1] should refetch when contextRange changes (different cache key)', async () => {
+    const { result, rerender } = renderHook(
+      ({ contextRange }: { contextRange: number }) =>
+        useSegmentContext({ fileId: 'file-1', segmentId: 'seg-1', contextRange }),
+      { initialProps: { contextRange: 2 } },
+    )
+    await waitFor(() => expect(result.current.data).not.toBeNull(), WAIT_OPTS)
+    const firstCallCount = mockGetSegmentContext.mock.calls.length
+
+    // Change contextRange — should trigger a new fetch (different cache key)
+    mockGetSegmentContext.mockResolvedValueOnce({
+      success: true as const,
+      data: {
+        ...defaultData,
+        contextBefore: [{ ...defaultData.currentSegment, id: 'extra-seg', segmentNumber: 2 }],
+      },
+    })
+    rerender({ contextRange: 3 })
+
+    await waitFor(() => {
+      expect(mockGetSegmentContext.mock.calls.length).toBe(firstCallCount + 1)
+    }, WAIT_OPTS)
+  })
+
+  it('[TA-G1][P2] should evict oldest cache entry when cache exceeds MAX_CACHE_SIZE (50)', async () => {
+    // Use dynamic mock that returns data based on input segmentId
+    mockGetSegmentContext.mockImplementation((...args: unknown[]) => {
+      const input = args[0] as Record<string, unknown>
+      const segId = input.segmentId as string
+      return Promise.resolve({
+        success: true as const,
+        data: {
+          ...defaultData,
+          currentSegment: {
+            ...defaultData.currentSegment,
+            id: segId,
+            segmentNumber: Number(segId.replace('seg-', '')),
+          },
+        },
+      })
+    })
+
+    // Fill cache: fetch seg-0 first
+    const { result, rerender } = renderHook(
+      ({ segmentId }: { segmentId: string }) =>
+        useSegmentContext({ fileId: 'file-1', segmentId, contextRange: 2 }),
+      { initialProps: { segmentId: 'seg-0' } },
+    )
+    await waitFor(() => expect(result.current.data?.currentSegment.id).toBe('seg-0'), WAIT_OPTS)
+
+    // Fetch 50 more unique segments (seg-1 through seg-50) to exceed MAX_CACHE_SIZE
+    for (let i = 1; i <= 50; i++) {
+      rerender({ segmentId: `seg-${i}` })
+      await waitFor(
+        () => expect(result.current.data?.currentSegment.id).toBe(`seg-${i}`),
+        WAIT_OPTS,
+      )
+    }
+
+    // Track call count before re-visit
+    const callsBefore = mockGetSegmentContext.mock.calls.length
+
+    // Cache now has 50 entries (seg-1:2 through seg-50:2). seg-0:2 was evicted.
+    // Re-visit seg-0 — should require a NEW fetch (evicted from cache)
+    rerender({ segmentId: 'seg-0' })
+    await waitFor(() => expect(result.current.data?.currentSegment.id).toBe('seg-0'), {
+      timeout: 5000,
+    })
+
+    // Verify re-fetch happened (seg-0 was evicted, so a new call was made)
+    expect(mockGetSegmentContext.mock.calls.length).toBeGreaterThan(callsBefore)
+
+    // Verify seg-0 was fetched twice total (initial + re-fetch after eviction)
+    const seg0Calls = mockGetSegmentContext.mock.calls.filter(
+      (call) => (call[0] as Record<string, unknown>)?.segmentId === 'seg-0',
+    )
+    expect(seg0Calls.length).toBe(2)
+  }, 60000)
 })

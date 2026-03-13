@@ -48,6 +48,9 @@ export type ScoreBadgeState =
   | 'partial'
 export type ScoreBadgeSize = 'sm' | 'md' | 'lg'
 
+// Score impact per finding status — maps each status to whether it counts as MQM penalty
+export type FindingStatusScoreImpact = Record<FindingStatus, { countsPenalty: boolean }>
+
 export type Finding = {
   id: string
   tenantId: string
