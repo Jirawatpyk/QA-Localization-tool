@@ -140,3 +140,13 @@
 .text-cjk-scale {
   font-size: 1.1em;
 }
+
+/* Excerpt highlight mark — uses token, dark variant via opacity */
+.highlight-mark {
+  background-color: var(--color-highlight);
+  border-radius: 0.125rem;
+  padding-inline: 0.125rem;
+}
+:is(.dark) .highlight-mark {
+  background-color: color-mix(in srgb, var(--color-highlight) 35%, transparent);
+}

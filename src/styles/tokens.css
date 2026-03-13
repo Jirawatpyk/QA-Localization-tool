@@ -53,6 +53,9 @@
   --color-finding-source-issue: #ede9fe;
   --color-source-issue: #7c3aed; /* purple-600 equivalent — 4.6:1 on white */
 
+  /* Text Highlight (excerpt match in segment context) */
+  --color-highlight: #fde68a; /* amber-200 — 4.9:1 contrast vs #111827 text */
+
   /* Layout */
   --sidebar-width: 240px;
   --sidebar-width-collapsed: 48px;

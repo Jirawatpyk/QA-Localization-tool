@@ -12,6 +12,7 @@ import { FindingCard } from '@/features/review/components/FindingCard'
 import { FindingCardCompact } from '@/features/review/components/FindingCardCompact'
 import { useFocusManagement } from '@/features/review/hooks/use-focus-management'
 import { useKeyboardActions } from '@/features/review/hooks/use-keyboard-actions'
+import { useReviewStore } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import type { FindingSeverity } from '@/types/finding'
@@ -188,6 +189,27 @@ export function FindingList({
     })
     return () => cancelAnimationFrame(focusRafRef.current)
   }, [activeFindingId, reducedMotion])
+
+  // ── Story 4.1c: Sync selectedId from review store → activeFindingId ──
+  // Enables click-to-navigate from SegmentContextList → FindingList (AC5).
+  // setState in effect is intentional: Zustand store is an external system (React docs pattern).
+  const storeSelectedId = useReviewStore((s) => s.selectedId)
+  useEffect(() => {
+    if (storeSelectedId === null) return
+    if (storeSelectedId === activeFindingId) return
+    // Guard: only sync if the finding is in the current list
+    if (!flattenedIds.includes(storeSelectedId)) {
+      // Check if it's a minor finding hidden in closed accordion
+      const isMinorFinding = groups.minor.some((f) => f.id === storeSelectedId)
+      if (isMinorFinding && !minorAccordionOpen) {
+        // Auto-expand minor accordion so the finding becomes visible
+        setMinorAccordionValue(['minor-group']) // eslint-disable-line react-hooks/set-state-in-effect -- syncing from Zustand external store
+      } else {
+        return // Finding not in list at all (filtered out)
+      }
+    }
+    setActiveFindingId(storeSelectedId)
+  }, [storeSelectedId, activeFindingId, flattenedIds, groups.minor, minorAccordionOpen])
 
   // Navigate to next finding (J / ArrowDown)
   const navigateNext = useCallback(() => {

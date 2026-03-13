@@ -114,7 +114,7 @@ export function ReviewPageClient({
         initialData.score.layerCompleted,
       )
     }
-  }, [fileId, projectId, resetForFile, setFindings, updateScore, initialData])
+  }, [fileId, projectId, tenantId, resetForFile, setFindings, updateScore, initialData])
 
   // Retry AI analysis state
   const [isPending, startTransition] = useTransition()
@@ -198,6 +198,7 @@ export function ReviewPageClient({
     () =>
       allFindings.map((f) => ({
         id: f.id,
+        segmentId: f.segmentId,
         severity: f.severity,
         category: f.category,
         description: f.description,
@@ -393,6 +394,11 @@ export function ReviewPageClient({
         open={isSheetOpen}
         onOpenChange={handleSheetOpenChange}
         findingId={selectedId}
+        finding={selectedId ? (findingsForDisplay.find((f) => f.id === selectedId) ?? null) : null}
+        sourceLang={sourceLang}
+        targetLang={targetLang ?? ''}
+        fileId={fileId}
+        onNavigateToFinding={setSelectedFinding}
       />
 
       {/* Keyboard Cheat Sheet Modal (Ctrl+?) */}
