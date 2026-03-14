@@ -91,6 +91,21 @@ import { acceptFinding } from '@/features/review/actions/acceptFinding.action'
 
 // ── Constants ──
 
+// TQA-L3: shared helper to find captured INSERT values by key/value
+function findCapturedValues(
+  state: { valuesCaptures: unknown[] },
+  key: string,
+  value: string,
+): Record<string, unknown> | undefined {
+  return state.valuesCaptures.find(
+    (capture: unknown) =>
+      typeof capture === 'object' &&
+      capture !== null &&
+      key in (capture as Record<string, unknown>) &&
+      (capture as Record<string, string>)[key] === value,
+  ) as Record<string, unknown> | undefined
+}
+
 const VALID_FINDING_ID = 'f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c'
 const VALID_FILE_ID = 'f1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
 const VALID_PROJECT_ID = 'b1c2d3e4-f5a6-4b2c-9d3e-4f5a6b7c8d9e'
@@ -152,13 +167,7 @@ describe('acceptFinding.action', () => {
 
     // H5 fix: Assert review_actions INSERT payload via valuesCaptures
     expect(dbState.valuesCaptures.length).toBeGreaterThan(0)
-    const reviewActionValues = dbState.valuesCaptures.find(
-      (capture: unknown) =>
-        typeof capture === 'object' &&
-        capture !== null &&
-        'actionType' in (capture as Record<string, unknown>) &&
-        (capture as Record<string, string>).actionType === 'accept',
-    ) as Record<string, unknown> | undefined
+    const reviewActionValues = findCapturedValues(dbState, 'actionType', 'accept')
     expect(reviewActionValues).toBeDefined()
     expect(reviewActionValues).toMatchObject({
       findingId: VALID_FINDING_ID,

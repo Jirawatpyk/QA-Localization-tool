@@ -88,20 +88,21 @@ export function useReviewActions({ fileId, projectId }: UseReviewActionsOptions)
         label.toast(`Finding ${label.past}`, { duration: 3000 })
 
         // Screen reader announcement (Task 6.3 — Guardrail #33: polite)
+        // CQ-M1 fix: single iteration over findingsMap for reviewed count + statusMap
         const updatedState = useReviewStore.getState()
-        const reviewed = [...updatedState.findingsMap.values()].filter(
-          (f) => f.status !== 'pending',
-        ).length
-        const total = updatedState.findingsMap.size
-        announce(`Finding ${label.past}. ${reviewed} of ${total} reviewed`)
+        const allIds: string[] = []
+        const statusMap = new Map<string, string>()
+        let reviewed = 0
+        for (const [id, f] of updatedState.findingsMap) {
+          allIds.push(id)
+          statusMap.set(id, f.status)
+          if (f.status !== 'pending') reviewed++
+        }
+        announce(`Finding ${label.past}. ${reviewed} of ${allIds.length} reviewed`)
 
         // Auto-advance to next Pending finding
         // useFocusManagement().autoAdvance handles rAF internally (Guardrail #32)
-        const nextPendingId = autoAdvance(
-          [...updatedState.findingsMap.keys()],
-          new Map([...updatedState.findingsMap.entries()].map(([k, v]) => [k, v.status])),
-          findingId,
-        )
+        const nextPendingId = autoAdvance(allIds, statusMap, findingId)
 
         // CR-R2-L1: Sync activeFindingId to next pending via store selectedId.
         // autoAdvance only moves DOM focus — FindingList's 4.1c effect syncs

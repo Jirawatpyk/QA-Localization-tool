@@ -131,7 +131,7 @@ export function ReviewPageClient({
         ...f,
         tenantId,
         projectId,
-        sessionId: '',
+        sessionId: '', // CQ-M3: legacy field — review sessions not yet wired (Story 4.4a)
         status: f.status,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -303,6 +303,13 @@ export function ReviewPageClient({
     [allFindings],
   )
 
+  // CQ-M2 fix: memoize findingNumber to avoid O(n) findIndex every render
+  const activeFindingNumber = useMemo(() => {
+    if (!activeFindingState) return undefined
+    const idx = findingsForDisplay.findIndex((f) => f.id === activeFindingState)
+    return idx >= 0 ? idx + 1 : undefined
+  }, [activeFindingState, findingsForDisplay])
+
   // Selected finding for detail panel
   const selectedFinding = selectedId
     ? (findingsForDisplay.find((f) => f.id === selectedId) ?? null)
@@ -468,11 +475,7 @@ export function ReviewPageClient({
           isDisabled={!activeFindingState || isActionInFlight}
           isInFlight={isActionInFlight}
           activeAction={activeAction}
-          findingNumber={
-            activeFindingState
-              ? findingsForDisplay.findIndex((f) => f.id === activeFindingState) + 1
-              : undefined
-          }
+          findingNumber={activeFindingNumber}
         />
       </div>
 

@@ -118,6 +118,20 @@ vi.mock('@/lib/logger', () => ({
 
 import { rejectFinding } from '@/features/review/actions/rejectFinding.action'
 
+function findCapturedValues(
+  state: { valuesCaptures: unknown[] },
+  key: string,
+  value: string,
+): Record<string, unknown> | undefined {
+  return state.valuesCaptures.find(
+    (capture: unknown) =>
+      typeof capture === 'object' &&
+      capture !== null &&
+      key in (capture as Record<string, unknown>) &&
+      (capture as Record<string, string>)[key] === value,
+  ) as Record<string, unknown> | undefined
+}
+
 // ── Constants ──
 
 const VALID_FINDING_ID = 'f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c'
@@ -214,13 +228,7 @@ describe('rejectFinding.action', () => {
 
     expect(dbState.valuesCaptures.length).toBeGreaterThan(0)
 
-    const feedbackValues = dbState.valuesCaptures.find(
-      (capture: unknown) =>
-        typeof capture === 'object' &&
-        capture !== null &&
-        'action' in (capture as Record<string, unknown>) &&
-        (capture as Record<string, string>).action === 'reject',
-    ) as Record<string, unknown> | undefined
+    const feedbackValues = findCapturedValues(dbState, 'action', 'reject')
 
     expect(feedbackValues).toBeDefined()
     // M7 fix: assert ALL NOT NULL columns including detectedByLayer

@@ -96,6 +96,20 @@ const VALID_TENANT_ID = 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f'
 const VALID_USER_ID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
 const VALID_SEGMENT_ID = 'd1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5a'
 
+function findCapturedValues(
+  state: { valuesCaptures: unknown[] },
+  key: string,
+  value: string,
+): Record<string, unknown> | undefined {
+  return state.valuesCaptures.find(
+    (capture: unknown) =>
+      typeof capture === 'object' &&
+      capture !== null &&
+      key in (capture as Record<string, unknown>) &&
+      (capture as Record<string, string>)[key] === value,
+  ) as Record<string, unknown> | undefined
+}
+
 // M3+M6 fix: shared mock shape with segmentId
 function buildFindingMock(overrides?: Record<string, unknown>) {
   return {
@@ -155,13 +169,7 @@ describe('flagFinding.action', () => {
 
     // H5 fix: assert review_actions INSERT payload
     expect(dbState.valuesCaptures.length).toBeGreaterThan(0)
-    const reviewActionValues = dbState.valuesCaptures.find(
-      (capture: unknown) =>
-        typeof capture === 'object' &&
-        capture !== null &&
-        'actionType' in (capture as Record<string, unknown>) &&
-        (capture as Record<string, string>).actionType === 'flag',
-    ) as Record<string, unknown> | undefined
+    const reviewActionValues = findCapturedValues(dbState, 'actionType', 'flag')
     expect(reviewActionValues).toBeDefined()
     expect(reviewActionValues).toMatchObject({
       findingId: VALID_FINDING_ID,
@@ -194,10 +202,8 @@ describe('flagFinding.action', () => {
     })
 
     const feedbackCapture = dbState.valuesCaptures.find(
-      (capture: unknown) =>
-        typeof capture === 'object' &&
-        capture !== null &&
-        'isFalsePositive' in (capture as Record<string, unknown>),
+      (c: unknown) =>
+        typeof c === 'object' && c !== null && 'isFalsePositive' in (c as Record<string, unknown>),
     )
     expect(feedbackCapture).toBeUndefined()
   })
