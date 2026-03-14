@@ -152,6 +152,7 @@ describe('useFindingsSubscription', () => {
           ai_confidence: 85,
           status: 'accepted',
           file_id: 'file-abc',
+          updated_at: new Date(Date.now() + 1000).toISOString(), // newer than pre-populated
         },
       })
     })

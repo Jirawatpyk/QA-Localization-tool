@@ -71,14 +71,14 @@ describe('FindingCard', () => {
     renderCard({ status: 'accepted' })
 
     const card = screen.getByTestId('finding-card')
-    expect(card.className).toMatch(/finding-bg-accepted/)
+    expect(card.className).toMatch(/bg-finding-accepted/)
   })
 
   it('should apply rejected status background class', () => {
     renderCard({ status: 'rejected' })
 
     const card = screen.getByTestId('finding-card')
-    expect(card.className).toMatch(/finding-bg-rejected/)
+    expect(card.className).toMatch(/bg-finding-rejected/)
   })
 
   it('should apply no extra background for pending status', () => {
@@ -86,7 +86,7 @@ describe('FindingCard', () => {
 
     const card = screen.getByTestId('finding-card')
     // pending is not in STATUS_BG, so no special background
-    expect(card.className).not.toMatch(/finding-bg-accepted|finding-bg-rejected|finding-bg-flagged/)
+    expect(card.className).not.toMatch(/bg-finding-accepted|bg-finding-rejected|bg-finding-flagged/)
   })
 
   // ── L3 Markers ──

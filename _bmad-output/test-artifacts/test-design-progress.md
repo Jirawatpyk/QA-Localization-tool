@@ -146,41 +146,49 @@ R3-015 (OPS, 2), R3-016 (OPS, 1), R3-017 (BUS, 1), R3-018 (BUS, 1), R3-028 (TECH
 - P0-02: Auto-pass boundary threshold=score ±0.01 (4) — R3-005 ✅ DONE (2026-03-14)
 - P0-03: Auto-pass new lang pair file #49 vs #50 (3) — R3-005 ✅ DONE (2026-03-14)
 - P0-04: Fallback × Inngest retry: total calls ≤ retries × chain (5) — R3-006 ✅ DONE (2026-03-14)
-- P0-05: Budget per-file in concurrent batch (4) — R3-001 ❌ NEW
-- P0-06: Chunk split multi-byte: Thai sara am, CJK at 30K (5) — R3-029 ❌ NEW
-- P0-07: Duplicate findings on retry: DELETE before re-run (4) — R3-030 ❌ NEW
-- P0-08: Penalty weight=0 for each severity (4) — R3-031 ❌ NEW
-- P0-09: Per-finding safeParse: skip bad, keep valid (4) — R3-025 ❌ NEW
-- P0-10: Score recalc race: 3 events/100ms → 1 final score (3) — R3-002 ❌ NEW
-- P0-11: E2E pipeline→score→UI with real L2 (2) — R3-019 ⚠️ ENHANCE
+- P0-05: Budget per-file in concurrent batch (4) — R3-001 ✅ DONE (2026-03-14)
+- P0-06: Chunk split multi-byte: Thai sara am, CJK at 30K (5) — R3-029 ✅ DONE (2026-03-14)
+- P0-07: Duplicate findings on retry: DELETE before re-run (4) — R3-030 ✅ DONE (2026-03-14)
+- P0-08: Penalty weight=0 for each severity (4) — R3-031 ✅ DONE (2026-03-14)
+- P0-09: Per-finding safeParse: skip bad, keep valid (4) — R3-025 ✅ DONE (2026-03-14)
+- P0-10: Score recalc race: 3 events/100ms → 1 final score (3) — R3-002 ✅ DONE (2026-03-14)
+- P0-11: E2E pipeline→score→UI with real L2 (2) — R3-019 ✅ DONE (2026-03-14)
 
-### P1 (High) — 16 areas, ~44 tests
+### P1 (High) — 16 areas, ~43 tests
 - P1-01: L2 NFR3 100 segments < 30s (2) ✅ EXISTS
-- P1-02: Cost estimation accuracy ≤ 20% variance (4) ❌ NEW
-- P1-03: Pre-flight batch budget check (3) ❌ NEW
-- P1-04: Inngest step ID unique across retries (3) ❌ NEW
-- P1-05: Batch payload 50 files < 512KB (3) ❌ NEW
-- P1-06: Rate limiter unavailable → fail-closed (3) ❌ NEW
-- P1-07: Score transition "recalculating" badge (3) ⚠️ ENHANCE
-- P1-08: 500+ L1 findings → prompt truncation (3) ❌ NEW
-- P1-09: Filter reset on file switch (3) ❌ NEW
-- P1-10: Chunk N fails, N+1 continues (3) ❌ NEW
-- P1-11: Realtime reconnect stops polling (3) ❌ NEW
-- P1-12: Concurrency key consistency (2) ❌ NEW
-- P1-13: ScoreBadge null → spinner not NaN (2) ❌ NEW
-- P1-14: Empty findings suspicious-zero telemetry (2) ❌ NEW
-- P1-15: E2E L3 failure → partial score + warning (2) ❌ NEW
-- P1-16: previous_state mismatch → conflict error (3) ❌ NEW
+- P1-02: Cost estimation accuracy ≤ 20% variance (4) ✅ DONE (2026-03-14)
+- P1-03: Pre-flight batch budget check (3) ✅ DONE (2026-03-14)
+- P1-04: Inngest step ID unique across retries (3) ✅ DONE (2026-03-14)
+- P1-05: Batch payload 50 files < 512KB (3) ✅ DONE (2026-03-14)
+- P1-06: Rate limiter unavailable → fail-closed (3) ✅ DONE (2026-03-14)
+- P1-07: Score transition "recalculating" badge (3) ✅ DONE (2026-03-14)
+- P1-08: 500+ L1 findings → prompt truncation (3) ✅ DONE (2026-03-14)
+- P1-09: Filter reset on file switch (3) ✅ DONE (2026-03-14)
+- P1-10: Chunk N fails, N+1 continues (3) ✅ DONE (2026-03-14)
+- P1-11: Realtime reconnect stops polling (3) ✅ DONE (2026-03-14)
+- P1-12: Concurrency key consistency (2) ✅ DONE (2026-03-14)
+- P1-13: ScoreBadge null → spinner not NaN (2) ✅ DONE (2026-03-14)
+- P1-14: Empty findings suspicious-zero telemetry (2) ✅ DONE (2026-03-14)
+- P1-15: E2E L3 resilience + partial score UI (3) ✅ DONE (2026-03-14)
+- P1-16: previous_state mismatch → conflict error (3) ✅ DONE (2026-03-14)
 
-### P2 (Medium) — 13 areas, ~30 tests
-- Cross-layer dedup, glossary timeout, AI mock contract, a11y badge icons
-- Zod schema drift, orphan file detection, optimistic vs RT conflict
-- Poll/RT overlap dedup, E2E budget exhausted UX, 1000+ segment perf
-- Partial score consistency, L3 anchoring bias, model pinning deprecation
+### P2 (Medium) — 10 areas, ~26 tests — ALL DONE (2026-03-14)
+- P2-01: Cross-layer dedup (4) ✅
+- P2-02: Glossary timeout (2) ✅
+- P2-03: AI mock contract (3) ✅
+- P2-04: Confidence badge a11y (3) ✅
+- P2-05: Zod schema nullable (3) ✅
+- P2-06: Orphan file detection (2) ✅
+- P2-07: Optimistic vs RT conflict (3) ✅
+- P2-08: Poll/RT overlap dedup (2) ✅
+- P2-12: Partial score consistency (2) ✅
+- P2-13: L3 anchoring bias (2) ✅
 
-### P3 (Low) — 7 areas, ~6 tests
-- Provider total outage, budget alert edges, multi-tab sync
-- Budget config mid-pipeline, token overflow, health check false positive, tooltip truncation
+### P3 (Low) — 4 areas, ~4 tests — ALL DONE (2026-03-14)
+- P3-03: Budget config mid-pipeline (1) ✅
+- P3-04: Token count boundary (1) ✅
+- P3-05: Health check false positive (1) ✅
+- P3-06: Confidence tooltip (1) ✅
 
 ## Execution Strategy
 

@@ -45,13 +45,7 @@
   /* Focus */
   --color-focus-ring: var(--color-primary);
 
-  /* Finding State Backgrounds */
-  --color-finding-accepted: #dcfce7;
-  --color-finding-rejected: #fee2e2;
-  --color-finding-flagged: #fef3c7;
-  --color-finding-noted: #dbeafe;
-  --color-finding-source-issue: #ede9fe;
-  --color-source-issue: #7c3aed; /* purple-600 equivalent — 4.6:1 on white */
+  --color-source-issue: #7c3aed; /* purple-600 — 4.6:1 on white */
 
   /* Text Highlight (excerpt match in segment context) */
   --color-highlight: #fde68a; /* amber-200 — 4.9:1 contrast vs #111827 text */
@@ -67,4 +61,21 @@
   /* Spacing (4px base, compact 0.75x) */
   --spacing-unit: 4px;
   --density-factor: 0.75;
+}
+
+/* Finding State Backgrounds — @utility avoids Tailwind v4 wildcard scan on arbitrary values */
+@utility bg-finding-accepted {
+  background-color: #dcfce7;
+}
+@utility bg-finding-rejected {
+  background-color: #fee2e2;
+}
+@utility bg-finding-flagged {
+  background-color: #fef3c7;
+}
+@utility bg-finding-noted {
+  background-color: #dbeafe;
+}
+@utility bg-finding-source-issue {
+  background-color: #ede9fe;
 }

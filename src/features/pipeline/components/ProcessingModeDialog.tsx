@@ -51,12 +51,22 @@ export function ProcessingModeDialog({
 
   const fileCount = fileIds.length
 
-  // Fetch word count when dialog opens (Guardrail #11: reset state on re-open)
+  // Effect 1: Reset form state on dialog open (Guardrail #11).
+  // `open` is a boolean primitive → stable dependency, fires only on actual change.
+  // false→true: reset mode + totalWords. true→false: no-op (early return).
+  useEffect(() => {
+    if (!open) return
+    setMode('economy')
+    setTotalWords(null)
+  }, [open])
+
+  // Effect 2: Fetch word count when dialog is open and file content changes.
+  // `fileIdsKey` is a string → stable comparison by content, not array reference.
+  // Re-fetches if files actually change (e.g., user selects different files).
+  const fileIdsKey = fileIds.join(',')
   useEffect(() => {
     if (!open || fileIds.length === 0) return
 
-    setMode('economy')
-    setTotalWords(null)
     setIsLoadingWords(true)
     getFilesWordCount({ fileIds, projectId })
       .then((result) => {
@@ -70,7 +80,8 @@ export function ProcessingModeDialog({
       .finally(() => {
         setIsLoadingWords(false)
       })
-  }, [open, fileIds, projectId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fileIdsKey replaces fileIds for stable comparison
+  }, [open, fileIdsKey, projectId])
 
   // Calculate cost from word count: (words / 100K) × rate
   const estimatedCost =
