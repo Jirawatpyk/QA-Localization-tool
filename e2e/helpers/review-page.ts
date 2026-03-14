@@ -12,11 +12,23 @@ export async function waitForReviewPageReady(page: Page) {
   const heading = page.locator('h1')
   await expect(heading).toBeVisible({ timeout: 30_000 })
 
-  // Fail fast if SSR returned an error
+  // Check for SSR errors — retry once on transient "File not found" (cloud DB latency)
   const errorText = page.locator('.text-destructive')
   const errorCount = await errorText.count()
   if (errorCount > 0) {
     const msg = await errorText.first().textContent()
+    // Retry once on transient cloud DB errors
+    if (msg?.includes('File not found') || msg?.includes('fetch')) {
+      await page.waitForTimeout(3_000)
+      await page.reload()
+      await expect(heading).toBeVisible({ timeout: 30_000 })
+      const retryErrorCount = await errorText.count()
+      if (retryErrorCount > 0) {
+        const retryMsg = await errorText.first().textContent()
+        throw new Error(`Review page SSR error after retry: "${retryMsg}"`)
+      }
+      return // retry succeeded
+    }
     throw new Error(`Review page SSR error: "${msg}"`)
   }
 }
