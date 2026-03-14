@@ -60,7 +60,7 @@ export type Finding = {
   tenantId: string
   projectId: string
   sessionId: string
-  segmentId: string
+  segmentId: string | null
   severity: FindingSeverity
   category: string
   status: FindingStatus

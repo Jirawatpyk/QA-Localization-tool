@@ -137,7 +137,8 @@ describe('acceptFinding.action', () => {
   it('[P0] U-SA1: should update finding status, write audit + review_actions, and send Inngest event on success', async () => {
     // Arrange: finding exists with pending status
     const findingMock = buildFindingMock({ status: 'pending' })
-    dbState.returnValues = [[findingMock], []]
+    // Call order: 1) SELECT finding, 2) tx.update, 3) tx.insert review_actions
+    dbState.returnValues = [[findingMock], [], []]
 
     // Act
     const result = await acceptFinding({

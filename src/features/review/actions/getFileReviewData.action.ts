@@ -32,7 +32,7 @@ export type FileReviewData = {
   }
   findings: Array<{
     id: string
-    segmentId: string
+    segmentId: string | null
     severity: FindingSeverity
     category: string
     description: string

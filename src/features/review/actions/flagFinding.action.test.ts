@@ -134,7 +134,8 @@ describe('flagFinding.action', () => {
 
   it('[P0] U-SA8: should update finding status to flagged, write audit + review_actions, and send Inngest event', async () => {
     const findingMock = buildFindingMock({ status: 'pending' })
-    dbState.returnValues = [[findingMock], []]
+    // Call order: 1) SELECT finding, 2) tx.update, 3) tx.insert review_actions
+    dbState.returnValues = [[findingMock], [], []]
 
     const result = await flagFinding({
       findingId: VALID_FINDING_ID,
@@ -184,7 +185,7 @@ describe('flagFinding.action', () => {
 
   it('[P0] U-SA8b: should NOT insert feedback_events for flag action (only reject does)', async () => {
     const findingMock = buildFindingMock({ status: 'pending' })
-    dbState.returnValues = [[findingMock], []]
+    dbState.returnValues = [[findingMock], [], []]
 
     await flagFinding({
       findingId: VALID_FINDING_ID,

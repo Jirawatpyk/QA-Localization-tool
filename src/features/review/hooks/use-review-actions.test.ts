@@ -1,6 +1,5 @@
 /**
- * TDD RED PHASE — Story 4.2: Core Review Actions
- * Hook: useReviewActions
+ * Story 4.2: Core Review Actions — useReviewActions hook
  * Tests: optimistic UI, rollback, double-click prevention, auto-advance, progress count
  */
 import { renderHook, act } from '@testing-library/react'
@@ -263,6 +262,12 @@ describe('useReviewActions', () => {
       await result.current.handleAccept(VALID_FINDING_ID)
     })
 
+    // TQA-L1: verify autoAdvance called with correct args
+    expect(mockAutoAdvance).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.any(Map),
+      VALID_FINDING_ID,
+    )
     // Assert: store setSelectedFinding called with next pending ID
     expect(mockSetSelectedFinding).toHaveBeenCalledWith(nextFindingId)
   })
@@ -284,10 +289,9 @@ describe('useReviewActions', () => {
       await result.current.handleAccept(VALID_FINDING_ID)
     })
 
-    // H6 fix: verify announce is called with progress text format "{N} of {M} reviewed"
-    // Note: mock setFinding doesn't mutate the map, so getState() returns original counts
-    // (1 accepted f2 out of 3). The important assertion is the announce FORMAT and call.
-    expect(mockAnnounce).toHaveBeenCalledWith(expect.stringMatching(/\d+ of \d+ reviewed/))
+    // TQA-M1 fix: exact count assertion. mockSetFinding mutates mockFindingsMap (line 55-57),
+    // so after optimistic update: VALID_FINDING_ID=accepted + f2=accepted + f3=pending = 2/3 reviewed
+    expect(mockAnnounce).toHaveBeenCalledWith('Finding accepted. 2 of 3 reviewed')
   })
 
   it('[P1] U-H5b: should handle reject action with default toast', async () => {
