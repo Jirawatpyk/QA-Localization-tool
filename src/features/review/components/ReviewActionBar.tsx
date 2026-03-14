@@ -13,6 +13,8 @@ import {
 import type { LucideIcon } from 'lucide-react'
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import type { ReviewAction } from '@/features/review/utils/state-transitions'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 
 type ActionButtonConfig = {
   key: string
@@ -82,8 +84,8 @@ const ACTION_BUTTONS: ActionButtonConfig[] = [
   },
 ]
 
-// Actions enabled in Story 4.2 — rest deferred to Story 4.3
-const ENABLED_ACTIONS = new Set(['accept', 'reject', 'flag'])
+// CR-R2 AP-M1/M2: typed with ReviewAction instead of bare string
+const ENABLED_ACTIONS = new Set<ReviewAction>(['accept', 'reject', 'flag'])
 
 type ReviewActionBarProps = {
   onAccept?: (() => void) | undefined
@@ -91,12 +93,12 @@ type ReviewActionBarProps = {
   onFlag?: (() => void) | undefined
   isDisabled?: boolean | undefined
   isInFlight?: boolean | undefined
+  activeAction?: ReviewAction | null | undefined
   findingNumber?: number | undefined
 }
 
-const ACTION_HANDLER_MAP: Record<
-  string,
-  keyof Pick<ReviewActionBarProps, 'onAccept' | 'onReject' | 'onFlag'>
+const ACTION_HANDLER_MAP: Partial<
+  Record<ReviewAction, keyof Pick<ReviewActionBarProps, 'onAccept' | 'onReject' | 'onFlag'>>
 > = {
   accept: 'onAccept',
   reject: 'onReject',
@@ -113,8 +115,10 @@ export function ReviewActionBar({
   onFlag,
   isDisabled = false,
   isInFlight = false,
+  activeAction = null,
   findingNumber,
 }: ReviewActionBarProps) {
+  const reducedMotion = useReducedMotion()
   const handlers: ReviewActionBarProps = { onAccept, onReject, onFlag }
 
   return (
@@ -128,24 +132,29 @@ export function ReviewActionBar({
       >
         {ACTION_BUTTONS.map((btn) => {
           const Icon = btn.icon
-          const isEnabled = ENABLED_ACTIONS.has(btn.key)
-          const handlerKey = ACTION_HANDLER_MAP[btn.key]
+          const isEnabled = ENABLED_ACTIONS.has(btn.key as ReviewAction)
+          const handlerKey = ACTION_HANDLER_MAP[btn.key as ReviewAction]
           const handler = handlerKey ? handlers[handlerKey] : undefined
           const btnDisabled = !isEnabled || isDisabled
+          // CR-R2-H2: spinner only on the specific button being actioned
+          const showSpinner = isInFlight && activeAction === btn.key && !btnDisabled
 
           return (
             <Tooltip key={btn.key}>
               <TooltipTrigger asChild>
                 <button
                   type="button"
-                  disabled={btnDisabled}
+                  disabled={btnDisabled || isInFlight}
                   onClick={handler}
                   aria-keyshortcuts={btn.ariaKeyshortcuts}
                   aria-label={`${btn.label}${findingNumber !== undefined ? ` finding ${findingNumber}` : ' finding'}, press ${btn.hotkey}`}
                   className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 hover:brightness-110 ${btn.colorClass}`}
                 >
-                  {isInFlight && isEnabled && !btnDisabled ? (
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  {showSpinner ? (
+                    <Loader2
+                      className={`h-4 w-4 ${reducedMotion ? '' : 'animate-spin'}`}
+                      aria-hidden="true"
+                    />
                   ) : (
                     <Icon className="h-4 w-4" aria-hidden="true" />
                   )}

@@ -56,12 +56,15 @@ const mockSetFinding = vi.fn((id: string, finding: { id: string; status: Finding
   mockFindingsMap.set(id, finding)
 })
 
+const mockSetSelectedFinding = vi.fn()
+
 vi.mock('@/features/review/stores/review.store', () => ({
   useReviewStore: Object.assign(
     vi.fn(() => ({
       findingsMap: mockFindingsMap,
       setFinding: mockSetFinding,
       selectedId: null,
+      setSelectedFinding: mockSetSelectedFinding,
       currentFileId: 'f1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
     })),
     {
@@ -69,6 +72,7 @@ vi.mock('@/features/review/stores/review.store', () => ({
         findingsMap: mockFindingsMap,
         setFinding: mockSetFinding,
         selectedId: null,
+        setSelectedFinding: mockSetSelectedFinding,
         currentFileId: 'f1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
       })),
     },
@@ -241,6 +245,28 @@ describe('useReviewActions', () => {
     expect(mockAnnounce).toHaveBeenCalledWith(expect.stringContaining('accepted'))
   })
 
+  it('[P1] U-H4b: should set selectedId to next pending finding after autoAdvance (CR-R2-L1)', async () => {
+    // Arrange: 2 findings — target (pending) + next (pending)
+    const nextFindingId = 'f2a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5d'
+    mockFindingsMap.set(nextFindingId, { id: nextFindingId, status: 'pending' })
+    // Configure autoAdvance to return the next pending ID
+    mockAutoAdvance.mockReturnValue(nextFindingId)
+
+    const { result } = renderHook(() =>
+      useReviewActions({
+        fileId: VALID_FILE_ID,
+        projectId: VALID_PROJECT_ID,
+      }),
+    )
+
+    await act(async () => {
+      await result.current.handleAccept(VALID_FINDING_ID)
+    })
+
+    // Assert: store setSelectedFinding called with next pending ID
+    expect(mockSetSelectedFinding).toHaveBeenCalledWith(nextFindingId)
+  })
+
   it('[P1] U-H5: should announce correct reviewed count after action', async () => {
     // H6 fix: test the actual announce call with progress text
     // Arrange: 3 findings — 1 pending (target), 1 accepted, 1 pending
@@ -264,51 +290,39 @@ describe('useReviewActions', () => {
     expect(mockAnnounce).toHaveBeenCalledWith(expect.stringMatching(/\d+ of \d+ reviewed/))
   })
 
-  it('[P1] U-H5b: should handle reject action via handleReject', async () => {
-    // Arrange
+  it('[P1] U-H5b: should handle reject action with default toast', async () => {
     const { result } = renderHook(() =>
-      useReviewActions({
-        fileId: VALID_FILE_ID,
-        projectId: VALID_PROJECT_ID,
-      }),
+      useReviewActions({ fileId: VALID_FILE_ID, projectId: VALID_PROJECT_ID }),
     )
 
-    // Act
     await act(async () => {
       await result.current.handleReject(VALID_FINDING_ID)
     })
 
-    // Assert: reject server action called
     expect(mockRejectFinding).toHaveBeenCalledWith(
-      expect.objectContaining({
-        findingId: VALID_FINDING_ID,
-        fileId: VALID_FILE_ID,
-        projectId: VALID_PROJECT_ID,
-      }),
+      expect.objectContaining({ findingId: VALID_FINDING_ID }),
     )
+    // TQA-M1: reject uses default toast (not toast.success/warning)
+    expect(mockAnnounce).toHaveBeenCalledWith(expect.stringContaining('rejected'))
   })
 
-  it('[P1] U-H5c: should handle flag action via handleFlag', async () => {
-    // Arrange
+  it('[P1] U-H5c: should handle flag action with toast.warning', async () => {
     const { result } = renderHook(() =>
-      useReviewActions({
-        fileId: VALID_FILE_ID,
-        projectId: VALID_PROJECT_ID,
-      }),
+      useReviewActions({ fileId: VALID_FILE_ID, projectId: VALID_PROJECT_ID }),
     )
 
-    // Act
     await act(async () => {
       await result.current.handleFlag(VALID_FINDING_ID)
     })
 
-    // Assert: flag server action called
     expect(mockFlagFinding).toHaveBeenCalledWith(
-      expect.objectContaining({
-        findingId: VALID_FINDING_ID,
-        fileId: VALID_FILE_ID,
-        projectId: VALID_PROJECT_ID,
-      }),
+      expect.objectContaining({ findingId: VALID_FINDING_ID }),
     )
+    // TQA-M1: flag uses toast.warning
+    expect(mockToastWarning).toHaveBeenCalledWith(
+      'Finding flagged for review',
+      expect.objectContaining({ duration: 3000 }),
+    )
+    expect(mockAnnounce).toHaveBeenCalledWith(expect.stringContaining('flagged'))
   })
 })

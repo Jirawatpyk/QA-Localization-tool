@@ -98,10 +98,11 @@ export function ReviewPageClient({
   }, [])
 
   // Wire review actions hook (Story 4.2)
-  const { handleAccept, handleReject, handleFlag, isActionInFlight } = useReviewActions({
-    fileId,
-    projectId,
-  })
+  const { handleAccept, handleReject, handleFlag, isActionInFlight, activeAction } =
+    useReviewActions({
+      fileId,
+      projectId,
+    })
 
   // CR-C1: Track active finding via ref (for hotkeys) + state (for action bar re-render)
   const activeFindingIdRef = useRef<string | null>(null)
@@ -465,6 +466,7 @@ export function ReviewPageClient({
           onFlag={() => activeFindingState && handleFlag(activeFindingState)}
           isDisabled={!activeFindingState || isActionInFlight}
           isInFlight={isActionInFlight}
+          activeAction={activeAction}
           findingNumber={
             activeFindingState
               ? findingsForDisplay.findIndex((f) => f.id === activeFindingState) + 1

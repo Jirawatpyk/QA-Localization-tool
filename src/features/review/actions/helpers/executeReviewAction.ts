@@ -186,19 +186,28 @@ export async function executeReviewAction({
   }
 
   // Send Inngest event for score recalculation (full FindingChangedEventData schema)
-  await inngest.send({
-    name: 'finding.changed',
-    data: {
-      findingId,
-      fileId,
-      projectId,
-      tenantId,
-      previousState: currentState,
-      newState,
-      triggeredBy: userId,
-      timestamp: new Date().toISOString(),
-    },
-  })
+  // CR-R2-H1: try-catch post-commit side effect — DB transaction already committed,
+  // Inngest failure must not propagate error to client (same pattern as audit log above)
+  try {
+    await inngest.send({
+      name: 'finding.changed',
+      data: {
+        findingId,
+        fileId,
+        projectId,
+        tenantId,
+        previousState: currentState,
+        newState,
+        triggeredBy: userId,
+        timestamp: new Date().toISOString(),
+      },
+    })
+  } catch (inngestErr) {
+    logger.error(
+      { err: inngestErr, findingId, action },
+      'Inngest event send failed for review action — score recalculation may be delayed',
+    )
+  }
 
   return {
     success: true,

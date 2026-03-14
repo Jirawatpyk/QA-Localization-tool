@@ -37,6 +37,8 @@ export function useReviewActions({ fileId, projectId }: UseReviewActionsOptions)
   // Ref kept for synchronous double-click guard (checked before await)
   const inFlightRef = useRef(false)
   const [isInFlight, setIsInFlight] = useState(false)
+  // CR-R2-H2: track which action is in-flight for per-button spinner
+  const [activeAction, setActiveAction] = useState<ReviewAction | null>(null)
 
   const executeAction = useCallback(
     async (findingId: string, action: ReviewAction) => {
@@ -64,6 +66,7 @@ export function useReviewActions({ fileId, projectId }: UseReviewActionsOptions)
 
       inFlightRef.current = true
       setIsInFlight(true)
+      setActiveAction(action)
       try {
         const actionFn = ACTION_FN_MAP[action]
         const result = await actionFn({ findingId, fileId, projectId })
@@ -117,6 +120,7 @@ export function useReviewActions({ fileId, projectId }: UseReviewActionsOptions)
       } finally {
         inFlightRef.current = false
         setIsInFlight(false)
+        setActiveAction(null)
       }
     },
     [fileId, projectId, autoAdvance],
@@ -142,5 +146,6 @@ export function useReviewActions({ fileId, projectId }: UseReviewActionsOptions)
     handleReject,
     handleFlag,
     isActionInFlight: isInFlight,
+    activeAction,
   }
 }

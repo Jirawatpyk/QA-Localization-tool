@@ -180,7 +180,7 @@ describe('rejectFinding.action', () => {
     expect(mockWriteAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({
         entityType: 'finding',
-        action: expect.stringContaining('reject'),
+        action: 'finding.reject',
         tenantId: VALID_TENANT_ID,
       }),
     )

@@ -147,7 +147,7 @@ describe('flagFinding.action', () => {
     expect(mockWriteAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({
         entityType: 'finding',
-        action: expect.stringContaining('flag'),
+        action: 'finding.flag',
         tenantId: VALID_TENANT_ID,
       }),
     )
