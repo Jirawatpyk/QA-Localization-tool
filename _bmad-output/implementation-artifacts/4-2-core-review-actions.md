@@ -421,6 +421,26 @@ Claude Opus 4.6 (claude-opus-4-6)
 20. FindingList.keyboard.test.tsx + FindingList.test.tsx: added store reset in beforeEach (Zustand state leakage)
 21. Full test suite: 237 files, 3261 passed, 0 failed
 
+**CR R2 fixes (2026-03-14):**
+
+22. R2-L1: auto-advance syncs activeFindingId via store setSelectedFinding + 4.1c effect
+23. R2-H1: inngest.send() wrapped in try-catch post-commit (best-effort, same as audit)
+24. R2-H2: ReviewActionBar per-button spinner via activeAction prop + reduced-motion
+25. R2-H4: store mock added setSelectedFinding + U-H4b test for auto-advance sync
+26. R2 AP-M1/M2: ReviewActionBar key types use ReviewAction union (not bare string)
+27. R2 TQA-M1/M4: toast type assertions for reject/flag, audit action exact values
+
+**CR R3 fixes (2026-03-14):**
+
+28. R3-H3: isActionInFlight threaded to FindingCard/FindingCardCompact/FindingDetailContent/FindingDetailSheet
+29. R3 CQ-H1: Finding.segmentId type changed to string | null (matches DB schema)
+30. R3 CQ-M1: triple array allocation → single iteration in auto-advance path
+31. R3 CQ-M2: findIndex O(n) memoized via useMemo (activeFindingNumber)
+32. R3 TQA-M1: U-H5 exact announce count assertion ('Finding accepted. 2 of 3 reviewed')
+33. R3 TQA-L1/L2/L3: autoAdvance args assertion, RED PHASE header removed, findCapturedValues helper
+34. FindingCard test regex updated for CSS var rename (--finding-bg-*)
+35. Full test suite: 246 files, 3304 passed, 0 failed. CR R1-R3: 0 deferred findings
+
 ### Change Log
 
 | Date | Change |
@@ -438,6 +458,7 @@ Claude Opus 4.6 (claude-opus-4-6)
 | 2026-03-14 | CR R1 C1 full fix: callback prop approach (`onActiveFindingChange`) — no Zustand re-render loops |
 | 2026-03-14 | CR R2: auto-advance sync (L1), inngest try-catch (H1), per-button spinner (H2), store mock+test (H4), typed keys (AP-M1/M2), toast assertions (TQA-M1/M4), reduced-motion spinner (CQ-M5) |
 | 2026-03-14 | CR R3: H3 quick-action disable in-flight (FindingCard/Compact/DetailContent/DetailSheet), TQA-M3 reviewerIsNative value assertion, mock returnValues order fix for transaction. Mark done |
+| 2026-03-14 | CR R3 agent fixes: CQ-H1 segmentId nullable, CQ-M1 single iteration, CQ-M2 findIndex memoized, TQA-M1 exact announce count, TQA-M2 explicit returnValues, TQA-L1/L2/L3 test polish, FindingCard test CSS var regex. All 14/14 findings fixed, 0 deferred |
 
 ### File List
 
