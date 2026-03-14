@@ -66,6 +66,45 @@ async function seedFileWithFindingsForActions(opts: {
   if (!scoreRes.ok)
     throw new Error(`seed score failed: ${scoreRes.status} ${await scoreRes.text()}`)
 
+  // Seed segments (required by scoreFile — throws NonRetriableError without them)
+  const segmentData = [
+    { segment_number: 1, source_text: 'Hello world', target_text: 'สวัสดีชาวโลก', word_count: 2 },
+    {
+      segment_number: 2,
+      source_text: 'Save changes',
+      target_text: 'บันทึกการเปลี่ยนแปลง',
+      word_count: 2,
+    },
+    { segment_number: 3, source_text: 'Delete file', target_text: 'ลบไฟล์', word_count: 2 },
+    {
+      segment_number: 4,
+      source_text: 'Upload complete',
+      target_text: 'อัปโหลดเสร็จสิ้น',
+      word_count: 2,
+    },
+    {
+      segment_number: 5,
+      source_text: 'Review findings',
+      target_text: 'ตรวจสอบข้อค้นพบ',
+      word_count: 2,
+    },
+  ]
+  for (const seg of segmentData) {
+    const segRes = await fetch(`${SUPABASE_URL}/rest/v1/segments`, {
+      method: 'POST',
+      headers: { ...adminHeaders(), Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        file_id: fileId,
+        project_id: opts.projectId,
+        tenant_id: opts.tenantId,
+        source_lang: 'en-US',
+        target_lang: 'th-TH',
+        ...seg,
+      }),
+    })
+    if (!segRes.ok) throw new Error(`seed segment failed: ${segRes.status} ${await segRes.text()}`)
+  }
+
   const findings = [
     {
       severity: 'critical',
