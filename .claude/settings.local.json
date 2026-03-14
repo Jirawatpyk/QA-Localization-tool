@@ -156,7 +156,25 @@
       "Bash(npx next:*)",
       "Bash(git lfs:*)",
       "Bash(ls -la /c/Users/Jiraw/OneDrive/Documents/qa-localization-tool/src/app/\\\\\\(app\\\\\\)/projects/\\\\[projectId\\\\]/review/\\\\[fileId\\\\\\)/)",
-      "Bash(grep -c '\"type\":\"result\"' \"C:\\\\Users\\\\Jiraw\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Jiraw-OneDrive-Documents-qa-localization-tool\\\\adec94eb-ee7c-4174-b898-b729ac26df74\\\\tasks\\\\aac738465b06a3d09.output\" 2>/dev/null; grep -c '\"type\":\"result\"' \"C:\\\\Users\\\\Jiraw\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Jiraw-OneDrive-Documents-qa-localization-tool\\\\adec94eb-ee7c-4174-b898-b729ac26df74\\\\tasks\\\\a78c08b4e2aba73fb.output\" 2>/dev/null; grep -c '\"type\":\"result\"' \"C:\\\\Users\\\\Jiraw\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Jiraw-OneDrive-Documents-qa-localization-tool\\\\adec94eb-ee7c-4174-b898-b729ac26df74\\\\tasks\\\\aeb49075d6f972674.output\" 2>/dev/null)"
+      "Bash(grep -c '\"type\":\"result\"' \"C:\\\\Users\\\\Jiraw\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Jiraw-OneDrive-Documents-qa-localization-tool\\\\adec94eb-ee7c-4174-b898-b729ac26df74\\\\tasks\\\\aac738465b06a3d09.output\" 2>/dev/null; grep -c '\"type\":\"result\"' \"C:\\\\Users\\\\Jiraw\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Jiraw-OneDrive-Documents-qa-localization-tool\\\\adec94eb-ee7c-4174-b898-b729ac26df74\\\\tasks\\\\a78c08b4e2aba73fb.output\" 2>/dev/null; grep -c '\"type\":\"result\"' \"C:\\\\Users\\\\Jiraw\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Jiraw-OneDrive-Documents-qa-localization-tool\\\\adec94eb-ee7c-4174-b898-b729ac26df74\\\\tasks\\\\aeb49075d6f972674.output\" 2>/dev/null)",
+      "Bash(cat \"/c/Users/Jiraw/OneDrive/Documents/qa-localization-tool/src/app/\\(app\\)/projects/[projectId]/review/layout.tsx\")",
+      "Bash(cat \"/c/Users/Jiraw/OneDrive/Documents/qa-localization-tool/src/app/\\(app\\)/layout.tsx\" | head -150)",
+      "Bash(cat \"/c/Users/Jiraw/OneDrive/Documents/qa-localization-tool/src/app/\\(app\\)/projects/[projectId]/review/[fileId]/page.tsx\")",
+      "Bash(ls -la \"C:/Users/Jiraw/OneDrive/Documents/qa-localization-tool/src/app/\\(app\\)/projects/[projectId]/review/\")",
+      "Bash(ls -la \"C:/Users/Jiraw/OneDrive/Documents/qa-localization-tool/src/app/\\(app\\)/projects/[projectId]/review/[fileId]/\")",
+      "Bash(cd \"C:/Users/Jiraw/OneDrive/Documents/qa-localization-tool\" && npx tsx --eval \"import\\('fs'\\).then\\(fs => { const code = fs.readFileSync\\('e2e/review-actions.spec.ts', 'utf8'\\); console.log\\('Syntax OK, length:', code.length, 'chars'\\) }\\)\" 2>&1)",
+      "Read(//c/Users/Jiraw/OneDrive/Documents/qa-localization-tool/**)",
+      "Bash(bash /tmp/count_tests.sh)",
+      "Bash(cd \"C:/Users/Jiraw/OneDrive/Documents/qa-localization-tool\" && INNGEST_DEV_URL=http://localhost:8288 npx playwright test e2e/review-actions.spec.ts --reporter=line 2>&1 | tail -30)",
+      "Bash(cd \"C:/Users/Jiraw/OneDrive/Documents/qa-localization-tool\" && rm -f .next/dev/lock && INNGEST_DEV_URL=http://localhost:8288 npx playwright test e2e/review-actions.spec.ts --reporter=line 2>&1 | tail -40)",
+      "Bash(cd \"C:/Users/Jiraw/OneDrive/Documents/qa-localization-tool\" && INNGEST_DEV_URL=http://localhost:8288 PLAYWRIGHT_SKIP_WEBSERVER=1 npx playwright test e2e/review-actions.spec.ts --reporter=line --grep-invert=\"setup\" 2>&1 | head -5)",
+      "Bash(cd \"C:/Users/Jiraw/OneDrive/Documents/qa-localization-tool\" && INNGEST_DEV_URL=http://localhost:8288 npx playwright test e2e/pipeline-score-ui.spec.ts --reporter=line 2>&1 | tail -30)",
+      "Bash(cd \"C:/Users/Jiraw/OneDrive/Documents/qa-localization-tool\" && rm -rf .next/cache 2>/dev/null; echo \"Cache cleared\")",
+      "Bash(cd \"C:/Users/Jiraw/OneDrive/Documents/qa-localization-tool\" && INNGEST_DEV_URL=http://localhost:8288 npx playwright test e2e/pipeline-score-ui.spec.ts --reporter=line 2>&1 | tail -40)",
+      "Bash(cd \"C:/Users/Jiraw/OneDrive/Documents/qa-localization-tool\" && INNGEST_DEV_URL=http://localhost:8288 npx playwright test e2e/pipeline-score-ui.spec.ts --reporter=line --config=playwright.config.ts 2>&1 | grep -E \"\\(PASS|FAIL|Error|timeout|skip|✓|✗|Running|pipeline-score\\)\" | head -20)",
+      "Bash(cd \"C:/Users/Jiraw/OneDrive/Documents/qa-localization-tool\" && rm -rf .next node_modules/.cache 2>/dev/null && echo \"Cleared all caches\")",
+      "Bash(cd \"C:/Users/Jiraw/OneDrive/Documents/qa-localization-tool\" && rm -rf .next 2>/dev/null; rm -rf node_modules/.cache 2>/dev/null; echo \"done\")",
+      "Bash(INNGEST_DEV_URL=http://localhost:8288 npx playwright test e2e/review-actions.spec.ts --reporter=list 2>&1)"
     ]
   }
 }

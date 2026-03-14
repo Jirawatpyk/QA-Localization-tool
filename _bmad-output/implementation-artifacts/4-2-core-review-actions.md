@@ -441,6 +441,17 @@ Claude Opus 4.6 (claude-opus-4-6)
 34. FindingCard test regex updated for CSS var rename (--finding-bg-*)
 35. Full test suite: 246 files, 3304 passed, 0 failed. CR R1-R3: 0 deferred findings
 
+**E2E Handoff fixes (2026-03-14, session 2):**
+
+36. TS errors fixed: dedup/reconnect test mocks (data[] as Record<string,unknown>[]), autoPassChecker (as ScoreStatus cast)
+37. E2E seed: +12 segments (word_count: 100 each), +7 findings (total 12) for serial test consumption
+38. E2E locators: [role="row"] prefix on data-finding-id (strict mode — FindingCard expanded card collision)
+39. E2E timing: toast wait between actions (inFlightRef blocks rapid presses), click() instead of focus() to sync activeFindingId
+40. E2E resilience: SSR retry in waitForReviewPageReady for transient cloud DB "File not found"
+41. E2E assertions: .first() for stacked toasts, ID-based locators after status change, score change detection (not direction)
+42. Full E2E: **12/12 tests GREEN** — setup + E-R1..E-R10 + E-B1
+43. Full unit suite: 291 files, 6450 passed, 0 failed
+
 ### Change Log
 
 | Date | Change |
@@ -459,6 +470,7 @@ Claude Opus 4.6 (claude-opus-4-6)
 | 2026-03-14 | CR R2: auto-advance sync (L1), inngest try-catch (H1), per-button spinner (H2), store mock+test (H4), typed keys (AP-M1/M2), toast assertions (TQA-M1/M4), reduced-motion spinner (CQ-M5) |
 | 2026-03-14 | CR R3: H3 quick-action disable in-flight (FindingCard/Compact/DetailContent/DetailSheet), TQA-M3 reviewerIsNative value assertion, mock returnValues order fix for transaction. Mark done |
 | 2026-03-14 | CR R3 agent fixes: CQ-H1 segmentId nullable, CQ-M1 single iteration, CQ-M2 findIndex memoized, TQA-M1 exact announce count, TQA-M2 explicit returnValues, TQA-L1/L2/L3 test polish, FindingCard test CSS var regex. All 14/14 findings fixed, 0 deferred |
+| 2026-03-14 | E2E Handoff: TS errors fixed (3 files), segments seeded, 12/12 E2E tests GREEN on cloud Supabase. Fixes: strict mode locators, timing (toast waits), click→activeFindingId sync, SSR retry, word_count for MQM scores |
 
 ### File List
 

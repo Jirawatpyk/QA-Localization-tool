@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **qa-localization-tool** is an AI-powered localization QA web application that combines deterministic rule-based checks (Xbench parity) with AI semantic analysis. The core value is **Single-Pass Completion** — enabling QA reviewers to approve files without a proofreader loop.
 
-**Status:** Epic 1 (Foundation) done, Epic 2 (File Processing & QA Engine) done, Epic 3 (AI-Powered Quality Analysis) next. Planning artifacts in `_bmad-output/planning-artifacts/`.
+**Status:** Epic 1–3 done. Epic 4 (Review & Decision Workflow) in-progress. Planning artifacts in `_bmad-output/planning-artifacts/`.
 
 **Target Users:** QA Reviewers (native + non-native language support), Project Managers.
 
@@ -72,14 +72,20 @@ src/
 │   │   └── admin/
 │   └── api/                # Route Handlers (inngest, health, webhooks)
 ├── features/               # Feature modules (core of the app)
+│   ├── admin/              # Tenant admin, user management
+│   ├── batch/              # Batch processing operations
 │   ├── parser/             # FR1-FR9: SDLXLIFF/XLIFF/Excel parsing
 │   ├── pipeline/           # FR10-FR22: Inngest orchestration + 3 layers
 │   │   ├── prompts/        # L2/L3 prompt builders + evaluation framework
 │   │   └── helpers/        # runL2ForFile, runL3ForFile, chunkSegments
+│   ├── project/            # Project CRUD, settings, file management
 │   ├── scoring/            # FR23-FR30: MQM calculator, score lifecycle
 │   ├── review/             # FR31-FR40: Review panel, finding actions, keyboard nav
 │   ├── glossary/           # FR41-FR45: Multi-token matching, import/export
 │   ├── taxonomy/           # Dual taxonomy config (MQM + Custom)
+│   ├── upload/             # File upload UI + storage integration
+│   ├── parity/             # Xbench parity verification tools
+│   ├── onboarding/         # Project-level onboarding tour (driver.js)
 │   ├── dashboard/          # Reporting, export, trend graphs
 │   └── audit/              # Immutable audit trail (defense-in-depth)
 ├── components/ui/          # shadcn/ui base + shared custom components
@@ -97,7 +103,7 @@ src/
 └── test/                   # Factories, drizzleMock, fixtures
 ```
 
-Each feature module contains: `components/`, `actions/` (Server Actions), `hooks/`, `stores/`, `validation/`.
+Each feature module contains: `components/`, `actions/` (Server Actions), `hooks/`, `stores/`, `validation/`, and optionally `utils/`, `helpers/`, `types.ts`.
 
 ### Key Architectural Patterns
 

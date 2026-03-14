@@ -22,28 +22,31 @@ See `patterns.md` for detailed notes on all findings and architecture patterns.
 
 ## Story Audit Index (all detail in patterns.md)
 
-| Story / Batch                    | Result          | Notable                                                                                                             |
-| -------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------- |
-| 1.1–1.7 baseline                 | PASS            | All server actions + pages                                                                                          |
-| 2.1–2.7                          | 0C/0H/0M/0L     | Upload, parsers, L1, scoring, pipeline, batch                                                                       |
-| 2.10                             | 0C/0H/0M/1L     | 1 LOW: perf test hardcoded non-UUID-v4 strings                                                                      |
-| 3.0                              | 0C/0H/0M/0L     | layerFilter=undefined additive-only inside and() confirmed                                                          |
-| 3.0.5                            | 0C/0H/0M/0L     | Pure UI story, zero new DB paths                                                                                    |
-| 3.1                              | 0C/0H/0M/0L     | ai_usage_logs confirmed tenant-scoped                                                                               |
-| 3.1a                             | 0C/0H/0M/0L     | LEFT JOIN canonical pattern established                                                                             |
-| 3.2a                             | 0C/0H/0M/0L     | INNER JOIN glossaryTerms→glossaries correct; rollback path scoped                                                   |
-| 3.2b5                            | 0C/0H/0M/0L     | Upload-pipeline wiring                                                                                              |
-| 3.2c                             | 0C/0H/4M/3L     | AT RISK — Realtime hooks missing tenant_id filter + polling no defense-in-depth                                     |
-| CI Fix (reorderMappings + proxy) | 0C/0H/0M/1L     | LOW: revalidateTag() 2-arg call                                                                                     |
-| Taxonomy deep-dive               | 0C/0H/0M/4L     | All LOW pre-existing                                                                                                |
-| Pipeline+Scoring deep-dive       | 0C/0H/0M/0L     | 23 files all PASS                                                                                                   |
-| Parity+Dashboard+Project         | 0C/1H/1M/0L     | HIGH: getDashboardData scores JOIN no withTenant; MEDIUM: compareWithXbench no fileId filter                        |
-| 3.4 R1                           | 0C/1H/0M/0L     | HIGH: retryAiAnalysis cross-project contamination → FIXED in R2                                                     |
-| 3.4 R2                           | 0C/0H/0M/0L     | SECURE — all 6 files PASS                                                                                           |
-| **3.5**                          | **0C/2H/0M/0L** | **AT RISK — use-threshold-subscription.ts: Realtime no tenant filter + prop tenantId trust**                        |
-| **4.0 pre-CR**                   | **0C/0H/2M/1L** | **AT RISK — use-score-subscription.ts: Realtime+polling missing tenant_id filter**                                  |
-| **4.1a**                         | **0C/0H/0M/1L** | SECURE — TD-TENANT-003 fixed (score+findings hooks). 1 LOW pre-existing: use-threshold-subscription.ts no tenant_id |
-| **4.1b**                         | **0C/0H/0M/0L** | SECURE — pure UI/keyboard story, zero new DB paths. tenantId prop chain verified clean end-to-end.                  |
+| Story / Batch                    | Result          | Notable                                                                                                                   |
+| -------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 1.1–1.7 baseline                 | PASS            | All server actions + pages                                                                                                |
+| 2.1–2.7                          | 0C/0H/0M/0L     | Upload, parsers, L1, scoring, pipeline, batch                                                                             |
+| 2.10                             | 0C/0H/0M/1L     | 1 LOW: perf test hardcoded non-UUID-v4 strings                                                                            |
+| 3.0                              | 0C/0H/0M/0L     | layerFilter=undefined additive-only inside and() confirmed                                                                |
+| 3.0.5                            | 0C/0H/0M/0L     | Pure UI story, zero new DB paths                                                                                          |
+| 3.1                              | 0C/0H/0M/0L     | ai_usage_logs confirmed tenant-scoped                                                                                     |
+| 3.1a                             | 0C/0H/0M/0L     | LEFT JOIN canonical pattern established                                                                                   |
+| 3.2a                             | 0C/0H/0M/0L     | INNER JOIN glossaryTerms→glossaries correct; rollback path scoped                                                         |
+| 3.2b5                            | 0C/0H/0M/0L     | Upload-pipeline wiring                                                                                                    |
+| 3.2c                             | 0C/0H/4M/3L     | AT RISK — Realtime hooks missing tenant_id filter + polling no defense-in-depth                                           |
+| CI Fix (reorderMappings + proxy) | 0C/0H/0M/1L     | LOW: revalidateTag() 2-arg call                                                                                           |
+| Taxonomy deep-dive               | 0C/0H/0M/4L     | All LOW pre-existing                                                                                                      |
+| Pipeline+Scoring deep-dive       | 0C/0H/0M/0L     | 23 files all PASS                                                                                                         |
+| Parity+Dashboard+Project         | 0C/1H/1M/0L     | HIGH: getDashboardData scores JOIN no withTenant; MEDIUM: compareWithXbench no fileId filter                              |
+| 3.4 R1                           | 0C/1H/0M/0L     | HIGH: retryAiAnalysis cross-project contamination → FIXED in R2                                                           |
+| 3.4 R2                           | 0C/0H/0M/0L     | SECURE — all 6 files PASS                                                                                                 |
+| **3.5**                          | **0C/2H/0M/0L** | **AT RISK — use-threshold-subscription.ts: Realtime no tenant filter + prop tenantId trust**                              |
+| **4.0 pre-CR**                   | **0C/0H/2M/1L** | **AT RISK — use-score-subscription.ts: Realtime+polling missing tenant_id filter**                                        |
+| **4.1a**                         | **0C/0H/0M/1L** | SECURE — TD-TENANT-003 fixed (score+findings hooks). 1 LOW pre-existing: use-threshold-subscription.ts no tenant_id       |
+| **4.1b**                         | **0C/0H/0M/0L** | SECURE — pure UI/keyboard story, zero new DB paths. tenantId prop chain verified clean end-to-end.                        |
+| **4.1d**                         | **0C/0H/0M/0L** | SECURE — pure UI/responsive layout story. 6 files, 0 new DB paths. getSegmentContext re-confirmed secure.                 |
+| **4.2**                          | **0C/0H/0M/0L** | SECURE — executeReviewAction 4-way WHERE (findingId+fileId+projectId+tenantId) is strongest guard in codebase.            |
+| **ProcessingModeDialog batch**   | **0C/0H/0M/0L** | SECURE — startProcessing 3-way file ownership guard + Inngest payload carries server-derived tenantId. Both actions PASS. |
 
 ## OPEN FINDINGS (unresolved)
 

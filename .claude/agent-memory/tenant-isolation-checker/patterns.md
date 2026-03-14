@@ -317,3 +317,110 @@ an assertion that the prop `tenantId` matches `session.user.app_metadata.tenant_
   `row.tenant_id` etc. before calling `updateStore()`.
 - Hooks that accept `tenantId` as prop should either validate against session or derive from session.
   The prop-trust pattern is a HIGH risk when combined with missing Realtime filter.
+
+## Story 4.2 — Core Review Actions: accept/reject/flag (2026-03-14)
+
+**Audit date:** 2026-03-14
+**Result:** 0 Critical / 0 High / 0 Medium / 0 Low — SECURE
+**Files:** 6 reviewed (all PASS)
+
+### Files Audited
+
+- `src/features/review/actions/helpers/executeReviewAction.ts` — PASS (see detail below)
+- `src/features/review/actions/acceptFinding.action.ts` — PASS
+- `src/features/review/actions/rejectFinding.action.ts` — PASS
+- `src/features/review/actions/flagFinding.action.ts` — PASS
+- `src/features/review/hooks/use-review-actions.ts` — PASS (client hook, no DB)
+- `src/features/review/validation/reviewAction.schema.ts` — PASS (no tenantId field — correct)
+
+### Four-way WHERE Pattern (Best-in-Class)
+
+`executeReviewAction` Q1 SELECT on `findings` uses:
+`eq(findings.id, findingId)` + `eq(findings.fileId, fileId)` + `eq(findings.projectId, projectId)` + `withTenant(findings.tenantId, tenantId)`
+
+This cross-validates all three client-supplied IDs against each other AND the session tenant simultaneously.
+This is the strongest ownership check seen in the codebase — stronger than typical 2-way or 3-way guards.
+Subsequent UPDATE and reviewActions INSERT inherit the pre-validated IDs so no additional cross-check needed.
+
+### feedbackEvents INSERT (rejectFinding.action.ts)
+
+- `tenantId` = `user.tenantId` (session-derived from requireRole)
+- All FK columns (fileId, projectId, findingId) come from Zod-validated input already proven to belong
+  to this tenant by executeReviewAction Q1 — no unverified FK from client
+- Non-fatal error handling (try-catch wraps the insert — reject action succeeds even if feedback fails)
+- `findingId` FK is nullable in feedbackEvents schema — intentional (preserves training data on finding purge)
+
+### segments SELECT in executeReviewAction
+
+The `segmentId` used to look up source/target language comes from the Q1-verified finding row (not from
+client input). The segments SELECT additionally applies `withTenant(segments.tenantId, tenantId)` independently
+— no cross-table trust. Defense-in-depth fully applied.
+
+### requireRole 'read' vs 'write' note
+
+All three action files call `requireRole('qa_reviewer')` without the second `operation` argument, defaulting
+to `'read'` (JWT fast path). Not a tenant isolation issue — `tenantId` is extracted correctly either way.
+Consistent with prior convention (`approveFile.action.ts`). If write-path M3 verification is ever mandated
+uniformly, add `'write'` as the second argument.
+
+### New Reference Pattern Confirmed
+
+`review_actions` table: confirmed tenant-scoped. INSERT sets tenantId in values (no SELECT needed for INSERT).
+`feedback_events` table: confirmed tenant-scoped. INSERT sets tenantId in values. findingId FK nullable by design.
+
+## ProcessingModeDialog Batch — startProcessing + getFilesWordCount (2026-03-14)
+
+**Audit date:** 2026-03-14
+**Result:** 0 Critical / 0 High / 0 Medium / 0 Low — SECURE
+**Files:** 5 reviewed (all PASS)
+
+### Files Audited
+
+- `src/features/pipeline/components/ProcessingModeDialog.tsx` — PASS (client component, no DB)
+- `src/features/pipeline/actions/startProcessing.action.ts` — PASS
+- `src/features/pipeline/actions/getFilesWordCount.action.ts` — PASS
+- `e2e/review-l3-failure.spec.ts` — PASS (service_role in E2E context, acceptable)
+- `e2e/pipeline-score-ui.spec.ts` — PASS (service_role in E2E context, acceptable)
+
+### Canonical "start" Mutation Pattern (startProcessing.action.ts)
+
+The canonical pattern for an action that fans out to Inngest:
+
+1. `requireRole('qa_reviewer', 'write')` → M3 write-path verification → gives `{ tenantId, id: userId }`
+2. Rate limit check using `userId` (not tenantId, not projectId)
+3. Budget check via `checkProjectBudget(projectId, tenantId)` — both params from session
+4. **Three-way file ownership SELECT** — `and(withTenant(files.tenantId, tenantId), eq(files.projectId, projectId), inArray(files.id, fileIds))` — guards against cross-tenant file injection
+5. Length comparison `foundFiles.length !== fileIds.length` — cross-tenant IDs will simply be missing from results, producing a count mismatch and early return
+6. UPDATE project with `and(withTenant(projects.tenantId, tenantId), eq(projects.id, projectId))` — two-way guard on UPDATE
+7. Inngest `inngest.send()` — `tenantId` in event payload sourced from verified session (line 115), NOT from client input. This is the trust chain seed for downstream Inngest steps.
+8. Audit log in try-catch (Guardrail #2: pipeline already triggered, audit failure must not surface as user error)
+
+This is the reference pattern for all "trigger background job" server actions.
+
+### Aggregation Query Isolation (getFilesWordCount.action.ts)
+
+Aggregation queries (SUM, COUNT, AVG across multiple rows) are a common place where developers
+apply tenant filtering to the outer table only and forget secondary filters. This action correctly
+applies all three discriminators to a `SUM(word_count)` query:
+
+```
+and(
+  withTenant(segments.tenantId, currentUser.tenantId),  // tenant scope
+  eq(segments.projectId, projectId),                    // project scope
+  inArray(segments.fileId, fileIds),                    // file set scope
+)
+```
+
+A cross-tenant file ID cannot satisfy `withTenant()` so the aggregation is fully isolated even
+without the fileId filter — but defense-in-depth is maintained.
+
+`inArray()` zero-length SQL issue (Guardrail #5) is prevented by schema `.min(1)` on `fileIds`.
+
+### E2E service_role Acceptability Rules
+
+PostgREST calls with `adminHeaders()` in E2E specs are acceptable when ALL of:
+
+1. The call is in an `e2e/` file (never `src/`)
+2. All seeded rows explicitly set `tenant_id` from a session-derived value (not hardcoded)
+3. The `tenantId` used is obtained via `getUserInfo(email)` → session → not a test constant
+4. A corresponding `cleanupTestProject(projectId)` exists in `afterAll`

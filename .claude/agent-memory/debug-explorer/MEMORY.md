@@ -51,3 +51,51 @@ boundingBox() → mouse.move(cx,startY) → mouse.down() → wait(200)
 
 - `e2e/taxonomy-admin.spec.ts` — lines 395–445: fixed drag pattern
 - `_bmad-output/e2e-testing-gotchas.md` — added section 9 with @dnd-kit pattern
+
+## RSC initialData re-render → optimistic overwrite (confirmed 2026-03-14)
+
+**Root cause of E-R1: `data-status` flips back to `pending` after optimistic accept**
+
+### Pattern
+
+```
+ReviewPageClient receives `initialData` prop (SSR)
+useEffect([..., initialData]) calls resetForFile() + setFindings(pending state)
+Server Action triggers RSC revalidation → new initialData reference
+useEffect re-runs → resetForFile() + setFindings(pending) overwrites optimistic state
+```
+
+### Fix 1 (Critical): Use ref to capture initialData once
+
+```ts
+const initialDataRef = useRef(initialData)  // capture on first render
+useEffect(() => {
+  const data = initialDataRef.current        // use ref, not prop
+  resetForFile(fileId)
+  setFindings(initialMap from data)
+}, [fileId, projectId, tenantId, ...])       // initialData NOT in deps
+```
+
+File: `src/features/review/components/ReviewPageClient.tsx`
+
+### Fix 2 (High): Realtime handleUpdate needs updatedAt guard
+
+Without guard, delayed/out-of-order Supabase Realtime UPDATE events can overwrite
+optimistic updates. Add same merge logic as polling:
+
+```ts
+const handleUpdate = (payload) => {
+  const finding = mapRowToFinding(payload.new)
+  if (!finding) return
+  const existing = store.findingsMap.get(finding.id)
+  if (existing && finding.updatedAt <= existing.updatedAt) return // ← guard
+  store.setFinding(finding.id, finding)
+}
+```
+
+File: `src/features/review/hooks/use-findings-subscription.ts`
+
+### General Rule
+
+Any `useEffect` that calls `resetForFile()` or `setFindings()` must NOT include
+`initialData` (SSR prop) in its dependency array. Use a ref to snapshot it once.
