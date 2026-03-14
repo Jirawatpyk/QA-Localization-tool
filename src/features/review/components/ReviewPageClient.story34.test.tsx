@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import type { FileReviewData } from '@/features/review/actions/getFileReviewData.action'
 import { ReviewPageClient } from '@/features/review/components/ReviewPageClient'
-import type { LayerCompleted } from '@/types/finding'
+import type { LayerCompleted, ScoreStatus } from '@/types/finding'
 
 // ── Mocks — must be before component import ──
 
@@ -77,7 +77,7 @@ const storeMockState = {
   currentScore: null as number | null,
   layerCompleted: null as LayerCompleted | null,
   updateScore: vi.fn(),
-  scoreStatus: null as string | null, // Story 3.4: new field
+  scoreStatus: null as ScoreStatus | null, // Story 3.4: new field
   l2ConfidenceMin: null as number | null,
   l3ConfidenceMin: null as number | null,
   selectedId: null as string | null,

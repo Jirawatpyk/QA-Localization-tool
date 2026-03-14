@@ -246,6 +246,7 @@ let projectId: string
 let tenantId: string
 let seededFileId: string
 
+// NOTE: process.env used directly — E2E specs run in Playwright Node.js process, not Next.js runtime
 test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
   test.setTimeout(120_000)
   test.skip(!process.env.INNGEST_DEV_URL, 'Requires Inngest dev server')

@@ -115,7 +115,11 @@ vi.mock('@/features/pipeline/actions/retryAiAnalysis.action', () => ({
 const mockApproveFile = vi.fn((..._args: unknown[]) =>
   Promise.resolve({
     success: true,
-    data: { fileId: VALID_FILE_ID, mqmScore: 85 as number | null, status: 'calculated' as string },
+    data: {
+      fileId: VALID_FILE_ID,
+      mqmScore: 85 as number | null,
+      status: 'calculated' as ScoreStatus,
+    },
   }),
 )
 vi.mock('@/features/review/actions/approveFile.action', () => ({
@@ -524,7 +528,7 @@ describe('ReviewPageClient — Story 3.5 score lifecycle & approve', () => {
       code: 'SCORE_STALE',
     } as unknown as {
       success: boolean
-      data: { fileId: string; mqmScore: number | null; status: string }
+      data: { fileId: string; mqmScore: number | null; status: ScoreStatus }
     })
 
     storeMockState.scoreStatus = 'calculated'
@@ -1027,7 +1031,7 @@ describe('ReviewPageClient — TA: Coverage Gap Tests (Story 3.5)', () => {
       error: 'Score stale',
     } as unknown as {
       success: boolean
-      data: { fileId: string; mqmScore: number | null; status: string }
+      data: { fileId: string; mqmScore: number | null; status: ScoreStatus }
     })
 
     storeMockState.scoreStatus = 'calculated'
@@ -1071,7 +1075,7 @@ describe('ReviewPageClient — TA: Coverage Gap Tests (Story 3.5)', () => {
       error: undefined,
     } as unknown as {
       success: boolean
-      data: { fileId: string; mqmScore: number | null; status: string }
+      data: { fileId: string; mqmScore: number | null; status: ScoreStatus }
     })
 
     storeMockState.scoreStatus = 'calculated'

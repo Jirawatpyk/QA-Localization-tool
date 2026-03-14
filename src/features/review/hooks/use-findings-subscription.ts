@@ -3,13 +3,13 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useReviewStore } from '@/features/review/stores/review.store'
 import { announce } from '@/features/review/utils/announce'
 import { createBrowserClient } from '@/lib/supabase/client'
-import { FINDING_STATUSES } from '@/types/finding'
+import { DETECTED_BY_LAYERS, FINDING_SEVERITIES, FINDING_STATUSES } from '@/types/finding'
 import type { DetectedByLayer, Finding, FindingSeverity, FindingStatus } from '@/types/finding'
 
-// ── Runtime validators (consistent with use-score-subscription.ts isValidScoreStatus pattern) ──
-const SEVERITY_VALUES = new Set<string>(['critical', 'major', 'minor'])
-const STATUS_VALUES = new Set<string>(FINDING_STATUSES)
-const LAYER_VALUES = new Set<string>(['L1', 'L2', 'L3'])
+// ── Runtime validators — derived from typed const arrays (Guardrail #3) ──
+const SEVERITY_VALUES: ReadonlySet<string> = new Set(FINDING_SEVERITIES)
+const STATUS_VALUES: ReadonlySet<string> = new Set(FINDING_STATUSES)
+const LAYER_VALUES: ReadonlySet<string> = new Set(DETECTED_BY_LAYERS)
 const SCOPE_VALUES = new Set<string>(['per-file', 'cross-file'])
 
 type FindingScope = 'per-file' | 'cross-file'
@@ -188,9 +188,18 @@ export function useFindingsSubscription(fileId: string, tenantId?: string | unde
 
     const handleUpdate = (payload: { new: Record<string, unknown> }) => {
       const finding = mapRowToFinding(payload.new)
-      if (finding) {
-        useReviewStore.getState().setFinding(finding.id, finding)
+      if (!finding) return
+      // Merge guard: only apply if Realtime event has newer data than the store.
+      // Without this, an out-of-order or delayed UPDATE event (e.g. Supabase
+      // Realtime latency on cloud) can overwrite a fresher optimistic update.
+      // Pattern mirrors the polling merge (lines 127-130) for consistency.
+      const store = useReviewStore.getState()
+      const existing = store.findingsMap.get(finding.id)
+      if (existing && finding.updatedAt <= existing.updatedAt) {
+        // Store has same or newer data (e.g. optimistic update) — skip
+        return
       }
+      store.setFinding(finding.id, finding)
     }
 
     const handleDelete = (payload: { old: Record<string, unknown> }) => {
