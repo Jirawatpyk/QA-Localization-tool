@@ -29,6 +29,7 @@ type FindingDetailContentProps = {
   onAccept?: ((findingId: string) => void) | undefined
   onReject?: ((findingId: string) => void) | undefined
   onFlag?: ((findingId: string) => void) | undefined
+  isActionInFlight?: boolean | undefined
 }
 
 /**
@@ -47,6 +48,7 @@ export function FindingDetailContent({
   onAccept,
   onReject,
   onFlag,
+  isActionInFlight = false,
 }: FindingDetailContentProps) {
   const [contextRange, setContextRange] = useState(contextRangeProp ?? 2)
 
@@ -153,7 +155,7 @@ export function FindingDetailContent({
           >
             <button
               type="button"
-              disabled={finding.status === 'manual'}
+              disabled={finding.status === 'manual' || isActionInFlight}
               onClick={() => onAccept?.(finding.id)}
               className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-sm font-medium bg-success/10 text-success border border-success/20 hover:bg-success/20 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
             >
@@ -162,7 +164,7 @@ export function FindingDetailContent({
             </button>
             <button
               type="button"
-              disabled={finding.status === 'manual'}
+              disabled={finding.status === 'manual' || isActionInFlight}
               onClick={() => onReject?.(finding.id)}
               className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-sm font-medium bg-error/10 text-error border border-error/20 hover:bg-error/20 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
             >
@@ -171,7 +173,7 @@ export function FindingDetailContent({
             </button>
             <button
               type="button"
-              disabled={finding.status === 'manual'}
+              disabled={finding.status === 'manual' || isActionInFlight}
               onClick={() => onFlag?.(finding.id)}
               className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-sm font-medium bg-warning/10 text-warning border border-warning/20 hover:bg-warning/20 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
             >

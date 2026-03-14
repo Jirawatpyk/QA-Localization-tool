@@ -1,6 +1,6 @@
 # Story 4.2: Core Review Actions — Accept, Reject, Flag & Finding States
 
-Status: in-progress
+Status: done
 
 ## Story
 
@@ -406,7 +406,7 @@ Claude Opus 4.6 (claude-opus-4-6)
 
 **CR R1 fixes (2026-03-14):**
 
-8. C1 (PARTIAL): selectedId synced via event handlers in FindingList (navigateNext/Prev/click). Full useEffect sync causes Zustand re-render loops — deferred to future refactor. Hotkeys/action bar activate after first J/K navigation
+8. C1 (FULL FIX): `onActiveFindingChange` callback prop from FindingList → ReviewPageClient ref+state. Hotkeys + action bar work from first render
 9. H1: `isActionInFlight` changed from ref to useState — spinner works
 10. H2: UPDATE + INSERT wrapped in `db.transaction()` (Guardrail #6)
 11. H3: Audit try-catch documented as best-effort (decision: keep for review actions)
@@ -435,6 +435,9 @@ Claude Opus 4.6 (claude-opus-4-6)
 | 2026-03-13 | Task 11: E2E tests unskipped |
 | 2026-03-13 | Lint + type-check clean, pre-CR agents dispatched |
 | 2026-03-14 | CR R1: 25 findings (1C+7H+9M+8L) — fixed 21, documented 2, deferred 2. C1 partial (event handler sync only) |
+| 2026-03-14 | CR R1 C1 full fix: callback prop approach (`onActiveFindingChange`) — no Zustand re-render loops |
+| 2026-03-14 | CR R2: auto-advance sync (L1), inngest try-catch (H1), per-button spinner (H2), store mock+test (H4), typed keys (AP-M1/M2), toast assertions (TQA-M1/M4), reduced-motion spinner (CQ-M5) |
+| 2026-03-14 | CR R3: H3 quick-action disable in-flight (FindingCard/Compact/DetailContent/DetailSheet), TQA-M3 reviewerIsNative value assertion, mock returnValues order fix for transaction. Mark done |
 
 ### File List
 

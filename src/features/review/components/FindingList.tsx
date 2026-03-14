@@ -27,6 +27,7 @@ export type FindingListProps = {
   l3ConfidenceMin?: number | null | undefined
   onAccept?: ((findingId: string) => void) | undefined
   onReject?: ((findingId: string) => void) | undefined
+  isActionInFlight?: boolean | undefined
   // CR-C1: callback to notify parent when active finding changes
   onActiveFindingChange?: ((id: string | null) => void) | undefined
 }
@@ -54,6 +55,7 @@ export function FindingList({
   l3ConfidenceMin,
   onAccept,
   onReject,
+  isActionInFlight = false,
   onActiveFindingChange,
 }: FindingListProps) {
   const reducedMotion = useReducedMotion()
@@ -364,6 +366,7 @@ export function FindingList({
           onExpand={onToggleExpand}
           onAccept={onAccept}
           onReject={onReject}
+          isActionInFlight={isActionInFlight}
         />
         {isExpanded && (
           <FindingCard
@@ -377,6 +380,7 @@ export function FindingList({
             isNew={isNew}
             onAccept={onAccept}
             onReject={onReject}
+            isActionInFlight={isActionInFlight}
           />
         )}
       </div>

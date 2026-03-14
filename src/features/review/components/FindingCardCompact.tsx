@@ -32,6 +32,7 @@ export type FindingCardCompactProps = {
   onExpand: (id: string) => void
   onAccept?: ((findingId: string) => void) | undefined
   onReject?: ((findingId: string) => void) | undefined
+  isActionInFlight?: boolean | undefined
 }
 
 export function FindingCardCompact({
@@ -48,6 +49,7 @@ export function FindingCardCompact({
   onExpand,
   onAccept,
   onReject,
+  isActionInFlight = false,
 }: FindingCardCompactProps) {
   const reducedMotion = useReducedMotion()
 
@@ -171,7 +173,7 @@ export function FindingCardCompact({
         <div role="group" className="flex items-center gap-1 shrink-0" aria-label="Quick actions">
           <button
             type="button"
-            disabled={finding.status === 'manual'}
+            disabled={finding.status === 'manual' || isActionInFlight}
             className="text-success hover:bg-success/10 disabled:opacity-50 disabled:cursor-not-allowed p-0.5 rounded focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
             aria-label="Accept finding"
             onClick={(e) => {
@@ -183,7 +185,7 @@ export function FindingCardCompact({
           </button>
           <button
             type="button"
-            disabled={finding.status === 'manual'}
+            disabled={finding.status === 'manual' || isActionInFlight}
             className="text-error hover:bg-error/10 disabled:opacity-50 disabled:cursor-not-allowed p-0.5 rounded focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
             aria-label="Reject finding"
             onClick={(e) => {

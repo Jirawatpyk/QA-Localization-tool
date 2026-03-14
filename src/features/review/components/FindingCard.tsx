@@ -28,6 +28,7 @@ export type FindingCardProps = {
   isNew?: boolean | undefined
   onAccept?: ((findingId: string) => void) | undefined
   onReject?: ((findingId: string) => void) | undefined
+  isActionInFlight?: boolean | undefined
 }
 
 export function FindingCard({
@@ -41,6 +42,7 @@ export function FindingCard({
   isNew,
   onAccept,
   onReject,
+  isActionInFlight = false,
 }: FindingCardProps) {
   const reducedMotion = useReducedMotion()
 
@@ -158,7 +160,7 @@ export function FindingCard({
         <div role="group" className="flex items-center gap-1 shrink-0" aria-label="Quick actions">
           <button
             type="button"
-            disabled={finding.status === 'manual'}
+            disabled={finding.status === 'manual' || isActionInFlight}
             onClick={() => onAccept?.(finding.id)}
             className="text-success hover:bg-success/10 disabled:opacity-50 disabled:cursor-not-allowed lg:p-0.5 p-2.5 min-h-[44px] min-w-[44px] lg:min-h-0 lg:min-w-0 rounded flex items-center justify-center focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
             aria-label="Accept finding"
@@ -167,7 +169,7 @@ export function FindingCard({
           </button>
           <button
             type="button"
-            disabled={finding.status === 'manual'}
+            disabled={finding.status === 'manual' || isActionInFlight}
             onClick={() => onReject?.(finding.id)}
             className="text-error hover:bg-error/10 disabled:opacity-50 disabled:cursor-not-allowed lg:p-0.5 p-2.5 min-h-[44px] min-w-[44px] lg:min-h-0 lg:min-w-0 rounded flex items-center justify-center focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
             aria-label="Reject finding"

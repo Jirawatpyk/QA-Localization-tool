@@ -456,6 +456,7 @@ export function ReviewPageClient({
             l3ConfidenceMin={storeL3ConfidenceMin ?? initialData.l3ConfidenceMin}
             onAccept={handleAccept}
             onReject={handleReject}
+            isActionInFlight={isActionInFlight}
             onActiveFindingChange={handleActiveFindingChange}
           />
         </div>
@@ -499,6 +500,7 @@ export function ReviewPageClient({
             onAccept={handleAccept}
             onReject={handleReject}
             onFlag={handleFlag}
+            isActionInFlight={isActionInFlight}
           />
         </aside>
       ) : (
@@ -513,6 +515,7 @@ export function ReviewPageClient({
           onAccept={handleAccept}
           onReject={handleReject}
           onFlag={handleFlag}
+          isActionInFlight={isActionInFlight}
         />
       )}
 

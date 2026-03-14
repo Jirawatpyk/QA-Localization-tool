@@ -165,9 +165,9 @@ describe('rejectFinding.action', () => {
 
   it('[P0] U-SA6: should update finding status, write audit + review_actions + feedback_events, and send Inngest event', async () => {
     const findingMock = buildFindingMock({ status: 'pending' })
-    // Call order: 1) SELECT finding (executeReviewAction) → transaction is mocked as single call
-    // 2) segment lookup 3) INSERT feedback_events
-    dbState.returnValues = [[findingMock], [], [{ sourceLang: 'en', targetLang: 'th' }], []]
+    // Call order: 1) SELECT finding, 2) tx.update (transaction), 3) tx.insert review_actions (transaction),
+    // 4) segment SELECT, 5) INSERT feedback_events
+    dbState.returnValues = [[findingMock], [], [], [{ sourceLang: 'en', targetLang: 'th' }], []]
 
     const result = await rejectFinding({
       findingId: VALID_FINDING_ID,
@@ -204,7 +204,7 @@ describe('rejectFinding.action', () => {
       category: 'accuracy',
       detectedByLayer: 'L2',
     })
-    dbState.returnValues = [[findingMock], [], [{ sourceLang: 'en', targetLang: 'th' }], []]
+    dbState.returnValues = [[findingMock], [], [], [{ sourceLang: 'en', targetLang: 'th' }], []]
 
     await rejectFinding({
       findingId: VALID_FINDING_ID,
@@ -240,10 +240,10 @@ describe('rejectFinding.action', () => {
       originalTarget: 'สวัสดีชาวโลก',
     })
 
-    // Assert: reviewerIsNative, sourceLang, targetLang present
-    expect(feedbackValues).toHaveProperty('reviewerIsNative')
-    expect(feedbackValues).toHaveProperty('sourceLang')
-    expect(feedbackValues).toHaveProperty('targetLang')
+    // TQA-M3: assert values not just property existence
+    expect(feedbackValues!.reviewerIsNative).toBe(false) // TODO(story-5.2): will change when wired from profile
+    expect(feedbackValues!.sourceLang).toBe('en')
+    expect(feedbackValues!.targetLang).toBe('th')
   })
 
   it('[P0] U-SA6b: should return NOT_FOUND when finding does not exist', async () => {
