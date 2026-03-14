@@ -433,12 +433,14 @@
       1. anti-pattern-detector (subagent_type="anti-pattern-detector") — scan changed files for CLAUDE.md anti-pattern violations
       2. tenant-isolation-checker (subagent_type="tenant-isolation-checker") — scan changed files for missing tenant isolation
       3. code-quality-analyzer (subagent_type="code-quality-analyzer") — scan changed files for code smells, perf issues, data quality, schema mock drift
-      4. feature-dev:code-reviewer (subagent_type="feature-dev:code-reviewer") — cross-file data flow review (Guardrail #44):
-         Trace state mutations across ALL changed files. For each state created in file A and consumed in file B, verify:
-         (a) iteration order matches visual/display order (Map insertion ≠ severity sort),
-         (b) refs/closures don't become stale when props change (file navigation, RSC revalidation),
-         (c) optimistic values are cleared after server confirms (prevent permanent Realtime/poll blocks),
-         (d) unit test mocks don't hide runtime failures (e.g., querySelector always returns element but DOM may not have it)
+      4. feature-dev:code-reviewer (subagent_type="feature-dev:code-reviewer") — CROSS-FILE ONLY (Guardrail #44).
+         DO NOT review single-file quality (code-quality-analyzer handles that).
+         ONLY review data/state that crosses file boundaries. For each changed file, ask:
+         "Does this file produce or consume state from another changed file?"
+         If yes, trace the flow and verify:
+         (a) producer's output order matches consumer's expected order,
+         (b) producer's value lifecycle (create → use → clear) is complete across both files,
+         (c) consumer handles the case where producer's DOM/state doesn't exist yet (e.g., accordion collapsed)
     </action>
 
     <!-- Conditional scans — trigger when relevant files changed OR story belongs to DB/pipeline-heavy epic -->
