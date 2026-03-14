@@ -25,11 +25,14 @@ type FindingsSlice = {
   findingsMap: Map<string, Finding>
   selectedId: string | null
   filterState: FilterState
+  /** Visual sort order of finding IDs (synced from FindingList flattenedIds) */
+  sortedFindingIds: string[]
   setFinding: (id: string, finding: Finding) => void
   setFindings: (findings: Map<string, Finding>) => void
   removeFinding: (id: string) => void
   setFilter: (filter: FilterState) => void
   setSelectedFinding: (id: string | null) => void
+  setSortedFindingIds: (ids: string[]) => void
 }
 
 const createFindingsSlice = (
@@ -38,6 +41,7 @@ const createFindingsSlice = (
   findingsMap: new Map(),
   selectedId: null,
   filterState: { severity: null, status: null, layer: null },
+  sortedFindingIds: [],
   setFinding: (id, finding) =>
     set((s) => {
       const newMap = new Map(s.findingsMap)
@@ -53,6 +57,7 @@ const createFindingsSlice = (
     }),
   setFilter: (filter) => set({ filterState: filter }),
   setSelectedFinding: (id) => set({ selectedId: id }),
+  setSortedFindingIds: (ids) => set({ sortedFindingIds: ids }),
 })
 
 // ── Score Slice ──
@@ -175,6 +180,7 @@ export const useReviewStore = create<ReviewState>()((set, _get) => {
         currentFileId: fileId,
         findingsMap: new Map(),
         selectedId: null,
+        sortedFindingIds: [],
         filterState: { severity: null, status: null, layer: null },
         currentScore: null,
         scoreStatus: 'na',

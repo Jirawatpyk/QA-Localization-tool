@@ -77,6 +77,8 @@ vi.mock('@/features/review/stores/review.store', () => {
     l3ConfidenceMin: null,
     selectedId: null,
     setSelectedFinding: vi.fn(),
+    sortedFindingIds: [],
+    setSortedFindingIds: vi.fn(),
   }
   return {
     useReviewStore: Object.assign(

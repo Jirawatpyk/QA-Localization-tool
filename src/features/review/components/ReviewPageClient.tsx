@@ -120,13 +120,27 @@ export function ReviewPageClient({
   const getSelectedId = useCallback(() => activeFindingIdRef.current, [])
   useReviewHotkeys({ accept: handleAccept, reject: handleReject, flag: handleFlag }, getSelectedId)
 
-  // Initialize store on mount
+  // Capture initialData on first render only — use a ref so the effect below
+  // does NOT re-run when Next.js RSC re-renders with a new initialData reference
+  // (e.g. after Server Action cache revalidation). Re-running would overwrite
+  // optimistic updates with stale pending state from SSR. (E-R1 root cause fix)
+  // H1 fix: track which fileId was last initialized. When fileId changes (file navigation),
+  // the effect re-initializes with new initialData. When RSC revalidates (same fileId,
+  // new initialData reference), the guard skips re-initialization to protect optimistic state.
+  const processedFileIdRef = useRef<string | null>(null)
+
+  // Initialize store on fileId change. initialData is in deps so the effect runs when it
+  // changes, but the guard ensures we only process once per unique fileId.
   useEffect(() => {
+    if (processedFileIdRef.current === fileId) return // already initialized this file
+    processedFileIdRef.current = fileId
+
+    const data = initialData
     resetForFile(fileId)
 
     // Populate initial findings — build batch Map for single store update (M5)
     const initialMap = new Map<string, Finding>()
-    for (const f of initialData.findings) {
+    for (const f of data.findings) {
       const finding: Finding = {
         ...f,
         tenantId,
@@ -144,14 +158,12 @@ export function ReviewPageClient({
     setFindings(initialMap)
 
     // Populate initial score
-    if (initialData.score.mqmScore !== null) {
-      updateScore(
-        initialData.score.mqmScore,
-        initialData.score.status,
-        initialData.score.layerCompleted,
-      )
+    if (data.score.mqmScore !== null) {
+      updateScore(data.score.mqmScore, data.score.status, data.score.layerCompleted)
     }
-  }, [fileId, projectId, tenantId, resetForFile, setFindings, updateScore, initialData])
+    // initialData in deps: effect re-runs on RSC revalidation but processedFileIdRef guard
+    // prevents re-initialization for the same file. Only genuine file navigation triggers init.
+  }, [fileId, initialData, projectId, tenantId, resetForFile, setFindings, updateScore])
 
   // Retry AI analysis state
   const [isPending, startTransition] = useTransition()

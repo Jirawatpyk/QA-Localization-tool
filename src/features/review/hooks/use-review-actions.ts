@@ -87,30 +87,38 @@ export function useReviewActions({ fileId, projectId }: UseReviewActionsOptions)
           return
         }
 
+        // H2 fix: replace optimistic updatedAt with server timestamp
+        // Prevents client clock skew from permanently blocking future Realtime/poll updates
+        const successState = useReviewStore.getState()
+        const successFinding = successState.findingsMap.get(findingId)
+        if (successFinding && result.data && 'serverUpdatedAt' in result.data) {
+          successState.setFinding(findingId, {
+            ...successFinding,
+            updatedAt: result.data.serverUpdatedAt,
+          })
+        }
+
         // Success toast (Task 6.1)
         const label = ACTION_LABELS[action]
         label.toast(`Finding ${label.past}`, { duration: 3000 })
 
         // Screen reader announcement (Task 6.3 — Guardrail #33: polite)
-        // CQ-M1 fix: single iteration over findingsMap for reviewed count + statusMap
         const updatedState = useReviewStore.getState()
-        const allIds: string[] = []
         const statusMap = new Map<string, string>()
         let reviewed = 0
         for (const [id, f] of updatedState.findingsMap) {
-          allIds.push(id)
           statusMap.set(id, f.status)
           if (f.status !== 'pending') reviewed++
         }
-        announce(`Finding ${label.past}. ${reviewed} of ${allIds.length} reviewed`)
+        announce(`Finding ${label.past}. ${reviewed} of ${updatedState.findingsMap.size} reviewed`)
 
-        // Auto-advance to next Pending finding
-        // useFocusManagement().autoAdvance handles rAF internally (Guardrail #32)
-        const nextPendingId = autoAdvance(allIds, statusMap, findingId)
+        // C1+H3 fix: use sortedFindingIds from store (visual order, includes minor)
+        // instead of Map insertion order. FindingList syncs this from its severity-sorted groups.
+        // autoAdvance handles rAF DOM focus. setSelectedFinding triggers FindingList's
+        // storeSelectedId effect which handles minor accordion expansion (C1 fix).
+        const sortedIds = updatedState.sortedFindingIds
+        const nextPendingId = autoAdvance(sortedIds, statusMap, findingId)
 
-        // CR-R2-L1: Sync activeFindingId to next pending via store selectedId.
-        // autoAdvance only moves DOM focus — FindingList's 4.1c effect syncs
-        // selectedId → activeFindingId so hotkeys target the correct finding.
         if (nextPendingId) {
           updatedState.setSelectedFinding(nextPendingId)
         }

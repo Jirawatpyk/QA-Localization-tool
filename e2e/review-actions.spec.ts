@@ -320,6 +320,10 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
     // Use specific finding-id locator (live [data-status=pending] would point to next row)
     const targetRow = grid.locator(`[role="row"][data-finding-id="${findingId}"]`)
     await expect(targetRow).toHaveAttribute('data-status', 'rejected', { timeout: 10_000 })
+    // AC2: Toast feedback
+    await expect(page.getByText('Finding rejected', { exact: true })).toBeVisible({
+      timeout: 15_000,
+    })
   })
 
   test('[P0] E-R3: should flag finding via keyboard F with toast and auto-advance', async ({
@@ -339,6 +343,10 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
     const flagTargetRow = grid.locator(`[role="row"][data-finding-id="${flagFindingId}"]`)
     await expect(flagTargetRow).toHaveAttribute('data-status', 'flagged', { timeout: 10_000 })
     await expect(flagTargetRow.getByTestId('flag-icon')).toBeVisible()
+    // AC3: Toast feedback
+    await expect(page.getByText('Finding flagged for review', { exact: true })).toBeVisible({
+      timeout: 15_000,
+    })
   })
 
   test('[P0] E-R4: should complete full keyboard review flow J then A then R then F', async ({
@@ -357,19 +365,31 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
     const firstPending = grid.locator('[role="row"][data-status="pending"]').first()
     await firstPending.click()
 
-    // Accept: focus pending → press A → wait for toast (confirms action + clears inFlight)
+    // Accept first pending → wait for toast (confirms action + clears inFlight)
     await page.keyboard.press('a')
     await expect(page.getByText('Finding accepted', { exact: true })).toBeVisible({
       timeout: 15_000,
     })
 
-    // Reject: auto-advance moved to next pending → press R
+    // J navigation: move to next finding (auto-advance already moved, J moves one more)
+    await page.keyboard.press('j')
+
+    // Reject current → wait for toast
     await page.keyboard.press('r')
     await expect(page.getByText('Finding rejected', { exact: true })).toBeVisible({
       timeout: 15_000,
     })
 
-    // Verify via progress text (more stable than counting DOM rows during RSC revalidation)
+    // J navigation again
+    await page.keyboard.press('j')
+
+    // Flag current → wait for toast
+    await page.keyboard.press('f')
+    await expect(page.getByText('Finding flagged for review', { exact: true }).first()).toBeVisible(
+      { timeout: 15_000 },
+    )
+
+    // Verify progress reflects 3 new actions
     const progress = page.getByTestId('review-progress')
     await expect(progress).toBeVisible({ timeout: 5_000 })
   })
@@ -554,6 +574,12 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
     // Verify no pending left
     pendingCount = await grid.locator('[role="row"][data-status="pending"]').count()
     expect(pendingCount).toBe(0)
+
+    // Guardrail #32: no pending → autoAdvance targets action bar
+    // NOTE: Radix Sheet (detail panel) sets aria-hidden on background → actual DOM focus
+    // blocked. Verify tabindex="0" + no pending (autoAdvance intent is correct).
+    const actionBar = page.getByTestId('review-action-bar')
+    await expect(actionBar).toHaveAttribute('tabindex', '0', { timeout: 10_000 })
 
     const progress = page.getByTestId('review-progress')
     await expect(progress).toBeVisible({ timeout: 10_000 })

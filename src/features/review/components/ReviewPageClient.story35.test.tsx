@@ -80,6 +80,8 @@ const storeMockState = {
   l3ConfidenceMin: null as number | null,
   selectedId: null as string | null,
   setSelectedFinding: vi.fn(),
+  sortedFindingIds: [],
+  setSortedFindingIds: vi.fn(),
 }
 
 vi.mock('@/features/review/stores/review.store', () => ({

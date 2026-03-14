@@ -35,6 +35,8 @@ export type ReviewActionResult = {
   previousState: FindingStatus
   newState: FindingStatus
   findingMeta: FindingMeta
+  /** Server-side updatedAt timestamp — used to clear optimistic timestamp lock (H2 fix) */
+  serverUpdatedAt: string
 }
 
 export type ReviewActionNoOp = {
@@ -144,11 +146,12 @@ export async function executeReviewAction({
   }
 
   // H2 fix: UPDATE + INSERT in transaction (Guardrail #6)
+  const serverUpdatedAt = new Date()
   await db.transaction(async (tx) => {
     // Update finding status (Guardrail #1 — withTenant on UPDATE)
     await tx
       .update(findings)
-      .set({ status: newState, updatedAt: new Date() })
+      .set({ status: newState, updatedAt: serverUpdatedAt })
       .where(and(eq(findings.id, findingId), withTenant(findings.tenantId, tenantId)))
 
     // Insert review_actions row (INSERT = set tenantId in values)
@@ -223,6 +226,7 @@ export async function executeReviewAction({
         sourceTextExcerpt: finding.sourceTextExcerpt,
         targetTextExcerpt: finding.targetTextExcerpt,
       },
+      serverUpdatedAt: serverUpdatedAt.toISOString(),
     },
   }
 }

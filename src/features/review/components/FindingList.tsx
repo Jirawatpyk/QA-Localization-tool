@@ -130,6 +130,22 @@ export function FindingList({
     return ids
   }, [groups.critical, groups.major, groups.minor, minorAccordionOpen])
 
+  // C1+H3 fix: sync ALL finding IDs in visual order to store for autoAdvance.
+  // Includes minor findings even when accordion is collapsed (autoAdvance needs them
+  // to find next pending → setSelectedFinding triggers accordion expand via effect below)
+  const allSortedIds = useMemo(
+    () => [
+      ...groups.critical.map((f) => f.id),
+      ...groups.major.map((f) => f.id),
+      ...groups.minor.map((f) => f.id),
+    ],
+    [groups.critical, groups.major, groups.minor],
+  )
+  const setSortedFindingIds = useReviewStore((s) => s.setSortedFindingIds)
+  useEffect(() => {
+    setSortedFindingIds(allSortedIds)
+  }, [allSortedIds, setSortedFindingIds])
+
   // ID-based focus tracking — local state (no Zustand to avoid re-render loops)
   const [activeFindingId, setActiveFindingId] = useState<string | null>(null)
 
