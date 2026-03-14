@@ -17,6 +17,8 @@
  * - E2E fixture files in e2e/fixtures/sdlxliff/
  */
 
+// NOTE: process.env and console.warn used directly — E2E specs run in Playwright
+// Node.js process (not Next.js runtime), so @/lib/env and pino are not available.
 import { test, expect } from '@playwright/test'
 
 import {
@@ -158,7 +160,9 @@ test.describe.serial('Pipeline Score UI — Epic 3 P0-11 (R3-019)', () => {
     expect(score!.mqm_score).toBeGreaterThanOrEqual(0)
     expect(Number.isNaN(score!.mqm_score)).toBe(false)
 
-    // Assert: Approve button state matches score status
+    // Assert: Approve button state matches score status.
+    // Guard: auto_passed files don't show the Approve button (file is already approved
+    // automatically). Only 'calculated' status renders it, so the conditional is intentional.
     if (score!.status === 'calculated') {
       const approveBtn = page.getByRole('button', { name: /approve/i })
       await expect(approveBtn).toBeVisible({ timeout: 15_000 })

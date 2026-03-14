@@ -3,36 +3,40 @@
  * Read runL2ForFile.ts: glossary is loaded via JOIN through glossaries table at Step 4b.
  * If that query fails, L2 should continue with an empty glossary context.
  */
-import { faker } from '@faker-js/faker'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-import { buildL2Response, buildSegmentRow, BUDGET_HAS_QUOTA } from '@/test/fixtures/ai-responses'
+import { buildL2Response, buildSegmentRow } from '@/test/fixtures/ai-responses'
+
+import {
+  VALID_FILE_ID,
+  VALID_PROJECT_ID,
+  VALID_TENANT_ID,
+  buildMockFile,
+  buildMockProject,
+  resetRunL2Mocks,
+  MOCK_FILES_SCHEMA,
+  MOCK_SEGMENTS_SCHEMA,
+  MOCK_FINDINGS_SCHEMA,
+  MOCK_GLOSSARIES_SCHEMA,
+  MOCK_GLOSSARY_TERMS_SCHEMA,
+  MOCK_TAXONOMY_DEFINITIONS_SCHEMA,
+  MOCK_PROJECTS_SCHEMA,
+} from './__tests__/runL2ForFile.test-utils'
 
 // ── Hoisted mocks ──
-const {
-  mocks: {
-    mockGenerateText,
-    mockCheckProjectBudget,
-    mockWriteAuditLog,
-    mockAggregateUsage,
-    mockGetModelForLayerWithFallback,
+const { mocks, modules, dbState, dbMockModule, mockAiL2Limit, mockBuildL2Prompt } = vi.hoisted(
+  () => {
+    const { dbState, dbMockModule } = createDrizzleMock()
+    const { mocks, modules } = createAIMock({ layer: 'L2' })
+    const mockAiL2Limit = vi.fn((..._args: unknown[]) =>
+      Promise.resolve({ success: true, limit: 100, remaining: 99, reset: 0 }),
+    )
+    const mockBuildL2Prompt = vi.fn((..._args: unknown[]) => 'mocked L2 prompt')
+    return { mocks, modules, dbState, dbMockModule, mockAiL2Limit, mockBuildL2Prompt }
   },
-  modules,
-  dbState,
-  dbMockModule,
-  mockAiL2Limit,
-  mockBuildL2Prompt,
-} = vi.hoisted(() => {
-  const { dbState, dbMockModule } = createDrizzleMock()
-  const { mocks, modules } = createAIMock({ layer: 'L2' })
-  const mockAiL2Limit = vi.fn((..._args: unknown[]) =>
-    Promise.resolve({ success: true, limit: 100, remaining: 99, reset: 0 }),
-  )
-  const mockBuildL2Prompt = vi.fn((..._args: unknown[]) => 'mocked L2 prompt')
-  return { mocks, modules, dbState, dbMockModule, mockAiL2Limit, mockBuildL2Prompt }
-})
+)
 
-// ── Module mocks ──
+// ── Module mocks (must stay in test file — hoisted by vitest) ──
 
 vi.mock('ai', () => modules.ai)
 vi.mock('@/lib/ai/client', () => modules.aiClient)
@@ -52,124 +56,35 @@ vi.mock('@/db/client', () => dbMockModule)
 vi.mock('@/lib/ratelimit', () => ({
   aiL2ProjectLimiter: { limit: (...args: unknown[]) => mockAiL2Limit(...args) },
 }))
-
 vi.mock('@/db/helpers/withTenant', () => ({
   withTenant: vi.fn((..._args: unknown[]) => 'tenant-filter'),
 }))
-
 vi.mock('drizzle-orm', () => ({
   and: vi.fn((...args: unknown[]) => args),
   eq: vi.fn((...args: unknown[]) => args),
 }))
-
-vi.mock('@/db/schema/files', () => ({
-  files: { id: 'id', tenantId: 'tenant_id', status: 'status', projectId: 'project_id' },
-}))
-vi.mock('@/db/schema/segments', () => ({
-  segments: {
-    id: 'id',
-    tenantId: 'tenant_id',
-    fileId: 'file_id',
-    projectId: 'project_id',
-    sourceText: 'source_text',
-    targetText: 'target_text',
-    segmentNumber: 'segment_number',
-    sourceLang: 'source_lang',
-    targetLang: 'target_lang',
-  },
-}))
-vi.mock('@/db/schema/findings', () => ({
-  findings: {
-    id: 'id',
-    tenantId: 'tenant_id',
-    fileId: 'file_id',
-    segmentId: 'segment_id',
-    projectId: 'project_id',
-    detectedByLayer: 'detected_by_layer',
-    category: 'category',
-    severity: 'severity',
-    description: 'description',
-  },
-}))
-vi.mock('@/db/schema/glossaries', () => ({
-  glossaries: { id: 'id', tenantId: 'tenant_id', projectId: 'project_id' },
-}))
-vi.mock('@/db/schema/glossaryTerms', () => ({
-  glossaryTerms: {
-    id: 'id',
-    glossaryId: 'glossary_id',
-    sourceTerm: 'source_term',
-    targetTerm: 'target_term',
-    caseSensitive: 'case_sensitive',
-  },
-}))
+vi.mock('@/db/schema/files', () => ({ files: MOCK_FILES_SCHEMA }))
+vi.mock('@/db/schema/segments', () => ({ segments: MOCK_SEGMENTS_SCHEMA }))
+vi.mock('@/db/schema/findings', () => ({ findings: MOCK_FINDINGS_SCHEMA }))
+vi.mock('@/db/schema/glossaries', () => ({ glossaries: MOCK_GLOSSARIES_SCHEMA }))
+vi.mock('@/db/schema/glossaryTerms', () => ({ glossaryTerms: MOCK_GLOSSARY_TERMS_SCHEMA }))
 vi.mock('@/db/schema/taxonomyDefinitions', () => ({
-  taxonomyDefinitions: {
-    id: 'id',
-    category: 'category',
-    parentCategory: 'parent_category',
-    severity: 'severity',
-    description: 'description',
-    isActive: 'is_active',
-  },
+  taxonomyDefinitions: MOCK_TAXONOMY_DEFINITIONS_SCHEMA,
 }))
-vi.mock('@/db/schema/projects', () => ({
-  projects: {
-    id: 'id',
-    tenantId: 'tenant_id',
-    name: 'name',
-    description: 'description',
-    sourceLang: 'source_lang',
-    targetLangs: 'target_langs',
-    processingMode: 'processing_mode',
-  },
-}))
+vi.mock('@/db/schema/projects', () => ({ projects: MOCK_PROJECTS_SCHEMA }))
 vi.mock('@/features/pipeline/prompts/build-l2-prompt', () => ({
   buildL2Prompt: (...args: unknown[]) => mockBuildL2Prompt(...args),
 }))
 
-// ── Constants ──
+// ── Shared mock data ──
 
-const VALID_FILE_ID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
-const VALID_PROJECT_ID = 'b1c2d3e4-f5a6-4b2c-9d3e-4f5a6b7c8d9e'
-const VALID_TENANT_ID = 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f'
-
-const mockFile = {
-  id: VALID_FILE_ID,
-  projectId: VALID_PROJECT_ID,
-  tenantId: VALID_TENANT_ID,
-  status: 'l2_processing',
-}
-
-const mockProject = {
-  name: 'Test Project',
-  description: null,
-  sourceLang: 'en',
-  targetLangs: ['th'],
-  processingMode: 'economy',
-}
+const mockFile = buildMockFile()
+const mockProject = buildMockProject()
 
 describe('runL2ForFile — glossary timeout/failure (P2-02)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    dbState.callIndex = 0
-    dbState.returnValues = []
-    dbState.setCaptures = []
-    dbState.throwAtCallIndex = null
-    mockGenerateText.mockResolvedValue(buildL2Response())
-    mockCheckProjectBudget.mockResolvedValue(BUDGET_HAS_QUOTA)
-    mockAiL2Limit.mockResolvedValue({ success: true, limit: 100, remaining: 99, reset: 0 })
-    mockWriteAuditLog.mockResolvedValue(undefined)
-    mockBuildL2Prompt.mockReturnValue('mocked L2 prompt')
-    mockAggregateUsage.mockReturnValue({
-      inputTokens: 100,
-      outputTokens: 50,
-      estimatedCostUsd: 0.001,
-    })
-    mockGetModelForLayerWithFallback.mockResolvedValue({
-      primary: 'gpt-4o-mini',
-      fallbacks: [],
-    })
+    resetRunL2Mocks({ ...mocks, mockAiL2Limit, mockBuildL2Prompt }, dbState, buildL2Response())
   })
 
   it('[P2] should continue L2 without glossary when glossary query throws', async () => {

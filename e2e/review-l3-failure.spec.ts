@@ -282,7 +282,9 @@ test.describe.serial('L3 Resilience + Partial Score UI (P1-15, R3-011)', () => {
     // Assert: MQM score preserved
     await expect(scoreBadge).toContainText(/\d+/)
 
-    // Assert: Approve button disabled for partial score
+    // Assert: Approve button disabled for partial score.
+    // Guard: partial-score files may not render the Approve button at all
+    // (UI hides it when score.status is not 'calculated'). When present, it must be disabled.
     const approveBtn = page.getByRole('button', { name: /approve/i })
     const btnCount = await approveBtn.count()
     if (btnCount > 0) {
