@@ -87,7 +87,7 @@ export async function waitForFindingsVisible(page: Page): Promise<Locator> {
   const minorAccordion = page.getByText(/Minor \(\d+\)/i)
   if (await minorAccordion.isVisible().catch(() => false)) {
     await minorAccordion.click()
-    await page.waitForTimeout(500)
+    // Step 4 below waits for rows to appear — no fixed sleep needed
   }
 
   // 4. Finding rows should now be visible

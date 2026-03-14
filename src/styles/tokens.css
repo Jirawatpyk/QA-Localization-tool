@@ -42,6 +42,13 @@
   --color-status-deep-analyzed: #d97706;
   --color-status-partial: #ea580c;
 
+  /* Finding Status Backgrounds */
+  --color-finding-accepted: #dcfce7; /* green-100 */
+  --color-finding-rejected: #fee2e2; /* red-100 */
+  --color-finding-flagged: #fef3c7; /* amber-100 */
+  --color-finding-noted: #dbeafe; /* blue-100 (Story 4.3) */
+  --color-finding-source-issue: #ede9fe; /* violet-100 (Story 4.3) */
+
   /* Focus */
   --color-focus-ring: var(--color-primary);
 
@@ -65,17 +72,17 @@
 
 /* Finding State Backgrounds — @utility avoids Tailwind v4 wildcard scan on arbitrary values */
 @utility bg-finding-accepted {
-  background-color: #dcfce7;
+  background-color: var(--color-finding-accepted);
 }
 @utility bg-finding-rejected {
-  background-color: #fee2e2;
+  background-color: var(--color-finding-rejected);
 }
 @utility bg-finding-flagged {
-  background-color: #fef3c7;
+  background-color: var(--color-finding-flagged);
 }
 @utility bg-finding-noted {
-  background-color: #dbeafe;
+  background-color: var(--color-finding-noted);
 }
 @utility bg-finding-source-issue {
-  background-color: #ede9fe;
+  background-color: var(--color-finding-source-issue);
 }

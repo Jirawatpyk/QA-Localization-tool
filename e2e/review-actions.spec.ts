@@ -567,8 +567,14 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
         await expect(page.getByText(/Finding accepted|already accepted/i).first()).toBeVisible({
           timeout: 15_000,
         })
-        // Dismiss toast by waiting briefly
-        await page.waitForTimeout(500)
+        // Wait for toast to dismiss before next iteration (deterministic)
+        await page
+          .getByText(/Finding accepted|already accepted/i)
+          .first()
+          .waitFor({ state: 'hidden', timeout: 5_000 })
+          .catch(() => {
+            /* toast may auto-dismiss before we check */
+          })
       }
     }
 
