@@ -47,6 +47,8 @@ vi.mock('@/features/review/stores/review.store', () => ({
       setFinding: mockSetFinding,
       selectedId: null,
       setSelectedFinding: mockSetSelectedFinding,
+      sortedFindingIds: [...mockFindingsMap.keys()],
+      setSortedFindingIds: vi.fn(),
       currentFileId: 'f1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
     })),
     {
@@ -55,6 +57,8 @@ vi.mock('@/features/review/stores/review.store', () => ({
         setFinding: mockSetFinding,
         selectedId: null,
         setSelectedFinding: mockSetSelectedFinding,
+        sortedFindingIds: [...mockFindingsMap.keys()],
+        setSortedFindingIds: vi.fn(),
         currentFileId: 'f1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
       })),
     },

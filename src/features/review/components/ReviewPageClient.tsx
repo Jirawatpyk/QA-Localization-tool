@@ -220,7 +220,7 @@ export function ReviewPageClient({
         if (result.code === 'SCORE_STALE') {
           toast.error('Score is being recalculated — please wait and retry')
         } else {
-          toast.error(result.error)
+          toast.error(result.error ?? 'An unexpected error occurred')
         }
       }
     })
