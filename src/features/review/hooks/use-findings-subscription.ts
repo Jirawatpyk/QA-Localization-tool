@@ -111,12 +111,29 @@ export function useFindingsSubscription(fileId: string, tenantId?: string | unde
           }
           const { data } = await query.order('created_at', { ascending: false })
           if (data && Array.isArray(data)) {
-            const newMap = new Map<string, Finding>()
+            // MERGE poll results with store — don't overwrite optimistic updates.
+            // If store has a newer updatedAt (from optimistic update), keep store version.
+            const store = useReviewStore.getState()
+            const mergedMap = new Map<string, Finding>(store.findingsMap)
+            let changed = false
             for (const row of data) {
-              const finding = mapRowToFinding(row as Record<string, unknown>)
-              if (finding) newMap.set(finding.id, finding)
+              const polled = mapRowToFinding(row as Record<string, unknown>)
+              if (!polled) continue
+              const existing = mergedMap.get(polled.id)
+              if (!existing) {
+                // New finding from poll — add it
+                mergedMap.set(polled.id, polled)
+                changed = true
+              } else if (polled.updatedAt > existing.updatedAt) {
+                // Poll has newer data — authoritative update
+                mergedMap.set(polled.id, polled)
+                changed = true
+              }
+              // else: store has same or newer data (optimistic) — keep it
             }
-            useReviewStore.getState().setFindings(newMap)
+            if (changed) {
+              store.setFindings(mergedMap)
+            }
           }
         } catch {
           // Polling errors are non-fatal — next poll will retry

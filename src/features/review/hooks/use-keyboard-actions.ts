@@ -434,10 +434,20 @@ export function useReviewHotkeys(
       cleanups.push(cleanup)
     }
 
+    // Signal E2E that review hotkeys (A/R/F) are registered.
+    // Child effects (FindingList: data-keyboard-ready) fire before parent effects,
+    // so E2E must wait for this attribute before pressing hotkeys.
+    document
+      .querySelector('[data-testid="review-3-zone"]')
+      ?.setAttribute('data-review-actions-ready', 'true')
+
     return () => {
       for (const cleanup of cleanups) {
         cleanup()
       }
+      document
+        .querySelector('[data-testid="review-3-zone"]')
+        ?.removeAttribute('data-review-actions-ready')
     }
   }, [register, getSelectedId])
 }

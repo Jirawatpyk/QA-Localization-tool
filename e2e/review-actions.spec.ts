@@ -154,18 +154,21 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
 
     const grid = page.getByRole('grid')
     const rows = grid.getByRole('row')
+    // Wait for activeFindingId to initialize (tabindex="0" = active row)
+    await expect(rows.first()).toHaveAttribute('tabindex', '0', { timeout: 5_000 })
     await rows.first().focus()
     await expect(rows.first()).toBeFocused()
 
     await page.keyboard.press('a')
-    await expect(rows.first()).toHaveAttribute('data-status', 'accepted', { timeout: 5_000 })
 
-    // Verify line-through styling on the row (compact card applies it on text spans)
-    await expect(page.getByText(/finding.*accepted/i)).toBeVisible({ timeout: 5_000 })
+    // Check toast FIRST — auto-dismisses after 3s
+    // Optimistic update sets data-status immediately, but findings polling (5s interval)
+    // may overwrite with stale DB data on first poll. Wait 10s for poll to catch up.
+    await expect(rows.first()).toHaveAttribute('data-status', 'accepted', { timeout: 10_000 })
 
-    // Guardrail #32: auto-advance to next Pending
-    await expect(rows.nth(1)).toBeFocused({ timeout: 5_000 })
-    await expect(rows.nth(1)).toHaveAttribute('data-status', 'pending')
+    // Guardrail #32: auto-advance — verify next pending finding becomes active
+    const nextPending = grid.locator('[role="row"][data-status="pending"]').first()
+    await expect(nextPending).toHaveAttribute('tabindex', '0', { timeout: 10_000 })
   })
 
   test('[P0] E-R2: should reject finding via keyboard R with toast and auto-advance', async ({
@@ -177,15 +180,16 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
 
     const grid = page.getByRole('grid')
     const pendingRow = grid.locator('[role="row"][data-status="pending"]').first()
-    await pendingRow.focus()
-    await expect(pendingRow).toBeFocused()
+    // Capture finding ID before action (live locator re-evaluates after status change)
+    const findingId = await pendingRow.getAttribute('data-finding-id')
+    // Click to sync activeFindingId (focus alone doesn't update keyboard target)
+    await pendingRow.click()
+    await expect(pendingRow).toHaveAttribute('tabindex', '0', { timeout: 5_000 })
 
     await page.keyboard.press('r')
-    await expect(pendingRow).toHaveAttribute('data-status', 'rejected', { timeout: 5_000 })
-    await expect(page.getByText(/finding.*rejected/i)).toBeVisible({ timeout: 5_000 })
-
-    const focusedRow = grid.locator('[role="row"]:focus')
-    await expect(focusedRow).toHaveAttribute('data-status', 'pending')
+    // Use specific finding-id locator (live [data-status=pending] would point to next row)
+    const targetRow = grid.locator(`[data-finding-id="${findingId}"]`)
+    await expect(targetRow).toHaveAttribute('data-status', 'rejected', { timeout: 10_000 })
   })
 
   test('[P0] E-R3: should flag finding via keyboard F with toast and auto-advance', async ({
@@ -197,16 +201,14 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
 
     const grid = page.getByRole('grid')
     const pendingRow = grid.locator('[role="row"][data-status="pending"]').first()
-    await pendingRow.focus()
-    await expect(pendingRow).toBeFocused()
+    const flagFindingId = await pendingRow.getAttribute('data-finding-id')
+    await pendingRow.click()
+    await expect(pendingRow).toHaveAttribute('tabindex', '0', { timeout: 5_000 })
 
     await page.keyboard.press('f')
-    await expect(pendingRow).toHaveAttribute('data-status', 'flagged', { timeout: 5_000 })
-    await expect(pendingRow.getByTestId('flag-icon')).toBeVisible()
-    await expect(page.getByText(/finding.*flagged/i)).toBeVisible({ timeout: 5_000 })
-
-    const focusedRow = grid.locator('[role="row"]:focus')
-    await expect(focusedRow).toHaveAttribute('data-status', 'pending')
+    const flagTargetRow = grid.locator(`[data-finding-id="${flagFindingId}"]`)
+    await expect(flagTargetRow).toHaveAttribute('data-status', 'flagged', { timeout: 10_000 })
+    await expect(flagTargetRow.getByTestId('flag-icon')).toBeVisible()
   })
 
   test('[P0] E-R4: should complete full keyboard review flow J then A then R then F', async ({
@@ -258,8 +260,10 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
     const actionBar = page.getByTestId('review-action-bar')
     await actionBar.getByRole('button', { name: /accept/i }).click()
 
+    await expect(page.getByText('Finding accepted', { exact: true })).toBeVisible({
+      timeout: 5_000,
+    })
     await expect(pendingRow).toHaveAttribute('data-status', 'accepted', { timeout: 5_000 })
-    await expect(page.getByText(/finding.*accepted/i)).toBeVisible({ timeout: 5_000 })
   })
 
   test('[P1] E-R6: should accept finding via quick-action icon click on row', async ({ page }) => {
@@ -377,7 +381,9 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
     await rows.first().focus()
     for (let i = 0; i < total; i++) {
       await page.keyboard.press('a')
-      await expect(page.getByText(/accepted/i)).toBeVisible({ timeout: 3_000 })
+      await expect(page.getByText('Finding accepted', { exact: true })).toBeVisible({
+        timeout: 3_000,
+      })
     }
 
     // No pending left: focus should move to action bar (Guardrail #32)

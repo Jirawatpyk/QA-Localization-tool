@@ -61,8 +61,12 @@ export function useReviewActions({ fileId, projectId }: UseReviewActionsOptions)
         return
       }
 
-      // Optimistic update
-      state.setFinding(findingId, { ...finding, status: newState })
+      // Optimistic update — set updatedAt to NOW so polling merge won't overwrite with stale data
+      state.setFinding(findingId, {
+        ...finding,
+        status: newState,
+        updatedAt: new Date().toISOString(),
+      })
 
       inFlightRef.current = true
       setIsInFlight(true)

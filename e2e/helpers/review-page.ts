@@ -44,6 +44,12 @@ export async function waitForReviewPageHydrated(page: Page) {
     timeout: 15_000,
   })
 
+  // Wait for review action hotkeys (A/R/F) — registered in parent (ReviewPageClient)
+  // effect which fires AFTER child effects. Without this, E2E presses keys before handlers exist.
+  await page.waitForSelector('[data-testid="review-3-zone"][data-review-actions-ready="true"]', {
+    timeout: 5_000,
+  })
+
   // Ensure the page has keyboard focus (headless Chromium may not auto-focus
   // after navigation). Use focus() instead of click() to avoid triggering
   // unintended side effects (dismiss tooltips, close popovers)
