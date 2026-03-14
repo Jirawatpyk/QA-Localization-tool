@@ -1,15 +1,17 @@
 ---
-stepsCompleted: ['step-01-detect-mode', 'step-02-load-context', 'step-03-risk-and-testability', 'step-04-coverage-plan']
-lastStep: 'step-04-coverage-plan'
-lastSaved: '2026-03-07'
+stepsCompleted: ['step-01-detect-mode', 'step-02-load-context', 'step-03-risk-and-testability', 'step-04-coverage-plan', 'step-05-generate-output']
+lastStep: 'step-05-generate-output'
+lastSaved: '2026-03-14'
 ---
 
 # Step 1: Mode Detection
 
 - **Mode**: Epic-Level
-- **Epic**: 2 — File Processing & QA Engine
-- **Status**: Epic 2 is DONE (Stories 2.1-2.10, 1,513+ tests)
-- **Prerequisites**: All met (epic docs, architecture, stories with ACs)
+- **Epic**: 3 — AI-Powered Quality Analysis
+- **Stories in scope**: 3.0, 3.1, 3.2a, 3.2b, 3.2c, 3.3, 3.4, 3.5
+- **FRs covered**: FR9, FR10, FR16-18, FR20, FR22-23, FR36, FR63, FR71-72
+- **NFRs addressed**: NFR3, NFR4, NFR16, NFR18, NFR36
+- **Prerequisites**: All met (Epic 3 doc + ACs + Architecture context)
 
 # Step 2: Loaded Context
 
@@ -19,252 +21,197 @@ lastSaved: '2026-03-07'
 - test_framework: playwright
 - test_artifacts: _bmad-output/test-artifacts
 
-## Project Artifacts
-- Epic 2 doc: 10 stories (2.1-2.10)
-- FRs: FR1-FR8, FR11-FR15, FR19, FR21, FR37, FR62
-- NFRs: NFR1, NFR2, NFR7, NFR8, NFR10, NFR16
-
 ## Existing Test Coverage
-- Unit tests: ~90+ files
-- Component tests: ~40+ files
-- E2E specs: 17 files
-- RLS tests: 6 files
+| Area | Files | Key Components |
+|------|-------|----------------|
+| Pipeline | 56 | L1/L2/L3 helpers, prompts, schemas, Inngest functions, engine checks |
+| Scoring | 8 | MQM calculator, auto-pass, score lifecycle |
+| Review | 21 | Store, actions (accept/reject/flag), hooks, utils, subscriptions |
+| AI lib | 8 | Budget, providers, costs, client, errors, models, fallback |
+| E2E | 27 | Review, pipeline, score lifecycle, budget, parity, resilience |
 
 ## Knowledge Fragments
-- risk-governance.md
-- probability-impact.md
-- test-levels-framework.md
-- test-priorities-matrix.md
+- risk-governance.md, probability-impact.md, test-levels-framework.md, test-priorities-matrix.md
 
-## Pre-mortem Analysis (Elicitation)
+# Step 3: Risk Assessment (post-elicitation)
 
-| # | Failure Scenario | Score | Action |
-|---|-----------------|-------|--------|
-| F1 | Parser silent data loss (nested tags stripped silently) | 6 | MITIGATE |
-| F2 | Thai/CJK word count drift (ICU version mismatch) | 6 | MITIGATE |
-| F3 | Pipeline race condition (duplicate findings on re-upload) | 4 | MONITOR |
-| F4 | Excel column swap (wrong source/target mapping) | 4 | MONITOR |
-| F5 | Tenant data leak via parity report (missing withTenant) | 3 | DOCUMENT |
-| F6 | Rule engine false negative (placeholder format gap) | 6 | MITIGATE |
+## Elicitation: Stakeholder Round Table
+- Sally (UX), John (PM), Amelia (Dev), Murat (TEA)
+- Added 6 new risks, adjusted 4 scores
+- Gate status changed: CONCERNS → FAIL (3 BLOCK risks)
 
-### Key Tests Identified from Pre-mortem
-- Nested tag boundary test (1, 3, 5, 10 levels) + round-trip integrity
-- Cross-Node segmenter consistency + score boundary at threshold +/-1
-- Concurrent pipeline idempotency (same file, 2 triggers)
-- Swapped column mapping direction verification
-- RLS cross-tenant parity report isolation
-- Extended placeholder format coverage (30+ formats) + parity regression
-
-## Failure Mode Analysis (Elicitation)
-
-### Component Failure Modes (33 total across 7 components)
-
-**File Upload & Storage (Story 2.1):** 6 modes — file size bypass, SHA-256 collision, path traversal, concurrent upload race, interrupted upload cleanup, batch record atomicity
-**SDLXLIFF/XLIFF Parser (Story 2.2):** 6 modes — XXE injection, unknown namespace, empty target, encoding mismatch, tag ID collision, massive segment count
-**Excel Parser (Story 2.3):** 5 modes — merged cells, formula cells, hidden rows, multi-sheet, large row count
-**Rule Engine (Story 2.4):** 6 modes — ReDoS backtracking, glossary false positive, number locale, cross-file false alarm, custom rule config corruption, Thai particle
-**MQM Score Calculator (Story 2.5):** 5 modes — division by zero, score overflow, rejected finding counted, layer status mismatch, auto-pass threshold wrong language
-**Inngest Pipeline (Story 2.6):** 5 modes — step ID collision, retry exhaustion, concurrency key bypass, payload size limit, realtime push failure
-**Batch Summary & Parity (Story 2.7):** 3 modes — sort instability, parity segment off-by-one, missing check without tenant
-
-### Coverage Gaps Identified
-
-| Priority | ID | Gap | Component | Test Level |
-|---|---|---|---|---|
-| P0 | FM-2.1 | XXE prevention | Parser | Unit |
-| P0 | FM-4.1 | ReDoS protection | Rule Engine | Unit |
-| P0 | FM-6.4 | Large payload handling (512KB limit) | Pipeline | Integration |
-| P1 | FM-1.4 | Concurrent upload race condition | Upload | E2E |
-| P1 | FM-2.3 | Empty target segment handling | Parser | Unit |
-| P1 | FM-2.4 | Encoding detection (UTF-16 as UTF-8) | Parser | Unit |
-| P1 | FM-3.1 | Merged cells in Excel | Excel Parser | Unit |
-| P1 | FM-3.2 | Formula vs value resolution | Excel Parser | Unit |
-| P1 | FM-5.4 | Layer status consistency check | Scoring | Unit |
-| P1 | FM-6.3 | Cross-project concurrency isolation | Pipeline | Integration |
-| P2 | FM-3.5 | Large row count (65K+) | Excel Parser | Unit/Perf |
-
-## Red Team vs Blue Team Analysis (Elicitation)
-
-### Attack Surface Summary (20 attacks tested across 5 categories)
-
-| Category | Attacks | Defended | Gaps | Critical |
-|----------|---------|----------|------|----------|
-| File Upload | 4 | 2 | 2 | 1 (zip bomb xlsx) |
-| Parser Injection | 4 | 1 | 3 | 2 (XXE, Billion Laughs) |
-| Tenant Isolation | 4 | 2 | 2 | 1 (parity RLS) |
-| Data Integrity | 4 | 2 | 2 | 0 |
-| Denial of Service | 4 | 0 | 4 | 0 |
-| **Total** | **20** | **7** | **13** | **4** |
-
-### Critical Hardening Actions (ordered by severity)
-
-1. **CRITICAL** Audit fast-xml-parser config: processEntities, entity expansion limit (XXE + Billion Laughs)
-2. **CRITICAL** Add decompressed size guard for xlsx files (zip bomb prevention)
-3. **CRITICAL** Add RLS tests for parity_reports + missing_check_reports tables
-4. **MAJOR** Add MIME type / magic bytes validation on upload
-5. **MAJOR** Add ReDoS test suite for all tag/placeholder regex patterns
-6. **MAJOR** Verify segment immutability (no update action exposed)
-7. **MAJOR** Add per-project storage quota + glossary term count limit
-8. **MAJOR** Verify glossary query tenant filter before match
-9. **MAJOR** Verify pipeline rerun idempotency guard
-10. **MINOR** Verify server-side timestamp enforcement on uploaded_at
-11. **MINOR** Add rate limit on missing check report submissions
-
-### Security Test Gaps (new, not in FMA)
-
-| Priority | ID | Gap | Category |
-|---|---|---|---|
-| P0 | RT-1 | fast-xml-parser XXE/Billion Laughs config audit | Parser Injection |
-| P0 | RT-2 | xlsx decompressed size guard | File Upload |
-| P0 | RT-3 | RLS for parity_reports + missing_check_reports | Tenant Isolation |
-| P1 | RT-4 | MIME type / magic bytes validation | File Upload |
-| P1 | RT-5 | ReDoS test suite for regex patterns | Parser Injection |
-| P1 | RT-6 | Segment immutability verification | Data Integrity |
-| P1 | RT-7 | Per-project storage quota | Denial of Service |
-| P1 | RT-8 | Glossary term count limit | Denial of Service |
-| P1 | RT-9 | Glossary query tenant filter audit | Tenant Isolation |
-| P2 | RT-10 | Pipeline rerun idempotency | Data Integrity |
-| P3 | RT-11 | Missing check report rate limit | Denial of Service |
-
-## Stakeholder Round Table (Elicitation)
-
-### Perspectives
-
-- **Sally (UX):** Trust via parity, false positive fatigue (Thai/glossary), score visual cues, Excel non-English headers
-- **John (PM):** Parity = table stakes, Thai/CJK = differentiator, batch 50-file enterprise readiness, score determinism
-- **Amelia (Dev):** Parser malformed input, Inngest step ID uniqueness, transaction rollback, ExcelJS type pinning, Realtime reconnect
-- **Murat (TEA):** Trust Pyramid — unit (logic trust) > integration (infra trust) > E2E (user trust)
-
-### Consensus Priority Ranking
-
-| Rank | Test Area | Consensus | Rationale |
-|------|-----------|-----------|-----------|
-| 1 | Xbench parity golden corpus regression | P0 | All stakeholders agree — table stakes for adoption |
-| 2 | Parser malformed input suite (15+ cases) | P0 | Dev: most complex module, fragile to edge cases |
-| 3 | Thai/CJK segmenter comprehensive (50+ cases) | P0 | UX + PM: differentiator + trust-critical |
-| 4 | Security: XXE + ReDoS prevention | P0 | Dev + TEA: critical vulnerability, silent failure |
-| 5 | Score determinism + boundary tests | P0 | UX + PM: score drift = trust loss |
-| 6 | Pipeline idempotency + step ID uniqueness | P1 | Dev: silent bug, hard to debug in production |
-| 7 | E2E upload-parse-L1-score flow | P1 | UX: end-to-end trust, catches integration gaps |
-| 8 | Batch 50-file throughput benchmark | P1 | PM: enterprise readiness (beyond NFR7 10-file) |
-| 9 | False positive rate (Thai particle + glossary) | P1 | UX: false positive fatigue = adoption killer |
-| 10 | Transaction rollback on partial failure | P1 | Dev: data integrity, hard to catch without test |
-| 11 | Realtime disconnect/reconnect | P2 | Dev: edge case but affects UX during processing |
-| 12 | Excel non-English header auto-detect | P2 | UX: real-world Thai/Chinese headers |
-| 13 | Onboarding tour lifecycle | P2 | PM: churn prevention, but not core QA flow |
-| 14 | ScoreBadge visual threshold colors | P2 | UX: visual trust cue, component-level test |
-
-### Key Disagreement Resolution
-- **Unit vs E2E debate:** Both needed — unit catches logic bugs faster, E2E catches integration gaps. Unit first, E2E for critical flows only
-- **10-file vs 50-file batch:** Test 10 per NFR7 (P1), benchmark 50 as P2 perf test
-- **All agreed:** Xbench parity + Thai/CJK + parser security = non-negotiable P0
-
-# Step 3: Risk Assessment
-
-## Risk Matrix (20 risks identified)
-
-### High-Priority Risks (Score >= 6) — 8 risks
+## BLOCK Risks (Score = 9) — 3 risks
 
 | Risk ID | Cat | Description | P | I | Score | Mitigation |
 |---------|-----|-------------|---|---|-------|------------|
-| R-001 | SEC | XXE/Billion Laughs via fast-xml-parser config | 2 | 3 | 6 | Audit processEntities, entity expansion test |
-| R-002 | SEC | ReDoS in tag/placeholder regex | 2 | 3 | 6 | ReDoS test suite, regex review |
-| R-003 | DATA | Parser silent data loss (nested tags 5+) | 2 | 3 | 6 | Round-trip integrity test, tag count assertion |
-| R-004 | BUS | Xbench parity regression on rule change | 2 | 3 | 6 | Golden corpus regression on every PR |
-| R-005 | DATA | Thai/CJK word count drift (ICU version) | 2 | 3 | 6 | Pin Node version, golden corpus segmenter test |
-| R-006 | BUS | Placeholder format gap (new formats missed) | 2 | 3 | 6 | Extend to 30+ formats, parity test |
-| R-007 | SEC | xlsx zip bomb (unlimited decompressed size) | 2 | 3 | 6 | Decompressed size guard in ExcelJS |
-| R-008 | SEC | Parity report tenant leak (RLS not verified) | 1 | 3 | 6* | RLS test for parity_reports table |
+| R3-003 | SEC | AI prompt injection via segment text — craft SDLXLIFF with malicious target text manipulates L2/L3 output, could pass auto-pass | 3 | 3 | 9 | Adversarial segment fixture test + output sanitization verification |
+| R3-005 | BUS | Auto-pass false approval — new lang pair uncalibrated threshold + stale score → bad file auto-approved | 3 | 3 | 9 | Boundary tests: threshold=score, file #49 vs #50, uncalibrated pair, score=0 |
+| R3-006 | TECH | Multi-provider fallback × Inngest retry — primary rate-limited, exponential API calls (retries × fallbacks) → cost explosion | 3 | 3 | 9 | Integration test: Inngest retry count + fallback chain; verify no duplicate AI calls |
 
-### Medium-Priority Risks (Score 3-4) — 8 risks
+## High-Priority Risks (Score 6-8) — 13 risks
+
+| Risk ID | Cat | Description | P | I | Score | Mitigation |
+|---------|-----|-------------|---|---|-------|------------|
+| R3-001 | DATA | Token budget bypass under concurrent batch — 10 files queued, all call AI before budget exhausts | 2 | 3 | 6 | Integration test: 5 files, exhaust after 2nd, verify 3rd-5th blocked |
+| R3-002 | DATA | Score recalc race during rapid actions — Accept+Reject rapid fire → double calculation | 2 | 3 | 6 | Test 3 finding.changed events within 100ms, verify Inngest serial queue |
+| R3-004 | PERF | L2 NFR3 violation (>30s/100 segments) — API latency spike | 2 | 3 | 6 | Performance benchmark (existing perf test) + CI gate |
+| R3-013 | BUS | Cost estimation variance >20% visible to customer — erodes trust | 2 | 3 | 6 | Budget estimation accuracy test with known token counts |
+| R3-019 | BUS | Score "jump scare" — L1→L2 score drops without transition warning | 2 | 3 | 6 | Test score transition animation + "recalculating" state visibility |
+| R3-020 | BUS | No pre-flight budget check for batch — 50-file batch exhausts at file 30 | 2 | 3 | 6 | Pre-flight estimation test: total batch cost vs remaining budget |
+| R3-021 | TECH | Inngest step ID collision on retry-after-crash — step skip = silent finding loss | 2 | 3 | 6 | Test retry scenario: verify step IDs unique across retries |
+| R3-025 | DATA | Garbage JSON = entire chunk lost — 1 bad finding rejects all valid findings in same chunk | 2 | 3 | 6 | Per-finding safeParse: skip invalid, keep valid findings in chunk |
+| R3-029 | DATA | Chunk split breaks multi-byte char — Thai sara am / CJK at 30K boundary corrupts prompt | 2 | 3 | 6 | Test chunkSegments with Thai/CJK at exact boundary |
+| R3-030 | DATA | Duplicate findings on re-run — retry without DELETE old L2 → double penalty | 2 | 3 | 6 | Test retryFailedLayers: verify DELETE old L2 findings before re-run |
+| R3-031 | BUS | Penalty weight = 0 bypasses scoring — Major=0 → auto-pass with Major findings | 2 | 3 | 6 | Boundary test: weight=0 for each severity, verify score reflects findings |
+| R3-032 | OPS | Rate limiter service down — Upstash unavailable, fail-open allows unlimited AI calls | 2 | 3 | 6 | Test rate limiter unavailable → graceful degradation (fail-closed) |
+| R3-033 | TECH | Batch payload > 512KB — 50 files + metadata exceeds Inngest limit, silently rejected | 2 | 3 | 6 | Boundary test: 50 files payload size vs 512KB limit |
+
+## Medium-Priority Risks (Score 3-4) — 10 risks
 
 | Risk ID | Cat | Description | P | I | Score |
 |---------|-----|-------------|---|---|-------|
-| R-009 | TECH | Pipeline race condition (duplicate findings) | 2 | 2 | 4 |
-| R-010 | BUS | Excel column swap (wrong direction) | 2 | 2 | 4 |
-| R-011 | TECH | Inngest step ID collision (silent skip) | 2 | 2 | 4 |
-| R-012 | TECH | Transaction atomicity (DELETE+INSERT) | 2 | 2 | 4 |
-| R-013 | PERF | Inngest payload > 512KB rejected | 2 | 2 | 4 |
-| R-014 | SEC | MIME type bypass (extension-only) | 2 | 2 | 4 |
-| R-015 | BUS | Score determinism failure | 1 | 3 | 3 |
-| R-016 | BUS | False positive fatigue (Thai/glossary) | 2 | 2 | 4 |
+| R3-007 | BUS | False positive fatigue from low-confidence AI findings | 2 | 2 | 4 |
+| R3-008 | DATA | Cross-layer dedup miss (L2+L3 same issue = 2 findings) | 2 | 2 | 4 |
+| R3-009 | TECH | Glossary context loading timeout → prompt without glossary | 2 | 2 | 4 |
+| R3-010 | OPS | Model pinning version deprecation without admin notice | 2 | 2 | 4 |
+| R3-011 | TECH | L3 failure recovery untested E2E | 2 | 2 | 4 |
+| R3-012 | PERF | Very large file (1000+ segments) resilience | 1 | 3 | 3 |
+| R3-014 | DATA | Partial results score status inconsistency | 2 | 2 | 4 |
+| R3-022 | TECH | AI mock drift from real API → green test + prod bug | 2 | 2 | 4 |
+| R3-023 | BUS | Confidence badge lacks distinct icon shape (a11y Guardrail #25) | 2 | 2 | 4 |
+| R3-024 | TECH | Zod schema drift if provider changes null/undefined behavior | 2 | 2 | 4 |
+| R3-026 | OPS | Orphan "processing" files — Inngest never resumes, no cleanup job | 2 | 2 | 4 |
+| R3-027 | DATA | Optimistic vs Realtime conflict — concurrent reviewers see stale state | 2 | 2 | 4 |
+| R3-034 | BUS | Provider returns empty findings (lazy response) — file looks clean but isn't | 2 | 2 | 4 |
+| R3-035 | TECH | 500+ L1 findings → prompt context overflow, L2 prompt truncated silently | 2 | 2 | 4 |
+| R3-036 | BUS | L3 anchoring bias — always confirms L2, adds no value | 1 | 2 | 2 |
+| R3-037 | BUS | Filter not reset on file switch → empty finding list shown | 2 | 2 | 4 |
+| R3-038 | TECH | Concurrency key mismatch (score vs process functions) → race condition | 2 | 2 | 4 |
+| R3-039 | BUS | ScoreBadge shows NaN for null score before first calculation | 2 | 2 | 4 |
 
-### Low-Priority Risks (Score 1-2) — 4 risks
+## Low-Priority Risks (Score 1-2) — 5 risks
 
-R-017 (OPS, 2), R-018 (OPS, 2), R-019 (BUS, 1), R-020 (OPS, 1)
+R3-015 (OPS, 2), R3-016 (OPS, 1), R3-017 (BUS, 1), R3-018 (BUS, 1), R3-028 (TECH, 2)
 
-## Risk Summary
-- High (>=6): 8 — SEC (4), DATA (2), BUS (2)
-- Medium (3-4): 8 — TECH (4), BUS (2), PERF (1), SEC (1)
-- Low (1-2): 4 — OPS (3), BUS (1)
-- Gate status: CONCERNS (8 risks >= 6 need mitigation before PASS)
+## Elicitation: Chaos Monkey Scenarios
+- 6 scenarios tested: Kill AI mid-batch, Realtime dies, Budget exhausted L2→L3, Garbage JSON, Inngest crash, Concurrent reviewers
+- 9 new gaps found → 4 new risks added (R3-025 to R3-028)
+- Key insight: per-finding validation missing (1 bad finding = whole chunk lost)
+
+## Chaos Monkey Gap Inventory (9 gaps)
+1. Chunk N fails but N+1 continues — UNTESTED (runL2ForFile)
+2. Realtime reconnect + stop polling — UNTESTED (use-findings-subscription)
+3. Poll/Realtime overlap dedup — UNTESTED (use-findings-subscription)
+4. E2E budget exhausted mid-pipeline UX — UNTESTED (e2e)
+5. Per-finding safeParse (skip bad, keep good) — UNTESTED (l2/l3 output handling)
+6. File status during Inngest recovery window — UNTESTED (processFile)
+7. Orphan "processing" file cleanup — UNTESTED (no cleanup job exists)
+8. Optimistic vs Realtime state conflict — UNTESTED (use-review-actions)
+9. previous_state mismatch → conflict dialog — UNTESTED (state-transitions)
+
+## Elicitation: Failure Mode Analysis
+- 8 components analyzed: AI Provider, L2 Pipeline, L3 Pipeline, Inngest, Scoring, Review Store, Budget, UI
+- 30+ failure modes identified across all components
+- 5 new HIGH risks (R3-029 to R3-033), 6 new MEDIUM risks (R3-034 to R3-039), 1 new LOW (R3-036)
+- Key insights: chunk split multi-byte, duplicate findings on re-run, penalty weight=0 bypass, rate limiter down
+
+## FMA Gap Inventory (12 new gaps from FMA)
+1. Chunk split at multi-byte boundary (Thai sara am, CJK) — UNTESTED
+2. Retry without DELETE old L2 findings → duplicates — UNTESTED
+3. Custom penalty weight = 0 → score bypass — UNTESTED
+4. Upstash rate limiter unavailable → fail-open? — UNTESTED
+5. Batch payload > 512KB → Inngest rejects — UNTESTED
+6. Provider returns empty findings (lazy response) — no suspicious-zero alert
+7. Health check OK but inference broken — UNTESTED
+8. 500+ L1 findings in prompt context → overflow — UNTESTED
+9. L3 anchoring bias (always agrees with L2) — no validation
+10. Filter state not reset on file switch — UNTESTED
+11. Concurrency key mismatch (score vs process) — no integration test
+12. ScoreBadge null score → NaN display — UNTESTED
+
+## Risk Summary (Final — post Round Table + Chaos Monkey + FMA)
+- BLOCK (=9): 3 — SEC (1), BUS (1), TECH (1)
+- High (6-8): 13 — DATA (5), PERF (1), BUS (4), TECH (2), OPS (1)
+- Medium (3-4): 18 — TECH (6), DATA (3), BUS (5), OPS (3), PERF (1)
+- Low (1-2): 6 — OPS (2), BUS (3), TECH (1)
+- **Total: 40 risks**
+- **Gate status: CONCERNS — 3 BLOCK risks mitigated (18 tests, 2026-03-14). 13 High risks remain.**
 
 # Step 4: Coverage Plan & Execution Strategy
 
 ## Coverage Matrix Summary
 
-### P0 (Critical) — 10 test areas, ~64 tests
-- Xbench parity golden corpus regression (3)
-- XXE/Billion Laughs prevention (4)
-- ReDoS protection for all regex (8)
-- Parser inline tag integrity — nested 1/3/5/10 + round-trip (6)
-- Thai/CJK Intl.Segmenter accuracy — 50+ edge cases (12)
-- MQM score correctness — determinism, boundary, clamp (8)
-- Placeholder format coverage — 30+ formats (10)
-- xlsx decompressed size guard (3)
-- RLS tenant isolation — existing 6 + parity + missing_check (8)
-- E2E upload-parse-L1-score flow (2)
+### P0 (Critical) — 11 areas, ~44 tests
+- P0-01: Prompt injection adversarial segments (6) — R3-003 ✅ DONE (2026-03-14)
+- P0-02: Auto-pass boundary threshold=score ±0.01 (4) — R3-005 ✅ DONE (2026-03-14)
+- P0-03: Auto-pass new lang pair file #49 vs #50 (3) — R3-005 ✅ DONE (2026-03-14)
+- P0-04: Fallback × Inngest retry: total calls ≤ retries × chain (5) — R3-006 ✅ DONE (2026-03-14)
+- P0-05: Budget per-file in concurrent batch (4) — R3-001 ❌ NEW
+- P0-06: Chunk split multi-byte: Thai sara am, CJK at 30K (5) — R3-029 ❌ NEW
+- P0-07: Duplicate findings on retry: DELETE before re-run (4) — R3-030 ❌ NEW
+- P0-08: Penalty weight=0 for each severity (4) — R3-031 ❌ NEW
+- P0-09: Per-finding safeParse: skip bad, keep valid (4) — R3-025 ❌ NEW
+- P0-10: Score recalc race: 3 events/100ms → 1 final score (3) — R3-002 ❌ NEW
+- P0-11: E2E pipeline→score→UI with real L2 (2) — R3-019 ⚠️ ENHANCE
 
-### P1 (High) — 15 test areas, ~69 tests
-- Parser malformed input suite (15)
-- Pipeline idempotency (4), step ID uniqueness (3)
-- Transaction rollback on re-parse (4)
-- Excel merged cells + formulas + multi-sheet (6)
-- MIME type / magic bytes validation (5)
-- Thai particle negative tests (6)
-- Batch throughput NFR7 10 files (2)
-- Score recalculation on status change (4)
-- File size guard 15MB boundary (4)
-- Duplicate detection SHA-256 (3)
-- Number check locale awareness (6)
-- Cross-file consistency (4)
-- E2E review + accept/reject (2), E2E parity comparison (1)
+### P1 (High) — 16 areas, ~44 tests
+- P1-01: L2 NFR3 100 segments < 30s (2) ✅ EXISTS
+- P1-02: Cost estimation accuracy ≤ 20% variance (4) ❌ NEW
+- P1-03: Pre-flight batch budget check (3) ❌ NEW
+- P1-04: Inngest step ID unique across retries (3) ❌ NEW
+- P1-05: Batch payload 50 files < 512KB (3) ❌ NEW
+- P1-06: Rate limiter unavailable → fail-closed (3) ❌ NEW
+- P1-07: Score transition "recalculating" badge (3) ⚠️ ENHANCE
+- P1-08: 500+ L1 findings → prompt truncation (3) ❌ NEW
+- P1-09: Filter reset on file switch (3) ❌ NEW
+- P1-10: Chunk N fails, N+1 continues (3) ❌ NEW
+- P1-11: Realtime reconnect stops polling (3) ❌ NEW
+- P1-12: Concurrency key consistency (2) ❌ NEW
+- P1-13: ScoreBadge null → spinner not NaN (2) ❌ NEW
+- P1-14: Empty findings suspicious-zero telemetry (2) ❌ NEW
+- P1-15: E2E L3 failure → partial score + warning (2) ❌ NEW
+- P1-16: previous_state mismatch → conflict error (3) ❌ NEW
 
-### P2 (Medium) — 10 test areas, ~26 tests
-- Excel large row count, batch 50-file, Realtime disconnect, non-English headers
-- Onboarding tour lifecycle, ScoreBadge thresholds, batch sort determinism
-- Pipeline rerun idempotency, Inngest payload boundary, file history filter
+### P2 (Medium) — 13 areas, ~30 tests
+- Cross-layer dedup, glossary timeout, AI mock contract, a11y badge icons
+- Zod schema drift, orphan file detection, optimistic vs RT conflict
+- Poll/RT overlap dedup, E2E budget exhausted UX, 1000+ segment perf
+- Partial score consistency, L3 anchoring bias, model pinning deprecation
 
-### P3 (Low) — 5 test areas, ~9 tests
-- Segment immutability, timestamp enforcement, rate limit, storage quota, glossary limit
+### P3 (Low) — 7 areas, ~6 tests
+- Provider total outage, budget alert edges, multi-tab sync
+- Budget config mid-pipeline, token overflow, health check false positive, tooltip truncation
 
 ## Execution Strategy
 
 | Trigger | Suite | Time Budget |
 |---------|-------|-------------|
 | Every PR | P0 + P1 unit/component | < 5 min |
-| PR to main | P0 + P1 full (incl. E2E + RLS) | < 15 min |
+| PR to main | P0 + P1 full (+ E2E) | < 15 min |
 | Nightly | P0 + P1 + P2 | < 30 min |
 | Weekly | Full regression P0-P3 | < 45 min |
-| On rule engine change | Golden corpus parity | < 10 min |
+| On AI schema change | P0-01 to P0-09 + P2-03 | < 10 min |
 
 ## Resource Estimates
 
-| Priority | Tests | Total Hours |
-|----------|-------|-------------|
-| P0 | ~64 | 96-128 hrs |
-| P1 | ~69 | 52-69 hrs |
-| P2 | ~26 | 13-20 hrs |
-| P3 | ~9 | 2-5 hrs |
-| **Total** | **~168** | **163-222 hrs (~20-28 days)** |
+| Priority | New Tests | Total Hours |
+|----------|-----------|-------------|
+| P0 | ~34 new + 10 enhance | 70-130 hrs |
+| P1 | ~38 new + 6 enhance | 40-65 hrs |
+| P2 | ~24 new + 6 enhance | 15-30 hrs |
+| P3 | ~6 new | 2-3 hrs |
+| **Total** | **~124 new tests** | **~127-228 hrs (~16-29 days)** |
+
+Existing: 610 tests → After: ~734 tests
 
 ## Quality Gates
 
 - P0 pass rate: 100% (merge blocked)
-- P1 pass rate: >= 95% (waivers require owner + deadline)
-- P2/P3 pass rate: >= 90% (informational)
-- High-risk mitigations R-001 to R-008: 100% complete
-- Security tests (SEC): 100% pass
-- Parity regression: 100% match (0 Xbench-only gaps)
-- Critical path coverage: >= 80%
-- Business logic coverage: >= 70%
+- P1 pass rate: ≥ 95% (waivers require owner + deadline)
+- P2/P3 pass rate: ≥ 90% (informational)
+- BLOCK risks (R3-003, R3-005, R3-006): 100% mitigated
+- High risks (13 items): 100% mitigation plan + owner
+- Security (prompt injection): 100% pass
+- Performance NFR3/NFR4: benchmarks met
+- Critical path coverage: ≥ 80%
+- Business logic coverage: ≥ 80%
