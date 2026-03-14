@@ -94,11 +94,18 @@ export function useReviewActions({ fileId, projectId }: UseReviewActionsOptions)
 
         // Auto-advance to next Pending finding
         // useFocusManagement().autoAdvance handles rAF internally (Guardrail #32)
-        autoAdvance(
+        const nextPendingId = autoAdvance(
           [...updatedState.findingsMap.keys()],
           new Map([...updatedState.findingsMap.entries()].map(([k, v]) => [k, v.status])),
           findingId,
         )
+
+        // CR-R2-L1: Sync activeFindingId to next pending via store selectedId.
+        // autoAdvance only moves DOM focus — FindingList's 4.1c effect syncs
+        // selectedId → activeFindingId so hotkeys target the correct finding.
+        if (nextPendingId) {
+          updatedState.setSelectedFinding(nextPendingId)
+        }
       } catch {
         // M4 fix: fresh state for rollback on unexpected error
         const currentState = useReviewStore.getState()
