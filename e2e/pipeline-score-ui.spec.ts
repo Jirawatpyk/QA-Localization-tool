@@ -34,6 +34,7 @@ import {
   queryFileByName,
   queryScore,
 } from './helpers/pipeline-admin'
+import { gotoReviewPageWithRetry } from './helpers/review-page'
 import {
   signupOrLogin,
   getUserInfo,
@@ -48,20 +49,6 @@ const TEST_EMAIL = `e2e-pipeline-score-${Date.now()}@test.local`
 let projectId: string
 let tenantId: string
 let fileId: string
-
-// ── Page-Ready Guard ──────────────────────────────────────────────────────────
-
-async function waitForReviewPageReady(page: import('@playwright/test').Page) {
-  const heading = page.locator('h1')
-  await expect(heading).toBeVisible({ timeout: 30_000 })
-
-  const errorText = page.locator('.text-destructive')
-  const errorCount = await errorText.count()
-  if (errorCount > 0) {
-    const msg = await errorText.first().textContent()
-    throw new Error(`Review page SSR error: "${msg}"`)
-  }
-}
 
 test.describe.serial('Pipeline Score UI — Epic 3 P0-11 (R3-019)', () => {
   // TODO(TD-E2E-008): Skip when no Inngest dev server — pipeline needs event orchestration
@@ -140,9 +127,8 @@ test.describe.serial('Pipeline Score UI — Epic 3 P0-11 (R3-019)', () => {
     // Wait for auth session to fully establish before SSR navigation
     await page.waitForURL('**/dashboard', { timeout: 15_000 })
 
-    // Navigate to review page
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
-    await waitForReviewPageReady(page)
+    // Navigate to review page (with retry for transient SSR errors)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     // Assert: ScoreBadge is visible
     const scoreBadge = page.getByTestId('score-badge')

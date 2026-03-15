@@ -17,7 +17,7 @@
 import { test, expect } from '@playwright/test'
 
 import { cleanupTestProject } from './helpers/pipeline-admin'
-import { waitForFindingsVisible } from './helpers/review-page'
+import { gotoReviewPageWithRetry } from './helpers/review-page'
 import {
   SUPABASE_URL,
   adminHeaders,
@@ -208,10 +208,7 @@ test.describe.serial('Progressive Disclosure — Story 4.1a', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
-
-    // Wait for findings to load
-    await waitForFindingsVisible(page)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     // Severity rowgroups should exist with proper aria-labels
     const criticalGroup = page.locator('[role="rowgroup"][aria-label="Critical findings"]')
@@ -235,9 +232,7 @@ test.describe.serial('Progressive Disclosure — Story 4.1a', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
-
-    await waitForFindingsVisible(page)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     // Critical finding row should have aria-expanded="true"
     const criticalGroup = page.locator('[role="rowgroup"][aria-label="Critical findings"]')
@@ -253,15 +248,7 @@ test.describe.serial('Progressive Disclosure — Story 4.1a', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
-
-    // Wait for finding list (but don't expand accordion yet)
-    const findingList = page.getByTestId('finding-list')
-    await expect(findingList).toBeVisible({ timeout: 15_000 })
-
-    // Wait for store to populate
-    const countSummary = page.getByTestId('finding-count-summary')
-    await expect(countSummary).not.toContainText('Total: 0', { timeout: 15_000 })
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     // Minor accordion header should show "Minor (3)" — 3 seeded minor findings
     const minorAccordion = page.getByText(/Minor \(3\)/i)
@@ -283,13 +270,7 @@ test.describe.serial('Progressive Disclosure — Story 4.1a', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
-
-    // Wait for finding list
-    const findingList = page.getByTestId('finding-list')
-    await expect(findingList).toBeVisible({ timeout: 15_000 })
-    const countSummary = page.getByTestId('finding-count-summary')
-    await expect(countSummary).not.toContainText('Total: 0', { timeout: 15_000 })
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     // Click Minor accordion to expand
     const minorAccordion = page.getByText(/Minor \(\d+\)/i)
@@ -314,9 +295,7 @@ test.describe.serial('Progressive Disclosure — Story 4.1a', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
-
-    await waitForFindingsVisible(page)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     // Major group should have compact rows with severity indicator
     const majorGroup = page.locator('[role="rowgroup"][aria-label="Major findings"]')
@@ -336,9 +315,7 @@ test.describe.serial('Progressive Disclosure — Story 4.1a', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
-
-    await waitForFindingsVisible(page)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     // All SVG icons inside finding rows should have aria-hidden="true"
     const findingRows = page.getByTestId('finding-compact-row')
@@ -358,7 +335,7 @@ test.describe.serial('Progressive Disclosure — Story 4.1a', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     // ReviewProgress component should be visible
     const reviewProgress = page.getByTestId('review-progress')
@@ -384,7 +361,7 @@ test.describe.serial('Progressive Disclosure — Story 4.1a', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     const countSummary = page.getByTestId('finding-count-summary')
     await expect(countSummary).toBeVisible({ timeout: 15_000 })
@@ -398,9 +375,7 @@ test.describe.serial('Progressive Disclosure — Story 4.1a', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
-
-    await waitForFindingsVisible(page)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     // Find a Major row that is NOT expanded
     const majorGroup = page.locator('[role="rowgroup"][aria-label="Major findings"]')

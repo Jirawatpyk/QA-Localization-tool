@@ -18,7 +18,7 @@
 import { test, expect } from '@playwright/test'
 
 import { cleanupTestProject, queryScore } from './helpers/pipeline-admin'
-import { waitForReviewPageReady } from './helpers/review-page'
+import { gotoReviewPageWithRetry } from './helpers/review-page'
 import {
   SUPABASE_URL,
   adminHeaders,
@@ -249,8 +249,8 @@ test.describe.serial('Review to Score — Story 4.0 ATDD', () => {
   test('[P1] TD1: should display review page with score badge visible', async ({ page }) => {
     // TD-E2E-007: Unskipped review-score E2E test (proper red-phase stub)
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageReady(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
+    // hydrated by gotoReviewPageWithRetry above
 
     // Score badge should be visible with MQM score value
     const scoreBadge = page.getByTestId('score-badge')
@@ -272,8 +272,8 @@ test.describe.serial('Review to Score — Story 4.0 ATDD', () => {
   }) => {
     // TD-E2E-007: Full review→accept→score recalculate flow
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageReady(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
+    // hydrated by gotoReviewPageWithRetry above
 
     // Wait for finding list + hotkeys to render
     const findingList = page.getByRole('grid')
@@ -320,8 +320,8 @@ test.describe.serial('Review to Score — Story 4.0 ATDD', () => {
     // Guardrail #25: Color never sole information carrier
     // Guardrail #36: Severity display — icon shape + text + color
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageReady(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
+    // hydrated by gotoReviewPageWithRetry above
 
     // Wait for finding list
     const findingList = page.getByRole('grid')

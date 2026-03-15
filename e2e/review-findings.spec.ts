@@ -14,7 +14,7 @@ import {
   queryFindingsCount,
   queryScore,
 } from './helpers/pipeline-admin'
-import { waitForFindingsVisible } from './helpers/review-page'
+import { gotoReviewPageWithRetry, waitForFindingsVisible } from './helpers/review-page'
 import {
   signupOrLogin,
   getUserInfo,
@@ -137,7 +137,7 @@ test.describe.serial('Review Findings — Story 3.2c', () => {
 
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     // ScoreBadge should be visible with a computed score
     const scoreBadge = page.getByTestId('score-badge')
@@ -164,7 +164,7 @@ test.describe.serial('Review Findings — Story 3.2c', () => {
 
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     if (l2Count > 0) {
       // Wait for findings to load + expand minor accordion if needed
@@ -186,7 +186,7 @@ test.describe.serial('Review Findings — Story 3.2c', () => {
 
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     // Score badge should be visible
     const scoreBadge = page.getByTestId('score-badge')
@@ -207,7 +207,7 @@ test.describe.serial('Review Findings — Story 3.2c', () => {
 
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     // ReviewProgress component should be visible (Story 4.1a dual-track)
     const reviewProgress = page.getByTestId('review-progress')
@@ -231,7 +231,7 @@ test.describe.serial('Review Findings — Story 3.2c', () => {
 
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     if (totalFindings > 0) {
       // Wait for findings to load + expand minor accordion if needed
@@ -257,7 +257,7 @@ test.describe.serial('Review Findings — Story 3.2c', () => {
 
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     // Score badge should contain the actual MQM score from DB
     const scoreBadge = page.getByTestId('score-badge')

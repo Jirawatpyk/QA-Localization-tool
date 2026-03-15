@@ -22,6 +22,7 @@ import { test, expect } from '@playwright/test'
 
 import { SUPABASE_URL, adminHeaders } from './helpers/supabase-admin'
 import { cleanupTestProject, queryScore } from './helpers/pipeline-admin'
+import { gotoReviewPageWithRetry } from './helpers/review-page'
 import {
   signupOrLogin,
   getUserInfo,
@@ -207,7 +208,7 @@ test.describe.serial('Score Lifecycle & Confidence Display — Story 3.5', () =>
 
     // Act: navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
     await waitForReviewPageReady(page)
 
     // Assert: ScoreBadge shows calculating / spinner state
@@ -246,7 +247,7 @@ test.describe.serial('Score Lifecycle & Confidence Display — Story 3.5', () =>
 
     // Act: navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
     await waitForReviewPageReady(page)
 
     // Assert: ScoreBadge shows "AI Screened" state (L1L2 = Economy pipeline complete)
@@ -287,7 +288,7 @@ test.describe.serial('Score Lifecycle & Confidence Display — Story 3.5', () =>
 
     // Act: navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
     await waitForReviewPageReady(page)
 
     // Wait for the review page to fully render with the score badge
@@ -361,7 +362,7 @@ test.describe.serial('Score Lifecycle & Confidence Display — Story 3.5', () =>
 
     // Act: navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
     await waitForReviewPageReady(page)
 
     // Assert: AutoPassRationale card is visible (check positive indicator first)
@@ -437,7 +438,7 @@ test.describe.serial('Score Lifecycle & Confidence Display — Story 3.5', () =>
 
     // Act: navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
     await waitForReviewPageReady(page)
 
     // Wait for findings list to render

@@ -37,6 +37,7 @@ import {
   queryFileByName,
   queryScore,
 } from './helpers/pipeline-admin'
+import { gotoReviewPageWithRetry } from './helpers/review-page'
 import {
   SUPABASE_URL,
   adminHeaders,
@@ -133,18 +134,6 @@ async function pollFileTerminalThorough(fId: string, timeoutMs: number = 120_000
     await new Promise((r) => setTimeout(r, interval))
   }
   throw new Error(`pollFileTerminalThorough timed out after ${timeoutMs}ms`)
-}
-
-async function waitForReviewPageReady(page: import('@playwright/test').Page) {
-  const heading = page.locator('h1')
-  await expect(heading).toBeVisible({ timeout: 30_000 })
-
-  const errorText = page.locator('.text-destructive')
-  const errorCount = await errorText.count()
-  if (errorCount > 0) {
-    const msg = await errorText.first().textContent()
-    throw new Error(`Review page SSR error: "${msg}"`)
-  }
 }
 
 // ── Test Suite ────────────────────────────────────────────────────────────────
@@ -247,9 +236,8 @@ test.describe.serial('L3 Resilience + Partial Score UI (P1-15, R3-011)', () => {
       await page.waitForURL('**/dashboard', { timeout: 15_000 })
     }
 
-    // Navigate to review page
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
-    await waitForReviewPageReady(page)
+    // Navigate to review page (with retry for transient SSR errors)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     const scoreBadge = page.getByTestId('score-badge')
     await expect(scoreBadge).toBeVisible({ timeout: 30_000 })
@@ -271,8 +259,7 @@ test.describe.serial('L3 Resilience + Partial Score UI (P1-15, R3-011)', () => {
 
     await signupOrLogin(page, TEST_EMAIL)
     await page.waitForURL('**/dashboard', { timeout: 15_000 })
-    await page.goto(`/projects/${projectId}/review/${partialFileId}`)
-    await waitForReviewPageReady(page)
+    await gotoReviewPageWithRetry(page, projectId, partialFileId)
 
     // Assert: ScoreBadge shows partial state
     const scoreBadge = page.getByTestId('score-badge')

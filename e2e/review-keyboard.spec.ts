@@ -21,7 +21,7 @@
 import { test, expect } from '@playwright/test'
 
 import { cleanupTestProject, queryScore } from './helpers/pipeline-admin'
-import { gotoReviewPageWithRetry, waitForReviewPageReady } from './helpers/review-page'
+import { gotoReviewPageWithRetry } from './helpers/review-page'
 import {
   SUPABASE_URL,
   adminHeaders,
@@ -243,8 +243,7 @@ test.describe.serial('Review Keyboard & Focus — Story 4.0 ATDD', () => {
   }) => {
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageReady(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     // Wait for finding list to render
     const findingList = page.getByRole('grid')
@@ -339,17 +338,17 @@ test.describe.serial('Review Keyboard & Focus — Story 4.0 ATDD', () => {
       timeout: 15_000,
     })
 
-    // 3. Navigate to second finding with J — small delay for rAF focus
+    // 3. Navigate to second finding with J
+    // CI headless: rAF focus delay — wait for tabindex + focused with timeout
     await page.keyboard.press('j')
-    await page.waitForTimeout(200)
     const secondRow = rows.nth(1)
     await expect(secondRow).toHaveAttribute('tabindex', '0', { timeout: 10_000 })
-    await expect(secondRow).toBeFocused()
-    // First row should lose active tabindex
+    await expect(secondRow).toBeFocused({ timeout: 5_000 })
     await expect(firstRow).toHaveAttribute('tabindex', '-1')
 
     // 4. Navigate back up with K
     await page.keyboard.press('k')
+    await expect(firstRow).toHaveAttribute('tabindex', '0', { timeout: 10_000 })
     await expect(firstRow).toBeFocused({ timeout: 5_000 })
 
     // 5. Press Enter to INLINE expand (NOT Sheet open — Story 4.1b AC2)
