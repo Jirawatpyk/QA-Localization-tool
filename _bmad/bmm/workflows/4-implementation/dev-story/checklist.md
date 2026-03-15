@@ -55,15 +55,6 @@ validation-rules:
 - [ ] **Review Follow-ups:** All review follow-up tasks (marked [AI-Review]) completed and corresponding review items marked resolved (if applicable)
 - [ ] **Story Structure Compliance:** Only permitted sections of story file were modified
 
-## 🛡️ Pre-CR Quality Scan
-
-- [ ] **Anti-Pattern Scan:** anti-pattern-detector sub-agent ran on all changed files — no CRITICAL/HIGH findings remain
-- [ ] **Tenant Isolation Scan:** tenant-isolation-checker sub-agent ran on all changed files — no CRITICAL/HIGH findings remain
-- [ ] **RLS Policy Scan (conditional):** If schema/migration files changed → rls-policy-reviewer ran, no CRITICAL/HIGH findings remain
-- [ ] **Inngest Validation (conditional):** If pipeline/Inngest files changed → inngest-function-validator ran, no CRITICAL/HIGH findings remain
-- [ ] **Scan Findings Resolved:** All critical and high severity findings fixed, re-scanned, and verified clean
-- [ ] **Quality Gates Re-passed:** Lint + type-check + full test suite passed after scan fixes (if any)
-
 ## 🔚 Final Status Verification
 
 - [ ] **Story Status Updated:** Story Status set to "review"
