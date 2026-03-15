@@ -166,25 +166,6 @@ test.describe.serial('Undo/Redo & Conflict Resolution — Story 4.4b ATDD', () =
     await rows.first().click()
     await page.waitForTimeout(500)
 
-    // Debug: check if ctrl+z handler is registered
-    const hasCtrlZ = await page.evaluate(() => {
-      // Fire test keydown and check if it was handled
-      let handled = false
-      const testHandler = (e: KeyboardEvent) => {
-        if (e.ctrlKey && e.key === 'z') handled = true
-      }
-      document.addEventListener('keydown', testHandler, { capture: true })
-      const event = new KeyboardEvent('keydown', {
-        key: 'z',
-        code: 'KeyZ',
-        ctrlKey: true,
-        bubbles: true,
-        cancelable: true,
-      })
-      document.dispatchEvent(event)
-      document.removeEventListener('keydown', testHandler, { capture: true })
-      return handled
-    })
     // Undo via Ctrl+Z — use keyboard.down/up pattern for Windows compatibility
     await page.keyboard.down('Control')
     await page.keyboard.press('z')

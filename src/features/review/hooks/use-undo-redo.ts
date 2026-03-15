@@ -57,6 +57,17 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
           return
         }
 
+        // CR-R2-C1: Update store with restored severity (don't wait for Realtime)
+        const updatedFinding = store.findingsMap.get(entry.findingId)
+        if (updatedFinding && entry.previousSeverity) {
+          store.setFinding(entry.findingId, {
+            ...updatedFinding,
+            severity: entry.previousSeverity.severity,
+            originalSeverity: entry.previousSeverity.originalSeverity,
+            updatedAt: result.data.serverUpdatedAt,
+          })
+        }
+
         store.pushRedo(entry)
         toast.success(`Undone: ${entry.description}`)
         announce(`Undone: ${entry.description}`)
@@ -132,10 +143,12 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
           entry.staleFindings.has(fId),
         )
         if (staleInBulk.length > 0 && staleInBulk.length === entry.previousStates.size) {
-          // All findings are stale — show conflict for the first one
-          const firstStale = staleInBulk[0]!
-          const finding = store.findingsMap.get(firstStale)
-          onConflict(entry, firstStale, finding?.status ?? 'unknown')
+          // CR-R2-M1: All findings stale in bulk — show warning toast instead of ConflictDialog
+          // (ConflictDialog's forceUndo only handles single entries, not bulk)
+          toast.warning(
+            `All ${entry.previousStates.size} findings were modified by another user — undo cancelled`,
+          )
+          announce('Undo cancelled: all findings were modified by another user')
           return
         }
 
@@ -301,6 +314,16 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
           toast.error(`Redo failed: ${result.error}`)
           return
         }
+        // CR-R2-C1: Update store with re-applied severity (don't wait for Realtime)
+        const updatedFinding = store.findingsMap.get(entry.findingId)
+        if (updatedFinding) {
+          store.setFinding(entry.findingId, {
+            ...updatedFinding,
+            severity: entry.newSeverity,
+            originalSeverity: updatedFinding.originalSeverity ?? updatedFinding.severity,
+            updatedAt: result.data.serverUpdatedAt,
+          })
+        }
         store.pushUndo(entry)
         toast.success(`Redone: ${entry.description}`)
         announce(`Redone: ${entry.description}`)
@@ -377,14 +400,22 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
 
         // CR-H2: Filter undo entry for partial conflicts (mirror of undo-bulk pattern)
         if (result.data.conflicted.length > 0) {
-          const revertedSet = new Set(result.data.reverted)
-          store.pushUndo({
-            ...entry,
-            previousStates: new Map([...entry.previousStates].filter(([k]) => revertedSet.has(k))),
-            newStates: new Map([...entry.newStates].filter(([k]) => revertedSet.has(k))),
-          })
+          // CR-R2: Don't push empty undo entry when ALL findings conflicted (mirror of H3 fix)
+          if (result.data.reverted.length > 0) {
+            const revertedSet = new Set(result.data.reverted)
+            store.pushUndo({
+              ...entry,
+              previousStates: new Map(
+                [...entry.previousStates].filter(([k]) => revertedSet.has(k)),
+              ),
+              newStates: new Map([...entry.newStates].filter(([k]) => revertedSet.has(k))),
+            })
+          }
+          const total = result.data.reverted.length + result.data.conflicted.length
           toast.warning(
-            `Partially redone: ${result.data.reverted.length}/${findingInputs.length} findings (${result.data.conflicted.length} conflicts)`,
+            result.data.reverted.length > 0
+              ? `Partially redone: ${result.data.reverted.length}/${total} findings (${result.data.conflicted.length} conflicts)`
+              : `All ${total} findings were modified — redo cancelled`,
           )
         } else {
           store.pushUndo(entry)

@@ -74,7 +74,7 @@ const FULL_SNAPSHOT = {
   originalSeverity: null,
   category: 'accuracy',
   description: 'Mistranslation in segment',
-  detectedByLayer: 'L2',
+  detectedByLayer: 'L2' as const,
   aiModel: 'gpt-4o-mini',
   aiConfidence: 0.87,
   suggestedFix: null,

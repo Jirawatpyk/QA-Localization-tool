@@ -62,6 +62,7 @@ export async function waitForReviewPageHydrated(page: Page) {
 /**
  * Navigate to review page with retry — handles transient cloud Supabase SSR errors.
  * Retries up to 3 times with 3s delay between attempts.
+ * Uses full hydration wait (findings visible + keyboard ready).
  */
 export async function gotoReviewPageWithRetry(page: Page, projectId: string, fileId: string) {
   const url = `/projects/${projectId}/review/${fileId}`
@@ -69,6 +70,25 @@ export async function gotoReviewPageWithRetry(page: Page, projectId: string, fil
     await page.goto(url)
     try {
       await waitForReviewPageHydrated(page)
+      return
+    } catch {
+      if (attempt === 2) throw new Error(`Review page failed to load after 3 attempts: ${url}`)
+      await page.waitForTimeout(3_000)
+    }
+  }
+}
+
+/**
+ * Navigate to review page with retry — lightweight version.
+ * Only waits for page ready (heading visible, no SSR error).
+ * Use for tests that seed files WITHOUT findings (e.g., score-lifecycle calculating state).
+ */
+export async function gotoReviewPageReadyWithRetry(page: Page, projectId: string, fileId: string) {
+  const url = `/projects/${projectId}/review/${fileId}`
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await page.goto(url)
+    try {
+      await waitForReviewPageReady(page)
       return
     } catch {
       if (attempt === 2) throw new Error(`Review page failed to load after 3 attempts: ${url}`)

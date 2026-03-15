@@ -1,9 +1,10 @@
 import { z } from 'zod'
 
-import { FINDING_SEVERITIES, FINDING_STATUSES } from '@/types/finding'
+import { DETECTED_BY_LAYERS, FINDING_SEVERITIES, FINDING_STATUSES } from '@/types/finding'
 
 const findingStatusEnum = z.enum(FINDING_STATUSES)
 const findingSeverityEnum = z.enum(FINDING_SEVERITIES)
+const detectedByLayerEnum = z.enum(DETECTED_BY_LAYERS)
 
 // ── Single Undo (status revert) ──
 
@@ -76,7 +77,7 @@ export const undoDeleteFindingSchema = z.object({
     originalSeverity: findingSeverityEnum.nullable(),
     category: z.string(),
     description: z.string(),
-    detectedByLayer: z.string(),
+    detectedByLayer: detectedByLayerEnum,
     aiModel: z.string().nullable(),
     aiConfidence: z.number().nullable(),
     suggestedFix: z.string().nullable(),
