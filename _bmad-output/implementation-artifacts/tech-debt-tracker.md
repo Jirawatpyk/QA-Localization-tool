@@ -633,3 +633,14 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **File:** `src/features/review/components/ReviewPageClient.tsx` — `handleActiveFindingChange` + `detailFindingId` derivation
 - **Description:** On desktop (>=1440px), `handleActiveFindingChange` syncs `selectedId` via `setSelectedFinding(id)`. On laptop/mobile, it does NOT sync (Sheet would open and block finding list). If user is on desktop with finding X active, then resizes browser to laptop viewport: `detailFindingId` switches from `activeFindingState` to `selectedId`. Since `selectedId` was set on desktop, it still holds the correct value. However, if `activeFindingState` and `selectedId` diverge (e.g., user navigates findings after resize), the detail panel shows stale finding. Edge case: users don't resize dev tools in production. Fix: add `useEffect` that syncs `selectedId` from `activeFindingState` when `isDesktop` transitions from `true` to `false`.
 - **Status:** DEFERRED → Epic 5 (responsive polish)
+
+### TD-DATA-001: `reviewerIsNative` hardcoded to `false` in feedback_events inserts
+- **Date:** 2026-03-15
+- **Story:** Story 4.4b (also present since Story 4.2 in rejectFinding.action.ts)
+- **Phase:** impl
+- **Severity:** Low
+- **Files:** `src/features/review/actions/rejectFinding.action.ts:88`, `src/features/review/actions/undoAction.action.ts:102`, `src/features/review/actions/undoBulkAction.action.ts:176`, `src/features/review/actions/addFinding.action.ts:194`
+- **Description:** `reviewerIsNative: false` is hardcoded in all `feedback_events` INSERT paths. Should be derived from user profile (native language pair setting). Affects AI training data quality — all feedback is tagged as non-native reviewer regardless of actual language pair proficiency.
+- **Mitigation:** Low impact until AI learning pipeline (Epic 9) consumes this field. All rows have consistent `false` value — no data inconsistency.
+- **Fix:** Wire from user profile `reviewer_is_native` field once Story 5.2 (Non-native auto-tag) implements the user language proficiency model.
+- **Status:** DEFERRED → **Story 5.2 — Non-native auto-tag, native reviewer access**
