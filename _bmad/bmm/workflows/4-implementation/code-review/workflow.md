@@ -103,55 +103,26 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
   <critical>R2+ ROUNDS: You MUST re-execute this ENTIRE Step 3 (sub-agents + manual review + AC validation) on EVERY round — NOT just verify R1 fixes. Fixes may introduce regressions in untouched code, and fresh review catches issues R1 missed. "Verify fixes only" is a forbidden shortcut.</critical>
 
   <!-- Automated Sub-agent Scans — run FIRST to enrich manual review -->
-  <action>Launch FOUR sub-agents IN PARALLEL using the Task tool to scan all files in the comprehensive review list:
-    1. code-quality-analyzer (subagent_type="code-quality-analyzer") — code quality, patterns, maintainability (single-file focus)
-    2. testing-qa-expert (subagent_type="testing-qa-expert") — test coverage gaps, missing test scenarios, test quality
+  <action>Launch FOUR sub-agents IN PARALLEL on all files in comprehensive review list:
+    1. code-quality-analyzer — code quality, patterns, maintainability (single-file)
+    2. testing-qa-expert — test coverage gaps, missing test scenarios
     3. feature-dev:code-reviewer (subagent_type="feature-dev:code-reviewer") — CROSS-FILE Data Flow Reviewer (Guardrail #44).
-         Scope: ONLY state/data that crosses file boundaries (single-file quality = agent #1).
-
-         METHOD (2-phase, mandatory):
-
-         Phase 1 — DISCOVERY (mandatory output):
-           List ALL cross-file pairs from changed files as:
-           [Producer file] → [Consumer file]: [what flows] (state/callback/type/event)
-           If 0 pairs found, explicitly state "No cross-file data flows detected" and terminate.
-           Do NOT skip to findings.
-
-         Phase 2 — VERIFICATION per pair (Guardrail #44 checklist):
-           (a) Contract match — does the consumer receive data in the exact shape/type/order
-               the producer sends?
-               (e.g., array order mismatch, missing fields, type narrowing lost,
-               column rename not propagated)
-           (b) Lifecycle completeness — is data created, consumed, AND cleaned up correctly
-               across both files?
-               (e.g., temporary state not cleared, subscription not unsubscribed,
-               intermediate value leaks to next caller)
-           (c) Staleness — can the consumer read outdated data from the producer?
-               (e.g., stale closure, cached ref, revalidation overwrites local state,
-               Inngest step reads pre-mutation snapshot)
-           (d) Timing — can producer write and consumer read race?
-               (e.g., async gap between update and read, parallel Inngest steps
-               assuming serial, optimistic update vs server confirm)
-           (e) Error/edge states — what happens when the producer is in a non-happy-path state?
-               (e.g., loading, error, empty, null, partial failure,
-               0 items, concurrent mutation by another user)
-
-         RISK FILTER:
-           P0 — data corruption, wrong output, silent data loss
-           P1 — race condition, stale state, unhandled error propagation
-           Skip P2+ (cosmetic, theoretical, performance-only).
-
-         OUTPUT FORMAT (mandatory):
-           1. Cross-file pair list (Phase 1 output)
-           2. Findings per pair with severity + evidence (file:line)
-
-         DO NOT report (agent #1's job): type widening, bare string types, mock drift,
-         naming conventions, missing tests, single-file code smells, unused imports, perf within one file.
-    4. bmad-review-edge-case-hunter (skill="bmad-review-edge-case-hunter") — boundary conditions: walk every branching path in changed files, report ONLY unhandled edge cases (missing else/default, null/empty guards, off-by-one, race conditions, timeout gaps). Orthogonal to agents #1-#3 — method-driven path enumeration, not attitude-driven review
+       Scope: ONLY state/data that crosses file boundaries (single-file = agent #1).
+       Phase 1 — DISCOVERY (mandatory): List ALL cross-file pairs as [Producer] → [Consumer]: [what flows].
+         If 0 pairs found → state "No cross-file data flows detected" and terminate. Do NOT skip to findings.
+       Phase 2 — VERIFICATION per pair:
+         (a) Contract match — data shape/type/order correct across boundary?
+         (b) Lifecycle completeness — created, consumed, AND cleaned up across both files?
+         (c) Staleness — consumer can read outdated data from producer?
+         (d) Timing/race — producer write and consumer read can race?
+         (e) Error/edge states — producer in non-happy-path state?
+       RISK FILTER: P0 (data corruption, wrong output, silent data loss) + P1 (race, stale state, unhandled error propagation). Skip P2+.
+       OUTPUT: 1) Cross-file pair list 2) Findings per pair with severity + evidence (file:line).
+       DO NOT report single-file issues (= agent #1's job)
+    4. bmad-review-edge-case-hunter — boundary conditions: walk every branching path,
+       report ONLY unhandled edge cases. Method-driven, not attitude-driven.
   </action>
-  <action>Collect findings from all four sub-agents and incorporate them into the review below.
-    Sub-agent findings count toward issue discovery.
-    Note: Objective scans (rls-policy-reviewer, inngest-function-validator) already ran in Dev Story Pre-CR scan — check Dev Agent Record for results.</action>
+  <action>Collect findings from all four sub-agents and incorporate into review below.</action>
 
   <!-- Git vs Story Discrepancies -->
   <action>Review git vs story File List discrepancies:

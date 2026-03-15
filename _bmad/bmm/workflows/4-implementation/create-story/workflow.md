@@ -351,7 +351,45 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
   context engine analysis completed - comprehensive developer guide created"</action>
 </step>
 
-<step n="6" goal="Update sprint status and finalize">
+<step n="6" goal="Codebase verification — cross-check story against actual code">
+  <critical>🔍 CODEBASE TRUTH CHECK — Every claim in the story must match reality!</critical>
+
+  <!-- Extract targets from story -->
+  <action>From the story file, extract:
+    - ALL DB table names referenced (e.g., findings, review_actions, feedback_events)
+    - ALL type/interface names defined (e.g., FindingSnapshot, UndoEntry)
+    - ALL files listed in "Files to modify" and "Existing Code to Extend"
+    - ALL column/field names used in type definitions or server action schemas
+    - ALL function signatures assumed (return types, parameters)
+  </action>
+
+  <!-- Read actual source files -->
+  <action>For each DB table referenced: read `src/db/schema/{table}.ts` and extract actual column names + types</action>
+  <action>For each file listed in "Files to modify": read the actual file header (imports, exports, function signatures)</action>
+  <action>For each type defined in story: cross-check every field name against actual schema columns</action>
+
+  <!-- Verify claims -->
+  <action>Produce a verification report:
+    For each claim in the story, mark as:
+    - ✓ VERIFIED — matches actual code
+    - ✗ MISMATCH — story says X, code says Y → FIX in story
+    - ⚠ MISSING — story assumes something that doesn't exist yet → note as "needs migration" or "needs creation"
+  </action>
+
+  <!-- Fix mismatches -->
+  <action>For each MISMATCH: edit the story file to match actual code (column names, types, return values)</action>
+  <action>For each internal contradiction (scope table vs tasks, AC vs tasks): resolve and make consistent</action>
+
+  <!-- Verify internal consistency -->
+  <action>Check: every feature in scope table has matching AC + matching Task</action>
+  <action>Check: every function assumed to return a value actually does (void functions flagged)</action>
+  <action>Check: every type field name matches exactly (no shorthand aliases like "suggestion" for "suggestedFix")</action>
+
+  <action>Save corrected story file</action>
+  <output>Codebase verification complete: {{verified_count}} verified, {{fixed_count}} mismatches fixed, {{missing_count}} items need creation</output>
+</step>
+
+<step n="7" goal="Update sprint status and finalize">
   <action>Validate the newly created story file {story_file} against {installed_path}/checklist.md and apply any required fixes before finalizing</action>
   <action>Save story document unconditionally</action>
 
@@ -367,7 +405,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
   </check>
 
   <action>Report completion</action>
-  <output>**🎯 ULTIMATE BMad Method STORY CONTEXT CREATED, {user_name}!**
+  <output>**🎯 STORY CONTEXT CREATED, {user_name}!**
 
     **Story Details:**
     - Story ID: {{story_id}}

@@ -197,10 +197,6 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
         **Required:** `_bmad-output/test-artifacts/atdd-checklist-{{story_id}}.md`
 
-        The ATDD workflow (Test Architect Murat) must be run BEFORE implementation to generate:
-        - Failing acceptance tests (TDD red phase) with `it.skip()` stubs
-        - AC-to-test scenario mapping with P0/P1/P2/P3 priorities
-
         **Action Required:**
         1. Run TEA ATDD workflow: `/bmad:tea:testarch-atdd`
         2. Then re-run `dev-story` to start implementation
@@ -209,36 +205,14 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
     </check>
 
     <check if="ATDD checklist file EXISTS">
-      <action>Read ATDD checklist file and extract from "AC-to-Test Scenario Mapping" tables:
-        - For each test row: test ID (e.g., "1.1"), scenario description, level, and Priority column (P0/P1/P2/P3)
-        - Count totals: {{atdd_p0_count}}, {{atdd_p1_count}}, {{atdd_p2_count}}, {{atdd_p3_count}}, {{atdd_total_count}}
-        - AC coverage: which ACs have at least one P0 or P1 test
-        - Generated test file paths from "Generated Test Files" section
-        - Key risks from "Failure Mode Analysis" and "Pre-mortem Analysis" sections
-      </action>
-      <action>Store extracted data for use in Step 5 (RED phase) and Step 10 (compliance gate)</action>
+      <action>Read ATDD checklist and extract: test IDs, priorities (P0/P1/P2/P3), AC coverage, generated test file paths, key risks from Failure Mode Analysis</action>
       <action>Verify ALL story ACs have at least one P0 or P1 test mapped</action>
-
-      <check if="any AC has ZERO tests mapped">
-        <output>⚠️ **ATDD COVERAGE GAP** — AC(s) without test coverage detected.
-          This may indicate an incomplete ATDD run. Consider re-running ATDD or proceeding with awareness.
-        </output>
-      </check>
-
-      <!-- Verify ATDD test stubs still compile after any schema/type changes since ATDD generation -->
-      <action>Run the test suite on ATDD-generated test files to verify they compile without errors.
-        Stubs with `it.skip()` will be skipped (0 fail expected). Already-activated tests should pass.
-        The goal is to catch import/type errors from schema changes since ATDD was generated.</action>
+      <action>Run test suite on ATDD-generated test files to verify they compile without errors</action>
       <check if="ATDD test files have compilation errors">
-        <output>⚠️ **ATDD STUBS OUTDATED** — Some ATDD test files have compilation errors.
-          Fix the import/type errors in ATDD stubs before proceeding.</output>
         <action>Fix compilation errors in ATDD test stubs (update imports/types only, do NOT change test logic)</action>
       </check>
-
       <output>✅ **Context + ATDD Loaded**
-        Story and project context available for implementation.
         ATDD checklist: {{atdd_total_count}} tests ({{atdd_p0_count}} P0, {{atdd_p1_count}} P1)
-        Test files: {{atdd_test_files_count}} files with `it.skip()` stubs ready for green phase.
       </output>
     </check>
 
@@ -326,64 +300,37 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
     <action>Review the current task/subtask from the story file - this is your authoritative implementation guide</action>
 
-    <!-- LEVEL 1: Mandatory Query Plan — output BEFORE coding any task that touches DB/actions/helpers -->
-    <action>Classify the current task: does it create or modify files in src/db/*, src/features/*/actions/*, or src/features/*/helpers/*?</action>
-    <check if="task touches DB, actions, or helpers">
-      <critical>MANDATORY: Output a Query Plan BEFORE writing any code for this task</critical>
-      <action>Output the following Query Plan to Dev Agent Record → Implementation Plan:
-        ```
-        ## Query Plan — Task N.N: {task title}
-        | # | Query location (file:function) | Operation | withTenant? | Why / Why not |
-        |---|-------------------------------|-----------|-------------|---------------|
-        | 1 | {file}:{fn}                   | SELECT/INSERT/UPDATE/DELETE | ✓ / ✗ | {reason} |
-
-        DELETE+INSERT pairs needing transaction: {list or "none"}
-        Schema columns needed for test mocks: {list}
-        ```
-      </action>
+    <!-- Mandatory Query Plan for DB/action tasks -->
+    <check if="task touches src/db/*, src/features/*/actions/*, or src/features/*/helpers/*">
+      <critical>Output a Query Plan BEFORE writing code: table of queries with withTenant status</critical>
     </check>
-
-    <action>Plan implementation following ATDD-guided red-green-refactor cycle</action>
 
     <!-- ATDD-AWARE RED PHASE -->
-    <action>Check ATDD checklist for tests mapped to the current task's AC(s) using the AC-to-Test Scenario Mapping tables</action>
-    <action>Identify which ATDD `it.skip()` test stubs correspond to this task by matching AC number and test IDs</action>
-    <check if="ATDD test stubs exist for this task AND stubs still contain `it.skip()`">
-      <action>Remove `it.skip()` / `.skip` from the relevant ATDD test stubs — these become the RED phase tests</action>
-      <action>If implementation details differ from ATDD assumptions, adapt stubs with these constraints:
-        - MAY update: mock setup, fixture data, import paths, type annotations
-        - MAY update: assertion values to match actual implementation (e.g., different field names)
-        - MUST PRESERVE: the test scenario intent (what is being tested and why)
-        - MUST PRESERVE: the assertion count (do not reduce number of expect() calls)
-        - MUST NOT: delete an ATDD test entirely — if a scenario is no longer applicable, convert to a different test for the same AC
-      </action>
-      <action>Write ADDITIONAL tests if the task requires coverage beyond what ATDD generated</action>
+    <action>Check ATDD checklist for tests mapped to current task's AC(s)</action>
+    <check if="ATDD test stubs exist with it.skip()">
+      <action>Remove it.skip() — these become RED phase tests. Adapt stubs:
+        MAY update: mock setup, fixture data, import paths
+        MUST PRESERVE: test scenario intent + assertion count
+        MUST NOT: delete an ATDD test entirely</action>
     </check>
-    <check if="ATDD test stubs exist but `it.skip()` already removed (review continuation or previous task activated them)">
-      <action>Skip ATDD activation — stubs were already activated in a previous pass. Proceed with standard TDD for any remaining gaps.</action>
+    <check if="no ATDD stubs for this task">
+      <action>Write FAILING tests first (standard TDD RED phase)</action>
     </check>
-    <check if="no ATDD test stubs for this task">
-      <action>Write FAILING tests first for the task/subtask functionality (standard TDD RED phase)</action>
-    </check>
-    <action>Confirm tests fail before implementation - this validates test correctness</action>
+    <action>Confirm tests fail before implementation</action>
 
     <!-- GREEN PHASE -->
-    <action>Implement MINIMAL code to make tests pass (both ATDD and any additional tests)</action>
+    <action>Implement MINIMAL code to make tests pass</action>
     <action>Run tests to confirm they now pass</action>
-    <action>Handle error conditions and edge cases as specified in task/subtask</action>
 
     <!-- REFACTOR PHASE -->
     <action>Improve code structure while keeping tests green</action>
-    <action>Ensure code follows architecture patterns and coding standards from Dev Notes</action>
 
-    <!-- LEVEL 2: Trigger-based post-task tenant-isolation scan -->
-    <check if="task created or modified files matching src/db/*, src/features/*/actions/*, src/features/*/helpers/*">
-      <action>Launch tenant-isolation-checker (subagent_type="tenant-isolation-checker") on ONLY the files changed in this task</action>
-      <action>If CRITICAL or HIGH findings: fix immediately — do NOT proceed to next task</action>
-      <action>Record scan result in Dev Agent Record: "Post-task scan (Task N.N): tenant-isolation ✅ / ✗ {details}"</action>
+    <!-- Post-task tenant scan for DB/action files -->
+    <check if="task modified src/db/*, src/features/*/actions/*, or src/features/*/helpers/*">
+      <action>Launch tenant-isolation-checker on changed files. Fix CRITICAL/HIGH immediately.</action>
     </check>
 
-    <action>Document technical approach and decisions in Dev Agent Record → Implementation Plan</action>
+    <action>Document technical approach and decisions in Dev Agent Record</action>
 
     <action if="new dependencies required beyond story specifications">HALT: "Additional dependencies need user approval"</action>
     <action if="3 consecutive implementation failures occur">HALT and request guidance</action>
@@ -397,15 +344,9 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
   </step>
 
   <step n="6" goal="Verify test coverage and author supplementary tests">
-    <action>Review ATDD checklist coverage for the current task — which P0/P1/P2 tests were activated in Step 5?</action>
-    <action>Identify gaps: are there edge cases, error paths, or integration scenarios NOT covered by ATDD stubs?</action>
-    <action>Write SUPPLEMENTARY tests ONLY for gaps not already covered by activated ATDD tests:
-      - Unit tests for business logic edge cases beyond ATDD scenarios
-      - Integration tests for component interactions if ATDD did not generate them
-      - End-to-end tests for critical user flows when story requirements demand them
-      - Error handling scenarios identified in story Dev Notes or ATDD Failure Mode Analysis
-    </action>
-    <action>Do NOT duplicate tests already written via ATDD activation in Step 5</action>
+    <action>Review ATDD checklist — which P0/P1 tests were activated in Step 5?</action>
+    <action>Write SUPPLEMENTARY tests ONLY for gaps not covered by ATDD stubs</action>
+    <action>Do NOT duplicate tests already written via ATDD activation</action>
   </step>
 
   <step n="7" goal="Run validations and tests">
@@ -471,141 +412,46 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
   </step>
 
   <step n="9" goal="Pre-CR quality scan with sub-agents">
-    <critical>Run automated scans BEFORE marking story for review — catch issues the dev agent missed</critical>
-
-    <!-- Launch objective scans in parallel -->
-    <action>Launch FOUR sub-agents IN PARALLEL using the Task tool to scan all files in the story File List:
-      1. anti-pattern-detector (subagent_type="anti-pattern-detector") — scan changed files for CLAUDE.md anti-pattern violations
-      2. tenant-isolation-checker (subagent_type="tenant-isolation-checker") — scan changed files for missing tenant isolation
-      3. code-quality-analyzer (subagent_type="code-quality-analyzer") — scan changed files for code smells, perf issues, data quality, schema mock drift
-      4. feature-dev:code-reviewer (subagent_type="feature-dev:code-reviewer") — CROSS-FILE Data Flow Reviewer (Guardrail #44).
-         Scope: ONLY state/data that crosses file boundaries (single-file quality = code-quality-analyzer).
-
-         METHOD (2-phase, mandatory):
-
-         Phase 1 — DISCOVERY (mandatory output):
-           List ALL cross-file pairs from changed files as:
-           [Producer file] → [Consumer file]: [what flows] (state/callback/type/event)
-           If 0 pairs found, explicitly state "No cross-file data flows detected" and terminate.
-           Do NOT skip to findings.
-
-         Phase 2 — VERIFICATION per pair (Guardrail #44 checklist):
-           (a) Contract match — does the consumer receive data in the exact shape/type/order
-               the producer sends?
-               (e.g., array order mismatch, missing fields, type narrowing lost,
-               column rename not propagated)
-           (b) Lifecycle completeness — is data created, consumed, AND cleaned up correctly
-               across both files?
-               (e.g., temporary state not cleared, subscription not unsubscribed,
-               intermediate value leaks to next caller)
-           (c) Staleness — can the consumer read outdated data from the producer?
-               (e.g., stale closure, cached ref, revalidation overwrites local state,
-               Inngest step reads pre-mutation snapshot)
-           (d) Timing — can producer write and consumer read race?
-               (e.g., async gap between update and read, parallel Inngest steps
-               assuming serial, optimistic update vs server confirm)
-           (e) Error/edge states — what happens when the producer is in a non-happy-path state?
-               (e.g., loading, error, empty, null, partial failure,
-               0 items, concurrent mutation by another user)
-
-         RISK FILTER:
-           P0 — data corruption, wrong output, silent data loss
-           P1 — race condition, stale state, unhandled error propagation
-           Skip P2+ (cosmetic, theoretical, performance-only).
-
-         OUTPUT FORMAT (mandatory):
-           1. Cross-file pair list (Phase 1 output)
-           2. Findings per pair with severity + evidence (file:line)
-
-         DO NOT report (code-quality-analyzer's job): type widening, bare string types, mock drift,
-         naming conventions, missing tests, single-file code smells, unused imports, perf within one file.
+    <critical>Run automated scans BEFORE marking story for review</critical>
+    <action>Launch FOUR sub-agents IN PARALLEL on all files in story File List:
+      1. anti-pattern-detector — CLAUDE.md violations
+      2. tenant-isolation-checker — missing tenant isolation
+      3. code-quality-analyzer — code smells, mock drift (single-file)
+      4. feature-dev:code-reviewer — CROSS-FILE data flow (Guardrail #44):
+         Phase 1: List all cross-file producer→consumer pairs
+         Phase 2: Verify per pair: (a) contract match, (b) lifecycle completeness,
+         (c) staleness, (d) timing/race, (e) error/edge states
+         DO NOT report single-file issues (= agent #3's job)
     </action>
-
-    <!-- Conditional scans — trigger when relevant files changed OR story belongs to DB/pipeline-heavy epic -->
-    <action>Determine if conditional scans should trigger by checking BOTH:
-      1. File List contains relevant paths (primary trigger)
-      2. Story belongs to a DB/pipeline-heavy epic (fallback trigger — prevents missed scans if File List is incomplete)
-    </action>
-
-    <action>RLS scan trigger: Check if File List contains schema/migration files (src/db/schema/*, src/db/migrations/*, supabase/migrations/*),
-      OR if story key starts with epic that involves database changes (e.g., epic-2 File Processing, epic-4 Scoring)</action>
-    <check if="RLS scan trigger is true">
-      <action>ALSO launch: rls-policy-reviewer (subagent_type="rls-policy-reviewer") — audit RLS policies against Drizzle schema</action>
+    <check if="File List contains src/db/schema/* or src/db/migrations/*">
+      <action>ALSO launch: rls-policy-reviewer</action>
     </check>
-
-    <action>Inngest scan trigger: Check if File List contains Inngest/pipeline files (src/features/pipeline/*, src/lib/inngest/*, src/app/api/inngest/*, src/features/scoring/*),
-      OR if story key starts with epic that involves pipeline/orchestration (e.g., epic-3 Pipeline, epic-4 Scoring)</action>
-    <check if="Inngest scan trigger is true">
-      <action>ALSO launch: inngest-function-validator (subagent_type="inngest-function-validator") — validate Inngest function patterns</action>
+    <check if="File List contains src/features/pipeline/* or src/lib/inngest/*">
+      <action>ALSO launch: inngest-function-validator</action>
     </check>
-
-    <action>Collect findings from ALL sub-agents and categorize by severity (CRITICAL / HIGH / MEDIUM / LOW)</action>
-
-    <!-- Fix critical and high findings -->
-    <check if="CRITICAL or HIGH findings exist">
-      <action>Fix ALL critical and high severity findings immediately</action>
-      <action>Re-run lint + type-check + full test suite after fixes</action>
-      <action>Update File List with any newly changed files</action>
-      <action>Add fixed findings to Dev Agent Record → Completion Notes</action>
+    <check if="CRITICAL or HIGH findings">
+      <action>Fix immediately, re-run scans until clean or LOW-only</action>
     </check>
-
-    <!-- Re-scan if fixes were applied -->
-    <check if="fixes were applied">
-      <action>Re-run ALL triggered sub-agents to verify fixes and check for new findings</action>
-      <action>Repeat fix cycle until all scans return clean or LOW-only findings</action>
-    </check>
-
-    <!-- Gate: only proceed when clean -->
-    <check if="all scans return clean or LOW-only findings">
-      <action>Record scan results in Dev Agent Record: "Pre-CR scan: anti-pattern ✅, tenant-isolation ✅, code-quality ✅, cross-file-flow ✅, rls-policy [ran/skipped: reason], inngest-validator [ran/skipped: reason]"</action>
-      <action>Record which conditional scans ran and which were skipped (and why) — so CR reviewer knows nothing was missed</action>
-      <goto step="10">Story completion</goto>
-    </check>
-
-    <action if="unable to fix findings after 3 attempts">HALT: "Pre-CR scan findings could not be resolved — need user guidance"</action>
-
+    <action>Record scan results in Dev Agent Record</action>
+    <goto step="10">Story completion</goto>
   </step>
 
   <step n="10" goal="Story completion and mark for review" tag="sprint-status">
-    <action>Verify ALL tasks and subtasks are marked [x] (re-scan the story document now)</action>
-    <action>Run the full regression suite (do not skip)</action>
+    <action>Verify ALL tasks and subtasks are marked [x]</action>
+    <action>Run the full regression suite</action>
     <action>Confirm File List includes every changed file</action>
 
-    <!-- ATDD Compliance Gate — verify BEFORE setting status to "review" -->
-    <critical>🧪 ATDD COMPLIANCE: All P0+P1 ATDD tests MUST pass before story completion</critical>
-    <action>Re-read the ATDD checklist at _bmad-output/test-artifacts/atdd-checklist-{{story_id}}.md</action>
-    <action>Cross-reference ATDD test coverage using this method:
-      1. From the ATDD checklist "AC-to-Test Scenario Mapping" tables, build a list of all test IDs with their Priority (P0/P1/P2/P3)
-         Example: test ID "1.1" = "getBatchSummary returns correct ActionResult shape" = P0
-      2. For each ATDD-generated test file (listed in "Generated Test Files" section):
-         a. Search the file for remaining `it.skip(` or `test.skip(` — each is an un-activated test
-         b. Match the test description string against the ATDD checklist scenario description
-         c. Determine the priority of each remaining skip by matching to checklist table
-      3. Count results:
-         - {{p0_skip}}: P0 tests still skipped or failing
-         - {{p1_skip}}: P1 tests still skipped or failing
-         - {{p2_skip}}: P2 tests still skipped (acceptable)
-         - {{p0_passing}}: P0 tests active and passing
-         - {{p1_passing}}: P1 tests active and passing
-    </action>
+    <!-- ATDD Compliance Gate -->
+    <critical>All P0+P1 ATDD tests MUST pass before story completion</critical>
+    <action>Cross-reference ATDD checklist: count P0/P1 still skipped or failing</action>
+    <check if="P0 skip > 0"><action>HALT: P0 tests incomplete</action></check>
+    <check if="P1 skip > 0"><action>HALT: P1 tests incomplete</action></check>
 
-    <check if="{{p0_skip}} > 0 (any P0 test still skipped or FAILING)">
-      <action>HALT: "ATDD P0 tests incomplete — {{p0_skip}} P0 tests not passing. Fix before marking story complete."</action>
-    </check>
+    <!-- DoD then status update -->
+    <action>Validate definition-of-done checklist</action>
+    <action>Update the story Status to: "review"</action>
 
-    <check if="{{p1_skip}} > 0 (any P1 test still skipped or FAILING)">
-      <action>HALT: "ATDD P1 tests incomplete — {{p1_skip}} P1 tests not passing. Fix before marking story complete."</action>
-    </check>
-
-    <check if="P2 tests remain as `it.skip()`">
-      <action>Record in Dev Agent Record: "ATDD P2 coverage: {{p2_passing}}/{{p2_total}} passing ({{p2_skip}} skipped — accepted as tech debt)"</action>
-    </check>
-
-    <action>Record in Dev Agent Record → Completion Notes:
-      "ATDD Compliance: P0 {{p0_passing}}/{{atdd_p0_count}} ✅ | P1 {{p1_passing}}/{{atdd_p1_count}} ✅ | P2 {{p2_status}}"
-    </action>
-
-    <!-- Enhanced Definition of Done — validate BEFORE setting status -->
+    <!-- Enhanced Definition of Done Validation -->
     <action>Validate definition-of-done checklist with essential requirements:
       - All tasks/subtasks marked complete with [x]
       - Implementation satisfies every Acceptance Criterion
@@ -619,9 +465,6 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
       - Change Log includes summary of changes
       - Only permitted story sections were modified
     </action>
-
-    <!-- ONLY set status to "review" AFTER all gates pass (ATDD + DoD) -->
-    <action>Update the story Status to: "review"</action>
 
     <!-- Mark story ready for review - sprint status conditional -->
     <check if="{sprint_status} file exists AND {{current_sprint_status}} != 'no-sprint-tracking'">
@@ -654,6 +497,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
   </step>
 
   <step n="11" goal="Completion communication and user support">
+    <action>Execute the enhanced definition-of-done checklist using the validation framework</action>
     <action>Prepare a concise summary in Dev Agent Record → Completion Notes</action>
 
     <action>Communicate to {user_name} that story implementation is complete and ready for review</action>
