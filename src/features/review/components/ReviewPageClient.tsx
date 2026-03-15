@@ -122,6 +122,10 @@ export function ReviewPageClient({
   const [isNoteInputOpen, setIsNoteInputOpen] = useState(false)
   const [isOverrideMenuOpen, setIsOverrideMenuOpen] = useState(false)
   const [isAddFindingDialogOpen, setIsAddFindingDialogOpen] = useState(false)
+  // CR-R1-H2: in-flight guard for override/reset (prevent rapid double-override corruption)
+  const overrideInFlightRef = useRef(false)
+  // CR-R1-H3: capture findingId at NoteInput open time (prevent stale closure)
+  const noteTargetIdRef = useRef<string | null>(null)
 
   // CR-C1: Track active finding via ref (for hotkeys) + state (for action bar re-render)
   const activeFindingIdRef = useRef<string | null>(null)
@@ -155,10 +159,12 @@ export function ReviewPageClient({
   // CR-C1: use ref (synchronous, no re-render dependency) for hotkey dispatch
   const getSelectedId = useCallback(() => activeFindingIdRef.current, [])
   // Story 4.3: Note two-path handler for hotkey
+  // CR-R1-H3: capture findingId at open time so NoteInput submit uses correct target
   const handleNoteHotkey = useCallback(
     (findingId: string) => {
       const result = handleNote(findingId)
       if (result === 'open-note-input') {
+        noteTargetIdRef.current = findingId
         setIsNoteInputOpen(true)
       }
     },
@@ -172,7 +178,11 @@ export function ReviewPageClient({
       flag: handleFlag,
       note: handleNoteHotkey,
       source: handleSourceIssue,
-      override: () => setIsOverrideMenuOpen(true),
+      override: () => {
+        // CR-R1-M2: guard — don't open menu if no finding focused (prevents stale open state)
+        if (!activeFindingIdRef.current) return
+        setIsOverrideMenuOpen(true)
+      },
       add: () => setIsAddFindingDialogOpen(true),
     },
     getSelectedId,
@@ -393,6 +403,24 @@ export function ReviewPageClient({
     ? (findingsForDisplay.find((f) => f.id === detailFindingId) ?? null)
     : null
 
+  // CR-R1-M1: shared delete handler for desktop aside + mobile sheet (DRY)
+  const handleDeleteFinding = useCallback(
+    (findingId: string) => {
+      void deleteFinding({ findingId, fileId, projectId })
+        .then((result) => {
+          if (result.success) {
+            useReviewStore.getState().removeFinding(findingId)
+            setSelectedFinding(null)
+            toast.success('Finding deleted')
+          } else {
+            toast.error(result.error ?? 'Delete failed')
+          }
+        })
+        .catch(() => toast.error('Delete failed'))
+    },
+    [fileId, projectId, setSelectedFinding],
+  )
+
   // Toggle button for mobile drawer (visible when finding selected but sheet closed)
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
   const showToggleButton = !isDesktop && !isLaptop && selectedId !== null && !mobileDrawerOpen
@@ -554,7 +582,10 @@ export function ReviewPageClient({
           onNote={() => {
             if (!activeFindingState) return
             const result = handleNote(activeFindingState)
-            if (result === 'open-note-input') setIsNoteInputOpen(true)
+            if (result === 'open-note-input') {
+              noteTargetIdRef.current = activeFindingState
+              setIsNoteInputOpen(true)
+            }
           }}
           onSource={() => activeFindingState && handleSourceIssue(activeFindingState)}
           onOverride={() => setIsOverrideMenuOpen(true)}
@@ -575,8 +606,10 @@ export function ReviewPageClient({
           open={isNoteInputOpen}
           onSubmit={(noteText) => {
             setIsNoteInputOpen(false)
-            if (!activeFindingState) return
-            void updateNoteText({ findingId: activeFindingState, fileId, projectId, noteText })
+            // CR-R1-H3: use ref-captured findingId from open time, not current activeFindingState
+            const targetId = noteTargetIdRef.current
+            if (!targetId) return
+            void updateNoteText({ findingId: targetId, fileId, projectId, noteText })
               .then((result) => {
                 if (result.success) toast.success('Note saved')
                 else toast.error(result.error ?? 'Failed to save note')
@@ -595,7 +628,7 @@ export function ReviewPageClient({
             onOpenChange={setIsOverrideMenuOpen}
             onOverride={(newSeverity) => {
               setIsOverrideMenuOpen(false)
-              if (!activeFindingState) return
+              if (!activeFindingState || overrideInFlightRef.current) return
               // Optimistic store update
               const store = useReviewStore.getState()
               const f = store.findingsMap.get(activeFindingState)
@@ -607,6 +640,7 @@ export function ReviewPageClient({
                   updatedAt: new Date().toISOString(),
                 })
               }
+              overrideInFlightRef.current = true
               void overrideSeverity({
                 findingId: activeFindingState,
                 fileId,
@@ -615,28 +649,37 @@ export function ReviewPageClient({
               })
                 .then((result) => {
                   if (result.success) {
+                    // CR-R1-H4: sync server timestamp to prevent Realtime merge guard rejection
+                    const curr = useReviewStore.getState().findingsMap.get(activeFindingState)
+                    if (curr) {
+                      useReviewStore.getState().setFinding(activeFindingState, {
+                        ...curr,
+                        updatedAt: result.data.serverUpdatedAt,
+                      })
+                    }
                     toast.success(`Severity overridden to ${newSeverity}`)
                   } else {
                     // Rollback optimistic update
                     if (f) {
                       const curr = useReviewStore.getState().findingsMap.get(activeFindingState)
                       if (curr)
-                        useReviewStore
-                          .getState()
-                          .setFinding(activeFindingState, {
-                            ...curr,
-                            severity: f.severity,
-                            originalSeverity: f.originalSeverity,
-                          })
+                        useReviewStore.getState().setFinding(activeFindingState, {
+                          ...curr,
+                          severity: f.severity,
+                          originalSeverity: f.originalSeverity,
+                        })
                     }
                     toast.error(result.error ?? 'Override failed')
                   }
                 })
                 .catch(() => toast.error('Override failed'))
+                .finally(() => {
+                  overrideInFlightRef.current = false
+                })
             }}
             onReset={() => {
               setIsOverrideMenuOpen(false)
-              if (!activeFindingState || !activeFinding) return
+              if (!activeFindingState || !activeFinding || overrideInFlightRef.current) return
               const orig = activeFinding.originalSeverity
               if (!orig) return
               // Optimistic store update for reset
@@ -650,6 +693,7 @@ export function ReviewPageClient({
                   updatedAt: new Date().toISOString(),
                 })
               }
+              overrideInFlightRef.current = true
               void overrideSeverity({
                 findingId: activeFindingState,
                 fileId,
@@ -658,24 +702,33 @@ export function ReviewPageClient({
               })
                 .then((result) => {
                   if (result.success) {
+                    // CR-R1-H4: sync server timestamp
+                    const curr = useReviewStore.getState().findingsMap.get(activeFindingState)
+                    if (curr) {
+                      useReviewStore.getState().setFinding(activeFindingState, {
+                        ...curr,
+                        updatedAt: result.data.serverUpdatedAt,
+                      })
+                    }
                     toast.success('Severity reset to original')
                   } else {
                     // Rollback
                     if (f) {
                       const curr = useReviewStore.getState().findingsMap.get(activeFindingState)
                       if (curr)
-                        useReviewStore
-                          .getState()
-                          .setFinding(activeFindingState, {
-                            ...curr,
-                            severity: f.severity,
-                            originalSeverity: f.originalSeverity,
-                          })
+                        useReviewStore.getState().setFinding(activeFindingState, {
+                          ...curr,
+                          severity: f.severity,
+                          originalSeverity: f.originalSeverity,
+                        })
                     }
                     toast.error(result.error ?? 'Reset failed')
                   }
                 })
                 .catch(() => toast.error('Reset failed'))
+                .finally(() => {
+                  overrideInFlightRef.current = false
+                })
             }}
             trigger={<span className="hidden" />}
           />
@@ -761,20 +814,7 @@ export function ReviewPageClient({
             onAccept={handleAccept}
             onReject={handleReject}
             onFlag={handleFlag}
-            onDelete={(findingId) => {
-              void deleteFinding({ findingId, fileId, projectId })
-                .then((result) => {
-                  if (result.success) {
-                    // Atomic remove from store (M1 fix: use removeFinding, not manual Map copy)
-                    useReviewStore.getState().removeFinding(findingId)
-                    setSelectedFinding(null)
-                    toast.success('Finding deleted')
-                  } else {
-                    toast.error(result.error ?? 'Delete failed')
-                  }
-                })
-                .catch(() => toast.error('Delete failed'))
-            }}
+            onDelete={handleDeleteFinding}
             isActionInFlight={isActionInFlight}
           />
         </aside>
@@ -790,19 +830,7 @@ export function ReviewPageClient({
           onAccept={handleAccept}
           onReject={handleReject}
           onFlag={handleFlag}
-          onDelete={(findingId) => {
-            void deleteFinding({ findingId, fileId, projectId })
-              .then((result) => {
-                if (result.success) {
-                  useReviewStore.getState().removeFinding(findingId)
-                  setSelectedFinding(null)
-                  toast.success('Finding deleted')
-                } else {
-                  toast.error(result.error ?? 'Delete failed')
-                }
-              })
-              .catch(() => toast.error('Delete failed'))
-          }}
+          onDelete={handleDeleteFinding}
           isActionInFlight={isActionInFlight}
         />
       )}

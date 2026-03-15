@@ -24,6 +24,7 @@ type OverrideSeverityResult = {
   findingId: string
   originalSeverity: FindingSeverity
   newSeverity: FindingSeverity
+  serverUpdatedAt: string
 }
 
 export async function overrideSeverity(
@@ -230,6 +231,7 @@ export async function overrideSeverity(
       findingId,
       originalSeverity: currentSeverity,
       newSeverity,
+      serverUpdatedAt: serverUpdatedAt.toISOString(),
     },
   }
 }

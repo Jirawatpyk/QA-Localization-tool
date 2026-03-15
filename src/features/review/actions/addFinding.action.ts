@@ -10,6 +10,7 @@ import { feedbackEvents } from '@/db/schema/feedbackEvents'
 import { findings } from '@/db/schema/findings'
 import { reviewActions } from '@/db/schema/reviewActions'
 import { segments } from '@/db/schema/segments'
+import { taxonomyDefinitions } from '@/db/schema/taxonomyDefinitions'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { addFindingSchema } from '@/features/review/validation/reviewAction.schema'
 import type { AddFindingInput } from '@/features/review/validation/reviewAction.schema'
@@ -74,6 +75,17 @@ export async function addFinding(input: AddFindingInput): Promise<ActionResult<A
   }
 
   const segment = segRows[0]!
+
+  // CR-R1-H5: validate category is still active in taxonomy (no tenant_id — shared data)
+  const catRows = await db
+    .select({ isActive: taxonomyDefinitions.isActive })
+    .from(taxonomyDefinitions)
+    .where(and(eq(taxonomyDefinitions.category, category), eq(taxonomyDefinitions.isActive, true)))
+    .limit(1)
+
+  if (catRows.length === 0) {
+    return { success: false, error: 'Category not found or inactive', code: 'INVALID_CATEGORY' }
+  }
   const sourceExcerpt = segment.sourceText.slice(0, 500)
   const targetExcerpt = segment.targetText.slice(0, 500)
 

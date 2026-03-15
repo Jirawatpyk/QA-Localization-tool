@@ -1,37 +1,44 @@
-# Story 4.3 Extended Review Actions — CR R1
+# Story 4.3 Extended Review Actions — CR R1 + R2
 
-**Date:** 2026-03-14
-**Files Scanned:** 16 (6 actions, 5 components, 2 hooks, 1 page client)
-**Result:** 0C / 4H / 5M / 5L
+## R1 Results: 0C / 4H / 5M / 5L (2026-03-14)
 
-## Key Findings
+### R1 Key Findings (partially fixed in current code)
 
-### H1: Components Created But Not Wired (Memory #26 pattern)
+- H1: Components Created But Not Wired — **FIXED** (all wired in ReviewPageClient)
+- H2: OverrideSeverityResult bare string — **FIXED** (uses FindingSeverity type)
+- H3: updateNoteText audit old value — **FIXED** (reads existingMetadata)
+- H4: Inline Tailwind colors — **FIXED** (uses tokens)
 
-- NoteInput, SeverityOverrideMenu, AddFindingDialog exist as components
-- ReviewPageClient has useState for open/close but does NOT render them
-- deleteFinding, overrideSeverity, addFinding, updateNoteText not imported/called
-- FindingDetailContent.onDelete prop not passed
+## R2 Results: 0C / 3H / 5M / 5L (2026-03-15)
 
-### H2: OverrideSeverityResult uses bare `string` instead of FindingSeverity
+### High Findings
 
-### H3: updateNoteText audit log writes `oldValue: { noteText: null }` instead of actual previous value
+1. **H1:** addFinding.action.ts — no server-side validation that category isActive=true (TOCTOU race)
+2. **H2:** ReviewPageClient.tsx — delete handler 100% duplicated between desktop aside + mobile Sheet
+3. **H3:** overrideSeverity.action.ts — Inngest finding.changed event previousState===newState (severity override doesn't change status, score recalc may skip)
 
-### H4: 6 inline Tailwind colors (amber-100/800/200, blue-600, purple-600) across FindingCard + FindingCardCompact
+### Medium Findings
 
-### M1: Duplicated badge rendering between FindingCard and FindingCardCompact
+1. **M1:** ReviewPageClient 60+ line inline override/reset handlers in JSX
+2. **M2:** `status: 'manual'` bare string in addFinding (Guardrail #3)
+3. **M3:** deleteFinding doesn't clean feedback_events before DELETE
+4. **M4:** `as FindingSeverity` cast before validation in overrideSeverity
+5. **M5:** `setSeverity(val as FindingSeverity)` unsafe cast in AddFindingDialog
 
-### M2: overrideSeverity Inngest event sends same previousState/newState (status doesn't change, only severity)
+### Low Findings
 
-### M3: AddFindingResult.severity is bare `string`
-
-### M4: deleteFinding doesn't document feedbackEvents FK handling (ON DELETE SET NULL)
-
-### M5: use-keyboard-actions singleton state may leak across route changes
+1. NoteInput aria-modal on non-modal
+2. SEVERITY_OPTIONS hardcoded (derive from FINDING_SEVERITIES)
+3. ENABLED_ACTIONS Set always true (dead code)
+4. buildFindingForUI Record<string,unknown> parameter
+5. findings.ts schema comment missing 'Manual'
 
 ## Patterns Confirmed
 
-- executeReviewAction DRY helper: excellent pattern
-- State transition matrix: clean 40-cell coverage
-- Optimistic update + rollback: well-implemented
-- Accessibility: comprehensive (aria-keyshortcuts, reduced motion, IME guard)
+- executeReviewAction DRY helper: excellent
+- State transition matrix: clean 8x5 coverage (all 8 statuses x 5 actions)
+- Optimistic update + rollback: well-implemented with Zustand getState()
+- Dialog reset via React 19 "adjust state during render" — good modern pattern
+- Focus trap + escape hierarchy correct in NoteInput
+- withTenant() on every query (all 6 actions verified)
+- Guard rows[0]! before access (all actions verified)

@@ -47,9 +47,9 @@ describe('SeverityOverrideMenu', () => {
     const majorItem = screen.getByTestId('override-major')
     const minorItem = screen.getByTestId('override-minor')
 
-    expect(criticalItem).toBeDefined()
-    expect(majorItem).toBeDefined()
-    expect(minorItem).toBeDefined()
+    expect(criticalItem).not.toBeNull()
+    expect(majorItem).not.toBeNull()
+    expect(minorItem).not.toBeNull()
 
     // Check text labels (Guardrail #36: icon + text + color)
     expect(criticalItem.textContent).toContain('Override to Critical')
@@ -57,7 +57,7 @@ describe('SeverityOverrideMenu', () => {
     expect(minorItem.textContent).toContain('Override to Minor')
 
     // Current severity (major) should be disabled
-    expect(majorItem.getAttribute('data-disabled')).toBeDefined()
+    expect(majorItem.getAttribute('data-disabled')).not.toBeNull()
 
     // Other severities should NOT be disabled
     expect(criticalItem.getAttribute('data-disabled')).toBeNull()
@@ -71,7 +71,7 @@ describe('SeverityOverrideMenu', () => {
     const majorItem = screen.getByTestId('override-major')
     const minorItem = screen.getByTestId('override-minor')
 
-    expect(criticalItem.getAttribute('data-disabled')).toBeDefined()
+    expect(criticalItem.getAttribute('data-disabled')).not.toBeNull()
     expect(majorItem.getAttribute('data-disabled')).toBeNull()
     expect(minorItem.getAttribute('data-disabled')).toBeNull()
   })
@@ -97,7 +97,7 @@ describe('SeverityOverrideMenu', () => {
     renderMenu({ currentSeverity: 'critical', originalSeverity: 'minor' })
 
     const resetItem = screen.getByTestId('override-reset')
-    expect(resetItem).toBeDefined()
+    expect(resetItem).not.toBeNull()
     expect(resetItem.textContent).toContain('Reset to original')
     expect(resetItem.textContent).toContain('minor')
   })

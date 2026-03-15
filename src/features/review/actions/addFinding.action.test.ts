@@ -132,7 +132,7 @@ describe('addFinding.action', () => {
   })
 
   it('[P0] U-AF1: should create finding with status=manual, layer=Manual', async () => {
-    // SELECT segment, tx.insert findings (returning), tx.insert review_actions, audit, inngest, feedback_events
+    // SELECT segment, SELECT taxonomy (CR-R1-H5), tx.insert findings (returning), tx.insert review_actions, audit, inngest, feedback_events
     dbState.returnValues = [
       [
         {
@@ -143,6 +143,7 @@ describe('addFinding.action', () => {
           targetLang: 'th-TH',
         },
       ],
+      [{ isActive: true }], // taxonomy category validation
       [{ id: IDS.newFindingId, status: 'manual', severity: 'minor', category: 'accuracy' }], // tx.insert returning
       [], // tx.insert review_actions
       [], // feedback_events
@@ -152,6 +153,8 @@ describe('addFinding.action', () => {
 
     expect(result.success).toBe(true)
     if (result.success) {
+      // CR-R1-M6: verify findingId propagates from INSERT returning
+      expect(result.data.findingId).toBe(IDS.newFindingId)
       expect(result.data).toMatchObject({
         status: 'manual',
         detectedByLayer: 'Manual',
@@ -200,6 +203,7 @@ describe('addFinding.action', () => {
           targetLang: 'th-TH',
         },
       ],
+      [{ isActive: true }], // taxonomy category validation (CR-R1-H5)
       [{ id: IDS.newFindingId }],
       [],
       [],
@@ -235,6 +239,7 @@ describe('addFinding.action', () => {
           targetLang: 'th-TH',
         },
       ],
+      [{ isActive: true }], // taxonomy category validation (CR-R1-H5)
       [{ id: IDS.newFindingId }],
       [],
       [],

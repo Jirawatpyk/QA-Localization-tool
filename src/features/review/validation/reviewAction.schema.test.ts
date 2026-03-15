@@ -121,7 +121,7 @@ describe('reviewAction.schema', () => {
   describe('updateNoteTextSchema — boundary values', () => {
     const base = { findingId: VALID_FINDING_ID, fileId: VALID_FILE_ID, projectId: VALID_PROJECT_ID }
 
-    it('[P0] U-BV1: noteText boundary — 500 accepted, 501 rejected, null accepted', () => {
+    it('[P0] U-BV1: noteText boundary — 500 accepted, 501 rejected, null rejected', () => {
       // 500 chars: accepted
       expect(updateNoteTextSchema.safeParse({ ...base, noteText: 'a'.repeat(500) }).success).toBe(
         true,
@@ -134,6 +134,8 @@ describe('reviewAction.schema', () => {
       expect(updateNoteTextSchema.safeParse({ ...base, noteText: 'a'.repeat(501) }).success).toBe(
         false,
       )
+      // CR-R1-M5: null rejected (z.string().min(1) does not accept null)
+      expect(updateNoteTextSchema.safeParse({ ...base, noteText: null }).success).toBe(false)
     })
   })
 
