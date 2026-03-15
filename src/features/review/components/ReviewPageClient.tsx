@@ -163,44 +163,50 @@ export function ReviewPageClient({
         }
       }
 
-      const result = await bulkAction({ findingIds: ids, action, fileId, projectId })
+      try {
+        const result = await bulkAction({ findingIds: ids, action, fileId, projectId })
 
-      if (result.success) {
-        // Sync server timestamps (H2 fix pattern)
-        for (const pf of result.data.processedFindings) {
-          const current = useReviewStore.getState().findingsMap.get(pf.findingId)
-          if (current) {
-            useReviewStore.getState().setFinding(pf.findingId, {
-              ...current,
-              updatedAt: pf.serverUpdatedAt,
-            })
+        if (result.success) {
+          // Sync server timestamps (H2 fix pattern)
+          for (const pf of result.data.processedFindings) {
+            const current = useReviewStore.getState().findingsMap.get(pf.findingId)
+            if (current) {
+              useReviewStore.getState().setFinding(pf.findingId, {
+                ...current,
+                updatedAt: pf.serverUpdatedAt,
+              })
+            }
+            // Increment override count (matches Q7 semantic: overrideCount = actionCount - 1)
+            // Only for re-decisions (previousState !== 'pending' = finding was already acted on)
+            if (pf.previousState !== 'pending') {
+              const currentCount = useReviewStore.getState().overrideCounts.get(pf.findingId)
+              if (currentCount !== undefined) {
+                useReviewStore.getState().incrementOverrideCount(pf.findingId)
+              } else {
+                useReviewStore.getState().setOverrideCount(pf.findingId, 1)
+              }
+            }
           }
-          // Increment override count only if finding already has prior actions
-          // (matches Q7 semantic: overrideCount = actionCount - 1, filtered at > 1)
-          const currentCount = useReviewStore.getState().overrideCounts.get(pf.findingId)
-          if (currentCount !== undefined && currentCount > 0) {
-            useReviewStore.getState().incrementOverrideCount(pf.findingId)
+          const processed = result.data.processedCount
+          const verb = action === 'accept' ? 'accepted' : 'rejected'
+          toast.success(`${processed} finding${processed !== 1 ? 's' : ''} ${verb}`)
+          // Clear selection
+          clearSelection()
+          setSelectionMode('single')
+        } else {
+          // Rollback optimistic updates
+          for (const [id, snap] of snapshots) {
+            const current = useReviewStore.getState().findingsMap.get(id)
+            if (current) {
+              useReviewStore.getState().setFinding(id, snap)
+            }
           }
+          toast.error(result.error ?? 'Bulk operation failed')
         }
-        const processed = result.data.processedCount
-        const verb = action === 'accept' ? 'accepted' : 'rejected'
-        toast.success(`${processed} finding${processed !== 1 ? 's' : ''} ${verb}`)
-        // Clear selection
-        clearSelection()
-        setSelectionMode('single')
-      } else {
-        // Rollback optimistic updates
-        for (const [id, snap] of snapshots) {
-          const current = useReviewStore.getState().findingsMap.get(id)
-          if (current) {
-            useReviewStore.getState().setFinding(id, snap)
-          }
-        }
-        toast.error(result.error ?? 'Bulk operation failed')
+      } finally {
+        setBulkInFlight(false)
+        setActiveBulkAction(null)
       }
-
-      setBulkInFlight(false)
-      setActiveBulkAction(null)
     },
     [fileId, projectId, clearSelection, setSelectionMode, setBulkInFlight],
   )

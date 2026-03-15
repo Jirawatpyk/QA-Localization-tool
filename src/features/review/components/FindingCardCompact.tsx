@@ -90,16 +90,21 @@ export function FindingCardCompact({
     const target = e.target as HTMLElement
     if (target.closest('button')) return
 
-    // Story 4.4a: Shift+Click enters bulk mode + toggles selection
+    // Story 4.4a: Shift+Click enters bulk mode + range selection
     if (e.shiftKey) {
       e.preventDefault()
+      const store = useReviewStore.getState()
+      const anchorId = store.selectedId
       if (selectionMode !== 'bulk') {
         setSelectionMode('bulk')
-        // When entering bulk mode, also select the previously-active finding (anchor)
-        const activeId = useReviewStore.getState().selectedId
-        if (activeId) addToSelection(activeId)
       }
-      addToSelection(finding.id)
+      if (anchorId && anchorId !== finding.id) {
+        // Range select from anchor to clicked finding (inclusive)
+        store.selectRange(anchorId, finding.id)
+      } else {
+        // No anchor or same finding — just add this one
+        addToSelection(finding.id)
+      }
       return
     }
 
@@ -146,13 +151,20 @@ export function FindingCardCompact({
           <div
             className="w-5 shrink-0 flex items-center justify-center"
             role="checkbox"
+            tabIndex={0}
             aria-checked={isSelected}
             aria-label={`Select finding ${findingIndex + 1}`}
             onClick={(e) => {
               e.stopPropagation()
               toggleSelection(finding.id)
             }}
-            onKeyDown={() => {}}
+            onKeyDown={(e) => {
+              if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault()
+                e.stopPropagation()
+                toggleSelection(finding.id)
+              }
+            }}
           >
             <div
               className={`h-4 w-4 rounded border-2 flex items-center justify-center ${

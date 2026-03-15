@@ -3,14 +3,9 @@
 import { ArrowRight, Clock } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
-export type OverrideHistoryEntry = {
-  id: string
-  actionType: string
-  previousState: string
-  newState: string
-  userId: string
-  createdAt: string
-}
+import type { OverrideHistoryEntry } from '@/features/review/actions/getOverrideHistory.action'
+
+export type { OverrideHistoryEntry }
 
 export type OverrideHistoryPanelProps = {
   findingId: string
@@ -65,8 +60,8 @@ export function OverrideHistoryPanel({
 
   useEffect(() => {
     if (isVisible && findingId && fetchHistory) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch callback sets state after await (external system subscription pattern)
       doFetch().catch(() => {
-        // eslint-disable-line react-hooks/set-state-in-effect -- async fetch callback (external system subscription pattern)
         // Non-critical — UI degrades gracefully
       })
     }

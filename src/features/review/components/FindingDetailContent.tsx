@@ -80,11 +80,15 @@ export function FindingDetailContent({
     finding ? (s.overrideCounts.get(finding.id) ?? 0) : 0,
   )
 
-  // Reset history visibility when finding changes (external state sync pattern)
+  // Reset history visibility when finding changes (render-time adjustment — React 19 pattern)
   const prevFindingIdRef = useRef<string | null>(null)
-  if (finding?.id !== prevFindingIdRef.current) {
-    prevFindingIdRef.current = finding?.id ?? null
-    if (showHistory) setShowHistory(false)
+  const currentFindingId = finding?.id ?? null
+  if (currentFindingId !== prevFindingIdRef.current) {
+    prevFindingIdRef.current = currentFindingId
+    // Only reset if we have a new REAL finding (avoid setState on null → null transition)
+    if (currentFindingId !== null) {
+      setShowHistory(false)
+    }
   }
 
   // Segment context hook

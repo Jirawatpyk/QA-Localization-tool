@@ -174,30 +174,40 @@ export async function bulkAction(input: BulkActionInput): Promise<ActionResult<B
   const serverUpdatedAt = new Date()
   try {
     await db.transaction(async (tx) => {
-      for (let i = 0; i < processed.length; i++) {
-        const p = processed[i]!
+      // Group findings by newState for batch UPDATE (reduces N round-trips to M where M = distinct newStates)
+      const byNewState = new Map<string, string[]>()
+      for (const p of processed) {
+        const ids = byNewState.get(p.newState) ?? []
+        ids.push(p.findingId)
+        byNewState.set(p.newState, ids)
+      }
 
-        // UPDATE finding status (Guardrail #1 — withTenant on UPDATE)
+      // Batch UPDATE per newState group (Guardrail #1 — withTenant on UPDATE)
+      for (const [newState, ids] of byNewState) {
         await tx
           .update(findings)
-          .set({ status: p.newState, updatedAt: serverUpdatedAt })
-          .where(and(eq(findings.id, p.findingId), withTenant(findings.tenantId, tenantId)))
-
-        // INSERT review_actions (INSERT = set tenantId in values)
-        await tx.insert(reviewActions).values({
-          findingId: p.findingId,
-          fileId,
-          projectId,
-          tenantId,
-          actionType: action,
-          previousState: p.previousState,
-          newState: p.newState,
-          userId,
-          batchId,
-          isBulk: true,
-          metadata: { is_bulk: true, batch_size: processed.length, action_index: i },
-        })
+          .set({ status: newState, updatedAt: serverUpdatedAt })
+          .where(and(inArray(findings.id, ids), withTenant(findings.tenantId, tenantId)))
       }
+
+      // Batch INSERT review_actions (single INSERT with all rows)
+      const reviewActionRows = processed.map((p, i) => ({
+        findingId: p.findingId,
+        fileId,
+        projectId,
+        tenantId,
+        actionType: action,
+        previousState: p.previousState,
+        newState: p.newState,
+        userId,
+        batchId,
+        isBulk: true,
+        metadata: { is_bulk: true, batch_size: processed.length, action_index: i } as Record<
+          string,
+          unknown
+        >,
+      }))
+      await tx.insert(reviewActions).values(reviewActionRows)
     })
   } catch (txErr) {
     logger.error(

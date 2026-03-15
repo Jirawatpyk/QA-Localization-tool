@@ -2,7 +2,7 @@
 
 import 'server-only'
 
-import { and, asc, count, eq, gt, sql } from 'drizzle-orm'
+import { and, asc, count, eq, gt, inArray, sql } from 'drizzle-orm'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
@@ -266,26 +266,33 @@ export async function getFileReviewData(
     }
 
     // Q7: Get override counts per finding (Story 4.4a AC4) — non-fatal
+    // Filter by current findingIds to exclude orphaned review_actions from deleted findings
+    const currentFindingIds = sortedFindings.map((f) => f.id)
     const overrideCounts: Record<string, number> = {}
     try {
-      const overrideRows = await db
-        .select({
-          findingId: reviewActions.findingId,
-          actionCount: count(reviewActions.id),
-        })
-        .from(reviewActions)
-        .where(
-          and(
-            eq(reviewActions.fileId, fileId),
-            eq(reviewActions.projectId, projectId),
-            withTenant(reviewActions.tenantId, tenantId),
-          ),
-        )
-        .groupBy(reviewActions.findingId)
-        .having(gt(count(reviewActions.id), sql`1`))
+      if (currentFindingIds.length === 0) {
+        // Guardrail #5: skip inArray with empty array
+      } else {
+        const overrideRows = await db
+          .select({
+            findingId: reviewActions.findingId,
+            actionCount: count(reviewActions.id),
+          })
+          .from(reviewActions)
+          .where(
+            and(
+              eq(reviewActions.fileId, fileId),
+              eq(reviewActions.projectId, projectId),
+              inArray(reviewActions.findingId, currentFindingIds),
+              withTenant(reviewActions.tenantId, tenantId),
+            ),
+          )
+          .groupBy(reviewActions.findingId)
+          .having(gt(count(reviewActions.id), sql`1`))
 
-      for (const row of overrideRows) {
-        overrideCounts[row.findingId] = Number(row.actionCount) - 1
+        for (const row of overrideRows) {
+          overrideCounts[row.findingId] = Number(row.actionCount) - 1
+        }
       }
     } catch (overrideErr) {
       logger.error(

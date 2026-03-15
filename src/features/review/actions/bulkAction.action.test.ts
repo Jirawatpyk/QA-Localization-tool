@@ -428,13 +428,24 @@ describe('bulkAction.action', () => {
 
     expect(result.success).toBe(true)
 
-    // Find all review_actions inserts
-    const reviewActionInserts = dbState.valuesCaptures.filter(
+    // Find review_actions batch insert (single .values() call with array)
+    const batchInsert = dbState.valuesCaptures.find(
       (c: unknown) =>
-        typeof c === 'object' &&
-        c !== null &&
-        (c as Record<string, unknown>).actionType === 'accept',
-    )
+        Array.isArray(c) &&
+        c.length > 0 &&
+        (c[0] as Record<string, unknown>).actionType === 'accept',
+    ) as Array<Record<string, unknown>> | undefined
+
+    // Fallback: individual inserts (for backward compatibility)
+    const reviewActionInserts = batchInsert
+      ? batchInsert
+      : dbState.valuesCaptures.filter(
+          (c: unknown) =>
+            typeof c === 'object' &&
+            c !== null &&
+            !Array.isArray(c) &&
+            (c as Record<string, unknown>).actionType === 'accept',
+        )
 
     expect(reviewActionInserts.length).toBe(3)
 

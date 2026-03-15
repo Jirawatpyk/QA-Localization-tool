@@ -294,9 +294,6 @@ test.describe.serial('Bulk Operations & Decision Override — Story 4.4a ATDD', 
     page,
   }) => {
     test.setTimeout(180_000) // Extra time for first test — SSR + login may be slow
-    console.log(
-      `[E-BK1] projectId=${projectId}, fileId=${seededFileId}, findingIds=${seededFindingIds?.length}`,
-    )
     expect(projectId).toBeTruthy()
     expect(seededFileId).toBeTruthy()
 
@@ -430,15 +427,31 @@ test.describe.serial('Bulk Operations & Decision Override — Story 4.4a ATDD', 
     // AC3: Dialog title shows count
     await expect(dialog.getByRole('heading')).toContainText(/Reject \d+ findings/i)
 
-    // AC3: Dialog body shows severity breakdown (at least one severity visible)
-    // Note: after E-BK2 accepted 3 findings, remaining may not include all severities
-    await expect(dialog).toContainText(/Critical|Major|Minor/i)
+    // AC3: Dialog body shows severity breakdown with actual numbers
+    // After E-BK2 accepted 3 findings, remaining set may not include all severities
+    // Verify at least one severity label WITH a numeric count is visible
+    const dialogText = await dialog.textContent()
+    const severityPattern = /(Critical|Major|Minor)\s*\d+/i
+    expect(dialogText).toMatch(severityPattern)
 
     // AC3: Cancel and Confirm buttons present
     const cancelBtn = dialog.getByRole('button', { name: /cancel/i })
     const confirmBtn = dialog.getByRole('button', { name: /confirm/i })
     await expect(cancelBtn).toBeVisible()
     await expect(confirmBtn).toBeVisible()
+
+    // AC3: Cancel closes dialog WITHOUT executing reject
+    await cancelBtn.click()
+    await expect(dialog).not.toBeVisible({ timeout: 5_000 })
+
+    // Verify findings NOT rejected (still pending)
+    const stillPending = grid.locator('[role="row"][data-status="pending"]')
+    const pendingAfterCancel = await stillPending.count()
+    expect(pendingAfterCancel).toBeGreaterThan(0)
+
+    // Re-open for the actual Confirm path
+    await bulkBar.getByRole('button', { name: /bulk reject/i }).click()
+    await expect(dialog).toBeVisible({ timeout: 5_000 })
 
     // AC3: Focus trap — Tab stays within dialog (Guardrail #30)
     await confirmBtn.focus()
@@ -601,16 +614,16 @@ test.describe.serial('Bulk Operations & Decision Override — Story 4.4a ATDD', 
     await expect(historyEntries).toHaveCount(2, { timeout: 5_000 })
 
     // AC5: Most recent entry is first (newest-first order)
-    // Latest action was reject, so first entry should show "rejected"
+    // Latest action was reject (accept→rejected), so first entry should show "Rejected"
     const firstEntry = historyEntries.first()
-    await expect(firstEntry).toContainText(/rejected/i)
+    await expect(firstEntry).toContainText(/Rejected/i)
+
+    // AC5: Second entry is the initial accept (pending→accepted)
+    const secondEntry = historyEntries.nth(1)
+    await expect(secondEntry).toContainText(/Accepted/i)
 
     // AC5: Entries show relative timestamp ("just now" or "N min ago")
     await expect(firstEntry).toContainText(/just now|ago/i)
-
-    // AC5: Entries show state transition (previousState -> newState) — ArrowRight icon between states
-    // The icon is aria-hidden, so just verify both states are present
-    await expect(firstEntry).toContainText(/Accepted|Rejected/i)
 
     // AC5: All entries are read-only (no edit/delete buttons)
     const editButtons = historyPanel.getByRole('button', { name: /edit|delete/i })
