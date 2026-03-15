@@ -32,7 +32,7 @@
 import { test, expect } from '@playwright/test'
 
 import { cleanupTestProject, queryScore } from './helpers/pipeline-admin'
-import { waitForReviewPageHydrated, waitForReviewPageReady } from './helpers/review-page'
+import { gotoReviewPageWithRetry } from './helpers/review-page'
 import {
   SUPABASE_URL,
   adminHeaders,
@@ -323,8 +323,7 @@ test.describe.serial('Detail Panel & Segment Context — Story 4.1c ATDD', () =>
   }) => {
     // Navigate to review page with seeded findings
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
 
     // Finding list should be visible with grid role
     const grid = page.getByRole('grid')
@@ -380,8 +379,7 @@ test.describe.serial('Detail Panel & Segment Context — Story 4.1c ATDD', () =>
   }) => {
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
 
     const grid = page.getByRole('grid')
     await expect(grid).toBeVisible({ timeout: 30_000 })
@@ -436,8 +434,7 @@ test.describe.serial('Detail Panel & Segment Context — Story 4.1c ATDD', () =>
   test.skip('[P1] E3: should show context segments ±2 around finding segment', async ({ page }) => {
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
 
     const grid = page.getByRole('grid')
     await expect(grid).toBeVisible({ timeout: 30_000 })
@@ -485,8 +482,7 @@ test.describe.serial('Detail Panel & Segment Context — Story 4.1c ATDD', () =>
   }) => {
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
 
     const grid = page.getByRole('grid')
     await expect(grid).toBeVisible({ timeout: 30_000 })
@@ -539,8 +535,7 @@ test.describe.serial('Detail Panel & Segment Context — Story 4.1c ATDD', () =>
   }) => {
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
 
     const grid = page.getByRole('grid')
     await expect(grid).toBeVisible({ timeout: 30_000 })
@@ -592,8 +587,7 @@ test.describe.serial('Detail Panel & Segment Context — Story 4.1c ATDD', () =>
   }) => {
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
 
     const grid = page.getByRole('grid')
     await expect(grid).toBeVisible({ timeout: 30_000 })
@@ -648,8 +642,7 @@ test.describe.serial('Detail Panel & Segment Context — Story 4.1c ATDD', () =>
   test.skip('[P1] E7: should trap focus in Sheet and restore to grid on Esc', async ({ page }) => {
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
 
     const grid = page.getByRole('grid')
     await expect(grid).toBeVisible({ timeout: 30_000 })

@@ -8,7 +8,7 @@
 import { test, expect } from '@playwright/test'
 
 import { cleanupTestProject, queryScore } from './helpers/pipeline-admin'
-import { waitForReviewPageHydrated } from './helpers/review-page'
+import { gotoReviewPageWithRetry } from './helpers/review-page'
 import {
   SUPABASE_URL,
   adminHeaders,
@@ -357,8 +357,7 @@ test.describe.serial('Extended Review Actions — Story 4.3 ATDD', () => {
   // ── E-N1: Keyboard N on pending → noted ─────────────────────────────────
   test('[P0] E-N1: Keyboard N on pending → noted state + auto-advance', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     const grid = page.getByRole('grid')
     const pendingRow = grid.locator('[role="row"][data-status="pending"]').first()
@@ -382,8 +381,7 @@ test.describe.serial('Extended Review Actions — Story 4.3 ATDD', () => {
   // ── E-N2: Keyboard N on noted → NoteInput popover opens ────────────────
   test('[P1] E-N2: Keyboard N on noted → NoteInput popover opens', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     const grid = page.getByRole('grid')
     // Find the noted finding from E-N1
@@ -403,8 +401,7 @@ test.describe.serial('Extended Review Actions — Story 4.3 ATDD', () => {
   // ── E-N3: NoteInput type text + Enter → note saved ─────────────────────
   test('[P1] E-N3: NoteInput: type text + Enter → note saved', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     const grid = page.getByRole('grid')
     // Find noted finding, click to activate, press N to open NoteInput
@@ -434,8 +431,7 @@ test.describe.serial('Extended Review Actions — Story 4.3 ATDD', () => {
   // ── E-S1: Keyboard S on pending → source_issue ─────────────────────────
   test('[P0] E-S1: Keyboard S on pending → source_issue state + auto-advance', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     const grid = page.getByRole('grid')
     const pendingRow = grid.locator('[role="row"][data-status="pending"]').first()
@@ -458,8 +454,7 @@ test.describe.serial('Extended Review Actions — Story 4.3 ATDD', () => {
   // ── E-O1: Override button → dropdown → Minor → badge visible ───────────
   test('[P0] E-O1: Override button → dropdown → select Minor → badge visible', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     const grid = page.getByRole('grid')
     // Find a pending finding with severity critical or major for meaningful override
@@ -491,8 +486,7 @@ test.describe.serial('Extended Review Actions — Story 4.3 ATDD', () => {
   // ── E-O2: Override → Reset to original → badge removed ─────────────────
   test('[P1] E-O2: Override → Reset to original → badge removed', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     const grid = page.getByRole('grid')
     // Find the overridden finding from E-O1 (has override-badge)
@@ -532,8 +526,7 @@ test.describe.serial('Extended Review Actions — Story 4.3 ATDD', () => {
     page,
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     // Click Add button in action bar
     const actionBar = page.getByTestId('review-action-bar')
@@ -578,8 +571,7 @@ test.describe.serial('Extended Review Actions — Story 4.3 ATDD', () => {
     // Desktop viewport (>1440px) — aside auto-shows active finding detail
     await page.setViewportSize({ width: 1500, height: 900 })
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     const grid = page.getByRole('grid')
     await expect(grid).toBeVisible({ timeout: 30_000 })
@@ -620,8 +612,7 @@ test.describe.serial('Extended Review Actions — Story 4.3 ATDD', () => {
   // ── E-WC1: Focus rings ────────────────────────────────────────────────
   test('[P2] E-WC1: All extended action buttons have focus ring', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     // Click a finding to enable action buttons
     const pendingRow = page.locator('[role="row"][data-status="pending"]').first()

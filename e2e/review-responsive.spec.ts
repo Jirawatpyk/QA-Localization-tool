@@ -26,7 +26,7 @@ import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
 import { cleanupTestProject, queryScore } from './helpers/pipeline-admin'
-import { waitForReviewPageHydrated } from './helpers/review-page'
+import { gotoReviewPageWithRetry } from './helpers/review-page'
 import {
   SUPABASE_URL,
   adminHeaders,
@@ -331,8 +331,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'desktop')
 
     // Root layout container should be visible
@@ -357,8 +356,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'desktop')
 
     // Detail panel content should exist within the static aside
@@ -373,8 +371,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   test.skip('[P0] T1.4/RT-2a — exactly 1 [role="complementary"]:visible', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'desktop')
 
     // Exactly one visible complementary landmark
@@ -385,8 +382,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   test.skip('[P1] T1.3 — data-layout-mode="desktop" on root div', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
 
     const rootLayout = page.getByTestId('review-3-zone')
     await expect(rootLayout).toHaveAttribute('data-layout-mode', 'desktop')
@@ -397,8 +393,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'desktop')
 
     const aside = page.getByTestId('finding-detail-aside')
@@ -413,8 +408,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   test.skip('[P1] T1.6/RT-1b — Tab from finding list reaches aside content', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'desktop')
 
     // Focus a finding row in the grid
@@ -444,8 +438,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   test.skip('[P1] RT-2b — complementary NOT in [data-radix-portal]', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'desktop')
 
     // At desktop, [role="complementary"] must NOT be inside a Radix portal
@@ -462,8 +455,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1200, height: 900 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'laptop')
 
     // Sidebar nav should be hidden at laptop breakpoint
@@ -481,8 +473,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   test.skip('[P1] T2.2/RT-2c — detail panel in Radix portal at laptop', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1200, height: 900 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'laptop')
 
     // Click a finding row to open the detail Sheet
@@ -500,8 +491,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1200, height: 900 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'laptop')
 
     // Click a finding to open Sheet
@@ -522,8 +512,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   test.skip('[P1] T2.4 — scrim visible, click scrim closes Sheet at laptop', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1200, height: 900 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'laptop')
 
     // Click a finding to open Sheet
@@ -549,8 +538,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   test.skip('[P1] T2.5/RT-1a — sidebar nav not in tab order at laptop', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1200, height: 900 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'laptop')
 
     // Tab through the page — sidebar nav links should NOT receive focus
@@ -574,8 +562,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   test.skip('[P1] RT-6 — ARIA nav landmark present (dropdown) at laptop', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1200, height: 900 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'laptop')
 
     // A <nav> element should still be present at laptop (contains dropdown navigation)
@@ -594,8 +581,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   test.skip('[P1] T3.1 — single column, only finding list visible at 375px', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 375, height: 812 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'mobile')
 
     // Finding list should be visible as single column
@@ -616,8 +602,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 375, height: 812 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'mobile')
 
     // Click a finding to open Sheet drawer
@@ -640,8 +625,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 375, height: 812 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'mobile')
 
     // Select a finding row
@@ -657,8 +641,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   test.skip('[P2] T3.4 — MobileBanner visible at mobile breakpoint', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 375, height: 812 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'mobile')
 
     // Mobile banner should be visible at mobile viewport
@@ -677,8 +660,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
 
     // At exactly 1440px -> desktop
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'desktop')
 
     const rootLayout = page.getByTestId('review-3-zone')
@@ -697,8 +679,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
 
     // At exactly 1024px -> laptop
     await page.setViewportSize({ width: 1024, height: 768 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'laptop')
 
     const rootLayout = page.getByTestId('review-3-zone')
@@ -717,8 +698,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
 
     // At 768px -> still tablet/mobile (finding list visible, no sidebar)
     await page.setViewportSize({ width: 768, height: 1024 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
 
     const findingList = page.getByTestId('finding-list')
     await expect(findingList).toBeVisible()
@@ -742,8 +722,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
 
     // Start at desktop: 1440px with static aside
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'desktop')
 
     // Focus a finding row in the grid — detail shows in aside
@@ -782,8 +761,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
 
     // Start at laptop (1200px)
     await page.setViewportSize({ width: 1200, height: 900 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'laptop')
 
     // Open Sheet by clicking a finding
@@ -815,8 +793,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
 
     // Start at desktop (1440px)
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
 
     const rootLayout = page.getByTestId('review-3-zone')
 
@@ -846,8 +823,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
 
     // Desktop — static aside has role="complementary"
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'desktop')
 
     const desktopComplementary = page.locator('[role="complementary"]:visible')
@@ -884,8 +860,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1200, height: 900 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'laptop')
 
     // Open Sheet by clicking a finding
@@ -917,8 +892,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'desktop')
 
     // Focus a finding row
@@ -952,8 +926,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 768, height: 1024 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'mobile')
 
     // Finding rows should have >= 44px height (touch target per WCAG 2.5.8)
@@ -976,8 +949,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   test.skip('[P2] T6.8 — keyboard J/K works at 1200px viewport', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1200, height: 900 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'laptop')
 
     // Focus the grid
@@ -1017,8 +989,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
 
     await page.setViewportSize({ width: 1200, height: 900 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'laptop')
 
     // Click a finding to open Sheet
@@ -1045,8 +1016,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await page.emulateMedia({ reducedMotion: 'no-preference' })
 
     await page.setViewportSize({ width: 1200, height: 900 })
-    await page.goto(`/projects/${projectId}/review/${seeded.fileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'laptop')
 
     // Click a finding to open Sheet

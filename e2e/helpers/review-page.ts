@@ -60,6 +60,24 @@ export async function waitForReviewPageHydrated(page: Page) {
 }
 
 /**
+ * Navigate to review page with retry — handles transient cloud Supabase SSR errors.
+ * Retries up to 3 times with 3s delay between attempts.
+ */
+export async function gotoReviewPageWithRetry(page: Page, projectId: string, fileId: string) {
+  const url = `/projects/${projectId}/review/${fileId}`
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await page.goto(url)
+    try {
+      await waitForReviewPageHydrated(page)
+      return
+    } catch {
+      if (attempt === 2) throw new Error(`Review page failed to load after 3 attempts: ${url}`)
+      await page.waitForTimeout(3_000)
+    }
+  }
+}
+
+/**
  * Wait for findings to load in the Zustand store, expand minor accordion
  * if needed, and return the finding rows locator.
  *

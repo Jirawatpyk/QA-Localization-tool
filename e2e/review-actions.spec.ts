@@ -10,7 +10,7 @@
 import { test, expect } from '@playwright/test'
 
 import { cleanupTestProject, queryScore } from './helpers/pipeline-admin'
-import { waitForReviewPageHydrated } from './helpers/review-page'
+import { gotoReviewPageWithRetry, waitForReviewPageHydrated } from './helpers/review-page'
 import {
   SUPABASE_URL,
   adminHeaders,
@@ -274,8 +274,7 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
     page,
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     const grid = page.getByRole('grid')
     const rows = grid.getByRole('row')
@@ -306,8 +305,7 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
     page,
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     const grid = page.getByRole('grid')
     const pendingRow = grid.locator('[role="row"][data-status="pending"]').first()
@@ -331,8 +329,7 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
     page,
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     const grid = page.getByRole('grid')
     const pendingRow = grid.locator('[role="row"][data-status="pending"]').first()
@@ -354,8 +351,7 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
     page,
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     const grid = page.getByRole('grid')
 
@@ -397,8 +393,7 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
 
   test('[P1] E-R5: should accept finding via mouse click on Accept button', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     const grid = page.getByRole('grid')
     const pendingRow = grid.locator('[role="row"][data-status="pending"]').first()
@@ -418,8 +413,7 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
 
   test('[P1] E-R6: should accept finding via quick-action icon click on row', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     const grid = page.getByRole('grid')
     const pendingRow = grid.locator('[role="row"][data-status="pending"]').first()
@@ -435,8 +429,7 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
     page,
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     const grid = page.getByRole('grid')
     const pendingRow = grid.locator('[role="row"][data-status="pending"]').first()
@@ -466,8 +459,7 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
     page,
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     // Find an already-accepted finding from previous tests, or accept a pending one first
     const grid = page.getByRole('grid')
@@ -498,8 +490,7 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
     const initialMqm = initialScore!.mqm_score
 
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     const pendingRow = page.getByRole('grid').locator('[role="row"][data-status="pending"]').first()
     // Click to sync activeFindingId before keyboard action
@@ -527,8 +518,7 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
 
   test('[P1] E-R10: should enable action buttons when finding is active', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     const actionBar = page.getByTestId('review-action-bar')
     await expect(actionBar).toBeVisible({ timeout: 10_000 })
@@ -551,8 +541,7 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
 
   test('[P0] E-B1: should focus action bar when all findings are reviewed', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     const grid = page.getByRole('grid')
 

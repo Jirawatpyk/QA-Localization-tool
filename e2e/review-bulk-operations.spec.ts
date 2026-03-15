@@ -11,7 +11,7 @@
 import { test, expect } from '@playwright/test'
 
 import { cleanupTestProject, queryScore } from './helpers/pipeline-admin'
-import { waitForReviewPageHydrated } from './helpers/review-page'
+import { gotoReviewPageWithRetry } from './helpers/review-page'
 import {
   SUPABASE_URL,
   adminHeaders,
@@ -20,32 +20,6 @@ import {
   setUserMetadata,
   createTestProject,
 } from './helpers/supabase-admin'
-
-/** Navigate to review page with retry on SSR transient failure */
-async function gotoReviewPageWithRetry(
-  page: import('@playwright/test').Page,
-  pid: string,
-  fid: string,
-) {
-  const url = `/projects/${pid}/review/${fid}`
-  for (let attempt = 0; attempt < 3; attempt++) {
-    await page.goto(url)
-    // Debug: screenshot what we see
-    await page.screenshot({ path: `test-results/debug-attempt-${attempt}.png`, fullPage: true })
-    try {
-      await waitForReviewPageHydrated(page)
-      return
-    } catch (err) {
-      const bodyText = await page
-        .locator('body')
-        .textContent()
-        .catch(() => 'unknown')
-      console.log(`[retry ${attempt}] page body: ${bodyText?.slice(0, 300)}`)
-      if (attempt === 2) throw new Error(`Review page failed to load after 3 attempts: ${url}`)
-      await page.waitForTimeout(3_000)
-    }
-  }
-}
 
 // ── Seed Helper ───────────────────────────────────────────────────────────────
 

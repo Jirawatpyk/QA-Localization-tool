@@ -21,7 +21,7 @@
 import { test, expect } from '@playwright/test'
 
 import { cleanupTestProject, queryScore } from './helpers/pipeline-admin'
-import { waitForReviewPageHydrated, waitForReviewPageReady } from './helpers/review-page'
+import { gotoReviewPageWithRetry, waitForReviewPageReady } from './helpers/review-page'
 import {
   SUPABASE_URL,
   adminHeaders,
@@ -192,9 +192,7 @@ test.describe.serial('Review Keyboard & Focus — Story 4.0 ATDD', () => {
   test('[P0] F1e: should trap Tab within modal on review page', async ({ page }) => {
     // Navigate to review page with seeded findings
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    // Wait for full hydration (finding grid + keyboard bindings registered)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     // Focus a finding row BEFORE opening modal so Radix can restore focus
     // (Guardrail #30: Modal focus trap + restore — needs a visible trigger element)
@@ -285,9 +283,7 @@ test.describe.serial('Review Keyboard & Focus — Story 4.0 ATDD', () => {
   }) => {
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    // Wait for full hydration (finding grid + keyboard bindings registered)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     // Press Ctrl+Shift+/ (produces Ctrl+? in most keyboard layouts)
     // Use explicit key sequence for cross-platform reliability
@@ -321,8 +317,7 @@ test.describe.serial('Review Keyboard & Focus — Story 4.0 ATDD', () => {
   }) => {
     // Full integration test covering the keyboard review workflow
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${seededFileId}`)
-    await waitForReviewPageHydrated(page)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     // 1. Finding list visible with grid role (Guardrail #29, #38)
     const grid = page.getByRole('grid')
