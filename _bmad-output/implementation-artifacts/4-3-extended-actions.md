@@ -604,6 +604,47 @@ All server actions follow executeReviewAction pattern with withTenant on every q
 
 All HIGH and MEDIUM issues resolved. 0C + 0H remaining. Story ready for done status.
 
+## Bugs Found & Fixed During Implementation (Post-CR R1)
+
+### BUG-1 (CRITICAL): Infinite render loop when clicking Manual/Minor finding on desktop viewport
+- **Root cause:** `setSelectedFinding(id)` in `handleActiveFindingChange` → Zustand `selectedId` change → FindingList `storeSelectedId` effect → `setActiveFindingId(id)` → `onActiveFindingChange` → `setSelectedFinding(id)` → infinite loop. React error: "Maximum update depth exceeded"
+- **Trigger:** Click any finding in minor accordion at >= 1440px viewport
+- **Fix:** (1) Desktop aside derives detail from `activeFindingState` directly (not `selectedId`). (2) `handleActiveFindingChange` calls `setSelectedFinding` only on desktop with `skipStoreSyncRef` flag. (3) FindingList's `storeSelectedId` effect checks `skipStoreSyncRef` before re-syncing. Breaks the cycle.
+- **Files:** `ReviewPageClient.tsx`, `FindingList.tsx`
+
+### BUG-2 (HIGH): Two Override buttons rendered simultaneously
+- **Root cause:** `SeverityOverrideMenu` renders default trigger button when no `trigger` prop + `ReviewActionBar` has its own override button. Two buttons visible = UX defect + a11y violation.
+- **Fix:** Pass `trigger={<span className="hidden" />}` to `SeverityOverrideMenu` — hides the internal trigger while keeping Radix DropdownMenu functional.
+- **File:** `ReviewPageClient.tsx`
+
+### BUG-3 (HIGH): `deleteFinding` store update race condition (TOCTOU)
+- **Root cause:** Inline `new Map(store.findingsMap) → map.delete → store.setFindings(map)` pattern — concurrent Realtime UPDATE between Map copy and `setFindings` silently discards the update.
+- **Fix:** Use `store.removeFinding(id)` which uses Zustand functional update `set((s) => ...)` — atomic, immune to concurrent access.
+- **Files:** `ReviewPageClient.tsx` (desktop aside + Sheet onDelete)
+
+### BUG-4 (HIGH): AddFindingDialog silently broken when Q5/Q6 queries fail
+- **Root cause:** `getFileReviewData` Q5 (segments) and Q6 (taxonomy_definitions) wrapped in try-catch return empty arrays on failure. AddFindingDialog shows empty dropdowns with disabled submit — no error message to user.
+- **Fix:** Added warning banner in `AddFindingDialog` when `segments.length === 0 || categories.length === 0`.
+- **File:** `AddFindingDialog.tsx`
+
+### BUG-5 (MEDIUM): NoteInput missing focus trap (Guardrail #30 violation)
+- **Root cause:** `role="dialog"` without Tab trap — keyboard users Tab out of the popover, Esc only caught by textarea's own keydown (not container).
+- **Fix:** Added `aria-modal="true"`, container-level `onKeyDown` for Esc + Tab trap (first/last focusable cycling).
+- **File:** `NoteInput.tsx`
+
+### BUG-6 (MEDIUM): `addFinding` optimistic update missing sourceTextExcerpt
+- **Root cause:** Optimistic finding set `sourceTextExcerpt: null`. Realtime INSERT overwrites with real text ~1-2s later — brief empty state in detail panel.
+- **Fix:** Populate `sourceTextExcerpt` from `initialData.segments` data during optimistic update.
+- **File:** `ReviewPageClient.tsx`
+
+### BUG-7 (LOW): ESLint set-state-in-effect violations blocking commit
+- **Root cause:** `AddFindingDialog` and `NoteInput` used `useEffect` + `setState` for form reset on re-open. Pre-commit hook (ESLint `react-hooks/set-state-in-effect`) rejects this pattern.
+- **Fix:** Refactored to React 19 "adjust state during render" pattern (`if (open && !prevOpen) { setPrevOpen(true); resetForm() }`).
+- **Files:** `AddFindingDialog.tsx`, `NoteInput.tsx`
+
+### TD logged
+- **TD-UX-005:** Desktop→laptop viewport resize leaves `selectedId` stale — DEFERRED → Epic 5 (responsive polish)
+
 ### File List
 - src/db/schema/findings.ts (modified — added originalSeverity column)
 - src/db/migrations/0011_heavy_frog_thor.sql (new — migration)
