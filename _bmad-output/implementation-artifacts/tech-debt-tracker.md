@@ -614,6 +614,17 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** E-R9 tests that MQM score changes after rejecting a finding. Original assertion: `toBeGreaterThan(initialMqm)` (score should increase when penalty removed). Changed to `scoreChanged !== initialMqm` because serial test suite state pollution makes `initialMqm` baseline unreliable — prior Inngest recalculation jobs from E-R1..E-R8 may still be processing. Direction is verified in unit tests (`mqmCalculator.test.ts`). Fix: isolate E-R9 with its own seeded file, or use a dedicated project per test.
 - **Status:** ACCEPTED — unit tests verify direction; E2E verifies integration (score DOES change)
 
+### TD-AUTH-001: updateNoteText allows cross-user note editing within tenant
+- **Date:** 2026-03-15
+- **Story:** Story 4.3 (CR R1 — M3 finding)
+- **Phase:** CR
+- **Severity:** Medium
+- **File:** `src/features/review/actions/updateNoteText.action.ts:78-94`
+- **Description:** `updateNoteText` finds the latest `review_actions` row with `actionType='note'` for a finding, but does NOT filter by `userId`. User B (same tenant, qa_reviewer role) can overwrite User A's note text. The AC doesn't specify cross-user note ownership behavior — design decision needed: is note per-user or per-finding?
+- **Mitigation:** Same-tenant users collaborating on same file is rare in current product. RLS prevents cross-tenant access.
+- **Fix:** Add `eq(reviewActions.userId, userId)` to the WHERE clause, OR make the design decision that notes are per-finding (shared). Requires UX design input.
+- **Status:** DEFERRED → **Epic 5 — Multi-reviewer collaboration** (collaboration features + note ownership model)
+
 ### TD-UX-005: Desktop→laptop viewport resize leaves detail panel blank
 - **Date:** 2026-03-15
 - **Story:** Story 4.3 (CR adversarial review — H3 finding)
