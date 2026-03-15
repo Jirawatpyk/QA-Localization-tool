@@ -210,12 +210,36 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
     </check>
 
     <check if="ATDD checklist file EXISTS">
-      <action>Read ATDD checklist file and extract test counts by priority (P0/P1/P2/P3)</action>
+      <action>Read ATDD checklist file and extract from "AC-to-Test Scenario Mapping" tables:
+        - For each test row: test ID (e.g., "1.1"), scenario description, level, and Priority column (P0/P1/P2/P3)
+        - Count totals: {{atdd_p0_count}}, {{atdd_p1_count}}, {{atdd_p2_count}}, {{atdd_p3_count}}, {{atdd_total_count}}
+        - AC coverage: which ACs have at least one P0 or P1 test
+        - Generated test file paths from "Generated Test Files" section
+        - Key risks from "Failure Mode Analysis" and "Pre-mortem Analysis" sections
+      </action>
+      <action>Store extracted data for use in Step 5 (RED phase) and Step 10 (compliance gate)</action>
       <action>Verify ALL story ACs have at least one P0 or P1 test mapped</action>
-      <action>Run test suite on ATDD-generated test files to verify they compile without errors</action>
+
+      <check if="any AC has ZERO tests mapped">
+        <output>⚠️ **ATDD COVERAGE GAP** — AC(s) without test coverage detected.
+          This may indicate an incomplete ATDD run. Consider re-running ATDD or proceeding with awareness.
+        </output>
+      </check>
+
+      <!-- Verify ATDD test stubs still compile after any schema/type changes since ATDD generation -->
+      <action>Run the test suite on ATDD-generated test files to verify they compile without errors.
+        Stubs with `it.skip()` will be skipped (0 fail expected). Already-activated tests should pass.
+        The goal is to catch import/type errors from schema changes since ATDD was generated.</action>
+      <check if="ATDD test files have compilation errors">
+        <output>⚠️ **ATDD STUBS OUTDATED** — Some ATDD test files have compilation errors.
+          Fix the import/type errors in ATDD stubs before proceeding.</output>
+        <action>Fix compilation errors in ATDD test stubs (update imports/types only, do NOT change test logic)</action>
+      </check>
+
       <output>✅ **Context + ATDD Loaded**
         Story and project context available for implementation.
         ATDD checklist: {{atdd_total_count}} tests ({{atdd_p0_count}} P0, {{atdd_p1_count}} P1)
+        Test files: {{atdd_test_files_count}} files with `it.skip()` stubs ready for green phase.
       </output>
     </check>
   </step>
@@ -320,11 +344,21 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
     <action>Plan implementation following ATDD-guided red-green-refactor cycle</action>
 
     <!-- ATDD-AWARE RED PHASE -->
-    <action>Check ATDD checklist for tests mapped to the current task's AC(s)</action>
-    <action>Identify which ATDD `it.skip()` test stubs correspond to this task</action>
+    <action>Check ATDD checklist for tests mapped to the current task's AC(s) using the AC-to-Test Scenario Mapping tables</action>
+    <action>Identify which ATDD `it.skip()` test stubs correspond to this task by matching AC number and test IDs</action>
     <check if="ATDD test stubs exist for this task AND stubs still contain `it.skip()`">
-      <action>Remove `it.skip()` from relevant ATDD test stubs — these become the RED phase tests</action>
+      <action>Remove `it.skip()` / `.skip` from the relevant ATDD test stubs — these become the RED phase tests</action>
+      <action>If implementation details differ from ATDD assumptions, adapt stubs with these constraints:
+        - MAY update: mock setup, fixture data, import paths, type annotations
+        - MAY update: assertion values to match actual implementation (e.g., different field names)
+        - MUST PRESERVE: the test scenario intent (what is being tested and why)
+        - MUST PRESERVE: the assertion count (do not reduce number of expect() calls)
+        - MUST NOT: delete an ATDD test entirely — if a scenario is no longer applicable, convert to a different test for the same AC
+      </action>
       <action>Write ADDITIONAL tests if the task requires coverage beyond what ATDD generated</action>
+    </check>
+    <check if="ATDD test stubs exist but `it.skip()` already removed (review continuation or previous task activated them)">
+      <action>Skip ATDD activation — stubs were already activated in a previous pass. Proceed with standard TDD for any remaining gaps.</action>
     </check>
     <check if="no ATDD test stubs for this task">
       <action>Write FAILING tests first for the task/subtask functionality (standard TDD RED phase)</action>
@@ -452,22 +486,44 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
          naming conventions, missing tests, single-file code smells, unused imports, perf within one file.
     </action>
 
-    <!-- Conditional scans -->
-    <check if="File List contains schema/migration files (src/db/schema/*, src/db/migrations/*)">
-      <action>ALSO launch: rls-policy-reviewer (subagent_type="rls-policy-reviewer")</action>
-    </check>
-    <check if="File List contains Inngest/pipeline files (src/features/pipeline/*, src/lib/inngest/*)">
-      <action>ALSO launch: inngest-function-validator (subagent_type="inngest-function-validator")</action>
+    <!-- Conditional scans — trigger when relevant files changed OR story belongs to DB/pipeline-heavy epic -->
+    <action>Determine if conditional scans should trigger by checking BOTH:
+      1. File List contains relevant paths (primary trigger)
+      2. Story belongs to a DB/pipeline-heavy epic (fallback trigger — prevents missed scans if File List is incomplete)
+    </action>
+
+    <action>RLS scan trigger: Check if File List contains schema/migration files (src/db/schema/*, src/db/migrations/*, supabase/migrations/*),
+      OR if story key starts with epic that involves database changes (e.g., epic-2 File Processing, epic-4 Scoring)</action>
+    <check if="RLS scan trigger is true">
+      <action>ALSO launch: rls-policy-reviewer (subagent_type="rls-policy-reviewer") — audit RLS policies against Drizzle schema</action>
     </check>
 
-    <action>Collect findings from ALL sub-agents and categorize by severity</action>
+    <action>Inngest scan trigger: Check if File List contains Inngest/pipeline files (src/features/pipeline/*, src/lib/inngest/*, src/app/api/inngest/*, src/features/scoring/*),
+      OR if story key starts with epic that involves pipeline/orchestration (e.g., epic-3 Pipeline, epic-4 Scoring)</action>
+    <check if="Inngest scan trigger is true">
+      <action>ALSO launch: inngest-function-validator (subagent_type="inngest-function-validator") — validate Inngest function patterns</action>
+    </check>
+
+    <action>Collect findings from ALL sub-agents and categorize by severity (CRITICAL / HIGH / MEDIUM / LOW)</action>
+
+    <!-- Fix critical and high findings -->
     <check if="CRITICAL or HIGH findings exist">
       <action>Fix ALL critical and high severity findings immediately</action>
       <action>Re-run lint + type-check + full test suite after fixes</action>
+      <action>Update File List with any newly changed files</action>
+      <action>Add fixed findings to Dev Agent Record → Completion Notes</action>
     </check>
 
+    <!-- Re-scan if fixes were applied -->
+    <check if="fixes were applied">
+      <action>Re-run ALL triggered sub-agents to verify fixes and check for new findings</action>
+      <action>Repeat fix cycle until all scans return clean or LOW-only findings</action>
+    </check>
+
+    <!-- Gate: only proceed when clean -->
     <check if="all scans return clean or LOW-only findings">
       <action>Record scan results in Dev Agent Record: "Pre-CR scan: anti-pattern ✅, tenant-isolation ✅, code-quality ✅, cross-file-flow ✅, rls-policy [ran/skipped: reason], inngest-validator [ran/skipped: reason]"</action>
+      <action>Record which conditional scans ran and which were skipped (and why) — so CR reviewer knows nothing was missed</action>
       <goto step="10">Story completion</goto>
     </check>
 
@@ -482,10 +538,19 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
     <!-- ATDD Compliance Gate — verify BEFORE setting status to "review" -->
     <critical>🧪 ATDD COMPLIANCE: All P0+P1 ATDD tests MUST pass before story completion</critical>
     <action>Re-read the ATDD checklist at _bmad-output/test-artifacts/atdd-checklist-{{story_id}}.md</action>
-    <action>Cross-reference ATDD test coverage:
-      1. For each ATDD-generated test file, search for remaining `it.skip(` or `test.skip(`
-      2. Match each skipped test against the ATDD checklist to determine its priority (P0/P1/P2/P3)
-      3. Count: {{p0_skip}} P0 still skipped, {{p1_skip}} P1 still skipped, {{p2_skip}} P2 still skipped
+    <action>Cross-reference ATDD test coverage using this method:
+      1. From the ATDD checklist "AC-to-Test Scenario Mapping" tables, build a list of all test IDs with their Priority (P0/P1/P2/P3)
+         Example: test ID "1.1" = "getBatchSummary returns correct ActionResult shape" = P0
+      2. For each ATDD-generated test file (listed in "Generated Test Files" section):
+         a. Search the file for remaining `it.skip(` or `test.skip(` — each is an un-activated test
+         b. Match the test description string against the ATDD checklist scenario description
+         c. Determine the priority of each remaining skip by matching to checklist table
+      3. Count results:
+         - {{p0_skip}}: P0 tests still skipped or failing
+         - {{p1_skip}}: P1 tests still skipped or failing
+         - {{p2_skip}}: P2 tests still skipped (acceptable)
+         - {{p0_passing}}: P0 tests active and passing
+         - {{p1_passing}}: P1 tests active and passing
     </action>
 
     <check if="{{p0_skip}} > 0 (any P0 test still skipped or FAILING)">
