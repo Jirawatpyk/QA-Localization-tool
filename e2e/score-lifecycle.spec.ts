@@ -434,7 +434,7 @@ test.describe.serial('Score Lifecycle & Confidence Display — Story 3.5', () =>
 
     // Act: navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await gotoReviewPageWithRetry(page, projectId, fileId)
+    await gotoReviewPageReadyWithRetry(page, projectId, fileId)
 
     // Wait for findings list to render
     const confidenceBadges = page.getByTestId('confidence-badge')
