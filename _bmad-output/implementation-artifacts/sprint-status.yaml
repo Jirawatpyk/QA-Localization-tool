@@ -123,7 +123,7 @@ development_status:
   4-2-core-review-actions: done
   4-3-extended-actions: done
   4-4a-bulk-operations-decision-override: done
-  4-4b-undo-redo-realtime-conflict-resolution: ready-for-dev
+  4-4b-undo-redo-realtime-conflict-resolution: done
   4-5-search-filter-ai-layer-toggle: backlog
   4-6-suppress-false-positive-patterns: backlog
   4-7-add-to-glossary-from-review: backlog

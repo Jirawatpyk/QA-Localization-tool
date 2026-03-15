@@ -352,8 +352,34 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
           toast.error(`Redo failed: ${result.error}`)
           return
         }
-        // CR-R2-M2: addFinding generates new UUID — update entry so next undo-add deletes correct ID
+        // CR-R3: Add re-created finding to store immediately (don't wait for Realtime)
         const newId = result.data.findingId
+        store.setFinding(newId, {
+          id: newId,
+          tenantId: snap.tenantId,
+          projectId: snap.projectId,
+          sessionId: snap.reviewSessionId ?? '',
+          segmentId: snap.segmentId ?? '',
+          severity: snap.severity,
+          originalSeverity: snap.originalSeverity,
+          category: snap.category,
+          status: 'manual',
+          description: snap.description,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          fileId: snap.fileId,
+          detectedByLayer: snap.detectedByLayer,
+          aiModel: snap.aiModel,
+          aiConfidence: snap.aiConfidence,
+          suggestedFix: snap.suggestedFix,
+          sourceTextExcerpt: snap.sourceTextExcerpt,
+          targetTextExcerpt: snap.targetTextExcerpt,
+          segmentCount: snap.segmentCount,
+          scope: snap.scope,
+          reviewSessionId: snap.reviewSessionId,
+          relatedFileIds: snap.relatedFileIds,
+        })
+        // CR-R2-M2: addFinding generates new UUID — update entry so next undo-add deletes correct ID
         store.pushUndo({
           ...entry,
           findingId: newId,
