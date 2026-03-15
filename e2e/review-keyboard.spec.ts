@@ -326,9 +326,9 @@ test.describe.serial('Review Keyboard & Focus — Story 4.0 ATDD', () => {
     const rows = grid.getByRole('row')
     await expect(rows).toHaveCount(3)
 
-    // 2. Focus first row explicitly (body focus after hydration helper)
+    // 2. Click first row to sync activeFindingId (focus() alone doesn't sync — E2E memory)
     const firstRow = rows.first()
-    await firstRow.focus()
+    await firstRow.click()
     await expect(firstRow).toBeFocused({ timeout: 5_000 })
     await expect(firstRow).toHaveAttribute('tabindex', '0')
 
@@ -339,8 +339,9 @@ test.describe.serial('Review Keyboard & Focus — Story 4.0 ATDD', () => {
       timeout: 15_000,
     })
 
-    // 3. Navigate to second finding with J
+    // 3. Navigate to second finding with J — small delay for rAF focus
     await page.keyboard.press('j')
+    await page.waitForTimeout(200)
     const secondRow = rows.nth(1)
     await expect(secondRow).toHaveAttribute('tabindex', '0', { timeout: 10_000 })
     await expect(secondRow).toBeFocused()

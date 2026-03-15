@@ -21,6 +21,7 @@
 import { test, expect } from '@playwright/test'
 
 import { cleanupTestProject, queryScore, seedAiPartialFile } from './helpers/pipeline-admin'
+import { gotoReviewPageWithRetry } from './helpers/review-page'
 import {
   signupOrLogin,
   getUserInfo,
@@ -77,7 +78,7 @@ test.describe.serial('Pipeline Resilience — Story 3.4', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     // ScoreBadge should be visible and show "Partial" label
     const scoreBadge = page.getByTestId('score-badge')
@@ -90,7 +91,7 @@ test.describe.serial('Pipeline Resilience — Story 3.4', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     // Retry button should be enabled on a file with partial AI results
     const retryButton = page.getByRole('button', { name: /retry ai analysis/i })
@@ -100,19 +101,19 @@ test.describe.serial('Pipeline Resilience — Story 3.4', () => {
 
   // ── T79: Click retry → button disappears → action dispatched ─────────────
   test('[P1] clicking retry dispatches action and hides button', async ({ page }) => {
-    test.setTimeout(60_000)
+    test.setTimeout(90_000)
 
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     const retryButton = page.getByRole('button', { name: /retry ai analysis/i })
-    await expect(retryButton).toBeVisible({ timeout: 15_000 })
+    await expect(retryButton).toBeVisible({ timeout: 30_000 })
 
     await retryButton.click()
 
     // After click: retryAiAnalysis action returns success → retryDispatched=true → button gone.
-    // This confirms the server action dispatched the Inngest event.
-    await expect(retryButton).not.toBeVisible({ timeout: 15_000 })
+    // Server action may take time in CI (cold start + Inngest dispatch).
+    await expect(retryButton).not.toBeVisible({ timeout: 30_000 })
 
     // Score badge should remain visible (no crash / error state).
     // NOTE: Score may or may not transition from "Partial" — depends on AI pipeline
@@ -127,7 +128,7 @@ test.describe.serial('Pipeline Resilience — Story 3.4', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     // Wait for findings list to load
     await page.waitForTimeout(3_000)

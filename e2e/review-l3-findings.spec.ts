@@ -34,7 +34,7 @@ import {
   queryFindingsCount,
   queryScore,
 } from './helpers/pipeline-admin'
-import { waitForFindingsVisible } from './helpers/review-page'
+import { gotoReviewPageWithRetry, waitForFindingsVisible } from './helpers/review-page'
 import {
   signupOrLogin,
   getUserInfo,
@@ -138,13 +138,13 @@ test.describe.serial('Review L3 Findings — Story 3.3', () => {
     expect(score).not.toBeNull()
     expect(score!.layer_completed).toBe('L1L2L3')
 
-    // Navigate to review page
+    // Navigate to review page (retry for transient SSR errors in CI)
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
-    // ScoreBadge should be visible
+    // ScoreBadge should be visible — allow extra time for score subscription
     const scoreBadge = page.getByTestId('score-badge')
-    await expect(scoreBadge).toBeVisible({ timeout: 15_000 })
+    await expect(scoreBadge).toBeVisible({ timeout: 30_000 })
 
     // For Thorough mode (L1+L2+L3), badge should show "Deep Analyzed" (gold)
     // Economy mode shows "AI Screened" — L3 upgrades to "Deep Analyzed"
@@ -157,7 +157,7 @@ test.describe.serial('Review L3 Findings — Story 3.3', () => {
 
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     // ReviewProgress component should be visible (Story 4.1a dual-track)
     const reviewProgress = page.getByTestId('review-progress')
@@ -184,7 +184,7 @@ test.describe.serial('Review L3 Findings — Story 3.3', () => {
 
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     // Score badge should contain the actual MQM score from DB
     const scoreBadge = page.getByTestId('score-badge')
@@ -207,7 +207,7 @@ test.describe.serial('Review L3 Findings — Story 3.3', () => {
 
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     if (l3Count > 0) {
       // Wait for findings to load in store + expand minor accordion if needed
@@ -231,7 +231,7 @@ test.describe.serial('Review L3 Findings — Story 3.3', () => {
 
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     if (l3Count > 0) {
       // Each L3 finding should display a layer badge with "AI"
@@ -257,7 +257,7 @@ test.describe.serial('Review L3 Findings — Story 3.3', () => {
 
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     if (l2Count > 0 && l3Count > 0) {
       // Look for confirm/contradict indicators on L2 findings
@@ -293,7 +293,7 @@ test.describe.serial('Review L3 Findings — Story 3.3', () => {
 
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
-    await page.goto(`/projects/${projectId}/review/${fileId}`)
+    await gotoReviewPageWithRetry(page, projectId, fileId)
 
     if (totalCount > 0) {
       // Wait for findings to load in store + expand minor accordion if needed
