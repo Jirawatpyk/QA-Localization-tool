@@ -484,10 +484,12 @@ Claude Opus 4.6 (1M context)
 - Fixed 5 ReviewPageClient test files: added bulk store fields + bulkAction mock + overrideCounts
 - Fixed getFileReviewData test: withTenant call count 6→7 (Q7 override counts query)
 - 2 pre-existing test failures in pipeline (runL2ForFile, runL3ForFile) — unrelated to 4.4a, pass when run individually (flaky in full suite)
-- E2E Bug 1: `server-only` + `'use server'` conflict → hydration crash → removed `server-only`
-- E2E Bug 2: infinite re-render from `useState` render-time adjustment → switched to `useRef`
-- E2E Bug 3: missing `useRef` import → added to import statement
-- E2E Bug 4: Zustand function ref in useEffect deps → used `getState()` inside handler
+- E2E Bug 1: infinite re-render from `useState` render-time adjustment → switched to `useRef` — **root cause ของ "Something went wrong" hydration crash**
+- E2E Bug 2: missing `useRef` import → added to import statement
+- E2E Bug 3: Zustand function ref in useEffect deps → used `getState()` inside handler
+- Audit Bug 4: `incrementOverrideCount` ไม่ถูกเรียกใน single-action → เพิ่มใน `use-review-actions.ts`
+- Audit Bug 5: `onOverrideBadgeClick` ไม่ wire ผ่าน `FindingList` → เพิ่ม prop threading
+- Misdiagnosis: `server-only` ไม่ใช่ root cause → restored กลับหลัง audit ยืนยัน build+E2E ผ่าน
 
 ### Completion Notes List
 
@@ -511,20 +513,26 @@ Claude Opus 4.6 (1M context)
 **ATDD Tests:** 20/20 unit tests GREEN (12 bulkAction + 3 getOverrideHistory + 5 store)
 **E2E Tests:** 9/9 GREEN (8 tests + 1 setup)
 
-**E2E Bug Fixes (production bugs found during E2E):**
+**Production Bugs (found during E2E + systematic audit):**
 
-1. **`server-only` + `'use server'` conflict** — `bulkAction.action.ts` + `getOverrideHistory.action.ts` มีทั้ง `'use server'` และ `import 'server-only'`. เมื่อ Client Component (ReviewPageClient) import Server Action ที่มี `server-only` → bundler block import → client hydration crash. Root cause: copy pattern จาก Server Actions อื่นที่ไม่ถูก import ตรงจาก client. Fix: ลบ `import 'server-only'` — `'use server'` directive เพียงพอ.
+1. **Infinite re-render loop (Too many re-renders)** — `FindingDetailContent.tsx` ใช้ render-time state adjustment (`useState` + `setPrevFindingId`) เพื่อ reset `showHistory` เมื่อ finding เปลี่ยน. `setPrevFindingId` trigger re-render → `setShowHistory(false)` trigger อีก render → infinite loop. Root cause: `useState` ไม่เหมาะสำหรับ tracking previous value ใน render body. Fix: ใช้ `useRef` แทน — ref ไม่ trigger re-render. **นี่คือ root cause จริงของ "Something went wrong" ที่เจอตอน E2E** (ไม่ใช่ `server-only` ที่ถูก misdiagnose ในตอนแรก)
 
-2. **Infinite re-render loop (Too many re-renders)** — `FindingDetailContent.tsx` ใช้ render-time state adjustment (`useState` + `setPrevFindingId`) เพื่อ reset `showHistory` เมื่อ finding เปลี่ยน. `setPrevFindingId` trigger re-render → `setShowHistory(false)` trigger อีก render → infinite loop. Root cause: `useState` ไม่เหมาะสำหรับ tracking previous value ใน render body. Fix: ใช้ `useRef` แทน — ref ไม่ trigger re-render.
+2. **Missing `useRef` import** — แก้ Bug 1 โดยเปลี่ยนเป็น `useRef` แต่ลืม update import statement → `ReferenceError: useRef is not defined` ตอน runtime.
 
-3. **Missing `useRef` import** — แก้ Bug 2 โดยเปลี่ยนเป็น `useRef` แต่ลืม update import statement → `ReferenceError: useRef is not defined` ตอน runtime.
+3. **Zustand store function ใน useEffect deps → re-register loop** — `selectAllFiltered` จาก `useReviewStore((s) => s.selectAllFiltered)` เปลี่ยน reference ทุกครั้งที่ store update (Zustand ใช้ `Object.is` compare → function จาก object ใหม่ = reference ใหม่) → `useEffect` re-run ทุก render → `register` keyboard shortcut ซ้ำ → conflict loop. Fix: ใช้ `useReviewStore.getState().selectAllFiltered()` ภายใน handler แทน subscription.
 
-4. **Zustand store function ใน useEffect deps → re-register loop** — `selectAllFiltered` จาก `useReviewStore((s) => s.selectAllFiltered)` เปลี่ยน reference ทุกครั้งที่ store update (Zustand ใช้ `Object.is` compare → function จาก object ใหม่ = reference ใหม่) → `useEffect` re-run ทุก render → `register` keyboard shortcut ซ้ำ → conflict loop. Fix: ใช้ `useReviewStore.getState().selectAllFiltered()` ภายใน handler แทน subscription.
+4. **Override badge ไม่ขึ้นหลัง single-action (production gap)** — `incrementOverrideCount` ถูกเรียกเฉพาะใน bulk action handler (`ReviewPageClient`) ไม่ถูกเรียกใน `useReviewActions` hook สำหรับ accept/reject ธรรมดา → badge ไม่ขึ้น client-side จนกว่าจะ reload page. Fix: เพิ่ม logic ใน `use-review-actions.ts` — ถ้า `currentStatus !== 'pending'` (เป็น re-decision) → increment หรือ set count.
+
+5. **Badge click ไม่ทำงาน (wiring gap)** — `onOverrideBadgeClick` prop ถูกเพิ่มใน `FindingCard` + `FindingCardCompact` แต่ `FindingList.tsx` ไม่ได้ pass prop นี้ลง → optional chaining `?.` ดักเงียบ → click ไม่ทำอะไร. Fix: เพิ่ม prop threading: `ReviewPageClient` → `FindingList` → `FindingCard/Compact`.
+
+**Misdiagnosis (corrected by systematic audit):**
+- ~~`server-only` + `'use server'` conflict~~ → **ไม่ใช่ root cause** — `npm run build` ผ่านปกติ + E2E 9/9 GREEN แม้ `server-only` คืนกลับ. `server-only` ถูก restore แล้ว ตรงกับ pattern ของ Server Actions อื่นทั้ง 11 ไฟล์ในโปรเจกต์
 
 **Lessons Learned (new Guardrails):**
-- Server Action ที่ถูก import จาก `'use client'` → **ห้าม `import 'server-only'`**
 - Render-time state reset → **ใช้ `useRef` ไม่ใช่ `useState`** สำหรับ tracking previous value
 - Zustand store methods ใน `useEffect` deps → **ใช้ `getState()` inside handler** แทน selector ใน deps
+- New prop on component → **ตรวจ parent chain ทั้งหมด** ว่า wire ลงมาครบ (optional chaining ดักเงียบ)
+- Override count increment → **ทุก action path** ที่เปลี่ยน state ต้อง increment ไม่ใช่แค่ bulk
 
 ### Implementation Plan
 
