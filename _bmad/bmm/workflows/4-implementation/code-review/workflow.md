@@ -102,12 +102,13 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
   <critical>VALIDATE EVERY CLAIM - Check git reality vs story claims</critical>
 
   <!-- Automated Sub-agent Scans — run FIRST to enrich manual review -->
-  <action>Launch THREE sub-agents IN PARALLEL using the Task tool to scan all files in the comprehensive review list:
+  <action>Launch FOUR sub-agents IN PARALLEL using the Task tool to scan all files in the comprehensive review list:
     1. code-quality-analyzer (subagent_type="code-quality-analyzer") — code quality, patterns, maintainability (single-file focus)
     2. testing-qa-expert (subagent_type="testing-qa-expert") — test coverage gaps, missing test scenarios, test quality
     3. feature-dev:code-reviewer (subagent_type="feature-dev:code-reviewer") — CROSS-FILE data flow (Guardrail #44). Scope: ONLY state/data crossing file boundaries (single-file = agent #1). Trace each export→import flow: shape/order match, lifecycle complete, transitional state handling, timing/race conditions. DO NOT report: type widening, bare string, mock drift, naming, missing tests, single-file smells (= agent #1's job)
+    4. bmad-review-edge-case-hunter (skill="bmad-review-edge-case-hunter") — boundary conditions: walk every branching path in changed files, report ONLY unhandled edge cases (missing else/default, null/empty guards, off-by-one, race conditions, timeout gaps). Orthogonal to agents #1-#3 — method-driven path enumeration, not attitude-driven review
   </action>
-  <action>Collect findings from all three sub-agents and incorporate them into the review below.
+  <action>Collect findings from all four sub-agents and incorporate them into the review below.
     Sub-agent findings count toward issue discovery.
     Note: Objective scans (rls-policy-reviewer, inngest-function-validator) already ran in Dev Story Pre-CR scan — check Dev Agent Record for results.</action>
 
