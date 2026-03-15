@@ -148,20 +148,29 @@ export async function undoBulkAction(
         .from(findings)
         .where(and(inArray(findings.id, undoneIds), withTenant(findings.tenantId, tenantId)))
 
-      for (const meta of findingMeta) {
-        let sourceLang = 'unknown'
-        let targetLang = 'unknown'
-        if (meta.segmentId) {
-          const segRows = await db
-            .select({ sourceLang: segments.sourceLang, targetLang: segments.targetLang })
-            .from(segments)
-            .where(and(eq(segments.id, meta.segmentId), withTenant(segments.tenantId, tenantId)))
-            .limit(1)
-          if (segRows.length > 0) {
-            sourceLang = segRows[0]!.sourceLang
-            targetLang = segRows[0]!.targetLang
-          }
+      // CR-H5: Batch segment lookup instead of N+1 queries
+      const segmentIds = findingMeta
+        .map((m) => m.segmentId)
+        .filter((id): id is string => id !== null)
+      const segmentLangMap = new Map<string, { sourceLang: string; targetLang: string }>()
+      if (segmentIds.length > 0) {
+        const segRows = await db
+          .select({
+            id: segments.id,
+            sourceLang: segments.sourceLang,
+            targetLang: segments.targetLang,
+          })
+          .from(segments)
+          .where(and(inArray(segments.id, segmentIds), withTenant(segments.tenantId, tenantId)))
+        for (const row of segRows) {
+          segmentLangMap.set(row.id, { sourceLang: row.sourceLang, targetLang: row.targetLang })
         }
+      }
+
+      for (const meta of findingMeta) {
+        const langs = meta.segmentId ? segmentLangMap.get(meta.segmentId) : undefined
+        const sourceLang = langs?.sourceLang ?? 'unknown'
+        const targetLang = langs?.targetLang ?? 'unknown'
 
         await db.insert(feedbackEvents).values({
           tenantId,

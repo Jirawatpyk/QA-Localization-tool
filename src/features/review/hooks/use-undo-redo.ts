@@ -93,6 +93,33 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
           }
           return
         }
+        // CR-C3: Re-insert finding into store from snapshot (don't wait for Realtime)
+        const snap = entry.findingSnapshot
+        store.setFinding(snap.id, {
+          id: snap.id,
+          tenantId: snap.tenantId,
+          projectId: snap.projectId,
+          sessionId: snap.reviewSessionId ?? '',
+          segmentId: snap.segmentId ?? '',
+          severity: snap.severity,
+          originalSeverity: snap.originalSeverity,
+          category: snap.category,
+          status: snap.status,
+          description: snap.description,
+          createdAt: snap.createdAt,
+          updatedAt: new Date().toISOString(),
+          fileId: snap.fileId,
+          detectedByLayer: snap.detectedByLayer,
+          aiModel: snap.aiModel,
+          aiConfidence: snap.aiConfidence,
+          suggestedFix: snap.suggestedFix,
+          sourceTextExcerpt: snap.sourceTextExcerpt,
+          targetTextExcerpt: snap.targetTextExcerpt,
+          segmentCount: snap.segmentCount,
+          scope: snap.scope,
+          reviewSessionId: snap.reviewSessionId,
+          relatedFileIds: snap.relatedFileIds,
+        })
         store.pushRedo(entry)
         toast.success(`Undone: ${entry.description}`)
         announce(`Undone: ${entry.description}`)
@@ -100,12 +127,33 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
       }
 
       if (entry.type === 'bulk') {
-        // Check for stale findings in the entry
-        const findingInputs = [...entry.previousStates.entries()].map(([fId, prevState]) => ({
+        // CR-H1: Check stale findings before server call (parity with single undo stale check)
+        const staleInBulk = [...entry.previousStates.keys()].filter((fId) =>
+          entry.staleFindings.has(fId),
+        )
+        if (staleInBulk.length > 0 && staleInBulk.length === entry.previousStates.size) {
+          // All findings are stale — show conflict for the first one
+          const firstStale = staleInBulk[0]!
+          const finding = store.findingsMap.get(firstStale)
+          onConflict(entry, firstStale, finding?.status ?? 'unknown')
+          return
+        }
+
+        // Build inputs, excluding stale findings (non-stale proceed, stale treated as conflicts)
+        const nonStaleEntries = [...entry.previousStates.entries()].filter(
+          ([fId]) => !entry.staleFindings.has(fId),
+        )
+        const findingInputs = nonStaleEntries.map(([fId, prevState]) => ({
           findingId: fId,
           previousState: prevState,
           expectedCurrentState: entry.newStates.get(fId) ?? prevState,
         }))
+
+        // CR-H3: Guard empty findingInputs (all stale but not all — shouldn't happen, defensive)
+        if (findingInputs.length === 0) {
+          toast.warning('All findings were modified by another user')
+          return
+        }
 
         const result = await undoBulkAction({
           findings: findingInputs,
@@ -130,14 +178,22 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
 
         // P2 fix: push redo entry with ONLY reverted findings (exclude conflicted)
         if (result.data.conflicted.length > 0) {
-          const revertedSet = new Set(result.data.reverted)
-          store.pushRedo({
-            ...entry,
-            previousStates: new Map([...entry.previousStates].filter(([k]) => revertedSet.has(k))),
-            newStates: new Map([...entry.newStates].filter(([k]) => revertedSet.has(k))),
-          })
+          // CR-H3: Don't push empty redo entry when ALL findings conflicted
+          if (result.data.reverted.length > 0) {
+            const revertedSet = new Set(result.data.reverted)
+            store.pushRedo({
+              ...entry,
+              previousStates: new Map(
+                [...entry.previousStates].filter(([k]) => revertedSet.has(k)),
+              ),
+              newStates: new Map([...entry.newStates].filter(([k]) => revertedSet.has(k))),
+            })
+          }
+          const total = result.data.reverted.length + result.data.conflicted.length
           toast.warning(
-            `Partially undone: ${result.data.reverted.length}/${findingInputs.length} findings (${result.data.conflicted.length} conflicts)`,
+            result.data.reverted.length > 0
+              ? `Partially undone: ${result.data.reverted.length}/${total} findings (${result.data.conflicted.length} conflicts)`
+              : `All ${total} findings were modified — undo cancelled`,
           )
         } else {
           store.pushRedo(entry)
@@ -251,8 +307,13 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
         return
       }
 
-      if (entry.action === 'add' && entry.findingSnapshot) {
-        // Re-add: use addFinding with snapshot data
+      if (entry.action === 'add') {
+        // CR-C2: Re-add finding from snapshot (or fail gracefully if no snapshot)
+        if (!entry.findingSnapshot) {
+          store.pushRedo(entry)
+          toast.error('Redo failed: missing finding data')
+          return
+        }
         const snap = entry.findingSnapshot
         const result = await addFinding({
           fileId: snap.fileId,
@@ -314,8 +375,21 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
           }
         }
 
-        store.pushUndo(entry)
-        toast.success(`Redone: ${entry.description}`)
+        // CR-H2: Filter undo entry for partial conflicts (mirror of undo-bulk pattern)
+        if (result.data.conflicted.length > 0) {
+          const revertedSet = new Set(result.data.reverted)
+          store.pushUndo({
+            ...entry,
+            previousStates: new Map([...entry.previousStates].filter(([k]) => revertedSet.has(k))),
+            newStates: new Map([...entry.newStates].filter(([k]) => revertedSet.has(k))),
+          })
+          toast.warning(
+            `Partially redone: ${result.data.reverted.length}/${findingInputs.length} findings (${result.data.conflicted.length} conflicts)`,
+          )
+        } else {
+          store.pushUndo(entry)
+          toast.success(`Redone: ${entry.description}`)
+        }
         announce(`Redone: ${entry.description}`)
         return
       }
@@ -395,6 +469,8 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
             updatedAt: result.data.serverUpdatedAt,
           })
         }
+        // CR-C4: Push to redo stack so forced undo can be redone
+        store.pushRedo(entry)
         toast.success(`Undone: ${entry.description} (forced)`)
         announce(`Undone: ${entry.description}`)
       } else {

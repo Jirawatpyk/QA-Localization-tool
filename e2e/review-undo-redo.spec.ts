@@ -185,8 +185,6 @@ test.describe.serial('Undo/Redo & Conflict Resolution — Story 4.4b ATDD', () =
       document.removeEventListener('keydown', testHandler, { capture: true })
       return handled
     })
-    console.log('Ctrl+Z event propagated:', hasCtrlZ)
-
     // Undo via Ctrl+Z — use keyboard.down/up pattern for Windows compatibility
     await page.keyboard.down('Control')
     await page.keyboard.press('z')
@@ -300,21 +298,20 @@ test.describe.serial('Undo/Redo & Conflict Resolution — Story 4.4b ATDD', () =
     await page.waitForTimeout(300)
     await page.keyboard.press('-')
 
-    // Select a different severity (e.g., minor)
+    // CR-H6: Assert menu visibility (not conditional — test must exercise the path)
     const minorOption = page.getByRole('menuitem', { name: /minor/i })
-    if (await minorOption.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await minorOption.click()
-      await expect(page.getByText(/severity/i).first()).toBeVisible({ timeout: 10_000 })
-      await page.waitForTimeout(1000)
+    await expect(minorOption).toBeVisible({ timeout: 5_000 })
+    await minorOption.click()
+    await expect(page.getByText(/severity/i).first()).toBeVisible({ timeout: 10_000 })
+    await page.waitForTimeout(1000)
 
-      // Undo
-      await rows.first().click()
-      await page.waitForTimeout(300)
-      await page.keyboard.down('Control')
-      await page.keyboard.press('z')
-      await page.keyboard.up('Control')
-      await expect(page.getByText(/[Uu]ndo/).first()).toBeVisible({ timeout: 15_000 })
-    }
+    // Undo severity override via Ctrl+Z
+    await rows.first().click()
+    await page.waitForTimeout(300)
+    await page.keyboard.down('Control')
+    await page.keyboard.press('z')
+    await page.keyboard.up('Control')
+    await expect(page.getByText(/[Uu]ndo/).first()).toBeVisible({ timeout: 15_000 })
   })
 
   // ── E-05: P1 AC6 — Stack clears on file switch ──

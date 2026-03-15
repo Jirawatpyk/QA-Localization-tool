@@ -1003,6 +1003,26 @@ export function ReviewPageClient({
                       })
                     }
                     toast.success(`Severity overridden to ${newSeverity}`)
+
+                    // Story 4.4b CR-C1: Push undo entry for severity override (AC3)
+                    useReviewStore.getState().pushUndo({
+                      id: crypto.randomUUID(),
+                      type: 'single',
+                      action: 'severity_override',
+                      findingId: activeFindingState,
+                      batchId: null,
+                      previousStates: new Map([[activeFindingState, f?.status ?? 'pending']]),
+                      newStates: new Map([[activeFindingState, f?.status ?? 'pending']]),
+                      previousSeverity: {
+                        severity: f?.severity ?? newSeverity,
+                        originalSeverity: f?.originalSeverity ?? null,
+                      },
+                      newSeverity,
+                      findingSnapshot: null,
+                      description: `Override severity (${f?.severity ?? '?'} → ${newSeverity})`,
+                      timestamp: Date.now(),
+                      staleFindings: new Set(),
+                    })
                   } else {
                     // Rollback optimistic update
                     if (f) {
@@ -1056,6 +1076,26 @@ export function ReviewPageClient({
                       })
                     }
                     toast.success('Severity reset to original')
+
+                    // Story 4.4b CR-C1: Push undo entry for severity reset (AC3)
+                    useReviewStore.getState().pushUndo({
+                      id: crypto.randomUUID(),
+                      type: 'single',
+                      action: 'severity_override',
+                      findingId: activeFindingState,
+                      batchId: null,
+                      previousStates: new Map([[activeFindingState, f?.status ?? 'pending']]),
+                      newStates: new Map([[activeFindingState, f?.status ?? 'pending']]),
+                      previousSeverity: {
+                        severity: f?.severity ?? orig,
+                        originalSeverity: f?.originalSeverity ?? null,
+                      },
+                      newSeverity: orig,
+                      findingSnapshot: null,
+                      description: `Reset severity (${f?.severity ?? '?'} → ${orig})`,
+                      timestamp: Date.now(),
+                      staleFindings: new Set(),
+                    })
                   } else {
                     // Rollback
                     if (f) {
@@ -1127,7 +1167,7 @@ export function ReviewPageClient({
                   }
                   store.setFinding(result.data.findingId, newFinding)
 
-                  // Story 4.4b: Push undo entry for manual add
+                  // Story 4.4b: Push undo entry for manual add (CR-C2: include snapshot for redo)
                   store.pushUndo({
                     id: crypto.randomUUID(),
                     type: 'single',
@@ -1138,7 +1178,30 @@ export function ReviewPageClient({
                     newStates: new Map([[result.data.findingId, 'manual']]),
                     previousSeverity: null,
                     newSeverity: null,
-                    findingSnapshot: null,
+                    findingSnapshot: {
+                      id: newFinding.id,
+                      segmentId: newFinding.segmentId || null,
+                      fileId: newFinding.fileId ?? fileId,
+                      projectId,
+                      tenantId,
+                      reviewSessionId: null,
+                      status: 'manual',
+                      severity: newFinding.severity,
+                      originalSeverity: null,
+                      category: newFinding.category,
+                      description: newFinding.description,
+                      detectedByLayer: 'Manual',
+                      aiModel: null,
+                      aiConfidence: null,
+                      suggestedFix: newFinding.suggestedFix,
+                      sourceTextExcerpt: newFinding.sourceTextExcerpt,
+                      targetTextExcerpt: null,
+                      scope: 'per-file',
+                      relatedFileIds: null,
+                      segmentCount: 1,
+                      createdAt: newFinding.createdAt,
+                      updatedAt: newFinding.updatedAt,
+                    },
                     description: 'Add manual finding',
                     timestamp: Date.now(),
                     staleFindings: new Set(),
