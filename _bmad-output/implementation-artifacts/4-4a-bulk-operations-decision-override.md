@@ -219,11 +219,11 @@ So that I can handle large batches of false positives efficiently and correct mi
 - [ ] 14.6 Optimistic update tests — deferred to E2E
 
 ### Task 15: E2E Tests (AC: #1, #2, #3, #4, #5)
-- [ ] 15.1 `e2e/review-bulk-operations.spec.ts`: Shift+Click multi-select → BulkActionBar visible → Bulk Accept → summary toast + score recalc
-- [ ] 15.2 Bulk Reject with >5 findings → confirmation dialog → severity breakdown → confirm → success
-- [ ] 15.3 Override badge appears after re-decision → click badge → history panel visible
-- [ ] 15.4 Ctrl+A selects all → clear selection → BulkActionBar hides
-- [ ] 15.5 Suite-level skip guard: `test.skip(!process.env.INNGEST_DEV_URL)` (ATDD stubs exist, requires local Inngest)
+- [x] 15.1 E-BK1+BK2: Shift+Click multi-select → BulkActionBar → Bulk Accept → toast + score recalc ✅
+- [x] 15.2 E-BK3: Bulk Reject >5 → confirmation dialog → severity breakdown → confirm ✅
+- [x] 15.3 E-BK6+BK7: Override badge after re-decision → history panel with decision trail ✅
+- [x] 15.4 E-BK4+BK5: Escape clears selection, Ctrl+A selects all filtered ✅
+- [x] 15.5 Suite-level skip guard + gotoReviewPageWithRetry for SSR transient failures ✅
 
 ### Task 16: Tech Debt Resolution
 - [x] 16.1 Checked tech-debt-tracker.md — no items targeting 4.4a specifically
@@ -483,7 +483,11 @@ Claude Opus 4.6 (1M context)
 - Fixed `exactOptionalPropertyTypes` for `fetchHistory` prop type
 - Fixed 5 ReviewPageClient test files: added bulk store fields + bulkAction mock + overrideCounts
 - Fixed getFileReviewData test: withTenant call count 6→7 (Q7 override counts query)
-- 2 pre-existing test failures in pipeline (runL2ForFile, runL3ForFile) — unrelated to 4.4a
+- 2 pre-existing test failures in pipeline (runL2ForFile, runL3ForFile) — unrelated to 4.4a, pass when run individually (flaky in full suite)
+- E2E Bug 1: `server-only` + `'use server'` conflict → hydration crash → removed `server-only`
+- E2E Bug 2: infinite re-render from `useState` render-time adjustment → switched to `useRef`
+- E2E Bug 3: missing `useRef` import → added to import statement
+- E2E Bug 4: Zustand function ref in useEffect deps → used `getState()` inside handler
 
 ### Completion Notes List
 
@@ -505,7 +509,22 @@ Claude Opus 4.6 (1M context)
 - `getFileReviewData.action.ts`: Q7 override counts query + FileReviewData type extended
 
 **ATDD Tests:** 20/20 unit tests GREEN (12 bulkAction + 3 getOverrideHistory + 5 store)
-**E2E Tests:** ATDD stubs exist (8 tests), require local Inngest for execution
+**E2E Tests:** 9/9 GREEN (8 tests + 1 setup)
+
+**E2E Bug Fixes (production bugs found during E2E):**
+
+1. **`server-only` + `'use server'` conflict** — `bulkAction.action.ts` + `getOverrideHistory.action.ts` มีทั้ง `'use server'` และ `import 'server-only'`. เมื่อ Client Component (ReviewPageClient) import Server Action ที่มี `server-only` → bundler block import → client hydration crash. Root cause: copy pattern จาก Server Actions อื่นที่ไม่ถูก import ตรงจาก client. Fix: ลบ `import 'server-only'` — `'use server'` directive เพียงพอ.
+
+2. **Infinite re-render loop (Too many re-renders)** — `FindingDetailContent.tsx` ใช้ render-time state adjustment (`useState` + `setPrevFindingId`) เพื่อ reset `showHistory` เมื่อ finding เปลี่ยน. `setPrevFindingId` trigger re-render → `setShowHistory(false)` trigger อีก render → infinite loop. Root cause: `useState` ไม่เหมาะสำหรับ tracking previous value ใน render body. Fix: ใช้ `useRef` แทน — ref ไม่ trigger re-render.
+
+3. **Missing `useRef` import** — แก้ Bug 2 โดยเปลี่ยนเป็น `useRef` แต่ลืม update import statement → `ReferenceError: useRef is not defined` ตอน runtime.
+
+4. **Zustand store function ใน useEffect deps → re-register loop** — `selectAllFiltered` จาก `useReviewStore((s) => s.selectAllFiltered)` เปลี่ยน reference ทุกครั้งที่ store update (Zustand ใช้ `Object.is` compare → function จาก object ใหม่ = reference ใหม่) → `useEffect` re-run ทุก render → `register` keyboard shortcut ซ้ำ → conflict loop. Fix: ใช้ `useReviewStore.getState().selectAllFiltered()` ภายใน handler แทน subscription.
+
+**Lessons Learned (new Guardrails):**
+- Server Action ที่ถูก import จาก `'use client'` → **ห้าม `import 'server-only'`**
+- Render-time state reset → **ใช้ `useRef` ไม่ใช่ `useState`** สำหรับ tracking previous value
+- Zustand store methods ใน `useEffect` deps → **ใช้ `getState()` inside handler** แทน selector ใน deps
 
 ### Implementation Plan
 
@@ -558,3 +577,5 @@ Claude Opus 4.6 (1M context)
 - src/features/review/components/ReviewPageClient.test.tsx (overrideCounts in mock data)
 - src/features/review/components/ReviewPageClient.responsive.test.tsx (overrideCounts in mock data)
 - src/features/review/components/ReviewPageClient.story40.test.tsx (overrideCounts in mock data)
+- e2e/review-bulk-operations.spec.ts (9 E2E tests unskipped + assertions fixed)
+- src/app/(app)/projects/[projectId]/review/[fileId]/page.tsx (temporary debug log — remove after CR)
