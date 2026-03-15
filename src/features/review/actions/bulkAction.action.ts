@@ -1,6 +1,8 @@
 'use server'
 
-import 'server-only'
+// Note: 'server-only' omitted — 'use server' directive is sufficient.
+// Adding 'server-only' blocks client-side imports needed for Server Action references
+// (ReviewPageClient imports this action for bulk operation dispatch)
 
 import crypto from 'node:crypto'
 

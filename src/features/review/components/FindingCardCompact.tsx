@@ -95,6 +95,9 @@ export function FindingCardCompact({
       e.preventDefault()
       if (selectionMode !== 'bulk') {
         setSelectionMode('bulk')
+        // When entering bulk mode, also select the previously-active finding (anchor)
+        const activeId = useReviewStore.getState().selectedId
+        if (activeId) addToSelection(activeId)
       }
       addToSelection(finding.id)
       return

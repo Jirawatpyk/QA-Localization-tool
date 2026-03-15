@@ -1,7 +1,7 @@
 'use client'
 
 import { Check, Flag, Trash2, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { ConfidenceBadge } from '@/features/review/components/ConfidenceBadge'
 import { LayerBadge } from '@/features/review/components/LayerBadge'
@@ -74,14 +74,16 @@ export function FindingDetailContent({
     }
   }, [contextRangeProp])
 
-  // Story 4.4a: Override history visibility — reset on finding change via render-time state adjustment (React 19 pattern)
+  // Story 4.4a: Override history visibility
   const [showHistory, setShowHistory] = useState(false)
   const overrideCount = useReviewStore((s) =>
     finding ? (s.overrideCounts.get(finding.id) ?? 0) : 0,
   )
-  const [prevFindingId, setPrevFindingId] = useState<string | null>(null)
-  if (finding?.id !== prevFindingId) {
-    setPrevFindingId(finding?.id ?? null)
+
+  // Reset history visibility when finding changes (external state sync pattern)
+  const prevFindingIdRef = useRef<string | null>(null)
+  if (finding?.id !== prevFindingIdRef.current) {
+    prevFindingIdRef.current = finding?.id ?? null
     if (showHistory) setShowHistory(false)
   }
 

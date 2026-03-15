@@ -29,7 +29,7 @@ import { ReviewActionBar } from '@/features/review/components/ReviewActionBar'
 import { ReviewProgress } from '@/features/review/components/ReviewProgress'
 import { SeverityOverrideMenu } from '@/features/review/components/SeverityOverrideMenu'
 import { useFindingsSubscription } from '@/features/review/hooks/use-findings-subscription'
-import { useReviewHotkeys } from '@/features/review/hooks/use-keyboard-actions'
+import { useKeyboardActions, useReviewHotkeys } from '@/features/review/hooks/use-keyboard-actions'
 import { useReviewActions } from '@/features/review/hooks/use-review-actions'
 import { useScoreSubscription } from '@/features/review/hooks/use-score-subscription'
 import { useThresholdSubscription } from '@/features/review/hooks/use-threshold-subscription'
@@ -307,6 +307,48 @@ export function ReviewPageClient({
     },
     getSelectedId,
   )
+
+  // Story 4.4a: Bulk keyboard shortcuts — Ctrl+A (select all) + Escape (clear bulk)
+  const { register } = useKeyboardActions()
+
+  useEffect(() => {
+    const cleanups: Array<() => void> = []
+
+    // Ctrl+A — select all filtered findings (Guardrail #34: only when finding list focused)
+    cleanups.push(
+      register(
+        'ctrl+a',
+        () => {
+          useReviewStore.getState().selectAllFiltered()
+        },
+        {
+          scope: 'review',
+          description: 'Select all findings',
+          category: 'Bulk',
+          preventDefault: true,
+        },
+      ),
+    )
+
+    // Escape — clear bulk selection (Guardrail #31: selection layer)
+    cleanups.push(
+      register(
+        'escape',
+        () => {
+          const state = useReviewStore.getState()
+          if (state.selectionMode === 'bulk' && state.selectedIds.size > 0) {
+            state.clearSelection()
+            state.setSelectionMode('single')
+          }
+        },
+        { scope: 'review', description: 'Clear bulk selection', category: 'Bulk' },
+      ),
+    )
+
+    return () => {
+      for (const cleanup of cleanups) cleanup()
+    }
+  }, [register])
 
   // Capture initialData on first render only — use a ref so the effect below
   // does NOT re-run when Next.js RSC re-renders with a new initialData reference
@@ -727,6 +769,15 @@ export function ReviewPageClient({
               : false
           }
         />
+
+        {/* Story 4.4a: Bulk selection aria-live announcer (persistent in DOM per Guardrail #33) */}
+        <div aria-live="polite" className="sr-only" data-testid="bulk-selection-announcer">
+          {selectionMode === 'bulk' && selectedIds.size > 0
+            ? `${selectedIds.size} findings selected`
+            : selectionMode === 'single'
+              ? 'Selection cleared'
+              : ''}
+        </div>
 
         {/* Story 4.4a: BulkActionBar — visible in bulk mode with selections */}
         {selectionMode === 'bulk' && selectedIds.size > 0 && (
