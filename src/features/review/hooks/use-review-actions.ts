@@ -119,6 +119,20 @@ export function useReviewActions({ fileId, projectId }: UseReviewActionsOptions)
           })
         }
 
+        // Story 4.4a: Increment override count for single-action re-decisions
+        // Only increment if finding already had prior actions (matches Q7 semantic: overrideCount = actionCount - 1)
+        // A finding going from pending → accepted is NOT an override (first action)
+        // A finding going from accepted → rejected IS an override (re-decision)
+        if (currentStatus !== 'pending') {
+          const currentCount = successState.overrideCounts.get(findingId)
+          if (currentCount !== undefined) {
+            successState.incrementOverrideCount(findingId)
+          } else {
+            // First override — set count to 1 (Q7 would return actionCount=2, minus 1 = 1)
+            successState.setOverrideCount(findingId, 1)
+          }
+        }
+
         // Success toast (Task 6.1)
         const label = ACTION_LABELS[action]
         label.toast(`Finding ${label.past}`, { duration: 3000 })

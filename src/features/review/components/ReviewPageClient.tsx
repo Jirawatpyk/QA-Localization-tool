@@ -741,6 +741,10 @@ export function ReviewPageClient({
             isActionInFlight={isActionInFlight}
             onActiveFindingChange={handleActiveFindingChange}
             skipStoreSyncRef={selectedIdFromClickRef}
+            onOverrideBadgeClick={(findingId) => {
+              // Select the finding to open detail panel, then auto-show history
+              handleActiveFindingChange(findingId)
+            }}
           />
         </div>
         {/* Action Bar (Task 5 — below finding list) */}

@@ -553,10 +553,7 @@ test.describe.serial('Bulk Operations & Decision Override — Story 4.4a ATDD', 
       timeout: 15_000,
     })
 
-    // AC4: Override badge requires page reload (counts come from server Q7)
-    // Single-action override count is not incremented client-side (only bulk does)
-    await gotoReviewPageWithRetry(page, projectId, seededFileId)
-
+    // AC4: Override badge appears client-side (single-action now increments count)
     const targetRow = grid.locator(`[role="row"][data-finding-id="${findingId}"]`)
     await expect(targetRow.getByTestId('decision-override-badge')).toBeVisible({ timeout: 10_000 })
 
@@ -583,11 +580,11 @@ test.describe.serial('Bulk Operations & Decision Override — Story 4.4a ATDD', 
       .first()
     await expect(overriddenRow).toBeVisible({ timeout: 10_000 })
 
-    // Click the finding row to select it (opens detail panel on desktop)
-    await overriddenRow.click()
+    // Click the override badge — wired through FindingList → ReviewPageClient → opens detail panel
+    await overriddenRow.getByTestId('decision-override-badge').click()
     await page.waitForTimeout(1_000) // Wait for detail panel to render
 
-    // Click "Show decision history" button in the detail panel
+    // Click "Show decision history" button in the detail panel (badge click opens panel, not history directly)
     const showHistoryBtn = page.getByText(/show decision history/i)
     await expect(showHistoryBtn).toBeVisible({ timeout: 10_000 })
     await showHistoryBtn.click()

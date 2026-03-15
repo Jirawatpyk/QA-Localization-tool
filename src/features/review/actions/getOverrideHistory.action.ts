@@ -1,8 +1,6 @@
 'use server'
 
-// Note: 'server-only' omitted — this file uses 'use server' directive which is sufficient.
-// Adding 'server-only' would block client-side imports needed for Server Action references
-// (ReviewPageClient passes this action as prop to FindingDetailContent → OverrideHistoryPanel)
+import 'server-only'
 
 import { and, desc, eq } from 'drizzle-orm'
 import { z } from 'zod'

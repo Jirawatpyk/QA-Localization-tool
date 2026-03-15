@@ -32,6 +32,8 @@ export type FindingListProps = {
   onActiveFindingChange?: ((id: string | null) => void) | undefined
   // H3 fix: ref that signals storeSelectedId change came from row click (skip re-sync)
   skipStoreSyncRef?: React.RefObject<boolean> | undefined
+  // Story 4.4a: callback when override badge clicked on finding card
+  onOverrideBadgeClick?: ((findingId: string) => void) | undefined
 }
 
 const SEVERITY_ORDER: Record<FindingSeverity, number> = { critical: 0, major: 1, minor: 2 }
@@ -60,6 +62,7 @@ export function FindingList({
   isActionInFlight = false,
   onActiveFindingChange,
   skipStoreSyncRef,
+  onOverrideBadgeClick,
 }: FindingListProps) {
   const reducedMotion = useReducedMotion()
   const { register } = useKeyboardActions()
@@ -393,6 +396,7 @@ export function FindingList({
           onAccept={onAccept}
           onReject={onReject}
           isActionInFlight={isActionInFlight}
+          onOverrideBadgeClick={onOverrideBadgeClick}
         />
         {isExpanded && (
           <FindingCard
@@ -407,6 +411,7 @@ export function FindingList({
             onAccept={onAccept}
             onReject={onReject}
             isActionInFlight={isActionInFlight}
+            onOverrideBadgeClick={onOverrideBadgeClick}
           />
         )}
       </div>

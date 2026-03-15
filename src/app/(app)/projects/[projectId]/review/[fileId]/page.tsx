@@ -13,15 +13,6 @@ export default async function ReviewPage({
 
   const result = await getFileReviewData({ fileId, projectId })
 
-  // Temporary E2E debug — remove after Story 4.4a
-  if (result.success) {
-    console.log(
-      `[ReviewPage] fileId=${fileId} findings=${result.data.findings.length} tenantId=${result.data.tenantId}`,
-    )
-  } else {
-    console.log(`[ReviewPage] ERROR: ${result.error} code=${result.code}`)
-  }
-
   if (!result.success) {
     return (
       <div className="p-6">
