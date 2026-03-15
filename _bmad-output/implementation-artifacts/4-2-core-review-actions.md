@@ -452,6 +452,19 @@ Claude Opus 4.6 (claude-opus-4-6)
 42. Full E2E: **12/12 tests GREEN** — setup + E-R1..E-R10 + E-B1
 43. Full unit suite: 291 files, 6450 passed, 0 failed
 
+**Production bugs found by systematic review (2026-03-15):**
+
+44. **C1 (CRITICAL):** autoAdvance ใช้ `findingsMap` (Map insertion order) → minor findings ใน collapsed accordion ไม่มี DOM node → `querySelector` return null → focus หาย silently. **Fix:** เพิ่ม `sortedFindingIds` ใน Zustand store, FindingList sync visual order, `setSelectedFinding` trigger accordion expand via effect.
+45. **H1 (HIGH):** `initialDataRef` ไม่ reset เมื่อ navigate ไปไฟล์อื่น → store populate ด้วย findings ไฟล์เก่า. **Fix:** `processedFileIdRef` guard — skip RSC revalidation, process file navigation.
+46. **H2 (HIGH):** Client clock ahead of server → optimistic `updatedAt` permanently blocks Realtime/poll updates. **Fix:** `serverUpdatedAt` return จาก `executeReviewAction`, update store after success.
+47. **H3 (HIGH):** autoAdvance ใช้ Map insertion order ไม่ใช่ visual severity sort → jump ไป finding ผิดตำแหน่ง. **Fix:** same as C1 — `sortedFindingIds` from store.
+
+**Root cause analysis:**
+- C1/H3: unit test mock `document.querySelector` always returns element → ไม่เจอ collapsed accordion case
+- H1: เกิดจาก fix ระหว่าง session ที่ commit ด้วย `--no-verify` (bypass CR)
+- H2: cross-file logic (optimistic timestamp ใน `use-review-actions.ts` + merge guard ใน `use-findings-subscription.ts`) — CR agents scan ทีละไฟล์ไม่เจอ
+- **ทุก bug เจอโดย E2E + systematic review ไม่ใช่ ATDD** → นำไปสู่ Guardrail #42 (ห้าม --no-verify), #43 (E2E must PASS), #44 (cross-file review)
+
 ### Change Log
 
 | Date | Change |
@@ -471,6 +484,9 @@ Claude Opus 4.6 (claude-opus-4-6)
 | 2026-03-14 | CR R3: H3 quick-action disable in-flight (FindingCard/Compact/DetailContent/DetailSheet), TQA-M3 reviewerIsNative value assertion, mock returnValues order fix for transaction. Mark done |
 | 2026-03-14 | CR R3 agent fixes: CQ-H1 segmentId nullable, CQ-M1 single iteration, CQ-M2 findIndex memoized, TQA-M1 exact announce count, TQA-M2 explicit returnValues, TQA-L1/L2/L3 test polish, FindingCard test CSS var regex. All 14/14 findings fixed, 0 deferred |
 | 2026-03-14 | E2E Handoff: TS errors fixed (3 files), segments seeded, 12/12 E2E tests GREEN on cloud Supabase. Fixes: strict mode locators, timing (toast waits), click→activeFindingId sync, SSR retry, word_count for MQM scores |
+| 2026-03-15 | Systematic review: 4 production bugs found (1C+3H). C1: autoAdvance sortedFindingIds. H1: processedFileIdRef. H2: serverUpdatedAt. H3: same as C1. All fixed + E2E assertions restored |
+| 2026-03-15 | CR all agents clean (0C+0H). TD-UX-004, TD-E2E-018, TD-E2E-019 logged. Guardrails #42-#44 added to CLAUDE.md |
+| 2026-03-15 | Process improvement: pre-CR 3→4 agents (cross-file reviewer), CR 2→4 agents (+cross-file +edge-case-hunter) |
 
 ### File List
 
