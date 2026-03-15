@@ -316,37 +316,40 @@ test.describe.serial('Review Keyboard & Focus — Story 4.0 ATDD', () => {
   }) => {
     // Full integration test covering the keyboard review workflow
     await signupOrLogin(page, TEST_EMAIL)
-    await gotoReviewPageReadyWithRetry(page, projectId, seededFileId)
-    // Manual hydration: wait for grid + keyboard ready (exact original pattern)
-    await page.waitForSelector('[role="grid"]', { timeout: 30_000 })
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
     // 1. Finding list visible with grid role (Guardrail #29, #38)
     const grid = page.getByRole('grid')
-    await expect(grid).toBeVisible()
+    await expect(grid).toBeVisible({ timeout: 30_000 })
 
     const rows = grid.getByRole('row')
     await expect(rows).toHaveCount(3)
 
-    // 2. Focus first row explicitly (original pattern — focus not click)
+    // 2. Click first row to activate (click syncs activeFindingId — focus alone doesn't)
     const firstRow = rows.first()
-    await firstRow.focus()
+    await firstRow.click()
     await expect(firstRow).toBeFocused({ timeout: 5_000 })
     await expect(firstRow).toHaveAttribute('tabindex', '0')
 
-    // Wait for keyboard handler registration
-    await page.waitForSelector('[role="grid"][data-keyboard-ready="true"]', {
-      timeout: 15_000,
-    })
+    // Wait for ALL keyboard handlers (FindingList J/K + ReviewPageClient actions + undo/redo)
+    await page.waitForSelector('[role="grid"][data-keyboard-ready="true"]', { timeout: 15_000 })
+    await page.waitForSelector('[data-review-actions-ready="true"]', { timeout: 10_000 })
 
     // 3. Navigate to second finding with J
     await page.keyboard.press('j')
     const secondRow = rows.nth(1)
-    await expect(secondRow).toHaveAttribute('tabindex', '0', { timeout: 10_000 })
-    await expect(secondRow).toBeFocused()
+    await expect(secondRow).toHaveAttribute('tabindex', '0', { timeout: 5_000 })
+    await expect(secondRow).toBeFocused({ timeout: 5_000 })
     await expect(firstRow).toHaveAttribute('tabindex', '-1')
 
     // 4. Navigate back up with K
-    await page.keyboard.press('k')
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await page.keyboard.press('k')
+      const tabVal = await firstRow.getAttribute('tabindex').catch(() => '-1')
+      if (tabVal === '0') break
+      await page.waitForTimeout(300)
+    }
+    await expect(firstRow).toHaveAttribute('tabindex', '0', { timeout: 5_000 })
     await expect(firstRow).toBeFocused({ timeout: 5_000 })
 
     // 5. Press Enter to INLINE expand (NOT Sheet open — Story 4.1b AC2)

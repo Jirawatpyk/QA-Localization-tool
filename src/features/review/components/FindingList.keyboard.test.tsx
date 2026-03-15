@@ -46,31 +46,14 @@ function defaultProps(overrides?: Record<string, unknown>) {
   }
 }
 
-// ── Mock useKeyboardActions to capture registered handlers ──
-
-type HandlerFn = (event: KeyboardEvent) => void
-type RegisterCall = [string, HandlerFn, { scope: string; description: string }]
-
-const registeredHandlers = new Map<string, HandlerFn>()
-const mockCleanups: Array<() => void> = []
-
-const mockRegister = vi.fn(
-  (key: string, handler: HandlerFn, _options: { scope: string; description: string }) => {
-    registeredHandlers.set(key, handler)
-    const cleanup = vi.fn(() => {
-      registeredHandlers.delete(key)
-    })
-    mockCleanups.push(cleanup)
-    return cleanup
-  },
-)
+// ── Mock useKeyboardActions (still needed for pushEscapeLayer/popEscapeLayer tests) ──
 
 const mockPushEscapeLayer = vi.fn()
 const mockPopEscapeLayer = vi.fn()
 
 vi.mock('@/features/review/hooks/use-keyboard-actions', () => ({
   useKeyboardActions: () => ({
-    register: mockRegister,
+    register: vi.fn(() => vi.fn()),
     unregister: vi.fn(),
     pushScope: vi.fn(),
     popScope: vi.fn(),
@@ -111,22 +94,17 @@ vi.mock('@/hooks/useReducedMotion', () => ({
   useReducedMotion: () => mockReducedMotion,
 }))
 
-// ── Helper to simulate J/K key presses via registered handlers ──
+// ── Helper: press key on grid element ──
 
-function pressKey(key: string) {
-  const handler = registeredHandlers.get(key)
-  if (handler) {
-    act(() => {
-      handler(new KeyboardEvent('keydown', { key, bubbles: true }))
-    })
-  }
+function pressKeyOnGrid(grid: HTMLElement, key: string, eventInit?: Partial<KeyboardEventInit>) {
+  act(() => {
+    fireEvent.keyDown(grid, { key, bubbles: true, ...eventInit })
+  })
 }
 
 describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    registeredHandlers.clear()
-    mockCleanups.length = 0
     mockReducedMotion = false
     // CR-C1: reset store activeFindingId + selectedId to prevent state leakage
     useReviewStore.getState().resetForFile('test')
@@ -141,49 +119,77 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
   // ═══════════════════════════════════════════════════════════════════════
 
   describe('AC1: J/K/Arrow Navigation', () => {
-    it('[T1.1][P0] should register J handler that moves activeIndex forward', () => {
+    it('[T1.1][P0] should navigate forward on J keydown on grid', () => {
       render(<FindingList {...defaultProps()} />)
 
-      // THEN: register called with 'j' key and scope 'review'
-      expect(mockRegister).toHaveBeenCalledWith(
-        'j',
-        expect.any(Function),
-        expect.objectContaining({ scope: 'review' }),
-      )
+      const grid = screen.getByRole('grid')
+      const rows = screen.getAllByTestId('finding-compact-row')
 
-      // Verify J handler was registered
-      const jCall = mockRegister.mock.calls.find((call: RegisterCall) => call[0] === 'j')
-      expect(jCall).toBeDefined()
+      // First row should be initially active (tabindex=0)
+      expect(rows[0]!).toHaveAttribute('tabindex', '0')
+      expect(rows[1]!).toHaveAttribute('tabindex', '-1')
+
+      // Press J on grid
+      pressKeyOnGrid(grid, 'j')
+
+      // Second row should now be active
+      expect(rows[1]!).toHaveAttribute('tabindex', '0')
+      expect(rows[0]!).toHaveAttribute('tabindex', '-1')
     })
 
-    it('[T1.2][P0] should register K handler that moves activeIndex backward', () => {
-      render(<FindingList {...defaultProps()} />)
+    it('[T1.2][P0] should navigate backward on K keydown on grid', () => {
+      const findings = [
+        buildFindingForUI({ id: 'c1', severity: 'critical', aiConfidence: 95 }),
+        buildFindingForUI({ id: 'm1', severity: 'major', aiConfidence: 90 }),
+        buildFindingForUI({ id: 'm2', severity: 'major', aiConfidence: 70 }),
+      ]
+      render(<FindingList {...defaultProps({ findings })} />)
 
-      expect(mockRegister).toHaveBeenCalledWith(
-        'k',
-        expect.any(Function),
-        expect.objectContaining({ scope: 'review' }),
-      )
+      const grid = screen.getByRole('grid')
+      const rows = screen.getAllByTestId('finding-compact-row')
+
+      // Navigate forward first to m1
+      pressKeyOnGrid(grid, 'j')
+      expect(rows[1]!).toHaveAttribute('tabindex', '0')
+
+      // Press K to go backward
+      pressKeyOnGrid(grid, 'k')
+      expect(rows[0]!).toHaveAttribute('tabindex', '0')
+      expect(rows[1]!).toHaveAttribute('tabindex', '-1')
     })
 
-    it('[T1.3][P1] should register ArrowDown handler same as J', () => {
+    it('[T1.3][P1] should navigate forward on ArrowDown keydown', () => {
       render(<FindingList {...defaultProps()} />)
 
-      expect(mockRegister).toHaveBeenCalledWith(
-        'ArrowDown',
-        expect.any(Function),
-        expect.objectContaining({ scope: 'review' }),
-      )
+      const grid = screen.getByRole('grid')
+      const rows = screen.getAllByTestId('finding-compact-row')
+
+      expect(rows[0]!).toHaveAttribute('tabindex', '0')
+
+      pressKeyOnGrid(grid, 'ArrowDown')
+
+      expect(rows[1]!).toHaveAttribute('tabindex', '0')
+      expect(rows[0]!).toHaveAttribute('tabindex', '-1')
     })
 
-    it('[T1.4][P1] should register ArrowUp handler same as K', () => {
-      render(<FindingList {...defaultProps()} />)
+    it('[T1.4][P1] should navigate backward on ArrowUp keydown', () => {
+      const findings = [
+        buildFindingForUI({ id: 'c1', severity: 'critical', aiConfidence: 95 }),
+        buildFindingForUI({ id: 'm1', severity: 'major', aiConfidence: 90 }),
+      ]
+      render(<FindingList {...defaultProps({ findings })} />)
 
-      expect(mockRegister).toHaveBeenCalledWith(
-        'ArrowUp',
-        expect.any(Function),
-        expect.objectContaining({ scope: 'review' }),
-      )
+      const grid = screen.getByRole('grid')
+      const rows = screen.getAllByTestId('finding-compact-row')
+
+      // Navigate forward first
+      pressKeyOnGrid(grid, 'ArrowDown')
+      expect(rows[1]!).toHaveAttribute('tabindex', '0')
+
+      // ArrowUp to go back
+      pressKeyOnGrid(grid, 'ArrowUp')
+      expect(rows[0]!).toHaveAttribute('tabindex', '0')
+      expect(rows[1]!).toHaveAttribute('tabindex', '-1')
     })
 
     it('[T1.5][P0] should navigate across severity groups (Critical → Major → Minor)', () => {
@@ -211,15 +217,17 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       ]
       render(<FindingList {...defaultProps({ findings })} />)
 
+      const grid = screen.getByRole('grid')
+
       // Navigate J twice → active on m2 (index 2)
-      pressKey('j')
-      pressKey('j')
+      pressKeyOnGrid(grid, 'j')
+      pressKeyOnGrid(grid, 'j')
       // m2 should be active
       const rows = screen.getAllByTestId('finding-compact-row')
       expect(rows[2]!).toHaveAttribute('tabindex', '0')
 
       // Navigate J once more → wraps to c1 (index 0)
-      pressKey('j')
+      pressKeyOnGrid(grid, 'j')
       expect(rows[0]!).toHaveAttribute('tabindex', '0')
     })
 
@@ -232,21 +240,37 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       ]
       render(<FindingList {...defaultProps({ findings })} />)
 
+      const grid = screen.getByRole('grid')
+
       // K at index 0 → wraps to m2 (index 2)
-      pressKey('k')
+      pressKeyOnGrid(grid, 'k')
       const rows = screen.getAllByTestId('finding-compact-row')
       expect(rows[2]!).toHaveAttribute('tabindex', '0')
     })
 
     it('[T1.8][P1] should suppress J/K in input elements (G#28)', () => {
+      // The grid onKeyDown handler checks target.tagName for INPUT/TEXTAREA/SELECT
+      // and returns early without navigating
       render(<FindingList {...defaultProps()} />)
 
-      // THEN: register calls should NOT specify allowInInput (defaults to false)
-      const jCall = mockRegister.mock.calls.find((call: RegisterCall) => call[0] === 'j')
-      expect(jCall).toBeDefined()
-      // allowInInput is not set in options → defaults to false in useKeyboardActions
-      const options = (jCall as RegisterCall)[2]
-      expect(options).not.toHaveProperty('allowInInput', true)
+      const grid = screen.getByRole('grid')
+      const rows = screen.getAllByTestId('finding-compact-row')
+
+      // Initially c1 is active
+      expect(rows[0]!).toHaveAttribute('tabindex', '0')
+
+      // Simulate J keydown with target being an INPUT element
+      // fireEvent.keyDown dispatches from the grid, but we need to simulate
+      // the target being an input. We create a synthetic event targeting an input.
+      const input = document.createElement('input')
+      grid.appendChild(input)
+      fireEvent.keyDown(input, { key: 'j', bubbles: true })
+
+      // Should NOT navigate — c1 still active
+      expect(rows[0]!).toHaveAttribute('tabindex', '0')
+      expect(rows[1]!).toHaveAttribute('tabindex', '-1')
+
+      grid.removeChild(input)
     })
 
     it('[T1.9][P1] should auto-collapse expanded finding before J moves (DD#11)', () => {
@@ -255,8 +279,10 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       const expandedIds = new Set(['c1'])
       render(<FindingList {...defaultProps({ expandedIds, onToggleExpand })} />)
 
+      const grid = screen.getByRole('grid')
+
       // WHEN: J handler invoked (navigateNext)
-      pressKey('j')
+      pressKeyOnGrid(grid, 'j')
 
       // THEN: onToggleExpand('c1') called (auto-collapse before moving)
       expect(onToggleExpand).toHaveBeenCalledWith('c1')
@@ -288,6 +314,7 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       ]
       render(<FindingList {...defaultProps({ findings })} />)
 
+      const grid = screen.getByRole('grid')
       const rows = screen.getAllByTestId('finding-compact-row')
       // Initially c1 active
       expect(rows[0]!).toHaveAttribute('tabindex', '0')
@@ -295,7 +322,7 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       expect(rows[2]!).toHaveAttribute('tabindex', '-1')
 
       // After J: m1 should be active
-      pressKey('j')
+      pressKeyOnGrid(grid, 'j')
       expect(rows[0]!).toHaveAttribute('tabindex', '-1')
       expect(rows[1]!).toHaveAttribute('tabindex', '0')
       expect(rows[2]!).toHaveAttribute('tabindex', '-1')
@@ -313,8 +340,10 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       ]
       render(<FindingList {...defaultProps({ findings })} />)
 
+      const grid = screen.getByRole('grid')
+
       // Navigate J → should trigger requestAnimationFrame
-      pressKey('j')
+      pressKeyOnGrid(grid, 'j')
 
       expect(rafSpy).toHaveBeenCalled()
       rafSpy.mockRestore()
@@ -376,9 +405,11 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       // GIVEN: FindingList rendered
       render(<FindingList {...defaultProps()} />)
 
+      const grid = screen.getByRole('grid')
+
       // Navigate to m1 first
-      pressKey('j')
-      pressKey('j')
+      pressKeyOnGrid(grid, 'j')
+      pressKeyOnGrid(grid, 'j')
 
       // THEN: m1 should be active
       const rows = screen.getAllByTestId('finding-compact-row')
@@ -389,8 +420,10 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       // GIVEN: Default findings rendered, active on c1 (index 0)
       render(<FindingList {...defaultProps()} />)
 
+      const grid = screen.getByRole('grid')
+
       // WHEN: Navigate J once → moves to c2 (index 1, sorted by confidence desc)
-      pressKey('j')
+      pressKeyOnGrid(grid, 'j')
 
       // THEN: c2 has tabindex=0 (activeFindingId persists across renders)
       const rows = screen.getAllByTestId('finding-compact-row')
@@ -460,10 +493,16 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       // GIVEN: FindingList rendered
       render(<FindingList {...defaultProps()} />)
 
-      // THEN: Grid container does NOT trap Tab (no Tab handler registered)
-      // Verify no Tab registration
-      const tabCall = mockRegister.mock.calls.find((call: RegisterCall) => call[0] === 'Tab')
-      expect(tabCall).toBeUndefined()
+      // THEN: Grid onKeyDown handler does NOT intercept Tab key
+      // Verify by pressing Tab on grid — tabindex should NOT change (Tab is not handled)
+      const grid = screen.getByRole('grid')
+      const rows = screen.getAllByTestId('finding-compact-row')
+      expect(rows[0]!).toHaveAttribute('tabindex', '0')
+
+      fireEvent.keyDown(grid, { key: 'Tab' })
+
+      // Active row unchanged — Tab was not intercepted
+      expect(rows[0]!).toHaveAttribute('tabindex', '0')
     })
   })
 
@@ -476,11 +515,13 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       // GIVEN: 2C + 2M + 2m, accordion default CLOSED
       render(<FindingList {...defaultProps()} />)
 
+      const grid = screen.getByRole('grid')
+
       // Navigate through all findings with J — should only cycle through 4 (C+M)
-      pressKey('j') // c2
-      pressKey('j') // m1
-      pressKey('j') // m2
-      pressKey('j') // wrap → c1
+      pressKeyOnGrid(grid, 'j') // c2
+      pressKeyOnGrid(grid, 'j') // m1
+      pressKeyOnGrid(grid, 'j') // m2
+      pressKeyOnGrid(grid, 'j') // wrap → c1
 
       // After 4 J presses, should be back at c1
       const rows = screen.getAllByTestId('finding-compact-row')
@@ -500,13 +541,15 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       const rows = screen.getAllByTestId('finding-compact-row')
       expect(rows.length).toBe(6)
 
+      const grid = screen.getByRole('grid')
+
       // Navigate J through all 6
-      pressKey('j') // c2
-      pressKey('j') // m1
-      pressKey('j') // m2
-      pressKey('j') // n1
-      pressKey('j') // n2
-      pressKey('j') // wrap → c1
+      pressKeyOnGrid(grid, 'j') // c2
+      pressKeyOnGrid(grid, 'j') // m1
+      pressKeyOnGrid(grid, 'j') // m2
+      pressKeyOnGrid(grid, 'j') // n1
+      pressKeyOnGrid(grid, 'j') // n2
+      pressKeyOnGrid(grid, 'j') // wrap → c1
 
       const c1Row = rows.find((r) => r.getAttribute('data-finding-id') === 'c1')
       expect(c1Row).toHaveAttribute('tabindex', '0')
@@ -518,13 +561,15 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       const trigger = screen.getByText(/Minor \(2\)/)
       fireEvent.click(trigger)
 
+      const grid = screen.getByRole('grid')
+
       // Navigate to m2 (last Major — index 3)
-      pressKey('j') // c2
-      pressKey('j') // m1
-      pressKey('j') // m2
+      pressKeyOnGrid(grid, 'j') // c2
+      pressKeyOnGrid(grid, 'j') // m1
+      pressKeyOnGrid(grid, 'j') // m2
 
       // J from m2 → n1 (first Minor)
-      pressKey('j')
+      pressKeyOnGrid(grid, 'j')
       const rows = screen.getAllByTestId('finding-compact-row')
       const n1Row = rows.find((r) => r.getAttribute('data-finding-id') === 'n1')
       expect(n1Row).toHaveAttribute('tabindex', '0')
@@ -534,13 +579,15 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       // GIVEN: Accordion closed
       render(<FindingList {...defaultProps()} />)
 
+      const grid = screen.getByRole('grid')
+
       // Navigate to m2 (last visible finding)
-      pressKey('j') // c2
-      pressKey('j') // m1
-      pressKey('j') // m2
+      pressKeyOnGrid(grid, 'j') // c2
+      pressKeyOnGrid(grid, 'j') // m1
+      pressKeyOnGrid(grid, 'j') // m2
 
       // J from m2 → wraps to c1 (Minor skipped)
-      pressKey('j')
+      pressKeyOnGrid(grid, 'j')
       const rows = screen.getAllByTestId('finding-compact-row')
       const c1Row = rows.find((r) => r.getAttribute('data-finding-id') === 'c1')
       expect(c1Row).toHaveAttribute('tabindex', '0')
@@ -552,14 +599,16 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       const trigger = screen.getByText(/Minor \(2\)/)
       fireEvent.click(trigger)
 
+      const grid = screen.getByRole('grid')
+
       // Navigate to n1 (first Minor — index 4)
-      pressKey('j') // c2
-      pressKey('j') // m1
-      pressKey('j') // m2
-      pressKey('j') // n1
+      pressKeyOnGrid(grid, 'j') // c2
+      pressKeyOnGrid(grid, 'j') // m1
+      pressKeyOnGrid(grid, 'j') // m2
+      pressKeyOnGrid(grid, 'j') // n1
 
       // K from n1 → m2 (last Major)
-      pressKey('k')
+      pressKeyOnGrid(grid, 'k')
       const rows = screen.getAllByTestId('finding-compact-row')
       const m2Row = rows.find((r) => r.getAttribute('data-finding-id') === 'm2')
       expect(m2Row).toHaveAttribute('tabindex', '0')
@@ -579,8 +628,10 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       ]
       const { rerender } = render(<FindingList {...defaultProps({ findings })} />)
 
+      const grid = screen.getByRole('grid')
+
       // Navigate to m1
-      pressKey('j')
+      pressKeyOnGrid(grid, 'j')
 
       // WHEN: New critical finding inserted above (Realtime push)
       const updatedFindings = [
@@ -604,8 +655,10 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       ]
       const { rerender } = render(<FindingList {...defaultProps({ findings })} />)
 
+      const grid = screen.getByRole('grid')
+
       // Navigate to m1
-      pressKey('j')
+      pressKeyOnGrid(grid, 'j')
 
       // WHEN: New finding inserted → m1 moves to index 2
       const updatedFindings = [
@@ -630,8 +683,10 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       ]
       const { rerender } = render(<FindingList {...defaultProps({ findings })} />)
 
+      const grid = screen.getByRole('grid')
+
       // Navigate to m1
-      pressKey('j')
+      pressKeyOnGrid(grid, 'j')
 
       // WHEN: m1 is removed from findings (Realtime deletion)
       const updatedFindings = findings.filter((f) => f.id !== 'm1')
@@ -651,8 +706,10 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       ]
       const { rerender } = render(<FindingList {...defaultProps({ findings })} />)
 
+      const grid = screen.getByRole('grid')
+
       // Navigate to m1
-      pressKey('j')
+      pressKeyOnGrid(grid, 'j')
 
       // WHEN: New finding added (count changes)
       const updatedFindings = [
@@ -743,7 +800,8 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       ]
       render(<FindingList {...defaultProps({ findings })} />)
 
-      pressKey('j')
+      const grid = screen.getByRole('grid')
+      pressKeyOnGrid(grid, 'j')
 
       // When reduced motion, scrollIntoView MUST be called with 'instant' (no conditional — anti-pattern #39)
       expect(scrollSpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'instant' }))
@@ -763,16 +821,23 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       expect(rowgroups[2]!).toHaveAttribute('aria-label', 'Minor findings')
     })
 
-    it('[T6.6][P1] should register J/K only with scope "review" (not global)', () => {
-      // GIVEN: FindingList rendered
+    it('[T6.6][P1] should handle J/K only within grid scope (not global document)', () => {
+      // GIVEN: FindingList rendered — J/K handled via grid onKeyDown, not document listener
       render(<FindingList {...defaultProps()} />)
 
-      // THEN: All J/K/Arrow registrations use scope='review'
-      const calls = mockRegister.mock.calls as RegisterCall[]
-      const navCalls = calls.filter((c) => ['j', 'k', 'ArrowDown', 'ArrowUp'].includes(c[0]))
-      for (const call of navCalls) {
-        expect(call[2].scope).toBe('review')
-      }
+      const grid = screen.getByRole('grid')
+      const rows = screen.getAllByTestId('finding-compact-row')
+
+      // J on grid navigates
+      pressKeyOnGrid(grid, 'j')
+      expect(rows[1]!).toHaveAttribute('tabindex', '0')
+
+      // J dispatched on document body does NOT navigate (scoped to grid)
+      act(() => {
+        fireEvent.keyDown(document.body, { key: 'j', bubbles: true })
+      })
+      // Still on rows[1], not rows[2]
+      expect(rows[1]!).toHaveAttribute('tabindex', '0')
     })
   })
 
@@ -790,12 +855,14 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       ]
       render(<FindingList {...defaultProps({ findings })} />)
 
+      const grid = screen.getByRole('grid')
+
       // Navigate to last
-      pressKey('j') // m1
-      pressKey('j') // m2
+      pressKeyOnGrid(grid, 'j') // m1
+      pressKeyOnGrid(grid, 'j') // m2
 
       // J at last → wrap to c1
-      pressKey('j')
+      pressKeyOnGrid(grid, 'j')
       const rows = screen.getAllByTestId('finding-compact-row')
       expect(rows[0]!).toHaveAttribute('tabindex', '0')
     })
@@ -809,8 +876,10 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       ]
       render(<FindingList {...defaultProps({ findings })} />)
 
+      const grid = screen.getByRole('grid')
+
       // K at first → wrap to m2
-      pressKey('k')
+      pressKeyOnGrid(grid, 'k')
       const rows = screen.getAllByTestId('finding-compact-row')
       expect(rows[2]!).toHaveAttribute('tabindex', '0')
     })
@@ -820,15 +889,16 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       const findings = [buildFindingForUI({ id: 'solo', severity: 'major', aiConfidence: 80 })]
       render(<FindingList {...defaultProps({ findings })} />)
 
+      const grid = screen.getByRole('grid')
       const row = screen.getByTestId('finding-compact-row')
       expect(row).toHaveAttribute('tabindex', '0')
 
       // J wraps to self
-      pressKey('j')
+      pressKeyOnGrid(grid, 'j')
       expect(row).toHaveAttribute('tabindex', '0')
 
       // K wraps to self
-      pressKey('k')
+      pressKeyOnGrid(grid, 'k')
       expect(row).toHaveAttribute('tabindex', '0')
     })
 
@@ -875,19 +945,32 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
   // ═══════════════════════════════════════════════════════════════════════
 
   describe('Party Mode: Additional Tests', () => {
-    it('[T-IME-01][P1] should delegate J/K to useKeyboardActions which handles IME guard', () => {
+    it('[T-IME-01][P1] should suppress J/K during IME composition (isComposing guard)', () => {
       // GIVEN: FindingList rendered with findings
       render(<FindingList {...defaultProps()} />)
 
-      // THEN: J/K registered via useKeyboardActions (which has built-in IME guard)
-      // Verify all 4 navigation keys are registered (no direct keydown bypass)
-      const registeredKeys = mockRegister.mock.calls.map((call: RegisterCall) => call[0])
-      expect(registeredKeys).toContain('j')
-      expect(registeredKeys).toContain('k')
-      expect(registeredKeys).toContain('ArrowDown')
-      expect(registeredKeys).toContain('ArrowUp')
-      // IME suppression (isComposing || keyCode===229) is handled by the hook internally
-      // No direct keydown handler on grid means no IME bypass path exists
+      const grid = screen.getByRole('grid')
+      const rows = screen.getAllByTestId('finding-compact-row')
+
+      // Initially c1 is active
+      expect(rows[0]!).toHaveAttribute('tabindex', '0')
+
+      // WHEN: J pressed during IME composition (isComposing=true)
+      act(() => {
+        fireEvent.keyDown(grid, { key: 'j', isComposing: true, bubbles: true })
+      })
+
+      // THEN: Navigation suppressed — c1 still active
+      expect(rows[0]!).toHaveAttribute('tabindex', '0')
+      expect(rows[1]!).toHaveAttribute('tabindex', '-1')
+
+      // Also test keyCode 229 (IME process key)
+      act(() => {
+        fireEvent.keyDown(grid, { key: 'j', keyCode: 229, bubbles: true })
+      })
+
+      // THEN: Still suppressed
+      expect(rows[0]!).toHaveAttribute('tabindex', '0')
     })
 
     it('[T-SCROLL-01][P1] should call focus() on target row after J navigation via rAF', () => {
@@ -903,7 +986,8 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       ]
       render(<FindingList {...defaultProps({ findings })} />)
 
-      pressKey('j')
+      const grid = screen.getByRole('grid')
+      pressKeyOnGrid(grid, 'j')
 
       // focus() should have been called on the target row (via rAF)
       expect(focusSpy).toHaveBeenCalled()
@@ -912,21 +996,26 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       focusSpy.mockRestore()
     })
 
-    it('[T-CLEANUP-01][P1] should call cleanup functions on unmount (no memory leak)', () => {
-      const { unmount } = render(<FindingList {...defaultProps()} />)
+    it('[T-CLEANUP-01][P1] should clean up rAF on unmount (no memory leak)', () => {
+      const cancelRafSpy = vi.spyOn(window, 'cancelAnimationFrame')
 
-      // Verify handlers were registered
-      const registeredCount = mockRegister.mock.calls.length
-      expect(registeredCount).toBeGreaterThanOrEqual(4) // j, k, ArrowDown, ArrowUp
+      const findings = [
+        buildFindingForUI({ id: 'c1', severity: 'critical', aiConfidence: 95 }),
+        buildFindingForUI({ id: 'm1', severity: 'major', aiConfidence: 80 }),
+      ]
+      const { unmount } = render(<FindingList {...defaultProps({ findings })} />)
+
+      const grid = screen.getByRole('grid')
+      // Trigger a navigation to schedule a rAF
+      pressKeyOnGrid(grid, 'j')
 
       // WHEN: Component unmounts
       unmount()
 
-      // THEN: Cleanup functions returned by register() should be called
-      // Each register call returns a cleanup fn — verify they were invoked
-      for (const cleanup of mockCleanups) {
-        expect(cleanup).toHaveBeenCalled()
-      }
+      // THEN: cancelAnimationFrame should have been called (cleanup in useEffect return)
+      expect(cancelRafSpy).toHaveBeenCalled()
+
+      cancelRafSpy.mockRestore()
     })
 
     it('[T-ASYNC-01][P2] should handle async rerender during navigation without focus jump', () => {
@@ -938,8 +1027,10 @@ describe('FindingList — Keyboard Navigation (Story 4.1b)', () => {
       ]
       const { rerender } = render(<FindingList {...defaultProps({ findings })} />)
 
+      const grid = screen.getByRole('grid')
+
       // Navigate to m1
-      pressKey('j')
+      pressKeyOnGrid(grid, 'j')
 
       // Async rerender (Realtime push) while user is navigating
       const updatedFindings = [

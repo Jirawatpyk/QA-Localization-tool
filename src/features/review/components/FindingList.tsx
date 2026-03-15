@@ -11,7 +11,6 @@ import {
 import { FindingCard } from '@/features/review/components/FindingCard'
 import { FindingCardCompact } from '@/features/review/components/FindingCardCompact'
 import { useFocusManagement } from '@/features/review/hooks/use-focus-management'
-import { useKeyboardActions } from '@/features/review/hooks/use-keyboard-actions'
 import { useReviewStore } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -65,7 +64,7 @@ export function FindingList({
   onOverrideBadgeClick,
 }: FindingListProps) {
   const reducedMotion = useReducedMotion()
-  const { register } = useKeyboardActions()
+  // useKeyboardActions removed — J/K handled by grid onKeyDown (avoids double-fire)
   const { pushEscapeLayer, popEscapeLayer } = useFocusManagement()
   const gridRef = useRef<HTMLDivElement>(null)
   const gridFocusRafRef = useRef<number>(0)
@@ -263,20 +262,17 @@ export function FindingList({
     setActiveFindingId(flattenedIds[prevIndex] ?? null)
   }, [activeIndex, activeFindingId, expandedIds, flattenedIds, onToggleExpand])
 
-  // Register J/K/Arrow keyboard handlers (AC1)
+  // J/K/Arrow handlers live on grid onKeyDown (handleGridKeyDown) — scoped to grid focus.
+  // DO NOT also register via useKeyboardActions (document-level) — causes double-fire
+  // (React synthetic + native document listener both call navigateNext per keypress).
+  // Signal E2E that grid is ready — must re-run when findings load (gridRef may be null
+  // on first render if store hasn't populated yet → early return at sorted.length === 0).
+  const gridReady = sorted.length > 0
   useEffect(() => {
-    const cleanups = [
-      register('j', () => navigateNext(), { scope: 'review', description: 'Next finding' }),
-      register('ArrowDown', () => navigateNext(), { scope: 'review', description: 'Next finding' }),
-      register('k', () => navigatePrev(), { scope: 'review', description: 'Previous finding' }),
-      register('ArrowUp', () => navigatePrev(), {
-        scope: 'review',
-        description: 'Previous finding',
-      }),
-    ]
-    gridRef.current?.setAttribute('data-keyboard-ready', 'true')
-    return () => cleanups.forEach((fn) => fn())
-  }, [register, navigateNext, navigatePrev])
+    if (gridReady) {
+      gridRef.current?.setAttribute('data-keyboard-ready', 'true')
+    }
+  }, [gridReady])
 
   // Escape layer management for expanded cards (AC2, Guardrail #31)
   const activeFindingIdRef = useRef<string | null>(null)
