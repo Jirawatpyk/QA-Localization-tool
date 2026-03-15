@@ -33,6 +33,8 @@ export type FindingListProps = {
   skipStoreSyncRef?: React.RefObject<boolean> | undefined
   // Story 4.4a: callback when override badge clicked on finding card
   onOverrideBadgeClick?: ((findingId: string) => void) | undefined
+  // Expose navigation for parent-level keyboard handler (review-zone scope)
+  onNavigateReady?: ((fns: { next: () => void; prev: () => void }) => void) | undefined
 }
 
 const SEVERITY_ORDER: Record<FindingSeverity, number> = { critical: 0, major: 1, minor: 2 }
@@ -62,6 +64,7 @@ export function FindingList({
   onActiveFindingChange,
   skipStoreSyncRef,
   onOverrideBadgeClick,
+  onNavigateReady,
 }: FindingListProps) {
   const reducedMotion = useReducedMotion()
   // useKeyboardActions removed — J/K handled by grid onKeyDown (avoids double-fire)
@@ -271,8 +274,9 @@ export function FindingList({
   useEffect(() => {
     if (gridReady) {
       gridRef.current?.setAttribute('data-keyboard-ready', 'true')
+      onNavigateReady?.({ next: navigateNext, prev: navigatePrev })
     }
-  }, [gridReady])
+  }, [gridReady, navigateNext, navigatePrev, onNavigateReady])
 
   // Escape layer management for expanded cards (AC2, Guardrail #31)
   const activeFindingIdRef = useRef<string | null>(null)

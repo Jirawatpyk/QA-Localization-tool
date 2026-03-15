@@ -397,6 +397,32 @@ export function ReviewPageClient({
     }
   }, [register])
 
+  // J/K navigation from review-zone scope (Guardrail #28: review area, not just grid)
+  const navigateNextRef = useRef<(() => void) | null>(null)
+  const navigatePrevRef = useRef<(() => void) | null>(null)
+
+  const handleNavigateReady = useCallback((fns: { next: () => void; prev: () => void }) => {
+    navigateNextRef.current = fns.next
+    navigatePrevRef.current = fns.prev
+  }, [])
+
+  const handleReviewZoneKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    // IME guard
+    if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return
+    // Input guard (Guardrail #28)
+    const tag = (e.target as HTMLElement).tagName
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return
+    if ((e.target as HTMLElement).getAttribute('contenteditable') === 'true') return
+
+    if (e.key === 'j' || e.key === 'ArrowDown') {
+      e.preventDefault()
+      navigateNextRef.current?.()
+    } else if (e.key === 'k' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      navigatePrevRef.current?.()
+    }
+  }, [])
+
   // Capture initialData on first render only — use a ref so the effect below
   // does NOT re-run when Next.js RSC re-renders with a new initialData reference
   // (e.g. after Server Action cache revalidation). Re-running would overwrite
@@ -734,7 +760,12 @@ export function ReviewPageClient({
   }
 
   return (
-    <div className="flex h-full" data-testid="review-3-zone" data-layout-mode={layoutMode}>
+    <div
+      className="flex h-full"
+      data-testid="review-3-zone"
+      data-layout-mode={layoutMode}
+      onKeyDown={handleReviewZoneKeyDown}
+    >
       {/* Zone 1: File Navigation — desktop: sidebar, laptop: dropdown, mobile: hidden */}
       {isDesktop && (
         <nav
@@ -864,6 +895,7 @@ export function ReviewPageClient({
               // Select the finding to open detail panel, then auto-show history
               handleActiveFindingChange(findingId)
             }}
+            onNavigateReady={handleNavigateReady}
           />
         </div>
         {/* Action Bar (Task 5 — below finding list) */}
