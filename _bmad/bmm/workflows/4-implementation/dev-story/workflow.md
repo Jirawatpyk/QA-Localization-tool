@@ -13,7 +13,7 @@ description: 'Execute story implementation following a context filled story spec
 - Only modify the story file in these areas: Tasks/Subtasks checkboxes, Dev Agent Record (Debug Log, Completion Notes), File List, Change Log, and Status
 - Execute ALL steps in exact order; do NOT skip steps
 - Absolutely DO NOT stop because of "milestones", "significant progress", or "session boundaries". Continue in a single execution until the story is COMPLETE (all ACs satisfied and all tasks/subtasks checked) UNLESS a HALT condition is triggered or the USER gives other instruction.
-- Do NOT schedule a "next session" or request review pauses unless a HALT condition applies. Only Step 6 decides completion.
+- Do NOT schedule a "next session" or request review pauses unless a HALT condition applies. Only Step 10 decides completion.
 - User skill level ({user_skill_level}) affects conversation style ONLY, not code updates.
 
 ---
@@ -54,7 +54,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
   <critical>Absolutely DO NOT stop because of "milestones", "significant progress", or "session boundaries". Continue in a single execution
     until the story is COMPLETE (all ACs satisfied and all tasks/subtasks checked) UNLESS a HALT condition is triggered or the USER gives
     other instruction.</critical>
-  <critical>Do NOT schedule a "next session" or request review pauses unless a HALT condition applies. Only Step 6 decides completion.</critical>
+  <critical>Do NOT schedule a "next session" or request review pauses unless a HALT condition applies. Only Step 10 decides completion.</critical>
   <critical>User skill level ({user_skill_level}) affects conversation style ONLY, not code updates.</critical>
 
   <step n="1" goal="Find next ready story and load it" tag="sprint-status">
@@ -183,10 +183,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
     <critical>Load all available context to inform implementation</critical>
 
     <action>Load {project_context} for coding standards and project-wide patterns (if exists)</action>
-    <action>Parse sections: Story, Acceptance Criteria, Tasks/Subtasks, Dev Notes, Dev Agent Record, File List, Change Log, Status</action>
-    <action>Load comprehensive context from story file's Dev Notes section</action>
-    <action>Extract developer guidance from Dev Notes: architecture requirements, previous learnings, technical specifications</action>
-    <action>Use enhanced story context to inform implementation decisions and approaches</action>
+    <!-- Story sections already parsed in Step 1 — reuse extracted Dev Notes, ACs, Tasks -->
 
     <!-- ATDD MANDATORY GATE — Quality-first: ATDD tests MUST exist before dev starts -->
     <critical>🧪 ATDD GATE: Verify acceptance tests exist BEFORE implementation begins</critical>
@@ -569,11 +566,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
       "ATDD Compliance: P0 {{p0_passing}}/{{atdd_p0_count}} ✅ | P1 {{p1_passing}}/{{atdd_p1_count}} ✅ | P2 {{p2_status}}"
     </action>
 
-    <!-- ONLY set status to "review" AFTER all gates pass -->
-    <action>Execute enhanced definition-of-done validation</action>
-    <action>Update the story Status to: "review"</action>
-
-    <!-- Enhanced Definition of Done Validation -->
+    <!-- Enhanced Definition of Done — validate BEFORE setting status -->
     <action>Validate definition-of-done checklist with essential requirements:
       - All tasks/subtasks marked complete with [x]
       - Implementation satisfies every Acceptance Criterion
@@ -587,6 +580,9 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
       - Change Log includes summary of changes
       - Only permitted story sections were modified
     </action>
+
+    <!-- ONLY set status to "review" AFTER all gates pass (ATDD + DoD) -->
+    <action>Update the story Status to: "review"</action>
 
     <!-- Mark story ready for review - sprint status conditional -->
     <check if="{sprint_status} file exists AND {{current_sprint_status}} != 'no-sprint-tracking'">
@@ -618,7 +614,6 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
   </step>
 
   <step n="11" goal="Completion communication and user support">
-    <action>Execute the enhanced definition-of-done checklist using the validation framework</action>
     <action>Prepare a concise summary in Dev Agent Record → Completion Notes</action>
 
     <action>Communicate to {user_name} that story implementation is complete and ready for review</action>
