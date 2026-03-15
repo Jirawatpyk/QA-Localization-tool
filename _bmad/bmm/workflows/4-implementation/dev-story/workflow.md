@@ -473,6 +473,33 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
     <action>Verify ALL tasks and subtasks are marked [x] (re-scan the story document now)</action>
     <action>Run the full regression suite (do not skip)</action>
     <action>Confirm File List includes every changed file</action>
+
+    <!-- ATDD Compliance Gate — verify BEFORE setting status to "review" -->
+    <critical>🧪 ATDD COMPLIANCE: All P0+P1 ATDD tests MUST pass before story completion</critical>
+    <action>Re-read the ATDD checklist at _bmad-output/test-artifacts/atdd-checklist-{{story_id}}.md</action>
+    <action>Cross-reference ATDD test coverage:
+      1. For each ATDD-generated test file, search for remaining `it.skip(` or `test.skip(`
+      2. Match each skipped test against the ATDD checklist to determine its priority (P0/P1/P2/P3)
+      3. Count: {{p0_skip}} P0 still skipped, {{p1_skip}} P1 still skipped, {{p2_skip}} P2 still skipped
+    </action>
+
+    <check if="{{p0_skip}} > 0 (any P0 test still skipped or FAILING)">
+      <action>HALT: "ATDD P0 tests incomplete — {{p0_skip}} P0 tests not passing. Fix before marking story complete."</action>
+    </check>
+
+    <check if="{{p1_skip}} > 0 (any P1 test still skipped or FAILING)">
+      <action>HALT: "ATDD P1 tests incomplete — {{p1_skip}} P1 tests not passing. Fix before marking story complete."</action>
+    </check>
+
+    <check if="P2 tests remain as `it.skip()`">
+      <action>Record in Dev Agent Record: "ATDD P2 coverage: {{p2_passing}}/{{p2_total}} passing ({{p2_skip}} skipped — accepted as tech debt)"</action>
+    </check>
+
+    <action>Record in Dev Agent Record → Completion Notes:
+      "ATDD Compliance: P0 {{p0_passing}}/{{atdd_p0_count}} ✅ | P1 {{p1_passing}}/{{atdd_p1_count}} ✅ | P2 {{p2_status}}"
+    </action>
+
+    <!-- ONLY set status to "review" AFTER all gates pass -->
     <action>Execute enhanced definition-of-done validation</action>
     <action>Update the story Status to: "review"</action>
 
