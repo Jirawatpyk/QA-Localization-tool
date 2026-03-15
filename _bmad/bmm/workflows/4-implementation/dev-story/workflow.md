@@ -173,7 +173,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
     <action>Identify first incomplete task (unchecked [ ]) in Tasks/Subtasks</action>
 
     <action if="no incomplete tasks">
-      <goto step="6">Completion sequence</goto>
+      <goto step="9">Pre-CR quality scan</goto>
     </action>
     <action if="story file inaccessible">HALT: "Cannot develop story without access to story file"</action>
     <action if="incomplete task or subtask requirements ambiguous">ASK user to clarify or HALT</action>
@@ -359,11 +359,16 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
     <critical>Do NOT propose to pause for review until Step 9 completion gates are satisfied</critical>
   </step>
 
-  <step n="6" goal="Author comprehensive tests">
-    <action>Create unit tests for business logic and core functionality introduced/changed by the task</action>
-    <action>Add integration tests for component interactions specified in story requirements</action>
-    <action>Include end-to-end tests for critical user flows when story requirements demand them</action>
-    <action>Cover edge cases and error handling scenarios identified in story Dev Notes</action>
+  <step n="6" goal="Verify test coverage and author supplementary tests">
+    <action>Review ATDD checklist coverage for the current task — which P0/P1/P2 tests were activated in Step 5?</action>
+    <action>Identify gaps: are there edge cases, error paths, or integration scenarios NOT covered by ATDD stubs?</action>
+    <action>Write SUPPLEMENTARY tests ONLY for gaps not already covered by activated ATDD tests:
+      - Unit tests for business logic edge cases beyond ATDD scenarios
+      - Integration tests for component interactions if ATDD did not generate them
+      - End-to-end tests for critical user flows when story requirements demand them
+      - Error handling scenarios identified in story Dev Notes or ATDD Failure Mode Analysis
+    </action>
+    <action>Do NOT duplicate tests already written via ATDD activation in Step 5</action>
   </step>
 
   <step n="7" goal="Run validations and tests">
