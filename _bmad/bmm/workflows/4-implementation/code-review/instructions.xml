@@ -80,7 +80,7 @@
     <action>Launch THREE sub-agents IN PARALLEL using the Task tool to scan all files in the comprehensive review list:
       1. code-quality-analyzer (subagent_type="code-quality-analyzer") — code quality, patterns, maintainability (single-file focus)
       2. testing-qa-expert (subagent_type="testing-qa-expert") — test coverage gaps, missing test scenarios, test quality
-      3. feature-dev:code-reviewer (subagent_type="feature-dev:code-reviewer") — CROSS-FILE data flow (Guardrail #44). Scope: ONLY state/data crossing file boundaries (single-file = agent #1). Trace each export→import flow: shape/order match, lifecycle complete, transitional state handling, timing/race conditions
+      3. feature-dev:code-reviewer (subagent_type="feature-dev:code-reviewer") — CROSS-FILE data flow (Guardrail #44). Scope: ONLY state/data crossing file boundaries (single-file = agent #1). Trace each export→import flow: shape/order match, lifecycle complete, transitional state handling, timing/race conditions. DO NOT report: type widening, bare string, mock drift, naming, missing tests, single-file smells (= agent #1's job)
     </action>
     <action>Collect findings from all three sub-agents and incorporate them into the review below.
       Sub-agent findings count toward the minimum 3 issues requirement.

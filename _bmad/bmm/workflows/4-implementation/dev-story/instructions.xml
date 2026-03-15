@@ -441,6 +441,8 @@
          - Is the data's lifecycle complete? (created → used → cleaned up across both files)
          - What happens when the producer is in a transitional state? (loading, unmounted, stale, revalidated)
          - Could timing between producer update and consumer read cause a bug? (race condition, stale closure, batched render)
+         DO NOT report (code-quality-analyzer's job): type widening, bare string types, mock drift,
+         naming conventions, missing tests, single-file code smells, unused imports, perf within one file.
     </action>
 
     <!-- Conditional scans — trigger when relevant files changed OR story belongs to DB/pipeline-heavy epic -->

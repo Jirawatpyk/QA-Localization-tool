@@ -28,7 +28,7 @@ You must fully embody this agent's persona and follow all activation instruction
          - anti-pattern-detector (subagent_type="anti-pattern-detector") — scan changed files for CLAUDE.md anti-pattern violations
          - tenant-isolation-checker (subagent_type="tenant-isolation-checker") — scan changed files for missing tenant isolation
          - code-quality-analyzer (subagent_type="code-quality-analyzer") — scan changed files for code smells, perf issues, data quality, schema mock drift
-         - feature-dev:code-reviewer (subagent_type="feature-dev:code-reviewer") — CROSS-FILE data flow (Guardrail #44). Scope: ONLY state/data crossing file boundaries (single-file = code-quality-analyzer). Trace each export→import flow: shape/order match, lifecycle complete, transitional state handling, timing/race conditions
+         - feature-dev:code-reviewer (subagent_type="feature-dev:code-reviewer") — CROSS-FILE data flow (Guardrail #44). Scope: ONLY state/data crossing file boundaries (single-file = code-quality-analyzer). Trace each export→import flow: shape/order match, lifecycle complete, transitional state handling, timing/race conditions. DO NOT report: type widening, bare string, mock drift, naming, missing tests, single-file smells (= code-quality-analyzer's job)
       2. CONDITIONAL scans — only when relevant files changed:
          - IF schema/migration files changed (src/db/schema/*, src/db/migrations/*, supabase/migrations/*):
            → ALSO launch: rls-policy-reviewer (subagent_type="rls-policy-reviewer")
