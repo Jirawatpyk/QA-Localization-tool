@@ -1,6 +1,6 @@
 'use client'
 
-import { Check, Flag, X } from 'lucide-react'
+import { Check, Flag, Trash2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { ConfidenceBadge } from '@/features/review/components/ConfidenceBadge'
@@ -29,6 +29,7 @@ type FindingDetailContentProps = {
   onAccept?: ((findingId: string) => void) | undefined
   onReject?: ((findingId: string) => void) | undefined
   onFlag?: ((findingId: string) => void) | undefined
+  onDelete?: ((findingId: string) => void) | undefined
   isActionInFlight?: boolean | undefined
 }
 
@@ -48,6 +49,7 @@ export function FindingDetailContent({
   onAccept,
   onReject,
   onFlag,
+  onDelete,
   isActionInFlight = false,
 }: FindingDetailContentProps) {
   const [contextRange, setContextRange] = useState(contextRangeProp ?? 2)
@@ -180,6 +182,20 @@ export function FindingDetailContent({
               <Flag className="h-4 w-4" aria-hidden="true" />
               Flag
             </button>
+
+            {/* Story 4.3: Delete button — visible only for Manual findings (AC5) */}
+            {finding.detectedByLayer === 'Manual' && (
+              <button
+                type="button"
+                disabled={isActionInFlight}
+                onClick={() => onDelete?.(finding.id)}
+                data-testid="delete-finding-button"
+                className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-sm font-medium bg-error/10 text-error border border-error/20 hover:bg-error/20 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 ml-auto"
+              >
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                Delete
+              </button>
+            )}
           </div>
         </>
       ) : (

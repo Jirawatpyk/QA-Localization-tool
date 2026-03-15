@@ -317,7 +317,7 @@ test.describe.serial('Detail Panel & Segment Context — Story 4.1c ATDD', () =>
   })
 
   // ── 4.1c-E1 [P0]: Focus finding → detail panel shows metadata ─────────
-  // TODO(TD-E2E-016): unskip when Sheet open flow is stable in CI (Story 4.2)
+  // TD-E2E-016: Re-skipped — selectedId not set by row click (detail panel content requires onNavigateToFinding). Wiring gap predates Story 4.3
   test.skip('[P0] E1: should show finding metadata in detail panel when finding is focused', async ({
     page,
   }) => {
@@ -374,7 +374,7 @@ test.describe.serial('Detail Panel & Segment Context — Story 4.1c ATDD', () =>
   })
 
   // ── 4.1c-E2 [P0]: Detail panel shows full segment text with <mark> highlight ──
-  // TODO(TD-E2E-016): unskip when Sheet open flow is stable in CI (Story 4.2)
+  // TD-E2E-016: Re-skipped — selectedId not set by row click (detail panel content requires onNavigateToFinding). Wiring gap predates Story 4.3
   test.skip('[P0] E2: should show full segment text with <mark> highlight on excerpt', async ({
     page,
   }) => {
@@ -432,7 +432,7 @@ test.describe.serial('Detail Panel & Segment Context — Story 4.1c ATDD', () =>
   })
 
   // ── 4.1c-E3 [P1]: Context segments ±2 visible ──────────────────────────
-  // TODO(TD-E2E-016): unskip when Sheet open flow is stable in CI (Story 4.2)
+  // TD-E2E-016: Re-skipped — selectedId not set by row click (detail panel content requires onNavigateToFinding). Wiring gap predates Story 4.3
   test.skip('[P1] E3: should show context segments ±2 around finding segment', async ({ page }) => {
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
@@ -479,7 +479,7 @@ test.describe.serial('Detail Panel & Segment Context — Story 4.1c ATDD', () =>
   })
 
   // ── 4.1c-E4 [P1]: Click context segment with findings → navigates ──────
-  // TODO(TD-E2E-016): unskip when Sheet open flow is stable in CI (Story 4.2)
+  // TD-E2E-016: Re-skipped — selectedId not set by row click (detail panel content requires onNavigateToFinding). Wiring gap predates Story 4.3
   test.skip('[P1] E4: should navigate to finding when clicking context segment with findings', async ({
     page,
   }) => {
@@ -533,7 +533,7 @@ test.describe.serial('Detail Panel & Segment Context — Story 4.1c ATDD', () =>
   })
 
   // ── 4.1c-E5 [P2]: Context range selector changes segment count ─────────
-  // TODO(TD-E2E-016): unskip when Sheet open flow is stable in CI (Story 4.2)
+  // TD-E2E-016: Re-skipped — selectedId not set by row click (detail panel content requires onNavigateToFinding). Wiring gap predates Story 4.3
   test.skip('[P2] E5: should change visible context segments when range selector is changed', async ({
     page,
   }) => {
@@ -586,7 +586,7 @@ test.describe.serial('Detail Panel & Segment Context — Story 4.1c ATDD', () =>
   })
 
   // ── 4.1c-E6 [P1]: CJK/Thai text has lang attribute ─────────────────────
-  // TODO(TD-E2E-016): unskip when Sheet open flow is stable in CI (Story 4.2)
+  // TD-E2E-016: Re-skipped — selectedId not set by row click (detail panel content requires onNavigateToFinding). Wiring gap predates Story 4.3
   test.skip('[P1] E6: should have correct lang attribute on CJK/Thai text elements', async ({
     page,
   }) => {
@@ -644,7 +644,7 @@ test.describe.serial('Detail Panel & Segment Context — Story 4.1c ATDD', () =>
   })
 
   // ── 4.1c-E7 [P1]: Sheet focus trap → Esc → focus restores to grid ──────
-  // TODO(TD-E2E-016): unskip when Sheet open flow is stable in CI (Story 4.2)
+  // TD-E2E-016: Re-skipped — selectedId not set by row click (detail panel content requires onNavigateToFinding). Wiring gap predates Story 4.3
   test.skip('[P1] E7: should trap focus in Sheet and restore to grid on Esc', async ({ page }) => {
     // Navigate to review page
     await signupOrLogin(page, TEST_EMAIL)

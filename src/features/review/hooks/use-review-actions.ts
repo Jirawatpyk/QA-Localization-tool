@@ -3,7 +3,9 @@ import { toast } from 'sonner'
 
 import { acceptFinding } from '@/features/review/actions/acceptFinding.action'
 import { flagFinding } from '@/features/review/actions/flagFinding.action'
+import { noteFinding } from '@/features/review/actions/noteFinding.action'
 import { rejectFinding } from '@/features/review/actions/rejectFinding.action'
+import { sourceIssueFinding } from '@/features/review/actions/sourceIssueFinding.action'
 import { useFocusManagement } from '@/features/review/hooks/use-focus-management'
 import { useReviewStore } from '@/features/review/stores/review.store'
 import { announce } from '@/features/review/utils/announce'
@@ -17,11 +19,19 @@ type UseReviewActionsOptions = {
   projectId: string
 }
 
-const ACTION_FN_MAP = {
+// State-transition actions that use executeReviewAction pattern
+type StateTransitionAction = 'accept' | 'reject' | 'flag' | 'note' | 'source'
+
+const ACTION_FN_MAP: Record<
+  StateTransitionAction,
+  (input: { findingId: string; fileId: string; projectId: string }) => Promise<unknown>
+> = {
   accept: acceptFinding,
   reject: rejectFinding,
   flag: flagFinding,
-} as const
+  note: noteFinding,
+  source: sourceIssueFinding,
+}
 
 type ToastFn = (message: string, data?: Parameters<typeof toast>[1]) => ReturnType<typeof toast>
 
@@ -29,6 +39,8 @@ const ACTION_LABELS: Record<ReviewAction, { past: string; toast: ToastFn }> = {
   accept: { past: 'accepted', toast: toast.success },
   reject: { past: 'rejected', toast: toast },
   flag: { past: 'flagged for review', toast: toast.warning },
+  note: { past: 'noted', toast: toast.info },
+  source: { past: 'marked as source issue', toast: toast },
 }
 
 export function useReviewActions({ fileId, projectId }: UseReviewActionsOptions) {
@@ -73,7 +85,16 @@ export function useReviewActions({ fileId, projectId }: UseReviewActionsOptions)
       setActiveAction(action)
       try {
         const actionFn = ACTION_FN_MAP[action]
-        const result = await actionFn({ findingId, fileId, projectId })
+        const result = await (actionFn({ findingId, fileId, projectId }) as Promise<{
+          success: boolean
+          error?: string
+          data?: {
+            serverUpdatedAt?: string
+            noOp?: boolean
+            findingId?: string
+            [key: string]: unknown
+          }
+        }>)
 
         if (!result.success) {
           // M4 fix: get fresh state before rollback to avoid overwriting Realtime updates
@@ -121,6 +142,10 @@ export function useReviewActions({ fileId, projectId }: UseReviewActionsOptions)
 
         if (nextPendingId) {
           updatedState.setSelectedFinding(nextPendingId)
+        } else {
+          // TD-E2E-018 fix: all findings reviewed — clear selectedFinding to close Sheet
+          // (Radix Sheet sets aria-hidden on background, blocking action bar focus)
+          updatedState.setSelectedFinding(null)
         }
       } catch {
         // M4 fix: fresh state for rollback on unexpected error
@@ -154,10 +179,40 @@ export function useReviewActions({ fileId, projectId }: UseReviewActionsOptions)
     [executeAction],
   )
 
+  // Story 4.3: Note action — two-path logic
+  // Path 1: not noted → executeAction('note') + auto-advance
+  // Path 2: already noted → returns 'open-note-input' for caller to open NoteInput popover
+  const handleNote = useCallback(
+    (findingId: string): 'open-note-input' | void => {
+      const state = useReviewStore.getState()
+      const finding = state.findingsMap.get(findingId)
+      if (!finding) return
+
+      // Path 2: already noted → open NoteInput (no advance, no state change)
+      if (finding.status === 'noted') {
+        return 'open-note-input'
+      }
+
+      // Path 1: not noted → standard action + auto-advance (Guardrail #13: no void swallowing)
+      executeAction(findingId, 'note').catch(() => {
+        /* handled by executeAction's own catch */
+      })
+    },
+    [executeAction],
+  )
+
+  // Story 4.3: Source Issue action — auto-advance
+  const handleSourceIssue = useCallback(
+    (findingId: string) => executeAction(findingId, 'source'),
+    [executeAction],
+  )
+
   return {
     handleAccept,
     handleReject,
     handleFlag,
+    handleNote,
+    handleSourceIssue,
     isActionInFlight: isInFlight,
     activeAction,
   }

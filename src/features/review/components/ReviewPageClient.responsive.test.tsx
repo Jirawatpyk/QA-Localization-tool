@@ -134,6 +134,8 @@ function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
     autoPassRationale: null,
     sourceLang: 'en-US',
     targetLang: 'th-TH',
+    segments: [],
+    categories: [],
     ...overrides,
   }
 }
@@ -532,15 +534,16 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
       />,
     )
 
-    // Before selecting: toggle button should NOT be visible (selectedId is null)
+    // H3 revert: handleActiveFindingChange only calls setSelectedFinding on desktop.
+    // In mobile mode, selectedId is NOT set by row click — only by autoAdvance or explicit action.
+    // So toggle button is NOT visible until selectedId is explicitly set.
     expect(screen.queryByTestId('detail-panel-toggle')).not.toBeInTheDocument()
 
-    // Select a finding
+    // Explicitly set selectedId (simulates autoAdvance or explicit user action)
     act(() => {
       useReviewStore.getState().setSelectedFinding('find1')
     })
 
-    // Now toggle button SHOULD appear (selectedId set, mobileDrawerOpen=false)
     expect(screen.getByTestId('detail-panel-toggle')).toBeInTheDocument()
     expect(screen.getByTestId('detail-panel-toggle')).toHaveAttribute(
       'aria-label',
@@ -551,6 +554,25 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     fireEvent.click(screen.getByTestId('detail-panel-toggle'))
 
     // Toggle button should HIDE now (mobileDrawerOpen=true)
+    expect(screen.queryByTestId('detail-panel-toggle')).not.toBeInTheDocument()
+  })
+
+  it('[TA-G7][P1] mobile toggle button should NOT show when no findings (selectedId is null)', () => {
+    // Arrange: mobile breakpoint with NO findings
+    mockUseIsDesktop.mockReturnValue(false)
+    mockUseIsLaptop.mockReturnValue(false)
+    mockUseIsMobile.mockReturnValue(true)
+
+    render(
+      <ReviewPageClient
+        fileId="f1"
+        projectId="p1"
+        tenantId="t1"
+        initialData={buildInitialData({ findings: [] })}
+      />,
+    )
+
+    // No findings → no auto-selection → selectedId is null → toggle NOT visible
     expect(screen.queryByTestId('detail-panel-toggle')).not.toBeInTheDocument()
   })
 

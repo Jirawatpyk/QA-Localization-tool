@@ -1,27 +1,71 @@
 import type { FindingStatus } from '@/types/finding'
 
-export type ReviewAction = 'accept' | 'reject' | 'flag'
+export type ReviewAction = 'accept' | 'reject' | 'flag' | 'note' | 'source'
 
 export type ScoreImpact = { countsPenalty: boolean }
 
 /**
- * 24-cell transition matrix: 8 states × 3 actions.
+ * 40-cell transition matrix: 8 states × 5 actions (Story 4.3 extends 8×3 → 8×5).
  * Returns the new state, or null for no-op transitions.
  *
- * Rules (AC4):
- * - `manual` findings cannot be accepted/rejected/flagged (no-op for all)
+ * Rules:
+ * - `manual` findings are no-op for ALL actions (can only be deleted)
  * - `accept` on `rejected` → `re_accepted` (special case)
+ * - `note` from any state → `noted` (except already noted or manual)
+ * - `source` from any state → `source_issue` (except already source_issue or manual)
  * - Idempotent: action on already-target state → null (no-op)
  */
 const TRANSITION_MATRIX: Record<FindingStatus, Record<ReviewAction, FindingStatus | null>> = {
-  pending: { accept: 'accepted', reject: 'rejected', flag: 'flagged' },
-  accepted: { accept: null, reject: 'rejected', flag: 'flagged' },
-  re_accepted: { accept: null, reject: 'rejected', flag: 'flagged' },
-  rejected: { accept: 're_accepted', reject: null, flag: 'flagged' },
-  flagged: { accept: 'accepted', reject: 'rejected', flag: null },
-  noted: { accept: 'accepted', reject: 'rejected', flag: 'flagged' },
-  source_issue: { accept: 'accepted', reject: 'rejected', flag: 'flagged' },
-  manual: { accept: null, reject: null, flag: null },
+  pending: {
+    accept: 'accepted',
+    reject: 'rejected',
+    flag: 'flagged',
+    note: 'noted',
+    source: 'source_issue',
+  },
+  accepted: {
+    accept: null,
+    reject: 'rejected',
+    flag: 'flagged',
+    note: 'noted',
+    source: 'source_issue',
+  },
+  re_accepted: {
+    accept: null,
+    reject: 'rejected',
+    flag: 'flagged',
+    note: 'noted',
+    source: 'source_issue',
+  },
+  rejected: {
+    accept: 're_accepted',
+    reject: null,
+    flag: 'flagged',
+    note: 'noted',
+    source: 'source_issue',
+  },
+  flagged: {
+    accept: 'accepted',
+    reject: 'rejected',
+    flag: null,
+    note: 'noted',
+    source: 'source_issue',
+  },
+  noted: {
+    accept: 'accepted',
+    reject: 'rejected',
+    flag: 'flagged',
+    note: null,
+    source: 'source_issue',
+  },
+  source_issue: {
+    accept: 'accepted',
+    reject: 'rejected',
+    flag: 'flagged',
+    note: 'noted',
+    source: null,
+  },
+  manual: { accept: null, reject: null, flag: null, note: null, source: null },
 }
 
 export function getNewState(

@@ -36,6 +36,8 @@ export const findings = pgTable(
     status: varchar('status', { length: 30 }).notNull().default('pending'),
     // 'pending' | 'accepted' | 're_accepted' | 'rejected' | 'flagged' | 'noted' | 'source_issue' | 'manual'
     severity: varchar('severity', { length: 20 }).notNull(), // 'critical' | 'major' | 'minor'
+    // Stores pre-override severity. Null = not overridden (Story 4.3 AC3)
+    originalSeverity: varchar('original_severity', { length: 20 }),
     category: varchar('category', { length: 100 }).notNull(), // MQM category
     description: text('description').notNull(),
     detectedByLayer: varchar('detected_by_layer', { length: 10 }).notNull(), // 'L1' | 'L2' | 'L3'

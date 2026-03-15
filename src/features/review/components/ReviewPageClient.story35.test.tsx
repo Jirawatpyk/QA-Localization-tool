@@ -171,6 +171,8 @@ function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
     autoPassRationale: null,
     sourceLang: 'en-US',
     targetLang: 'th-TH',
+    segments: [],
+    categories: [],
     ...overrides,
   } as FileReviewData
 }
@@ -686,6 +688,7 @@ function buildFindingForStore(overrides?: Partial<Finding>): Finding {
     sessionId: 's1',
     segmentId: 'seg1',
     severity: 'major',
+    originalSeverity: null,
     category: 'accuracy',
     description: 'Test finding',
     status: 'pending',

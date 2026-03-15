@@ -128,6 +128,7 @@ describe('useFindingsSubscription — reconnect (P1-11)', () => {
       sessionId: '',
       segmentId: 'seg-1',
       severity: 'major',
+      originalSeverity: null,
       category: 'accuracy',
       status: 'pending',
       description: 'Existing finding from Realtime',

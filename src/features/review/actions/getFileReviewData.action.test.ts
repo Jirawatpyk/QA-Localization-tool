@@ -113,18 +113,20 @@ describe('getFileReviewData', () => {
     const fileId = 'c3d4e5f6-a1b2-4c1d-ae2f-5a6b7c8d9e0f'
     const projectId = 'd4e5f6a1-b2c3-4d1e-bf3a-6b7c8d9e0f1a'
 
-    // Provide enough return values for all queries
+    // Provide enough return values for all queries (Q1-Q6)
     dbState.returnValues = [
       [buildFile({ fileId })],
       [buildDbFinding({ fileId, tenantId: mockTenantId })],
       [buildScoreRecord({ fileId, tenantId: mockTenantId })],
       [{ l2ConfidenceMin: 70 }],
+      [], // Q5: segments
+      [], // Q6: categories
     ]
 
     await getFileReviewData({ fileId, projectId })
 
-    // withTenant called for: files, findings, scores, languagePairConfigs(JOIN), projects(WHERE) = 5
-    expect(mockWithTenant).toHaveBeenCalledTimes(5)
+    // withTenant called for: files, findings, scores, languagePairConfigs(JOIN), projects(WHERE), segments = 6
+    expect(mockWithTenant).toHaveBeenCalledTimes(6)
     // Every call must use the authenticated user's tenantId
     for (const call of mockWithTenant.mock.calls) {
       expect(call[1]).toBe(mockTenantId)

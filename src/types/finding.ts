@@ -20,7 +20,7 @@ export type FindingStatus = (typeof FINDING_STATUSES)[number]
 
 // Pipeline detection layer (findings.detected_by_layer column)
 // Const array for runtime validation (Guardrail #3), type derived from it
-export const DETECTED_BY_LAYERS = ['L1', 'L2', 'L3'] as const
+export const DETECTED_BY_LAYERS = ['L1', 'L2', 'L3', 'Manual'] as const
 export type DetectedByLayer = (typeof DETECTED_BY_LAYERS)[number]
 
 // Score lifecycle statuses (from scores.status column)
@@ -62,6 +62,7 @@ export type Finding = {
   sessionId: string
   segmentId: string | null
   severity: FindingSeverity
+  originalSeverity: FindingSeverity | null
   category: string
   status: FindingStatus
   description: string

@@ -56,6 +56,10 @@ function mapRowToFinding(row: Record<string, unknown>): Finding | null {
     sessionId: typeof row.review_session_id === 'string' ? row.review_session_id : '',
     segmentId: typeof row.segment_id === 'string' ? row.segment_id : '',
     severity: rawSeverity,
+    originalSeverity:
+      typeof row.original_severity === 'string' && isValidSeverity(row.original_severity)
+        ? row.original_severity
+        : null,
     category: typeof row.category === 'string' ? row.category : '',
     status,
     description: typeof row.description === 'string' ? row.description : '',

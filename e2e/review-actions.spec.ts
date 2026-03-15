@@ -542,11 +542,11 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
     await expect(actionBar.getByRole('button', { name: /reject/i })).toBeEnabled()
     await expect(actionBar.getByRole('button', { name: /flag/i })).toBeEnabled()
 
-    // Note/Source/Override/Add remain disabled (deferred to Story 4.3)
-    await expect(actionBar.getByRole('button', { name: /note/i })).toBeDisabled()
-    await expect(actionBar.getByRole('button', { name: /source/i })).toBeDisabled()
-    await expect(actionBar.getByRole('button', { name: /override/i })).toBeDisabled()
-    await expect(actionBar.getByRole('button', { name: /add/i })).toBeDisabled()
+    // Story 4.3: Note/Source/Override/Add now enabled
+    await expect(actionBar.getByRole('button', { name: /note/i })).toBeEnabled()
+    await expect(actionBar.getByRole('button', { name: /source/i })).toBeEnabled()
+    await expect(actionBar.getByRole('button', { name: /override/i })).toBeEnabled()
+    await expect(actionBar.getByRole('button', { name: /add/i })).toBeEnabled()
   })
 
   test('[P0] E-B1: should focus action bar when all findings are reviewed', async ({ page }) => {

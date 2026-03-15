@@ -7,6 +7,14 @@ import type { FileReviewData } from '@/features/review/actions/getFileReviewData
 
 vi.mock('server-only', () => ({}))
 
+// Mock responsive hooks — laptop mode
+vi.mock('@/hooks/useMediaQuery', () => ({
+  useMediaQuery: vi.fn(() => false),
+  useIsDesktop: vi.fn(() => false),
+  useIsLaptop: vi.fn(() => true),
+  useIsMobile: vi.fn(() => false),
+}))
+
 // Mock dependencies before importing the component
 vi.mock('@/features/review/hooks/use-findings-subscription', () => ({
   useFindingsSubscription: vi.fn(),
@@ -132,6 +140,8 @@ function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
     autoPassRationale: null,
     sourceLang: 'en-US',
     targetLang: 'th-TH',
+    segments: [],
+    categories: [],
     ...overrides,
   } as FileReviewData
 }

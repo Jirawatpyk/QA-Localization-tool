@@ -161,6 +161,7 @@ describe('FindingDetailContent', () => {
       id: 'f-cross',
       segmentId: null,
       severity: 'minor',
+      originalSeverity: null,
       category: 'fluency',
       description: 'Cross-file issue',
       status: 'pending',

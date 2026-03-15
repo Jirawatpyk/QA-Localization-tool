@@ -47,6 +47,14 @@ vi.mock('@/features/review/actions/flagFinding.action', () => ({
   flagFinding: (...args: unknown[]) => mockFlagFinding(...args),
 }))
 
+// Story 4.3: mock new action imports (server-only modules)
+vi.mock('@/features/review/actions/noteFinding.action', () => ({
+  noteFinding: vi.fn((..._args: unknown[]) => Promise.resolve({ success: true, data: {} })),
+}))
+vi.mock('@/features/review/actions/sourceIssueFinding.action', () => ({
+  sourceIssueFinding: vi.fn((..._args: unknown[]) => Promise.resolve({ success: true, data: {} })),
+}))
+
 // ── Mock Zustand store ──
 
 const mockFindingsMap = new Map<string, { id: string; status: FindingStatus }>()
@@ -332,5 +340,54 @@ describe('useReviewActions', () => {
       expect.objectContaining({ duration: 3000 }),
     )
     expect(mockAnnounce).toHaveBeenCalledWith(expect.stringContaining('flagged'))
+  })
+
+  // ── Story 4.3 ATDD: Note/Source extended actions ──
+
+  it('[P0] U-H1: should call executeAction(note) + autoAdvance when finding is not noted', async () => {
+    // Arrange: finding is pending (not noted)
+    mockFindingsMap.set(VALID_FINDING_ID, { id: VALID_FINDING_ID, status: 'pending' })
+
+    const { result } = renderHook(() =>
+      useReviewActions({ fileId: VALID_FILE_ID, projectId: VALID_PROJECT_ID }),
+    )
+
+    await act(async () => {
+      result.current.handleNote(VALID_FINDING_ID)
+    })
+
+    // handleNote on non-noted finding should dispatch 'note' action (via executeAction)
+    // The noteFinding mock should be called (through ACTION_FN_MAP)
+    expect(mockAnnounce).toHaveBeenCalledWith(expect.stringContaining('noted'))
+  })
+
+  it('[P0] U-H2: should call executeAction(source) + autoAdvance', async () => {
+    mockFindingsMap.set(VALID_FINDING_ID, { id: VALID_FINDING_ID, status: 'pending' })
+
+    const { result } = renderHook(() =>
+      useReviewActions({ fileId: VALID_FILE_ID, projectId: VALID_PROJECT_ID }),
+    )
+
+    await act(async () => {
+      await result.current.handleSourceIssue(VALID_FINDING_ID)
+    })
+
+    expect(mockAnnounce).toHaveBeenCalledWith(expect.stringContaining('source issue'))
+  })
+
+  it('[P1] U-H5: should open NoteInput when finding is already noted (no advance)', () => {
+    // Arrange: finding is already noted
+    mockFindingsMap.set(VALID_FINDING_ID, { id: VALID_FINDING_ID, status: 'noted' })
+
+    const { result } = renderHook(() =>
+      useReviewActions({ fileId: VALID_FILE_ID, projectId: VALID_PROJECT_ID }),
+    )
+
+    // Act
+    const noteResult = result.current.handleNote(VALID_FINDING_ID)
+
+    // Assert: returns 'open-note-input' signal (no action dispatched, no advance)
+    expect(noteResult).toBe('open-note-input')
+    expect(mockAnnounce).not.toHaveBeenCalled()
   })
 })

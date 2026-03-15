@@ -2,7 +2,7 @@
 
 import 'server-only'
 
-import { and, eq } from 'drizzle-orm'
+import { and, asc, eq } from 'drizzle-orm'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
@@ -11,6 +11,8 @@ import { findings } from '@/db/schema/findings'
 import { languagePairConfigs } from '@/db/schema/languagePairConfigs'
 import { projects } from '@/db/schema/projects'
 import { scores } from '@/db/schema/scores'
+import { segments } from '@/db/schema/segments'
+import { taxonomyDefinitions } from '@/db/schema/taxonomyDefinitions'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
@@ -34,6 +36,7 @@ export type FileReviewData = {
     id: string
     segmentId: string | null
     severity: FindingSeverity
+    originalSeverity: FindingSeverity | null
     category: string
     description: string
     status: FindingStatus
@@ -60,6 +63,10 @@ export type FileReviewData = {
   autoPassRationale: string | null
   sourceLang: string
   targetLang: string | null
+  /** Story 4.3: Segments for AddFindingDialog segment selector */
+  segments: Array<{ id: string; segmentNumber: number; sourceText: string }>
+  /** Story 4.3: Active taxonomy categories for AddFindingDialog category selector */
+  categories: Array<{ category: string; parentCategory: string | null }>
 }
 
 const SEVERITY_PRIORITY: Record<string, number> = {
@@ -124,6 +131,7 @@ export async function getFileReviewData(
         id: findings.id,
         segmentId: findings.segmentId,
         severity: findings.severity,
+        originalSeverity: findings.originalSeverity,
         category: findings.category,
         description: findings.description,
         status: findings.status,
@@ -217,6 +225,43 @@ export async function getFileReviewData(
     // Sort findings: severity priority (critical→major→minor), then aiConfidence DESC NULLS LAST
     const sortedFindings = sortFindings(findingRows as FileReviewData['findings'])
 
+    // Q5: Get segments for AddFindingDialog (Story 4.3 AC4) — non-fatal
+    let segmentRows: Array<{ id: string; segmentNumber: number; sourceText: string }> = []
+    try {
+      segmentRows = await db
+        .select({
+          id: segments.id,
+          segmentNumber: segments.segmentNumber,
+          sourceText: segments.sourceText,
+        })
+        .from(segments)
+        .where(and(withTenant(segments.tenantId, tenantId), eq(segments.fileId, fileId)))
+        .orderBy(asc(segments.segmentNumber))
+    } catch (segErr) {
+      logger.error(
+        { err: segErr, fileId },
+        'Q5 segment query failed — AddFinding dialog will have empty segments',
+      )
+    }
+
+    // Q6: Get active taxonomy categories for AddFindingDialog (Story 4.3 AC4) — non-fatal
+    let categoryRows: Array<{ category: string; parentCategory: string | null }> = []
+    try {
+      categoryRows = await db
+        .select({
+          category: taxonomyDefinitions.category,
+          parentCategory: taxonomyDefinitions.parentCategory,
+        })
+        .from(taxonomyDefinitions)
+        .where(eq(taxonomyDefinitions.isActive, true))
+        .orderBy(asc(taxonomyDefinitions.displayOrder))
+    } catch (catErr) {
+      logger.error(
+        { err: catErr },
+        'Q6 taxonomy query failed — AddFinding dialog will have empty categories',
+      )
+    }
+
     return {
       success: true,
       data: {
@@ -230,6 +275,8 @@ export async function getFileReviewData(
         autoPassRationale,
         sourceLang,
         targetLang,
+        segments: segmentRows,
+        categories: categoryRows,
       },
     }
   } catch (err) {

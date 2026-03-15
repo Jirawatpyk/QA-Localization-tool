@@ -86,7 +86,56 @@ async function seedFileWithScoreForReview(opts: {
     )
   }
 
-  // 3. Insert findings (5 findings for count summary)
+  // 3. Insert segments (needed for Inngest score recalculation — scoreFile needs total_words)
+  const segmentData = [
+    {
+      segment_number: 1,
+      source_text: 'Application settings page',
+      target_text: 'หน้าตั้งค่าแอปพลิเคชัน',
+      word_count: 100,
+    },
+    {
+      segment_number: 2,
+      source_text: 'User profile configuration',
+      target_text: 'การกำหนดค่าโปรไฟล์ผู้ใช้',
+      word_count: 100,
+    },
+    {
+      segment_number: 3,
+      source_text: 'Export report feature',
+      target_text: 'ฟีเจอร์ส่งออกรายงาน',
+      word_count: 100,
+    },
+    {
+      segment_number: 4,
+      source_text: 'Search and filter panel',
+      target_text: 'แผงค้นหาและกรอง',
+      word_count: 100,
+    },
+    {
+      segment_number: 5,
+      source_text: 'Notification preferences',
+      target_text: 'การตั้งค่าการแจ้งเตือน',
+      word_count: 100,
+    },
+  ]
+  for (const seg of segmentData) {
+    const segRes = await fetch(`${SUPABASE_URL}/rest/v1/segments`, {
+      method: 'POST',
+      headers: { ...adminHeaders(), Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        file_id: fileId,
+        project_id: opts.projectId,
+        tenant_id: opts.tenantId,
+        source_lang: 'en-US',
+        target_lang: 'th-TH',
+        ...seg,
+      }),
+    })
+    if (!segRes.ok) throw new Error(`seed segment failed: ${segRes.status} ${await segRes.text()}`)
+  }
+
+  // 4. Insert findings (5 findings for count summary)
   const findings = [
     {
       severity: 'major',
@@ -217,8 +266,8 @@ test.describe.serial('Review to Score — Story 4.0 ATDD', () => {
   })
 
   // ── 4.0-E-TD2 [P1]: Score recalculate after finding action ──────────────
-  // TODO(TD-E2E-015): Unskip when Story 4.2 implements accept/reject review actions
-  test.skip('[P1] TD2: should recalculate score after finding action on review page', async ({
+  // Story 4.2/4.3: Review actions now available
+  test('[P1] TD2: should recalculate score after finding action on review page', async ({
     page,
   }) => {
     // TD-E2E-007: Full review→accept→score recalculate flow
@@ -226,30 +275,42 @@ test.describe.serial('Review to Score — Story 4.0 ATDD', () => {
     await page.goto(`/projects/${projectId}/review/${seededFileId}`)
     await waitForReviewPageReady(page)
 
-    // Wait for finding list to render
+    // Wait for finding list + hotkeys to render
     const findingList = page.getByRole('grid')
     await expect(findingList).toBeVisible({ timeout: 30_000 })
+    await expect(page.locator('[data-review-actions-ready="true"]')).toBeAttached({
+      timeout: 10_000,
+    })
 
-    // Record initial score
-    const scoreBadge = page.getByTestId('score-badge')
-    await expect(scoreBadge).toBeVisible()
-    const initialScoreText = await scoreBadge.textContent()
+    // Record initial score from DB
+    const initialScore = await queryScore(seededFileId)
+    expect(initialScore).not.toBeNull()
+    const initialMqm = initialScore!.mqm_score
 
     // Click first pending finding row
-    const firstRow = page
-      .getByRole('row')
-      .filter({ hasText: /pending/i })
-      .first()
+    const firstRow = page.locator('[role="row"][data-status="pending"]').first()
     await firstRow.click()
+    await expect(firstRow).toHaveAttribute('tabindex', '0', { timeout: 5_000 })
 
-    // Accept the finding via action button
-    const acceptBtn = page.getByRole('button', { name: /accept/i })
-    await expect(acceptBtn).toBeVisible({ timeout: 5_000 })
-    await acceptBtn.click()
+    // Reject the finding via keyboard R — reject removes MQM penalty (countsPenalty: false)
+    await page.keyboard.press('r')
 
-    // Wait for score recalculation (toast or badge update)
-    // Score should update after recalculation completes
-    await expect(scoreBadge).not.toContainText(initialScoreText ?? '', { timeout: 30_000 })
+    // Wait for toast confirmation
+    await expect(page.getByText('Finding rejected', { exact: true })).toBeVisible({
+      timeout: 15_000,
+    })
+
+    // Poll DB for score change (Inngest async recalculation)
+    let scoreChanged = false
+    for (let i = 0; i < 15; i++) {
+      await page.waitForTimeout(2_000)
+      const newScore = await queryScore(seededFileId)
+      if (newScore && newScore.mqm_score !== initialMqm) {
+        scoreChanged = true
+        break
+      }
+    }
+    expect(scoreChanged).toBe(true)
   })
 
   // ── 4.0-E-TD3 [P1]: Finding list shows severity icons + text ─────────────

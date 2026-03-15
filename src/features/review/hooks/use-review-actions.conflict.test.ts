@@ -30,6 +30,12 @@ vi.mock('@/features/review/actions/rejectFinding.action', () => ({
 vi.mock('@/features/review/actions/flagFinding.action', () => ({
   flagFinding: vi.fn((..._args: unknown[]) => Promise.resolve({ success: true, data: {} })),
 }))
+vi.mock('@/features/review/actions/noteFinding.action', () => ({
+  noteFinding: vi.fn((..._args: unknown[]) => Promise.resolve({ success: true, data: {} })),
+}))
+vi.mock('@/features/review/actions/sourceIssueFinding.action', () => ({
+  sourceIssueFinding: vi.fn((..._args: unknown[]) => Promise.resolve({ success: true, data: {} })),
+}))
 
 // ── Mock Zustand store ──
 

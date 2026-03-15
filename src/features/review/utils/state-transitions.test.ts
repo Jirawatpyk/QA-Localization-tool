@@ -12,15 +12,58 @@ import { FINDING_STATUSES } from '@/types/finding'
 
 // ── Full 24-cell transition matrix (8 states x 3 actions) ──
 
+// Full 40-cell transition matrix (8 states × 5 actions) — Story 4.3 extends 8×3 → 8×5
 const EXPECTED_TRANSITIONS: Record<FindingStatus, Record<ReviewAction, FindingStatus | null>> = {
-  pending: { accept: 'accepted', reject: 'rejected', flag: 'flagged' },
-  accepted: { accept: null, reject: 'rejected', flag: 'flagged' },
-  re_accepted: { accept: null, reject: 'rejected', flag: 'flagged' },
-  rejected: { accept: 're_accepted', reject: null, flag: 'flagged' },
-  flagged: { accept: 'accepted', reject: 'rejected', flag: null },
-  noted: { accept: 'accepted', reject: 'rejected', flag: 'flagged' },
-  source_issue: { accept: 'accepted', reject: 'rejected', flag: 'flagged' },
-  manual: { accept: null, reject: null, flag: null },
+  pending: {
+    accept: 'accepted',
+    reject: 'rejected',
+    flag: 'flagged',
+    note: 'noted',
+    source: 'source_issue',
+  },
+  accepted: {
+    accept: null,
+    reject: 'rejected',
+    flag: 'flagged',
+    note: 'noted',
+    source: 'source_issue',
+  },
+  re_accepted: {
+    accept: null,
+    reject: 'rejected',
+    flag: 'flagged',
+    note: 'noted',
+    source: 'source_issue',
+  },
+  rejected: {
+    accept: 're_accepted',
+    reject: null,
+    flag: 'flagged',
+    note: 'noted',
+    source: 'source_issue',
+  },
+  flagged: {
+    accept: 'accepted',
+    reject: 'rejected',
+    flag: null,
+    note: 'noted',
+    source: 'source_issue',
+  },
+  noted: {
+    accept: 'accepted',
+    reject: 'rejected',
+    flag: 'flagged',
+    note: null,
+    source: 'source_issue',
+  },
+  source_issue: {
+    accept: 'accepted',
+    reject: 'rejected',
+    flag: 'flagged',
+    note: 'noted',
+    source: null,
+  },
+  manual: { accept: null, reject: null, flag: null, note: null, source: null },
 }
 
 // ── SCORE_IMPACT_MAP expected values ──
@@ -68,10 +111,10 @@ describe('state-transitions', () => {
       expect(getNewState('flag', 'pending')).toBe('flagged')
     })
 
-    // ── P0: Full 24-transition matrix ──
+    // ── P0: Full 40-transition matrix (8 states × 5 actions) ──
 
-    it('[P0] U-T8: should produce correct output for ALL 24 state-action combinations', () => {
-      const actions: ReviewAction[] = ['accept', 'reject', 'flag']
+    it('[P0] U-T8: should produce correct output for ALL 40 state-action combinations', () => {
+      const actions: ReviewAction[] = ['accept', 'reject', 'flag', 'note', 'source']
 
       for (const status of FINDING_STATUSES) {
         for (const action of actions) {
@@ -88,6 +131,64 @@ describe('state-transitions', () => {
       expect(getNewState('accept', 'manual')).toBeNull()
       expect(getNewState('reject', 'manual')).toBeNull()
       expect(getNewState('flag', 'manual')).toBeNull()
+      expect(getNewState('note', 'manual')).toBeNull()
+      expect(getNewState('source', 'manual')).toBeNull()
+    })
+
+    // ── Story 4.3 ATDD: Note action transitions ──
+
+    it('[P0] U-N1: should return noted when note on pending', () => {
+      expect(getNewState('note', 'pending')).toBe('noted')
+    })
+
+    it('[P0] U-N2: should return noted when note on accepted', () => {
+      expect(getNewState('note', 'accepted')).toBe('noted')
+    })
+
+    it('[P0] U-N3: should return noted when note on rejected', () => {
+      expect(getNewState('note', 'rejected')).toBe('noted')
+    })
+
+    it('[P0] U-N4: should return noted when note on flagged', () => {
+      expect(getNewState('note', 'flagged')).toBe('noted')
+    })
+
+    it('[P0] U-N5: should return noted when note on source_issue', () => {
+      expect(getNewState('note', 'source_issue')).toBe('noted')
+    })
+
+    it('[P0] U-N6: should return null when note on noted (no-op)', () => {
+      expect(getNewState('note', 'noted')).toBeNull()
+    })
+
+    it('[P0] U-N7: should return null when note on manual (no-op)', () => {
+      expect(getNewState('note', 'manual')).toBeNull()
+    })
+
+    // ── Story 4.3 ATDD: Source Issue action transitions ──
+
+    it('[P0] U-S1: should return source_issue when source on pending', () => {
+      expect(getNewState('source', 'pending')).toBe('source_issue')
+    })
+
+    it('[P0] U-S2: should return source_issue when source on accepted', () => {
+      expect(getNewState('source', 'accepted')).toBe('source_issue')
+    })
+
+    it('[P0] U-S3: should return source_issue when source on rejected', () => {
+      expect(getNewState('source', 'rejected')).toBe('source_issue')
+    })
+
+    it('[P0] U-S4: should return source_issue when source on noted', () => {
+      expect(getNewState('source', 'noted')).toBe('source_issue')
+    })
+
+    it('[P0] U-S5: should return null when source on source_issue (no-op)', () => {
+      expect(getNewState('source', 'source_issue')).toBeNull()
+    })
+
+    it('[P0] U-S6: should return null when source on manual (no-op)', () => {
+      expect(getNewState('source', 'manual')).toBeNull()
     })
   })
 

@@ -30,6 +30,8 @@ export type FindingListProps = {
   isActionInFlight?: boolean | undefined
   // CR-C1: callback to notify parent when active finding changes
   onActiveFindingChange?: ((id: string | null) => void) | undefined
+  // H3 fix: ref that signals storeSelectedId change came from row click (skip re-sync)
+  skipStoreSyncRef?: React.RefObject<boolean> | undefined
 }
 
 const SEVERITY_ORDER: Record<FindingSeverity, number> = { critical: 0, major: 1, minor: 2 }
@@ -57,6 +59,7 @@ export function FindingList({
   onReject,
   isActionInFlight = false,
   onActiveFindingChange,
+  skipStoreSyncRef,
 }: FindingListProps) {
   const reducedMotion = useReducedMotion()
   const { register } = useKeyboardActions()
@@ -193,10 +196,15 @@ export function FindingList({
   useEffect(() => {
     if (storeSelectedId === null) return
     if (storeSelectedId === activeFindingId) return
+    // H3 fix: skip if selectedId change came from row click (prevents infinite loop)
+    if (skipStoreSyncRef?.current) return
     if (!flattenedIds.includes(storeSelectedId)) {
       const isMinorFinding = groups.minor.some((f) => f.id === storeSelectedId)
       if (isMinorFinding && !minorAccordionOpen) {
         setMinorAccordionValue(['minor-group']) // eslint-disable-line react-hooks/set-state-in-effect -- syncing from Zustand external store
+        // After accordion opens, flattenedIds will update and this effect re-runs.
+        // The re-run will hit the `setActiveFindingId` below because flattenedIds now includes the minor ID.
+        return
       } else {
         return
       }
@@ -325,6 +333,8 @@ export function FindingList({
         e.stopPropagation()
         navigatePrev()
       }
+      // Note: Enter is handled by FindingCardCompact's own onKeyDown handler (line 85)
+      // Do NOT add grid-level Enter handler — it would stopPropagation and block the card.
     },
     [navigateNext, navigatePrev],
   )

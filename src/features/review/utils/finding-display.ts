@@ -24,7 +24,8 @@ export function isCjkLang(lang: string | undefined): boolean {
 // ── Fallback Badge Detection ──
 
 export function isFallbackModel(aiModel: string | null, detectedByLayer: DetectedByLayer): boolean {
-  return aiModel !== null && detectedByLayer !== 'L1' && aiModel !== PRIMARY_MODELS[detectedByLayer]
+  if (aiModel === null || detectedByLayer === 'L1' || detectedByLayer === 'Manual') return false
+  return aiModel !== PRIMARY_MODELS[detectedByLayer]
 }
 
 // ── Confidence Threshold ──

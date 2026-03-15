@@ -1,0 +1,235 @@
+'use server'
+
+import 'server-only'
+
+import { and, eq } from 'drizzle-orm'
+
+import { db } from '@/db/client'
+import { withTenant } from '@/db/helpers/withTenant'
+import { feedbackEvents } from '@/db/schema/feedbackEvents'
+import { findings } from '@/db/schema/findings'
+import { reviewActions } from '@/db/schema/reviewActions'
+import { segments } from '@/db/schema/segments'
+import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
+import { overrideSeveritySchema } from '@/features/review/validation/reviewAction.schema'
+import type { OverrideSeverityInput } from '@/features/review/validation/reviewAction.schema'
+import { requireRole } from '@/lib/auth/requireRole'
+import { inngest } from '@/lib/inngest/client'
+import { logger } from '@/lib/logger'
+import type { ActionResult } from '@/types/actionResult'
+import { FINDING_SEVERITIES, FINDING_STATUSES } from '@/types/finding'
+import type { FindingSeverity, FindingStatus } from '@/types/finding'
+
+type OverrideSeverityResult = {
+  findingId: string
+  originalSeverity: FindingSeverity
+  newSeverity: FindingSeverity
+}
+
+export async function overrideSeverity(
+  input: OverrideSeverityInput,
+): Promise<ActionResult<OverrideSeverityResult>> {
+  // Zod validation
+  const parsed = overrideSeveritySchema.safeParse(input)
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? 'Invalid input',
+      code: 'VALIDATION',
+    }
+  }
+
+  // Auth
+  let user: Awaited<ReturnType<typeof requireRole>>
+  try {
+    user = await requireRole('qa_reviewer')
+  } catch {
+    return { success: false, error: 'Unauthorized', code: 'UNAUTHORIZED' }
+  }
+
+  const { findingId, fileId, projectId, newSeverity } = parsed.data
+  const { id: userId, tenantId } = user
+
+  // Fetch finding with tenant isolation (Guardrail #1, #4)
+  const rows = await db
+    .select({
+      id: findings.id,
+      status: findings.status,
+      severity: findings.severity,
+      originalSeverity: findings.originalSeverity,
+      category: findings.category,
+      detectedByLayer: findings.detectedByLayer,
+      segmentId: findings.segmentId,
+      sourceTextExcerpt: findings.sourceTextExcerpt,
+      targetTextExcerpt: findings.targetTextExcerpt,
+    })
+    .from(findings)
+    .where(
+      and(
+        eq(findings.id, findingId),
+        eq(findings.fileId, fileId),
+        eq(findings.projectId, projectId),
+        withTenant(findings.tenantId, tenantId),
+      ),
+    )
+    .limit(1)
+
+  if (rows.length === 0) {
+    return { success: false, error: 'Finding not found', code: 'NOT_FOUND' }
+  }
+
+  const finding = rows[0]!
+  const currentSeverity = finding.severity as FindingSeverity
+
+  // Guard: can't override to same severity
+  if (currentSeverity === newSeverity) {
+    return {
+      success: false,
+      error: `Finding already has severity: ${newSeverity}`,
+      code: 'SAME_SEVERITY',
+    }
+  }
+
+  // Validate current severity (Guardrail #3)
+  if (!FINDING_SEVERITIES.includes(currentSeverity)) {
+    return {
+      success: false,
+      error: `Invalid current severity: ${currentSeverity}`,
+      code: 'INVALID_STATE',
+    }
+  }
+
+  // Determine if this is "reset to original" or new override
+  const isReset = finding.originalSeverity !== null && newSeverity === finding.originalSeverity
+  const serverUpdatedAt = new Date()
+
+  // Transaction: UPDATE finding + INSERT review_actions (Guardrail #6)
+  await db.transaction(async (tx) => {
+    if (isReset) {
+      // Reset: restore original severity, clear originalSeverity
+      await tx
+        .update(findings)
+        .set({
+          severity: newSeverity,
+          originalSeverity: null,
+          updatedAt: serverUpdatedAt,
+        })
+        .where(and(eq(findings.id, findingId), withTenant(findings.tenantId, tenantId)))
+    } else {
+      // Override: set originalSeverity only if not already set (preserve first original)
+      await tx
+        .update(findings)
+        .set({
+          severity: newSeverity,
+          originalSeverity: finding.originalSeverity ?? currentSeverity,
+          updatedAt: serverUpdatedAt,
+        })
+        .where(and(eq(findings.id, findingId), withTenant(findings.tenantId, tenantId)))
+    }
+
+    // Insert review_actions row
+    await tx.insert(reviewActions).values({
+      findingId,
+      fileId,
+      projectId,
+      tenantId,
+      actionType: 'override',
+      previousState: currentSeverity,
+      newState: newSeverity,
+      userId,
+      batchId: null,
+      metadata: {
+        originalSeverity: finding.originalSeverity ?? currentSeverity,
+        newSeverity,
+        isReset,
+      },
+    })
+  })
+
+  // Audit log (best-effort — Guardrail #2)
+  try {
+    await writeAuditLog({
+      tenantId,
+      userId,
+      entityType: 'finding',
+      entityId: findingId,
+      action: 'finding.override',
+      oldValue: { severity: currentSeverity },
+      newValue: { severity: newSeverity },
+    })
+  } catch (auditErr) {
+    logger.error({ err: auditErr, findingId }, 'Audit log write failed for severity override')
+  }
+
+  // Inngest event for score recalculation (best-effort)
+  try {
+    await inngest.send({
+      name: 'finding.changed',
+      data: {
+        findingId,
+        fileId,
+        projectId,
+        tenantId,
+        previousState: (FINDING_STATUSES.includes(finding.status as FindingStatus)
+          ? finding.status
+          : 'pending') as FindingStatus,
+        newState: (FINDING_STATUSES.includes(finding.status as FindingStatus)
+          ? finding.status
+          : 'pending') as FindingStatus,
+        triggeredBy: userId,
+        timestamp: new Date().toISOString(),
+      },
+    })
+  } catch (inngestErr) {
+    logger.error({ err: inngestErr, findingId }, 'Inngest event send failed for severity override')
+  }
+
+  // Insert feedback_events for AI training (FR79 — best-effort)
+  try {
+    // Segment lookup for language pair
+    let sourceLang = 'unknown'
+    let targetLang = 'unknown'
+    if (finding.segmentId) {
+      const segRows = await db
+        .select({ sourceLang: segments.sourceLang, targetLang: segments.targetLang })
+        .from(segments)
+        .where(and(eq(segments.id, finding.segmentId), withTenant(segments.tenantId, tenantId)))
+        .limit(1)
+      if (segRows.length > 0) {
+        sourceLang = segRows[0]!.sourceLang
+        targetLang = segRows[0]!.targetLang
+      }
+    }
+
+    await db.insert(feedbackEvents).values({
+      tenantId,
+      fileId,
+      projectId,
+      findingId,
+      reviewerId: userId,
+      action: 'change_severity',
+      findingCategory: finding.category,
+      originalSeverity: currentSeverity,
+      newSeverity,
+      isFalsePositive: false,
+      reviewerIsNative: false, // TODO(story-5.2): wire from user profile
+      layer: finding.detectedByLayer,
+      detectedByLayer: finding.detectedByLayer,
+      sourceLang,
+      targetLang,
+      sourceText: finding.sourceTextExcerpt ?? '',
+      originalTarget: finding.targetTextExcerpt ?? '',
+    })
+  } catch (feedbackErr) {
+    logger.error({ err: feedbackErr, findingId }, 'feedback_events insert failed for override')
+  }
+
+  return {
+    success: true,
+    data: {
+      findingId,
+      originalSeverity: currentSeverity,
+      newSeverity,
+    },
+  }
+}

@@ -1,6 +1,6 @@
 'use client'
 
-import { Check, Flag, X } from 'lucide-react'
+import { Check, FileText, FileWarning, Flag, X } from 'lucide-react'
 import type { KeyboardEvent, MouseEvent } from 'react'
 
 import { ConfidenceBadge } from '@/features/review/components/ConfidenceBadge'
@@ -67,7 +67,12 @@ export function FindingCardCompact({
   const bgClass = STATUS_BG[finding.status] ?? ''
   const isAccepted = finding.status === 'accepted' || finding.status === 're_accepted'
   const isRejected = finding.status === 'rejected'
+  const isNoted = finding.status === 'noted'
+  const isSourceIssue = finding.status === 'source_issue'
+  const isManual = finding.detectedByLayer === 'Manual'
+  const isOverridden = finding.originalSeverity !== null
   const stateClass = isRejected ? 'opacity-60' : ''
+  const borderClass = isManual ? 'border-dashed' : ''
 
   function handleClick(e: MouseEvent<HTMLDivElement>) {
     // Don't expand when clicking disabled action buttons (RT#5)
@@ -101,7 +106,7 @@ export function FindingCardCompact({
       aria-rowindex={findingIndex + 1}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      className={`border rounded-lg px-3 py-2 cursor-pointer hover:bg-accent/50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 ${bgClass} ${stateClass} ${showAnimation ? 'animate-fade-in' : ''}`}
+      className={`border rounded-lg px-3 py-2 cursor-pointer hover:bg-accent/50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 ${borderClass} ${bgClass} ${stateClass} ${showAnimation ? 'animate-fade-in' : ''}`}
     >
       <div role="gridcell" className="flex items-center gap-2">
         {/* Severity badge — Guardrail #36 */}
@@ -166,6 +171,36 @@ export function FindingCardCompact({
         {isFallback && (
           <span className="inline-flex items-center rounded px-1 py-0.5 text-[10px] font-medium bg-warning/10 text-warning border border-warning/20 shrink-0">
             Fallback
+          </span>
+        )}
+
+        {/* Story 4.3 badges */}
+        {isOverridden && (
+          <span
+            data-testid="override-badge"
+            className="inline-flex items-center rounded px-1 py-0.5 text-[10px] font-medium bg-warning-light text-warning-foreground border border-warning-border shrink-0"
+          >
+            Override
+          </span>
+        )}
+        {isManual && (
+          <span
+            data-testid="manual-badge"
+            className="inline-flex items-center rounded px-1 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground border border-border shrink-0"
+          >
+            Manual
+          </span>
+        )}
+        {isNoted && (
+          <span className="inline-flex items-center gap-1 text-[10px] text-info shrink-0">
+            <FileText className="h-3.5 w-3.5" aria-hidden="true" />
+            Noted
+          </span>
+        )}
+        {isSourceIssue && (
+          <span className="inline-flex items-center gap-1 text-[10px] text-source-issue shrink-0">
+            <FileWarning className="h-3.5 w-3.5" aria-hidden="true" />
+            Source Issue
           </span>
         )}
 

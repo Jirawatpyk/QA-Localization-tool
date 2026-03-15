@@ -613,3 +613,12 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **File:** `e2e/review-actions.spec.ts` E-R9 test
 - **Description:** E-R9 tests that MQM score changes after rejecting a finding. Original assertion: `toBeGreaterThan(initialMqm)` (score should increase when penalty removed). Changed to `scoreChanged !== initialMqm` because serial test suite state pollution makes `initialMqm` baseline unreliable — prior Inngest recalculation jobs from E-R1..E-R8 may still be processing. Direction is verified in unit tests (`mqmCalculator.test.ts`). Fix: isolate E-R9 with its own seeded file, or use a dedicated project per test.
 - **Status:** ACCEPTED — unit tests verify direction; E2E verifies integration (score DOES change)
+
+### TD-UX-005: Desktop→laptop viewport resize leaves detail panel blank
+- **Date:** 2026-03-15
+- **Story:** Story 4.3 (CR adversarial review — H3 finding)
+- **Phase:** CR
+- **Severity:** Low
+- **File:** `src/features/review/components/ReviewPageClient.tsx` — `handleActiveFindingChange` + `detailFindingId` derivation
+- **Description:** On desktop (>=1440px), `handleActiveFindingChange` syncs `selectedId` via `setSelectedFinding(id)`. On laptop/mobile, it does NOT sync (Sheet would open and block finding list). If user is on desktop with finding X active, then resizes browser to laptop viewport: `detailFindingId` switches from `activeFindingState` to `selectedId`. Since `selectedId` was set on desktop, it still holds the correct value. However, if `activeFindingState` and `selectedId` diverge (e.g., user navigates findings after resize), the detail panel shows stale finding. Edge case: users don't resize dev tools in production. Fix: add `useEffect` that syncs `selectedId` from `activeFindingState` when `isDesktop` transitions from `true` to `false`.
+- **Status:** DEFERRED → Epic 5 (responsive polish)

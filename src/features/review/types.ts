@@ -5,6 +5,7 @@ export type FindingForDisplay = {
   id: string
   segmentId: string | null
   severity: FindingSeverity
+  originalSeverity: FindingSeverity | null
   category: string
   description: string
   status: FindingStatus

@@ -84,42 +84,80 @@ const ACTION_BUTTONS: ActionButtonConfig[] = [
   },
 ]
 
-// CR-R2 AP-M1/M2: typed with ReviewAction instead of bare string
-const ENABLED_ACTIONS = new Set<ReviewAction>(['accept', 'reject', 'flag'])
+// Story 4.3: all 7 actions enabled
+const ENABLED_ACTIONS = new Set<string>([
+  'accept',
+  'reject',
+  'flag',
+  'note',
+  'source',
+  'override',
+  'add',
+])
 
 type ReviewActionBarProps = {
   onAccept?: (() => void) | undefined
   onReject?: (() => void) | undefined
   onFlag?: (() => void) | undefined
+  onNote?: (() => void) | undefined
+  onSource?: (() => void) | undefined
+  onOverride?: (() => void) | undefined
+  onAdd?: (() => void) | undefined
   isDisabled?: boolean | undefined
   isInFlight?: boolean | undefined
   activeAction?: ReviewAction | null | undefined
   findingNumber?: number | undefined
+  /** Manual findings can't be noted/sourced/etc — disable action buttons except override */
+  isManualFinding?: boolean | undefined
 }
 
-const ACTION_HANDLER_MAP: Partial<
-  Record<ReviewAction, keyof Pick<ReviewActionBarProps, 'onAccept' | 'onReject' | 'onFlag'>>
-> = {
+type HandlerKeys =
+  | 'onAccept'
+  | 'onReject'
+  | 'onFlag'
+  | 'onNote'
+  | 'onSource'
+  | 'onOverride'
+  | 'onAdd'
+
+const ACTION_HANDLER_MAP: Partial<Record<string, HandlerKeys>> = {
   accept: 'onAccept',
   reject: 'onReject',
   flag: 'onFlag',
+  note: 'onNote',
+  source: 'onSource',
+  override: 'onOverride',
+  add: 'onAdd',
 }
 
 /**
  * Review Action Bar — 7 action buttons in a toolbar.
- * Accept/Reject/Flag enabled (Story 4.2). Note/Source/Override/Add disabled (Story 4.3).
+ * All enabled (Story 4.3). Manual findings: only override is active.
  */
 export function ReviewActionBar({
   onAccept,
   onReject,
   onFlag,
+  onNote,
+  onSource,
+  onOverride,
+  onAdd,
   isDisabled = false,
   isInFlight = false,
   activeAction = null,
   findingNumber,
+  isManualFinding = false,
 }: ReviewActionBarProps) {
   const reducedMotion = useReducedMotion()
-  const handlers: ReviewActionBarProps = { onAccept, onReject, onFlag }
+  const handlers: ReviewActionBarProps = {
+    onAccept,
+    onReject,
+    onFlag,
+    onNote,
+    onSource,
+    onOverride,
+    onAdd,
+  }
 
   return (
     <TooltipProvider delayDuration={500}>
@@ -132,10 +170,12 @@ export function ReviewActionBar({
       >
         {ACTION_BUTTONS.map((btn) => {
           const Icon = btn.icon
-          const isEnabled = ENABLED_ACTIONS.has(btn.key as ReviewAction)
-          const handlerKey = ACTION_HANDLER_MAP[btn.key as ReviewAction]
+          const isEnabled = ENABLED_ACTIONS.has(btn.key)
+          const handlerKey = ACTION_HANDLER_MAP[btn.key]
           const handler = handlerKey ? handlers[handlerKey] : undefined
-          const btnDisabled = !isEnabled || isDisabled
+          // Manual findings: only override and add are active (AC5 — no accept/reject/flag/note/source)
+          const manualDisabled = isManualFinding && !['override', 'add'].includes(btn.key)
+          const btnDisabled = !isEnabled || isDisabled || manualDisabled
           // CR-R2-H2: spinner only on the specific button being actioned
           const showSpinner = isInFlight && activeAction === btn.key && !btnDisabled
 
@@ -146,6 +186,7 @@ export function ReviewActionBar({
                   type="button"
                   disabled={btnDisabled || isInFlight}
                   onClick={handler}
+                  data-testid={`action-${btn.key}`}
                   aria-keyshortcuts={btn.ariaKeyshortcuts}
                   aria-label={`${btn.label}${findingNumber !== undefined ? ` finding ${findingNumber}` : ' finding'}, press ${btn.hotkey}`}
                   className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 hover:brightness-110 ${btn.colorClass}`}

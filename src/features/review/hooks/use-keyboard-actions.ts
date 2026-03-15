@@ -389,6 +389,10 @@ type ReviewHotkeyHandlers = {
   accept?: (findingId: string) => void
   reject?: (findingId: string) => void
   flag?: (findingId: string) => void
+  note?: (findingId: string) => void
+  source?: (findingId: string) => void
+  override?: () => void
+  add?: () => void
 }
 
 // Map hotkey key to handler name
@@ -396,9 +400,13 @@ const HOTKEY_ACTION_MAP: Record<string, keyof ReviewHotkeyHandlers> = {
   a: 'accept',
   r: 'reject',
   f: 'flag',
+  n: 'note',
+  s: 'source',
+  '-': 'override',
+  '+': 'add',
 }
 
-/** Register 7 review hotkeys — A/R/F wired to handlers, N/S/-/+ remain no-op (Story 4.3) */
+/** Register 7 review hotkeys — A/R/F/N/S/-/+ all wired (Story 4.3) */
 export function useReviewHotkeys(
   handlers: ReviewHotkeyHandlers = {},
   getSelectedId?: () => string | null,
@@ -418,12 +426,17 @@ export function useReviewHotkeys(
       const cleanup = register(
         hotkey.key,
         () => {
-          if (!actionName) return // N, S, -, + remain no-op
+          if (!actionName) return
           const handler = handlersRef.current[actionName]
           if (!handler) return
+          // '+' (add) and '-' (override) don't need a selected finding passed — they open UI
+          if (actionName === 'add' || actionName === 'override') {
+            ;(handler as () => void)()
+            return
+          }
           const selectedId = getSelectedId?.()
           if (!selectedId) return // Guard: no finding selected
-          handler(selectedId)
+          ;(handler as (id: string) => void)(selectedId)
         },
         {
           scope: 'review',

@@ -26,6 +26,7 @@ type FindingDetailSheetProps = {
   onAccept?: ((findingId: string) => void) | undefined
   onReject?: ((findingId: string) => void) | undefined
   onFlag?: ((findingId: string) => void) | undefined
+  onDelete?: ((findingId: string) => void) | undefined
   isActionInFlight?: boolean | undefined
 }
 
@@ -48,6 +49,7 @@ export function FindingDetailSheet({
   onAccept,
   onReject,
   onFlag,
+  onDelete,
   isActionInFlight = false,
 }: FindingDetailSheetProps) {
   const reducedMotion = useReducedMotion()
@@ -103,6 +105,7 @@ export function FindingDetailSheet({
             onAccept={onAccept}
             onReject={onReject}
             onFlag={onFlag}
+            onDelete={onDelete}
             isActionInFlight={isActionInFlight}
           />
         ) : null}

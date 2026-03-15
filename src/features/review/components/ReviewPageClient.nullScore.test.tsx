@@ -166,6 +166,8 @@ function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
     autoPassRationale: null,
     sourceLang: 'en-US',
     targetLang: 'th-TH',
+    segments: [],
+    categories: [],
     ...overrides,
   } as FileReviewData
 }

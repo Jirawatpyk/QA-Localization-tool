@@ -7,16 +7,23 @@ import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { ScoreBadge } from '@/features/batch/components/ScoreBadge'
 import { retryAiAnalysis } from '@/features/pipeline/actions/retryAiAnalysis.action'
+import { addFinding } from '@/features/review/actions/addFinding.action'
 import { approveFile } from '@/features/review/actions/approveFile.action'
+import { deleteFinding } from '@/features/review/actions/deleteFinding.action'
 import type { FileReviewData } from '@/features/review/actions/getFileReviewData.action'
+import { overrideSeverity } from '@/features/review/actions/overrideSeverity.action'
+import { updateNoteText } from '@/features/review/actions/updateNoteText.action'
+import { AddFindingDialog } from '@/features/review/components/AddFindingDialog'
 import { AutoPassRationale } from '@/features/review/components/AutoPassRationale'
 import { FileNavigationDropdown } from '@/features/review/components/FileNavigationDropdown'
 import { FindingDetailContent } from '@/features/review/components/FindingDetailContent'
 import { FindingDetailSheet } from '@/features/review/components/FindingDetailSheet'
 import { FindingList } from '@/features/review/components/FindingList'
 import { KeyboardCheatSheet } from '@/features/review/components/KeyboardCheatSheet'
+import { NoteInput } from '@/features/review/components/NoteInput'
 import { ReviewActionBar } from '@/features/review/components/ReviewActionBar'
 import { ReviewProgress } from '@/features/review/components/ReviewProgress'
+import { SeverityOverrideMenu } from '@/features/review/components/SeverityOverrideMenu'
 import { useFindingsSubscription } from '@/features/review/hooks/use-findings-subscription'
 import { useReviewHotkeys } from '@/features/review/hooks/use-keyboard-actions'
 import { useReviewActions } from '@/features/review/hooks/use-review-actions'
@@ -97,28 +104,79 @@ export function ReviewPageClient({
     }
   }, [])
 
-  // Wire review actions hook (Story 4.2)
-  const { handleAccept, handleReject, handleFlag, isActionInFlight, activeAction } =
-    useReviewActions({
-      fileId,
-      projectId,
-    })
+  // Wire review actions hook (Story 4.2 + 4.3)
+  const {
+    handleAccept,
+    handleReject,
+    handleFlag,
+    handleNote,
+    handleSourceIssue,
+    isActionInFlight,
+    activeAction,
+  } = useReviewActions({
+    fileId,
+    projectId,
+  })
+
+  // Story 4.3: dialog/popover state
+  const [isNoteInputOpen, setIsNoteInputOpen] = useState(false)
+  const [isOverrideMenuOpen, setIsOverrideMenuOpen] = useState(false)
+  const [isAddFindingDialogOpen, setIsAddFindingDialogOpen] = useState(false)
 
   // CR-C1: Track active finding via ref (for hotkeys) + state (for action bar re-render)
   const activeFindingIdRef = useRef<string | null>(null)
   const [activeFindingState, setActiveFindingState] = useState<string | null>(null)
-  const handleActiveFindingChange = useCallback((id: string | null) => {
-    activeFindingIdRef.current = id
-    setActiveFindingState(id)
-    // Note: NOT calling setSelectedFinding here — selectedId is for detail panel/Sheet
-    // which should only open on explicit user action (SegmentContextList navigation).
-    // Hotkeys use activeFindingIdRef, action bar uses activeFindingState.
-  }, [])
+  // Ref to signal FindingList that selectedId change came from row click (not SegmentContext navigation)
+  // FindingList's storeSelectedId effect should skip re-setting activeFindingId in this case.
+  const selectedIdFromClickRef = useRef(false)
+
+  const handleActiveFindingChange = useCallback(
+    (id: string | null) => {
+      activeFindingIdRef.current = id
+      setActiveFindingState(id)
+      // Desktop only: sync selectedId for aside detail panel.
+      // Laptop/mobile: do NOT auto-set selectedId — Sheet would open and block finding list.
+      // (H3 viewport-resize edge case accepted as TD — users don't resize dev tools in production)
+      if (isDesktop) {
+        selectedIdFromClickRef.current = true
+        setSelectedFinding(id)
+        queueMicrotask(() => {
+          selectedIdFromClickRef.current = false
+        })
+      }
+    },
+    [isDesktop, setSelectedFinding],
+  )
+
+  // Story 4.3: selectedId synced from handleActiveFindingChange on all viewports (H3 fix).
+  // Infinite loop prevented by skipStoreSyncRef passed to FindingList.
 
   // Register review hotkeys — A/R/F wired to real handlers (Story 4.2)
   // CR-C1: use ref (synchronous, no re-render dependency) for hotkey dispatch
   const getSelectedId = useCallback(() => activeFindingIdRef.current, [])
-  useReviewHotkeys({ accept: handleAccept, reject: handleReject, flag: handleFlag }, getSelectedId)
+  // Story 4.3: Note two-path handler for hotkey
+  const handleNoteHotkey = useCallback(
+    (findingId: string) => {
+      const result = handleNote(findingId)
+      if (result === 'open-note-input') {
+        setIsNoteInputOpen(true)
+      }
+    },
+    [handleNote],
+  )
+
+  useReviewHotkeys(
+    {
+      accept: handleAccept,
+      reject: handleReject,
+      flag: handleFlag,
+      note: handleNoteHotkey,
+      source: handleSourceIssue,
+      override: () => setIsOverrideMenuOpen(true),
+      add: () => setIsAddFindingDialogOpen(true),
+    },
+    getSelectedId,
+  )
 
   // Capture initialData on first render only — use a ref so the effect below
   // does NOT re-run when Next.js RSC re-renders with a new initialData reference
@@ -143,6 +201,7 @@ export function ReviewPageClient({
     for (const f of data.findings) {
       const finding: Finding = {
         ...f,
+        originalSeverity: f.originalSeverity ?? null,
         tenantId,
         projectId,
         sessionId: '', // CQ-M3: legacy field — review sessions not yet wired (Story 4.4a)
@@ -249,6 +308,7 @@ export function ReviewPageClient({
         id: f.id,
         segmentId: f.segmentId,
         severity: f.severity,
+        originalSeverity: f.originalSeverity,
         category: f.category,
         description: f.description,
         status: f.status,
@@ -315,6 +375,9 @@ export function ReviewPageClient({
     [allFindings],
   )
 
+  // Story 4.3: derive active finding for SeverityOverrideMenu + detail panel
+  const activeFinding = activeFindingState ? (findingsMap.get(activeFindingState) ?? null) : null
+
   // CQ-M2 fix: memoize findingNumber to avoid O(n) findIndex every render
   const activeFindingNumber = useMemo(() => {
     if (!activeFindingState) return undefined
@@ -323,8 +386,11 @@ export function ReviewPageClient({
   }, [activeFindingState, findingsForDisplay])
 
   // Selected finding for detail panel
-  const selectedFinding = selectedId
-    ? (findingsForDisplay.find((f) => f.id === selectedId) ?? null)
+  // Desktop: derive from activeFindingState (synced via selectedId in handleActiveFindingChange).
+  // Laptop/mobile: derive from selectedId (set by autoAdvance or explicit user action).
+  const detailFindingId = isDesktop ? activeFindingState : selectedId
+  const selectedFinding = detailFindingId
+    ? (findingsForDisplay.find((f) => f.id === detailFindingId) ?? null)
     : null
 
   // Toggle button for mobile drawer (visible when finding selected but sheet closed)
@@ -477,6 +543,7 @@ export function ReviewPageClient({
             onReject={handleReject}
             isActionInFlight={isActionInFlight}
             onActiveFindingChange={handleActiveFindingChange}
+            skipStoreSyncRef={selectedIdFromClickRef}
           />
         </div>
         {/* Action Bar (Task 5 — below finding list) */}
@@ -484,10 +551,189 @@ export function ReviewPageClient({
           onAccept={() => activeFindingState && handleAccept(activeFindingState)}
           onReject={() => activeFindingState && handleReject(activeFindingState)}
           onFlag={() => activeFindingState && handleFlag(activeFindingState)}
+          onNote={() => {
+            if (!activeFindingState) return
+            const result = handleNote(activeFindingState)
+            if (result === 'open-note-input') setIsNoteInputOpen(true)
+          }}
+          onSource={() => activeFindingState && handleSourceIssue(activeFindingState)}
+          onOverride={() => setIsOverrideMenuOpen(true)}
+          onAdd={() => setIsAddFindingDialogOpen(true)}
           isDisabled={!activeFindingState || isActionInFlight}
           isInFlight={isActionInFlight}
           activeAction={activeAction}
           findingNumber={activeFindingNumber}
+          isManualFinding={
+            activeFindingState
+              ? findingsMap.get(activeFindingState)?.detectedByLayer === 'Manual'
+              : false
+          }
+        />
+
+        {/* Story 4.3: NoteInput popover (AC1 Path 2) */}
+        <NoteInput
+          open={isNoteInputOpen}
+          onSubmit={(noteText) => {
+            setIsNoteInputOpen(false)
+            if (!activeFindingState) return
+            void updateNoteText({ findingId: activeFindingState, fileId, projectId, noteText })
+              .then((result) => {
+                if (result.success) toast.success('Note saved')
+                else toast.error(result.error ?? 'Failed to save note')
+              })
+              .catch(() => toast.error('Failed to save note'))
+          }}
+          onDismiss={() => setIsNoteInputOpen(false)}
+        />
+
+        {/* Story 4.3: SeverityOverrideMenu (AC3) */}
+        {activeFinding && (
+          <SeverityOverrideMenu
+            currentSeverity={activeFinding.severity}
+            originalSeverity={activeFinding.originalSeverity}
+            open={isOverrideMenuOpen}
+            onOpenChange={setIsOverrideMenuOpen}
+            onOverride={(newSeverity) => {
+              setIsOverrideMenuOpen(false)
+              if (!activeFindingState) return
+              // Optimistic store update
+              const store = useReviewStore.getState()
+              const f = store.findingsMap.get(activeFindingState)
+              if (f) {
+                store.setFinding(activeFindingState, {
+                  ...f,
+                  originalSeverity: f.originalSeverity ?? f.severity,
+                  severity: newSeverity,
+                  updatedAt: new Date().toISOString(),
+                })
+              }
+              void overrideSeverity({
+                findingId: activeFindingState,
+                fileId,
+                projectId,
+                newSeverity,
+              })
+                .then((result) => {
+                  if (result.success) {
+                    toast.success(`Severity overridden to ${newSeverity}`)
+                  } else {
+                    // Rollback optimistic update
+                    if (f) {
+                      const curr = useReviewStore.getState().findingsMap.get(activeFindingState)
+                      if (curr)
+                        useReviewStore
+                          .getState()
+                          .setFinding(activeFindingState, {
+                            ...curr,
+                            severity: f.severity,
+                            originalSeverity: f.originalSeverity,
+                          })
+                    }
+                    toast.error(result.error ?? 'Override failed')
+                  }
+                })
+                .catch(() => toast.error('Override failed'))
+            }}
+            onReset={() => {
+              setIsOverrideMenuOpen(false)
+              if (!activeFindingState || !activeFinding) return
+              const orig = activeFinding.originalSeverity
+              if (!orig) return
+              // Optimistic store update for reset
+              const store = useReviewStore.getState()
+              const f = store.findingsMap.get(activeFindingState)
+              if (f) {
+                store.setFinding(activeFindingState, {
+                  ...f,
+                  severity: orig,
+                  originalSeverity: null,
+                  updatedAt: new Date().toISOString(),
+                })
+              }
+              void overrideSeverity({
+                findingId: activeFindingState,
+                fileId,
+                projectId,
+                newSeverity: orig,
+              })
+                .then((result) => {
+                  if (result.success) {
+                    toast.success('Severity reset to original')
+                  } else {
+                    // Rollback
+                    if (f) {
+                      const curr = useReviewStore.getState().findingsMap.get(activeFindingState)
+                      if (curr)
+                        useReviewStore
+                          .getState()
+                          .setFinding(activeFindingState, {
+                            ...curr,
+                            severity: f.severity,
+                            originalSeverity: f.originalSeverity,
+                          })
+                    }
+                    toast.error(result.error ?? 'Reset failed')
+                  }
+                })
+                .catch(() => toast.error('Reset failed'))
+            }}
+            trigger={<span className="hidden" />}
+          />
+        )}
+
+        {/* Story 4.3: AddFindingDialog (AC4) */}
+        <AddFindingDialog
+          open={isAddFindingDialogOpen}
+          onOpenChange={setIsAddFindingDialogOpen}
+          segments={initialData.segments}
+          categories={initialData.categories}
+          defaultSegmentId={
+            activeFindingState ? (findingsMap.get(activeFindingState)?.segmentId ?? null) : null
+          }
+          onSubmit={(data) => {
+            setIsAddFindingDialogOpen(false)
+            void addFinding({ ...data, fileId, projectId })
+              .then((result) => {
+                if (result.success) {
+                  toast.success('Manual finding added')
+                  // Add new finding to store so it renders immediately
+                  const store = useReviewStore.getState()
+                  const newFinding: Finding = {
+                    id: result.data.findingId,
+                    tenantId,
+                    projectId,
+                    sessionId: '',
+                    segmentId: data.segmentId,
+                    severity: result.data.severity,
+                    originalSeverity: null,
+                    category: result.data.category,
+                    status: 'manual',
+                    description: result.data.description,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    fileId,
+                    detectedByLayer: 'Manual',
+                    aiModel: null,
+                    aiConfidence: null,
+                    suggestedFix: data.suggestion,
+                    // H2 fix: populate from segments data to avoid flicker until Realtime arrives
+                    sourceTextExcerpt:
+                      initialData.segments
+                        .find((s) => s.id === data.segmentId)
+                        ?.sourceText?.substring(0, 100) ?? null,
+                    targetTextExcerpt: null, // target text not available in segments list
+                    segmentCount: 1,
+                    scope: 'per-file',
+                    reviewSessionId: null,
+                    relatedFileIds: null,
+                  }
+                  store.setFinding(result.data.findingId, newFinding)
+                } else {
+                  toast.error(result.error ?? 'Failed to add finding')
+                }
+              })
+              .catch(() => toast.error('Failed to add finding'))
+          }}
         />
       </div>
 
@@ -515,6 +761,20 @@ export function ReviewPageClient({
             onAccept={handleAccept}
             onReject={handleReject}
             onFlag={handleFlag}
+            onDelete={(findingId) => {
+              void deleteFinding({ findingId, fileId, projectId })
+                .then((result) => {
+                  if (result.success) {
+                    // Atomic remove from store (M1 fix: use removeFinding, not manual Map copy)
+                    useReviewStore.getState().removeFinding(findingId)
+                    setSelectedFinding(null)
+                    toast.success('Finding deleted')
+                  } else {
+                    toast.error(result.error ?? 'Delete failed')
+                  }
+                })
+                .catch(() => toast.error('Delete failed'))
+            }}
             isActionInFlight={isActionInFlight}
           />
         </aside>
@@ -530,6 +790,19 @@ export function ReviewPageClient({
           onAccept={handleAccept}
           onReject={handleReject}
           onFlag={handleFlag}
+          onDelete={(findingId) => {
+            void deleteFinding({ findingId, fileId, projectId })
+              .then((result) => {
+                if (result.success) {
+                  useReviewStore.getState().removeFinding(findingId)
+                  setSelectedFinding(null)
+                  toast.success('Finding deleted')
+                } else {
+                  toast.error(result.error ?? 'Delete failed')
+                }
+              })
+              .catch(() => toast.error('Delete failed'))
+          }}
           isActionInFlight={isActionInFlight}
         />
       )}
