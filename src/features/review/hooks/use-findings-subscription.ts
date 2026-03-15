@@ -204,12 +204,19 @@ export function useFindingsSubscription(fileId: string, tenantId?: string | unde
         return
       }
       store.setFinding(finding.id, finding)
+
+      // Story 4.4b AC7: Mark undo entries stale when finding modified by another user
+      store.markEntryStale(finding.id)
     }
 
     const handleDelete = (payload: { old: Record<string, unknown> }) => {
       const id = typeof payload.old.id === 'string' ? payload.old.id : null
       if (id) {
-        useReviewStore.getState().removeFinding(id)
+        const store = useReviewStore.getState()
+        store.removeFinding(id)
+        // Story 4.4b AC7: Remove all undo/redo entries referencing deleted finding
+        store.removeEntriesForFinding(id)
+        announce(`Finding no longer exists`)
       }
     }
 

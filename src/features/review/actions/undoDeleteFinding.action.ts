@@ -47,6 +47,15 @@ export async function undoDeleteFinding(
   const { snapshot, fileId, projectId } = parsed.data
   const { id: userId, tenantId } = user
 
+  // Coordinate consistency check — snapshot must match outer params (tenant isolation)
+  if (snapshot.fileId !== fileId || snapshot.projectId !== projectId) {
+    return {
+      success: false,
+      error: 'Snapshot coordinate mismatch',
+      code: 'VALIDATION',
+    }
+  }
+
   // FK guard: verify segmentId still exists (AC4 — segments FK is onDelete: cascade)
   if (snapshot.segmentId) {
     const segRows = await db
@@ -85,9 +94,9 @@ export async function undoDeleteFinding(
     await tx.insert(findings).values({
       id: snapshot.id,
       segmentId: snapshot.segmentId,
-      fileId: snapshot.fileId,
-      projectId: snapshot.projectId,
-      tenantId: snapshot.tenantId,
+      fileId,
+      projectId,
+      tenantId, // Server-derived from requireRole() — NEVER use snapshot.tenantId
       reviewSessionId: snapshot.reviewSessionId,
       status: snapshot.status,
       severity: snapshot.severity,

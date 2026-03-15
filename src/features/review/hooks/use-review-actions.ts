@@ -8,11 +8,21 @@ import { rejectFinding } from '@/features/review/actions/rejectFinding.action'
 import { sourceIssueFinding } from '@/features/review/actions/sourceIssueFinding.action'
 import { useFocusManagement } from '@/features/review/hooks/use-focus-management'
 import { useReviewStore } from '@/features/review/stores/review.store'
+import type { UndoEntryAction } from '@/features/review/stores/review.store'
 import { announce } from '@/features/review/utils/announce'
 import { getNewState } from '@/features/review/utils/state-transitions'
 import type { ReviewAction } from '@/features/review/utils/state-transitions'
 import { FINDING_STATUSES } from '@/types/finding'
 import type { FindingStatus } from '@/types/finding'
+
+// Map ReviewAction → UndoEntryAction (source → accept is 'source_issue' in undo context)
+const REVIEW_TO_UNDO_ACTION: Record<ReviewAction, UndoEntryAction> = {
+  accept: 'accept',
+  reject: 'reject',
+  flag: 'flag',
+  note: 'note',
+  source: 'source_issue',
+}
 
 type UseReviewActionsOptions = {
   fileId: string
@@ -132,6 +142,24 @@ export function useReviewActions({ fileId, projectId }: UseReviewActionsOptions)
             successState.setOverrideCount(findingId, 1)
           }
         }
+
+        // Story 4.4b: Push undo entry after successful action
+        const undoAction = REVIEW_TO_UNDO_ACTION[action]
+        useReviewStore.getState().pushUndo({
+          id: crypto.randomUUID(),
+          type: 'single',
+          action: undoAction,
+          findingId,
+          batchId: null,
+          previousStates: new Map([[findingId, currentStatus]]),
+          newStates: new Map([[findingId, newState]]),
+          previousSeverity: null,
+          newSeverity: null,
+          findingSnapshot: null,
+          description: `${ACTION_LABELS[action].past} finding`,
+          timestamp: Date.now(),
+          staleFindings: new Set(),
+        })
 
         // Success toast (Task 6.1)
         const label = ACTION_LABELS[action]

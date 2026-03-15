@@ -1,11 +1,35 @@
 /**
  * ATDD Tests — Story 3.0: Score & Review Infrastructure
  * AC1: Zustand Review Store (`useReviewStore`)
+ * + Story 4.4b: UndoRedoSlice
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, selectCanUndo, selectCanRedo } from '@/features/review/stores/review.store'
+import type { UndoEntry } from '@/features/review/stores/review.store'
 import { buildFinding } from '@/test/factories'
+
+/** Helper: create a minimal UndoEntry for testing */
+function buildUndoEntry(overrides?: Partial<UndoEntry>): UndoEntry {
+  const id = overrides?.id ?? crypto.randomUUID()
+  const findingId = overrides?.findingId ?? crypto.randomUUID()
+  return {
+    id,
+    type: 'single',
+    action: 'accept',
+    findingId,
+    batchId: null,
+    previousStates: new Map([[findingId, 'pending']]),
+    newStates: new Map([[findingId, 'accepted']]),
+    previousSeverity: null,
+    newSeverity: null,
+    findingSnapshot: null,
+    description: 'Accept Finding',
+    timestamp: Date.now(),
+    staleFindings: new Set(),
+    ...overrides,
+  }
+}
 
 describe('useReviewStore', () => {
   beforeEach(() => {
@@ -276,5 +300,152 @@ describe('useReviewStore', () => {
     // Reset should clear it
     useReviewStore.getState().resetForFile('new-file')
     expect(useReviewStore.getState().layerCompleted).toBeNull()
+  })
+
+  // ══════════════════════════════════════════════════════════════
+  // Story 4.4b ATDD: UndoRedoSlice
+  // ══════════════════════════════════════════════════════════════
+
+  // ── P0: AC6 — Push/Pop LIFO (U-01) ──
+
+  it('should push undo entry and maintain LIFO order (U-01)', () => {
+    const e1 = buildUndoEntry({ id: 'e1', description: 'first' })
+    const e2 = buildUndoEntry({ id: 'e2', description: 'second' })
+    const e3 = buildUndoEntry({ id: 'e3', description: 'third' })
+    useReviewStore.getState().pushUndo(e1)
+    useReviewStore.getState().pushUndo(e2)
+    useReviewStore.getState().pushUndo(e3)
+    expect(useReviewStore.getState().undoStack).toHaveLength(3)
+    const popped = useReviewStore.getState().popUndo()
+    expect(popped?.id).toBe('e3')
+    const popped2 = useReviewStore.getState().popUndo()
+    expect(popped2?.id).toBe('e2')
+  })
+
+  // ── P0: AC6 — Boundary: max 20 (U-02) ──
+
+  it('should drop oldest entry when stack exceeds 20 (U-02)', () => {
+    for (let i = 0; i < 21; i++) {
+      useReviewStore.getState().pushUndo(buildUndoEntry({ id: `e-${i}` }))
+    }
+    const stack = useReviewStore.getState().undoStack
+    expect(stack).toHaveLength(20)
+    // Oldest (e-0) should be dropped
+    expect(stack[0]!.id).toBe('e-1')
+    expect(stack[19]!.id).toBe('e-20')
+  })
+
+  // ── P0: AC6 — Boundary: empty stack (U-03) ──
+
+  it('should return undefined when popping empty undo stack (U-03)', () => {
+    const result = useReviewStore.getState().popUndo()
+    expect(result).toBeUndefined()
+  })
+
+  // ── P1: AC6 — Boundary: single entry (U-04) ──
+
+  it('should pop single entry leaving empty stack (U-04)', () => {
+    const entry = buildUndoEntry({ id: 'only' })
+    useReviewStore.getState().pushUndo(entry)
+    const popped = useReviewStore.getState().popUndo()
+    expect(popped?.id).toBe('only')
+    expect(useReviewStore.getState().undoStack).toHaveLength(0)
+    expect(selectCanUndo(useReviewStore.getState())).toBe(false)
+  })
+
+  // ── P0: AC6 — Clear on file switch (U-05) ──
+
+  it('should clear undo and redo stacks on resetForFile (U-05)', () => {
+    useReviewStore.getState().pushUndo(buildUndoEntry())
+    useReviewStore.getState().pushRedo(buildUndoEntry())
+    expect(useReviewStore.getState().undoStack).toHaveLength(1)
+    expect(useReviewStore.getState().redoStack).toHaveLength(1)
+    useReviewStore.getState().resetForFile('new-file')
+    expect(useReviewStore.getState().undoStack).toHaveLength(0)
+    expect(useReviewStore.getState().redoStack).toHaveLength(0)
+    expect(useReviewStore.getState().undoFindingIndex.size).toBe(0)
+  })
+
+  // ── P0: AC6 — Redo clears on new action (U-06) ──
+
+  it('should clear redo stack when pushUndo is called (U-06)', () => {
+    useReviewStore.getState().pushRedo(buildUndoEntry())
+    useReviewStore.getState().pushRedo(buildUndoEntry())
+    expect(useReviewStore.getState().redoStack).toHaveLength(2)
+    useReviewStore.getState().pushUndo(buildUndoEntry())
+    expect(useReviewStore.getState().redoStack).toHaveLength(0)
+  })
+
+  // ── P0: AC7 — Mark stale single (U-07) ──
+
+  it('should mark entry stale per-finding for single entry (U-07)', () => {
+    const fId = 'finding-1'
+    const entry = buildUndoEntry({ findingId: fId })
+    useReviewStore.getState().pushUndo(entry)
+    useReviewStore.getState().markEntryStale(fId)
+    const stack = useReviewStore.getState().undoStack
+    expect(stack[0]!.staleFindings.has(fId)).toBe(true)
+  })
+
+  // ── P1: AC7 — Mark stale bulk partial (U-08) ──
+
+  it('should mark stale per-finding in bulk entry without marking entire batch (U-08)', () => {
+    const f1 = 'finding-a'
+    const f2 = 'finding-b'
+    const f3 = 'finding-c'
+    const entry = buildUndoEntry({
+      type: 'bulk',
+      findingId: null,
+      batchId: 'batch-1',
+      previousStates: new Map([
+        [f1, 'pending'],
+        [f2, 'pending'],
+        [f3, 'pending'],
+      ]),
+      newStates: new Map([
+        [f1, 'accepted'],
+        [f2, 'accepted'],
+        [f3, 'accepted'],
+      ]),
+    })
+    useReviewStore.getState().pushUndo(entry)
+    useReviewStore.getState().markEntryStale(f2)
+    const stack = useReviewStore.getState().undoStack
+    expect(stack[0]!.staleFindings.has(f2)).toBe(true)
+    expect(stack[0]!.staleFindings.has(f1)).toBe(false)
+    expect(stack[0]!.staleFindings.has(f3)).toBe(false)
+  })
+
+  // ── P1: AC7 — Remove entries for deleted finding (U-09) ──
+
+  it('should remove entries for finding from both undo and redo stacks (U-09)', () => {
+    const targetId = 'finding-to-remove'
+    const keepId = 'finding-to-keep'
+    // Single entry referencing target → should be removed
+    useReviewStore.getState().pushUndo(buildUndoEntry({ id: 'e1', findingId: targetId }))
+    // Single entry referencing other → should stay
+    useReviewStore.getState().pushUndo(buildUndoEntry({ id: 'e2', findingId: keepId }))
+    // Also add to redo stack
+    useReviewStore.getState().pushRedo(buildUndoEntry({ id: 'r1', findingId: targetId }))
+    useReviewStore.getState().pushRedo(buildUndoEntry({ id: 'r2', findingId: keepId }))
+
+    useReviewStore.getState().removeEntriesForFinding(targetId)
+
+    expect(useReviewStore.getState().undoStack).toHaveLength(1)
+    expect(useReviewStore.getState().undoStack[0]!.id).toBe('e2')
+    expect(useReviewStore.getState().redoStack).toHaveLength(1)
+    expect(useReviewStore.getState().redoStack[0]!.id).toBe('r2')
+  })
+
+  // ── P1: AC6 — Selectors (U-10) ──
+
+  it('should return correct canUndo/canRedo via selector functions (U-10)', () => {
+    expect(selectCanUndo(useReviewStore.getState())).toBe(false)
+    expect(selectCanRedo(useReviewStore.getState())).toBe(false)
+    useReviewStore.getState().pushUndo(buildUndoEntry())
+    expect(selectCanUndo(useReviewStore.getState())).toBe(true)
+    expect(selectCanRedo(useReviewStore.getState())).toBe(false)
+    useReviewStore.getState().pushRedo(buildUndoEntry())
+    expect(selectCanRedo(useReviewStore.getState())).toBe(true)
   })
 })

@@ -11,6 +11,63 @@ import type {
   ScoreStatus,
 } from '@/types/finding'
 
+// ── Undo/Redo Types (Story 4.4b — SINGLE SOURCE OF TRUTH) ──
+
+/** Full snapshot of a finding row — for undo-delete re-insert */
+export type FindingSnapshot = {
+  id: string
+  segmentId: string | null
+  fileId: string
+  projectId: string
+  tenantId: string
+  reviewSessionId: string | null
+  status: FindingStatus
+  severity: FindingSeverity
+  originalSeverity: FindingSeverity | null
+  category: string
+  description: string
+  detectedByLayer: DetectedByLayer
+  aiModel: string | null
+  aiConfidence: number | null
+  suggestedFix: string | null
+  sourceTextExcerpt: string | null
+  targetTextExcerpt: string | null
+  scope: 'per-file' | 'cross-file'
+  relatedFileIds: string[] | null
+  segmentCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export type UndoEntryAction =
+  | 'accept'
+  | 'reject'
+  | 'flag'
+  | 'note'
+  | 'source_issue'
+  | 'severity_override'
+  | 'add'
+  | 'delete'
+
+export type UndoEntry = {
+  id: string
+  type: 'single' | 'bulk'
+  action: UndoEntryAction
+  findingId: string | null
+  batchId: string | null
+  previousStates: Map<string, FindingStatus>
+  newStates: Map<string, FindingStatus>
+  previousSeverity: {
+    severity: FindingSeverity
+    originalSeverity: FindingSeverity | null
+  } | null
+  newSeverity: FindingSeverity | null
+  findingSnapshot: FindingSnapshot | null
+  description: string
+  timestamp: number
+  staleFindings: Set<string>
+}
+
 // ── Filter State ──
 
 type FilterState = {
@@ -183,12 +240,163 @@ const createSelectionSlice = (
     }),
 })
 
+// ── UndoRedo Slice (Story 4.4b) ──
+
+const UNDO_STACK_MAX = 20
+
+type UndoRedoSlice = {
+  undoStack: UndoEntry[]
+  redoStack: UndoEntry[]
+  /** findingId → Set of UndoEntry IDs for O(1) Realtime conflict lookup */
+  undoFindingIndex: Map<string, Set<string>>
+  pushUndo: (entry: UndoEntry) => void
+  popUndo: () => UndoEntry | undefined
+  pushRedo: (entry: UndoEntry) => void
+  popRedo: () => UndoEntry | undefined
+  clearUndoRedo: () => void
+  markEntryStale: (findingId: string) => void
+  removeEntriesForFinding: (findingId: string) => void
+}
+
+/** Extract all finding IDs referenced by an UndoEntry */
+function getEntryFindingIds(entry: UndoEntry): string[] {
+  if (entry.type === 'single' && entry.findingId) {
+    return [entry.findingId]
+  }
+  // Bulk: all keys from previousStates
+  return [...entry.previousStates.keys()]
+}
+
+/** Rebuild the undoFindingIndex from scratch */
+function rebuildIndex(stack: UndoEntry[]): Map<string, Set<string>> {
+  const index = new Map<string, Set<string>>()
+  for (const entry of stack) {
+    for (const fId of getEntryFindingIds(entry)) {
+      const set = index.get(fId) ?? new Set<string>()
+      set.add(entry.id)
+      index.set(fId, set)
+    }
+  }
+  return index
+}
+
+const createUndoRedoSlice = (
+  set: (fn: Partial<ReviewState> | ((s: ReviewState) => Partial<ReviewState>)) => void,
+  get: () => ReviewState,
+): UndoRedoSlice => ({
+  undoStack: [],
+  redoStack: [],
+  undoFindingIndex: new Map(),
+  pushUndo: (entry) =>
+    set((s) => {
+      const newStack = [...s.undoStack, entry].slice(-UNDO_STACK_MAX)
+      return {
+        undoStack: newStack,
+        redoStack: [], // Clear redo on new action (AC6)
+        undoFindingIndex: rebuildIndex(newStack),
+      }
+    }),
+  popUndo: () => {
+    const state = get()
+    if (state.undoStack.length === 0) return undefined
+    const entry = state.undoStack[state.undoStack.length - 1]!
+    const newStack = state.undoStack.slice(0, -1)
+    set({
+      undoStack: newStack,
+      undoFindingIndex: rebuildIndex(newStack),
+    })
+    return entry
+  },
+  pushRedo: (entry) =>
+    set((s) => ({
+      redoStack: [...s.redoStack, entry],
+    })),
+  popRedo: () => {
+    const state = get()
+    if (state.redoStack.length === 0) return undefined
+    const entry = state.redoStack[state.redoStack.length - 1]!
+    set({ redoStack: state.redoStack.slice(0, -1) })
+    return entry
+  },
+  clearUndoRedo: () =>
+    set({
+      undoStack: [],
+      redoStack: [],
+      undoFindingIndex: new Map(),
+    }),
+  markEntryStale: (findingId) =>
+    set((s) => {
+      // C2 fix: mark stale in BOTH undo and redo stacks
+      const markStaleInStack = (stack: UndoEntry[]): UndoEntry[] =>
+        stack.map((entry) => {
+          const fIds = getEntryFindingIds(entry)
+          if (!fIds.includes(findingId)) return entry
+          const newStale = new Set(entry.staleFindings)
+          newStale.add(findingId)
+          return { ...entry, staleFindings: newStale }
+        })
+      return {
+        undoStack: markStaleInStack(s.undoStack),
+        redoStack: markStaleInStack(s.redoStack),
+      }
+    }),
+  removeEntriesForFinding: (findingId) =>
+    set((s) => {
+      // For single entries: remove entirely if they reference this finding
+      // For bulk entries: remove the finding from the entry (keep entry if other findings remain)
+      const filterStack = (stack: UndoEntry[]): UndoEntry[] => {
+        const result: UndoEntry[] = []
+        for (const entry of stack) {
+          if (entry.type === 'single' && entry.findingId === findingId) {
+            continue // Remove entirely
+          }
+          if (entry.type === 'bulk') {
+            const hasFinding = entry.previousStates.has(findingId) || entry.newStates.has(findingId)
+            if (hasFinding) {
+              // Remove this finding from the bulk entry
+              const newPrev = new Map(entry.previousStates)
+              const newNew = new Map(entry.newStates)
+              const newStale = new Set(entry.staleFindings)
+              newPrev.delete(findingId)
+              newNew.delete(findingId)
+              newStale.delete(findingId)
+              // If no findings left, drop the entire entry
+              if (newPrev.size === 0) continue
+              result.push({
+                ...entry,
+                previousStates: newPrev,
+                newStates: newNew,
+                staleFindings: newStale,
+              })
+              continue
+            }
+          }
+          result.push(entry)
+        }
+        return result
+      }
+      const newUndo = filterStack(s.undoStack)
+      const newRedo = filterStack(s.redoStack)
+      return {
+        undoStack: newUndo,
+        redoStack: newRedo,
+        undoFindingIndex: rebuildIndex(newUndo),
+      }
+    }),
+})
+
+// ── Selector Functions (Story 4.4b AC6 — NEVER select full stack array) ──
+
+export const selectCanUndo = (s: ReviewState): boolean => s.undoStack.length > 0
+export const selectCanRedo = (s: ReviewState): boolean => s.redoStack.length > 0
+
 // ── Composed Store ──
 
 type ReviewState = FindingsSlice &
   ScoreSlice &
   ThresholdSlice &
-  SelectionSlice & {
+  SelectionSlice &
+  UndoRedoSlice & {
     currentFileId: string | null
     resetForFile: (fileId: string) => void
     selectRange: (fromId: string, toId: string) => void
@@ -205,6 +413,7 @@ export const useReviewStore = create<ReviewState>()((set, get) => {
     ...createScoreSlice(setState),
     ...createThresholdSlice(setState),
     ...createSelectionSlice(setState),
+    ...createUndoRedoSlice(setState, get as () => ReviewState),
     currentFileId: null,
     resetForFile: (fileId: string) =>
       set({
@@ -224,6 +433,10 @@ export const useReviewStore = create<ReviewState>()((set, get) => {
         selectionMode: 'single',
         isBulkInFlight: false,
         overrideCounts: new Map(),
+        // Story 4.4b: Clear undo/redo on file switch (AC6, Guardrail #35)
+        undoStack: [],
+        redoStack: [],
+        undoFindingIndex: new Map(),
       }),
     // Task 4.4: selectRange — needs get() for sortedFindingIds
     selectRange: (fromId: string, toId: string) => {

@@ -67,12 +67,12 @@ describe('undoAction', () => {
   it('should revert finding to previousState when status matches expectedCurrentState', async () => {
     // Setup: finding with status='accepted'
     dbState.returnValues = [
-      [{ id: 'f1', status: 'accepted' }], // SELECT finding
+      [{ id: '00000000-0000-4000-8000-000000000003', status: 'accepted' }], // SELECT finding
       undefined, // transaction (update + insert)
     ]
 
     const result = await undoAction({
-      findingId: 'f1',
+      findingId: '00000000-0000-4000-8000-000000000003',
       fileId: '00000000-0000-4000-8000-000000000001',
       projectId: '00000000-0000-4000-8000-000000000002',
       previousState: 'pending',
@@ -82,7 +82,7 @@ describe('undoAction', () => {
 
     expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.data.findingId).toBe('f1')
+      expect(result.data.findingId).toBe('00000000-0000-4000-8000-000000000003')
       expect(result.data.newState).toBe('pending')
       expect(result.data.previousState).toBe('accepted')
       expect(result.data.serverUpdatedAt).toBeDefined()
@@ -93,10 +93,10 @@ describe('undoAction', () => {
 
   it('should return CONFLICT when finding status does not match expectedCurrentState', async () => {
     // Finding was changed by another user to 'rejected'
-    dbState.returnValues = [[{ id: 'f1', status: 'rejected' }]]
+    dbState.returnValues = [[{ id: '00000000-0000-4000-8000-000000000003', status: 'rejected' }]]
 
     const result = await undoAction({
-      findingId: 'f1',
+      findingId: '00000000-0000-4000-8000-000000000003',
       fileId: '00000000-0000-4000-8000-000000000001',
       projectId: '00000000-0000-4000-8000-000000000002',
       previousState: 'pending',
@@ -115,12 +115,12 @@ describe('undoAction', () => {
 
   it('should bypass state check and revert when force=true', async () => {
     dbState.returnValues = [
-      [{ id: 'f1', status: 'rejected' }], // different from expected
+      [{ id: '00000000-0000-4000-8000-000000000003', status: 'rejected' }], // different from expected
       undefined, // transaction
     ]
 
     const result = await undoAction({
-      findingId: 'f1',
+      findingId: '00000000-0000-4000-8000-000000000003',
       fileId: '00000000-0000-4000-8000-000000000001',
       projectId: '00000000-0000-4000-8000-000000000002',
       previousState: 'pending',
@@ -135,7 +135,7 @@ describe('undoAction', () => {
 
   it('should insert feedback_events with action undo_reject when undoing a reject', async () => {
     dbState.returnValues = [
-      [{ id: 'f1', status: 'rejected' }], // SELECT finding (executeUndoRedo)
+      [{ id: '00000000-0000-4000-8000-000000000003', status: 'rejected' }], // SELECT finding (executeUndoRedo)
       undefined, // transaction
       // undoAction post-processing: fetch finding meta
       [
@@ -155,7 +155,7 @@ describe('undoAction', () => {
     ]
 
     const result = await undoAction({
-      findingId: 'f1',
+      findingId: '00000000-0000-4000-8000-000000000003',
       fileId: '00000000-0000-4000-8000-000000000001',
       projectId: '00000000-0000-4000-8000-000000000002',
       previousState: 'pending',
@@ -171,10 +171,13 @@ describe('undoAction', () => {
   // ── P0: AC1 — updatedAt for Realtime merge guard (U-15) ──
 
   it('should set updatedAt on finding to prevent Realtime merge guard from dropping change', async () => {
-    dbState.returnValues = [[{ id: 'f1', status: 'accepted' }], undefined]
+    dbState.returnValues = [
+      [{ id: '00000000-0000-4000-8000-000000000003', status: 'accepted' }],
+      undefined,
+    ]
 
     const result = await undoAction({
-      findingId: 'f1',
+      findingId: '00000000-0000-4000-8000-000000000003',
       fileId: '00000000-0000-4000-8000-000000000001',
       projectId: '00000000-0000-4000-8000-000000000002',
       previousState: 'pending',

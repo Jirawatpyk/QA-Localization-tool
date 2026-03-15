@@ -69,7 +69,7 @@ export const undoDeleteFindingSchema = z.object({
     segmentId: z.string().uuid().nullable(),
     fileId: z.string().uuid(),
     projectId: z.string().uuid(),
-    tenantId: z.string().uuid(),
+    // tenantId intentionally excluded — server derives from requireRole() (tenant isolation)
     reviewSessionId: z.string().uuid().nullable(),
     status: findingStatusEnum,
     severity: findingSeverityEnum,
@@ -82,7 +82,7 @@ export const undoDeleteFindingSchema = z.object({
     suggestedFix: z.string().nullable(),
     sourceTextExcerpt: z.string().nullable(),
     targetTextExcerpt: z.string().nullable(),
-    scope: z.string(),
+    scope: z.enum(['per-file', 'cross-file']),
     relatedFileIds: z.array(z.string()).nullable(),
     segmentCount: z.number().int(),
     createdAt: z.string(),

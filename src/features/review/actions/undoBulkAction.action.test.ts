@@ -65,16 +65,24 @@ describe('undoBulkAction', () => {
   it('should revert all findings and return reverted array (U-16)', async () => {
     dbState.returnValues = [
       [
-        { id: 'f1', status: 'accepted' },
-        { id: 'f2', status: 'accepted' },
+        { id: '00000000-0000-4000-8000-000000000003', status: 'accepted' },
+        { id: '00000000-0000-4000-8000-000000000004', status: 'accepted' },
       ],
       undefined,
     ]
 
     const result = await undoBulkAction({
       findings: [
-        { findingId: 'f1', previousState: 'pending', expectedCurrentState: 'accepted' },
-        { findingId: 'f2', previousState: 'pending', expectedCurrentState: 'accepted' },
+        {
+          findingId: '00000000-0000-4000-8000-000000000003',
+          previousState: 'pending',
+          expectedCurrentState: 'accepted',
+        },
+        {
+          findingId: '00000000-0000-4000-8000-000000000004',
+          previousState: 'pending',
+          expectedCurrentState: 'accepted',
+        },
       ],
       fileId: '00000000-0000-4000-8000-000000000001',
       projectId: '00000000-0000-4000-8000-000000000002',
@@ -83,8 +91,8 @@ describe('undoBulkAction', () => {
 
     expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.data.reverted).toContain('f1')
-      expect(result.data.reverted).toContain('f2')
+      expect(result.data.reverted).toContain('00000000-0000-4000-8000-000000000003')
+      expect(result.data.reverted).toContain('00000000-0000-4000-8000-000000000004')
       expect(result.data.conflicted).toHaveLength(0)
     }
   })
@@ -92,16 +100,24 @@ describe('undoBulkAction', () => {
   it('should partition into canRevert and conflicted on state mismatch (U-17)', async () => {
     dbState.returnValues = [
       [
-        { id: 'f1', status: 'accepted' },
-        { id: 'f2', status: 'rejected' },
+        { id: '00000000-0000-4000-8000-000000000003', status: 'accepted' },
+        { id: '00000000-0000-4000-8000-000000000004', status: 'rejected' },
       ],
       undefined,
     ]
 
     const result = await undoBulkAction({
       findings: [
-        { findingId: 'f1', previousState: 'pending', expectedCurrentState: 'accepted' },
-        { findingId: 'f2', previousState: 'pending', expectedCurrentState: 'accepted' },
+        {
+          findingId: '00000000-0000-4000-8000-000000000003',
+          previousState: 'pending',
+          expectedCurrentState: 'accepted',
+        },
+        {
+          findingId: '00000000-0000-4000-8000-000000000004',
+          previousState: 'pending',
+          expectedCurrentState: 'accepted',
+        },
       ],
       fileId: '00000000-0000-4000-8000-000000000001',
       projectId: '00000000-0000-4000-8000-000000000002',
@@ -110,18 +126,18 @@ describe('undoBulkAction', () => {
 
     expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.data.reverted).toContain('f1')
-      expect(result.data.conflicted).toContain('f2')
+      expect(result.data.reverted).toContain('00000000-0000-4000-8000-000000000003')
+      expect(result.data.conflicted).toContain('00000000-0000-4000-8000-000000000004')
     }
   })
 
   it('should insert feedback_events for each undone reject in batch (U-18)', async () => {
     dbState.returnValues = [
-      [{ id: 'f1', status: 'rejected' }],
+      [{ id: '00000000-0000-4000-8000-000000000003', status: 'rejected' }],
       undefined,
       [
         {
-          id: 'f1',
+          id: '00000000-0000-4000-8000-000000000003',
           severity: 'major',
           category: 'accuracy',
           detectedByLayer: 'L2',
@@ -134,7 +150,13 @@ describe('undoBulkAction', () => {
     ]
 
     const result = await undoBulkAction({
-      findings: [{ findingId: 'f1', previousState: 'pending', expectedCurrentState: 'rejected' }],
+      findings: [
+        {
+          findingId: '00000000-0000-4000-8000-000000000003',
+          previousState: 'pending',
+          expectedCurrentState: 'rejected',
+        },
+      ],
       fileId: '00000000-0000-4000-8000-000000000001',
       projectId: '00000000-0000-4000-8000-000000000002',
       force: false,
@@ -142,7 +164,7 @@ describe('undoBulkAction', () => {
 
     expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.data.reverted).toContain('f1')
+      expect(result.data.reverted).toContain('00000000-0000-4000-8000-000000000003')
     }
   })
 })

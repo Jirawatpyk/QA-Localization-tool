@@ -128,12 +128,19 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
           }
         }
 
-        store.pushRedo(entry)
+        // P2 fix: push redo entry with ONLY reverted findings (exclude conflicted)
         if (result.data.conflicted.length > 0) {
+          const revertedSet = new Set(result.data.reverted)
+          store.pushRedo({
+            ...entry,
+            previousStates: new Map([...entry.previousStates].filter(([k]) => revertedSet.has(k))),
+            newStates: new Map([...entry.newStates].filter(([k]) => revertedSet.has(k))),
+          })
           toast.warning(
             `Partially undone: ${result.data.reverted.length}/${findingInputs.length} findings (${result.data.conflicted.length} conflicts)`,
           )
         } else {
+          store.pushRedo(entry)
           toast.success(`Undone: ${entry.description}`)
         }
         announce(`Undone: ${entry.description}`)
@@ -392,6 +399,8 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
         announce(`Undone: ${entry.description}`)
       } else {
         toast.error(`Force undo failed: ${result.error}`)
+        // P1 fix: restore entry to undo stack so user can retry
+        useReviewStore.getState().pushUndo(entry)
       }
     },
     [fileId, projectId],

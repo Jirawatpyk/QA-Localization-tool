@@ -19,6 +19,7 @@ import { AddFindingDialog } from '@/features/review/components/AddFindingDialog'
 import { AutoPassRationale } from '@/features/review/components/AutoPassRationale'
 import { BulkActionBar } from '@/features/review/components/BulkActionBar'
 import { BulkConfirmDialog } from '@/features/review/components/BulkConfirmDialog'
+import { ConflictDialog } from '@/features/review/components/ConflictDialog'
 import { FileNavigationDropdown } from '@/features/review/components/FileNavigationDropdown'
 import { FindingDetailContent } from '@/features/review/components/FindingDetailContent'
 import { FindingDetailSheet } from '@/features/review/components/FindingDetailSheet'
@@ -29,11 +30,17 @@ import { ReviewActionBar } from '@/features/review/components/ReviewActionBar'
 import { ReviewProgress } from '@/features/review/components/ReviewProgress'
 import { SeverityOverrideMenu } from '@/features/review/components/SeverityOverrideMenu'
 import { useFindingsSubscription } from '@/features/review/hooks/use-findings-subscription'
-import { useKeyboardActions, useReviewHotkeys } from '@/features/review/hooks/use-keyboard-actions'
+import {
+  useKeyboardActions,
+  useReviewHotkeys,
+  useUndoRedoHotkeys,
+} from '@/features/review/hooks/use-keyboard-actions'
 import { useReviewActions } from '@/features/review/hooks/use-review-actions'
 import { useScoreSubscription } from '@/features/review/hooks/use-score-subscription'
 import { useThresholdSubscription } from '@/features/review/hooks/use-threshold-subscription'
+import { useUndoRedo } from '@/features/review/hooks/use-undo-redo'
 import { useReviewStore } from '@/features/review/stores/review.store'
+import type { UndoEntry } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import { mountAnnouncer, unmountAnnouncer } from '@/features/review/utils/announce'
 import { getNewState } from '@/features/review/utils/state-transitions'
@@ -41,6 +48,7 @@ import { useIsDesktop, useIsLaptop } from '@/hooks/useMediaQuery'
 import type {
   Finding,
   FindingSeverity,
+  FindingStatus,
   LayerCompleted,
   ScoreBadgeState,
   ScoreStatus,
@@ -197,6 +205,32 @@ export function ReviewPageClient({
           const processed = result.data.processedCount
           const verb = action === 'accept' ? 'accepted' : 'rejected'
           toast.success(`${processed} finding${processed !== 1 ? 's' : ''} ${verb}`)
+
+          // Story 4.4b: Push undo entry for bulk action
+          const previousStates = new Map<string, FindingStatus>()
+          const newStates = new Map<string, FindingStatus>()
+          for (const pf of result.data.processedFindings) {
+            previousStates.set(pf.findingId, pf.previousState as FindingStatus)
+            newStates.set(pf.findingId, pf.newState as FindingStatus)
+          }
+          if (previousStates.size > 0) {
+            useReviewStore.getState().pushUndo({
+              id: crypto.randomUUID(),
+              type: 'bulk',
+              action,
+              findingId: null,
+              batchId: result.data.batchId,
+              previousStates,
+              newStates,
+              previousSeverity: null,
+              newSeverity: null,
+              findingSnapshot: null,
+              description: `Bulk ${verb} (${processed} findings)`,
+              timestamp: Date.now(),
+              staleFindings: new Set(),
+            })
+          }
+
           // Clear selection
           clearSelection()
           setSelectionMode('single')
@@ -423,6 +457,34 @@ export function ReviewPageClient({
   // Approve state
   const [isApproving, startApproveTransition] = useTransition()
 
+  // Story 4.4b: Undo/redo + conflict dialog state
+  const [conflictOpen, setConflictOpen] = useState(false)
+  const [conflictEntry, setConflictEntry] = useState<UndoEntry | null>(null)
+  const [conflictFindingId, setConflictFindingId] = useState<string | null>(null)
+  const [conflictCurrentState, setConflictCurrentState] = useState<string | null>(null)
+
+  const handleConflict = useCallback(
+    (entry: UndoEntry, findingId: string, currentState: string) => {
+      setConflictEntry(entry)
+      setConflictFindingId(findingId)
+      setConflictCurrentState(currentState)
+      setConflictOpen(true)
+    },
+    [],
+  )
+
+  const { performUndo, performRedo, forceUndo } = useUndoRedo({
+    fileId,
+    projectId,
+    onConflict: handleConflict,
+  })
+
+  // Register Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y
+  useUndoRedoHotkeys({
+    undo: performUndo,
+    redo: performRedo,
+  })
+
   // Wire Realtime subscriptions (TD-TENANT-003: pass tenantId for compound filter)
   useScoreSubscription(fileId, tenantId)
   useFindingsSubscription(fileId, tenantId)
@@ -591,9 +653,53 @@ export function ReviewPageClient({
       void deleteFinding({ findingId, fileId, projectId })
         .then((result) => {
           if (result.success) {
+            // C1 fix: Capture snapshot from store RIGHT BEFORE removal (freshest state)
+            const finding = useReviewStore.getState().findingsMap.get(findingId)
             useReviewStore.getState().removeFinding(findingId)
             setSelectedFinding(null)
             toast.success('Finding deleted')
+
+            // Story 4.4b: Push undo entry with full snapshot for re-insert
+            if (finding) {
+              useReviewStore.getState().pushUndo({
+                id: crypto.randomUUID(),
+                type: 'single',
+                action: 'delete',
+                findingId,
+                batchId: null,
+                previousStates: new Map([[findingId, finding.status]]),
+                newStates: new Map(),
+                previousSeverity: null,
+                newSeverity: null,
+                findingSnapshot: {
+                  id: finding.id,
+                  segmentId: finding.segmentId,
+                  fileId: finding.fileId ?? fileId,
+                  projectId: finding.projectId,
+                  tenantId: finding.tenantId,
+                  reviewSessionId: finding.reviewSessionId,
+                  status: finding.status,
+                  severity: finding.severity,
+                  originalSeverity: finding.originalSeverity,
+                  category: finding.category,
+                  description: finding.description,
+                  detectedByLayer: finding.detectedByLayer,
+                  aiModel: finding.aiModel,
+                  aiConfidence: finding.aiConfidence,
+                  suggestedFix: finding.suggestedFix,
+                  sourceTextExcerpt: finding.sourceTextExcerpt,
+                  targetTextExcerpt: finding.targetTextExcerpt,
+                  scope: finding.scope,
+                  relatedFileIds: finding.relatedFileIds,
+                  segmentCount: finding.segmentCount,
+                  createdAt: finding.createdAt,
+                  updatedAt: finding.updatedAt,
+                },
+                description: 'Delete finding',
+                timestamp: Date.now(),
+                staleFindings: new Set(),
+              })
+            }
           } else {
             toast.error(result.error ?? 'Delete failed')
           }
@@ -820,6 +926,26 @@ export function ReviewPageClient({
           }}
         />
 
+        {/* Story 4.4b: ConflictDialog for undo conflicts */}
+        <ConflictDialog
+          open={conflictOpen}
+          entry={conflictEntry}
+          findingId={conflictFindingId}
+          currentState={conflictCurrentState}
+          onForceUndo={() => {
+            setConflictOpen(false)
+            if (conflictEntry) {
+              forceUndo(conflictEntry).catch(() => {
+                /* handled in forceUndo */
+              })
+            }
+          }}
+          onCancel={() => {
+            setConflictOpen(false)
+            setConflictEntry(null)
+          }}
+        />
+
         {/* Story 4.3: NoteInput popover (AC1 Path 2) */}
         <NoteInput
           open={isNoteInputOpen}
@@ -1000,6 +1126,23 @@ export function ReviewPageClient({
                     relatedFileIds: null,
                   }
                   store.setFinding(result.data.findingId, newFinding)
+
+                  // Story 4.4b: Push undo entry for manual add
+                  store.pushUndo({
+                    id: crypto.randomUUID(),
+                    type: 'single',
+                    action: 'add',
+                    findingId: result.data.findingId,
+                    batchId: null,
+                    previousStates: new Map(),
+                    newStates: new Map([[result.data.findingId, 'manual']]),
+                    previousSeverity: null,
+                    newSeverity: null,
+                    findingSnapshot: null,
+                    description: 'Add manual finding',
+                    timestamp: Date.now(),
+                    staleFindings: new Set(),
+                  })
                 } else {
                   toast.error(result.error ?? 'Failed to add finding')
                 }

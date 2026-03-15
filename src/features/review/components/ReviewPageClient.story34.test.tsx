@@ -46,7 +46,11 @@ vi.mock('@/features/review/utils/announce', () => ({
 }))
 vi.mock('@/features/review/hooks/use-keyboard-actions', () => ({
   useReviewHotkeys: vi.fn(),
+  useUndoRedoHotkeys: vi.fn(),
   useKeyboardActions: () => ({ register: vi.fn(() => vi.fn()) }),
+}))
+vi.mock('@/features/review/hooks/use-undo-redo', () => ({
+  useUndoRedo: () => ({ performUndo: vi.fn(), performRedo: vi.fn(), forceUndo: vi.fn() }),
 }))
 vi.mock('@/features/review/hooks/use-focus-management', () => ({
   useFocusManagement: () => ({

@@ -173,7 +173,7 @@ export async function undoBulkAction(
           findingCategory: meta.category,
           originalSeverity: meta.severity,
           isFalsePositive: false,
-          reviewerIsNative: false,
+          reviewerIsNative: false, // TODO(story-5.2): wire from user profile
           layer: meta.detectedByLayer,
           detectedByLayer: meta.detectedByLayer,
           sourceLang,

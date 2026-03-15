@@ -373,6 +373,81 @@ export function useKeyboardActions(): UseKeyboardActionsReturn {
   }
 }
 
+// ── Undo/Redo hotkey registration (Story 4.4b Task 10) ──
+
+type UndoRedoHandlers = {
+  undo: () => void
+  redo: () => void
+}
+
+/** Register Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y in 'review' scope */
+export function useUndoRedoHotkeys(handlers: UndoRedoHandlers): void {
+  const { register } = useKeyboardActions()
+  const handlersRef = useRef(handlers)
+
+  useEffect(() => {
+    handlersRef.current = handlers
+  })
+
+  useEffect(() => {
+    const cleanups: Array<() => void> = []
+
+    // Ctrl+Z — Undo (Guardrail #34: in text inputs = native browser undo)
+    cleanups.push(
+      register(
+        'ctrl+z',
+        () => {
+          handlersRef.current.undo()
+        },
+        {
+          scope: 'review',
+          description: 'Undo last action',
+          category: 'Undo/Redo',
+          allowInInput: false, // Guardrail #28/#34: suppress in input/textarea
+        },
+      ),
+    )
+
+    // Ctrl+Shift+Z — Redo
+    cleanups.push(
+      register(
+        'ctrl+shift+z',
+        () => {
+          handlersRef.current.redo()
+        },
+        {
+          scope: 'review',
+          description: 'Redo last undone action',
+          category: 'Undo/Redo',
+          allowInInput: false,
+        },
+      ),
+    )
+
+    // Ctrl+Y — Redo alias
+    cleanups.push(
+      register(
+        'ctrl+y',
+        () => {
+          handlersRef.current.redo()
+        },
+        {
+          scope: 'review',
+          description: 'Redo (alias)',
+          category: 'Undo/Redo',
+          allowInInput: false,
+        },
+      ),
+    )
+
+    return () => {
+      for (const cleanup of cleanups) {
+        cleanup()
+      }
+    }
+  }, [register])
+}
+
 // ── Review action hotkey registration (Task 1.2) ──
 
 export const REVIEW_HOTKEYS = [

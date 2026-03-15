@@ -14,8 +14,8 @@ import type { FindingStatus } from '@/types/finding'
 
 export type UndoRedoResult = {
   findingId: string
-  previousState: string
-  newState: string
+  previousState: FindingStatus
+  newState: FindingStatus
   serverUpdatedAt: string
 }
 

@@ -19,8 +19,8 @@ import type { FindingSeverity, FindingStatus } from '@/types/finding'
 
 type UndoSeverityResult = {
   findingId: string
-  previousSeverity: string
-  newSeverity: string
+  previousSeverity: FindingSeverity
+  newSeverity: FindingSeverity
   serverUpdatedAt: string
 }
 
