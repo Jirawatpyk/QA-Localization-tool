@@ -125,8 +125,8 @@ describe('getFileReviewData', () => {
 
     await getFileReviewData({ fileId, projectId })
 
-    // withTenant called for: files, findings, scores, languagePairConfigs(JOIN), projects(WHERE), segments = 6
-    expect(mockWithTenant).toHaveBeenCalledTimes(6)
+    // withTenant called for: files, findings, scores, languagePairConfigs(JOIN), projects(WHERE), segments, reviewActions(overrideCounts) = 7
+    expect(mockWithTenant).toHaveBeenCalledTimes(7)
     // Every call must use the authenticated user's tenantId
     for (const call of mockWithTenant.mock.calls) {
       expect(call[1]).toBe(mockTenantId)

@@ -82,6 +82,20 @@ const storeMockState = {
   setSelectedFinding: vi.fn(),
   sortedFindingIds: [],
   setSortedFindingIds: vi.fn(),
+  selectedIds: new Set(),
+  selectionMode: 'single' as const,
+  isBulkInFlight: false,
+  clearSelection: vi.fn(),
+  setSelectionMode: vi.fn(),
+  setBulkInFlight: vi.fn(),
+  overrideCounts: new Map(),
+  setOverrideCounts: vi.fn(),
+  setOverrideCount: vi.fn(),
+  incrementOverrideCount: vi.fn(),
+  selectRange: vi.fn(),
+  selectAllFiltered: vi.fn(),
+  addToSelection: vi.fn(),
+  toggleSelection: vi.fn(),
 }
 
 vi.mock('@/features/review/stores/review.store', () => ({
@@ -101,6 +115,20 @@ vi.mock('@/features/review/actions/acceptFinding.action', () => ({
 }))
 vi.mock('@/features/review/actions/rejectFinding.action', () => ({
   rejectFinding: vi.fn((..._args: unknown[]) => Promise.resolve({ success: true, data: {} })),
+}))
+vi.mock('@/features/review/actions/bulkAction.action', () => ({
+  bulkAction: vi.fn((..._args: unknown[]) =>
+    Promise.resolve({
+      success: true,
+      data: {
+        processedCount: 0,
+        skippedCount: 0,
+        batchId: 'test',
+        skippedIds: [],
+        processedFindings: [],
+      },
+    }),
+  ),
 }))
 vi.mock('@/features/review/actions/flagFinding.action', () => ({
   flagFinding: vi.fn((..._args: unknown[]) => Promise.resolve({ success: true, data: {} })),
@@ -173,6 +201,7 @@ function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
     targetLang: 'th-TH',
     segments: [],
     categories: [],
+    overrideCounts: {},
     ...overrides,
   } as FileReviewData
 }

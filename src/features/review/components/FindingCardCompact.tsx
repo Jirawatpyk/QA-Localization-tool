@@ -5,7 +5,9 @@ import type { KeyboardEvent, MouseEvent } from 'react'
 
 import { ConfidenceBadge } from '@/features/review/components/ConfidenceBadge'
 import { LayerBadge } from '@/features/review/components/LayerBadge'
+import { OverrideBadge } from '@/features/review/components/OverrideBadge'
 import { SeverityIndicator } from '@/features/review/components/SeverityIndicator'
+import { useReviewStore } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import {
   L3_CONFIRMED_MARKER,
@@ -33,6 +35,7 @@ export type FindingCardCompactProps = {
   onAccept?: ((findingId: string) => void) | undefined
   onReject?: ((findingId: string) => void) | undefined
   isActionInFlight?: boolean | undefined
+  onOverrideBadgeClick?: ((findingId: string) => void) | undefined
 }
 
 export function FindingCardCompact({
@@ -50,8 +53,16 @@ export function FindingCardCompact({
   onAccept,
   onReject,
   isActionInFlight = false,
+  onOverrideBadgeClick,
 }: FindingCardCompactProps) {
   const reducedMotion = useReducedMotion()
+  const selectionMode = useReviewStore((s) => s.selectionMode)
+  const isSelected = useReviewStore((s) => s.selectedIds.has(finding.id))
+  const overrideCount = useReviewStore((s) => s.overrideCounts.get(finding.id) ?? 0)
+  const toggleSelection = useReviewStore((s) => s.toggleSelection)
+  const addToSelection = useReviewStore((s) => s.addToSelection)
+  const setSelectionMode = useReviewStore((s) => s.setSelectionMode)
+  const clearSelection = useReviewStore((s) => s.clearSelection)
 
   const l3Confirmed = finding.description.includes(L3_CONFIRMED_MARKER)
   const l3Disagrees = finding.description.includes(L3_DISAGREES_MARKER)
@@ -78,6 +89,23 @@ export function FindingCardCompact({
     // Don't expand when clicking disabled action buttons (RT#5)
     const target = e.target as HTMLElement
     if (target.closest('button')) return
+
+    // Story 4.4a: Shift+Click enters bulk mode + toggles selection
+    if (e.shiftKey) {
+      e.preventDefault()
+      if (selectionMode !== 'bulk') {
+        setSelectionMode('bulk')
+      }
+      addToSelection(finding.id)
+      return
+    }
+
+    // Regular click: if in bulk mode, clear selection and return to single
+    if (selectionMode === 'bulk') {
+      clearSelection()
+      setSelectionMode('single')
+    }
+
     onExpand(finding.id)
   }
 
@@ -104,11 +132,37 @@ export function FindingCardCompact({
       aria-expanded={isExpanded ? 'true' : 'false'}
       aria-label={ariaLabel}
       aria-rowindex={findingIndex + 1}
+      aria-selected={isSelected ? 'true' : undefined}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      className={`border rounded-lg px-3 py-2 cursor-pointer hover:bg-accent/50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 ${borderClass} ${bgClass} ${stateClass} ${showAnimation ? 'animate-fade-in' : ''}`}
+      className={`border rounded-lg px-3 py-2 cursor-pointer hover:bg-accent/50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 ${borderClass} ${bgClass} ${stateClass} ${showAnimation ? 'animate-fade-in' : ''} ${isSelected ? 'ring-2 ring-primary' : ''}`}
     >
       <div role="gridcell" className="flex items-center gap-2">
+        {/* Story 4.4a: Bulk selection checkbox — visible in bulk mode */}
+        {selectionMode === 'bulk' && (
+          <div
+            className="w-5 shrink-0 flex items-center justify-center"
+            role="checkbox"
+            aria-checked={isSelected}
+            aria-label={`Select finding ${findingIndex + 1}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              toggleSelection(finding.id)
+            }}
+            onKeyDown={() => {}}
+          >
+            <div
+              className={`h-4 w-4 rounded border-2 flex items-center justify-center ${
+                isSelected
+                  ? 'bg-primary border-primary text-primary-foreground'
+                  : 'border-muted-foreground'
+              }`}
+            >
+              {isSelected && <Check className="h-3 w-3" aria-hidden="true" />}
+            </div>
+          </div>
+        )}
+
         {/* Severity badge — Guardrail #36 */}
         <SeverityIndicator severity={finding.severity} />
 
@@ -174,7 +228,7 @@ export function FindingCardCompact({
           </span>
         )}
 
-        {/* Story 4.3 badges */}
+        {/* Story 4.3: severity override badge */}
         {isOverridden && (
           <span
             data-testid="override-badge"
@@ -182,6 +236,13 @@ export function FindingCardCompact({
           >
             Override
           </span>
+        )}
+        {/* Story 4.4a: decision override badge */}
+        {overrideCount > 0 && (
+          <OverrideBadge
+            overrideCount={overrideCount}
+            onClick={() => onOverrideBadgeClick?.(finding.id)}
+          />
         )}
         {isManual && (
           <span

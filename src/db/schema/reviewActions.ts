@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, jsonb, timestamp } from 'drizzle-orm/pg-core'
+import { boolean, pgTable, uuid, varchar, jsonb, timestamp } from 'drizzle-orm/pg-core'
 
 import { files } from './files'
 import { findings } from './findings'
@@ -27,6 +27,7 @@ export const reviewActions = pgTable('review_actions', {
     .notNull()
     .references(() => users.id, { onDelete: 'restrict' }),
   batchId: uuid('batch_id'),
+  isBulk: boolean('is_bulk').notNull().default(false),
   metadata: jsonb('metadata').$type<Record<string, unknown>>(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })

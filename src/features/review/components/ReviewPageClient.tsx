@@ -9,12 +9,16 @@ import { ScoreBadge } from '@/features/batch/components/ScoreBadge'
 import { retryAiAnalysis } from '@/features/pipeline/actions/retryAiAnalysis.action'
 import { addFinding } from '@/features/review/actions/addFinding.action'
 import { approveFile } from '@/features/review/actions/approveFile.action'
+import { bulkAction } from '@/features/review/actions/bulkAction.action'
 import { deleteFinding } from '@/features/review/actions/deleteFinding.action'
 import type { FileReviewData } from '@/features/review/actions/getFileReviewData.action'
+import { getOverrideHistory } from '@/features/review/actions/getOverrideHistory.action'
 import { overrideSeverity } from '@/features/review/actions/overrideSeverity.action'
 import { updateNoteText } from '@/features/review/actions/updateNoteText.action'
 import { AddFindingDialog } from '@/features/review/components/AddFindingDialog'
 import { AutoPassRationale } from '@/features/review/components/AutoPassRationale'
+import { BulkActionBar } from '@/features/review/components/BulkActionBar'
+import { BulkConfirmDialog } from '@/features/review/components/BulkConfirmDialog'
 import { FileNavigationDropdown } from '@/features/review/components/FileNavigationDropdown'
 import { FindingDetailContent } from '@/features/review/components/FindingDetailContent'
 import { FindingDetailSheet } from '@/features/review/components/FindingDetailSheet'
@@ -117,6 +121,122 @@ export function ReviewPageClient({
     fileId,
     projectId,
   })
+
+  // Story 4.4a: Bulk selection state from store
+  const selectedIds = useReviewStore((s) => s.selectedIds)
+  const selectionMode = useReviewStore((s) => s.selectionMode)
+  const isBulkInFlight = useReviewStore((s) => s.isBulkInFlight)
+  const clearSelection = useReviewStore((s) => s.clearSelection)
+  const setSelectionMode = useReviewStore((s) => s.setSelectionMode)
+  const setBulkInFlight = useReviewStore((s) => s.setBulkInFlight)
+
+  // Story 4.4a: Bulk confirm dialog state
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false)
+  const [bulkConfirmAction, setBulkConfirmAction] = useState<'accept' | 'reject'>('accept')
+  const [activeBulkAction, setActiveBulkAction] = useState<'accept' | 'reject' | null>(null)
+
+  // Story 4.4a: Bulk action handlers
+  const executeBulk = useCallback(
+    async (action: 'accept' | 'reject') => {
+      const store = useReviewStore.getState()
+      const ids = [...store.selectedIds]
+      if (ids.length === 0) return
+
+      setBulkInFlight(true)
+      setActiveBulkAction(action)
+
+      // Task 13: Optimistic update — snapshot + batch update
+      const snapshots = new Map<string, Finding>()
+      for (const id of ids) {
+        const f = store.findingsMap.get(id)
+        if (f) snapshots.set(id, f)
+      }
+
+      // Optimistic: update all findings in store
+      const { getNewState } = await import('@/features/review/utils/state-transitions')
+      for (const id of ids) {
+        const f = snapshots.get(id)
+        if (!f) continue
+        const newState = getNewState(action, f.status)
+        if (newState) {
+          store.setFinding(id, { ...f, status: newState, updatedAt: new Date().toISOString() })
+        }
+      }
+
+      const result = await bulkAction({ findingIds: ids, action, fileId, projectId })
+
+      if (result.success) {
+        // Sync server timestamps (H2 fix pattern)
+        for (const pf of result.data.processedFindings) {
+          const current = useReviewStore.getState().findingsMap.get(pf.findingId)
+          if (current) {
+            useReviewStore.getState().setFinding(pf.findingId, {
+              ...current,
+              updatedAt: pf.serverUpdatedAt,
+            })
+          }
+          // Increment override count only if finding already has prior actions
+          // (matches Q7 semantic: overrideCount = actionCount - 1, filtered at > 1)
+          const currentCount = useReviewStore.getState().overrideCounts.get(pf.findingId)
+          if (currentCount !== undefined && currentCount > 0) {
+            useReviewStore.getState().incrementOverrideCount(pf.findingId)
+          }
+        }
+        const processed = result.data.processedCount
+        const verb = action === 'accept' ? 'accepted' : 'rejected'
+        toast.success(`${processed} finding${processed !== 1 ? 's' : ''} ${verb}`)
+        // Clear selection
+        clearSelection()
+        setSelectionMode('single')
+      } else {
+        // Rollback optimistic updates
+        for (const [id, snap] of snapshots) {
+          const current = useReviewStore.getState().findingsMap.get(id)
+          if (current) {
+            useReviewStore.getState().setFinding(id, snap)
+          }
+        }
+        toast.error(result.error ?? 'Bulk operation failed')
+      }
+
+      setBulkInFlight(false)
+      setActiveBulkAction(null)
+    },
+    [fileId, projectId, clearSelection, setSelectionMode, setBulkInFlight],
+  )
+
+  const handleBulkAccept = useCallback(() => {
+    if (selectedIds.size > 5) {
+      setBulkConfirmAction('accept')
+      setBulkConfirmOpen(true)
+    } else {
+      executeBulk('accept').catch(() => toast.error('Bulk accept failed'))
+    }
+  }, [selectedIds.size, executeBulk])
+
+  const handleBulkReject = useCallback(() => {
+    if (selectedIds.size > 5) {
+      setBulkConfirmAction('reject')
+      setBulkConfirmOpen(true)
+    } else {
+      executeBulk('reject').catch(() => toast.error('Bulk reject failed'))
+    }
+  }, [selectedIds.size, executeBulk])
+
+  const handleClearBulkSelection = useCallback(() => {
+    clearSelection()
+    setSelectionMode('single')
+  }, [clearSelection, setSelectionMode])
+
+  // Selected findings for BulkConfirmDialog severity breakdown
+  const selectedFindingsForDialog = useMemo(() => {
+    const result: Finding[] = []
+    for (const id of selectedIds) {
+      const f = findingsMap.get(id)
+      if (f) result.push(f)
+    }
+    return result
+  }, [selectedIds, findingsMap])
 
   // Story 4.3: dialog/popover state
   const [isNoteInputOpen, setIsNoteInputOpen] = useState(false)
@@ -225,6 +345,13 @@ export function ReviewPageClient({
       initialMap.set(f.id, finding)
     }
     setFindings(initialMap)
+
+    // Story 4.4a: Populate override counts
+    if (data.overrideCounts) {
+      useReviewStore
+        .getState()
+        .setOverrideCounts(new Map(Object.entries(data.overrideCounts).map(([k, v]) => [k, v])))
+    }
 
     // Populate initial score
     if (data.score.mqmScore !== null) {
@@ -601,6 +728,29 @@ export function ReviewPageClient({
           }
         />
 
+        {/* Story 4.4a: BulkActionBar — visible in bulk mode with selections */}
+        {selectionMode === 'bulk' && selectedIds.size > 0 && (
+          <BulkActionBar
+            selectedCount={selectedIds.size}
+            onBulkAccept={handleBulkAccept}
+            onBulkReject={handleBulkReject}
+            onClearSelection={handleClearBulkSelection}
+            isBulkInFlight={isBulkInFlight}
+            activeAction={activeBulkAction}
+          />
+        )}
+
+        {/* Story 4.4a: BulkConfirmDialog — for >5 threshold */}
+        <BulkConfirmDialog
+          open={bulkConfirmOpen}
+          onOpenChange={setBulkConfirmOpen}
+          action={bulkConfirmAction}
+          selectedFindings={selectedFindingsForDialog}
+          onConfirm={() => {
+            executeBulk(bulkConfirmAction).catch(() => toast.error('Bulk operation failed'))
+          }}
+        />
+
         {/* Story 4.3: NoteInput popover (AC1 Path 2) */}
         <NoteInput
           open={isNoteInputOpen}
@@ -809,12 +959,14 @@ export function ReviewPageClient({
             sourceLang={sourceLang}
             targetLang={targetLang ?? ''}
             fileId={fileId}
+            projectId={projectId}
             contextRange={undefined}
             onNavigateToFinding={setSelectedFinding}
             onAccept={handleAccept}
             onReject={handleReject}
             onFlag={handleFlag}
             onDelete={handleDeleteFinding}
+            fetchOverrideHistory={getOverrideHistory}
             isActionInFlight={isActionInFlight}
           />
         </aside>
@@ -832,6 +984,7 @@ export function ReviewPageClient({
           onFlag={handleFlag}
           onDelete={handleDeleteFinding}
           isActionInFlight={isActionInFlight}
+          projectId={projectId}
         />
       )}
 

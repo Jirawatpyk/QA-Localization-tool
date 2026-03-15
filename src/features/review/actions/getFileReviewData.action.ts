@@ -2,7 +2,7 @@
 
 import 'server-only'
 
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, count, eq, gt, sql } from 'drizzle-orm'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
@@ -10,6 +10,7 @@ import { files } from '@/db/schema/files'
 import { findings } from '@/db/schema/findings'
 import { languagePairConfigs } from '@/db/schema/languagePairConfigs'
 import { projects } from '@/db/schema/projects'
+import { reviewActions } from '@/db/schema/reviewActions'
 import { scores } from '@/db/schema/scores'
 import { segments } from '@/db/schema/segments'
 import { taxonomyDefinitions } from '@/db/schema/taxonomyDefinitions'
@@ -67,6 +68,8 @@ export type FileReviewData = {
   segments: Array<{ id: string; segmentNumber: number; sourceText: string }>
   /** Story 4.3: Active taxonomy categories for AddFindingDialog category selector */
   categories: Array<{ category: string; parentCategory: string | null }>
+  /** Story 4.4a: Override counts per finding (findingId → count of re-decisions) */
+  overrideCounts: Record<string, number>
 }
 
 const SEVERITY_PRIORITY: Record<string, number> = {
@@ -262,6 +265,35 @@ export async function getFileReviewData(
       )
     }
 
+    // Q7: Get override counts per finding (Story 4.4a AC4) — non-fatal
+    const overrideCounts: Record<string, number> = {}
+    try {
+      const overrideRows = await db
+        .select({
+          findingId: reviewActions.findingId,
+          actionCount: count(reviewActions.id),
+        })
+        .from(reviewActions)
+        .where(
+          and(
+            eq(reviewActions.fileId, fileId),
+            eq(reviewActions.projectId, projectId),
+            withTenant(reviewActions.tenantId, tenantId),
+          ),
+        )
+        .groupBy(reviewActions.findingId)
+        .having(gt(count(reviewActions.id), sql`1`))
+
+      for (const row of overrideRows) {
+        overrideCounts[row.findingId] = Number(row.actionCount) - 1
+      }
+    } catch (overrideErr) {
+      logger.error(
+        { err: overrideErr, fileId },
+        'Q7 override counts query failed — override badges will not show',
+      )
+    }
+
     return {
       success: true,
       data: {
@@ -277,6 +309,7 @@ export async function getFileReviewData(
         targetLang,
         segments: segmentRows,
         categories: categoryRows,
+        overrideCounts,
       },
     }
   } catch (err) {

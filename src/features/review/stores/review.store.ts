@@ -121,10 +121,17 @@ const createThresholdSlice = (
 type SelectionSlice = {
   selectedIds: Set<string>
   selectionMode: 'single' | 'bulk'
+  isBulkInFlight: boolean
+  overrideCounts: Map<string, number>
   toggleSelection: (id: string) => void
+  addToSelection: (id: string) => void
   setSelections: (ids: Set<string>) => void
   clearSelection: () => void
   setSelectionMode: (mode: 'single' | 'bulk') => void
+  setBulkInFlight: (v: boolean) => void
+  setOverrideCounts: (counts: Map<string, number>) => void
+  setOverrideCount: (findingId: string, count: number) => void
+  incrementOverrideCount: (findingId: string) => void
 }
 
 const createSelectionSlice = (
@@ -132,6 +139,8 @@ const createSelectionSlice = (
 ): SelectionSlice => ({
   selectedIds: new Set(),
   selectionMode: 'single',
+  isBulkInFlight: false,
+  overrideCounts: new Map(),
   toggleSelection: (id) =>
     set((s) => {
       const newSet = new Set(s.selectedIds)
@@ -140,6 +149,12 @@ const createSelectionSlice = (
       } else {
         newSet.add(id)
       }
+      return { selectedIds: newSet }
+    }),
+  addToSelection: (id) =>
+    set((s) => {
+      const newSet = new Set(s.selectedIds)
+      newSet.add(id)
       return { selectedIds: newSet }
     }),
   setSelections: (ids) => set({ selectedIds: ids }),
@@ -152,6 +167,20 @@ const createSelectionSlice = (
       }
       return { selectionMode: mode }
     }),
+  setBulkInFlight: (v) => set({ isBulkInFlight: v }),
+  setOverrideCounts: (counts) => set({ overrideCounts: counts }),
+  setOverrideCount: (findingId, count) =>
+    set((s) => {
+      const newMap = new Map(s.overrideCounts)
+      newMap.set(findingId, count)
+      return { overrideCounts: newMap }
+    }),
+  incrementOverrideCount: (findingId) =>
+    set((s) => {
+      const newMap = new Map(s.overrideCounts)
+      newMap.set(findingId, (newMap.get(findingId) ?? 0) + 1)
+      return { overrideCounts: newMap }
+    }),
 })
 
 // ── Composed Store ──
@@ -162,9 +191,11 @@ type ReviewState = FindingsSlice &
   SelectionSlice & {
     currentFileId: string | null
     resetForFile: (fileId: string) => void
+    selectRange: (fromId: string, toId: string) => void
+    selectAllFiltered: () => void
   }
 
-export const useReviewStore = create<ReviewState>()((set, _get) => {
+export const useReviewStore = create<ReviewState>()((set, get) => {
   const setState = set as (
     fn: Partial<ReviewState> | ((s: ReviewState) => Partial<ReviewState>),
   ) => void
@@ -191,6 +222,39 @@ export const useReviewStore = create<ReviewState>()((set, _get) => {
         l3ConfidenceMin: null,
         selectedIds: new Set(),
         selectionMode: 'single',
+        isBulkInFlight: false,
+        overrideCounts: new Map(),
       }),
+    // Task 4.4: selectRange — needs get() for sortedFindingIds
+    selectRange: (fromId: string, toId: string) => {
+      const state = get()
+      const ids = state.sortedFindingIds
+      const fromIdx = ids.indexOf(fromId)
+      const toIdx = ids.indexOf(toId)
+      if (fromIdx === -1 || toIdx === -1) return
+      const start = Math.min(fromIdx, toIdx)
+      const end = Math.max(fromIdx, toIdx)
+      const rangeIds = ids.slice(start, end + 1)
+      const newSet = new Set(state.selectedIds)
+      for (const id of rangeIds) {
+        newSet.add(id)
+      }
+      set({ selectedIds: newSet, selectionMode: 'bulk' })
+    },
+    // Task 4.5: selectAllFiltered — needs get() for sortedFindingIds + filterState
+    selectAllFiltered: () => {
+      const state = get()
+      const { filterState, findingsMap, sortedFindingIds } = state
+      const filtered = sortedFindingIds.filter((id) => {
+        const finding = findingsMap.get(id)
+        if (!finding) return false
+        if (filterState.severity !== null && finding.severity !== filterState.severity) return false
+        if (filterState.status !== null && finding.status !== filterState.status) return false
+        if (filterState.layer !== null && finding.detectedByLayer !== filterState.layer)
+          return false
+        return true
+      })
+      set({ selectedIds: new Set(filtered), selectionMode: 'bulk' })
+    },
   }
 })

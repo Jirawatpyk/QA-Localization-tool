@@ -45,6 +45,7 @@ export type FindingChangedEventData = {
   newState: FindingStatus
   triggeredBy: string // userId
   timestamp: string // ISO 8601
+  batchId?: string // Story 4.4a: optional — null for single actions, UUID for bulk
 }
 
 // DB files.status column — all possible pipeline statuses

@@ -28,6 +28,7 @@ type FindingDetailSheetProps = {
   onFlag?: ((findingId: string) => void) | undefined
   onDelete?: ((findingId: string) => void) | undefined
   isActionInFlight?: boolean | undefined
+  projectId?: string | undefined
 }
 
 /**
@@ -51,6 +52,7 @@ export function FindingDetailSheet({
   onFlag,
   onDelete,
   isActionInFlight = false,
+  projectId,
 }: FindingDetailSheetProps) {
   const reducedMotion = useReducedMotion()
   const isLaptop = useIsLaptop()
@@ -107,6 +109,7 @@ export function FindingDetailSheet({
             onFlag={onFlag}
             onDelete={onDelete}
             isActionInFlight={isActionInFlight}
+            projectId={projectId}
           />
         ) : null}
       </SheetContent>

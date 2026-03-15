@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react'
 
 import { ConfidenceBadge } from '@/features/review/components/ConfidenceBadge'
 import { LayerBadge } from '@/features/review/components/LayerBadge'
+import type { OverrideHistoryEntry } from '@/features/review/components/OverrideHistoryPanel'
+import { OverrideHistoryPanel } from '@/features/review/components/OverrideHistoryPanel'
 import {
   SegmentContextList,
   SegmentContextSkeleton,
@@ -13,6 +15,7 @@ import {
 } from '@/features/review/components/SegmentContextList'
 import { SeverityIndicator } from '@/features/review/components/SeverityIndicator'
 import { useSegmentContext } from '@/features/review/hooks/use-segment-context'
+import { useReviewStore } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import type { FindingStatus } from '@/types/finding'
 
@@ -31,6 +34,14 @@ type FindingDetailContentProps = {
   onFlag?: ((findingId: string) => void) | undefined
   onDelete?: ((findingId: string) => void) | undefined
   isActionInFlight?: boolean | undefined
+  projectId?: string | undefined
+  fetchOverrideHistory?:
+    | ((input: { findingId: string; projectId: string }) => Promise<{
+        success: boolean
+        data?: OverrideHistoryEntry[]
+        error?: string
+      }>)
+    | undefined
 }
 
 /**
@@ -51,6 +62,8 @@ export function FindingDetailContent({
   onFlag,
   onDelete,
   isActionInFlight = false,
+  projectId,
+  fetchOverrideHistory,
 }: FindingDetailContentProps) {
   const [contextRange, setContextRange] = useState(contextRangeProp ?? 2)
 
@@ -60,6 +73,17 @@ export function FindingDetailContent({
       setContextRange(contextRangeProp) // eslint-disable-line react-hooks/set-state-in-effect -- sync prop-driven initial value after parent changes (external system subscription pattern)
     }
   }, [contextRangeProp])
+
+  // Story 4.4a: Override history visibility — reset on finding change via render-time state adjustment (React 19 pattern)
+  const [showHistory, setShowHistory] = useState(false)
+  const overrideCount = useReviewStore((s) =>
+    finding ? (s.overrideCounts.get(finding.id) ?? 0) : 0,
+  )
+  const [prevFindingId, setPrevFindingId] = useState<string | null>(null)
+  if (finding?.id !== prevFindingId) {
+    setPrevFindingId(finding?.id ?? null)
+    if (showHistory) setShowHistory(false)
+  }
 
   // Segment context hook
   const segmentCtx = useSegmentContext({
@@ -148,6 +172,26 @@ export function FindingDetailContent({
               />
             ) : null}
           </section>
+
+          {/* ── Story 4.4a: Override History Panel ── */}
+          {overrideCount > 0 && projectId && (
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={() => setShowHistory(!showHistory)}
+                className="text-xs text-warning-foreground hover:underline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
+              >
+                {showHistory ? 'Hide' : 'Show'} decision history ({overrideCount} override
+                {overrideCount !== 1 ? 's' : ''})
+              </button>
+              <OverrideHistoryPanel
+                findingId={finding.id}
+                projectId={projectId}
+                isVisible={showHistory}
+                fetchHistory={fetchOverrideHistory}
+              />
+            </div>
+          )}
 
           {/* ── Action Buttons (Story 4.2) ── */}
           <div

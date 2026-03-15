@@ -1,0 +1,1 @@
+ALTER TABLE "review_actions" ADD COLUMN "is_bulk" boolean DEFAULT false NOT NULL;

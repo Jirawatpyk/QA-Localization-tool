@@ -4,7 +4,9 @@ import { Check, FileText, FileWarning, X } from 'lucide-react'
 
 import { ConfidenceBadge } from '@/features/review/components/ConfidenceBadge'
 import { LayerBadge } from '@/features/review/components/LayerBadge'
+import { OverrideBadge } from '@/features/review/components/OverrideBadge'
 import { SeverityIndicator } from '@/features/review/components/SeverityIndicator'
+import { useReviewStore } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import {
   L3_CONFIRMED_MARKER,
@@ -29,6 +31,7 @@ export type FindingCardProps = {
   onAccept?: ((findingId: string) => void) | undefined
   onReject?: ((findingId: string) => void) | undefined
   isActionInFlight?: boolean | undefined
+  onOverrideBadgeClick?: ((findingId: string) => void) | undefined
 }
 
 export function FindingCard({
@@ -43,8 +46,10 @@ export function FindingCard({
   onAccept,
   onReject,
   isActionInFlight = false,
+  onOverrideBadgeClick,
 }: FindingCardProps) {
   const reducedMotion = useReducedMotion()
+  const overrideCount = useReviewStore((s) => s.overrideCounts.get(finding.id) ?? 0)
 
   const l3Confirmed = finding.description.includes(L3_CONFIRMED_MARKER)
   const l3Disagrees = finding.description.includes(L3_DISAGREES_MARKER)
@@ -136,6 +141,14 @@ export function FindingCard({
           >
             Override
           </span>
+        )}
+
+        {/* Story 4.4a: Decision override badge */}
+        {overrideCount > 0 && (
+          <OverrideBadge
+            overrideCount={overrideCount}
+            onClick={() => onOverrideBadgeClick?.(finding.id)}
+          />
         )}
 
         {/* Story 4.3: Manual badge */}

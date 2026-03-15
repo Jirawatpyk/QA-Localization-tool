@@ -88,6 +88,7 @@ function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
     targetLang: 'th-TH',
     segments: [],
     categories: [],
+    overrideCounts: {},
     ...overrides,
   }
 }

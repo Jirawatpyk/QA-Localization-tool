@@ -43,6 +43,18 @@ export const addFindingSchema = z.object({
 // Story 4.3: Delete Finding
 export const deleteFindingSchema = reviewActionBaseSchema
 
+// Story 4.4a: Bulk Operations
+export const bulkActionSchema = z.object({
+  findingIds: z
+    .array(z.string().uuid())
+    .min(1)
+    .max(200)
+    .refine((ids) => new Set(ids).size === ids.length, 'Duplicate IDs'),
+  action: z.union([z.literal('accept'), z.literal('reject')]),
+  fileId: z.string().uuid(),
+  projectId: z.string().uuid(),
+})
+
 // Inferred input types
 export type AcceptFindingInput = z.infer<typeof acceptFindingSchema>
 export type RejectFindingInput = z.infer<typeof rejectFindingSchema>
@@ -53,3 +65,4 @@ export type UpdateNoteTextInput = z.infer<typeof updateNoteTextSchema>
 export type OverrideSeverityInput = z.infer<typeof overrideSeveritySchema>
 export type AddFindingInput = z.infer<typeof addFindingSchema>
 export type DeleteFindingInput = z.infer<typeof deleteFindingSchema>
+export type BulkActionInput = z.infer<typeof bulkActionSchema>
