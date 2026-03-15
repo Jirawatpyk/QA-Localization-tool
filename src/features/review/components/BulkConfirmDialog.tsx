@@ -19,6 +19,8 @@ export type BulkConfirmDialogProps = {
   action: 'accept' | 'reject'
   selectedFindings: Finding[]
   onConfirm: () => void
+  /** CR-M3: Use store selectedIds.size for title count (resilient to Realtime deletions) */
+  totalSelectedCount?: number | undefined
 }
 
 export function BulkConfirmDialog({
@@ -27,6 +29,7 @@ export function BulkConfirmDialog({
   action,
   selectedFindings,
   onConfirm,
+  totalSelectedCount,
 }: BulkConfirmDialogProps) {
   const triggerRef = useRef<HTMLElement | null>(null)
 
@@ -48,7 +51,10 @@ export function BulkConfirmDialog({
     return counts
   }, [selectedFindings])
 
-  const count = selectedFindings.length
+  // CR-M3+L-R2-2: Use selectedFindings.length (consistent with severity breakdown).
+  // Fallback to totalSelectedCount only when array is empty (all deleted by Realtime).
+  const resolvedCount = selectedFindings.length
+  const count = resolvedCount > 0 ? resolvedCount : (totalSelectedCount ?? 0)
   const actionLabel = action === 'accept' ? 'Accept' : 'Reject'
   const actionVerb =
     action === 'accept' ? 'accept them as valid findings' : 'dismiss them as false positives'

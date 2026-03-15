@@ -254,6 +254,11 @@ export const useReviewStore = create<ReviewState>()((set, get) => {
           return false
         return true
       })
+      // CR-M2+L-R2-1: 0 match → clear selection + exit bulk mode (not silent no-op)
+      if (filtered.length === 0) {
+        set({ selectedIds: new Set<string>(), selectionMode: 'single' })
+        return
+      }
       set({ selectedIds: new Set(filtered), selectionMode: 'bulk' })
     },
   }

@@ -10,6 +10,7 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet'
 import { FindingDetailContent } from '@/features/review/components/FindingDetailContent'
+import type { OverrideHistoryEntry } from '@/features/review/components/OverrideHistoryPanel'
 import type { FindingForDisplay } from '@/features/review/types'
 import { useIsLaptop } from '@/hooks/useMediaQuery'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -29,6 +30,13 @@ type FindingDetailSheetProps = {
   onDelete?: ((findingId: string) => void) | undefined
   isActionInFlight?: boolean | undefined
   projectId?: string | undefined
+  fetchOverrideHistory?:
+    | ((input: { findingId: string; projectId: string }) => Promise<{
+        success: boolean
+        data?: OverrideHistoryEntry[]
+        error?: string
+      }>)
+    | undefined
 }
 
 /**
@@ -53,6 +61,7 @@ export function FindingDetailSheet({
   onDelete,
   isActionInFlight = false,
   projectId,
+  fetchOverrideHistory,
 }: FindingDetailSheetProps) {
   const reducedMotion = useReducedMotion()
   const isLaptop = useIsLaptop()
@@ -110,6 +119,7 @@ export function FindingDetailSheet({
             onDelete={onDelete}
             isActionInFlight={isActionInFlight}
             projectId={projectId}
+            fetchOverrideHistory={fetchOverrideHistory}
           />
         ) : null}
       </SheetContent>

@@ -51,16 +51,19 @@ export function OverrideHistoryPanel({
     if (!fetchHistory) return
     setIsLoading(true)
     setEntries([]) // Clear stale entries before fetch (H1 fix)
-    const result = await fetchHistory({ findingId, projectId })
-    if (result.success && result.data) {
-      setEntries(result.data)
+    try {
+      const result = await fetchHistory({ findingId, projectId })
+      if (result.success && result.data) {
+        setEntries(result.data)
+      }
+    } finally {
+      // CR-M1: always clear loading state, even on network error
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }, [findingId, projectId, fetchHistory])
 
   useEffect(() => {
     if (isVisible && findingId && fetchHistory) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch callback sets state after await (external system subscription pattern)
       doFetch().catch(() => {
         // Non-critical — UI degrades gracefully
       })

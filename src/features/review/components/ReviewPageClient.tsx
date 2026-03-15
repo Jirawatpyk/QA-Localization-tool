@@ -36,6 +36,7 @@ import { useThresholdSubscription } from '@/features/review/hooks/use-threshold-
 import { useReviewStore } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import { mountAnnouncer, unmountAnnouncer } from '@/features/review/utils/announce'
+import { getNewState } from '@/features/review/utils/state-transitions'
 import { useIsDesktop, useIsLaptop } from '@/hooks/useMediaQuery'
 import type {
   Finding,
@@ -152,8 +153,7 @@ export function ReviewPageClient({
         if (f) snapshots.set(id, f)
       }
 
-      // Optimistic: update all findings in store
-      const { getNewState } = await import('@/features/review/utils/state-transitions')
+      // Optimistic: update all findings in store (CR-H3: static import, no dynamic chunk risk)
       for (const id of ids) {
         const f = snapshots.get(id)
         if (!f) continue
@@ -185,6 +185,13 @@ export function ReviewPageClient({
               } else {
                 useReviewStore.getState().setOverrideCount(pf.findingId, 1)
               }
+            }
+          }
+          // CR-H1: Rollback optimistic updates for skipped findings (not found in DB / concurrent delete)
+          for (const skippedId of result.data.skippedIds) {
+            const snap = snapshots.get(skippedId)
+            if (snap) {
+              useReviewStore.getState().setFinding(skippedId, snap)
             }
           }
           const processed = result.data.processedCount
@@ -807,6 +814,7 @@ export function ReviewPageClient({
           onOpenChange={setBulkConfirmOpen}
           action={bulkConfirmAction}
           selectedFindings={selectedFindingsForDialog}
+          totalSelectedCount={selectedIds.size}
           onConfirm={() => {
             executeBulk(bulkConfirmAction).catch(() => toast.error('Bulk operation failed'))
           }}
@@ -1046,6 +1054,7 @@ export function ReviewPageClient({
           onDelete={handleDeleteFinding}
           isActionInFlight={isActionInFlight}
           projectId={projectId}
+          fetchOverrideHistory={getOverrideHistory}
         />
       )}
 

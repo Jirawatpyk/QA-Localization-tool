@@ -282,16 +282,16 @@ export async function bulkAction(input: BulkActionInput): Promise<ActionResult<B
         }
       }
 
-      // Insert feedback_events one by one (different data per finding)
-      for (const p of processed) {
+      // CR-H4: Batch INSERT feedback_events (single round-trip instead of N)
+      const feedbackRows = processed.map((p) => {
         const lang = p.segmentId ? segmentLangMap.get(p.segmentId) : undefined
-        await db.insert(feedbackEvents).values({
+        return {
           tenantId,
           fileId,
           projectId,
           findingId: p.findingId,
           reviewerId: userId,
-          action: 'reject',
+          action: 'reject' as const,
           findingCategory: p.category,
           originalSeverity: p.severity,
           isFalsePositive: true,
@@ -302,7 +302,10 @@ export async function bulkAction(input: BulkActionInput): Promise<ActionResult<B
           targetLang: lang?.targetLang ?? 'unknown',
           sourceText: p.sourceTextExcerpt ?? '',
           originalTarget: p.targetTextExcerpt ?? '',
-        })
+        }
+      })
+      if (feedbackRows.length > 0) {
+        await db.insert(feedbackEvents).values(feedbackRows)
       }
     } catch (feedbackErr) {
       logger.error({ err: feedbackErr, batchId }, 'feedback_events insert failed for bulk reject')

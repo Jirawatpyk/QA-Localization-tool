@@ -388,11 +388,15 @@ describe('bulkAction.action', () => {
     const ids = [makeFindingId(70), makeFindingId(71)]
     const findingRows = ids.map((id) => buildFindingRow(id, { status: 'pending' }))
 
-    // SELECT findings, tx updates/inserts, segment lookups, feedback_events inserts
+    // SELECT findings, tx updates/inserts, segment lookups, feedback_events batch insert
     dbState.returnValues = [
       findingRows,
       ...ids.flatMap(() => [[], []]),
-      ...ids.flatMap(() => [[{ sourceLang: 'en', targetLang: 'th' }], []]),
+      [
+        { id: ids[0], sourceLang: 'en', targetLang: 'th' },
+        { id: ids[1], sourceLang: 'en', targetLang: 'th' },
+      ],
+      [],
     ]
 
     await bulkAction({
@@ -402,13 +406,20 @@ describe('bulkAction.action', () => {
       projectId: VALID_PROJECT_ID,
     })
 
-    // Should have feedback_events inserts captured
-    const feedbackInserts = dbState.valuesCaptures.filter(
+    // CR-H4: batch INSERT — find the array capture containing feedback_events rows
+    const feedbackBatch = dbState.valuesCaptures.find(
       (c: unknown) =>
-        typeof c === 'object' && c !== null && (c as Record<string, unknown>).action === 'reject',
-    )
+        Array.isArray(c) &&
+        c.length > 0 &&
+        typeof c[0] === 'object' &&
+        c[0] !== null &&
+        (c[0] as Record<string, unknown>).action === 'reject',
+    ) as Array<Record<string, unknown>> | undefined
 
-    expect(feedbackInserts.length).toBe(2)
+    expect(feedbackBatch).toBeDefined()
+    expect(feedbackBatch!.length).toBe(2)
+    expect(feedbackBatch![0]!.action).toBe('reject')
+    expect(feedbackBatch![1]!.action).toBe('reject')
   })
 
   // ── P1: is_bulk flag and shared batchId ──
