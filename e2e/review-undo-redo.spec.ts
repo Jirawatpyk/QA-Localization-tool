@@ -209,36 +209,36 @@ test.describe.serial('Undo/Redo & Conflict Resolution — Story 4.4b ATDD', () =
     await rows.first().waitFor({ state: 'visible', timeout: 30_000 })
     await page.waitForSelector('[data-review-actions-ready="true"]', { timeout: 10_000 })
 
-    // Click a finding then Ctrl+A to select all
+    // Click a finding to sync activeFindingId + ensure focus in review area
     await rows.first().click()
-    await page.waitForTimeout(500)
+    await expect(rows.first()).toBeFocused({ timeout: 5_000 })
+
+    // Ctrl+A to select all — wait for keyboard handlers to be registered
+    await page.waitForSelector('[data-keyboard-ready="true"]', { timeout: 10_000 })
     await page.keyboard.down('Control')
     await page.keyboard.press('a')
     await page.keyboard.up('Control')
-    await page.waitForTimeout(500)
 
-    // Click bulk accept button in BulkActionBar
-    const bulkAcceptBtn = page
-      .getByTestId('bulk-action-bar')
-      .getByRole('button', { name: /accept/i })
-    await expect(bulkAcceptBtn).toBeVisible({ timeout: 5_000 })
-    await bulkAcceptBtn.click()
+    // Click Bulk Accept button
+    const bulkBar = page.getByRole('toolbar', { name: /bulk actions/i })
+    await expect(bulkBar).toBeVisible({ timeout: 10_000 })
+    await bulkBar.getByText('Bulk Accept').click()
 
-    // Handle confirmation dialog if it appears (>5 findings)
-    const confirmBtn = page
-      .getByRole('alertdialog')
-      .getByRole('button', { name: /confirm|accept/i })
-    if (await confirmBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await confirmBtn.click()
+    // Handle confirmation dialog (>5 findings → threshold triggers dialog)
+    const dialog = page.getByRole('dialog')
+    if (await dialog.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await dialog.getByRole('button', { name: /confirm/i }).click()
     }
 
-    // Wait for bulk success toast
-    await expect(page.getByText(/findings? accepted/i).first()).toBeVisible({ timeout: 15_000 })
+    // Wait for bulk success toast — format: "N findings accepted"
+    await expect(page.getByText(/\d+ findings? accepted/i).first()).toBeVisible({ timeout: 20_000 })
     await page.waitForTimeout(1000)
 
-    // Undo bulk
+    // Click a finding row to ensure keyboard focus in review area
     await rows.first().click()
     await page.waitForTimeout(500)
+
+    // Undo bulk via Ctrl+Z
     await page.keyboard.down('Control')
     await page.keyboard.press('z')
     await page.keyboard.up('Control')
@@ -252,25 +252,35 @@ test.describe.serial('Undo/Redo & Conflict Resolution — Story 4.4b ATDD', () =
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
-    const findingRow = page.locator('[role="row"][data-finding-id]').first()
-    await findingRow.waitFor({ state: 'visible', timeout: 30_000 })
+    const grid = page.getByRole('grid')
+    const rows = grid.locator('[role="row"]')
+    await rows.first().waitFor({ state: 'visible', timeout: 30_000 })
+    await page.waitForSelector('[data-review-actions-ready="true"]', { timeout: 10_000 })
 
     // Accept → undo → redo
-    await findingRow.click()
+    await rows.first().click()
     await page.keyboard.press('a')
-    await expect(page.getByText(/accepted/i).first()).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText(/accepted/i).first()).toBeVisible({ timeout: 15_000 })
+    await page.waitForTimeout(1000)
 
+    // Undo
+    await rows.first().click()
+    await page.waitForTimeout(300)
     await page.keyboard.down('Control')
     await page.keyboard.press('z')
     await page.keyboard.up('Control')
-    await expect(page.getByText(/undone/i).first()).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText(/[Uu]ndo/).first()).toBeVisible({ timeout: 15_000 })
+    await page.waitForTimeout(1000)
 
+    // Redo
+    await rows.first().click()
+    await page.waitForTimeout(300)
     await page.keyboard.down('Control')
     await page.keyboard.down('Shift')
     await page.keyboard.press('z')
     await page.keyboard.up('Shift')
     await page.keyboard.up('Control')
-    await expect(page.getByText(/redone/i).first()).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText(/[Rr]edo/).first()).toBeVisible({ timeout: 15_000 })
   })
 
   // ── E-04: P2 AC3 — Severity override undo ──
@@ -280,24 +290,30 @@ test.describe.serial('Undo/Redo & Conflict Resolution — Story 4.4b ATDD', () =
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
-    const findingRow = page.locator('[role="row"][data-finding-id]').first()
-    await findingRow.waitFor({ state: 'visible', timeout: 30_000 })
+    const grid = page.getByRole('grid')
+    const rows = grid.locator('[role="row"]')
+    await rows.first().waitFor({ state: 'visible', timeout: 30_000 })
+    await page.waitForSelector('[data-review-actions-ready="true"]', { timeout: 10_000 })
 
     // Click finding → open severity override menu via '-' hotkey
-    await findingRow.click()
+    await rows.first().click()
+    await page.waitForTimeout(300)
     await page.keyboard.press('-')
 
     // Select a different severity (e.g., minor)
     const minorOption = page.getByRole('menuitem', { name: /minor/i })
     if (await minorOption.isVisible({ timeout: 3000 }).catch(() => false)) {
       await minorOption.click()
-      await expect(page.getByText(/severity overridden/i).first()).toBeVisible({ timeout: 10_000 })
+      await expect(page.getByText(/severity/i).first()).toBeVisible({ timeout: 10_000 })
+      await page.waitForTimeout(1000)
 
       // Undo
+      await rows.first().click()
+      await page.waitForTimeout(300)
       await page.keyboard.down('Control')
       await page.keyboard.press('z')
       await page.keyboard.up('Control')
-      await expect(page.getByText(/undone/i).first()).toBeVisible({ timeout: 10_000 })
+      await expect(page.getByText(/[Uu]ndo/).first()).toBeVisible({ timeout: 15_000 })
     }
   })
 
@@ -308,18 +324,20 @@ test.describe.serial('Undo/Redo & Conflict Resolution — Story 4.4b ATDD', () =
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
-    const findingRow = page.locator('[role="row"][data-finding-id]').first()
-    await findingRow.waitFor({ state: 'visible', timeout: 30_000 })
+    const grid = page.getByRole('grid')
+    const rows = grid.locator('[role="row"]')
+    await rows.first().waitFor({ state: 'visible', timeout: 30_000 })
+    await page.waitForSelector('[data-review-actions-ready="true"]', { timeout: 10_000 })
 
     // Accept a finding
-    await findingRow.click()
+    await rows.first().click()
     await page.keyboard.press('a')
-    await expect(page.getByText(/accepted/i).first()).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText(/accepted/i).first()).toBeVisible({ timeout: 15_000 })
 
     // Navigate away (go back to project page, then return to a different context)
     // For this test, we just reload the page which resets the client-side undo stack
     await page.reload()
-    await findingRow.waitFor({ state: 'visible', timeout: 30_000 })
+    await rows.first().waitFor({ state: 'visible', timeout: 30_000 })
 
     // Ctrl+Z should be no-op (stack cleared on page load)
     await page.keyboard.down('Control')

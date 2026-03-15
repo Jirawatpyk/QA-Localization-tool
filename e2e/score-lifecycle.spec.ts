@@ -209,7 +209,6 @@ test.describe.serial('Score Lifecycle & Confidence Display — Story 3.5', () =>
     // Act: navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, fileId)
-    await waitForReviewPageReady(page)
 
     // Assert: ScoreBadge shows calculating / spinner state
     const scoreBadge = page.getByTestId('score-badge')
@@ -248,7 +247,6 @@ test.describe.serial('Score Lifecycle & Confidence Display — Story 3.5', () =>
     // Act: navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, fileId)
-    await waitForReviewPageReady(page)
 
     // Assert: ScoreBadge shows "AI Screened" state (L1L2 = Economy pipeline complete)
     const scoreBadge = page.getByTestId('score-badge')
@@ -289,7 +287,6 @@ test.describe.serial('Score Lifecycle & Confidence Display — Story 3.5', () =>
     // Act: navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, fileId)
-    await waitForReviewPageReady(page)
 
     // Wait for the review page to fully render with the score badge
     const scoreBadge = page.getByTestId('score-badge')
@@ -363,7 +360,6 @@ test.describe.serial('Score Lifecycle & Confidence Display — Story 3.5', () =>
     // Act: navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, fileId)
-    await waitForReviewPageReady(page)
 
     // Assert: AutoPassRationale card is visible (check positive indicator first)
     const rationaleCard = page.getByTestId('auto-pass-rationale')
@@ -439,7 +435,6 @@ test.describe.serial('Score Lifecycle & Confidence Display — Story 3.5', () =>
     // Act: navigate to review page
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, fileId)
-    await waitForReviewPageReady(page)
 
     // Wait for findings list to render
     const confidenceBadges = page.getByTestId('confidence-badge')
