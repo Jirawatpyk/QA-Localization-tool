@@ -352,7 +352,14 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
           toast.error(`Redo failed: ${result.error}`)
           return
         }
-        store.pushUndo(entry)
+        // CR-R2-M2: addFinding generates new UUID — update entry so next undo-add deletes correct ID
+        const newId = result.data.findingId
+        store.pushUndo({
+          ...entry,
+          findingId: newId,
+          newStates: new Map([[newId, 'manual']]),
+          findingSnapshot: entry.findingSnapshot ? { ...entry.findingSnapshot, id: newId } : null,
+        })
         toast.success(`Redone: ${entry.description}`)
         announce(`Redone: ${entry.description}`)
         return

@@ -37,7 +37,7 @@ import {
   queryFileByName,
   queryScore,
 } from './helpers/pipeline-admin'
-import { gotoReviewPageWithRetry } from './helpers/review-page'
+import { gotoReviewPageReadyWithRetry } from './helpers/review-page'
 import {
   SUPABASE_URL,
   adminHeaders,
@@ -237,7 +237,7 @@ test.describe.serial('L3 Resilience + Partial Score UI (P1-15, R3-011)', () => {
     }
 
     // Navigate to review page (with retry for transient SSR errors)
-    await gotoReviewPageWithRetry(page, projectId, fileId)
+    await gotoReviewPageReadyWithRetry(page, projectId, fileId)
 
     const scoreBadge = page.getByTestId('score-badge')
     await expect(scoreBadge).toBeVisible({ timeout: 30_000 })
@@ -259,7 +259,7 @@ test.describe.serial('L3 Resilience + Partial Score UI (P1-15, R3-011)', () => {
 
     await signupOrLogin(page, TEST_EMAIL)
     await page.waitForURL('**/dashboard', { timeout: 15_000 })
-    await gotoReviewPageWithRetry(page, projectId, partialFileId)
+    await gotoReviewPageReadyWithRetry(page, projectId, partialFileId)
 
     // Assert: ScoreBadge shows partial state
     const scoreBadge = page.getByTestId('score-badge')

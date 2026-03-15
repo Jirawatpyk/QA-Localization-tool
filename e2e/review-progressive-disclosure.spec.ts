@@ -17,7 +17,7 @@
 import { test, expect } from '@playwright/test'
 
 import { cleanupTestProject } from './helpers/pipeline-admin'
-import { gotoReviewPageWithRetry } from './helpers/review-page'
+import { gotoReviewPageReadyWithRetry } from './helpers/review-page'
 import {
   SUPABASE_URL,
   adminHeaders,
@@ -208,7 +208,7 @@ test.describe.serial('Progressive Disclosure — Story 4.1a', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
-    await gotoReviewPageWithRetry(page, projectId, fileId)
+    await gotoReviewPageReadyWithRetry(page, projectId, fileId)
 
     // Severity rowgroups should exist with proper aria-labels
     const criticalGroup = page.locator('[role="rowgroup"][aria-label="Critical findings"]')
@@ -232,7 +232,7 @@ test.describe.serial('Progressive Disclosure — Story 4.1a', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
-    await gotoReviewPageWithRetry(page, projectId, fileId)
+    await gotoReviewPageReadyWithRetry(page, projectId, fileId)
 
     // Critical finding row should have aria-expanded="true"
     const criticalGroup = page.locator('[role="rowgroup"][aria-label="Critical findings"]')
@@ -248,7 +248,7 @@ test.describe.serial('Progressive Disclosure — Story 4.1a', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
-    await gotoReviewPageWithRetry(page, projectId, fileId)
+    await gotoReviewPageReadyWithRetry(page, projectId, fileId)
 
     // Minor accordion header should show "Minor (3)" — 3 seeded minor findings
     const minorAccordion = page.getByText(/Minor \(3\)/i)
@@ -270,7 +270,7 @@ test.describe.serial('Progressive Disclosure — Story 4.1a', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
-    await gotoReviewPageWithRetry(page, projectId, fileId)
+    await gotoReviewPageReadyWithRetry(page, projectId, fileId)
 
     // Click Minor accordion to expand
     const minorAccordion = page.getByText(/Minor \(\d+\)/i)
@@ -295,7 +295,7 @@ test.describe.serial('Progressive Disclosure — Story 4.1a', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
-    await gotoReviewPageWithRetry(page, projectId, fileId)
+    await gotoReviewPageReadyWithRetry(page, projectId, fileId)
 
     // Major group should have compact rows with severity indicator
     const majorGroup = page.locator('[role="rowgroup"][aria-label="Major findings"]')
@@ -315,7 +315,7 @@ test.describe.serial('Progressive Disclosure — Story 4.1a', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
-    await gotoReviewPageWithRetry(page, projectId, fileId)
+    await gotoReviewPageReadyWithRetry(page, projectId, fileId)
 
     // All SVG icons inside finding rows should have aria-hidden="true"
     const findingRows = page.getByTestId('finding-compact-row')
@@ -335,7 +335,7 @@ test.describe.serial('Progressive Disclosure — Story 4.1a', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
-    await gotoReviewPageWithRetry(page, projectId, fileId)
+    await gotoReviewPageReadyWithRetry(page, projectId, fileId)
 
     // ReviewProgress component should be visible
     const reviewProgress = page.getByTestId('review-progress')
@@ -361,7 +361,7 @@ test.describe.serial('Progressive Disclosure — Story 4.1a', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
-    await gotoReviewPageWithRetry(page, projectId, fileId)
+    await gotoReviewPageReadyWithRetry(page, projectId, fileId)
 
     const countSummary = page.getByTestId('finding-count-summary')
     await expect(countSummary).toBeVisible({ timeout: 15_000 })
@@ -375,7 +375,7 @@ test.describe.serial('Progressive Disclosure — Story 4.1a', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
-    await gotoReviewPageWithRetry(page, projectId, fileId)
+    await gotoReviewPageReadyWithRetry(page, projectId, fileId)
 
     // Find a Major row that is NOT expanded
     const majorGroup = page.locator('[role="rowgroup"][aria-label="Major findings"]')
