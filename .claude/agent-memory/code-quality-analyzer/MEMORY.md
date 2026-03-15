@@ -36,6 +36,7 @@
 - `story-4-1b-findings.md` — Story 4.1b Keyboard Navigation & Focus Management CR R1-R2 (R2: 0C/2H/3S)
 - `story-4-1c-findings.md` — Story 4.1c Detail Panel & Segment Context CR R1-R2 (R2: 0C/3H/5M/5L)
 - `story-4-3-findings.md` — Story 4.3 Extended Review Actions CR R1 (0C/4H/5M/5L)
+- `story-4-4a-findings.md` — Story 4.4a Bulk Operations & Decision Override CR R1 (1C/4H/5M/4L)
 
 ## Recurring Anti-Patterns (check EVERY review)
 

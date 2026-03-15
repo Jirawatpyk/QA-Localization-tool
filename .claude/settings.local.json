@@ -175,7 +175,10 @@
       "Bash(cd \"C:/Users/Jiraw/OneDrive/Documents/qa-localization-tool\" && rm -rf .next node_modules/.cache 2>/dev/null && echo \"Cleared all caches\")",
       "Bash(cd \"C:/Users/Jiraw/OneDrive/Documents/qa-localization-tool\" && rm -rf .next 2>/dev/null; rm -rf node_modules/.cache 2>/dev/null; echo \"done\")",
       "Bash(INNGEST_DEV_URL=http://localhost:8288 npx playwright test e2e/review-actions.spec.ts --reporter=list 2>&1)",
-      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@127.0.0.1:54322/postgres\" npx drizzle-kit migrate 2>&1)"
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@127.0.0.1:54322/postgres\" npx drizzle-kit migrate 2>&1)",
+      "Bash(for f:*)",
+      "Bash(sed -i \"/vi.mock.*rejectFinding.action/a\\\\:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }
