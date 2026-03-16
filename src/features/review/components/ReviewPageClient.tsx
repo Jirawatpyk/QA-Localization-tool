@@ -51,6 +51,7 @@ import {
 import type { UndoEntry } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import { mountAnnouncer, unmountAnnouncer } from '@/features/review/utils/announce'
+import { saveFilterCache } from '@/features/review/utils/filter-cache'
 import { findingMatchesFilters } from '@/features/review/utils/filter-helpers'
 import { getNewState } from '@/features/review/utils/state-transitions'
 import { useIsDesktop, useIsLaptop } from '@/hooks/useMediaQuery'
@@ -1102,6 +1103,17 @@ export function ReviewPageClient({
             onOpenChange={setCommandPaletteOpen}
             findings={filteredFindings}
             siblingFiles={initialData.siblingFiles}
+            onNavigateToFile={(targetFileId) => {
+              // CR-R2 L2: wire file navigation — save filter cache + navigate
+              const store = useReviewStore.getState()
+              const fs = store.fileStates.get(fileId)
+              saveFilterCache(fileId, {
+                filterState: { ...(fs?.filterState ?? store.filterState) },
+                searchQuery: fs?.searchQuery ?? store.searchQuery,
+                aiSuggestionsEnabled: fs?.aiSuggestionsEnabled ?? store.aiSuggestionsEnabled,
+              })
+              window.location.href = `/projects/${projectId}/review/${targetFileId}`
+            }}
             onNavigateToFinding={(id) => handleActiveFindingChange(id)}
             onAction={(action) => {
               if (!activeFindingState) return

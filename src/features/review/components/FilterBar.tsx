@@ -90,10 +90,14 @@ function computeMatchCounts(
       counts.severity[f.severity] = (counts.severity[f.severity] ?? 0) + 1
     }
     if (baseMatch('layer')) {
-      counts.layer[f.detectedByLayer] = (counts.layer[f.detectedByLayer] ?? 0) + 1
+      // Bucket L3 under 'L2' key to match filter group behavior (AI = L2+L3)
+      const layerKey = f.detectedByLayer === 'L3' ? 'L2' : f.detectedByLayer
+      counts.layer[layerKey] = (counts.layer[layerKey] ?? 0) + 1
     }
     if (baseMatch('status')) {
-      counts.status[f.status] = (counts.status[f.status] ?? 0) + 1
+      // Bucket 're_accepted' under 'accepted' to match filter group behavior (M1)
+      const statusKey = f.status === 're_accepted' ? 'accepted' : f.status
+      counts.status[statusKey] = (counts.status[statusKey] ?? 0) + 1
     }
     if (baseMatch('category')) {
       counts.category[f.category] = (counts.category[f.category] ?? 0) + 1
