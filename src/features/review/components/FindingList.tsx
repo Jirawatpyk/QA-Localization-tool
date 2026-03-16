@@ -215,7 +215,14 @@ export function FindingList({
       }
     }
     setActiveFindingId(storeSelectedId)
-  }, [storeSelectedId, activeFindingId, flattenedIds, groups.minor, minorAccordionOpen])
+  }, [
+    storeSelectedId,
+    activeFindingId,
+    flattenedIds,
+    groups.minor,
+    minorAccordionOpen,
+    skipStoreSyncRef,
+  ])
 
   // DOM focus wiring — focus the active row after activeFindingId changes
   const prevActiveFindingIdRef = useRef<string | null>(null)
