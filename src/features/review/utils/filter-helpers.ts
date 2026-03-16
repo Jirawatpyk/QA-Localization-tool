@@ -1,4 +1,17 @@
-import type { Finding, FindingSeverity, FindingStatus, DetectedByLayer } from '@/types/finding'
+import type { DetectedByLayer, FindingSeverity, FindingStatus } from '@/types/finding'
+
+/** Minimal fields needed for filter matching — accepts both Finding and FindingForDisplay */
+export type FilterableFinding = {
+  severity: FindingSeverity
+  status: FindingStatus
+  detectedByLayer: DetectedByLayer
+  category: string
+  aiConfidence: number | null
+  sourceTextExcerpt: string | null
+  targetTextExcerpt: string | null
+  description: string
+  suggestedFix: string | null
+}
 
 export type ConfidenceFilter = 'high' | 'medium' | 'low'
 
@@ -27,7 +40,7 @@ export const DEFAULT_FILTER_STATE: FilterState = {
 
 /** Check if a finding passes all current filters + search + AI toggle */
 export function findingMatchesFilters(
-  finding: Finding,
+  finding: FilterableFinding,
   filterState: FilterState,
   searchQuery: string,
   aiSuggestionsEnabled: boolean,

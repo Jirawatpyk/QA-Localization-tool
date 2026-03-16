@@ -314,16 +314,13 @@ test.describe.serial('Story 4.5: Search, Filter & AI Layer Toggle', () => {
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, fileIdA)
 
-    // Type search query
+    // Type search query — Playwright expect auto-retries (no manual waitForTimeout)
     const searchInput = page.getByTestId('search-input')
     await searchInput.fill('mistranslation')
 
-    // Wait for debounce (300ms+)
-    await page.waitForTimeout(500)
-
-    // Should filter to findings matching "mistranslation"
+    // Should filter to findings matching "mistranslation" (auto-retry covers debounce)
     const countLabel = page.getByTestId('filter-count')
-    await expect(countLabel).toContainText('Showing 1 of 6')
+    await expect(countLabel).toContainText('Showing 1 of 6', { timeout: 5_000 })
   })
 
   test('[P2] E-06: should handle Thai text search', async ({ page }) => {
@@ -333,15 +330,13 @@ test.describe.serial('Story 4.5: Search, Filter & AI Layer Toggle', () => {
     // Clear status filter to see all
     await page.getByTestId('filter-status-all').click()
 
-    // Search with Thai text
+    // Search with Thai text — Playwright expect auto-retries (no manual waitForTimeout)
     const searchInput = page.getByTestId('search-input')
     await searchInput.fill('คำแปล')
-    await page.waitForTimeout(500)
 
-    // Should find matching Thai text
+    // Should find matching Thai text (auto-retry covers debounce)
     const countLabel = page.getByTestId('filter-count')
-    // At least one finding with Thai target text should match
-    await expect(countLabel).not.toContainText('Showing 0')
+    await expect(countLabel).not.toContainText('Showing 0', { timeout: 5_000 })
   })
 
   // ── AI Layer Toggle (AC8) ──

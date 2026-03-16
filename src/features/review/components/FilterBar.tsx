@@ -78,12 +78,7 @@ function computeMatchCounts(
   for (const f of findings) {
     const baseMatch = (dimToSkip: keyof FilterState) => {
       const testFilter = { ...filterState, [dimToSkip]: null }
-      return findingMatchesFilters(
-        f as Parameters<typeof findingMatchesFilters>[0],
-        testFilter,
-        searchQuery,
-        aiSuggestionsEnabled,
-      )
+      return findingMatchesFilters(f, testFilter, searchQuery, aiSuggestionsEnabled)
     }
 
     if (baseMatch('severity')) {

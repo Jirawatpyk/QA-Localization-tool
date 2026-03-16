@@ -4,38 +4,22 @@
  */
 import { describe, it, expect } from 'vitest'
 
-import type { Finding } from '@/types/finding'
-
-import type { FilterState } from './filter-helpers'
+import type { FilterableFinding, FilterState } from './filter-helpers'
 import { DEFAULT_FILTER_STATE, findingMatchesFilters, getConfidenceBucket } from './filter-helpers'
 
 // ── Factory ──
 
-function makeFinding(overrides: Partial<Finding> = {}): Finding {
+function makeFinding(overrides: Partial<FilterableFinding> = {}): FilterableFinding {
   return {
-    id: 'f-1',
-    fileId: 'file-1',
-    projectId: 'proj-1',
-    tenantId: 'tenant-1',
-    sessionId: 'session-1',
-    segmentId: null,
-    reviewSessionId: null,
     severity: 'major',
-    originalSeverity: null,
     category: 'accuracy',
     status: 'pending',
     description: 'Test finding description',
     detectedByLayer: 'L1',
-    aiModel: null,
     aiConfidence: null,
     suggestedFix: null,
     sourceTextExcerpt: 'Source text',
     targetTextExcerpt: 'Target text',
-    scope: 'per-file',
-    relatedFileIds: null,
-    segmentCount: 1,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,
   }
 }

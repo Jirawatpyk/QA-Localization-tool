@@ -665,12 +665,7 @@ export function ReviewPageClient({
   const filteredFindings = useMemo(
     () =>
       findingsForDisplay.filter((f) =>
-        findingMatchesFilters(
-          f as Parameters<typeof findingMatchesFilters>[0],
-          filterState,
-          searchQuery,
-          aiSuggestionsEnabled,
-        ),
+        findingMatchesFilters(f, filterState, searchQuery, aiSuggestionsEnabled),
       ),
     [findingsForDisplay, filterState, searchQuery, aiSuggestionsEnabled],
   )
