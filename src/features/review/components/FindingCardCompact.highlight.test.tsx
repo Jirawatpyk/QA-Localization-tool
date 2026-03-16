@@ -62,4 +62,26 @@ describe('FindingCardCompact search highlight', () => {
     expect(marks[1]?.textContent).toBe('test')
     expect(marks[2]?.textContent).toBe('test')
   })
+
+  // CR L4: Thai/CJK highlight tests (AC4 "Supports Thai/CJK text")
+  it('should highlight Thai text', () => {
+    const { container } = render(<>{highlightText('ข้อผิดพลาดคำแปลร้ายแรง', 'คำแปล')}</>)
+    const mark = container.querySelector('mark')
+    expect(mark).not.toBeNull()
+    expect(mark?.textContent).toBe('คำแปล')
+  })
+
+  it('should highlight CJK (Japanese) text', () => {
+    const { container } = render(<>{highlightText('翻訳が不正確です', '翻訳')}</>)
+    const mark = container.querySelector('mark')
+    expect(mark).not.toBeNull()
+    expect(mark?.textContent).toBe('翻訳')
+  })
+
+  it('should highlight Korean text', () => {
+    const { container } = render(<>{highlightText('번역이 부정확합니다', '번역')}</>)
+    const mark = container.querySelector('mark')
+    expect(mark).not.toBeNull()
+    expect(mark?.textContent).toBe('번역')
+  })
 })

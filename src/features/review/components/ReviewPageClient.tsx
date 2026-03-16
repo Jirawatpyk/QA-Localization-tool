@@ -1013,6 +1013,7 @@ export function ReviewPageClient({
                 handleActiveFindingChange(findingId)
               }}
               onNavigateReady={handleNavigateReady}
+              searchQuery={searchQuery}
             />
           </div>
           {/* Action Bar (Task 5 — below finding list) */}
@@ -1099,7 +1100,7 @@ export function ReviewPageClient({
           <CommandPalette
             open={commandPaletteOpen}
             onOpenChange={setCommandPaletteOpen}
-            findings={findingsForDisplay}
+            findings={filteredFindings}
             siblingFiles={initialData.siblingFiles}
             onNavigateToFinding={(id) => handleActiveFindingChange(id)}
             onAction={(action) => {

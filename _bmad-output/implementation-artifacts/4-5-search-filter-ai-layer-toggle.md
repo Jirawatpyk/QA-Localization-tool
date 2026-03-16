@@ -322,6 +322,19 @@ Claude Opus 4.6 (1M context)
 - Task 7: highlightText using indexOf (not regex), React.memo wrapper on FindingCardCompact, searchQuery prop
 - Task 8: All components wired in ReviewPageClient, updated 5 existing test file mocks, 3645 unit tests pass
 
+### CR R1 Fixes Applied (2026-03-17)
+- **H1:** Wired searchQuery prop through FindingList → FindingCardCompact (AC4 highlight was dead code)
+- **H2:** Layer filter 'AI' now matches L2+L3 (was L2-only, excluded L3 findings)
+- **H3:** Strengthened E2E assertions: E-02/E-07/E-09 now verify exact filtered counts
+- **H4:** CommandPalette receives filteredFindings (was findingsForDisplay → silent no-op on filtered-out findings)
+- **H5:** Defensive merge with DEFAULT_FILTER_STATE in createFileState() — prevents old cache corruption
+- **H6:** Extracted getConfidenceBucket() shared function (FilterBar + filter-helpers single source)
+- **M1:** Status filter 'accepted' now includes 're_accepted' (semantic grouping)
+- **M2:** Created filter-helpers.test.ts with 37 direct tests (boundaries, Thai/CJK/Korean, special chars)
+- **L2:** Guard for empty flattenedIds → null instead of undefined
+- **L3:** Updated File List with 5 missing files
+- **L4:** Added Thai/CJK/Korean highlight tests
+
 ### File List
 - src/features/review/stores/review.store.ts (MODIFIED)
 - src/features/review/utils/filter-helpers.ts (NEW)
@@ -347,5 +360,10 @@ Claude Opus 4.6 (1M context)
 - src/features/review/components/ReviewPageClient.story34.test.tsx (MODIFIED — mock fields)
 - src/features/review/components/ReviewPageClient.story35.test.tsx (MODIFIED — mock fields)
 - _bmad-output/implementation-artifacts/sprint-status.yaml (MODIFIED — status)
+- src/features/review/utils/filter-cache.ts (NEW — sessionStorage persistence)
+- src/features/review/utils/filter-cache.test.ts (NEW — cache unit tests)
+- src/features/review/utils/filter-helpers.test.ts (NEW — CR M2: direct filter logic tests)
+- src/features/review/components/FindingList.tsx (MODIFIED — CR H1: searchQuery prop wiring)
+- e2e/review-search-filter.spec.ts (NEW — E2E test spec)
 - package.json (MODIFIED — cmdk dep)
 - package-lock.json (MODIFIED — cmdk dep)

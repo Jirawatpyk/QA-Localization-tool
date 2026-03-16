@@ -35,6 +35,8 @@ export type FindingListProps = {
   onOverrideBadgeClick?: ((findingId: string) => void) | undefined
   // Expose navigation for parent-level keyboard handler (review-zone scope)
   onNavigateReady?: ((fns: { next: () => void; prev: () => void }) => void) | undefined
+  // Story 4.5 CR: searchQuery for highlight in FindingCardCompact (AC4)
+  searchQuery?: string | undefined
 }
 
 const SEVERITY_ORDER: Record<FindingSeverity, number> = { critical: 0, major: 1, minor: 2 }
@@ -65,6 +67,7 @@ export function FindingList({
   skipStoreSyncRef,
   onOverrideBadgeClick,
   onNavigateReady,
+  searchQuery = '',
 }: FindingListProps) {
   const reducedMotion = useReducedMotion()
   // useKeyboardActions removed — J/K handled by grid onKeyDown (avoids double-fire)
@@ -182,9 +185,13 @@ export function FindingList({
     if (prevFlattenedIds.length > 0 && activeFindingId !== null) {
       const newIndex = flattenedIds.indexOf(activeFindingId)
       if (newIndex === -1) {
-        const oldIndex = prevFlattenedIds.indexOf(activeFindingId)
-        const safeIndex = Math.min(Math.max(oldIndex, 0), flattenedIds.length - 1)
-        setActiveFindingId(flattenedIds[safeIndex] ?? null)
+        if (flattenedIds.length === 0) {
+          setActiveFindingId(null)
+        } else {
+          const oldIndex = prevFlattenedIds.indexOf(activeFindingId)
+          const safeIndex = Math.min(Math.max(oldIndex, 0), flattenedIds.length - 1)
+          setActiveFindingId(flattenedIds[safeIndex] ?? null)
+        }
       }
     }
   }
@@ -404,6 +411,7 @@ export function FindingList({
           onReject={onReject}
           isActionInFlight={isActionInFlight}
           onOverrideBadgeClick={onOverrideBadgeClick}
+          searchQuery={searchQuery}
         />
         {isExpanded && (
           <FindingCard

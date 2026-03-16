@@ -6,7 +6,11 @@ import { Button } from '@/components/ui/button'
 import { useReviewStore, useFileState } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import type { ConfidenceFilter, FilterState } from '@/features/review/utils/filter-helpers'
-import { DEFAULT_FILTER_STATE, findingMatchesFilters } from '@/features/review/utils/filter-helpers'
+import {
+  DEFAULT_FILTER_STATE,
+  findingMatchesFilters,
+  getConfidenceBucket,
+} from '@/features/review/utils/filter-helpers'
 import { cn } from '@/lib/utils'
 import type { DetectedByLayer, FindingSeverity, FindingStatus } from '@/types/finding'
 
@@ -95,10 +99,7 @@ function computeMatchCounts(
       counts.category[f.category] = (counts.category[f.category] ?? 0) + 1
     }
     if (baseMatch('confidence') && f.aiConfidence !== null) {
-      let bucket: ConfidenceFilter
-      if (f.aiConfidence > 85) bucket = 'high'
-      else if (f.aiConfidence >= 70 && f.aiConfidence <= 85) bucket = 'medium'
-      else bucket = 'low'
+      const bucket = getConfidenceBucket(f.aiConfidence)
       counts.confidence[bucket] = (counts.confidence[bucket] ?? 0) + 1
     }
   }

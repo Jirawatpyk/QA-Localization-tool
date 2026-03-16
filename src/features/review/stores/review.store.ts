@@ -564,9 +564,11 @@ function createFileState(fileId: string): FileState {
   if (cached) clearFilterCache(fileId)
   const fs = createFreshFileState()
   if (cached) {
-    fs.filterState = { ...cached.filterState }
-    fs.searchQuery = cached.searchQuery
-    fs.aiSuggestionsEnabled = cached.aiSuggestionsEnabled
+    // CR-H5: defensive merge — old cache may lack new fields (e.g., confidence added in 4.5)
+    fs.filterState = { ...DEFAULT_FILTER_STATE, ...cached.filterState }
+    fs.searchQuery = typeof cached.searchQuery === 'string' ? cached.searchQuery : ''
+    fs.aiSuggestionsEnabled =
+      typeof cached.aiSuggestionsEnabled === 'boolean' ? cached.aiSuggestionsEnabled : true
   }
   return fs
 }

@@ -242,9 +242,9 @@ test.describe.serial('Story 4.5: Search, Filter & AI Layer Toggle', () => {
     await expect(page.getByTestId('filter-chip-severity-major')).toBeVisible()
     await expect(page.getByTestId('filter-chip-layer-L2')).toBeVisible()
 
-    // AND logic: only major L2 findings
+    // AND logic: only major AI (L2+L3) findings — seeded: accuracy L2 + fluency L3 = 2
     const countLabel = page.getByTestId('filter-count')
-    await expect(countLabel).toContainText('of 6')
+    await expect(countLabel).toContainText('Showing 2 of 6')
   })
 
   test('[P1] E-03: should clear all filters and show all findings', async ({ page }) => {
@@ -362,8 +362,8 @@ test.describe.serial('Story 4.5: Search, Filter & AI Layer Toggle', () => {
     await aiToggle.click()
 
     // Should hide L2/L3 findings (only L1 remain)
-    // L1 findings: 2 (terminology + style)
-    await expect(page.getByTestId('filter-count')).toContainText('of 6')
+    // L1 findings: 2 (terminology L1 + style L1)
+    await expect(page.getByTestId('filter-count')).toContainText('Showing 2 of 6')
 
     // "AI findings hidden" indicator should appear
     await expect(page.getByTestId('ai-hidden-indicator')).toBeVisible()
@@ -411,9 +411,12 @@ test.describe.serial('Story 4.5: Search, Filter & AI Layer Toggle', () => {
     // Apply severity=critical filter (hides most selections)
     await page.getByTestId('filter-severity-critical').click()
 
-    // Selection should be reduced or cleared
-    // The exact behavior depends on which findings matched — but no crash should occur
-    await expect(page.getByTestId('filter-count')).toBeVisible()
+    // Selection reduced: only 1 critical pending → bulk mode should exit (selection empty or 1)
+    // Verify filter applied correctly + no crash
+    await expect(page.getByTestId('filter-count')).toContainText('Showing 1 of 6')
+    // Bulk checkboxes should not be visible (exited bulk mode or reduced to single)
+    const checkboxes = page.locator('[role="checkbox"][aria-label^="Select finding"]')
+    await expect(checkboxes).toHaveCount(0)
   })
 
   test('[P1] E-10: should auto-advance within filtered view after action', async ({ page }) => {

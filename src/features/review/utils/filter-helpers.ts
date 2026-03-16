@@ -2,6 +2,13 @@ import type { Finding, FindingSeverity, FindingStatus, DetectedByLayer } from '@
 
 export type ConfidenceFilter = 'high' | 'medium' | 'low'
 
+/** Shared confidence bucket: high >85, medium 70–85, low <70 */
+export function getConfidenceBucket(aiConfidence: number): ConfidenceFilter {
+  if (aiConfidence > 85) return 'high'
+  if (aiConfidence >= 70) return 'medium'
+  return 'low'
+}
+
 export type FilterState = {
   severity: FindingSeverity | null
   status: FindingStatus | null
@@ -34,26 +41,28 @@ export function findingMatchesFilters(
   }
   // Severity
   if (filterState.severity !== null && finding.severity !== filterState.severity) return false
-  // Status
-  if (filterState.status !== null && finding.status !== filterState.status) return false
-  // Layer
-  if (filterState.layer !== null && finding.detectedByLayer !== filterState.layer) return false
+  // Status: 'accepted' also matches 're_accepted' (semantic grouping)
+  if (filterState.status !== null) {
+    if (filterState.status === 'accepted') {
+      if (finding.status !== 'accepted' && finding.status !== 're_accepted') return false
+    } else {
+      if (finding.status !== filterState.status) return false
+    }
+  }
+  // Layer: 'L1' = exact match, 'L2' = AI group (L2+L3) per AC1 "All/Rule-based/AI"
+  if (filterState.layer !== null) {
+    if (filterState.layer === 'L2') {
+      if (finding.detectedByLayer !== 'L2' && finding.detectedByLayer !== 'L3') return false
+    } else {
+      if (finding.detectedByLayer !== filterState.layer) return false
+    }
+  }
   // Category
   if (filterState.category !== null && finding.category !== filterState.category) return false
-  // Confidence thresholds: high >85, medium 70–85, low <70
+  // Confidence thresholds via shared bucket function
   if (filterState.confidence !== null) {
     if (finding.aiConfidence === null) return false
-    switch (filterState.confidence) {
-      case 'high':
-        if (finding.aiConfidence <= 85) return false
-        break
-      case 'medium':
-        if (finding.aiConfidence < 70 || finding.aiConfidence > 85) return false
-        break
-      case 'low':
-        if (finding.aiConfidence >= 70) return false
-        break
-    }
+    if (getConfidenceBucket(finding.aiConfidence) !== filterState.confidence) return false
   }
   // Search query (Thai/CJK safe — uses toLocaleLowerCase + includes)
   const trimmedQuery = searchQuery.trim()
