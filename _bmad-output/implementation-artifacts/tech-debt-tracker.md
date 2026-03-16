@@ -644,3 +644,24 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Mitigation:** Low impact until AI learning pipeline (Epic 9) consumes this field. All rows have consistent `false` value — no data inconsistency.
 - **Fix:** Wire from user profile `reviewer_is_native` field once Story 5.2 (Non-native auto-tag) implements the user language proficiency model.
 - **Status:** DEFERRED → **Story 5.2 — Non-native auto-tag, native reviewer access**
+
+---
+
+## Category 7: Architecture & Patterns
+
+### TD-ARCH-001: FileNavigationDropdown uses window.location.href instead of Next.js Link
+- **Date:** 2026-03-16
+- **Story:** 4.5 (Search, Filter & AI Layer Toggle)
+- **Phase:** impl + CR
+- **Severity:** Medium
+- **Files:** `src/features/review/components/FileNavigationDropdown.tsx`, `src/features/review/stores/review.store.ts`
+- **Description:** FileNavigationDropdown ใช้ `window.location.href` (full page reload) แทน Next.js `<Link>` สำหรับ file navigation. สาเหตุ: Next.js App Router ใช้ `React.startTransition` สำหรับ `<Link>` navigation ทำให้ OLD component tree ค้างอยู่ใน DOM ซ้อนกับ NEW tree ระหว่าง transition. ทั้ง 2 instances share Zustand singleton store เดียวกัน — เมื่อ `resetForFile()` ของ instance ใหม่ destructively clear store, instance เก่าที่ยังมีชีวิตเห็น data หาย ทำให้:
+  1. **UX:** 2 review zones ซ้อนกัน — old zone block click บน new zone
+  2. **Data:** Filter cache save อ่าน store state ที่ถูก reset ไปแล้ว (ได้ defaults แทนค่าจริง)
+  3. **Race condition:** `processedFileIdRef` set ก่อน `initialData` stream ครบ → guard block re-init → findings ว่างเปล่า
+  4. `key={fileId}` **ไม่แก้ปัญหา** — App Router transitions ignore key (verified by E2E: 2 zones ยังคง overlap หลังใส่ key)
+- **Current mitigation:** `window.location.href` = full reload eliminates overlap + sessionStorage persists filter state ข้าม reload. ทำงานถูกต้อง, tested by 12 E2E tests.
+- **Impact:** Layout (sidebar, header) reload ทุกครั้งที่ switch file — ช้ากว่า client-side nav ~200-500ms. File switching ไม่ใช่ hot path (ผู้ใช้ไม่ switch ทุกวินาที) — acceptable performance trade-off.
+- **Ideal fix:** Refactor `useReviewStore` เป็น **file-scoped store** (`Map<fileId, FileState>`) — แต่ละ file มี state แยก, ไม่ destructive reset, ไม่ conflict ระหว่าง concurrent instances. จะทำให้ `<Link>` navigation ทำงานได้ปกติโดยไม่มี overlap issue.
+- **Effort:** 1-2 days (refactor store architecture + update all consumers)
+- **Status:** DEFERRED → **Post-Story 4.5 — separate quick-spec for Zustand file-scoped store refactor**

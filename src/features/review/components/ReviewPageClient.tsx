@@ -466,10 +466,9 @@ export function ReviewPageClient({
   // new initialData reference), the guard skips re-initialization to protect optimistic state.
   const processedFileIdRef = useRef<string | null>(null)
 
-  // Initialize store on fileId change. initialData is in deps so the effect runs when it
-  // changes, but the guard ensures we only process once per unique fileId.
-  // Initialize store on fileId change — with full reload navigation,
-  // resetForFile restores filter from sessionStorage (AC3).
+  // Initialize store on fileId change — resetForFile restores filter from sessionStorage (AC3).
+  // Filter cache is saved by FileNavigationDropdown.handleFileSelect BEFORE window.location.href
+  // (not via cleanup effect — see FileNavigationDropdown.tsx JSDoc for why).
   useEffect(() => {
     // Guard: skip re-init for same file (protects optimistic state from RSC revalidation).
     // Exception: if findingsMap is empty but initialData has findings → data arrived late.

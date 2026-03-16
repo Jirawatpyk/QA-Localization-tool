@@ -1,7 +1,7 @@
 'use client'
 
-import { ChevronDown, Check } from 'lucide-react'
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { Check, ChevronDown } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useReviewStore } from '@/features/review/stores/review.store'
 import { saveFilterCache } from '@/features/review/utils/filter-cache'
@@ -20,8 +20,22 @@ type FileNavigationDropdownProps = {
 
 /**
  * Compact file selector for navigating between sibling files.
- * Uses window.location.href (full reload) to avoid Next.js React Transition overlap.
- * Filter state persisted via sessionStorage (AC3).
+ *
+ * WHY window.location.href INSTEAD OF <Link>:
+ * Next.js App Router uses React startTransition for <Link> navigation.
+ * During transition, the OLD component tree stays mounted alongside the NEW tree.
+ * Both trees share the same Zustand singleton store. When resetForFile() runs
+ * for the new file, it destructively clears the store — corrupting state for
+ * the old tree that's still alive. This causes:
+ *   1. Two review zones visible simultaneously (old blocks clicks on new)
+ *   2. Filter cache saves default values instead of user's actual filters
+ *   3. key={fileId} does NOT prevent this — App Router transitions ignore key
+ *
+ * Full page reload eliminates the overlap entirely. Filter state persists
+ * via sessionStorage (saved before navigate, restored in resetForFile).
+ *
+ * Future fix: refactor Zustand store to be file-scoped (Map<fileId, FileState>)
+ * so concurrent instances don't conflict. See TD-ARCH-001.
  */
 export function FileNavigationDropdown({
   currentFileName,
@@ -62,14 +76,14 @@ export function FileNavigationDropdown({
         return
       }
       setOpen(false)
-      // Save current filter state to sessionStorage before navigating
+      // Save current filter state to sessionStorage before full reload
       const store = useReviewStore.getState()
       saveFilterCache(currentFileId, {
         filterState: { ...store.filterState },
         searchQuery: store.searchQuery,
         aiSuggestionsEnabled: store.aiSuggestionsEnabled,
       })
-      // Full reload — avoids React Transition overlap (2 zones sharing Zustand)
+      // Full reload — see JSDoc above for why <Link> is not used
       window.location.href = `/projects/${projectId}/review/${fileId}`
     },
     [currentFileId, projectId],
