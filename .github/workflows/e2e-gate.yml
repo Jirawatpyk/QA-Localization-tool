@@ -139,8 +139,8 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install Playwright only (skip full npm ci to avoid ETXTBSY race)
+        run: npm install --no-save @playwright/test && npx playwright install --with-deps chromium
 
       - name: Download blob reports
         uses: actions/download-artifact@v5
