@@ -43,6 +43,7 @@ describe('useFindingsSubscription — dedup (P2-08)', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.clearAllMocks()
+    useReviewStore.setState({ currentFileId: null })
     useReviewStore.getState().resetForFile('test')
     mockChannel.on.mockReturnValue(mockChannel)
   })

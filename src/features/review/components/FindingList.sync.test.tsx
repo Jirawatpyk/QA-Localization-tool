@@ -74,6 +74,7 @@ function defaultProps(overrides?: Record<string, unknown>) {
 describe('FindingList sync (Story 4.1c)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    useReviewStore.setState({ currentFileId: null })
     useReviewStore.getState().resetForFile('test-file-id')
   })
 

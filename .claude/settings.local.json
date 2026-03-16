@@ -178,7 +178,8 @@
       "Bash(DATABASE_URL=\"postgresql://postgres:postgres@127.0.0.1:54322/postgres\" npx drizzle-kit migrate 2>&1)",
       "Bash(for f:*)",
       "Bash(sed -i \"/vi.mock.*rejectFinding.action/a\\\\:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "mcp__plugin_playwright_playwright__browser_fill_form"
     ]
   }
 }

@@ -25,6 +25,7 @@ function seedFindings(statuses: string[]) {
 
 describe('useReviewStore — Keyboard Bulk Operations (Story 4.4a)', () => {
   beforeEach(() => {
+    useReviewStore.setState({ currentFileId: null })
     useReviewStore.getState().resetForFile('kbd-test')
   })
 
@@ -32,6 +33,8 @@ describe('useReviewStore — Keyboard Bulk Operations (Story 4.4a)', () => {
 
   it('[P0] Ctrl+A should select all findings when no filter active', () => {
     seedFindings(['pending', 'accepted', 'rejected'])
+    // Clear default status=pending filter (Story 4.5: default is now status='pending')
+    useReviewStore.getState().setFilter('status', null)
 
     useReviewStore.getState().selectAllFiltered()
 
@@ -42,7 +45,7 @@ describe('useReviewStore — Keyboard Bulk Operations (Story 4.4a)', () => {
 
   it('[P0] Ctrl+A should select only filtered findings when status filter active', () => {
     seedFindings(['pending', 'accepted', 'pending', 'rejected'])
-    useReviewStore.getState().setFilter({ severity: null, status: 'pending', layer: null })
+    useReviewStore.getState().setFilter('status', 'pending')
 
     useReviewStore.getState().selectAllFiltered()
 

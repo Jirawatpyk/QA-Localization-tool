@@ -27,6 +27,7 @@ function seedFindings(count: number, overrides?: Record<string, unknown>) {
 
 describe('useReviewStore — Bulk Operations (Story 4.4a AC1)', () => {
   beforeEach(() => {
+    useReviewStore.setState({ currentFileId: null })
     useReviewStore.getState().resetForFile('test-file-id')
   })
 
@@ -61,7 +62,7 @@ describe('useReviewStore — Bulk Operations (Story 4.4a AC1)', () => {
     useReviewStore.getState().setSortedFindingIds(['f1', 'f2', 'f3', 'f4'])
 
     // Set filter to pending only
-    useReviewStore.getState().setFilter({ severity: null, status: 'pending', layer: null })
+    useReviewStore.getState().setFilter('status', 'pending')
 
     // Select all filtered — should select only pending findings
     useReviewStore.getState().selectAllFiltered()

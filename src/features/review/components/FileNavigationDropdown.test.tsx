@@ -10,14 +10,20 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}))
+
 import { FileNavigationDropdown } from '@/features/review/components/FileNavigationDropdown'
 
 // ── Default props ──
 
 function defaultProps(overrides?: Record<string, unknown>) {
   return {
+    currentFileId: 'f1',
     currentFileName: 'test-translation.sdlxliff',
-    files: [
+    projectId: 'proj-1',
+    siblingFiles: [
       { fileId: 'f1', fileName: 'test-translation.sdlxliff', status: 'l2_completed' as const },
       { fileId: 'f2', fileName: 'glossary-check.xliff', status: 'l1_completed' as const },
       { fileId: 'f3', fileName: 'review-batch.xlsx', status: 'uploaded' as const },
@@ -36,12 +42,12 @@ describe('FileNavigationDropdown', () => {
     expect(screen.getByText('test-translation.sdlxliff')).toBeInTheDocument()
   })
 
-  it('[P1] should wrap content in nav element with aria-label="File navigation"', () => {
+  it('[P1] should wrap content in nav element with aria-label="Switch file"', () => {
     // Arrange & Act
     render(<FileNavigationDropdown {...defaultProps()} />)
 
     // Assert: nav landmark with correct aria-label (Guardrail #38)
-    const nav = screen.getByRole('navigation', { name: /file navigation/i })
+    const nav = screen.getByRole('navigation', { name: /switch file/i })
     expect(nav).toBeInTheDocument()
   })
 

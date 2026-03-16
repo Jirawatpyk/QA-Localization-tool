@@ -2,7 +2,7 @@
 
 import 'server-only'
 
-import { and, asc, count, eq, gt, inArray, sql } from 'drizzle-orm'
+import { and, asc, count, eq, gt, inArray, ne, sql } from 'drizzle-orm'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
@@ -70,6 +70,8 @@ export type FileReviewData = {
   categories: Array<{ category: string; parentCategory: string | null }>
   /** Story 4.4a: Override counts per finding (findingId → count of re-decisions) */
   overrideCounts: Record<string, number>
+  /** Story 4.5: Sibling files in same project for file navigation + command palette */
+  siblingFiles: Array<{ fileId: string; fileName: string }>
 }
 
 const SEVERITY_PRIORITY: Record<string, number> = {
@@ -301,6 +303,19 @@ export async function getFileReviewData(
       )
     }
 
+    // Story 4.5: Query sibling files (same project, exclude current file)
+    const siblingFileRows = await db
+      .select({ fileId: files.id, fileName: files.fileName })
+      .from(files)
+      .where(
+        and(
+          eq(files.projectId, projectId),
+          ne(files.id, fileId),
+          withTenant(files.tenantId, tenantId),
+        ),
+      )
+      .orderBy(asc(files.fileName))
+
     return {
       success: true,
       data: {
@@ -317,6 +332,7 @@ export async function getFileReviewData(
         segments: segmentRows,
         categories: categoryRows,
         overrideCounts,
+        siblingFiles: siblingFileRows,
       },
     }
   } catch (err) {

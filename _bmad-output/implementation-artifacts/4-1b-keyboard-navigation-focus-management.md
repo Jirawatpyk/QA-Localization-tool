@@ -542,3 +542,17 @@ Ran 3 mandatory pre-CR agents before CR R1 submission:
 | `src/features/review/components/ReviewPageClient.story40.test.tsx` | MODIFIED | Added mocks + provided finding for grid test |
 | `e2e/review-keyboard.spec.ts` | MODIFIED | E1 unskipped, seed updated (3 major), inline expand assertions |
 | `_bmad-output/implementation-artifacts/tech-debt-tracker.md` | MODIFIED | TD-E2E-014 → RESOLVED |
+
+### Post-Story Bug Report (found during Story 4.4a E2E CI stabilization — 2026-03-15)
+
+**Bug 1: J/K double-fire — navigateNext called twice per keypress**
+- **Severity:** HIGH (functional — navigation jumps +2 instead of +1)
+- **Root cause:** J/K registered both on document level (`useKeyboardActions.register('j')`) AND on grid `onKeyDown` handler. React synthetic event fires grid handler → `navigateNext()`. Native event bubbles to document → `handleKeyDown` fires the registered handler → `navigateNext()` again. Net: index advances by 2 per press.
+- **Why not caught in CR:** E2E test E1 was flaky (cloud Supabase SSR transient errors masked the real assertion failure). Unit tests mocked `register()` and tested it was called — not that navigation actually worked.
+- **Fix:** Remove `register('j'/'k'/Arrow)` from FindingList. Grid `onKeyDown` is sufficient (scoped to grid focus). Commit `829684e`.
+
+**Bug 2: data-keyboard-ready attribute never set after findings load**
+- **Severity:** HIGH (blocks E2E hydration helper → cascading test failures)
+- **Root cause:** `useEffect(() => { gridRef.current?.setAttribute(...) }, [])` — empty deps array runs on mount. But on first render, `sorted.length === 0` (store not yet populated) → FindingList returns early before grid renders → `gridRef.current` is null → attribute not set. After findings load, effect doesn't re-run (empty deps).
+- **Why not caught in CR:** Pre-existing from initial implementation. Worked intermittently when findings loaded before effect ran (race condition).
+- **Fix:** Use `[gridReady]` dep where `gridReady = sorted.length > 0`. Commit `829684e`.

@@ -1,6 +1,7 @@
 'use client'
 
 import { Check, FileText, FileWarning, Flag, X } from 'lucide-react'
+import { memo } from 'react'
 import type { KeyboardEvent, MouseEvent } from 'react'
 
 import { ConfidenceBadge } from '@/features/review/components/ConfidenceBadge'
@@ -20,6 +21,36 @@ import {
 import { STATUS_BG } from '@/features/review/utils/finding-styles'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 
+/** Highlight ALL matching text using <mark> — uses indexOf (not regex) to avoid escaping issues */
+function highlightText(text: string, query: string): React.ReactNode {
+  if (!query) return text
+  const lowerText = text.toLocaleLowerCase()
+  const lowerQuery = query.toLocaleLowerCase()
+  const firstIdx = lowerText.indexOf(lowerQuery)
+  if (firstIdx === -1) return text
+
+  const parts: React.ReactNode[] = []
+  let cursor = 0
+  let idx = firstIdx
+  let key = 0
+  while (idx !== -1) {
+    if (idx > cursor) {
+      parts.push(text.slice(cursor, idx))
+    }
+    parts.push(
+      <mark key={key++} className="highlight-mark">
+        {text.slice(idx, idx + query.length)}
+      </mark>,
+    )
+    cursor = idx + query.length
+    idx = lowerText.indexOf(lowerQuery, cursor)
+  }
+  if (cursor < text.length) {
+    parts.push(text.slice(cursor))
+  }
+  return <>{parts}</>
+}
+
 export type FindingCardCompactProps = {
   finding: FindingForDisplay
   isActive: boolean
@@ -36,9 +67,10 @@ export type FindingCardCompactProps = {
   onReject?: ((findingId: string) => void) | undefined
   isActionInFlight?: boolean | undefined
   onOverrideBadgeClick?: ((findingId: string) => void) | undefined
+  searchQuery?: string | undefined
 }
 
-export function FindingCardCompact({
+function FindingCardCompactInner({
   finding,
   isActive,
   isExpanded = false,
@@ -54,6 +86,7 @@ export function FindingCardCompact({
   onReject,
   isActionInFlight = false,
   onOverrideBadgeClick,
+  searchQuery = '',
 }: FindingCardCompactProps) {
   const reducedMotion = useReducedMotion()
   const selectionMode = useReviewStore((s) => s.selectionMode)
@@ -207,7 +240,7 @@ export function FindingCardCompact({
               lang={sourceLang}
               className={isCjkLang(sourceLang) ? 'text-cjk-scale' : undefined}
             >
-              {truncate(finding.sourceTextExcerpt, 60)}
+              {highlightText(truncate(finding.sourceTextExcerpt, 60), searchQuery)}
             </span>
           )}
           {finding.sourceTextExcerpt && finding.targetTextExcerpt && ' → '}
@@ -216,7 +249,7 @@ export function FindingCardCompact({
               lang={targetLang}
               className={isCjkLang(targetLang) ? 'text-cjk-scale' : undefined}
             >
-              {truncate(finding.targetTextExcerpt, 60)}
+              {highlightText(truncate(finding.targetTextExcerpt, 60), searchQuery)}
             </span>
           )}
         </span>
@@ -311,3 +344,9 @@ export function FindingCardCompact({
     </div>
   )
 }
+
+// Story 4.5: React.memo to prevent unnecessary re-renders when only searchQuery changes
+export const FindingCardCompact = memo(FindingCardCompactInner)
+
+// Export highlightText for testing
+export { highlightText }

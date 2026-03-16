@@ -16,11 +16,14 @@ import { getOverrideHistory } from '@/features/review/actions/getOverrideHistory
 import { overrideSeverity } from '@/features/review/actions/overrideSeverity.action'
 import { updateNoteText } from '@/features/review/actions/updateNoteText.action'
 import { AddFindingDialog } from '@/features/review/components/AddFindingDialog'
+import { AiToggle } from '@/features/review/components/AiToggle'
 import { AutoPassRationale } from '@/features/review/components/AutoPassRationale'
 import { BulkActionBar } from '@/features/review/components/BulkActionBar'
 import { BulkConfirmDialog } from '@/features/review/components/BulkConfirmDialog'
+import { CommandPalette } from '@/features/review/components/CommandPalette'
 import { ConflictDialog } from '@/features/review/components/ConflictDialog'
 import { FileNavigationDropdown } from '@/features/review/components/FileNavigationDropdown'
+import { FilterBar } from '@/features/review/components/FilterBar'
 import { FindingDetailContent } from '@/features/review/components/FindingDetailContent'
 import { FindingDetailSheet } from '@/features/review/components/FindingDetailSheet'
 import { FindingList } from '@/features/review/components/FindingList'
@@ -28,6 +31,7 @@ import { KeyboardCheatSheet } from '@/features/review/components/KeyboardCheatSh
 import { NoteInput } from '@/features/review/components/NoteInput'
 import { ReviewActionBar } from '@/features/review/components/ReviewActionBar'
 import { ReviewProgress } from '@/features/review/components/ReviewProgress'
+import { SearchInput } from '@/features/review/components/SearchInput'
 import { SeverityOverrideMenu } from '@/features/review/components/SeverityOverrideMenu'
 import { useFindingsSubscription } from '@/features/review/hooks/use-findings-subscription'
 import {
@@ -43,6 +47,7 @@ import { useReviewStore } from '@/features/review/stores/review.store'
 import type { UndoEntry } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import { mountAnnouncer, unmountAnnouncer } from '@/features/review/utils/announce'
+import { findingMatchesFilters } from '@/features/review/utils/filter-helpers'
 import { getNewState } from '@/features/review/utils/state-transitions'
 import { useIsDesktop, useIsLaptop } from '@/hooks/useMediaQuery'
 import type {
@@ -104,6 +109,11 @@ export function ReviewPageClient({
   const selectedId = useReviewStore((s) => s.selectedId)
   const setSelectedFinding = useReviewStore((s) => s.setSelectedFinding)
 
+  // Story 4.5: Filter + Search + AI toggle state from store
+  const filterState = useReviewStore((s) => s.filterState)
+  const searchQuery = useReviewStore((s) => s.searchQuery)
+  const aiSuggestionsEnabled = useReviewStore((s) => s.aiSuggestionsEnabled)
+
   // Responsive breakpoint hooks
   const isDesktop = useIsDesktop()
   const isLaptop = useIsLaptop()
@@ -138,6 +148,21 @@ export function ReviewPageClient({
   const clearSelection = useReviewStore((s) => s.clearSelection)
   const setSelectionMode = useReviewStore((s) => s.setSelectionMode)
   const setBulkInFlight = useReviewStore((s) => s.setBulkInFlight)
+
+  // Story 4.5: Command palette state
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+
+  // Story 4.5: Ctrl+K global handler
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        setCommandPaletteOpen((prev) => !prev)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   // Story 4.4a: Bulk confirm dialog state
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false)
@@ -443,12 +468,23 @@ export function ReviewPageClient({
 
   // Initialize store on fileId change. initialData is in deps so the effect runs when it
   // changes, but the guard ensures we only process once per unique fileId.
+  // Initialize store on fileId change — with full reload navigation,
+  // resetForFile restores filter from sessionStorage (AC3).
   useEffect(() => {
-    if (processedFileIdRef.current === fileId) return // already initialized this file
+    // Guard: skip re-init for same file (protects optimistic state from RSC revalidation).
+    // Exception: if findingsMap is empty but initialData has findings → data arrived late.
+    const storeFindings = useReviewStore.getState().findingsMap
+    if (
+      processedFileIdRef.current === fileId &&
+      (storeFindings.size > 0 || initialData.findings.length === 0)
+    ) {
+      return
+    }
     processedFileIdRef.current = fileId
 
-    const data = initialData
     resetForFile(fileId)
+
+    const data = initialData
 
     // Populate initial findings — build batch Map for single store update (M5)
     const initialMap = new Map<string, Finding>()
@@ -609,6 +645,20 @@ export function ReviewPageClient({
         aiModel: f.aiModel,
       })),
     [allFindings],
+  )
+
+  // Story 4.5: Client-side filtering (AC2, AC4, AC8)
+  const filteredFindings = useMemo(
+    () =>
+      findingsForDisplay.filter((f) =>
+        findingMatchesFilters(
+          f as Parameters<typeof findingMatchesFilters>[0],
+          filterState,
+          searchQuery,
+          aiSuggestionsEnabled,
+        ),
+      ),
+    [findingsForDisplay, filterState, searchQuery, aiSuggestionsEnabled],
   )
 
   // Count findings per severity
@@ -789,12 +839,15 @@ export function ReviewPageClient({
 
       {/* Zone 2: Finding List (center) */}
       <div className="flex-1 overflow-y-auto p-6">
-        {/* Laptop dropdown nav — replaces sidebar */}
-        {!isDesktop && isLaptop && (
-          <div className="mb-4">
-            <FileNavigationDropdown currentFileName={initialData.file.fileName} />
-          </div>
-        )}
+        {/* File navigation dropdown — always render for review page navigation */}
+        <div className="mb-4">
+          <FileNavigationDropdown
+            currentFileName={initialData.file.fileName}
+            currentFileId={fileId}
+            projectId={projectId}
+            siblingFiles={initialData.siblingFiles}
+          />
+        </div>
 
         {/* Header: file name + score badge + approve button */}
         <div className="flex items-center justify-between mb-6">
@@ -811,6 +864,15 @@ export function ReviewPageClient({
               data-recalculating={isCalculating ? 'true' : undefined}
             >
               <ScoreBadge score={effectiveScore ?? null} size="md" state={badgeState} />
+              {/* Story 4.5 AC8: "AI findings hidden" indicator beside score badge */}
+              {!aiSuggestionsEnabled && (
+                <span
+                  data-testid="ai-hidden-indicator"
+                  className="text-xs text-muted-foreground ml-2"
+                >
+                  AI findings hidden
+                </span>
+              )}
             </div>
 
             {/* Recalculating badge */}
@@ -885,10 +947,24 @@ export function ReviewPageClient({
           <span className="text-muted-foreground">Total: {findingsMap.size}</span>
         </div>
 
+        {/* Story 4.5: Filter bar + search + AI toggle (AC1, AC2, AC4, AC5, AC8) */}
+        <div className="mt-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-1">
+              <FilterBar findings={findingsForDisplay} filteredCount={filteredFindings.length} />
+            </div>
+            <div className="flex flex-col gap-2 shrink-0 pt-2">
+              <SearchInput />
+              {/* AC8: AI Suggestions toggle */}
+              <AiToggle />
+            </div>
+          </div>
+        </div>
+
         {/* Findings list — grid role moved to FindingList (Story 4.1b, Guardrail #29, #38) */}
         <div data-testid="finding-list" className="mt-4 space-y-2">
           <FindingList
-            findings={findingsForDisplay}
+            findings={filteredFindings}
             expandedIds={expandedIds}
             onToggleExpand={handleToggleExpand}
             sourceLang={sourceLang}
@@ -984,6 +1060,35 @@ export function ReviewPageClient({
           onCancel={() => {
             setConflictOpen(false)
             setConflictEntry(null)
+          }}
+        />
+
+        {/* Story 4.5: Command palette (AC6, AC7, AC10) */}
+        <CommandPalette
+          open={commandPaletteOpen}
+          onOpenChange={setCommandPaletteOpen}
+          findings={findingsForDisplay}
+          siblingFiles={initialData.siblingFiles}
+          onNavigateToFinding={(id) => handleActiveFindingChange(id)}
+          onAction={(action) => {
+            if (!activeFindingState) return
+            switch (action) {
+              case 'accept':
+                handleAccept(activeFindingState)
+                break
+              case 'reject':
+                handleReject(activeFindingState)
+                break
+              case 'flag':
+                handleFlag(activeFindingState)
+                break
+              case 'note':
+                handleNote(activeFindingState)
+                break
+              case 'source_issue':
+                handleSourceIssue(activeFindingState)
+                break
+            }
           }}
         />
 

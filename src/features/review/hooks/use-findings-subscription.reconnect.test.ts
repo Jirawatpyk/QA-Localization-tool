@@ -46,6 +46,7 @@ describe('useFindingsSubscription — reconnect (P1-11)', () => {
     vi.useFakeTimers()
     vi.clearAllMocks()
     mockAnnounce.mockClear()
+    useReviewStore.setState({ currentFileId: null })
     useReviewStore.getState().resetForFile('test')
     mockChannel.on.mockReturnValue(mockChannel)
   })

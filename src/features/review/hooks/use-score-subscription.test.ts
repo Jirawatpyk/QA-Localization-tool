@@ -41,6 +41,7 @@ describe('useScoreSubscription', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.clearAllMocks()
+    useReviewStore.setState({ currentFileId: null })
     useReviewStore.getState().resetForFile('test')
     // Reset channel mock chain
     mockChannel.on.mockReturnValue(mockChannel)

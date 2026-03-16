@@ -1,16 +1,17 @@
 /**
- * Epic 3 P1 Tests — Filter State Reset on File Navigation (P1-09, R3-037)
- * Tests: Filter state (severity, layer) resets when navigating to a new file,
- * and empty filtered list shows "No findings" not blank.
+ * Epic 3 P1 Tests — Filter State on File Navigation (P1-09, R3-037)
+ * Story 4.5 Update: filter state PERSISTS per file (AC3), not resets.
+ * Default for never-visited file = status: 'pending'.
  *
- * Guardrails: #11 (Dialog state reset applies conceptually to filter reset on file switch)
+ * Guardrails: #11, #35 (undo stacks still clear on file switch)
  */
-import { render, screen, act } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { FindingList } from '@/features/review/components/FindingList'
 import { useReviewStore } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
+import { saveFilterCache } from '@/features/review/utils/filter-cache'
 import { buildFindingForUI } from '@/test/factories'
 
 // ── Mock useKeyboardActions — FindingList depends on it ──
@@ -70,41 +71,55 @@ function defaultProps(overrides?: Record<string, unknown>) {
 
 // ── Tests ──
 
-describe('FindingList — filterReset (P1-09)', () => {
+describe('FindingList — filter persistence (P1-09, Story 4.5 AC3)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    sessionStorage.clear()
+    useReviewStore.setState({ currentFileId: null })
     useReviewStore.getState().resetForFile('test-file-id')
   })
 
-  it('[P1] should reset filter state when navigating to a new file via resetForFile', () => {
-    // Arrange: Set a severity filter in store
-    useReviewStore.getState().setFilter({ severity: 'critical', status: null, layer: null })
-
-    // Verify filter is set
+  it('[P1] should persist filter state when switching files and returning', () => {
+    // Arrange: Set a severity filter on file-A
+    useReviewStore.getState().setFilter('severity', 'critical')
     expect(useReviewStore.getState().filterState.severity).toBe('critical')
 
-    // Act: resetForFile simulates file navigation — clears all filter state
-    useReviewStore.getState().resetForFile('new-file-id')
+    // Act: Simulate component cleanup (saves cache) + switch to file-B, then return
+    // Save A's filter to cache (mirrors ReviewPageClient cleanup effect)
+    const storeA = useReviewStore.getState()
+    saveFilterCache('test-file-id', {
+      filterState: { ...storeA.filterState },
+      searchQuery: storeA.searchQuery,
+      aiSuggestionsEnabled: storeA.aiSuggestionsEnabled,
+    })
 
-    // Assert: Filter state is reset (all null = show all)
-    const { filterState } = useReviewStore.getState()
-    expect(filterState.severity).toBeNull()
-    expect(filterState.status).toBeNull()
-    expect(filterState.layer).toBeNull()
+    useReviewStore.getState().resetForFile('file-b')
+
+    // Save B's filter, then return to A
+    const storeB = useReviewStore.getState()
+    saveFilterCache('file-b', {
+      filterState: { ...storeB.filterState },
+      searchQuery: storeB.searchQuery,
+      aiSuggestionsEnabled: storeB.aiSuggestionsEnabled,
+    })
+
+    useReviewStore.getState().resetForFile('test-file-id')
+
+    // Assert: Filter state is restored from cache
+    expect(useReviewStore.getState().filterState.severity).toBe('critical')
   })
 
-  it('[P1] should clear layer filter on file switch', () => {
-    // Arrange: Set a layer filter
-    useReviewStore.getState().setFilter({ severity: null, status: null, layer: 'L2' })
+  it('[P1] should set default status=pending for never-visited file', () => {
+    // Act: resetForFile for a brand new file
+    useReviewStore.getState().resetForFile('brand-new-file')
 
-    // Verify filter is set
-    expect(useReviewStore.getState().filterState.layer).toBe('L2')
-
-    // Act: resetForFile clears filters (simulates navigating to new file)
-    useReviewStore.getState().resetForFile('another-file-id')
-
-    // Assert: Layer filter is cleared
-    expect(useReviewStore.getState().filterState.layer).toBeNull()
+    // Assert: Default filter has status=pending (AC1 default)
+    const { filterState } = useReviewStore.getState()
+    expect(filterState.status).toBe('pending')
+    expect(filterState.severity).toBeNull()
+    expect(filterState.layer).toBeNull()
+    expect(filterState.category).toBeNull()
+    expect(filterState.confidence).toBeNull()
   })
 
   it('[P1] should show "No findings" text when findings list is empty after filter, not blank', () => {

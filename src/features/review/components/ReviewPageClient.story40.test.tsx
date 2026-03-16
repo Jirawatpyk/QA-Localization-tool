@@ -8,6 +8,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('server-only', () => ({}))
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}))
+
 // Mock Realtime subscription hooks to no-op
 const mockUseFindingsSubscription = vi.fn()
 const mockUseScoreSubscription = vi.fn()
@@ -117,6 +121,7 @@ function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
     segments: [],
     categories: [],
     overrideCounts: {},
+    siblingFiles: [],
     ...overrides,
   }
 }

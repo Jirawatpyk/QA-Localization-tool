@@ -141,6 +141,7 @@ function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
     segments: [],
     categories: [],
     overrideCounts: {},
+    siblingFiles: [],
     ...overrides,
   }
 }
@@ -465,7 +466,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
   // G6: FileNavigationDropdown at laptop only
   // ═══════════════════════════════════════════════════════════════════════
 
-  it('[TA-G6][P1] FileNavigationDropdown should show only at laptop (not desktop, not mobile)', () => {
+  it('[TA-G6][P1] FileNavigationDropdown should always be visible (Story 4.5: AC3 file switching)', () => {
     // Arrange: desktop
     mockUseIsDesktop.mockReturnValue(true)
     mockUseIsLaptop.mockReturnValue(true)
@@ -480,8 +481,8 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
       />,
     )
 
-    // Assert: dropdown NOT at desktop (uses sidebar instead)
-    expect(screen.queryByTestId('mock-file-nav-dropdown')).not.toBeInTheDocument()
+    // Assert: dropdown visible at ALL breakpoints (Story 4.5 — needed for file switching)
+    expect(screen.queryByTestId('mock-file-nav-dropdown')).toBeInTheDocument()
 
     // Switch to laptop
     mockUseIsDesktop.mockReturnValue(false)
@@ -514,8 +515,8 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
       />,
     )
 
-    // Assert: dropdown NOT at mobile
-    expect(screen.queryByTestId('mock-file-nav-dropdown')).not.toBeInTheDocument()
+    // Assert: dropdown visible at ALL breakpoints (Story 4.5 — always render for AC3)
+    expect(screen.queryByTestId('mock-file-nav-dropdown')).toBeInTheDocument()
   })
 
   // ═══════════════════════════════════════════════════════════════════════

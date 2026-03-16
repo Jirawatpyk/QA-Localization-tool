@@ -7,6 +7,10 @@ import type { FileReviewData } from '@/features/review/actions/getFileReviewData
 
 vi.mock('server-only', () => ({}))
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}))
+
 // Mock responsive hooks — laptop mode
 vi.mock('@/hooks/useMediaQuery', () => ({
   useMediaQuery: vi.fn(() => false),
@@ -107,6 +111,18 @@ vi.mock('@/features/review/stores/review.store', () => {
     setSortedFindingIds: vi.fn(),
     selectedIds: new Set(),
     selectionMode: 'single' as const,
+    filterState: {
+      severity: null,
+      status: 'pending',
+      layer: null,
+      category: null,
+      confidence: null,
+    },
+    searchQuery: '',
+    aiSuggestionsEnabled: true,
+    setFilter: vi.fn(),
+    setSearchQuery: vi.fn(),
+    setAiSuggestionsEnabled: vi.fn(),
     isBulkInFlight: false,
     clearSelection: vi.fn(),
     setSelectionMode: vi.fn(),
@@ -127,6 +143,7 @@ vi.mock('@/features/review/stores/review.store', () => {
       ),
       {
         getState: vi.fn(() => storeState),
+        setState: vi.fn(),
       },
     ),
   }
@@ -175,6 +192,7 @@ function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
     segments: [],
     categories: [],
     overrideCounts: {},
+    siblingFiles: [],
     ...overrides,
   } as FileReviewData
 }

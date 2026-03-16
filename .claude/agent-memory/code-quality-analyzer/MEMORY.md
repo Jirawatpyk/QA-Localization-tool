@@ -38,6 +38,7 @@
 - `story-4-3-findings.md` — Story 4.3 Extended Review Actions CR R1 (0C/4H/5M/5L)
 - `story-4-4a-findings.md` — Story 4.4a Bulk Operations & Decision Override CR R1 (0C/4H/5M/6L)
 - `story-4-4b-findings.md` — Story 4.4b Undo/Redo & Conflict Resolution CR R1 (0C/4H/5M/5L)
+- `story-4-5-findings.md` — Story 4.5 Search, Filter & AI Layer Toggle CR R1 (1C/5H/5M/4L)
 
 ## Recurring Anti-Patterns (check EVERY review)
 

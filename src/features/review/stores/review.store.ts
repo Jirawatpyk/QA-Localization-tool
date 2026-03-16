@@ -68,15 +68,55 @@ export type UndoEntry = {
   staleFindings: Set<string>
 }
 
-// ── Filter State ──
+// ── Filter State (Story 4.5: extended with category + confidence) ──
+// Types and filter helper re-exported from shared util (so store mocks don't break it)
 
-type FilterState = {
-  severity: FindingSeverity | null
-  status: FindingStatus | null
-  layer: DetectedByLayer | null
+import { loadFilterCache, clearFilterCache } from '@/features/review/utils/filter-cache'
+import { findingMatchesFilters, DEFAULT_FILTER_STATE } from '@/features/review/utils/filter-helpers'
+import type { FilterState } from '@/features/review/utils/filter-helpers'
+
+/** Compute selection adjustments after any filter/search/AI-toggle change */
+function computeSelectionAfterFilterChange(state: ReviewState): Partial<ReviewState> {
+  const visibleIds = new Set<string>()
+  for (const id of state.sortedFindingIds) {
+    const finding = state.findingsMap.get(id)
+    if (
+      finding &&
+      findingMatchesFilters(
+        finding,
+        state.filterState,
+        state.searchQuery,
+        state.aiSuggestionsEnabled,
+      )
+    ) {
+      visibleIds.add(id)
+    }
+  }
+
+  // Intersect selectedIds with visible
+  const newSelectedIds = new Set<string>()
+  for (const id of state.selectedIds) {
+    if (visibleIds.has(id)) newSelectedIds.add(id)
+  }
+
+  // Exit bulk mode if selection became empty
+  const newSelectionMode: 'single' | 'bulk' =
+    newSelectedIds.size === 0 && state.selectionMode === 'bulk' ? 'single' : state.selectionMode
+
+  // Reset selectedId if not visible
+  let newSelectedId = state.selectedId
+  if (newSelectedId !== null && !visibleIds.has(newSelectedId)) {
+    newSelectedId = state.sortedFindingIds.find((id) => visibleIds.has(id)) ?? null
+  }
+
+  return {
+    selectedIds: newSelectedIds,
+    selectionMode: newSelectionMode,
+    selectedId: newSelectedId,
+  }
 }
 
-// ── Findings Slice ──
+// ── Findings Slice (Story 4.5: + searchQuery, aiSuggestionsEnabled, per-key setFilter) ──
 
 type FindingsSlice = {
   findingsMap: Map<string, Finding>
@@ -84,12 +124,18 @@ type FindingsSlice = {
   filterState: FilterState
   /** Visual sort order of finding IDs (synced from FindingList flattenedIds) */
   sortedFindingIds: string[]
+  searchQuery: string
+  aiSuggestionsEnabled: boolean
   setFinding: (id: string, finding: Finding) => void
   setFindings: (findings: Map<string, Finding>) => void
   removeFinding: (id: string) => void
-  setFilter: (filter: FilterState) => void
+  setFilter: <K extends keyof FilterState>(key: K, value: FilterState[K]) => void
   setSelectedFinding: (id: string | null) => void
   setSortedFindingIds: (ids: string[]) => void
+  setSearchQuery: (query: string) => void
+  setAiSuggestionsEnabled: (enabled: boolean) => void
+  /** Batch reset all filters + search to defaults (single state update) */
+  resetFilters: () => void
 }
 
 const createFindingsSlice = (
@@ -97,8 +143,10 @@ const createFindingsSlice = (
 ): FindingsSlice => ({
   findingsMap: new Map(),
   selectedId: null,
-  filterState: { severity: null, status: null, layer: null },
+  filterState: { ...DEFAULT_FILTER_STATE },
   sortedFindingIds: [],
+  searchQuery: '',
+  aiSuggestionsEnabled: true,
   setFinding: (id, finding) =>
     set((s) => {
       const newMap = new Map(s.findingsMap)
@@ -112,9 +160,48 @@ const createFindingsSlice = (
       newMap.delete(id)
       return { findingsMap: newMap }
     }),
-  setFilter: (filter) => set({ filterState: filter }),
+  setFilter: (key, value) =>
+    set((s) => {
+      const newFilterState = { ...s.filterState, [key]: value }
+      const hypothetical: ReviewState = { ...s, filterState: newFilterState } as ReviewState
+      return {
+        filterState: newFilterState,
+        ...computeSelectionAfterFilterChange(hypothetical),
+      }
+    }),
   setSelectedFinding: (id) => set({ selectedId: id }),
   setSortedFindingIds: (ids) => set({ sortedFindingIds: ids }),
+  setSearchQuery: (query) =>
+    set((s) => {
+      const hypothetical: ReviewState = { ...s, searchQuery: query } as ReviewState
+      return {
+        searchQuery: query,
+        ...computeSelectionAfterFilterChange(hypothetical),
+      }
+    }),
+  setAiSuggestionsEnabled: (enabled) =>
+    set((s) => {
+      const hypothetical: ReviewState = { ...s, aiSuggestionsEnabled: enabled } as ReviewState
+      return {
+        aiSuggestionsEnabled: enabled,
+        ...computeSelectionAfterFilterChange(hypothetical),
+      }
+    }),
+  resetFilters: () =>
+    set((s) => {
+      const hypothetical: ReviewState = {
+        ...s,
+        filterState: { ...DEFAULT_FILTER_STATE },
+        searchQuery: '',
+        aiSuggestionsEnabled: true,
+      } as ReviewState
+      return {
+        filterState: { ...DEFAULT_FILTER_STATE },
+        searchQuery: '',
+        aiSuggestionsEnabled: true,
+        ...computeSelectionAfterFilterChange(hypothetical),
+      }
+    }),
 })
 
 // ── Score Slice ──
@@ -415,28 +502,42 @@ export const useReviewStore = create<ReviewState>()((set, get) => {
     ...createSelectionSlice(setState),
     ...createUndoRedoSlice(setState, get as () => ReviewState),
     currentFileId: null,
+    // Story 4.5 CR fix: resetForFile restores from sessionStorage (survives full reload)
     resetForFile: (fileId: string) =>
-      set({
-        currentFileId: fileId,
-        findingsMap: new Map(),
-        selectedId: null,
-        sortedFindingIds: [],
-        filterState: { severity: null, status: null, layer: null },
-        currentScore: null,
-        scoreStatus: 'na',
-        layerCompleted: null,
-        autoPassRationale: null,
-        isRecalculating: false,
-        l2ConfidenceMin: null,
-        l3ConfidenceMin: null,
-        selectedIds: new Set(),
-        selectionMode: 'single',
-        isBulkInFlight: false,
-        overrideCounts: new Map(),
-        // Story 4.4b: Clear undo/redo on file switch (AC6, Guardrail #35)
-        undoStack: [],
-        redoStack: [],
-        undoFindingIndex: new Map(),
+      set((s) => {
+        if (s.currentFileId === fileId) return {} // idempotent — same file, no reset needed
+
+        // Restore filter from sessionStorage (saved by FileNavigationDropdown before navigate)
+        const cached = loadFilterCache(fileId)
+        if (cached) clearFilterCache(fileId) // consume and clear — prevent stale restore
+        const restoredFilter = cached ? { ...cached.filterState } : { ...DEFAULT_FILTER_STATE }
+        const restoredSearch = cached?.searchQuery ?? ''
+        const restoredAiEnabled = cached ? cached.aiSuggestionsEnabled : true
+
+        return {
+          currentFileId: fileId,
+          findingsMap: new Map(),
+          selectedId: null,
+          sortedFindingIds: [],
+          filterState: restoredFilter,
+          searchQuery: restoredSearch,
+          aiSuggestionsEnabled: restoredAiEnabled,
+          currentScore: null,
+          scoreStatus: 'na',
+          layerCompleted: null,
+          autoPassRationale: null,
+          isRecalculating: false,
+          l2ConfidenceMin: null,
+          l3ConfidenceMin: null,
+          selectedIds: new Set(),
+          selectionMode: 'single',
+          isBulkInFlight: false,
+          overrideCounts: new Map(),
+          // Story 4.4b: Clear undo/redo on file switch (AC6, Guardrail #35)
+          undoStack: [],
+          redoStack: [],
+          undoFindingIndex: new Map(),
+        }
       }),
     // Task 4.4: selectRange — needs get() for sortedFindingIds
     selectRange: (fromId: string, toId: string) => {
@@ -454,18 +555,15 @@ export const useReviewStore = create<ReviewState>()((set, get) => {
       }
       set({ selectedIds: newSet, selectionMode: 'bulk' })
     },
-    // Task 4.5: selectAllFiltered — needs get() for sortedFindingIds + filterState
+    // Story 4.5: selectAllFiltered — extended with category, confidence, searchQuery, aiSuggestionsEnabled
     selectAllFiltered: () => {
       const state = get()
-      const { filterState, findingsMap, sortedFindingIds } = state
+      const { filterState, findingsMap, sortedFindingIds, searchQuery, aiSuggestionsEnabled } =
+        state
       const filtered = sortedFindingIds.filter((id) => {
         const finding = findingsMap.get(id)
         if (!finding) return false
-        if (filterState.severity !== null && finding.severity !== filterState.severity) return false
-        if (filterState.status !== null && finding.status !== filterState.status) return false
-        if (filterState.layer !== null && finding.detectedByLayer !== filterState.layer)
-          return false
-        return true
+        return findingMatchesFilters(finding, filterState, searchQuery, aiSuggestionsEnabled)
       })
       // CR-M2+L-R2-1: 0 match → clear selection + exit bulk mode (not silent no-op)
       if (filtered.length === 0) {

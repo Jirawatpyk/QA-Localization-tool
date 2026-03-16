@@ -7,6 +7,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('server-only', () => ({}))
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}))
+
 // Mock Realtime subscription hooks to no-op
 vi.mock('@/features/review/hooks/use-findings-subscription', () => ({
   useFindingsSubscription: vi.fn(),
@@ -93,6 +97,7 @@ function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
     segments: [],
     categories: [],
     overrideCounts: {},
+    siblingFiles: [],
     ...overrides,
   }
 }
@@ -156,5 +161,232 @@ describe('ReviewPageClient — deriveScoreBadgeState', () => {
     expect(badge).not.toHaveTextContent('AI Screened')
     expect(badge).not.toHaveTextContent('Deep Analyzed')
     expect(badge).not.toHaveTextContent('Partial')
+  })
+})
+
+// ══════════════════════════════════════════════════════════════
+// Story 4.5: File navigation — findings init on RSC streaming
+// ══════════════════════════════════════════════════════════════
+
+describe('ReviewPageClient — file navigation init (Story 4.5 AC3)', () => {
+  beforeEach(() => {
+    useReviewStore.setState({ currentFileId: null })
+  })
+
+  it('[P0] should populate findings when re-rendered with new fileId and new initialData', () => {
+    // Simulate: render fileA with findings
+    const dataA = buildInitialData({
+      file: { fileId: 'fileA', fileName: 'a.sdlxliff', status: 'l2_completed' as never },
+      findings: [
+        {
+          id: 'fa1',
+          segmentId: null,
+          severity: 'major',
+          originalSeverity: null,
+          category: 'accuracy',
+          description: 'Finding A1',
+          status: 'pending',
+          detectedByLayer: 'L1',
+          aiConfidence: null,
+          sourceTextExcerpt: null,
+          targetTextExcerpt: null,
+          suggestedFix: null,
+          aiModel: null,
+          segmentCount: 1,
+          scope: 'per-file' as const,
+        },
+      ],
+    })
+
+    const { rerender } = render(
+      <ReviewPageClient fileId="fileA" projectId="p1" tenantId="t1" initialData={dataA} />,
+    )
+
+    // fileA findings should be populated
+    expect(useReviewStore.getState().findingsMap.size).toBe(1)
+
+    // Simulate: Link navigation to fileB — new fileId + new initialData
+    const dataB = buildInitialData({
+      file: { fileId: 'fileB', fileName: 'b.sdlxliff', status: 'l2_completed' as never },
+      findings: [
+        {
+          id: 'fb1',
+          segmentId: null,
+          severity: 'critical',
+          originalSeverity: null,
+          category: 'terminology',
+          description: 'Finding B1',
+          status: 'pending',
+          detectedByLayer: 'L2',
+          aiConfidence: 85,
+          sourceTextExcerpt: null,
+          targetTextExcerpt: null,
+          suggestedFix: null,
+          aiModel: null,
+          segmentCount: 1,
+          scope: 'per-file' as const,
+        },
+        {
+          id: 'fb2',
+          segmentId: null,
+          severity: 'minor',
+          originalSeverity: null,
+          category: 'style',
+          description: 'Finding B2',
+          status: 'pending',
+          detectedByLayer: 'L1',
+          aiConfidence: null,
+          sourceTextExcerpt: null,
+          targetTextExcerpt: null,
+          suggestedFix: null,
+          aiModel: null,
+          segmentCount: 1,
+          scope: 'per-file' as const,
+        },
+      ],
+    })
+
+    rerender(<ReviewPageClient fileId="fileB" projectId="p1" tenantId="t1" initialData={dataB} />)
+
+    // fileB findings MUST be populated — this is the bug regression test
+    expect(useReviewStore.getState().findingsMap.size).toBe(2)
+    expect(useReviewStore.getState().findingsMap.has('fb1')).toBe(true)
+    expect(useReviewStore.getState().findingsMap.has('fb2')).toBe(true)
+    expect(useReviewStore.getState().currentFileId).toBe('fileB')
+  })
+
+  it('[P0] should populate findings when initialData arrives after fileId (RSC streaming)', () => {
+    // Simulate: render fileA with findings
+    const dataA = buildInitialData({
+      file: { fileId: 'fileA', fileName: 'a.sdlxliff', status: 'l2_completed' as never },
+      findings: [
+        {
+          id: 'fa1',
+          segmentId: null,
+          severity: 'major',
+          originalSeverity: null,
+          category: 'accuracy',
+          description: 'Finding A1',
+          status: 'pending',
+          detectedByLayer: 'L1',
+          aiConfidence: null,
+          sourceTextExcerpt: null,
+          targetTextExcerpt: null,
+          suggestedFix: null,
+          aiModel: null,
+          segmentCount: 1,
+          scope: 'per-file' as const,
+        },
+      ],
+    })
+
+    const { rerender } = render(
+      <ReviewPageClient fileId="fileA" projectId="p1" tenantId="t1" initialData={dataA} />,
+    )
+    expect(useReviewStore.getState().findingsMap.size).toBe(1)
+
+    // Phase 1: RSC streaming — fileId changes but initialData is EMPTY (stale/streaming)
+    const dataBEmpty = buildInitialData({
+      file: { fileId: 'fileB', fileName: 'b.sdlxliff', status: 'l2_completed' as never },
+      findings: [], // empty — RSC stream not yet complete
+    })
+
+    rerender(
+      <ReviewPageClient fileId="fileB" projectId="p1" tenantId="t1" initialData={dataBEmpty} />,
+    )
+
+    // Phase 2: RSC stream complete — same fileId, real initialData arrives
+    const dataBFull = buildInitialData({
+      file: { fileId: 'fileB', fileName: 'b.sdlxliff', status: 'l2_completed' as never },
+      findings: [
+        {
+          id: 'fb1',
+          segmentId: null,
+          severity: 'critical',
+          originalSeverity: null,
+          category: 'terminology',
+          description: 'Finding B1',
+          status: 'pending',
+          detectedByLayer: 'L2',
+          aiConfidence: 85,
+          sourceTextExcerpt: null,
+          targetTextExcerpt: null,
+          suggestedFix: null,
+          aiModel: null,
+          segmentCount: 1,
+          scope: 'per-file' as const,
+        },
+      ],
+    })
+
+    rerender(
+      <ReviewPageClient fileId="fileB" projectId="p1" tenantId="t1" initialData={dataBFull} />,
+    )
+
+    // Findings MUST be populated from the real data — not blocked by guard
+    expect(useReviewStore.getState().findingsMap.size).toBe(1)
+    expect(useReviewStore.getState().findingsMap.has('fb1')).toBe(true)
+  })
+
+  it('[P1] should NOT re-init when initialData ref changes but fileId stays same (optimistic protection)', () => {
+    const dataA = buildInitialData({
+      file: { fileId: 'fileA', fileName: 'a.sdlxliff', status: 'l2_completed' as never },
+      findings: [
+        {
+          id: 'fa1',
+          segmentId: null,
+          severity: 'major',
+          originalSeverity: null,
+          category: 'accuracy',
+          description: 'Finding A1',
+          status: 'pending',
+          detectedByLayer: 'L1',
+          aiConfidence: null,
+          sourceTextExcerpt: null,
+          targetTextExcerpt: null,
+          suggestedFix: null,
+          aiModel: null,
+          segmentCount: 1,
+          scope: 'per-file' as const,
+        },
+      ],
+    })
+
+    const { rerender } = render(
+      <ReviewPageClient fileId="fileA" projectId="p1" tenantId="t1" initialData={dataA} />,
+    )
+
+    // Simulate optimistic update
+    const f = useReviewStore.getState().findingsMap.get('fa1')!
+    useReviewStore.getState().setFinding('fa1', { ...f, status: 'accepted' })
+
+    // Simulate RSC revalidation: same fileId, new initialData reference
+    const dataA2 = buildInitialData({
+      file: { fileId: 'fileA', fileName: 'a.sdlxliff', status: 'l2_completed' as never },
+      findings: [
+        {
+          id: 'fa1',
+          segmentId: null,
+          severity: 'major',
+          originalSeverity: null,
+          category: 'accuracy',
+          description: 'Finding A1',
+          status: 'pending',
+          detectedByLayer: 'L1',
+          aiConfidence: null,
+          sourceTextExcerpt: null,
+          targetTextExcerpt: null,
+          suggestedFix: null,
+          aiModel: null,
+          segmentCount: 1,
+          scope: 'per-file' as const,
+        },
+      ],
+    })
+
+    rerender(<ReviewPageClient fileId="fileA" projectId="p1" tenantId="t1" initialData={dataA2} />)
+
+    // Optimistic state MUST be preserved
+    expect(useReviewStore.getState().findingsMap.get('fa1')?.status).toBe('accepted')
   })
 })

@@ -33,6 +33,7 @@ function buildUndoEntry(overrides?: Partial<UndoEntry>): UndoEntry {
 
 describe('useReviewStore', () => {
   beforeEach(() => {
+    useReviewStore.setState({ currentFileId: null })
     useReviewStore.getState().resetForFile('test-file-id')
   })
 
@@ -57,7 +58,8 @@ describe('useReviewStore', () => {
   })
 
   it('should update filterState via setFilter', () => {
-    useReviewStore.getState().setFilter({ severity: 'major', status: null, layer: 'L1' })
+    useReviewStore.getState().setFilter('severity', 'major')
+    useReviewStore.getState().setFilter('layer', 'L1')
     expect(useReviewStore.getState().filterState.severity).toBe('major')
     expect(useReviewStore.getState().filterState.layer).toBe('L1')
   })

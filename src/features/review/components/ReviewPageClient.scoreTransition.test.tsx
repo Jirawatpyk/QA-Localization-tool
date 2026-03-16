@@ -129,6 +129,12 @@ const storeMockState = {
   setSortedFindingIds: vi.fn(),
   selectedIds: new Set(),
   selectionMode: 'single' as const,
+  filterState: { severity: null, status: 'pending', layer: null, category: null, confidence: null },
+  searchQuery: '',
+  aiSuggestionsEnabled: true,
+  setFilter: vi.fn(),
+  setSearchQuery: vi.fn(),
+  setAiSuggestionsEnabled: vi.fn(),
   isBulkInFlight: false,
   clearSelection: vi.fn(),
   setSelectionMode: vi.fn(),
@@ -150,6 +156,7 @@ vi.mock('@/features/review/stores/review.store', () => ({
     ),
     {
       getState: vi.fn(() => storeMockState),
+      setState: vi.fn(),
     },
   ),
 }))
@@ -202,6 +209,7 @@ function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
     segments: [],
     categories: [],
     overrideCounts: {},
+    siblingFiles: [],
     ...overrides,
   } as FileReviewData
 }

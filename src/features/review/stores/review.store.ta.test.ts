@@ -12,6 +12,7 @@ import { buildFinding } from '@/test/factories'
 
 describe('useReviewStore — TA expansion', () => {
   beforeEach(() => {
+    useReviewStore.setState({ currentFileId: null })
     useReviewStore.getState().resetForFile('ta-test')
   })
 
