@@ -8,7 +8,7 @@ import { ConfidenceBadge } from '@/features/review/components/ConfidenceBadge'
 import { LayerBadge } from '@/features/review/components/LayerBadge'
 import { OverrideBadge } from '@/features/review/components/OverrideBadge'
 import { SeverityIndicator } from '@/features/review/components/SeverityIndicator'
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, useFileState } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import {
   L3_CONFIRMED_MARKER,
@@ -89,9 +89,9 @@ function FindingCardCompactInner({
   searchQuery = '',
 }: FindingCardCompactProps) {
   const reducedMotion = useReducedMotion()
-  const selectionMode = useReviewStore((s) => s.selectionMode)
-  const isSelected = useReviewStore((s) => s.selectedIds.has(finding.id))
-  const overrideCount = useReviewStore((s) => s.overrideCounts.get(finding.id) ?? 0)
+  const selectionMode = useFileState((fs) => fs.selectionMode)
+  const isSelected = useFileState((fs) => fs.selectedIds.has(finding.id))
+  const overrideCount = useFileState((fs) => fs.overrideCounts.get(finding.id) ?? 0)
   const toggleSelection = useReviewStore((s) => s.toggleSelection)
   const addToSelection = useReviewStore((s) => s.addToSelection)
   const setSelectionMode = useReviewStore((s) => s.setSelectionMode)

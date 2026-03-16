@@ -1,5 +1,6 @@
 'use client'
 
+import { createContext, useContext } from 'react'
 import { create } from 'zustand'
 
 import type {
@@ -472,6 +473,145 @@ const createUndoRedoSlice = (
     }),
 })
 
+// ── File-Scoped State (TD-ARCH-001 refactor) ──
+
+/** All 17 file-scoped fields — isolated per file in the Map */
+export type FileState = {
+  // FindingsSlice fields
+  findingsMap: Map<string, Finding>
+  selectedId: string | null
+  filterState: FilterState
+  sortedFindingIds: string[]
+  searchQuery: string
+  aiSuggestionsEnabled: boolean
+  // ScoreSlice fields
+  currentScore: number | null
+  scoreStatus: ScoreStatus
+  layerCompleted: LayerCompleted | null
+  autoPassRationale: string | null
+  isRecalculating: boolean
+  // ThresholdSlice fields
+  l2ConfidenceMin: number | null
+  l3ConfidenceMin: number | null
+  // SelectionSlice fields
+  selectedIds: Set<string>
+  selectionMode: 'single' | 'bulk'
+  isBulkInFlight: boolean
+  overrideCounts: Map<string, number>
+  // UndoRedoSlice fields
+  undoStack: UndoEntry[]
+  redoStack: UndoEntry[]
+  undoFindingIndex: Map<string, Set<string>>
+  // Init guard (replaces processedFileIdRef — F5 fix)
+  initialized: boolean
+}
+
+export const DEFAULT_FILE_STATE: FileState = {
+  findingsMap: new Map(),
+  selectedId: null,
+  filterState: { ...DEFAULT_FILTER_STATE },
+  sortedFindingIds: [],
+  searchQuery: '',
+  aiSuggestionsEnabled: true,
+  currentScore: null,
+  scoreStatus: 'na',
+  layerCompleted: null,
+  autoPassRationale: null,
+  isRecalculating: false,
+  l2ConfidenceMin: null,
+  l3ConfidenceMin: null,
+  selectedIds: new Set(),
+  selectionMode: 'single',
+  isBulkInFlight: false,
+  overrideCounts: new Map(),
+  undoStack: [],
+  redoStack: [],
+  undoFindingIndex: new Map(),
+  initialized: false,
+}
+
+/** Create a fresh FileState with defaults, optionally restoring filter from sessionStorage */
+function createFileState(fileId: string): FileState {
+  const cached = loadFilterCache(fileId)
+  if (cached) clearFilterCache(fileId)
+  return {
+    ...DEFAULT_FILE_STATE,
+    findingsMap: new Map(),
+    selectedIds: new Set(),
+    overrideCounts: new Map(),
+    undoFindingIndex: new Map(),
+    filterState: cached ? { ...cached.filterState } : { ...DEFAULT_FILTER_STATE },
+    searchQuery: cached?.searchQuery ?? '',
+    aiSuggestionsEnabled: cached ? cached.aiSuggestionsEnabled : true,
+  }
+}
+
+// ── File-scoped field keys for auto-sync (TD-ARCH-001) ──
+
+const FILE_STATE_KEYS: ReadonlySet<string> = new Set<keyof FileState>([
+  'findingsMap',
+  'selectedId',
+  'filterState',
+  'sortedFindingIds',
+  'searchQuery',
+  'aiSuggestionsEnabled',
+  'currentScore',
+  'scoreStatus',
+  'layerCompleted',
+  'autoPassRationale',
+  'isRecalculating',
+  'l2ConfidenceMin',
+  'l3ConfidenceMin',
+  'selectedIds',
+  'selectionMode',
+  'isBulkInFlight',
+  'overrideCounts',
+  'undoStack',
+  'redoStack',
+  'undoFindingIndex',
+  'initialized',
+])
+
+/**
+ * Wrap Zustand's `set` to auto-sync flat file-scoped fields → fileStates Map.
+ * Skip if the update already includes `fileStates` (e.g. resetForFile manages it directly).
+ */
+function createSyncingSet(
+  rawSet: (fn: Partial<ReviewState> | ((s: ReviewState) => Partial<ReviewState>)) => void,
+): (fn: Partial<ReviewState> | ((s: ReviewState) => Partial<ReviewState>)) => void {
+  return (fnOrPartial) => {
+    rawSet((s) => {
+      const update = typeof fnOrPartial === 'function' ? fnOrPartial(s) : fnOrPartial
+
+      // If resetForFile already manages fileStates, skip auto-sync
+      if ('fileStates' in update) return update
+
+      const fileId = s.currentFileId
+      if (!fileId) return update
+
+      // Check if update contains any file-scoped fields
+      const updateKeys = Object.keys(update)
+      const hasFileFields = updateKeys.some((k) => FILE_STATE_KEYS.has(k))
+      if (!hasFileFields) return update
+
+      // Sync flat field changes into the active file's FileState entry
+      const newFileStates = new Map(s.fileStates)
+      const existing = newFileStates.get(fileId)
+      if (!existing) return update // No FileState yet (pre-resetForFile)
+
+      const syncedFs = { ...existing }
+      for (const key of updateKeys) {
+        if (FILE_STATE_KEYS.has(key)) {
+          ;(syncedFs as Record<string, unknown>)[key] = (update as Record<string, unknown>)[key]
+        }
+      }
+      newFileStates.set(fileId, syncedFs)
+
+      return { ...update, fileStates: newFileStates }
+    })
+  }
+}
+
 // ── Selector Functions (Story 4.4b AC6 — NEVER select full stack array) ──
 
 export const selectCanUndo = (s: ReviewState): boolean => s.undoStack.length > 0
@@ -485,15 +625,18 @@ type ReviewState = FindingsSlice &
   SelectionSlice &
   UndoRedoSlice & {
     currentFileId: string | null
+    fileStates: Map<string, FileState>
     resetForFile: (fileId: string) => void
     selectRange: (fromId: string, toId: string) => void
     selectAllFiltered: () => void
   }
 
 export const useReviewStore = create<ReviewState>()((set, get) => {
-  const setState = set as (
+  const rawSet = set as (
     fn: Partial<ReviewState> | ((s: ReviewState) => Partial<ReviewState>),
   ) => void
+  // TD-ARCH-001: auto-sync flat fields → fileStates Map on every set() call
+  const setState = createSyncingSet(rawSet)
 
   return {
     ...createFindingsSlice(setState),
@@ -502,41 +645,47 @@ export const useReviewStore = create<ReviewState>()((set, get) => {
     ...createSelectionSlice(setState),
     ...createUndoRedoSlice(setState, get as () => ReviewState),
     currentFileId: null,
-    // Story 4.5 CR fix: resetForFile restores from sessionStorage (survives full reload)
+    fileStates: new Map<string, FileState>(),
+    // TD-ARCH-001: resetForFile switches activeFileId, creates fresh FileState.
+    // Always creates fresh entry (Guardrail #35: undo/redo cleared on file switch).
+    // Filter restored from sessionStorage L2 fallback only (createFileState handles this).
+    // L1 Map cache is read by useFileState() — NOT by resetForFile. This separation ensures
+    // that resetForFile always gives a clean slate (important for test isolation), while
+    // useFileState provides the preserved state for components after Phase 3 migration.
     resetForFile: (fileId: string) =>
       set((s) => {
         if (s.currentFileId === fileId) return {} // idempotent — same file, no reset needed
 
-        // Restore filter from sessionStorage (saved by FileNavigationDropdown before navigate)
-        const cached = loadFilterCache(fileId)
-        if (cached) clearFilterCache(fileId) // consume and clear — prevent stale restore
-        const restoredFilter = cached ? { ...cached.filterState } : { ...DEFAULT_FILTER_STATE }
-        const restoredSearch = cached?.searchQuery ?? ''
-        const restoredAiEnabled = cached ? cached.aiSuggestionsEnabled : true
+        const newFileStates = new Map(s.fileStates)
+        // Always create fresh entry — sessionStorage L2 fallback for filter restore
+        const freshFs = createFileState(fileId)
+        newFileStates.set(fileId, freshFs)
+        const fs = freshFs
 
         return {
           currentFileId: fileId,
-          findingsMap: new Map(),
-          selectedId: null,
-          sortedFindingIds: [],
-          filterState: restoredFilter,
-          searchQuery: restoredSearch,
-          aiSuggestionsEnabled: restoredAiEnabled,
-          currentScore: null,
-          scoreStatus: 'na',
-          layerCompleted: null,
-          autoPassRationale: null,
-          isRecalculating: false,
-          l2ConfidenceMin: null,
-          l3ConfidenceMin: null,
-          selectedIds: new Set(),
-          selectionMode: 'single',
-          isBulkInFlight: false,
-          overrideCounts: new Map(),
-          // Story 4.4b: Clear undo/redo on file switch (AC6, Guardrail #35)
-          undoStack: [],
-          redoStack: [],
-          undoFindingIndex: new Map(),
+          fileStates: newFileStates,
+          // Dual-write: flat fields mirror active file's FileState (backward compat during migration)
+          findingsMap: fs.findingsMap,
+          selectedId: fs.selectedId,
+          sortedFindingIds: fs.sortedFindingIds,
+          filterState: fs.filterState,
+          searchQuery: fs.searchQuery,
+          aiSuggestionsEnabled: fs.aiSuggestionsEnabled,
+          currentScore: fs.currentScore,
+          scoreStatus: fs.scoreStatus,
+          layerCompleted: fs.layerCompleted,
+          autoPassRationale: fs.autoPassRationale,
+          isRecalculating: fs.isRecalculating,
+          l2ConfidenceMin: fs.l2ConfidenceMin,
+          l3ConfidenceMin: fs.l3ConfidenceMin,
+          selectedIds: fs.selectedIds,
+          selectionMode: fs.selectionMode,
+          isBulkInFlight: fs.isBulkInFlight,
+          overrideCounts: fs.overrideCounts,
+          undoStack: fs.undoStack,
+          redoStack: fs.redoStack,
+          undoFindingIndex: fs.undoFindingIndex,
         }
       }),
     // Task 4.4: selectRange — needs get() for sortedFindingIds
@@ -553,7 +702,7 @@ export const useReviewStore = create<ReviewState>()((set, get) => {
       for (const id of rangeIds) {
         newSet.add(id)
       }
-      set({ selectedIds: newSet, selectionMode: 'bulk' })
+      setState({ selectedIds: newSet, selectionMode: 'bulk' })
     },
     // Story 4.5: selectAllFiltered — extended with category, confidence, searchQuery, aiSuggestionsEnabled
     selectAllFiltered: () => {
@@ -567,10 +716,42 @@ export const useReviewStore = create<ReviewState>()((set, get) => {
       })
       // CR-M2+L-R2-1: 0 match → clear selection + exit bulk mode (not silent no-op)
       if (filtered.length === 0) {
-        set({ selectedIds: new Set<string>(), selectionMode: 'single' })
+        setState({ selectedIds: new Set<string>(), selectionMode: 'single' })
         return
       }
-      set({ selectedIds: new Set(filtered), selectionMode: 'bulk' })
+      setState({ selectedIds: new Set(filtered), selectionMode: 'bulk' })
     },
   }
 })
+
+// ── File-Scoped Context + Selector Wrapper (TD-ARCH-001) ──
+
+/**
+ * Context providing the fileId for the current component tree.
+ * Each ReviewPageClient instance wraps its children in this provider
+ * so useFileState reads the correct file's state — even during
+ * React startTransition when old and new trees coexist.
+ */
+export const ReviewFileIdContext = createContext<string>('')
+
+/**
+ * Selector wrapper for file-scoped state. Reads from the fileId provided by:
+ * 1. Explicit `overrideFileId` parameter (for ReviewPageClient — has fileId prop)
+ * 2. ReviewFileIdContext (for child components — context set by ReviewPageClient)
+ * 3. Fallback to currentFileId (for tests / non-context usage)
+ *
+ * @example
+ * // Child component (context): useFileState((fs) => fs.findingsMap)
+ * // ReviewPageClient (prop):   useFileState((fs) => fs.findingsMap, fileId)
+ */
+export function useFileState<T>(
+  selector: (fs: FileState) => T,
+  overrideFileId?: string | undefined,
+): T {
+  const contextFileId = useContext(ReviewFileIdContext)
+  const resolvedFileId = overrideFileId ?? contextFileId
+  return useReviewStore((s) => {
+    const fs = s.fileStates.get(resolvedFileId || s.currentFileId || '')
+    return selector(fs ?? DEFAULT_FILE_STATE)
+  })
+}

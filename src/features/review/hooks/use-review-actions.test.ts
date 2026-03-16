@@ -92,6 +92,17 @@ vi.mock('@/features/review/stores/review.store', () => ({
       })),
     },
   ),
+  useFileState: vi.fn((selector?: (state: Record<string, unknown>) => unknown) =>
+    selector
+      ? selector({
+          findingsMap: mockFindingsMap,
+          selectedId: null,
+          sortedFindingIds: [...mockFindingsMap.keys()],
+        })
+      : undefined,
+  ),
+  selectCanUndo: vi.fn(() => false),
+  selectCanRedo: vi.fn(() => false),
 }))
 
 // ── Mock focus management ──

@@ -267,7 +267,7 @@ test.describe.serial('Story 4.5: Search, Filter & AI Layer Toggle', () => {
   test('[P1] E-04: should persist filter state when switching files and returning', async ({
     page,
   }) => {
-    test.setTimeout(90_000)
+    test.setTimeout(120_000)
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, fileIdA)
 
@@ -275,28 +275,33 @@ test.describe.serial('Story 4.5: Search, Filter & AI Layer Toggle', () => {
     await page.getByTestId('filter-severity-major').click()
     await expect(page.getByTestId('filter-chip-severity-major')).toBeVisible()
 
-    // Navigate to file B via FileNavigationDropdown (full reload — saves to sessionStorage)
+    // Navigate to file B via FileNavigationDropdown (<Link> — client-side nav, TD-ARCH-001)
     await page.getByTestId('file-nav-trigger').click()
     await page.getByTestId('file-nav-list').waitFor({ state: 'visible' })
     await page.getByTestId(`file-nav-item-${fileIdB}`).click()
 
-    // Full reload — wait for file B page to load completely
+    // TD-ARCH-001: <Link> client-side nav — both pages coexist during transition.
+    // Wait for the NEW file's h1 to appear (file-scoped store isolates data per instance).
     await page.waitForURL(`**/review/${fileIdB}`, { timeout: 30_000 })
-    await expect(page.locator('h1')).toContainText(/\.sdlxliff/, { timeout: 15_000 })
+    // Use .last() to target the newest h1 (new tree renders after old tree)
+    await expect(page.locator('h1').last()).toContainText(/\.sdlxliff/, { timeout: 30_000 })
 
     // File B: no severity chip (default filters)
     await expect(page.getByTestId('filter-chip-severity-major')).not.toBeVisible({ timeout: 5_000 })
 
-    // Navigate back to file A (full reload — restores from sessionStorage)
-    await page.getByTestId('file-nav-trigger').click()
-    await page.getByTestId('file-nav-list').waitFor({ state: 'visible' })
-    await page.getByTestId(`file-nav-item-${fileIdA}`).click()
+    // Navigate back to file A via <Link> — use visible() filter for transition overlap
+    await page.getByTestId('file-nav-trigger').and(page.locator(':visible')).click()
+    await page
+      .getByTestId('file-nav-list')
+      .and(page.locator(':visible'))
+      .waitFor({ state: 'visible' })
+    await page.getByTestId(`file-nav-item-${fileIdA}`).and(page.locator(':visible')).click()
 
-    // Full reload — wait for file A page to load
+    // Wait for file A page to load
     await page.waitForURL(`**/review/${fileIdA}`, { timeout: 30_000 })
-    await expect(page.locator('h1')).toContainText(/\.sdlxliff/, { timeout: 15_000 })
+    await expect(page.locator('h1').last()).toContainText(/\.sdlxliff/, { timeout: 30_000 })
 
-    // THE KEY ASSERTION: severity=major filter restored from sessionStorage
+    // THE KEY ASSERTION: severity=major filter restored from sessionStorage (L2 cache)
     await expect(page.getByTestId('filter-chip-severity-major')).toBeVisible({ timeout: 10_000 })
   })
 

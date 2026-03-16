@@ -1,9 +1,9 @@
 import { Button } from '@/components/ui/button'
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, useFileState } from '@/features/review/stores/review.store'
 import { cn } from '@/lib/utils'
 
 export function AiToggle() {
-  const aiSuggestionsEnabled = useReviewStore((s) => s.aiSuggestionsEnabled)
+  const aiSuggestionsEnabled = useFileState((fs) => fs.aiSuggestionsEnabled)
   const setAiSuggestionsEnabled = useReviewStore((s) => s.setAiSuggestionsEnabled)
 
   return (

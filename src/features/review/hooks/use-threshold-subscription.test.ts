@@ -54,6 +54,16 @@ vi.mock('@/features/review/stores/review.store', () => ({
       l3ConfidenceMin: 80,
     }),
   ),
+  useFileState: vi.fn((selector?: (state: Record<string, unknown>) => unknown) =>
+    selector
+      ? selector({
+          l2ConfidenceMin: 70,
+          l3ConfidenceMin: 80,
+        })
+      : undefined,
+  ),
+  selectCanUndo: vi.fn(() => false),
+  selectCanRedo: vi.fn(() => false),
 }))
 
 // ── Toast mock (sonner) — must be hoisted ──

@@ -11,7 +11,7 @@ import {
 import { FindingCard } from '@/features/review/components/FindingCard'
 import { FindingCardCompact } from '@/features/review/components/FindingCardCompact'
 import { useFocusManagement } from '@/features/review/hooks/use-focus-management'
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, useFileState } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import type { FindingSeverity } from '@/types/finding'
@@ -197,7 +197,7 @@ export function FindingList({
 
   // ── Story 4.1c: Sync selectedId from review store → activeFindingId ──
   // Enables click-to-navigate from SegmentContextList → FindingList (AC5).
-  const storeSelectedId = useReviewStore((s) => s.selectedId)
+  const storeSelectedId = useFileState((fs) => fs.selectedId)
   useEffect(() => {
     if (storeSelectedId === null) return
     if (storeSelectedId === activeFindingId) return

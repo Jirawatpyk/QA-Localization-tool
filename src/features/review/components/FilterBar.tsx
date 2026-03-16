@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, useFileState } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import type { ConfidenceFilter, FilterState } from '@/features/review/utils/filter-helpers'
 import { DEFAULT_FILTER_STATE, findingMatchesFilters } from '@/features/review/utils/filter-helpers'
@@ -109,9 +109,9 @@ function computeMatchCounts(
 // ── Component ──
 
 export function FilterBar({ findings, filteredCount }: FilterBarProps) {
-  const filterState = useReviewStore((s) => s.filterState)
-  const searchQuery = useReviewStore((s) => s.searchQuery)
-  const aiSuggestionsEnabled = useReviewStore((s) => s.aiSuggestionsEnabled)
+  const filterState = useFileState((fs) => fs.filterState)
+  const searchQuery = useFileState((fs) => fs.searchQuery)
+  const aiSuggestionsEnabled = useFileState((fs) => fs.aiSuggestionsEnabled)
   const setFilter = useReviewStore((s) => s.setFilter)
   const resetFilters = useReviewStore((s) => s.resetFilters)
   const totalCount = findings.length

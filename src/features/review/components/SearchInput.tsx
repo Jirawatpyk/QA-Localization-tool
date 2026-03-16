@@ -3,13 +3,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, useFileState } from '@/features/review/stores/review.store'
 
 const DEBOUNCE_MS = 300
 
 export function SearchInput() {
   const setSearchQuery = useReviewStore((s) => s.setSearchQuery)
-  const storeQuery = useReviewStore((s) => s.searchQuery)
+  const storeQuery = useFileState((fs) => fs.searchQuery)
   const [localValue, setLocalValue] = useState(storeQuery)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 

@@ -9,7 +9,7 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import { SeverityIndicator } from '@/features/review/components/SeverityIndicator'
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, useFileState } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 
 const MAX_FINDING_RESULTS = 20
@@ -43,7 +43,7 @@ export function CommandPalette({
   const [inputValue, setInputValue] = useState('')
   const setSelectedFinding = useReviewStore((s) => s.setSelectedFinding)
   const setAiSuggestionsEnabled = useReviewStore((s) => s.setAiSuggestionsEnabled)
-  const aiSuggestionsEnabled = useReviewStore((s) => s.aiSuggestionsEnabled)
+  const aiSuggestionsEnabled = useFileState((fs) => fs.aiSuggestionsEnabled)
 
   // Guardrail #11: Reset form state on re-open (adjust state during render pattern)
   const [prevOpen, setPrevOpen] = useState(false)

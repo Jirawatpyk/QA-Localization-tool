@@ -43,7 +43,11 @@ import { useReviewActions } from '@/features/review/hooks/use-review-actions'
 import { useScoreSubscription } from '@/features/review/hooks/use-score-subscription'
 import { useThresholdSubscription } from '@/features/review/hooks/use-threshold-subscription'
 import { useUndoRedo } from '@/features/review/hooks/use-undo-redo'
-import { useReviewStore } from '@/features/review/stores/review.store'
+import {
+  useReviewStore,
+  useFileState,
+  ReviewFileIdContext,
+} from '@/features/review/stores/review.store'
 import type { UndoEntry } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import { mountAnnouncer, unmountAnnouncer } from '@/features/review/utils/announce'
@@ -99,20 +103,20 @@ export function ReviewPageClient({
 }: ReviewPageClientProps) {
   const resetForFile = useReviewStore((s) => s.resetForFile)
   const setFindings = useReviewStore((s) => s.setFindings)
-  const findingsMap = useReviewStore((s) => s.findingsMap)
-  const currentScore = useReviewStore((s) => s.currentScore)
-  const layerCompleted = useReviewStore((s) => s.layerCompleted)
-  const scoreStatus = useReviewStore((s) => s.scoreStatus)
+  const findingsMap = useFileState((fs) => fs.findingsMap, fileId)
+  const currentScore = useFileState((fs) => fs.currentScore, fileId)
+  const layerCompleted = useFileState((fs) => fs.layerCompleted, fileId)
+  const scoreStatus = useFileState((fs) => fs.scoreStatus, fileId)
   const updateScore = useReviewStore((s) => s.updateScore)
-  const storeL2ConfidenceMin = useReviewStore((s) => s.l2ConfidenceMin)
-  const storeL3ConfidenceMin = useReviewStore((s) => s.l3ConfidenceMin)
-  const selectedId = useReviewStore((s) => s.selectedId)
+  const storeL2ConfidenceMin = useFileState((fs) => fs.l2ConfidenceMin, fileId)
+  const storeL3ConfidenceMin = useFileState((fs) => fs.l3ConfidenceMin, fileId)
+  const selectedId = useFileState((fs) => fs.selectedId, fileId)
   const setSelectedFinding = useReviewStore((s) => s.setSelectedFinding)
 
   // Story 4.5: Filter + Search + AI toggle state from store
-  const filterState = useReviewStore((s) => s.filterState)
-  const searchQuery = useReviewStore((s) => s.searchQuery)
-  const aiSuggestionsEnabled = useReviewStore((s) => s.aiSuggestionsEnabled)
+  const filterState = useFileState((fs) => fs.filterState, fileId)
+  const searchQuery = useFileState((fs) => fs.searchQuery, fileId)
+  const aiSuggestionsEnabled = useFileState((fs) => fs.aiSuggestionsEnabled, fileId)
 
   // Responsive breakpoint hooks
   const isDesktop = useIsDesktop()
@@ -142,9 +146,9 @@ export function ReviewPageClient({
   })
 
   // Story 4.4a: Bulk selection state from store
-  const selectedIds = useReviewStore((s) => s.selectedIds)
-  const selectionMode = useReviewStore((s) => s.selectionMode)
-  const isBulkInFlight = useReviewStore((s) => s.isBulkInFlight)
+  const selectedIds = useFileState((fs) => fs.selectedIds, fileId)
+  const selectionMode = useFileState((fs) => fs.selectionMode, fileId)
+  const isBulkInFlight = useFileState((fs) => fs.isBulkInFlight, fileId)
   const clearSelection = useReviewStore((s) => s.clearSelection)
   const setSelectionMode = useReviewStore((s) => s.setSelectionMode)
   const setBulkInFlight = useReviewStore((s) => s.setBulkInFlight)
@@ -457,21 +461,16 @@ export function ReviewPageClient({
     }
   }, [])
 
-  // Capture initialData on first render only — use a ref so the effect below
-  // does NOT re-run when Next.js RSC re-renders with a new initialData reference
-  // (e.g. after Server Action cache revalidation). Re-running would overwrite
-  // optimistic updates with stale pending state from SSR. (E-R1 root cause fix)
-  // H1 fix: track which fileId was last initialized. When fileId changes (file navigation),
-  // the effect re-initializes with new initialData. When RSC revalidates (same fileId,
-  // new initialData reference), the guard skips re-initialization to protect optimistic state.
+  // TD-ARCH-001: per-instance init guard (ref) + per-file initialized flag (Map).
+  // processedFileIdRef is per-component-instance — ensures each mount initializes once.
+  // FileState.initialized is per-file in the Map — used by useFileState consumers.
   const processedFileIdRef = useRef<string | null>(null)
 
   // Initialize store on fileId change — resetForFile restores filter from sessionStorage (AC3).
-  // Filter cache is saved by FileNavigationDropdown.handleFileSelect BEFORE window.location.href
-  // (not via cleanup effect — see FileNavigationDropdown.tsx JSDoc for why).
+  // Filter cache is saved by FileNavigationDropdown before <Link> navigation.
   useEffect(() => {
     // Guard: skip re-init for same file (protects optimistic state from RSC revalidation).
-    // Exception: if findingsMap is empty but initialData has findings → data arrived late.
+    // Exception: if findingsMap is empty but initialData has findings → data arrived late (F5 fix).
     const storeFindings = useReviewStore.getState().findingsMap
     if (
       processedFileIdRef.current === fileId &&
@@ -515,6 +514,15 @@ export function ReviewPageClient({
     // Populate initial score
     if (data.score.mqmScore !== null) {
       updateScore(data.score.mqmScore, data.score.status, data.score.layerCompleted)
+    }
+
+    // TD-ARCH-001: Mark file as initialized in the Map
+    const updatedState = useReviewStore.getState()
+    const currentFs = updatedState.fileStates.get(fileId)
+    if (currentFs && !currentFs.initialized) {
+      const newFileStates = new Map(updatedState.fileStates)
+      newFileStates.set(fileId, { ...currentFs, initialized: true })
+      useReviewStore.setState({ fileStates: newFileStates })
     }
     // initialData in deps: effect re-runs on RSC revalidation but processedFileIdRef guard
     // prevents re-initialization for the same file. Only genuine file navigation triggers init.
@@ -817,613 +825,633 @@ export function ReviewPageClient({
     }
   }
 
+  // TD-ARCH-001: Detect stale instance during <Link> transition.
+  // When another instance takes over (different currentFileId), this instance
+  // should become invisible + non-interactive so it doesn't block the new one.
+  const storeCurrentFileId = useReviewStore((s) => s.currentFileId)
+  const isStaleInstance = storeCurrentFileId !== null && storeCurrentFileId !== fileId
+
   return (
-    <div
-      className="flex h-full"
-      data-testid="review-3-zone"
-      data-layout-mode={layoutMode}
-      onKeyDown={handleReviewZoneKeyDown}
-    >
-      {/* Zone 1: File Navigation — desktop: sidebar, laptop: dropdown, mobile: hidden */}
-      {isDesktop && (
-        <nav
-          aria-label="File navigation"
-          className="w-60 border-r shrink-0 overflow-y-auto p-4"
-          data-testid="file-sidebar-nav"
-        >
-          <h2 className="text-sm font-semibold text-muted-foreground mb-2">Files</h2>
-          <p className="text-xs text-muted-foreground">File navigation coming soon.</p>
-        </nav>
-      )}
+    <ReviewFileIdContext.Provider value={fileId}>
+      <div
+        className="flex h-full"
+        data-testid="review-3-zone"
+        data-layout-mode={layoutMode}
+        onKeyDown={handleReviewZoneKeyDown}
+        {...(isStaleInstance
+          ? {
+              style: {
+                pointerEvents: 'none' as const,
+                opacity: 0,
+                position: 'absolute' as const,
+                inset: 0,
+                zIndex: -1,
+              },
+              'aria-hidden': true,
+            }
+          : {})}
+      >
+        {/* Zone 1: File Navigation — desktop: sidebar, laptop: dropdown, mobile: hidden */}
+        {isDesktop && (
+          <nav
+            aria-label="File navigation"
+            className="w-60 border-r shrink-0 overflow-y-auto p-4"
+            data-testid="file-sidebar-nav"
+          >
+            <h2 className="text-sm font-semibold text-muted-foreground mb-2">Files</h2>
+            <p className="text-xs text-muted-foreground">File navigation coming soon.</p>
+          </nav>
+        )}
 
-      {/* Zone 2: Finding List (center) */}
-      <div className="flex-1 overflow-y-auto p-6">
-        {/* File navigation dropdown — always render for review page navigation */}
-        <div className="mb-4">
-          <FileNavigationDropdown
-            currentFileName={initialData.file.fileName}
-            currentFileId={fileId}
-            projectId={projectId}
-            siblingFiles={initialData.siblingFiles}
-          />
-        </div>
-
-        {/* Header: file name + score badge + approve button */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">{initialData.file.fileName}</h1>
-            <p className="text-sm text-muted-foreground mt-1">Project Review</p>
+        {/* Zone 2: Finding List (center) */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {/* File navigation dropdown — always render for review page navigation */}
+          <div className="mb-4">
+            <FileNavigationDropdown
+              currentFileName={initialData.file.fileName}
+              currentFileId={fileId}
+              projectId={projectId}
+              siblingFiles={initialData.siblingFiles}
+            />
           </div>
-          <div className="flex items-center gap-3">
-            {/* Score badge with dimming during recalculation */}
-            <div
-              aria-live="polite"
-              data-testid="score-live-region"
-              className={isCalculating ? 'opacity-50' : ''}
-              data-recalculating={isCalculating ? 'true' : undefined}
-            >
-              <ScoreBadge score={effectiveScore ?? null} size="md" state={badgeState} />
-              {/* Story 4.5 AC8: "AI findings hidden" indicator beside score badge */}
-              {!aiSuggestionsEnabled && (
-                <span
-                  data-testid="ai-hidden-indicator"
-                  className="text-xs text-muted-foreground ml-2"
+
+          {/* Header: file name + score badge + approve button */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-2xl font-bold">{initialData.file.fileName}</h1>
+              <p className="text-sm text-muted-foreground mt-1">Project Review</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Score badge with dimming during recalculation */}
+              <div
+                aria-live="polite"
+                data-testid="score-live-region"
+                className={isCalculating ? 'opacity-50' : ''}
+                data-recalculating={isCalculating ? 'true' : undefined}
+              >
+                <ScoreBadge score={effectiveScore ?? null} size="md" state={badgeState} />
+                {/* Story 4.5 AC8: "AI findings hidden" indicator beside score badge */}
+                {!aiSuggestionsEnabled && (
+                  <span
+                    data-testid="ai-hidden-indicator"
+                    className="text-xs text-muted-foreground ml-2"
+                  >
+                    AI findings hidden
+                  </span>
+                )}
+              </div>
+
+              {/* Recalculating badge */}
+              {isCalculating && (
+                <Badge variant="outline" className="animate-pulse">
+                  Recalculating...
+                </Badge>
+              )}
+
+              {/* AI pending indicator */}
+              {isAiPending && (
+                <Badge variant="outline" className="text-info border-info/30">
+                  AI pending
+                </Badge>
+              )}
+
+              {/* Approve button — shown when not auto_passed */}
+              {!isAutoPassedStatus && (
+                <button
+                  type="button"
+                  onClick={handleApprove}
+                  disabled={!canApprove}
+                  className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
                 >
-                  AI findings hidden
-                </span>
+                  {isApproving ? 'Approving...' : 'Approve'}
+                </button>
+              )}
+
+              {showRetryButton && (
+                <button
+                  type="button"
+                  onClick={handleRetry}
+                  disabled={isPending}
+                  className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium bg-warning/10 text-warning border-warning/20 hover:bg-warning/20 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
+                >
+                  {isPending ? 'Retrying...' : 'Retry AI Analysis'}
+                </button>
               )}
             </div>
-
-            {/* Recalculating badge */}
-            {isCalculating && (
-              <Badge variant="outline" className="animate-pulse">
-                Recalculating...
-              </Badge>
-            )}
-
-            {/* AI pending indicator */}
-            {isAiPending && (
-              <Badge variant="outline" className="text-info border-info/30">
-                AI pending
-              </Badge>
-            )}
-
-            {/* Approve button — shown when not auto_passed */}
-            {!isAutoPassedStatus && (
-              <button
-                type="button"
-                onClick={handleApprove}
-                disabled={!canApprove}
-                className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
-              >
-                {isApproving ? 'Approving...' : 'Approve'}
-              </button>
-            )}
-
-            {showRetryButton && (
-              <button
-                type="button"
-                onClick={handleRetry}
-                disabled={isPending}
-                className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium bg-warning/10 text-warning border-warning/20 hover:bg-warning/20 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
-              >
-                {isPending ? 'Retrying...' : 'Retry AI Analysis'}
-              </button>
-            )}
           </div>
-        </div>
 
-        {/* Auto-pass rationale — shown when auto_passed */}
-        {isAutoPassedStatus && initialData.autoPassRationale && (
-          <AutoPassRationale rationale={initialData.autoPassRationale} />
-        )}
-
-        {/* Partial status warning — container always in DOM per G#33 */}
-        <div aria-live="assertive" data-testid="error-live-region">
-          {partialWarningText && (
-            <p className="text-sm text-warning bg-warning/5 border border-warning/20 rounded-md px-3 py-2">
-              {partialWarningText}
-            </p>
+          {/* Auto-pass rationale — shown when auto_passed */}
+          {isAutoPassedStatus && initialData.autoPassRationale && (
+            <AutoPassRationale rationale={initialData.autoPassRationale} />
           )}
-        </div>
 
-        {/* Dual-track progress (Story 4.1a AC3) */}
-        <ReviewProgress
-          reviewedCount={reviewedCount}
-          totalCount={allFindings.length}
-          fileStatus={initialData.file.status}
-          processingMode={initialData.processingMode}
-          layerCompleted={effectiveLayerCompleted}
-        />
+          {/* Partial status warning — container always in DOM per G#33 */}
+          <div aria-live="assertive" data-testid="error-live-region">
+            {partialWarningText && (
+              <p className="text-sm text-warning bg-warning/5 border border-warning/20 rounded-md px-3 py-2">
+                {partialWarningText}
+              </p>
+            )}
+          </div>
 
-        {/* Finding count summary */}
-        <div data-testid="finding-count-summary" className="flex gap-4 text-sm mt-4">
-          <span className="text-severity-critical font-medium">
-            Critical: {severityCounts.critical}
-          </span>
-          <span className="text-severity-major font-medium">Major: {severityCounts.major}</span>
-          <span className="text-severity-minor font-medium">Minor: {severityCounts.minor}</span>
-          <span className="text-muted-foreground">Total: {findingsMap.size}</span>
-        </div>
+          {/* Dual-track progress (Story 4.1a AC3) */}
+          <ReviewProgress
+            reviewedCount={reviewedCount}
+            totalCount={allFindings.length}
+            fileStatus={initialData.file.status}
+            processingMode={initialData.processingMode}
+            layerCompleted={effectiveLayerCompleted}
+          />
 
-        {/* Story 4.5: Filter bar + search + AI toggle (AC1, AC2, AC4, AC5, AC8) */}
-        <div className="mt-4">
-          <div className="flex items-start gap-3">
-            <div className="flex-1">
-              <FilterBar findings={findingsForDisplay} filteredCount={filteredFindings.length} />
-            </div>
-            <div className="flex flex-col gap-2 shrink-0 pt-2">
-              <SearchInput />
-              {/* AC8: AI Suggestions toggle */}
-              <AiToggle />
+          {/* Finding count summary */}
+          <div data-testid="finding-count-summary" className="flex gap-4 text-sm mt-4">
+            <span className="text-severity-critical font-medium">
+              Critical: {severityCounts.critical}
+            </span>
+            <span className="text-severity-major font-medium">Major: {severityCounts.major}</span>
+            <span className="text-severity-minor font-medium">Minor: {severityCounts.minor}</span>
+            <span className="text-muted-foreground">Total: {findingsMap.size}</span>
+          </div>
+
+          {/* Story 4.5: Filter bar + search + AI toggle (AC1, AC2, AC4, AC5, AC8) */}
+          <div className="mt-4">
+            <div className="flex items-start gap-3">
+              <div className="flex-1">
+                <FilterBar findings={findingsForDisplay} filteredCount={filteredFindings.length} />
+              </div>
+              <div className="flex flex-col gap-2 shrink-0 pt-2">
+                <SearchInput />
+                {/* AC8: AI Suggestions toggle */}
+                <AiToggle />
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Findings list — grid role moved to FindingList (Story 4.1b, Guardrail #29, #38) */}
-        <div data-testid="finding-list" className="mt-4 space-y-2">
-          <FindingList
-            findings={filteredFindings}
-            expandedIds={expandedIds}
-            onToggleExpand={handleToggleExpand}
-            sourceLang={sourceLang}
-            targetLang={targetLang ?? undefined}
-            l2ConfidenceMin={storeL2ConfidenceMin ?? initialData.l2ConfidenceMin}
-            l3ConfidenceMin={storeL3ConfidenceMin ?? initialData.l3ConfidenceMin}
-            onAccept={handleAccept}
-            onReject={handleReject}
-            isActionInFlight={isActionInFlight}
-            onActiveFindingChange={handleActiveFindingChange}
-            skipStoreSyncRef={selectedIdFromClickRef}
-            onOverrideBadgeClick={(findingId) => {
-              // Select the finding to open detail panel, then auto-show history
-              handleActiveFindingChange(findingId)
+          {/* Findings list — grid role moved to FindingList (Story 4.1b, Guardrail #29, #38) */}
+          <div data-testid="finding-list" className="mt-4 space-y-2">
+            <FindingList
+              findings={filteredFindings}
+              expandedIds={expandedIds}
+              onToggleExpand={handleToggleExpand}
+              sourceLang={sourceLang}
+              targetLang={targetLang ?? undefined}
+              l2ConfidenceMin={storeL2ConfidenceMin ?? initialData.l2ConfidenceMin}
+              l3ConfidenceMin={storeL3ConfidenceMin ?? initialData.l3ConfidenceMin}
+              onAccept={handleAccept}
+              onReject={handleReject}
+              isActionInFlight={isActionInFlight}
+              onActiveFindingChange={handleActiveFindingChange}
+              skipStoreSyncRef={selectedIdFromClickRef}
+              onOverrideBadgeClick={(findingId) => {
+                // Select the finding to open detail panel, then auto-show history
+                handleActiveFindingChange(findingId)
+              }}
+              onNavigateReady={handleNavigateReady}
+            />
+          </div>
+          {/* Action Bar (Task 5 — below finding list) */}
+          <ReviewActionBar
+            onAccept={() => activeFindingState && handleAccept(activeFindingState)}
+            onReject={() => activeFindingState && handleReject(activeFindingState)}
+            onFlag={() => activeFindingState && handleFlag(activeFindingState)}
+            onNote={() => {
+              if (!activeFindingState) return
+              const result = handleNote(activeFindingState)
+              if (result === 'open-note-input') {
+                noteTargetIdRef.current = activeFindingState
+                setIsNoteInputOpen(true)
+              }
             }}
-            onNavigateReady={handleNavigateReady}
+            onSource={() => activeFindingState && handleSourceIssue(activeFindingState)}
+            onOverride={() => setIsOverrideMenuOpen(true)}
+            onAdd={() => setIsAddFindingDialogOpen(true)}
+            isDisabled={!activeFindingState || isActionInFlight}
+            isInFlight={isActionInFlight}
+            activeAction={activeAction}
+            findingNumber={activeFindingNumber}
+            isManualFinding={
+              activeFindingState
+                ? findingsMap.get(activeFindingState)?.detectedByLayer === 'Manual'
+                : false
+            }
           />
-        </div>
-        {/* Action Bar (Task 5 — below finding list) */}
-        <ReviewActionBar
-          onAccept={() => activeFindingState && handleAccept(activeFindingState)}
-          onReject={() => activeFindingState && handleReject(activeFindingState)}
-          onFlag={() => activeFindingState && handleFlag(activeFindingState)}
-          onNote={() => {
-            if (!activeFindingState) return
-            const result = handleNote(activeFindingState)
-            if (result === 'open-note-input') {
-              noteTargetIdRef.current = activeFindingState
-              setIsNoteInputOpen(true)
-            }
-          }}
-          onSource={() => activeFindingState && handleSourceIssue(activeFindingState)}
-          onOverride={() => setIsOverrideMenuOpen(true)}
-          onAdd={() => setIsAddFindingDialogOpen(true)}
-          isDisabled={!activeFindingState || isActionInFlight}
-          isInFlight={isActionInFlight}
-          activeAction={activeAction}
-          findingNumber={activeFindingNumber}
-          isManualFinding={
-            activeFindingState
-              ? findingsMap.get(activeFindingState)?.detectedByLayer === 'Manual'
-              : false
-          }
-        />
 
-        {/* Story 4.4a: Bulk selection aria-live announcer (persistent in DOM per Guardrail #33) */}
-        <div aria-live="polite" className="sr-only" data-testid="bulk-selection-announcer">
-          {selectionMode === 'bulk' && selectedIds.size > 0
-            ? `${selectedIds.size} findings selected`
-            : selectionMode === 'single'
-              ? 'Selection cleared'
-              : ''}
-        </div>
+          {/* Story 4.4a: Bulk selection aria-live announcer (persistent in DOM per Guardrail #33) */}
+          <div aria-live="polite" className="sr-only" data-testid="bulk-selection-announcer">
+            {selectionMode === 'bulk' && selectedIds.size > 0
+              ? `${selectedIds.size} findings selected`
+              : selectionMode === 'single'
+                ? 'Selection cleared'
+                : ''}
+          </div>
 
-        {/* Story 4.4a: BulkActionBar — visible in bulk mode with selections */}
-        {selectionMode === 'bulk' && selectedIds.size > 0 && (
-          <BulkActionBar
-            selectedCount={selectedIds.size}
-            onBulkAccept={handleBulkAccept}
-            onBulkReject={handleBulkReject}
-            onClearSelection={handleClearBulkSelection}
-            isBulkInFlight={isBulkInFlight}
-            activeAction={activeBulkAction}
+          {/* Story 4.4a: BulkActionBar — visible in bulk mode with selections */}
+          {selectionMode === 'bulk' && selectedIds.size > 0 && (
+            <BulkActionBar
+              selectedCount={selectedIds.size}
+              onBulkAccept={handleBulkAccept}
+              onBulkReject={handleBulkReject}
+              onClearSelection={handleClearBulkSelection}
+              isBulkInFlight={isBulkInFlight}
+              activeAction={activeBulkAction}
+            />
+          )}
+
+          {/* Story 4.4a: BulkConfirmDialog — for >5 threshold */}
+          <BulkConfirmDialog
+            open={bulkConfirmOpen}
+            onOpenChange={setBulkConfirmOpen}
+            action={bulkConfirmAction}
+            selectedFindings={selectedFindingsForDialog}
+            totalSelectedCount={selectedIds.size}
+            onConfirm={() => {
+              executeBulk(bulkConfirmAction).catch(() => toast.error('Bulk operation failed'))
+            }}
           />
-        )}
 
-        {/* Story 4.4a: BulkConfirmDialog — for >5 threshold */}
-        <BulkConfirmDialog
-          open={bulkConfirmOpen}
-          onOpenChange={setBulkConfirmOpen}
-          action={bulkConfirmAction}
-          selectedFindings={selectedFindingsForDialog}
-          totalSelectedCount={selectedIds.size}
-          onConfirm={() => {
-            executeBulk(bulkConfirmAction).catch(() => toast.error('Bulk operation failed'))
-          }}
-        />
-
-        {/* Story 4.4b: ConflictDialog for undo conflicts */}
-        <ConflictDialog
-          open={conflictOpen}
-          entry={conflictEntry}
-          findingId={conflictFindingId}
-          currentState={conflictCurrentState}
-          onForceUndo={() => {
-            setConflictOpen(false)
-            if (conflictEntry) {
-              forceUndo(conflictEntry).catch(() => {
-                /* handled in forceUndo */
-              })
-            }
-          }}
-          onCancel={() => {
-            setConflictOpen(false)
-            setConflictEntry(null)
-          }}
-        />
-
-        {/* Story 4.5: Command palette (AC6, AC7, AC10) */}
-        <CommandPalette
-          open={commandPaletteOpen}
-          onOpenChange={setCommandPaletteOpen}
-          findings={findingsForDisplay}
-          siblingFiles={initialData.siblingFiles}
-          onNavigateToFinding={(id) => handleActiveFindingChange(id)}
-          onAction={(action) => {
-            if (!activeFindingState) return
-            switch (action) {
-              case 'accept':
-                handleAccept(activeFindingState)
-                break
-              case 'reject':
-                handleReject(activeFindingState)
-                break
-              case 'flag':
-                handleFlag(activeFindingState)
-                break
-              case 'note':
-                handleNote(activeFindingState)
-                break
-              case 'source_issue':
-                handleSourceIssue(activeFindingState)
-                break
-            }
-          }}
-        />
-
-        {/* Story 4.3: NoteInput popover (AC1 Path 2) */}
-        <NoteInput
-          open={isNoteInputOpen}
-          onSubmit={(noteText) => {
-            setIsNoteInputOpen(false)
-            // CR-R1-H3: use ref-captured findingId from open time, not current activeFindingState
-            const targetId = noteTargetIdRef.current
-            if (!targetId) return
-            void updateNoteText({ findingId: targetId, fileId, projectId, noteText })
-              .then((result) => {
-                if (result.success) toast.success('Note saved')
-                else toast.error(result.error ?? 'Failed to save note')
-              })
-              .catch(() => toast.error('Failed to save note'))
-          }}
-          onDismiss={() => setIsNoteInputOpen(false)}
-        />
-
-        {/* Story 4.3: SeverityOverrideMenu (AC3) */}
-        {activeFinding && (
-          <SeverityOverrideMenu
-            currentSeverity={activeFinding.severity}
-            originalSeverity={activeFinding.originalSeverity}
-            open={isOverrideMenuOpen}
-            onOpenChange={setIsOverrideMenuOpen}
-            onOverride={(newSeverity) => {
-              setIsOverrideMenuOpen(false)
-              if (!activeFindingState || overrideInFlightRef.current) return
-              // Optimistic store update
-              const store = useReviewStore.getState()
-              const f = store.findingsMap.get(activeFindingState)
-              if (f) {
-                store.setFinding(activeFindingState, {
-                  ...f,
-                  originalSeverity: f.originalSeverity ?? f.severity,
-                  severity: newSeverity,
-                  updatedAt: new Date().toISOString(),
+          {/* Story 4.4b: ConflictDialog for undo conflicts */}
+          <ConflictDialog
+            open={conflictOpen}
+            entry={conflictEntry}
+            findingId={conflictFindingId}
+            currentState={conflictCurrentState}
+            onForceUndo={() => {
+              setConflictOpen(false)
+              if (conflictEntry) {
+                forceUndo(conflictEntry).catch(() => {
+                  /* handled in forceUndo */
                 })
               }
-              overrideInFlightRef.current = true
-              void overrideSeverity({
-                findingId: activeFindingState,
-                fileId,
-                projectId,
-                newSeverity,
-              })
-                .then((result) => {
-                  if (result.success) {
-                    // CR-R1-H4: sync server timestamp to prevent Realtime merge guard rejection
-                    const curr = useReviewStore.getState().findingsMap.get(activeFindingState)
-                    if (curr) {
-                      useReviewStore.getState().setFinding(activeFindingState, {
-                        ...curr,
-                        updatedAt: result.data.serverUpdatedAt,
-                      })
-                    }
-                    toast.success(`Severity overridden to ${newSeverity}`)
-
-                    // Story 4.4b CR-C1: Push undo entry for severity override (AC3)
-                    useReviewStore.getState().pushUndo({
-                      id: crypto.randomUUID(),
-                      type: 'single',
-                      action: 'severity_override',
-                      findingId: activeFindingState,
-                      batchId: null,
-                      previousStates: new Map([[activeFindingState, f?.status ?? 'pending']]),
-                      newStates: new Map([[activeFindingState, f?.status ?? 'pending']]),
-                      previousSeverity: {
-                        severity: f?.severity ?? newSeverity,
-                        originalSeverity: f?.originalSeverity ?? null,
-                      },
-                      newSeverity,
-                      findingSnapshot: null,
-                      description: `Override severity (${f?.severity ?? '?'} → ${newSeverity})`,
-                      timestamp: Date.now(),
-                      staleFindings: new Set(),
-                    })
-                  } else {
-                    // Rollback optimistic update
-                    if (f) {
-                      const curr = useReviewStore.getState().findingsMap.get(activeFindingState)
-                      if (curr)
-                        useReviewStore.getState().setFinding(activeFindingState, {
-                          ...curr,
-                          severity: f.severity,
-                          originalSeverity: f.originalSeverity,
-                        })
-                    }
-                    toast.error(result.error ?? 'Override failed')
-                  }
-                })
-                .catch(() => toast.error('Override failed'))
-                .finally(() => {
-                  overrideInFlightRef.current = false
-                })
             }}
-            onReset={() => {
-              setIsOverrideMenuOpen(false)
-              if (!activeFindingState || !activeFinding || overrideInFlightRef.current) return
-              const orig = activeFinding.originalSeverity
-              if (!orig) return
-              // Optimistic store update for reset
-              const store = useReviewStore.getState()
-              const f = store.findingsMap.get(activeFindingState)
-              if (f) {
-                store.setFinding(activeFindingState, {
-                  ...f,
-                  severity: orig,
-                  originalSeverity: null,
-                  updatedAt: new Date().toISOString(),
-                })
-              }
-              overrideInFlightRef.current = true
-              void overrideSeverity({
-                findingId: activeFindingState,
-                fileId,
-                projectId,
-                newSeverity: orig,
-              })
-                .then((result) => {
-                  if (result.success) {
-                    // CR-R1-H4: sync server timestamp
-                    const curr = useReviewStore.getState().findingsMap.get(activeFindingState)
-                    if (curr) {
-                      useReviewStore.getState().setFinding(activeFindingState, {
-                        ...curr,
-                        updatedAt: result.data.serverUpdatedAt,
-                      })
-                    }
-                    toast.success('Severity reset to original')
-
-                    // Story 4.4b CR-C1: Push undo entry for severity reset (AC3)
-                    useReviewStore.getState().pushUndo({
-                      id: crypto.randomUUID(),
-                      type: 'single',
-                      action: 'severity_override',
-                      findingId: activeFindingState,
-                      batchId: null,
-                      previousStates: new Map([[activeFindingState, f?.status ?? 'pending']]),
-                      newStates: new Map([[activeFindingState, f?.status ?? 'pending']]),
-                      previousSeverity: {
-                        severity: f?.severity ?? orig,
-                        originalSeverity: f?.originalSeverity ?? null,
-                      },
-                      newSeverity: orig,
-                      findingSnapshot: null,
-                      description: `Reset severity (${f?.severity ?? '?'} → ${orig})`,
-                      timestamp: Date.now(),
-                      staleFindings: new Set(),
-                    })
-                  } else {
-                    // Rollback
-                    if (f) {
-                      const curr = useReviewStore.getState().findingsMap.get(activeFindingState)
-                      if (curr)
-                        useReviewStore.getState().setFinding(activeFindingState, {
-                          ...curr,
-                          severity: f.severity,
-                          originalSeverity: f.originalSeverity,
-                        })
-                    }
-                    toast.error(result.error ?? 'Reset failed')
-                  }
-                })
-                .catch(() => toast.error('Reset failed'))
-                .finally(() => {
-                  overrideInFlightRef.current = false
-                })
+            onCancel={() => {
+              setConflictOpen(false)
+              setConflictEntry(null)
             }}
-            trigger={<span className="hidden" />}
           />
-        )}
 
-        {/* Story 4.3: AddFindingDialog (AC4) */}
-        <AddFindingDialog
-          open={isAddFindingDialogOpen}
-          onOpenChange={setIsAddFindingDialogOpen}
-          segments={initialData.segments}
-          categories={initialData.categories}
-          defaultSegmentId={
-            activeFindingState ? (findingsMap.get(activeFindingState)?.segmentId ?? null) : null
-          }
-          onSubmit={(data) => {
-            setIsAddFindingDialogOpen(false)
-            void addFinding({ ...data, fileId, projectId })
-              .then((result) => {
-                if (result.success) {
-                  toast.success('Manual finding added')
-                  // Add new finding to store so it renders immediately
-                  const store = useReviewStore.getState()
-                  const newFinding: Finding = {
-                    id: result.data.findingId,
-                    tenantId,
-                    projectId,
-                    sessionId: '',
-                    segmentId: data.segmentId,
-                    severity: result.data.severity,
-                    originalSeverity: null,
-                    category: result.data.category,
-                    status: 'manual',
-                    description: result.data.description,
-                    createdAt: new Date().toISOString(),
+          {/* Story 4.5: Command palette (AC6, AC7, AC10) */}
+          <CommandPalette
+            open={commandPaletteOpen}
+            onOpenChange={setCommandPaletteOpen}
+            findings={findingsForDisplay}
+            siblingFiles={initialData.siblingFiles}
+            onNavigateToFinding={(id) => handleActiveFindingChange(id)}
+            onAction={(action) => {
+              if (!activeFindingState) return
+              switch (action) {
+                case 'accept':
+                  handleAccept(activeFindingState)
+                  break
+                case 'reject':
+                  handleReject(activeFindingState)
+                  break
+                case 'flag':
+                  handleFlag(activeFindingState)
+                  break
+                case 'note':
+                  handleNote(activeFindingState)
+                  break
+                case 'source_issue':
+                  handleSourceIssue(activeFindingState)
+                  break
+              }
+            }}
+          />
+
+          {/* Story 4.3: NoteInput popover (AC1 Path 2) */}
+          <NoteInput
+            open={isNoteInputOpen}
+            onSubmit={(noteText) => {
+              setIsNoteInputOpen(false)
+              // CR-R1-H3: use ref-captured findingId from open time, not current activeFindingState
+              const targetId = noteTargetIdRef.current
+              if (!targetId) return
+              void updateNoteText({ findingId: targetId, fileId, projectId, noteText })
+                .then((result) => {
+                  if (result.success) toast.success('Note saved')
+                  else toast.error(result.error ?? 'Failed to save note')
+                })
+                .catch(() => toast.error('Failed to save note'))
+            }}
+            onDismiss={() => setIsNoteInputOpen(false)}
+          />
+
+          {/* Story 4.3: SeverityOverrideMenu (AC3) */}
+          {activeFinding && (
+            <SeverityOverrideMenu
+              currentSeverity={activeFinding.severity}
+              originalSeverity={activeFinding.originalSeverity}
+              open={isOverrideMenuOpen}
+              onOpenChange={setIsOverrideMenuOpen}
+              onOverride={(newSeverity) => {
+                setIsOverrideMenuOpen(false)
+                if (!activeFindingState || overrideInFlightRef.current) return
+                // Optimistic store update
+                const store = useReviewStore.getState()
+                const f = store.findingsMap.get(activeFindingState)
+                if (f) {
+                  store.setFinding(activeFindingState, {
+                    ...f,
+                    originalSeverity: f.originalSeverity ?? f.severity,
+                    severity: newSeverity,
                     updatedAt: new Date().toISOString(),
-                    fileId,
-                    detectedByLayer: 'Manual',
-                    aiModel: null,
-                    aiConfidence: null,
-                    suggestedFix: data.suggestion,
-                    // H2 fix: populate from segments data to avoid flicker until Realtime arrives
-                    sourceTextExcerpt:
-                      initialData.segments
-                        .find((s) => s.id === data.segmentId)
-                        ?.sourceText?.substring(0, 100) ?? null,
-                    targetTextExcerpt: null, // target text not available in segments list
-                    segmentCount: 1,
-                    scope: 'per-file',
-                    reviewSessionId: null,
-                    relatedFileIds: null,
-                  }
-                  store.setFinding(result.data.findingId, newFinding)
+                  })
+                }
+                overrideInFlightRef.current = true
+                void overrideSeverity({
+                  findingId: activeFindingState,
+                  fileId,
+                  projectId,
+                  newSeverity,
+                })
+                  .then((result) => {
+                    if (result.success) {
+                      // CR-R1-H4: sync server timestamp to prevent Realtime merge guard rejection
+                      const curr = useReviewStore.getState().findingsMap.get(activeFindingState)
+                      if (curr) {
+                        useReviewStore.getState().setFinding(activeFindingState, {
+                          ...curr,
+                          updatedAt: result.data.serverUpdatedAt,
+                        })
+                      }
+                      toast.success(`Severity overridden to ${newSeverity}`)
 
-                  // Story 4.4b: Push undo entry for manual add (CR-C2: include snapshot for redo)
-                  store.pushUndo({
-                    id: crypto.randomUUID(),
-                    type: 'single',
-                    action: 'add',
-                    findingId: result.data.findingId,
-                    batchId: null,
-                    previousStates: new Map(),
-                    newStates: new Map([[result.data.findingId, 'manual']]),
-                    previousSeverity: null,
-                    newSeverity: null,
-                    findingSnapshot: {
-                      id: newFinding.id,
-                      segmentId: newFinding.segmentId || null,
-                      fileId: newFinding.fileId ?? fileId,
-                      projectId,
+                      // Story 4.4b CR-C1: Push undo entry for severity override (AC3)
+                      useReviewStore.getState().pushUndo({
+                        id: crypto.randomUUID(),
+                        type: 'single',
+                        action: 'severity_override',
+                        findingId: activeFindingState,
+                        batchId: null,
+                        previousStates: new Map([[activeFindingState, f?.status ?? 'pending']]),
+                        newStates: new Map([[activeFindingState, f?.status ?? 'pending']]),
+                        previousSeverity: {
+                          severity: f?.severity ?? newSeverity,
+                          originalSeverity: f?.originalSeverity ?? null,
+                        },
+                        newSeverity,
+                        findingSnapshot: null,
+                        description: `Override severity (${f?.severity ?? '?'} → ${newSeverity})`,
+                        timestamp: Date.now(),
+                        staleFindings: new Set(),
+                      })
+                    } else {
+                      // Rollback optimistic update
+                      if (f) {
+                        const curr = useReviewStore.getState().findingsMap.get(activeFindingState)
+                        if (curr)
+                          useReviewStore.getState().setFinding(activeFindingState, {
+                            ...curr,
+                            severity: f.severity,
+                            originalSeverity: f.originalSeverity,
+                          })
+                      }
+                      toast.error(result.error ?? 'Override failed')
+                    }
+                  })
+                  .catch(() => toast.error('Override failed'))
+                  .finally(() => {
+                    overrideInFlightRef.current = false
+                  })
+              }}
+              onReset={() => {
+                setIsOverrideMenuOpen(false)
+                if (!activeFindingState || !activeFinding || overrideInFlightRef.current) return
+                const orig = activeFinding.originalSeverity
+                if (!orig) return
+                // Optimistic store update for reset
+                const store = useReviewStore.getState()
+                const f = store.findingsMap.get(activeFindingState)
+                if (f) {
+                  store.setFinding(activeFindingState, {
+                    ...f,
+                    severity: orig,
+                    originalSeverity: null,
+                    updatedAt: new Date().toISOString(),
+                  })
+                }
+                overrideInFlightRef.current = true
+                void overrideSeverity({
+                  findingId: activeFindingState,
+                  fileId,
+                  projectId,
+                  newSeverity: orig,
+                })
+                  .then((result) => {
+                    if (result.success) {
+                      // CR-R1-H4: sync server timestamp
+                      const curr = useReviewStore.getState().findingsMap.get(activeFindingState)
+                      if (curr) {
+                        useReviewStore.getState().setFinding(activeFindingState, {
+                          ...curr,
+                          updatedAt: result.data.serverUpdatedAt,
+                        })
+                      }
+                      toast.success('Severity reset to original')
+
+                      // Story 4.4b CR-C1: Push undo entry for severity reset (AC3)
+                      useReviewStore.getState().pushUndo({
+                        id: crypto.randomUUID(),
+                        type: 'single',
+                        action: 'severity_override',
+                        findingId: activeFindingState,
+                        batchId: null,
+                        previousStates: new Map([[activeFindingState, f?.status ?? 'pending']]),
+                        newStates: new Map([[activeFindingState, f?.status ?? 'pending']]),
+                        previousSeverity: {
+                          severity: f?.severity ?? orig,
+                          originalSeverity: f?.originalSeverity ?? null,
+                        },
+                        newSeverity: orig,
+                        findingSnapshot: null,
+                        description: `Reset severity (${f?.severity ?? '?'} → ${orig})`,
+                        timestamp: Date.now(),
+                        staleFindings: new Set(),
+                      })
+                    } else {
+                      // Rollback
+                      if (f) {
+                        const curr = useReviewStore.getState().findingsMap.get(activeFindingState)
+                        if (curr)
+                          useReviewStore.getState().setFinding(activeFindingState, {
+                            ...curr,
+                            severity: f.severity,
+                            originalSeverity: f.originalSeverity,
+                          })
+                      }
+                      toast.error(result.error ?? 'Reset failed')
+                    }
+                  })
+                  .catch(() => toast.error('Reset failed'))
+                  .finally(() => {
+                    overrideInFlightRef.current = false
+                  })
+              }}
+              trigger={<span className="hidden" />}
+            />
+          )}
+
+          {/* Story 4.3: AddFindingDialog (AC4) */}
+          <AddFindingDialog
+            open={isAddFindingDialogOpen}
+            onOpenChange={setIsAddFindingDialogOpen}
+            segments={initialData.segments}
+            categories={initialData.categories}
+            defaultSegmentId={
+              activeFindingState ? (findingsMap.get(activeFindingState)?.segmentId ?? null) : null
+            }
+            onSubmit={(data) => {
+              setIsAddFindingDialogOpen(false)
+              void addFinding({ ...data, fileId, projectId })
+                .then((result) => {
+                  if (result.success) {
+                    toast.success('Manual finding added')
+                    // Add new finding to store so it renders immediately
+                    const store = useReviewStore.getState()
+                    const newFinding: Finding = {
+                      id: result.data.findingId,
                       tenantId,
-                      reviewSessionId: null,
-                      status: 'manual',
-                      severity: newFinding.severity,
+                      projectId,
+                      sessionId: '',
+                      segmentId: data.segmentId,
+                      severity: result.data.severity,
                       originalSeverity: null,
-                      category: newFinding.category,
-                      description: newFinding.description,
+                      category: result.data.category,
+                      status: 'manual',
+                      description: result.data.description,
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                      fileId,
                       detectedByLayer: 'Manual',
                       aiModel: null,
                       aiConfidence: null,
-                      suggestedFix: newFinding.suggestedFix,
-                      sourceTextExcerpt: newFinding.sourceTextExcerpt,
-                      targetTextExcerpt: null,
-                      scope: 'per-file',
-                      relatedFileIds: null,
+                      suggestedFix: data.suggestion,
+                      // H2 fix: populate from segments data to avoid flicker until Realtime arrives
+                      sourceTextExcerpt:
+                        initialData.segments
+                          .find((s) => s.id === data.segmentId)
+                          ?.sourceText?.substring(0, 100) ?? null,
+                      targetTextExcerpt: null, // target text not available in segments list
                       segmentCount: 1,
-                      createdAt: newFinding.createdAt,
-                      updatedAt: newFinding.updatedAt,
-                    },
-                    description: 'Add manual finding',
-                    timestamp: Date.now(),
-                    staleFindings: new Set(),
-                  })
-                } else {
-                  toast.error(result.error ?? 'Failed to add finding')
-                }
-              })
-              .catch(() => toast.error('Failed to add finding'))
-          }}
-        />
-      </div>
+                      scope: 'per-file',
+                      reviewSessionId: null,
+                      relatedFileIds: null,
+                    }
+                    store.setFinding(result.data.findingId, newFinding)
 
-      {/* Zone 3: Detail Panel — desktop: static aside, non-desktop: Sheet */}
-      {isDesktop ? (
-        <aside
-          role="complementary"
-          aria-label="Finding detail"
-          className="w-[var(--detail-panel-width)] shrink-0 border-l border-border overflow-y-auto"
-          data-testid="finding-detail-aside"
-        >
-          <div className="p-4">
-            <h2 className="font-semibold text-foreground">Finding Detail</h2>
-            <p className="text-sm text-muted-foreground">
-              Review finding details, segment context, and take actions
-            </p>
-          </div>
-          <FindingDetailContent
+                    // Story 4.4b: Push undo entry for manual add (CR-C2: include snapshot for redo)
+                    store.pushUndo({
+                      id: crypto.randomUUID(),
+                      type: 'single',
+                      action: 'add',
+                      findingId: result.data.findingId,
+                      batchId: null,
+                      previousStates: new Map(),
+                      newStates: new Map([[result.data.findingId, 'manual']]),
+                      previousSeverity: null,
+                      newSeverity: null,
+                      findingSnapshot: {
+                        id: newFinding.id,
+                        segmentId: newFinding.segmentId || null,
+                        fileId: newFinding.fileId ?? fileId,
+                        projectId,
+                        tenantId,
+                        reviewSessionId: null,
+                        status: 'manual',
+                        severity: newFinding.severity,
+                        originalSeverity: null,
+                        category: newFinding.category,
+                        description: newFinding.description,
+                        detectedByLayer: 'Manual',
+                        aiModel: null,
+                        aiConfidence: null,
+                        suggestedFix: newFinding.suggestedFix,
+                        sourceTextExcerpt: newFinding.sourceTextExcerpt,
+                        targetTextExcerpt: null,
+                        scope: 'per-file',
+                        relatedFileIds: null,
+                        segmentCount: 1,
+                        createdAt: newFinding.createdAt,
+                        updatedAt: newFinding.updatedAt,
+                      },
+                      description: 'Add manual finding',
+                      timestamp: Date.now(),
+                      staleFindings: new Set(),
+                    })
+                  } else {
+                    toast.error(result.error ?? 'Failed to add finding')
+                  }
+                })
+                .catch(() => toast.error('Failed to add finding'))
+            }}
+          />
+        </div>
+
+        {/* Zone 3: Detail Panel — desktop: static aside, non-desktop: Sheet */}
+        {isDesktop ? (
+          <aside
+            role="complementary"
+            aria-label="Finding detail"
+            className="w-[var(--detail-panel-width)] shrink-0 border-l border-border overflow-y-auto"
+            data-testid="finding-detail-aside"
+          >
+            <div className="p-4">
+              <h2 className="font-semibold text-foreground">Finding Detail</h2>
+              <p className="text-sm text-muted-foreground">
+                Review finding details, segment context, and take actions
+              </p>
+            </div>
+            <FindingDetailContent
+              finding={selectedFinding}
+              sourceLang={sourceLang}
+              targetLang={targetLang ?? ''}
+              fileId={fileId}
+              projectId={projectId}
+              contextRange={undefined}
+              onNavigateToFinding={setSelectedFinding}
+              onAccept={handleAccept}
+              onReject={handleReject}
+              onFlag={handleFlag}
+              onDelete={handleDeleteFinding}
+              fetchOverrideHistory={getOverrideHistory}
+              isActionInFlight={isActionInFlight}
+            />
+          </aside>
+        ) : (
+          <FindingDetailSheet
+            open={sheetOpen}
+            onOpenChange={handleSheetChange}
             finding={selectedFinding}
             sourceLang={sourceLang}
             targetLang={targetLang ?? ''}
             fileId={fileId}
-            projectId={projectId}
-            contextRange={undefined}
             onNavigateToFinding={setSelectedFinding}
             onAccept={handleAccept}
             onReject={handleReject}
             onFlag={handleFlag}
             onDelete={handleDeleteFinding}
-            fetchOverrideHistory={getOverrideHistory}
             isActionInFlight={isActionInFlight}
+            projectId={projectId}
+            fetchOverrideHistory={getOverrideHistory}
           />
-        </aside>
-      ) : (
-        <FindingDetailSheet
-          open={sheetOpen}
-          onOpenChange={handleSheetChange}
-          finding={selectedFinding}
-          sourceLang={sourceLang}
-          targetLang={targetLang ?? ''}
-          fileId={fileId}
-          onNavigateToFinding={setSelectedFinding}
-          onAccept={handleAccept}
-          onReject={handleReject}
-          onFlag={handleFlag}
-          onDelete={handleDeleteFinding}
-          isActionInFlight={isActionInFlight}
-          projectId={projectId}
-          fetchOverrideHistory={getOverrideHistory}
-        />
-      )}
+        )}
 
-      {/* Mobile toggle button — opens drawer when finding selected */}
-      {showToggleButton && (
-        <button
-          type="button"
-          onClick={handleToggleDrawer}
-          className="fixed bottom-4 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
-          aria-label="Open finding detail"
-          data-testid="detail-panel-toggle"
-        >
-          <PanelRight className="h-5 w-5" aria-hidden="true" />
-        </button>
-      )}
+        {/* Mobile toggle button — opens drawer when finding selected */}
+        {showToggleButton && (
+          <button
+            type="button"
+            onClick={handleToggleDrawer}
+            className="fixed bottom-4 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
+            aria-label="Open finding detail"
+            data-testid="detail-panel-toggle"
+          >
+            <PanelRight className="h-5 w-5" aria-hidden="true" />
+          </button>
+        )}
 
-      {/* Keyboard Cheat Sheet Modal (Ctrl+?) */}
-      <KeyboardCheatSheet />
-    </div>
+        {/* Keyboard Cheat Sheet Modal (Ctrl+?) */}
+        <KeyboardCheatSheet />
+      </div>
+    </ReviewFileIdContext.Provider>
   )
 }

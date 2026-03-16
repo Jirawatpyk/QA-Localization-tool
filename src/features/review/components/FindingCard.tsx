@@ -6,7 +6,7 @@ import { ConfidenceBadge } from '@/features/review/components/ConfidenceBadge'
 import { LayerBadge } from '@/features/review/components/LayerBadge'
 import { OverrideBadge } from '@/features/review/components/OverrideBadge'
 import { SeverityIndicator } from '@/features/review/components/SeverityIndicator'
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useFileState } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import {
   L3_CONFIRMED_MARKER,
@@ -49,7 +49,7 @@ export function FindingCard({
   onOverrideBadgeClick,
 }: FindingCardProps) {
   const reducedMotion = useReducedMotion()
-  const overrideCount = useReviewStore((s) => s.overrideCounts.get(finding.id) ?? 0)
+  const overrideCount = useFileState((fs) => fs.overrideCounts.get(finding.id) ?? 0)
 
   const l3Confirmed = finding.description.includes(L3_CONFIRMED_MARKER)
   const l3Disagrees = finding.description.includes(L3_DISAGREES_MARKER)

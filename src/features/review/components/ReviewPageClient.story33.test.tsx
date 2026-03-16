@@ -135,6 +135,8 @@ vi.mock('@/features/review/stores/review.store', () => {
     selectAllFiltered: vi.fn(),
     addToSelection: vi.fn(),
     toggleSelection: vi.fn(),
+    fileStates: new Map(),
+    currentFileId: null,
   }
   return {
     useReviewStore: Object.assign(
@@ -146,6 +148,13 @@ vi.mock('@/features/review/stores/review.store', () => {
         setState: vi.fn(),
       },
     ),
+    useFileState: vi.fn((selector?: (state: Record<string, unknown>) => unknown) =>
+      selector ? selector(storeState) : storeState,
+    ),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- vi.mock hoisted before imports
+    ReviewFileIdContext: require('react').createContext(''),
+    selectCanUndo: vi.fn(() => false),
+    selectCanRedo: vi.fn(() => false),
   }
 })
 

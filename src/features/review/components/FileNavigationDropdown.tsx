@@ -1,6 +1,7 @@
 'use client'
 
 import { Check, ChevronDown } from 'lucide-react'
+import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useReviewStore } from '@/features/review/stores/review.store'
@@ -19,23 +20,11 @@ type FileNavigationDropdownProps = {
 }
 
 /**
- * Compact file selector for navigating between sibling files.
- *
- * WHY window.location.href INSTEAD OF <Link>:
- * Next.js App Router uses React startTransition for <Link> navigation.
- * During transition, the OLD component tree stays mounted alongside the NEW tree.
- * Both trees share the same Zustand singleton store. When resetForFile() runs
- * for the new file, it destructively clears the store — corrupting state for
- * the old tree that's still alive. This causes:
- *   1. Two review zones visible simultaneously (old blocks clicks on new)
- *   2. Filter cache saves default values instead of user's actual filters
- *   3. key={fileId} does NOT prevent this — App Router transitions ignore key
- *
- * Full page reload eliminates the overlap entirely. Filter state persists
- * via sessionStorage (saved before navigate, restored in resetForFile).
- *
- * Future fix: refactor Zustand store to be file-scoped (Map<fileId, FileState>)
- * so concurrent instances don't conflict. See TD-ARCH-001.
+ * TD-ARCH-001: File navigation using Next.js <Link> for client-side nav.
+ * File-scoped store (fileStates Map) + ReviewFileIdContext prevents
+ * data corruption during React startTransition (old/new trees coexist).
+ * loading.tsx Suspense boundary ensures old page unmounts immediately.
+ * Filter persists via sessionStorage (L2 fallback for F5 reload).
  */
 export function FileNavigationDropdown({
   currentFileName,
@@ -69,24 +58,18 @@ export function FileNavigationDropdown({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [open])
 
-  const handleFileSelect = useCallback(
+  const handleLinkClick = useCallback(
     (fileId: string) => {
-      if (fileId === currentFileId) {
-        setOpen(false)
-        return
-      }
+      if (fileId === currentFileId) return
       setOpen(false)
-      // Save current filter state to sessionStorage before full reload
       const store = useReviewStore.getState()
       saveFilterCache(currentFileId, {
         filterState: { ...store.filterState },
         searchQuery: store.searchQuery,
         aiSuggestionsEnabled: store.aiSuggestionsEnabled,
       })
-      // Full reload — see JSDoc above for why <Link> is not used
-      window.location.href = `/projects/${projectId}/review/${fileId}`
     },
-    [currentFileId, projectId],
+    [currentFileId],
   )
 
   const allFiles = [{ fileId: currentFileId, fileName: currentFileName }, ...siblingFiles].sort(
@@ -124,22 +107,33 @@ export function FileNavigationDropdown({
         >
           {allFiles.map((f) => {
             const isCurrent = f.fileId === currentFileId
-            return (
+            return isCurrent ? (
               <button
                 key={f.fileId}
                 type="button"
                 role="option"
-                aria-selected={isCurrent}
+                aria-selected={true}
                 data-testid={`file-nav-item-${f.fileId}`}
-                className={`flex w-full items-center gap-2 px-3 py-2 text-sm text-left hover:bg-accent ${isCurrent ? 'bg-accent/50 font-medium' : ''}`}
-                onClick={() => handleFileSelect(f.fileId)}
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-left bg-accent/50 font-medium"
+                onClick={() => setOpen(false)}
               >
-                {isCurrent && (
-                  <Check className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
-                )}
-                {!isCurrent && <span className="w-3.5 shrink-0" />}
+                <Check className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
                 <span className="truncate">{f.fileName}</span>
               </button>
+            ) : (
+              <Link
+                key={f.fileId}
+                href={`/projects/${projectId}/review/${f.fileId}`}
+                prefetch={false}
+                role="option"
+                aria-selected={false}
+                data-testid={`file-nav-item-${f.fileId}`}
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-left hover:bg-accent"
+                onClick={() => handleLinkClick(f.fileId)}
+              >
+                <span className="w-3.5 shrink-0" />
+                <span className="truncate">{f.fileName}</span>
+              </Link>
             )
           })}
         </div>

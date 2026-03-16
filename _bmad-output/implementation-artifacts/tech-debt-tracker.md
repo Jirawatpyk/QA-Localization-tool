@@ -655,13 +655,25 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Phase:** impl + CR
 - **Severity:** Medium
 - **Files:** `src/features/review/components/FileNavigationDropdown.tsx`, `src/features/review/stores/review.store.ts`
-- **Description:** FileNavigationDropdown ใช้ `window.location.href` (full page reload) แทน Next.js `<Link>` สำหรับ file navigation. สาเหตุ: Next.js App Router ใช้ `React.startTransition` สำหรับ `<Link>` navigation ทำให้ OLD component tree ค้างอยู่ใน DOM ซ้อนกับ NEW tree ระหว่าง transition. ทั้ง 2 instances share Zustand singleton store เดียวกัน — เมื่อ `resetForFile()` ของ instance ใหม่ destructively clear store, instance เก่าที่ยังมีชีวิตเห็น data หาย ทำให้:
-  1. **UX:** 2 review zones ซ้อนกัน — old zone block click บน new zone
-  2. **Data:** Filter cache save อ่าน store state ที่ถูก reset ไปแล้ว (ได้ defaults แทนค่าจริง)
-  3. **Race condition:** `processedFileIdRef` set ก่อน `initialData` stream ครบ → guard block re-init → findings ว่างเปล่า
-  4. `key={fileId}` **ไม่แก้ปัญหา** — App Router transitions ignore key (verified by E2E: 2 zones ยังคง overlap หลังใส่ key)
-- **Current mitigation:** `window.location.href` = full reload eliminates overlap + sessionStorage persists filter state ข้าม reload. ทำงานถูกต้อง, tested by 12 E2E tests.
-- **Impact:** Layout (sidebar, header) reload ทุกครั้งที่ switch file — ช้ากว่า client-side nav ~200-500ms. File switching ไม่ใช่ hot path (ผู้ใช้ไม่ switch ทุกวินาที) — acceptable performance trade-off.
-- **Ideal fix:** Refactor `useReviewStore` เป็น **file-scoped store** (`Map<fileId, FileState>`) — แต่ละ file มี state แยก, ไม่ destructive reset, ไม่ conflict ระหว่าง concurrent instances. จะทำให้ `<Link>` navigation ทำงานได้ปกติโดยไม่มี overlap issue.
-- **Effort:** 1-2 days (refactor store architecture + update all consumers)
-- **Status:** DEFERRED → **Post-Story 4.5 — separate quick-spec for Zustand file-scoped store refactor**
+- **Description:** FileNavigationDropdown ใช้ `window.location.href` (full page reload) แทน Next.js `<Link>` สำหรับ file navigation.
+- **Root cause:** Next.js `startTransition` เก็บ old + new component tree ไว้พร้อมกัน → 2 instances share Zustand singleton → `resetForFile()` wipe store สลับกัน → infinite loop
+- **Fix (2026-03-16):**
+  1. `fileStates: Map<fileId, FileState>` — แต่ละ file มี state แยก ไม่ wipe กัน
+  2. `ReviewFileIdContext` — แต่ละ instance อ่าน fileId ของตัวเอง ผ่าน React Context
+  3. `createSyncingSet` wrapper — auto-sync flat fields → Map ทุก `set()` call
+  4. `isStaleInstance` — old instance ซ่อนตัว (`opacity:0 + pointer-events:none`)
+  5. FileNavigationDropdown reverted to `<Link prefetch={false}>`
+- **Verified:** E2E E-04 passes with `<Link>` nav (24.6s vs 29s full reload), 12/12 E2E green, 3668 unit tests green
+- **Status:** RESOLVED (2026-03-16 — file-scoped store refactor)
+
+### TD-ARCH-002: Zustand review store dual-write (flat fields + fileStates Map)
+- **Date:** 2026-03-16
+- **Story:** TD-ARCH-001 refactor
+- **Phase:** impl
+- **Severity:** Low
+- **Files:** `src/features/review/stores/review.store.ts`
+- **Description:** Store ยังมี 17 flat fields (findingsMap, selectedId, filterState, etc.) ที่ dual-write กับ `fileStates` Map ผ่าน `createSyncingSet` wrapper. Flat fields ยังถูกใช้โดย: (1) Realtime hooks 4 ตัว (`use-findings-subscription`, `use-score-subscription`, `use-undo-redo`, `use-review-actions`) ที่เรียก `.getState().setFinding(id, finding)` ไม่มี explicit `fileId` param, (2) `selectAllFiltered` + `selectRange` ที่อ่าน flat `findingsMap`/`sortedFindingIds` ผ่าน `get()`.
+- **Impact:** Zero functional impact — `createSyncingSet` ทำ dual-write อัตโนมัติ ไม่มี data inconsistency. เพิ่ม ~200 bytes memory + ~0.01ms overhead ต่อ `set()` call (สร้าง Map ใหม่ทุก sync).
+- **Ideal fix:** (1) Refactor 4 Realtime hooks ให้ pass `fileId` param, (2) `selectAllFiltered`/`selectRange` อ่านจาก Map, (3) ลบ flat fields + `createSyncingSet`, (4) Update 9+ test mocks
+- **Effort:** 4-6 ชม.
+- **Status:** DEFERRED → **Epic 5 — หรือเมื่อมี cross-file features ที่ต้องการ single source of truth**
