@@ -41,8 +41,10 @@ describe('useScoreSubscription', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.clearAllMocks()
+    // CR-H1: set currentFileId to match subscription fileId ('file-123')
+    // so the H1 guard (currentFileId !== fileId → skip write) doesn't block
     useReviewStore.setState({ currentFileId: null })
-    useReviewStore.getState().resetForFile('test')
+    useReviewStore.getState().resetForFile('file-123')
     // Reset channel mock chain
     mockChannel.on.mockReturnValue(mockChannel)
   })

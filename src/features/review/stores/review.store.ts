@@ -506,47 +506,75 @@ export type FileState = {
   initialized: boolean
 }
 
-export const DEFAULT_FILE_STATE: FileState = {
-  findingsMap: new Map(),
+/** Frozen default — NEVER mutate. Use createFreshFileState() for mutable copies. */
+export const DEFAULT_FILE_STATE: Readonly<FileState> = Object.freeze({
+  findingsMap: new Map<string, Finding>(),
   selectedId: null,
   filterState: { ...DEFAULT_FILTER_STATE },
-  sortedFindingIds: [],
+  sortedFindingIds: [] as string[],
   searchQuery: '',
   aiSuggestionsEnabled: true,
   currentScore: null,
-  scoreStatus: 'na',
+  scoreStatus: 'na' as const,
   layerCompleted: null,
   autoPassRationale: null,
   isRecalculating: false,
   l2ConfidenceMin: null,
   l3ConfidenceMin: null,
-  selectedIds: new Set(),
-  selectionMode: 'single',
+  selectedIds: new Set<string>(),
+  selectionMode: 'single' as const,
   isBulkInFlight: false,
-  overrideCounts: new Map(),
-  undoStack: [],
-  redoStack: [],
-  undoFindingIndex: new Map(),
+  overrideCounts: new Map<string, number>(),
+  undoStack: [] as UndoEntry[],
+  redoStack: [] as UndoEntry[],
+  undoFindingIndex: new Map<string, Set<string>>(),
   initialized: false,
-}
+} satisfies FileState)
 
-/** Create a fresh FileState with defaults, optionally restoring filter from sessionStorage */
-function createFileState(fileId: string): FileState {
-  const cached = loadFilterCache(fileId)
-  if (cached) clearFilterCache(fileId)
+/** Create a fresh mutable FileState with all collection fields as new instances */
+function createFreshFileState(): FileState {
   return {
-    ...DEFAULT_FILE_STATE,
     findingsMap: new Map(),
+    selectedId: null,
+    filterState: { ...DEFAULT_FILTER_STATE },
+    sortedFindingIds: [],
+    searchQuery: '',
+    aiSuggestionsEnabled: true,
+    currentScore: null,
+    scoreStatus: 'na',
+    layerCompleted: null,
+    autoPassRationale: null,
+    isRecalculating: false,
+    l2ConfidenceMin: null,
+    l3ConfidenceMin: null,
     selectedIds: new Set(),
+    selectionMode: 'single',
+    isBulkInFlight: false,
     overrideCounts: new Map(),
+    undoStack: [],
+    redoStack: [],
     undoFindingIndex: new Map(),
-    filterState: cached ? { ...cached.filterState } : { ...DEFAULT_FILTER_STATE },
-    searchQuery: cached?.searchQuery ?? '',
-    aiSuggestionsEnabled: cached ? cached.aiSuggestionsEnabled : true,
+    initialized: false,
   }
 }
 
+/** Create a fresh FileState, optionally restoring filter from sessionStorage (L2 fallback) */
+function createFileState(fileId: string): FileState {
+  const cached = loadFilterCache(fileId)
+  if (cached) clearFilterCache(fileId)
+  const fs = createFreshFileState()
+  if (cached) {
+    fs.filterState = { ...cached.filterState }
+    fs.searchQuery = cached.searchQuery
+    fs.aiSuggestionsEnabled = cached.aiSuggestionsEnabled
+  }
+  return fs
+}
+
 // ── File-scoped field keys for auto-sync (TD-ARCH-001) ──
+// Note: 'initialized' is intentionally EXCLUDED — it is managed directly via
+// useReviewStore.setState({ fileStates }) in ReviewPageClient, not through slice actions.
+// Including it would create a phantom property on the root ReviewState type.
 
 const FILE_STATE_KEYS: ReadonlySet<string> = new Set<keyof FileState>([
   'findingsMap',
@@ -569,7 +597,6 @@ const FILE_STATE_KEYS: ReadonlySet<string> = new Set<keyof FileState>([
   'undoStack',
   'redoStack',
   'undoFindingIndex',
-  'initialized',
 ])
 
 /**
@@ -591,6 +618,7 @@ function createSyncingSet(
 
       // Check if update contains any file-scoped fields
       const updateKeys = Object.keys(update)
+      if (updateKeys.length === 0) return update // L6: early exit for empty partial
       const hasFileFields = updateKeys.some((k) => FILE_STATE_KEYS.has(k))
       if (!hasFileFields) return update
 
@@ -613,6 +641,8 @@ function createSyncingSet(
 }
 
 // ── Selector Functions (Story 4.4b AC6 — NEVER select full stack array) ──
+// TODO(TD-ARCH-002): After flat field removal, read from fileStates Map:
+//   (s) => (s.fileStates.get(s.currentFileId ?? '')?.undoStack.length ?? 0) > 0
 
 export const selectCanUndo = (s: ReviewState): boolean => s.undoStack.length > 0
 export const selectCanRedo = (s: ReviewState): boolean => s.redoStack.length > 0
@@ -654,6 +684,7 @@ export const useReviewStore = create<ReviewState>()((set, get) => {
     // useFileState provides the preserved state for components after Phase 3 migration.
     resetForFile: (fileId: string) =>
       set((s) => {
+        if (!fileId) return {} // L2: guard invalid empty string fileId
         if (s.currentFileId === fileId) return {} // idempotent — same file, no reset needed
 
         const newFileStates = new Map(s.fileStates)

@@ -115,8 +115,10 @@ export function CommandPalette({
           resetFilters()
           break
         case 'toggle-ai': {
-          // H5 fix: use getState() to avoid stale closure
-          const current = useReviewStore.getState().aiSuggestionsEnabled
+          // CR-H2: read from fileStates Map (not flat field) to avoid stale/wrong-file read
+          const state = useReviewStore.getState()
+          const fid = state.currentFileId ?? ''
+          const current = state.fileStates.get(fid)?.aiSuggestionsEnabled ?? true
           setAiSuggestionsEnabled(!current)
           break
         }

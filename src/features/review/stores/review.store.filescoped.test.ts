@@ -4,14 +4,20 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 
-import { useReviewStore, selectCanUndo, selectCanRedo } from '@/features/review/stores/review.store'
-import type { UndoEntry } from '@/features/review/stores/review.store'
+import {
+  useReviewStore,
+  selectCanUndo,
+  selectCanRedo,
+  DEFAULT_FILE_STATE,
+} from '@/features/review/stores/review.store'
+import type { FileState, UndoEntry } from '@/features/review/stores/review.store'
 import { createMockFileState } from '@/features/review/stores/test-helpers'
 import { buildFinding } from '@/test/factories'
 
 function buildUndoEntry(overrides?: Partial<UndoEntry>): UndoEntry {
-  const id = overrides?.id ?? crypto.randomUUID()
+  // M6: compute findingId first so previousStates/newStates use the same ID
   const findingId = overrides?.findingId ?? crypto.randomUUID()
+  const id = overrides?.id ?? crypto.randomUUID()
   return {
     id,
     type: 'single',
@@ -95,6 +101,21 @@ describe('File-Scoped Store (TD-ARCH-001)', () => {
       const fsA = useReviewStore.getState().fileStates.get('file-a')
       expect(fsA?.undoStack.length).toBe(1)
     })
+
+    // L4: positive path — push on file-b, verify popUndo returns file-b's entry
+    it('should popUndo from active file (not other files)', () => {
+      const entryA = buildUndoEntry({ findingId: 'fa' })
+      useReviewStore.getState().pushUndo(entryA)
+
+      // Switch to file-b and push a different undo entry
+      useReviewStore.getState().resetForFile('file-b')
+      const entryB = buildUndoEntry({ findingId: 'fb' })
+      useReviewStore.getState().pushUndo(entryB)
+
+      // popUndo should return file-b's entry (not file-a's)
+      const popped = useReviewStore.getState().popUndo()
+      expect(popped?.findingId).toBe('fb')
+    })
   })
 
   // ── PM-3: selectAllFiltered scoped to active file ──
@@ -146,6 +167,26 @@ describe('File-Scoped Store (TD-ARCH-001)', () => {
       useReviewStore.getState().resetForFile('file-a')
       expect(useReviewStore.getState().fileStates.get('file-a')?.initialized).toBe(false)
     })
+
+    // M2: verify optimistic state preserved when already initialized with findings
+    it('should preserve optimistic findingsMap when initialized=true and findingsMap populated', () => {
+      // Simulate component init: populate findings + mark initialized
+      const finding = buildFinding({ id: 'f1', status: 'accepted' })
+      useReviewStore.getState().setFinding('f1', finding)
+      const fs = useReviewStore.getState().fileStates.get('file-a')!
+      const newFileStates = new Map(useReviewStore.getState().fileStates)
+      newFileStates.set('file-a', { ...fs, initialized: true })
+      useReviewStore.setState({ fileStates: newFileStates })
+
+      // The init guard pattern from ReviewPageClient: skip re-init when
+      // initialized=true AND findingsMap has data (protects optimistic state)
+      const fileFs = useReviewStore.getState().fileStates.get('file-a')
+      const shouldSkip = fileFs?.initialized === true && fileFs.findingsMap.size > 0
+      expect(shouldSkip).toBe(true)
+
+      // Verify the optimistic finding is still there
+      expect(fileFs?.findingsMap.get('f1')?.status).toBe('accepted')
+    })
   })
 
   // ── Concurrent file states ──
@@ -181,16 +222,106 @@ describe('File-Scoped Store (TD-ARCH-001)', () => {
     })
   })
 
-  // ── useFileState wrapper ──
+  // ── H3: createSyncingSet edge cases ──
 
-  describe('useFileState wrapper', () => {
-    it('should return DEFAULT_FILE_STATE when no file is active', () => {
+  describe('createSyncingSet auto-sync', () => {
+    it('should skip Map sync when update contains fileStates key (resetForFile path)', () => {
+      // resetForFile includes fileStates in its update — createSyncingSet should skip auto-sync
+      // If this works correctly, resetForFile creates a fresh FileState
+      useReviewStore.getState().resetForFile('file-b')
+      const fsB = useReviewStore.getState().fileStates.get('file-b')
+      expect(fsB).toBeDefined()
+      expect(fsB?.initialized).toBe(false) // fresh entry
+    })
+
+    it('should skip Map sync when currentFileId is null', () => {
       useReviewStore.setState({ currentFileId: null, fileStates: new Map() })
-      // useFileState is a React hook, test its logic directly
-      const fs = useReviewStore
-        .getState()
-        .fileStates.get(useReviewStore.getState().currentFileId ?? '')
+      // This should not throw — createSyncingSet returns update as-is when no fileId
+      expect(() => {
+        useReviewStore.getState().setFilter('severity', 'critical')
+      }).not.toThrow()
+    })
+
+    it('should skip Map sync for non-file-scoped field updates', () => {
+      // currentFileId is a global field, not in FILE_STATE_KEYS
+      const before = useReviewStore.getState().fileStates.get('file-a')
+      // Trigger a global-only update (resetForFile is the only way to change currentFileId,
+      // but we can verify that a non-file-scoped partial does not alter the Map entry)
+      const fsBeforeRef = before ? { ...before } : null
+
+      // setSelectedFinding writes to selectedId (IS file-scoped) — should sync
+      useReviewStore.getState().setSelectedFinding('test-id')
+      const fsAfter = useReviewStore.getState().fileStates.get('file-a')
+      expect(fsAfter?.selectedId).toBe('test-id')
+
+      // Verify other file-scoped fields in Map unchanged
+      if (fsBeforeRef) {
+        expect(fsAfter?.currentScore).toBe(fsBeforeRef.currentScore)
+      }
+    })
+
+    it('should handle empty partial update without error', () => {
+      // The L6 early exit: Object.keys({}).length === 0 → return update
+      expect(() => {
+        useReviewStore.setState({})
+      }).not.toThrow()
+    })
+  })
+
+  // ── resetForFile guards ──
+
+  describe('resetForFile guards', () => {
+    it('should be idempotent for same fileId', () => {
+      useReviewStore.getState().setFinding('f1', buildFinding({ id: 'f1' }))
+
+      // Calling resetForFile for the same file should be a no-op
+      useReviewStore.getState().resetForFile('file-a')
+      expect(useReviewStore.getState().findingsMap.size).toBe(1) // preserved
+    })
+
+    it('should not create Map entry for empty string fileId (L2)', () => {
+      const sizeBefore = useReviewStore.getState().fileStates.size
+      useReviewStore.getState().resetForFile('')
+      expect(useReviewStore.getState().fileStates.size).toBe(sizeBefore)
+    })
+  })
+
+  // ── useFileState store-level logic ──
+
+  describe('useFileState store-level logic', () => {
+    it('should return DEFAULT_FILE_STATE values when no file entry exists', () => {
+      useReviewStore.setState({ currentFileId: null, fileStates: new Map() })
+      // Test the store-level read path that useFileState uses internally
+      const state = useReviewStore.getState()
+      const fs = state.fileStates.get(state.currentFileId ?? '')
       expect(fs).toBeUndefined()
+      // When fs is undefined, useFileState returns selector(DEFAULT_FILE_STATE)
+      expect(DEFAULT_FILE_STATE.findingsMap.size).toBe(0)
+      expect(DEFAULT_FILE_STATE.initialized).toBe(false)
+    })
+
+    it('should read from the correct file entry when fileId is specified', () => {
+      // Set up file-a with findings
+      useReviewStore.getState().setFinding('f1', buildFinding({ id: 'f1' }))
+
+      // Switch to file-b
+      useReviewStore.getState().resetForFile('file-b')
+
+      // Reading file-a's entry should still return the finding
+      const fsA = useReviewStore.getState().fileStates.get('file-a')
+      expect(fsA?.findingsMap.has('f1')).toBe(true)
+
+      // Reading file-b's entry should be empty
+      const fsB = useReviewStore.getState().fileStates.get('file-b')
+      expect(fsB?.findingsMap.size).toBe(0)
+    })
+  })
+
+  // ── DEFAULT_FILE_STATE immutability (M1) ──
+
+  describe('DEFAULT_FILE_STATE', () => {
+    it('should be frozen (Object.freeze)', () => {
+      expect(Object.isFrozen(DEFAULT_FILE_STATE)).toBe(true)
     })
   })
 

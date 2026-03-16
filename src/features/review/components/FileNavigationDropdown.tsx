@@ -62,11 +62,13 @@ export function FileNavigationDropdown({
     (fileId: string) => {
       if (fileId === currentFileId) return
       setOpen(false)
+      // CR-H2: read from fileStates Map (not flat fields) to guarantee correct file's state
       const store = useReviewStore.getState()
+      const fs = store.fileStates.get(currentFileId)
       saveFilterCache(currentFileId, {
-        filterState: { ...store.filterState },
-        searchQuery: store.searchQuery,
-        aiSuggestionsEnabled: store.aiSuggestionsEnabled,
+        filterState: { ...(fs?.filterState ?? store.filterState) },
+        searchQuery: fs?.searchQuery ?? store.searchQuery,
+        aiSuggestionsEnabled: fs?.aiSuggestionsEnabled ?? store.aiSuggestionsEnabled,
       })
     },
     [currentFileId],

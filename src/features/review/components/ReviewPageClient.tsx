@@ -177,7 +177,11 @@ export function ReviewPageClient({
   const executeBulk = useCallback(
     async (action: 'accept' | 'reject') => {
       const store = useReviewStore.getState()
-      const ids = [...store.selectedIds]
+      // CR-H2: read from fileStates Map (not flat fields) to guarantee correct file's data
+      const fs = store.fileStates.get(fileId)
+      const currentSelectedIds = fs?.selectedIds ?? store.selectedIds
+      const currentFindingsMap = fs?.findingsMap ?? store.findingsMap
+      const ids = [...currentSelectedIds]
       if (ids.length === 0) return
 
       setBulkInFlight(true)
@@ -186,7 +190,7 @@ export function ReviewPageClient({
       // Task 13: Optimistic update — snapshot + batch update
       const snapshots = new Map<string, Finding>()
       for (const id of ids) {
-        const f = store.findingsMap.get(id)
+        const f = currentFindingsMap.get(id)
         if (f) snapshots.set(id, f)
       }
 
@@ -470,11 +474,13 @@ export function ReviewPageClient({
   // Filter cache is saved by FileNavigationDropdown before <Link> navigation.
   useEffect(() => {
     // Guard: skip re-init for same file (protects optimistic state from RSC revalidation).
+    // CR-H2: read from fileStates Map (not flat findingsMap) to check the correct file's data.
     // Exception: if findingsMap is empty but initialData has findings → data arrived late (F5 fix).
-    const storeFindings = useReviewStore.getState().findingsMap
+    const fileFs = useReviewStore.getState().fileStates.get(fileId)
+    const storeFindingsSize = fileFs?.findingsMap.size ?? 0
     if (
       processedFileIdRef.current === fileId &&
-      (storeFindings.size > 0 || initialData.findings.length === 0)
+      (storeFindingsSize > 0 || initialData.findings.length === 0)
     ) {
       return
     }

@@ -46,8 +46,9 @@ describe('useFindingsSubscription — reconnect (P1-11)', () => {
     vi.useFakeTimers()
     vi.clearAllMocks()
     mockAnnounce.mockClear()
+    // CR-H1: set currentFileId to match subscription fileId ('file-abc')
     useReviewStore.setState({ currentFileId: null })
-    useReviewStore.getState().resetForFile('test')
+    useReviewStore.getState().resetForFile('file-abc')
     mockChannel.on.mockReturnValue(mockChannel)
   })
 
@@ -56,6 +57,7 @@ describe('useFindingsSubscription — reconnect (P1-11)', () => {
   })
 
   it('[P1] should stop polling when channel transitions from CHANNEL_ERROR to SUBSCRIBED', async () => {
+    useReviewStore.getState().resetForFile('file-reconnect') // CR-H1: match subscription fileId
     renderHook(() => useFindingsSubscription('file-reconnect'))
 
     const subscribeCallback = mockChannel.subscribe.mock.calls[0]![0] as (status: string) => void
@@ -88,6 +90,7 @@ describe('useFindingsSubscription — reconnect (P1-11)', () => {
   })
 
   it('[P1] should reset poll interval to 5s after reconnect', async () => {
+    useReviewStore.getState().resetForFile('file-interval') // CR-H1: match subscription fileId
     renderHook(() => useFindingsSubscription('file-interval'))
 
     const subscribeCallback = mockChannel.subscribe.mock.calls[0]![0] as (status: string) => void
@@ -175,6 +178,7 @@ describe('useFindingsSubscription — reconnect (P1-11)', () => {
       error: null,
     })
 
+    useReviewStore.getState().resetForFile('file-overlap') // CR-H1: match subscription fileId
     renderHook(() => useFindingsSubscription('file-overlap'))
 
     const subscribeCallback = mockChannel.subscribe.mock.calls[0]![0] as (status: string) => void

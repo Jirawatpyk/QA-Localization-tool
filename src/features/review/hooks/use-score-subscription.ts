@@ -59,6 +59,8 @@ export function useScoreSubscription(fileId: string, tenantId?: string | undefin
           }
           const { data } = await query.single()
           if (data && isValidScoreStatus(data.status)) {
+            // CR-H1: skip write if fileId no longer active (prevents cross-file corruption during transition)
+            if (useReviewStore.getState().currentFileId !== fileId) return
             const layerCompleted =
               typeof data.layer_completed === 'string' &&
               isValidLayerCompleted(data.layer_completed)
@@ -95,6 +97,8 @@ export function useScoreSubscription(fileId: string, tenantId?: string | undefin
     supabaseRef.current = supabase
 
     const handleScoreChange = (payload: { new: Record<string, unknown> }) => {
+      // CR-H1: skip write if fileId no longer active (prevents cross-file corruption during transition)
+      if (useReviewStore.getState().currentFileId !== fileId) return
       const row = payload.new
       const mqm_score = typeof row.mqm_score === 'number' ? row.mqm_score : null
       const status = typeof row.status === 'string' ? row.status : null

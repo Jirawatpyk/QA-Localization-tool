@@ -118,6 +118,9 @@ export function useFindingsSubscription(fileId: string, tenantId?: string | unde
             // MERGE poll results with store — don't overwrite optimistic updates.
             // If store has a newer updatedAt (from optimistic update), keep store version.
             const store = useReviewStore.getState()
+            // CR-H1: skip write if this subscription's fileId no longer matches active file
+            // (prevents stale subscription from corrupting another file's state during <Link> transition)
+            if (store.currentFileId !== fileId) return
             const mergedMap = new Map<string, Finding>(store.findingsMap)
             let changed = false
             for (const row of data) {
@@ -170,6 +173,8 @@ export function useFindingsSubscription(fileId: string, tenantId?: string | unde
       buf.scheduled = false
       if (batch.length === 0) return
       const store = useReviewStore.getState()
+      // CR-H1: skip write if fileId no longer active (prevents cross-file corruption during transition)
+      if (store.currentFileId !== fileId) return
       const newMap = new Map(store.findingsMap)
       for (const f of batch) {
         newMap.set(f.id, f)
@@ -198,6 +203,8 @@ export function useFindingsSubscription(fileId: string, tenantId?: string | unde
       // Realtime latency on cloud) can overwrite a fresher optimistic update.
       // Pattern mirrors the polling merge (lines 127-130) for consistency.
       const store = useReviewStore.getState()
+      // CR-H1: skip write if fileId no longer active
+      if (store.currentFileId !== fileId) return
       const existing = store.findingsMap.get(finding.id)
       if (existing && finding.updatedAt <= existing.updatedAt) {
         // Store has same or newer data (e.g. optimistic update) — skip
@@ -213,6 +220,8 @@ export function useFindingsSubscription(fileId: string, tenantId?: string | unde
       const id = typeof payload.old.id === 'string' ? payload.old.id : null
       if (id) {
         const store = useReviewStore.getState()
+        // CR-H1: skip write if fileId no longer active
+        if (store.currentFileId !== fileId) return
         store.removeFinding(id)
         // Story 4.4b AC7: Remove all undo/redo entries referencing deleted finding
         store.removeEntriesForFinding(id)

@@ -41,5 +41,9 @@ export function loadFilterCache(fileId: string): FilterCacheEntry | null {
 export function clearFilterCache(fileId: string): void {
   const storage = getStorage()
   if (!storage) return
-  storage.removeItem(`${CACHE_PREFIX}${fileId}`)
+  try {
+    storage.removeItem(`${CACHE_PREFIX}${fileId}`)
+  } catch {
+    // L3: match save/load error handling — silently ignore
+  }
 }
