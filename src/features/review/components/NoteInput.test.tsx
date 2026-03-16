@@ -147,6 +147,49 @@ describe('NoteInput', () => {
     expect(textarea.getAttribute('maxLength')).toBe('500')
   })
 
+  describe('Tab trap (Guardrail #30)', () => {
+    it('[P1] G3-NoteInput-Tab: should trap Tab — wrap from Save to textarea', () => {
+      renderOpen()
+
+      const saveButton = screen.getByTestId('note-save-button')
+      const textarea = screen.getByTestId('note-text-field')
+
+      // Type text so Save button is enabled (disabled buttons are excluded from focusable query)
+      fireEvent.change(textarea, { target: { value: 'some text' } })
+
+      // Focus Save button (last focusable element)
+      saveButton.focus()
+      expect(document.activeElement).toBe(saveButton)
+
+      // Press Tab on the container — should wrap to textarea (first focusable)
+      const popover = screen.getByTestId('note-input-popover')
+      fireEvent.keyDown(popover, { key: 'Tab', shiftKey: false })
+
+      expect(document.activeElement).toBe(textarea)
+    })
+
+    it('[P1] G3-NoteInput-ShiftTab: should trap Shift+Tab — wrap from textarea to Save', () => {
+      renderOpen()
+
+      const textarea = screen.getByTestId('note-text-field')
+
+      // Type text so Save button is enabled
+      fireEvent.change(textarea, { target: { value: 'some text' } })
+
+      const saveButton = screen.getByTestId('note-save-button')
+
+      // Focus textarea (first focusable element)
+      textarea.focus()
+      expect(document.activeElement).toBe(textarea)
+
+      // Press Shift+Tab on the container — should wrap to Save (last focusable)
+      const popover = screen.getByTestId('note-input-popover')
+      fireEvent.keyDown(popover, { key: 'Tab', shiftKey: true })
+
+      expect(document.activeElement).toBe(saveButton)
+    })
+  })
+
   it('[P1] C-NI1c: should reset form on re-open (Guardrail #11)', async () => {
     const user = userEvent.setup()
     const { rerender } = render(<NoteInput open={true} onSubmit={onSubmit} onDismiss={onDismiss} />)

@@ -8,6 +8,13 @@ import type { AIMockOptions, AIMockResult } from './mocks/ai-providers'
 declare global {
   function createDrizzleMock(): DrizzleMockResult
   function createAIMock(options?: AIMockOptions): AIMockResult
+  function createActionTestMocks(): {
+    dbState: DrizzleMockResult['dbState']
+    dbMockModule: DrizzleMockResult['dbMockModule']
+    mockRequireRole: import('vitest').Mock
+    mockWriteAuditLog: import('vitest').Mock
+    mockInngestSend: import('vitest').Mock
+  }
 }
 
 export {}

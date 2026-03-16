@@ -18,42 +18,39 @@ import {
   createTestProject,
 } from './helpers/supabase-admin'
 
-// ── Seed Helper ───────────────────────────────────────────────────────────────
+// ── Seed Helpers (split per RV recommendation H4) ────────────────────────────
 
-/**
- * Seed file + score + segments + 15 findings for extended action tests.
- * Mix: pending status, various severities (critical/major/minor).
- * Returns { fileId, segmentIds } — segmentIds needed for Add Finding test.
- */
-async function seedFileWithFindingsForExtendedActions(opts: {
-  tenantId: string
-  projectId: string
-}): Promise<{ fileId: string; segmentIds: string[] }> {
-  // 1. Insert file
+type SeedOpts = { tenantId: string; projectId: string }
+
+/** Seed a file record with l2_completed status. Returns fileId. */
+async function seedFile(opts: SeedOpts): Promise<string> {
+  const ts = Date.now()
   const fileRes = await fetch(`${SUPABASE_URL}/rest/v1/files`, {
     method: 'POST',
     headers: { ...adminHeaders(), Prefer: 'return=representation' },
     body: JSON.stringify({
       project_id: opts.projectId,
       tenant_id: opts.tenantId,
-      file_name: `extended-actions-test-${Date.now()}.sdlxliff`,
+      file_name: `extended-actions-test-${ts}.sdlxliff`,
       file_type: 'sdlxliff',
       file_size_bytes: 2048,
-      storage_path: `e2e/extended-actions-test-${Date.now()}.sdlxliff`,
+      storage_path: `e2e/extended-actions-test-${ts}.sdlxliff`,
       status: 'l2_completed',
     }),
   })
   if (!fileRes.ok) throw new Error(`seed file failed: ${fileRes.status} ${await fileRes.text()}`)
   const fileData = (await fileRes.json()) as Array<{ id: string }>
   if (fileData.length === 0) throw new Error('seed file: no row returned')
-  const fileId = fileData[0]!.id
+  return fileData[0]!.id
+}
 
-  // 2. Insert score
+/** Seed a score record for a file. */
+async function seedScore(opts: SeedOpts & { fileId: string }): Promise<void> {
   const scoreRes = await fetch(`${SUPABASE_URL}/rest/v1/scores`, {
     method: 'POST',
     headers: { ...adminHeaders(), Prefer: 'return=minimal' },
     body: JSON.stringify({
-      file_id: fileId,
+      file_id: opts.fileId,
       project_id: opts.projectId,
       tenant_id: opts.tenantId,
       mqm_score: 72.0,
@@ -69,67 +66,70 @@ async function seedFileWithFindingsForExtendedActions(opts: {
   })
   if (!scoreRes.ok)
     throw new Error(`seed score failed: ${scoreRes.status} ${await scoreRes.text()}`)
+}
 
-  // 3. Insert segments (word_count >= 100 to avoid MQM always 0)
-  const segmentData = [
-    {
-      segment_number: 1,
-      source_text:
-        'The application must support multiple languages for internationalization purposes',
-      target_text: 'แอปพลิเคชันต้องรองรับหลายภาษาเพื่อวัตถุประสงค์ด้านการแปลภาษา',
-      word_count: 120,
-    },
-    {
-      segment_number: 2,
-      source_text: 'Please verify that all translations have been reviewed by a native speaker',
-      target_text: 'กรุณาตรวจสอบว่าการแปลทั้งหมดได้รับการตรวจสอบโดยผู้พูดภาษาแม่',
-      word_count: 110,
-    },
-    {
-      segment_number: 3,
-      source_text: 'The quality assurance process ensures consistency across all deliverables',
-      target_text: 'กระบวนการประกันคุณภาพช่วยให้แน่ใจว่ามีความสม่ำเสมอในทุกผลงาน',
-      word_count: 105,
-    },
-    {
-      segment_number: 4,
-      source_text: 'Users can configure notification preferences in the settings panel',
-      target_text: 'ผู้ใช้สามารถกำหนดค่าการแจ้งเตือนในแผงการตั้งค่า',
-      word_count: 100,
-    },
-    {
-      segment_number: 5,
-      source_text: 'The dashboard provides a comprehensive overview of project status and metrics',
-      target_text: 'แดชบอร์ดให้ภาพรวมที่ครอบคลุมของสถานะโปรเจกต์และตัวชี้วัด',
-      word_count: 115,
-    },
-    {
-      segment_number: 6,
-      source_text: 'Export functionality supports multiple formats including PDF and Excel',
-      target_text: 'ฟังก์ชันส่งออกรองรับหลายรูปแบบรวมถึง PDF และ Excel',
-      word_count: 100,
-    },
-    {
-      segment_number: 7,
-      source_text: 'Search results can be filtered by date range and category type',
-      target_text: 'ผลการค้นหาสามารถกรองตามช่วงวันที่และประเภทหมวดหมู่',
-      word_count: 100,
-    },
-    {
-      segment_number: 8,
-      source_text: 'The system automatically detects and flags potential translation errors',
-      target_text: 'ระบบตรวจจับและแจ้งข้อผิดพลาดในการแปลที่อาจเกิดขึ้นโดยอัตโนมัติ',
-      word_count: 100,
-    },
-  ]
+/** Segment definitions — word_count >= 100 to avoid MQM always 0. */
+const SEGMENT_DATA = [
+  {
+    segment_number: 1,
+    source_text:
+      'The application must support multiple languages for internationalization purposes',
+    target_text: 'แอปพลิเคชันต้องรองรับหลายภาษาเพื่อวัตถุประสงค์ด้านการแปลภาษา',
+    word_count: 120,
+  },
+  {
+    segment_number: 2,
+    source_text: 'Please verify that all translations have been reviewed by a native speaker',
+    target_text: 'กรุณาตรวจสอบว่าการแปลทั้งหมดได้รับการตรวจสอบโดยผู้พูดภาษาแม่',
+    word_count: 110,
+  },
+  {
+    segment_number: 3,
+    source_text: 'The quality assurance process ensures consistency across all deliverables',
+    target_text: 'กระบวนการประกันคุณภาพช่วยให้แน่ใจว่ามีความสม่ำเสมอในทุกผลงาน',
+    word_count: 105,
+  },
+  {
+    segment_number: 4,
+    source_text: 'Users can configure notification preferences in the settings panel',
+    target_text: 'ผู้ใช้สามารถกำหนดค่าการแจ้งเตือนในแผงการตั้งค่า',
+    word_count: 100,
+  },
+  {
+    segment_number: 5,
+    source_text: 'The dashboard provides a comprehensive overview of project status and metrics',
+    target_text: 'แดชบอร์ดให้ภาพรวมที่ครอบคลุมของสถานะโปรเจกต์และตัวชี้วัด',
+    word_count: 115,
+  },
+  {
+    segment_number: 6,
+    source_text: 'Export functionality supports multiple formats including PDF and Excel',
+    target_text: 'ฟังก์ชันส่งออกรองรับหลายรูปแบบรวมถึง PDF และ Excel',
+    word_count: 100,
+  },
+  {
+    segment_number: 7,
+    source_text: 'Search results can be filtered by date range and category type',
+    target_text: 'ผลการค้นหาสามารถกรองตามช่วงวันที่และประเภทหมวดหมู่',
+    word_count: 100,
+  },
+  {
+    segment_number: 8,
+    source_text: 'The system automatically detects and flags potential translation errors',
+    target_text: 'ระบบตรวจจับและแจ้งข้อผิดพลาดในการแปลที่อาจเกิดขึ้นโดยอัตโนมัติ',
+    word_count: 100,
+  },
+] as const
 
+/** Seed 8 segments for a file. Returns segmentIds in insertion order. */
+async function seedSegments(opts: SeedOpts & { fileId: string }): Promise<string[]> {
   const segmentIds: string[] = []
-  for (const seg of segmentData) {
+  for (const seg of SEGMENT_DATA) {
     const segRes = await fetch(`${SUPABASE_URL}/rest/v1/segments`, {
       method: 'POST',
       headers: { ...adminHeaders(), Prefer: 'return=representation' },
       body: JSON.stringify({
-        file_id: fileId,
+        file_id: opts.fileId,
         project_id: opts.projectId,
         tenant_id: opts.tenantId,
         source_lang: 'en-US',
@@ -142,129 +142,133 @@ async function seedFileWithFindingsForExtendedActions(opts: {
     if (segData.length === 0) throw new Error('seed segment: no row returned')
     segmentIds.push(segData[0]!.id)
   }
+  return segmentIds
+}
 
-  // 4. Insert 15 findings (serial tests consume them — need plenty of pending)
-  const findings = [
-    // Critical findings (2)
-    {
-      severity: 'critical',
-      category: 'accuracy',
-      description: 'Critical mistranslation of key term',
-      detected_by_layer: 'L2',
-      segment_number: 1,
-    },
-    {
-      severity: 'critical',
-      category: 'accuracy',
-      description: 'Omitted safety warning in translation',
-      detected_by_layer: 'L2',
-      segment_number: 2,
-    },
-    // Major findings (8)
-    {
-      severity: 'major',
-      category: 'fluency',
-      description: 'Awkward phrasing in target text',
-      detected_by_layer: 'L2',
-      segment_number: 1,
-    },
-    {
-      severity: 'major',
-      category: 'terminology',
-      description: 'Wrong glossary term used',
-      detected_by_layer: 'L1',
-      segment_number: 3,
-    },
-    {
-      severity: 'major',
-      category: 'style',
-      description: 'Inconsistent register level',
-      detected_by_layer: 'L2',
-      segment_number: 4,
-    },
-    {
-      severity: 'major',
-      category: 'accuracy',
-      description: 'Number format mismatch',
-      detected_by_layer: 'L1',
-      segment_number: 5,
-    },
-    {
-      severity: 'major',
-      category: 'fluency',
-      description: 'Unnatural word order detected',
-      detected_by_layer: 'L2',
-      segment_number: 6,
-    },
-    {
-      severity: 'major',
-      category: 'terminology',
-      description: 'Inconsistent term usage across segments',
-      detected_by_layer: 'L2',
-      segment_number: 7,
-    },
-    {
-      severity: 'major',
-      category: 'accuracy',
-      description: 'Omitted sentence in paragraph',
-      detected_by_layer: 'L2',
-      segment_number: 8,
-    },
-    {
-      severity: 'major',
-      category: 'style',
-      description: 'Formal register used in casual context',
-      detected_by_layer: 'L2',
-      segment_number: 2,
-    },
-    // Minor findings (5)
-    {
-      severity: 'minor',
-      category: 'whitespace',
-      description: 'Extra trailing space in target',
-      detected_by_layer: 'L1',
-      segment_number: 1,
-    },
-    {
-      severity: 'minor',
-      category: 'style',
-      description: 'Missing final period',
-      detected_by_layer: 'L1',
-      segment_number: 3,
-    },
-    {
-      severity: 'minor',
-      category: 'whitespace',
-      description: 'Double space between words',
-      detected_by_layer: 'L1',
-      segment_number: 5,
-    },
-    {
-      severity: 'minor',
-      category: 'style',
-      description: 'Capitalization error in proper noun',
-      detected_by_layer: 'L1',
-      segment_number: 6,
-    },
-    {
-      severity: 'minor',
-      category: 'whitespace',
-      description: 'Inconsistent spacing around punctuation',
-      detected_by_layer: 'L1',
-      segment_number: 7,
-    },
-  ]
+/** Finding definitions — 2 critical, 8 major, 5 minor = 15 total. */
+const FINDING_DATA = [
+  {
+    severity: 'critical',
+    category: 'accuracy',
+    description: 'Critical mistranslation of key term',
+    detected_by_layer: 'L2',
+    segment_number: 1,
+  },
+  {
+    severity: 'critical',
+    category: 'accuracy',
+    description: 'Omitted safety warning in translation',
+    detected_by_layer: 'L2',
+    segment_number: 2,
+  },
+  {
+    severity: 'major',
+    category: 'fluency',
+    description: 'Awkward phrasing in target text',
+    detected_by_layer: 'L2',
+    segment_number: 1,
+  },
+  {
+    severity: 'major',
+    category: 'terminology',
+    description: 'Wrong glossary term used',
+    detected_by_layer: 'L1',
+    segment_number: 3,
+  },
+  {
+    severity: 'major',
+    category: 'style',
+    description: 'Inconsistent register level',
+    detected_by_layer: 'L2',
+    segment_number: 4,
+  },
+  {
+    severity: 'major',
+    category: 'accuracy',
+    description: 'Number format mismatch',
+    detected_by_layer: 'L1',
+    segment_number: 5,
+  },
+  {
+    severity: 'major',
+    category: 'fluency',
+    description: 'Unnatural word order detected',
+    detected_by_layer: 'L2',
+    segment_number: 6,
+  },
+  {
+    severity: 'major',
+    category: 'terminology',
+    description: 'Inconsistent term usage across segments',
+    detected_by_layer: 'L2',
+    segment_number: 7,
+  },
+  {
+    severity: 'major',
+    category: 'accuracy',
+    description: 'Omitted sentence in paragraph',
+    detected_by_layer: 'L2',
+    segment_number: 8,
+  },
+  {
+    severity: 'major',
+    category: 'style',
+    description: 'Formal register used in casual context',
+    detected_by_layer: 'L2',
+    segment_number: 2,
+  },
+  {
+    severity: 'minor',
+    category: 'whitespace',
+    description: 'Extra trailing space in target',
+    detected_by_layer: 'L1',
+    segment_number: 1,
+  },
+  {
+    severity: 'minor',
+    category: 'style',
+    description: 'Missing final period',
+    detected_by_layer: 'L1',
+    segment_number: 3,
+  },
+  {
+    severity: 'minor',
+    category: 'whitespace',
+    description: 'Double space between words',
+    detected_by_layer: 'L1',
+    segment_number: 5,
+  },
+  {
+    severity: 'minor',
+    category: 'style',
+    description: 'Capitalization error in proper noun',
+    detected_by_layer: 'L1',
+    segment_number: 6,
+  },
+  {
+    severity: 'minor',
+    category: 'whitespace',
+    description: 'Inconsistent spacing around punctuation',
+    detected_by_layer: 'L1',
+    segment_number: 7,
+  },
+] as const
 
-  for (let i = 0; i < findings.length; i++) {
-    const f = findings[i]!
-    // Map segment_number to segmentId
+/** Seed 15 findings mapped to segments. Serial tests consume them — need plenty of pending. */
+async function seedFindings(
+  opts: SeedOpts & { fileId: string; segmentIds: string[] },
+): Promise<void> {
+  for (let i = 0; i < FINDING_DATA.length; i++) {
+    const f = FINDING_DATA[i]!
     const segIdx = f.segment_number - 1
-    const segId = segmentIds[segIdx]
+    if (!opts.segmentIds[segIdx]) {
+      throw new Error(`Segment ${f.segment_number} not found in seeded segments (index ${segIdx})`)
+    }
     const r = await fetch(`${SUPABASE_URL}/rest/v1/findings`, {
       method: 'POST',
       headers: { ...adminHeaders(), Prefer: 'return=minimal' },
       body: JSON.stringify({
-        file_id: fileId,
+        file_id: opts.fileId,
         project_id: opts.projectId,
         tenant_id: opts.tenantId,
         status: 'pending',
@@ -272,13 +276,11 @@ async function seedFileWithFindingsForExtendedActions(opts: {
         category: f.category,
         description: f.description,
         detected_by_layer: f.detected_by_layer,
-        segment_id: segId,
+        segment_id: opts.segmentIds[segIdx],
       }),
     })
     if (!r.ok) throw new Error(`seed finding ${i} failed: ${r.status} ${await r.text()}`)
   }
-
-  return { fileId, segmentIds }
 }
 
 // ── Test Suite ─────────────────────────────────────────────────────────────────
@@ -344,9 +346,11 @@ test.describe.serial('Extended Review Actions — Story 4.3 ATDD', () => {
       }
     }
 
-    const seedResult = await seedFileWithFindingsForExtendedActions({ tenantId, projectId })
-    seededFileId = seedResult.fileId
-    seededSegmentIds = seedResult.segmentIds
+    // Seed via split helpers (RV H4: each function has single responsibility)
+    seededFileId = await seedFile({ tenantId, projectId })
+    await seedScore({ tenantId, projectId, fileId: seededFileId })
+    seededSegmentIds = await seedSegments({ tenantId, projectId, fileId: seededFileId })
+    await seedFindings({ tenantId, projectId, fileId: seededFileId, segmentIds: seededSegmentIds })
     expect(seededFileId).toBeTruthy()
     expect(seededSegmentIds.length).toBeGreaterThanOrEqual(8)
     const score = await queryScore(seededFileId)
@@ -566,6 +570,55 @@ test.describe.serial('Extended Review Actions — Story 4.3 ATDD', () => {
     await expect(grid.getByTestId('manual-badge').first()).toBeVisible({ timeout: 10_000 })
   })
 
+  // ── G9: Manual finding — action hotkeys are no-op ─────────────────────
+  test('[P1] G9: Manual finding — A/R/F/N/S hotkeys are no-op (status stays manual)', async ({
+    page,
+  }) => {
+    await signupOrLogin(page, TEST_EMAIL)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
+
+    const grid = page.getByRole('grid')
+    // Find the manual finding from E-AF1 (has manual-badge)
+    const manualRow = grid
+      .locator('[role="row"]')
+      .filter({
+        has: page.getByTestId('manual-badge'),
+      })
+      .first()
+    await expect(manualRow).toBeVisible({ timeout: 10_000 })
+    await manualRow.click()
+    await expect(manualRow).toHaveAttribute('tabindex', '0', { timeout: 5_000 })
+
+    // Press each action hotkey — all should be no-op (status stays 'manual')
+    // Verify data-status remains 'manual' after each keypress (deterministic, no hard waits)
+    for (const key of ['a', 'r', 'f', 'n', 's']) {
+      await page.keyboard.press(key)
+      // Explicit assertion: status must still be 'manual' (no-op per AC5 transition matrix)
+      await expect(manualRow).toHaveAttribute('data-status', 'manual', { timeout: 5_000 })
+    }
+  })
+
+  // ── G12: Delete button hidden for non-manual findings ────────────────
+  test('[P1] G12: Delete button hidden for non-manual findings', async ({ page }) => {
+    // Desktop viewport — detail aside auto-shows
+    await page.setViewportSize({ width: 1500, height: 900 })
+    await signupOrLogin(page, TEST_EMAIL)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
+
+    const grid = page.getByRole('grid')
+    // Click a non-manual finding (pending)
+    const pendingRow = grid.locator('[role="row"][data-status="pending"]').first()
+    await expect(pendingRow).toBeVisible({ timeout: 10_000 })
+    await pendingRow.click()
+
+    // Wait for detail panel to render (deterministic: wait for panel content, not fixed time)
+    await expect(pendingRow).toHaveAttribute('tabindex', '0', { timeout: 5_000 })
+
+    // Verify delete button is NOT visible for non-manual finding
+    // Use count check — not.toBeVisible can pass even if element doesn't exist yet
+    await expect(page.getByTestId('delete-finding-button')).toHaveCount(0, { timeout: 10_000 })
+  })
+
   // ── E-D1: Delete manual finding ────────────────────────────────────────
   test('[P1] E-D1: Delete manual finding → removed from list', async ({ page }) => {
     // Desktop viewport (>1440px) — aside auto-shows active finding detail
@@ -634,6 +687,55 @@ test.describe.serial('Extended Review Actions — Story 4.3 ATDD', () => {
       const classList = await btn.getAttribute('class')
       expect(classList).toContain('focus-visible:outline-2')
     }
+  })
+
+  // ── G7: NoteInput Esc dismiss ─────────────────────────────────────────
+  test('[P2] G7: NoteInput Esc → popover closes without saving', async ({ page }) => {
+    await signupOrLogin(page, TEST_EMAIL)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
+
+    const grid = page.getByRole('grid')
+    // Find a noted finding (from E-N1)
+    const notedRow = grid.locator('[role="row"][data-status="noted"]').first()
+    await expect(notedRow).toBeVisible({ timeout: 10_000 })
+    await notedRow.click()
+    await expect(notedRow).toHaveAttribute('tabindex', '0', { timeout: 5_000 })
+
+    // Press N to open NoteInput
+    await page.keyboard.press('n')
+    await expect(page.getByTestId('note-input-popover')).toBeVisible({ timeout: 5_000 })
+
+    // Type some text but press Esc instead of Enter
+    await page.getByTestId('note-text-field').fill('This should not be saved')
+    await page.keyboard.press('Escape')
+
+    // Verify popover closes
+    await expect(page.getByTestId('note-input-popover')).not.toBeVisible({ timeout: 5_000 })
+
+    // Verify no "Note saved" toast appeared (popover dismissed without submit)
+    await expect(page.getByText('Note saved', { exact: true })).not.toBeVisible({ timeout: 2_000 })
+  })
+
+  // ── G8: Override via - keyboard shortcut ─────────────────────────────
+  test('[P2] G8: Keyboard - → override dropdown opens + Esc closes', async ({ page }) => {
+    await signupOrLogin(page, TEST_EMAIL)
+    await gotoReviewPageWithRetry(page, projectId, seededFileId)
+
+    const grid = page.getByRole('grid')
+    const pendingRow = grid.locator('[role="row"][data-status="pending"]').first()
+    await expect(pendingRow).toBeVisible({ timeout: 10_000 })
+    await pendingRow.click()
+    await expect(pendingRow).toHaveAttribute('tabindex', '0', { timeout: 5_000 })
+
+    // Press - hotkey (mapped to 'override' in HOTKEY_ACTION_MAP)
+    await page.keyboard.press('-')
+
+    // Verify override menu opens
+    await expect(page.getByTestId('override-menu-content')).toBeVisible({ timeout: 5_000 })
+
+    // Press Esc to close without selecting
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('override-menu-content')).not.toBeVisible({ timeout: 5_000 })
   })
 
   // ── Cleanup ─────────────────────────────────────────────────────────────

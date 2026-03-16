@@ -5,24 +5,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { withTenant } from '@/db/helpers/withTenant'
+import { noteFinding } from '@/features/review/actions/noteFinding.action'
+import { ACTION_TEST_IDS, findCapturedValues, resetDbState } from '@/test/action-test-mocks'
 
 const { dbState, dbMockModule, mockRequireRole, mockWriteAuditLog, mockInngestSend } = vi.hoisted(
-  () => {
-    const { dbState, dbMockModule } = createDrizzleMock()
-    return {
-      dbState,
-      dbMockModule,
-      mockRequireRole: vi.fn((..._args: unknown[]) =>
-        Promise.resolve({
-          id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
-          tenantId: 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f',
-          role: 'qa_reviewer',
-        }),
-      ),
-      mockWriteAuditLog: vi.fn((..._args: unknown[]) => Promise.resolve()),
-      mockInngestSend: vi.fn((..._args: unknown[]) => Promise.resolve()),
-    }
-  },
+  () => createActionTestMocks(),
 )
 
 vi.mock('server-only', () => ({}))
@@ -78,60 +65,41 @@ vi.mock('@/lib/logger', () => ({
   logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }))
 
-import { noteFinding } from '@/features/review/actions/noteFinding.action'
-
-const VALID_FINDING_ID = 'f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c'
-const VALID_FILE_ID = 'f1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
-const VALID_PROJECT_ID = 'b1c2d3e4-f5a6-4b2c-9d3e-4f5a6b7c8d9e'
-const VALID_TENANT_ID = 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f'
-const VALID_USER_ID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
-
 function buildFindingMock(overrides?: Record<string, unknown>) {
   return {
-    id: VALID_FINDING_ID,
-    fileId: VALID_FILE_ID,
-    projectId: VALID_PROJECT_ID,
-    tenantId: VALID_TENANT_ID,
-    segmentId: 'd1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5a',
+    id: ACTION_TEST_IDS.findingId,
+    fileId: ACTION_TEST_IDS.fileId,
+    projectId: ACTION_TEST_IDS.projectId,
+    tenantId: ACTION_TEST_IDS.tenantId,
+    segmentId: ACTION_TEST_IDS.segmentId,
     status: 'pending',
     severity: 'major',
     category: 'accuracy',
     detectedByLayer: 'L1',
     sourceTextExcerpt: 'Hello world',
-    targetTextExcerpt: 'สวัสดีชาวโลก',
+    targetTextExcerpt: '\u0e2a\u0e27\u0e31\u0e2a\u0e14\u0e35\u0e0a\u0e32\u0e27\u0e42\u0e25\u0e01',
     ...overrides,
   }
-}
-
-function findCapturedValues(state: { valuesCaptures: unknown[] }, key: string, value: string) {
-  return state.valuesCaptures.find(
-    (c: unknown) =>
-      typeof c === 'object' && c !== null && (c as Record<string, string>)[key] === value,
-  ) as Record<string, unknown> | undefined
 }
 
 describe('noteFinding.action', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    dbState.callIndex = 0
-    dbState.returnValues = []
-    dbState.setCaptures = []
-    dbState.valuesCaptures = []
-    dbState.throwAtCallIndex = null
+    resetDbState(dbState)
     mockRequireRole.mockResolvedValue({
-      id: VALID_USER_ID,
-      tenantId: VALID_TENANT_ID,
+      id: ACTION_TEST_IDS.userId,
+      tenantId: ACTION_TEST_IDS.tenantId,
       role: 'qa_reviewer',
     })
   })
 
-  it('[P0] U-NA1: should transition pending → noted with review_actions', async () => {
+  it('[P0] U-NA1: should transition pending \u2192 noted with review_actions', async () => {
     dbState.returnValues = [[buildFindingMock({ status: 'pending' })], [], []]
 
     const result = await noteFinding({
-      findingId: VALID_FINDING_ID,
-      fileId: VALID_FILE_ID,
-      projectId: VALID_PROJECT_ID,
+      findingId: ACTION_TEST_IDS.findingId,
+      fileId: ACTION_TEST_IDS.fileId,
+      projectId: ACTION_TEST_IDS.projectId,
     })
 
     expect(result.success).toBe(true)
@@ -162,23 +130,23 @@ describe('noteFinding.action', () => {
     dbState.returnValues = [[]]
 
     const result = await noteFinding({
-      findingId: VALID_FINDING_ID,
-      fileId: VALID_FILE_ID,
-      projectId: VALID_PROJECT_ID,
+      findingId: ACTION_TEST_IDS.findingId,
+      fileId: ACTION_TEST_IDS.fileId,
+      projectId: ACTION_TEST_IDS.projectId,
     })
 
     expect(result.success).toBe(false)
     if (!result.success) expect(result.code).toBe('NOT_FOUND')
-    expect(withTenant).toHaveBeenCalledWith('tenant_id', VALID_TENANT_ID)
+    expect(withTenant).toHaveBeenCalledWith('tenant_id', ACTION_TEST_IDS.tenantId)
   })
 
   it('[P1] U-NA3: should return no-op when finding is already noted', async () => {
     dbState.returnValues = [[buildFindingMock({ status: 'noted' })]]
 
     const result = await noteFinding({
-      findingId: VALID_FINDING_ID,
-      fileId: VALID_FILE_ID,
-      projectId: VALID_PROJECT_ID,
+      findingId: ACTION_TEST_IDS.findingId,
+      fileId: ACTION_TEST_IDS.fileId,
+      projectId: ACTION_TEST_IDS.projectId,
     })
 
     expect(result.success).toBe(true)
@@ -192,9 +160,9 @@ describe('noteFinding.action', () => {
     dbState.returnValues = [[buildFindingMock({ status: 'manual', detectedByLayer: 'Manual' })]]
 
     const result = await noteFinding({
-      findingId: VALID_FINDING_ID,
-      fileId: VALID_FILE_ID,
-      projectId: VALID_PROJECT_ID,
+      findingId: ACTION_TEST_IDS.findingId,
+      fileId: ACTION_TEST_IDS.fileId,
+      projectId: ACTION_TEST_IDS.projectId,
     })
 
     expect(result.success).toBe(true)

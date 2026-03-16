@@ -4,23 +4,10 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+import { ACTION_TEST_IDS, resetDbState } from '@/test/action-test-mocks'
+
 const { dbState, dbMockModule, mockRequireRole, mockWriteAuditLog, mockInngestSend } = vi.hoisted(
-  () => {
-    const { dbState, dbMockModule } = createDrizzleMock()
-    return {
-      dbState,
-      dbMockModule,
-      mockRequireRole: vi.fn((..._args: unknown[]) =>
-        Promise.resolve({
-          id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
-          tenantId: 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f',
-          role: 'qa_reviewer',
-        }),
-      ),
-      mockWriteAuditLog: vi.fn((..._args: unknown[]) => Promise.resolve()),
-      mockInngestSend: vi.fn((..._args: unknown[]) => Promise.resolve()),
-    }
-  },
+  () => createActionTestMocks(),
 )
 
 vi.mock('server-only', () => ({}))
@@ -90,25 +77,17 @@ vi.mock('@/lib/logger', () => ({
 
 import { overrideSeverity } from '@/features/review/actions/overrideSeverity.action'
 
-const IDS = {
-  findingId: 'f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c',
-  fileId: 'f1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
-  projectId: 'b1c2d3e4-f5a6-4b2c-9d3e-4f5a6b7c8d9e',
-  tenantId: 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f',
-  userId: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
-}
-
 function buildFinding(overrides?: Record<string, unknown>) {
   return {
-    id: IDS.findingId,
+    id: ACTION_TEST_IDS.findingId,
     status: 'pending',
     severity: 'critical',
     originalSeverity: null,
     category: 'accuracy',
     detectedByLayer: 'L1',
-    segmentId: 'd1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5a',
+    segmentId: ACTION_TEST_IDS.segmentId,
     sourceTextExcerpt: 'Hello',
-    targetTextExcerpt: 'สวัสดี',
+    targetTextExcerpt: '\u0e2a\u0e27\u0e31\u0e2a\u0e14\u0e35',
     ...overrides,
   }
 }
@@ -116,19 +95,15 @@ function buildFinding(overrides?: Record<string, unknown>) {
 describe('overrideSeverity.action', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    dbState.callIndex = 0
-    dbState.returnValues = []
-    dbState.setCaptures = []
-    dbState.valuesCaptures = []
-    dbState.throwAtCallIndex = null
+    resetDbState(dbState)
     mockRequireRole.mockResolvedValue({
-      id: IDS.userId,
-      tenantId: IDS.tenantId,
+      id: ACTION_TEST_IDS.userId,
+      tenantId: ACTION_TEST_IDS.tenantId,
       role: 'qa_reviewer',
     })
   })
 
-  it('[P0] U-O1: should override critical → minor and set original_severity', async () => {
+  it('[P0] U-O1: should override critical \u2192 minor and set original_severity', async () => {
     // SELECT finding, tx.update, tx.insert review_actions, audit, inngest, segment lookup, feedback_events
     dbState.returnValues = [
       [buildFinding({ severity: 'critical', originalSeverity: null })],
@@ -139,7 +114,9 @@ describe('overrideSeverity.action', () => {
     ]
 
     const result = await overrideSeverity({
-      ...IDS,
+      findingId: ACTION_TEST_IDS.findingId,
+      fileId: ACTION_TEST_IDS.fileId,
+      projectId: ACTION_TEST_IDS.projectId,
       newSeverity: 'minor',
     })
 
@@ -170,7 +147,12 @@ describe('overrideSeverity.action', () => {
       [],
     ]
 
-    const result = await overrideSeverity({ ...IDS, newSeverity: 'minor' })
+    const result = await overrideSeverity({
+      findingId: ACTION_TEST_IDS.findingId,
+      fileId: ACTION_TEST_IDS.fileId,
+      projectId: ACTION_TEST_IDS.projectId,
+      newSeverity: 'minor',
+    })
 
     expect(result.success).toBe(true)
     // Should preserve 'critical' as original, NOT set to 'major'
@@ -189,7 +171,12 @@ describe('overrideSeverity.action', () => {
       [],
     ]
 
-    const result = await overrideSeverity({ ...IDS, newSeverity: 'critical' })
+    const result = await overrideSeverity({
+      findingId: ACTION_TEST_IDS.findingId,
+      fileId: ACTION_TEST_IDS.fileId,
+      projectId: ACTION_TEST_IDS.projectId,
+      newSeverity: 'critical',
+    })
 
     expect(result.success).toBe(true)
     const updateCaptured = dbState.setCaptures[0] as Record<string, unknown>
@@ -200,7 +187,12 @@ describe('overrideSeverity.action', () => {
   it('[P1] U-O4: should reject override to same severity', async () => {
     dbState.returnValues = [[buildFinding({ severity: 'critical' })]]
 
-    const result = await overrideSeverity({ ...IDS, newSeverity: 'critical' })
+    const result = await overrideSeverity({
+      findingId: ACTION_TEST_IDS.findingId,
+      fileId: ACTION_TEST_IDS.fileId,
+      projectId: ACTION_TEST_IDS.projectId,
+      newSeverity: 'critical',
+    })
 
     expect(result.success).toBe(false)
     if (!result.success) expect(result.code).toBe('SAME_SEVERITY')
@@ -208,7 +200,12 @@ describe('overrideSeverity.action', () => {
 
   it('[P1] U-O5: should return NOT_FOUND when finding does not exist', async () => {
     dbState.returnValues = [[]]
-    const result = await overrideSeverity({ ...IDS, newSeverity: 'minor' })
+    const result = await overrideSeverity({
+      findingId: ACTION_TEST_IDS.findingId,
+      fileId: ACTION_TEST_IDS.fileId,
+      projectId: ACTION_TEST_IDS.projectId,
+      newSeverity: 'minor',
+    })
     expect(result.success).toBe(false)
     if (!result.success) expect(result.code).toBe('NOT_FOUND')
   })
@@ -222,7 +219,12 @@ describe('overrideSeverity.action', () => {
       [],
     ]
 
-    await overrideSeverity({ ...IDS, newSeverity: 'minor' })
+    await overrideSeverity({
+      findingId: ACTION_TEST_IDS.findingId,
+      fileId: ACTION_TEST_IDS.fileId,
+      projectId: ACTION_TEST_IDS.projectId,
+      newSeverity: 'minor',
+    })
 
     // feedback_events INSERT should have been captured
     const feedbackInsert = dbState.valuesCaptures.find(

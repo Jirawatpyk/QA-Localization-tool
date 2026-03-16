@@ -4,23 +4,10 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+import { ACTION_TEST_IDS, resetDbState } from '@/test/action-test-mocks'
+
 const { dbState, dbMockModule, mockRequireRole, mockWriteAuditLog, mockInngestSend } = vi.hoisted(
-  () => {
-    const { dbState, dbMockModule } = createDrizzleMock()
-    return {
-      dbState,
-      dbMockModule,
-      mockRequireRole: vi.fn((..._args: unknown[]) =>
-        Promise.resolve({
-          id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
-          tenantId: 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f',
-          role: 'qa_reviewer',
-        }),
-      ),
-      mockWriteAuditLog: vi.fn((..._args: unknown[]) => Promise.resolve()),
-      mockInngestSend: vi.fn((..._args: unknown[]) => Promise.resolve()),
-    }
-  },
+  () => createActionTestMocks(),
 )
 
 vi.mock('server-only', () => ({}))
@@ -97,19 +84,12 @@ vi.mock('@/lib/logger', () => ({
 
 import { addFinding } from '@/features/review/actions/addFinding.action'
 
-const IDS = {
-  fileId: 'f1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
-  projectId: 'b1c2d3e4-f5a6-4b2c-9d3e-4f5a6b7c8d9e',
-  segmentId: 'd1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5a',
-  tenantId: 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f',
-  userId: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
-  newFindingId: 'e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a5b',
-}
+const NEW_FINDING_ID = 'e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a5b'
 
 const VALID_INPUT = {
-  fileId: IDS.fileId,
-  projectId: IDS.projectId,
-  segmentId: IDS.segmentId,
+  fileId: ACTION_TEST_IDS.fileId,
+  projectId: ACTION_TEST_IDS.projectId,
+  segmentId: ACTION_TEST_IDS.segmentId,
   category: 'accuracy',
   severity: 'minor' as const,
   description: 'Missing translation for key term',
@@ -119,14 +99,10 @@ const VALID_INPUT = {
 describe('addFinding.action', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    dbState.callIndex = 0
-    dbState.returnValues = []
-    dbState.setCaptures = []
-    dbState.valuesCaptures = []
-    dbState.throwAtCallIndex = null
+    resetDbState(dbState)
     mockRequireRole.mockResolvedValue({
-      id: IDS.userId,
-      tenantId: IDS.tenantId,
+      id: ACTION_TEST_IDS.userId,
+      tenantId: ACTION_TEST_IDS.tenantId,
       role: 'qa_reviewer',
     })
   })
@@ -136,15 +112,16 @@ describe('addFinding.action', () => {
     dbState.returnValues = [
       [
         {
-          id: IDS.segmentId,
+          id: ACTION_TEST_IDS.segmentId,
           sourceText: 'Hello world source',
-          targetText: 'สวัสดีชาวโลก target',
+          targetText:
+            '\u0e2a\u0e27\u0e31\u0e2a\u0e14\u0e35\u0e0a\u0e32\u0e27\u0e42\u0e25\u0e01 target',
           sourceLang: 'en-US',
           targetLang: 'th-TH',
         },
       ],
       [{ isActive: true }], // taxonomy category validation
-      [{ id: IDS.newFindingId, status: 'manual', severity: 'minor', category: 'accuracy' }], // tx.insert returning
+      [{ id: NEW_FINDING_ID, status: 'manual', severity: 'minor', category: 'accuracy' }], // tx.insert returning
       [], // tx.insert review_actions
       [], // feedback_events
     ]
@@ -154,7 +131,7 @@ describe('addFinding.action', () => {
     expect(result.success).toBe(true)
     if (result.success) {
       // CR-R1-M6: verify findingId propagates from INSERT returning
-      expect(result.data.findingId).toBe(IDS.newFindingId)
+      expect(result.data.findingId).toBe(NEW_FINDING_ID)
       expect(result.data).toMatchObject({
         status: 'manual',
         detectedByLayer: 'Manual',
@@ -196,15 +173,15 @@ describe('addFinding.action', () => {
     dbState.returnValues = [
       [
         {
-          id: IDS.segmentId,
+          id: ACTION_TEST_IDS.segmentId,
           sourceText: 'Hello',
-          targetText: 'สวัสดี',
+          targetText: '\u0e2a\u0e27\u0e31\u0e2a\u0e14\u0e35',
           sourceLang: 'en-US',
           targetLang: 'th-TH',
         },
       ],
       [{ isActive: true }], // taxonomy category validation (CR-R1-H5)
-      [{ id: IDS.newFindingId }],
+      [{ id: NEW_FINDING_ID }],
       [],
       [],
     ]
@@ -232,15 +209,15 @@ describe('addFinding.action', () => {
     dbState.returnValues = [
       [
         {
-          id: IDS.segmentId,
+          id: ACTION_TEST_IDS.segmentId,
           sourceText: 'Hello',
-          targetText: 'สวัสดี',
+          targetText: '\u0e2a\u0e27\u0e31\u0e2a\u0e14\u0e35',
           sourceLang: 'en-US',
           targetLang: 'th-TH',
         },
       ],
       [{ isActive: true }], // taxonomy category validation (CR-R1-H5)
-      [{ id: IDS.newFindingId }],
+      [{ id: NEW_FINDING_ID }],
       [],
       [],
     ]

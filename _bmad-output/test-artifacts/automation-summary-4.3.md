@@ -1,0 +1,117 @@
+---
+stepsCompleted:
+  - step-01-preflight-and-context
+  - step-02-identify-targets
+  - step-03-generate-tests
+  - step-03c-aggregate
+  - step-04-validate-and-summarize
+lastStep: step-04-validate-and-summarize
+lastSaved: '2026-03-16'
+storyId: '4.3'
+storyTitle: 'Extended Actions — Note, Source Issue, Severity Override & Add Finding'
+detectedStack: fullstack
+executionMode: subagent
+inputDocuments:
+  - _bmad-output/implementation-artifacts/4-3-extended-actions.md
+  - _bmad-output/test-artifacts/atdd-checklist-4.3.md
+  - _bmad/tea/testarch/knowledge/test-levels-framework.md
+  - _bmad/tea/testarch/knowledge/test-priorities-matrix.md
+  - _bmad/tea/testarch/knowledge/data-factories.md
+---
+
+# Test Automation Summary — Story 4.3: Extended Actions
+
+**Date:** 2026-03-16
+**Author:** Murat (TEA Agent)
+**Mode:** BMad-Integrated (post-implementation gap coverage)
+**Execution:** Subagent (parallel dispatch — Unit/Component + E2E)
+
+---
+
+## Context
+
+Story 4.3 is `done` with 106 unit tests + 11 E2E tests already passing. This TA run identified **12 coverage gaps** from post-CR bug fixes (BUG-1 through BUG-7) and CR-R1 findings (H2, H3) that lacked regression guards.
+
+## Coverage Gap Analysis
+
+| Gap | Risk | Level | Status | Detail |
+|-----|------|-------|--------|--------|
+| G1: Infinite render loop (BUG-1) | P0 | Integration | Skipped | Requires full ReviewPageClient integration — prohibitive setup cost |
+| G2: AddFindingDialog form reset (BUG-7) | P2 | Component | Already covered | C-AD3 exists in AddFindingDialog.test.tsx |
+| G3: NoteInput focus trap (BUG-5) | P1 | Component | **2 tests added** | Tab + Shift+Tab wrap verified |
+| G4: overrideInFlightRef guard (CR-R1-H2) | P1 | Unit | **3 tests added** | Block, release, error recovery |
+| G5: noteTargetIdRef freeze (CR-R1-H3) | P1 | Unit | Already covered | U-H1 + U-H5 in use-review-actions.test.ts |
+| G6: overrideInFlightRef (same as G4) | P1 | Unit | Covered by G4 | — |
+| G7: NoteInput Esc dismiss | P2 | E2E | **1 test added** | Popover closes without save |
+| G8: `-` hotkey override dropdown | P2 | E2E | **1 test added** | Keyboard shortcut opens dropdown |
+| G9: Manual finding no-op lifecycle | P1 | E2E | **1 test added** | A/R/F/N/S all no-op on manual |
+| G10: AddFindingDialog validation | P2 | E2E | Deferred | Component C-AD2 covers |
+| G11: Override + score recalculation | P1 | E2E | Deferred | Needs Inngest pipeline — complex setup |
+| G12: Delete button visibility | P1 | E2E | **1 test added** | Hidden for non-manual findings |
+
+## Files Created / Extended
+
+| File | Action | Tests | Status |
+|------|--------|:-----:|--------|
+| `src/features/review/components/NoteInput.test.tsx` | Extended | +2 | PASS |
+| `src/features/review/utils/inflight-guard.test.ts` | Created | +3 | PASS |
+| `e2e/review-extended-actions.spec.ts` | Extended | +4 | Written (needs Inngest env) |
+
+## Test Count Summary
+
+| Level | Existing | Added | Total |
+|-------|:--------:|:-----:|:-----:|
+| Unit (Vitest) | 106 | 5 | 111 |
+| E2E (Playwright) | 11 | 4 | 15 |
+| **Total** | **117** | **9** | **126** |
+
+## Priority Coverage (new tests only)
+
+| Priority | Unit/Component | E2E | Total |
+|----------|:--------------:|:---:|:-----:|
+| P0 | 0 | 0 | 0 |
+| P1 | 5 | 2 | 7 |
+| P2 | 0 | 2 | 2 |
+| **Total** | **5** | **4** | **9** |
+
+## Validation Checklist
+
+- [x] Framework readiness: Vitest + Playwright config present
+- [x] Coverage mapping: ATDD checklist (76 tests) fully implemented + 9 gap tests
+- [x] Test quality: deterministic, isolated, <300 lines, explicit assertions
+- [x] Fixtures: using existing `src/test/factories.ts` — no new fixtures needed
+- [x] No CLI sessions leaked (no browser automation used)
+- [x] Artifacts stored in `_bmad-output/test-artifacts/`
+- [x] Unit tests verified GREEN: 15/15 pass
+
+## Assumptions & Risks
+
+| Risk | Mitigation |
+|------|-----------|
+| E2E tests require Inngest dev server | Suite-level skip guard: `test.skip(!process.env.INNGEST_DEV_URL)` |
+| G1 (infinite render loop) has no regression test | Pattern is structurally prevented by `skipStoreSyncRef` — low probability of regression |
+| G11 (score recalculation E2E) deferred | Score change after override verified at unit level (overrideSeverity.action.test.ts U-O1) |
+
+## E2E Serial Order (updated)
+
+```
+[setup] → E-N1 → E-N2 → E-N3 → E-S1 → E-O1 → E-O2 → E-AF1
+       → G9 → G12 → E-D1 → E-WC1 → G7 → G8 → [cleanup]
+```
+
+## Next Recommended Workflow
+
+- **`bmad-testarch-test-review` (RV)** — review quality of all 126 tests for Story 4.3
+- **`bmad-testarch-trace` (TR)** — trace AC→test coverage completeness
+
+## Knowledge Fragments Used
+
+- `test-levels-framework.md` (core) — level selection
+- `test-priorities-matrix.md` (core) — priority assignment
+- `data-factories.md` (core) — factory patterns
+- `selector-resilience.md` (core) — E2E selector patterns
+- `timing-debugging.md` (extended) — toast wait patterns
+
+---
+
+**Generated by BMad TEA Agent (Murat)** — 2026-03-16

@@ -4,23 +4,10 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+import { ACTION_TEST_IDS, resetDbState } from '@/test/action-test-mocks'
+
 const { dbState, dbMockModule, mockRequireRole, mockWriteAuditLog, mockInngestSend } = vi.hoisted(
-  () => {
-    const { dbState, dbMockModule } = createDrizzleMock()
-    return {
-      dbState,
-      dbMockModule,
-      mockRequireRole: vi.fn((..._args: unknown[]) =>
-        Promise.resolve({
-          id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
-          tenantId: 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f',
-          role: 'qa_reviewer',
-        }),
-      ),
-      mockWriteAuditLog: vi.fn((..._args: unknown[]) => Promise.resolve()),
-      mockInngestSend: vi.fn((..._args: unknown[]) => Promise.resolve()),
-    }
-  },
+  () => createActionTestMocks(),
 )
 
 vi.mock('server-only', () => ({}))
@@ -61,25 +48,13 @@ vi.mock('@/lib/logger', () => ({
 
 import { deleteFinding } from '@/features/review/actions/deleteFinding.action'
 
-const IDS = {
-  findingId: 'f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c',
-  fileId: 'f1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
-  projectId: 'b1c2d3e4-f5a6-4b2c-9d3e-4f5a6b7c8d9e',
-  tenantId: 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f',
-  userId: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
-}
-
 describe('deleteFinding.action', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    dbState.callIndex = 0
-    dbState.returnValues = []
-    dbState.setCaptures = []
-    dbState.valuesCaptures = []
-    dbState.throwAtCallIndex = null
+    resetDbState(dbState)
     mockRequireRole.mockResolvedValue({
-      id: IDS.userId,
-      tenantId: IDS.tenantId,
+      id: ACTION_TEST_IDS.userId,
+      tenantId: ACTION_TEST_IDS.tenantId,
       role: 'qa_reviewer',
     })
   })
@@ -87,20 +62,27 @@ describe('deleteFinding.action', () => {
   it('[P0] U-D1: should delete review_actions then finding in transaction', async () => {
     // SELECT finding, tx.delete review_actions, tx.delete finding
     dbState.returnValues = [
-      [{ id: IDS.findingId, detectedByLayer: 'Manual', severity: 'minor', category: 'accuracy' }],
+      [
+        {
+          id: ACTION_TEST_IDS.findingId,
+          detectedByLayer: 'Manual',
+          severity: 'minor',
+          category: 'accuracy',
+        },
+      ],
       [],
       [], // tx deletes
     ]
 
     const result = await deleteFinding({
-      findingId: IDS.findingId,
-      fileId: IDS.fileId,
-      projectId: IDS.projectId,
+      findingId: ACTION_TEST_IDS.findingId,
+      fileId: ACTION_TEST_IDS.fileId,
+      projectId: ACTION_TEST_IDS.projectId,
     })
 
     expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.data).toMatchObject({ findingId: IDS.findingId, deleted: true })
+      expect(result.data).toMatchObject({ findingId: ACTION_TEST_IDS.findingId, deleted: true })
     }
     expect(mockWriteAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'finding.delete' }),
@@ -109,13 +91,20 @@ describe('deleteFinding.action', () => {
 
   it('[P0] U-D2: should reject delete for non-Manual findings', async () => {
     dbState.returnValues = [
-      [{ id: IDS.findingId, detectedByLayer: 'L1', severity: 'major', category: 'accuracy' }],
+      [
+        {
+          id: ACTION_TEST_IDS.findingId,
+          detectedByLayer: 'L1',
+          severity: 'major',
+          category: 'accuracy',
+        },
+      ],
     ]
 
     const result = await deleteFinding({
-      findingId: IDS.findingId,
-      fileId: IDS.fileId,
-      projectId: IDS.projectId,
+      findingId: ACTION_TEST_IDS.findingId,
+      fileId: ACTION_TEST_IDS.fileId,
+      projectId: ACTION_TEST_IDS.projectId,
     })
 
     expect(result.success).toBe(false)
@@ -125,9 +114,9 @@ describe('deleteFinding.action', () => {
   it('[P1] U-D3: should return NOT_FOUND when finding does not exist', async () => {
     dbState.returnValues = [[]]
     const result = await deleteFinding({
-      findingId: IDS.findingId,
-      fileId: IDS.fileId,
-      projectId: IDS.projectId,
+      findingId: ACTION_TEST_IDS.findingId,
+      fileId: ACTION_TEST_IDS.fileId,
+      projectId: ACTION_TEST_IDS.projectId,
     })
     expect(result.success).toBe(false)
     if (!result.success) expect(result.code).toBe('NOT_FOUND')
@@ -135,12 +124,23 @@ describe('deleteFinding.action', () => {
 
   it('[P1] U-D4: should send Inngest event for score recalculation', async () => {
     dbState.returnValues = [
-      [{ id: IDS.findingId, detectedByLayer: 'Manual', severity: 'minor', category: 'accuracy' }],
+      [
+        {
+          id: ACTION_TEST_IDS.findingId,
+          detectedByLayer: 'Manual',
+          severity: 'minor',
+          category: 'accuracy',
+        },
+      ],
       [],
       [],
     ]
 
-    await deleteFinding({ findingId: IDS.findingId, fileId: IDS.fileId, projectId: IDS.projectId })
+    await deleteFinding({
+      findingId: ACTION_TEST_IDS.findingId,
+      fileId: ACTION_TEST_IDS.fileId,
+      projectId: ACTION_TEST_IDS.projectId,
+    })
 
     expect(mockInngestSend).toHaveBeenCalledWith(
       expect.objectContaining({
