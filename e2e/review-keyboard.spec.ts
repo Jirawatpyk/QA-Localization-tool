@@ -342,13 +342,8 @@ test.describe.serial('Review Keyboard & Focus — Story 4.0 ATDD', () => {
     await expect(secondRow).toBeFocused({ timeout: 5_000 })
     await expect(firstRow).toHaveAttribute('tabindex', '-1')
 
-    // 4. Navigate back up with K
-    for (let attempt = 0; attempt < 5; attempt++) {
-      await page.keyboard.press('k')
-      const tabVal = await firstRow.getAttribute('tabindex').catch(() => '-1')
-      if (tabVal === '0') break
-      await page.waitForTimeout(300)
-    }
+    // 4. Navigate back up with K (RV-M3: replaced retry loop with Playwright auto-retry)
+    await page.keyboard.press('k')
     await expect(firstRow).toHaveAttribute('tabindex', '0', { timeout: 5_000 })
     await expect(firstRow).toBeFocused({ timeout: 5_000 })
 
