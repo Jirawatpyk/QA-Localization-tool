@@ -281,12 +281,11 @@ test.describe.serial('Story 4.5: Search, Filter & AI Layer Toggle', () => {
     await page.getByTestId(`file-nav-item-${fileIdB}`).click()
 
     // TD-ARCH-001: <Link> client-side nav — both pages coexist during transition.
-    // CR-M5: Use non-stale review zone selector (isStaleInstance sets aria-hidden on old tree)
+    // CR-M5: Use visible h1 (isStaleInstance sets opacity:0 — Playwright treats as not visible)
     await page.waitForURL(`**/review/${fileIdB}`, { timeout: 30_000 })
-    await expect(page.locator('[data-testid="review-3-zone"]:not([aria-hidden]) h1')).toContainText(
-      /\.sdlxliff/,
-      { timeout: 30_000 },
-    )
+    await expect(page.locator('h1').locator('visible=true').first()).toContainText(/\.sdlxliff/, {
+      timeout: 30_000,
+    })
 
     // File B: no severity chip (default filters)
     await expect(page.getByTestId('filter-chip-severity-major')).not.toBeVisible({ timeout: 5_000 })
@@ -301,10 +300,9 @@ test.describe.serial('Story 4.5: Search, Filter & AI Layer Toggle', () => {
 
     // Wait for file A page to load
     await page.waitForURL(`**/review/${fileIdA}`, { timeout: 30_000 })
-    await expect(page.locator('[data-testid="review-3-zone"]:not([aria-hidden]) h1')).toContainText(
-      /\.sdlxliff/,
-      { timeout: 30_000 },
-    )
+    await expect(page.locator('h1').locator('visible=true').first()).toContainText(/\.sdlxliff/, {
+      timeout: 30_000,
+    })
 
     // THE KEY ASSERTION: severity=major filter restored from sessionStorage (L2 cache)
     await expect(page.getByTestId('filter-chip-severity-major')).toBeVisible({ timeout: 10_000 })
