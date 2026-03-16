@@ -401,6 +401,12 @@ export function ReviewPageClient({
   const navigateNextRef = useRef<(() => void) | null>(null)
   const navigatePrevRef = useRef<(() => void) | null>(null)
 
+  // Clear stale refs on file switch (FindingList unmounts → refs point to old callbacks)
+  useEffect(() => {
+    navigateNextRef.current = null
+    navigatePrevRef.current = null
+  }, [fileId])
+
   const handleNavigateReady = useCallback((fns: { next: () => void; prev: () => void }) => {
     navigateNextRef.current = fns.next
     navigatePrevRef.current = fns.prev
@@ -410,9 +416,12 @@ export function ReviewPageClient({
     // IME guard
     if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return
     // Input guard (Guardrail #28)
-    const tag = (e.target as HTMLElement).tagName
+    const target = e.target as HTMLElement
+    const tag = target.tagName
     if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return
-    if ((e.target as HTMLElement).getAttribute('contenteditable') === 'true') return
+    if (target.getAttribute('contenteditable') === 'true') return
+    // Scope guard: skip when focus is in file navigation (Guardrail #28 — review area only)
+    if (target.closest('nav')) return
 
     if (e.key === 'j' || e.key === 'ArrowDown') {
       e.preventDefault()
