@@ -182,6 +182,10 @@ test.describe.serial('Undo/Redo & Conflict Resolution — Story 4.4b ATDD', () =
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, seededFileId)
 
+    // Clear default pending filter — bulk accept changes status to 'accepted' which would be filtered out
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
+
     // Wait for findings grid
     const grid = page.getByRole('grid')
     const rows = grid.locator('[role="row"]')
