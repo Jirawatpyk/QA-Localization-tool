@@ -44,7 +44,11 @@ export async function signupOrLogin(
 
   if (!loginSucceeded) {
     await page.goto('/signup')
-    await page.getByLabel('Display Name').fill(displayName)
+    // Display Name field removed from signup page — skip if not present
+    const displayNameField = page.getByLabel('Display Name')
+    if (await displayNameField.isVisible().catch(() => false)) {
+      await displayNameField.fill(displayName)
+    }
     await page.getByLabel('Email').fill(email)
     await page.getByLabel('Password').fill(password)
     await page.getByRole('button', { name: 'Create account' }).click()
