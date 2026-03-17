@@ -416,7 +416,15 @@ test.describe.serial('Review Actions — TA Expansion', () => {
     page,
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
-    await gotoReviewPageWithRetry(page, projectId, fileAId)
+    // Use lightweight page load — previous tests consumed all pending findings,
+    // so waitForFindingsVisible (inside gotoReviewPageWithRetry) would timeout
+    // because default status=pending filter hides all acted-on findings.
+    await page.goto(`/projects/${projectId}/review/${fileAId}`)
+    await expect(page.locator('h1')).toBeVisible({ timeout: 30_000 })
+
+    // Show all findings (previous tests consumed pending ones)
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 10_000 })
 
     const grid = page.getByRole('grid')
     // Use any non-rejected finding (serial suite may have consumed all pending)
