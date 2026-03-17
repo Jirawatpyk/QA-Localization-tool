@@ -30,6 +30,7 @@ export type CreateSuppressionRuleResult = {
   ruleId: string
   autoRejectedCount: number
   autoRejectedIds: string[]
+  serverUpdatedAt: string | null // ISO string — use to replace client-clock updatedAt (CR-H2 fix)
 }
 
 export async function createSuppressionRule(
@@ -109,6 +110,7 @@ export async function createSuppressionRule(
 
   // Atomic transaction (Guardrail #6)
   let ruleId: string
+  let serverUpdatedAt: string | null = null
   try {
     ruleId = await db.transaction(async (tx) => {
       // INSERT suppression rule
@@ -139,17 +141,18 @@ export async function createSuppressionRule(
       // Batch UPDATE findings to rejected (Guardrail #5: guard empty array)
       if (toAutoReject.length > 0) {
         const rejectIds = toAutoReject.map((f) => f.id)
-        const serverUpdatedAt = new Date()
+        const txUpdatedAt = new Date()
+        serverUpdatedAt = txUpdatedAt.toISOString() // CR-H2: capture for client store sync
 
         await tx
           .update(findings)
-          .set({ status: 'rejected', updatedAt: serverUpdatedAt })
+          .set({ status: 'rejected', updatedAt: txUpdatedAt })
           .where(and(inArray(findings.id, rejectIds), withTenant(findings.tenantId, tenantId)))
 
         // Batch INSERT review_actions (shared batchId, isBulk)
         const reviewActionRows = toAutoReject.map((f, i) => ({
           findingId: f.id,
-          fileId: f.findingFileId!, // findings always have fileId (NOT NULL in DB)
+          fileId: f.findingFileId ?? currentFileId, // CR-H8: guard nullable FK with fallback
           projectId,
           tenantId,
           actionType: 'reject' as const,
@@ -193,7 +196,7 @@ export async function createSuppressionRule(
           const lang = f.segmentId ? segmentLangMap.get(f.segmentId) : undefined
           return {
             tenantId,
-            fileId: f.findingFileId!, // findings always have fileId (NOT NULL in DB)
+            fileId: f.findingFileId ?? currentFileId, // CR-H8: guard nullable FK with fallback
             projectId,
             findingId: f.id,
             reviewerId: userId,
@@ -254,7 +257,7 @@ export async function createSuppressionRule(
         name: 'finding.changed',
         data: {
           findingId: firstFinding.id,
-          fileId: firstFinding.findingFileId!, // findings always have fileId
+          fileId: firstFinding.findingFileId ?? currentFileId, // CR-H8: guard nullable FK
           projectId,
           tenantId,
           previousState: 'pending',
@@ -278,6 +281,7 @@ export async function createSuppressionRule(
       ruleId,
       autoRejectedCount: toAutoReject.length,
       autoRejectedIds: toAutoReject.map((f) => f.id),
+      serverUpdatedAt, // CR-H2: server timestamp for client store sync
     },
   }
 }

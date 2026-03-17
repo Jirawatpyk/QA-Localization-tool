@@ -55,10 +55,10 @@ describe('SuppressionRulesList', () => {
     expect(screen.getByText(/no.*suppression.*rule/i)).toBeInTheDocument()
   })
 
-  it('[P2] should have role="grid" on table element', () => {
+  it('[P2] should have role="table" on table element', () => {
     render(<SuppressionRulesList rules={[makeRule()]} onDeactivate={vi.fn()} />)
-    const grid = screen.getByRole('grid')
-    expect(grid).toBeInTheDocument()
-    expect(grid.tagName).toBe('TABLE')
+    const table = screen.getByRole('table')
+    expect(table).toBeInTheDocument()
+    expect(table.tagName).toBe('TABLE')
   })
 })

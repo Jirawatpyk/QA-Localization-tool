@@ -4,12 +4,13 @@
  */
 import { describe, it, expect } from 'vitest'
 
-import type { DetectedPattern, FindingForDisplay } from '@/features/review/types'
+import type { FindingForDisplay, SuppressionRule } from '@/features/review/types'
 import {
   trackRejection,
   extractKeywords,
   computeWordOverlap,
   resetPatternCounter,
+  isAlreadySuppressed,
 } from '@/features/review/utils/pattern-detection'
 import type { RejectionTracker } from '@/features/review/utils/pattern-detection'
 
@@ -30,6 +31,28 @@ function makeFinding(overrides: Partial<FindingForDisplay> = {}): FindingForDisp
     targetTextExcerpt: null,
     suggestedFix: null,
     aiModel: 'gpt-4o-mini',
+    ...overrides,
+  }
+}
+
+function makeRule(overrides: Partial<SuppressionRule> = {}): SuppressionRule {
+  return {
+    id: crypto.randomUUID(),
+    projectId: crypto.randomUUID(),
+    tenantId: crypto.randomUUID(),
+    pattern: 'bank, terminology, translation',
+    category: 'Terminology',
+    scope: 'language_pair',
+    duration: 'until_improved',
+    reason: 'Auto-generated',
+    fileId: null,
+    sourceLang: 'en-US',
+    targetLang: 'th-TH',
+    matchCount: 3,
+    createdBy: crypto.randomUUID(),
+    createdByName: null,
+    isActive: true,
+    createdAt: new Date().toISOString(),
     ...overrides,
   }
 }
@@ -97,7 +120,7 @@ describe('computeWordOverlap', () => {
 
 describe('trackRejection', () => {
   it('[P0] should detect pattern when 3 findings share category, lang pair, and >=3 keyword overlap', () => {
-    const tracker: RejectionTracker = new Map()
+    let tracker: RejectionTracker = new Map()
     const findings = [
       makeFinding({
         id: '00000000-0000-4000-8000-000000000001',
@@ -112,17 +135,32 @@ describe('trackRejection', () => {
         description: 'bank terminology error in translated financial text',
       }),
     ]
-    let result: DetectedPattern | null = null
+    let pattern = null
     for (const f of findings) {
-      result = trackRejection(tracker, f, 'en-US', 'th-TH')
+      const result = trackRejection(tracker, f, 'en-US', 'th-TH')
+      tracker = result.tracker
+      if (result.pattern) pattern = result.pattern
     }
-    expect(result).not.toBeNull()
-    expect(result!.category).toBe('Terminology')
-    expect(result!.matchingFindingIds).toHaveLength(3)
+    expect(pattern).not.toBeNull()
+    expect(pattern!.category).toBe('Terminology')
+    expect(pattern!.matchingFindingIds).toHaveLength(3)
+  })
+
+  it('[P0] should return new tracker reference (immutable pattern for Zustand)', () => {
+    const tracker: RejectionTracker = new Map()
+    const result = trackRejection(
+      tracker,
+      makeFinding({ description: 'incorrect bank terminology translation in financial context' }),
+      'en-US',
+      'th-TH',
+    )
+    // New tracker returned even when no pattern detected
+    expect(result.tracker).not.toBe(tracker)
+    expect(result.pattern).toBeNull()
   })
 
   it('[P0] should NOT detect pattern with only 2 rejections', () => {
-    const tracker: RejectionTracker = new Map()
+    let tracker: RejectionTracker = new Map()
     const findings = [
       makeFinding({
         id: '00000000-0000-4000-8000-000000000001',
@@ -133,15 +171,17 @@ describe('trackRejection', () => {
         description: 'wrong bank term used in financial document translation',
       }),
     ]
-    let result: DetectedPattern | null = null
+    let pattern = null
     for (const f of findings) {
-      result = trackRejection(tracker, f, 'en-US', 'th-TH')
+      const result = trackRejection(tracker, f, 'en-US', 'th-TH')
+      tracker = result.tracker
+      if (result.pattern) pattern = result.pattern
     }
-    expect(result).toBeNull()
+    expect(pattern).toBeNull()
   })
 
   it('[P0] should NOT detect pattern with <3 word overlap', () => {
-    const tracker: RejectionTracker = new Map()
+    let tracker: RejectionTracker = new Map()
     const findings = [
       makeFinding({
         id: '00000000-0000-4000-8000-000000000001',
@@ -156,54 +196,57 @@ describe('trackRejection', () => {
         description: 'placeholder format error found',
       }),
     ]
-    let result: DetectedPattern | null = null
+    let pattern = null
     for (const f of findings) {
-      result = trackRejection(tracker, f, 'en-US', 'th-TH')
+      const result = trackRejection(tracker, f, 'en-US', 'th-TH')
+      tracker = result.tracker
+      if (result.pattern) pattern = result.pattern
     }
-    expect(result).toBeNull()
+    expect(pattern).toBeNull()
   })
 
   it('[P1] should exclude findings with <4 unique keywords from detection', () => {
-    const tracker: RejectionTracker = new Map()
+    let tracker: RejectionTracker = new Map()
     // "bad tag" = only 2 keywords → excluded
     const findings = [
       makeFinding({ id: '00000000-0000-4000-8000-000000000001', description: 'bad tag' }),
       makeFinding({ id: '00000000-0000-4000-8000-000000000002', description: 'bad tag' }),
       makeFinding({ id: '00000000-0000-4000-8000-000000000003', description: 'bad tag' }),
     ]
-    let result: DetectedPattern | null = null
+    let pattern = null
     for (const f of findings) {
-      result = trackRejection(tracker, f, 'en-US', 'th-TH')
+      const result = trackRejection(tracker, f, 'en-US', 'th-TH')
+      tracker = result.tracker
+      if (result.pattern) pattern = result.pattern
     }
-    expect(result).toBeNull()
+    expect(pattern).toBeNull()
   })
 
   it('[P1] should treat different categories as separate groups', () => {
-    const tracker: RejectionTracker = new Map()
-    trackRejection(
+    let tracker: RejectionTracker = new Map()
+    let r = trackRejection(
       tracker,
       makeFinding({
-        id: '1',
         category: 'Terminology',
         description: 'incorrect bank terminology translation in financial context',
       }),
       'en-US',
       'th-TH',
     )
-    trackRejection(
+    tracker = r.tracker
+    r = trackRejection(
       tracker,
       makeFinding({
-        id: '2',
         category: 'Terminology',
         description: 'wrong bank term used in financial document translation',
       }),
       'en-US',
       'th-TH',
     )
-    const result = trackRejection(
+    tracker = r.tracker
+    r = trackRejection(
       tracker,
       makeFinding({
-        id: '3',
         category: 'Accuracy',
         description: 'bank terminology error in translated financial text',
       }),
@@ -211,37 +254,37 @@ describe('trackRejection', () => {
       'th-TH',
     )
     // 2 in Terminology, 1 in Accuracy → no group reaches 3
-    expect(result).toBeNull()
+    expect(r.pattern).toBeNull()
   })
 
   it('[P1] should treat different language pairs as separate groups', () => {
-    const tracker: RejectionTracker = new Map()
-    trackRejection(
+    let tracker: RejectionTracker = new Map()
+    let r = trackRejection(
       tracker,
       makeFinding({
-        id: '1',
         description: 'incorrect bank terminology translation in financial context',
       }),
       'en-US',
       'th-TH',
     )
-    trackRejection(
+    tracker = r.tracker
+    r = trackRejection(
       tracker,
       makeFinding({
-        id: '2',
         description: 'wrong bank term used in financial document translation',
       }),
       'en-US',
       'th-TH',
     )
-    const result = trackRejection(
+    tracker = r.tracker
+    r = trackRejection(
       tracker,
-      makeFinding({ id: '3', description: 'bank terminology error in translated financial text' }),
+      makeFinding({ description: 'bank terminology error in translated financial text' }),
       'en-US',
       'ja-JP',
     )
     // 2 in en-US→th-TH, 1 in en-US→ja-JP → no group reaches 3
-    expect(result).toBeNull()
+    expect(r.pattern).toBeNull()
   })
 })
 
@@ -249,103 +292,205 @@ describe('trackRejection', () => {
 
 describe('resetPatternCounter', () => {
   it('[P0] should prevent same cluster from re-triggering after "Keep checking"', () => {
-    const tracker: RejectionTracker = new Map()
-    trackRejection(
+    let tracker: RejectionTracker = new Map()
+    let r = trackRejection(
       tracker,
       makeFinding({
-        id: '1',
         description: 'incorrect bank terminology translation in financial context',
       }),
       'en-US',
       'th-TH',
     )
-    trackRejection(
+    tracker = r.tracker
+    r = trackRejection(
       tracker,
       makeFinding({
-        id: '2',
         description: 'wrong bank term used in financial document translation',
       }),
       'en-US',
       'th-TH',
     )
+    tracker = r.tracker
     const detected = trackRejection(
       tracker,
-      makeFinding({ id: '3', description: 'bank terminology error in translated financial text' }),
+      makeFinding({ description: 'bank terminology error in translated financial text' }),
       'en-US',
       'th-TH',
     )
-    expect(detected).not.toBeNull()
+    tracker = detected.tracker
+    expect(detected.pattern).not.toBeNull()
 
-    // User clicks "Keep checking"
-    resetPatternCounter(tracker, 'Terminology::en-US::th-TH', detected!.patternName)
+    // User clicks "Keep checking" — returns new tracker (immutable)
+    tracker = resetPatternCounter(
+      tracker,
+      'Terminology::en-US::th-TH',
+      detected.pattern!.patternName,
+    )
 
     // Adding 4th similar finding should NOT re-trigger same cluster
     const again = trackRejection(
       tracker,
-      makeFinding({ id: '4', description: 'mistranslated bank financial terminology issue' }),
+      makeFinding({ description: 'mistranslated bank financial terminology issue' }),
       'en-US',
       'th-TH',
     )
-    expect(again).toBeNull()
+    expect(again.pattern).toBeNull()
+  })
+
+  it('[P0] should return new tracker reference (immutable pattern)', () => {
+    const tracker: RejectionTracker = new Map()
+    tracker.set('Terminology::en-US::th-TH', { entries: [], dismissedPatterns: new Set() })
+    const newTracker = resetPatternCounter(tracker, 'Terminology::en-US::th-TH', 'test-pattern')
+    expect(newTracker).not.toBe(tracker)
   })
 
   it('[P1] should allow new rejections after reset to form a new cluster', () => {
-    const tracker: RejectionTracker = new Map()
+    let tracker: RejectionTracker = new Map()
     // First 3 trigger
-    trackRejection(
+    let r = trackRejection(
       tracker,
       makeFinding({
-        id: '1',
         description: 'incorrect bank terminology translation in financial context',
       }),
       'en-US',
       'th-TH',
     )
-    trackRejection(
+    tracker = r.tracker
+    r = trackRejection(
       tracker,
       makeFinding({
-        id: '2',
         description: 'wrong bank term used in financial document translation',
       }),
       'en-US',
       'th-TH',
     )
+    tracker = r.tracker
     const detected = trackRejection(
       tracker,
-      makeFinding({ id: '3', description: 'bank terminology error in translated financial text' }),
+      makeFinding({ description: 'bank terminology error in translated financial text' }),
       'en-US',
       'th-TH',
     )
-    resetPatternCounter(tracker, 'Terminology::en-US::th-TH', detected!.patternName)
+    tracker = detected.tracker
+    tracker = resetPatternCounter(
+      tracker,
+      'Terminology::en-US::th-TH',
+      detected.pattern!.patternName,
+    )
 
     // 3 NEW rejections with different keyword overlap should form new cluster
-    trackRejection(
+    r = trackRejection(
       tracker,
       makeFinding({
-        id: '4',
         description: 'glossary mismatch bank account translation error detected',
       }),
       'en-US',
       'th-TH',
     )
-    trackRejection(
+    tracker = r.tracker
+    r = trackRejection(
       tracker,
       makeFinding({
-        id: '5',
         description: 'glossary mismatch bank balance translation error found',
       }),
       'en-US',
       'th-TH',
     )
+    tracker = r.tracker
     const newCluster = trackRejection(
       tracker,
       makeFinding({
-        id: '6',
         description: 'glossary mismatch bank statement translation error reported',
       }),
       'en-US',
       'th-TH',
     )
-    expect(newCluster).not.toBeNull()
+    expect(newCluster.pattern).not.toBeNull()
+  })
+})
+
+// ── isAlreadySuppressed (CR-H4) ──
+
+describe('isAlreadySuppressed', () => {
+  it('[P0] should return true when active rule matches category + keyword overlap', () => {
+    const rules = [makeRule()]
+    const finding = makeFinding({
+      description: 'incorrect bank terminology translation in financial context',
+    })
+    expect(isAlreadySuppressed(rules, finding, 'en-US', 'th-TH', null)).toBe(true)
+  })
+
+  it('[P0] should skip inactive rules', () => {
+    const rules = [makeRule({ isActive: false })]
+    const finding = makeFinding({
+      description: 'incorrect bank terminology translation in financial context',
+    })
+    expect(isAlreadySuppressed(rules, finding, 'en-US', 'th-TH', null)).toBe(false)
+  })
+
+  it('[P0] should skip rules with different category', () => {
+    const rules = [makeRule({ category: 'Accuracy' })]
+    const finding = makeFinding({
+      category: 'Terminology',
+      description: 'incorrect bank terminology translation in financial context',
+    })
+    expect(isAlreadySuppressed(rules, finding, 'en-US', 'th-TH', null)).toBe(false)
+  })
+
+  it('[P0] should skip language_pair scope with mismatched lang', () => {
+    const rules = [makeRule({ scope: 'language_pair', sourceLang: 'en-US', targetLang: 'ja-JP' })]
+    const finding = makeFinding({
+      description: 'incorrect bank terminology translation in financial context',
+    })
+    expect(isAlreadySuppressed(rules, finding, 'en-US', 'th-TH', null)).toBe(false)
+  })
+
+  it('[P0] should match language_pair scope with matching lang', () => {
+    const rules = [makeRule({ scope: 'language_pair', sourceLang: 'en-US', targetLang: 'th-TH' })]
+    const finding = makeFinding({
+      description: 'incorrect bank terminology translation in financial context',
+    })
+    expect(isAlreadySuppressed(rules, finding, 'en-US', 'th-TH', null)).toBe(true)
+  })
+
+  it('[P0] should match "all" scope regardless of language', () => {
+    const rules = [makeRule({ scope: 'all', sourceLang: null, targetLang: null })]
+    const finding = makeFinding({
+      description: 'incorrect bank terminology translation in financial context',
+    })
+    expect(isAlreadySuppressed(rules, finding, 'ja-JP', 'ko-KR', null)).toBe(true)
+  })
+
+  it('[P0] should skip "file" scope with mismatched fileId (CR-M1)', () => {
+    const fileA = crypto.randomUUID()
+    const fileB = crypto.randomUUID()
+    const rules = [makeRule({ scope: 'file', fileId: fileA })]
+    const finding = makeFinding({
+      description: 'incorrect bank terminology translation in financial context',
+    })
+    expect(isAlreadySuppressed(rules, finding, 'en-US', 'th-TH', fileB)).toBe(false)
+  })
+
+  it('[P0] should match "file" scope with matching fileId', () => {
+    const fileId = crypto.randomUUID()
+    const rules = [makeRule({ scope: 'file', fileId })]
+    const finding = makeFinding({
+      description: 'incorrect bank terminology translation in financial context',
+    })
+    expect(isAlreadySuppressed(rules, finding, 'en-US', 'th-TH', fileId)).toBe(true)
+  })
+
+  it('[P0] boundary: 2 keyword overlap = NOT suppressed', () => {
+    const rules = [makeRule({ pattern: 'bank, terminology' })]
+    const finding = makeFinding({ description: 'bank terminology issues' })
+    expect(isAlreadySuppressed(rules, finding, 'en-US', 'th-TH', null)).toBe(false)
+  })
+
+  it('[P0] boundary: 3 keyword overlap = suppressed', () => {
+    const rules = [makeRule({ pattern: 'bank, terminology, translation' })]
+    const finding = makeFinding({
+      description: 'incorrect bank terminology translation in context',
+    })
+    expect(isAlreadySuppressed(rules, finding, 'en-US', 'th-TH', null)).toBe(true)
   })
 })

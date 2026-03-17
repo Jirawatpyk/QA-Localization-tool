@@ -12,6 +12,7 @@ import type { UndoEntryAction } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import { announce } from '@/features/review/utils/announce'
 import { isAlreadySuppressed, trackRejection } from '@/features/review/utils/pattern-detection'
+import type { TrackRejectionResult } from '@/features/review/utils/pattern-detection'
 import { getNewState } from '@/features/review/utils/state-transitions'
 import type { ReviewAction } from '@/features/review/utils/state-transitions'
 import { FINDING_STATUSES } from '@/types/finding'
@@ -192,21 +193,25 @@ export function useReviewActions({
           const segSourceLang = sourceLang ?? 'unknown'
           const segTargetLang = targetLang ?? 'unknown'
           // CF-C2 fix: check if finding is already covered by active suppression rule
+          // CR-M1 fix: pass fileId for 'file' scope guard in isAlreadySuppressed
           const alreadySuppressed = isAlreadySuppressed(
             latestState.activeSuppressions,
             findingForDetection,
             segSourceLang,
             segTargetLang,
+            fileId,
           )
           if (!alreadySuppressed) {
-            const detectedPattern = trackRejection(
+            // CR-H1 fix: trackRejection returns new tracker (immutable pattern for Zustand)
+            const result: TrackRejectionResult = trackRejection(
               latestState.rejectionTracker,
               findingForDetection,
               segSourceLang,
               segTargetLang,
             )
-            if (detectedPattern) {
-              latestState.trackRejectionInStore(detectedPattern)
+            latestState.setRejectionTracker(result.tracker)
+            if (result.pattern) {
+              latestState.trackRejectionInStore(result.pattern)
             }
           }
         }

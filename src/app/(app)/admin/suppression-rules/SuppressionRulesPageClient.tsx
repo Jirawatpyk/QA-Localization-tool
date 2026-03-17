@@ -8,13 +8,7 @@ import { getSuppressionRules } from '@/features/review/actions/getSuppressionRul
 import { SuppressionRulesList } from '@/features/review/components/SuppressionRulesList'
 import type { SuppressionRule } from '@/features/review/types'
 
-type SuppressionRulesPageClientProps = {
-  tenantId: string
-}
-
-export function SuppressionRulesPageClient({
-  tenantId: _tenantId,
-}: SuppressionRulesPageClientProps) {
+export function SuppressionRulesPageClient() {
   const [rules, setRules] = useState<SuppressionRule[]>([])
   const [loading, setLoading] = useState(true)
 

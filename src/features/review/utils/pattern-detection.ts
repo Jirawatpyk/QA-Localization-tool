@@ -93,32 +93,48 @@ function buildGroupKey(category: string, sourceLang: string, targetLang: string)
   return `${category}::${sourceLang}::${targetLang}`
 }
 
+/** Result of trackRejection — includes updated tracker (immutable pattern for Zustand) */
+export type TrackRejectionResult = {
+  tracker: RejectionTracker
+  pattern: DetectedPattern | null
+}
+
 /**
  * Track a rejection and detect if a pattern cluster has formed.
  *
- * Returns DetectedPattern when cluster of 3+ findings with >=3 shared keywords
+ * Returns new tracker + DetectedPattern when cluster of 3+ findings with >=3 shared keywords
  * is found within the same category + language pair group.
- * Returns null if no pattern detected.
+ * Returns new tracker + null if no pattern detected.
+ *
+ * IMPORTANT: returns a NEW Map (immutable pattern) — caller must call setRejectionTracker() on store.
  */
 export function trackRejection(
   tracker: RejectionTracker,
   finding: FindingForDisplay,
   sourceLang: string,
   targetLang: string,
-): DetectedPattern | null {
+): TrackRejectionResult {
   const keywords = extractKeywords(finding.description)
 
   // Guard: skip findings with too few unique keywords (prevents false clusters on short L1 templated descriptions)
   if (keywords.length < MIN_UNIQUE_KEYWORDS) {
-    return null
+    return { tracker, pattern: null }
   }
 
   const groupKey = buildGroupKey(finding.category, sourceLang, targetLang)
 
-  if (!tracker.has(groupKey)) {
-    tracker.set(groupKey, { entries: [], dismissedPatterns: new Set() })
+  // Clone tracker (immutable — Zustand needs new reference to detect change)
+  const newTracker: RejectionTracker = new Map(tracker)
+  if (!newTracker.has(groupKey)) {
+    newTracker.set(groupKey, { entries: [], dismissedPatterns: new Set() })
   }
-  const group = tracker.get(groupKey)!
+  const oldGroup = newTracker.get(groupKey)!
+  // Clone the group's entries array (shallow clone is sufficient — entries are immutable value objects)
+  const group: CategoryLangTracker = {
+    entries: [...oldGroup.entries],
+    dismissedPatterns: new Set(oldGroup.dismissedPatterns),
+  }
+  newTracker.set(groupKey, group)
 
   const entry: RejectionEntry = {
     findingId: finding.id,
@@ -163,7 +179,7 @@ export function trackRejection(
   }
 
   if (visited.size < MIN_CLUSTER_SIZE) {
-    return null
+    return { tracker: newTracker, pattern: null }
   }
 
   const verifiedCluster = allEntries.filter((e) => visited.has(e.findingId))
@@ -185,43 +201,52 @@ export function trackRejection(
 
   // Check if this pattern was already dismissed
   if (group.dismissedPatterns.has(patternName)) {
-    return null
+    return { tracker: newTracker, pattern: null }
   }
 
   return {
-    category: finding.category,
-    keywords: topKeywords,
-    patternName,
-    matchingFindingIds: verifiedCluster.map((e) => e.findingId),
-    sourceLang,
-    targetLang,
+    tracker: newTracker,
+    pattern: {
+      category: finding.category,
+      keywords: topKeywords,
+      patternName,
+      matchingFindingIds: verifiedCluster.map((e) => e.findingId),
+      sourceLang,
+      targetLang,
+    },
   }
 }
 
 // ── Reset ──
 
 /** Reset counter for "Keep checking" — clears entries and adds pattern to dismissed list.
- * AC4: "counter resets" — only NEW rejections after reset can form a new cluster. */
+ * AC4: "counter resets" — only NEW rejections after reset can form a new cluster.
+ * Returns new tracker (immutable pattern for Zustand). */
 export function resetPatternCounter(
   tracker: RejectionTracker,
   groupKey: string,
   patternName: string,
-): void {
-  const group = tracker.get(groupKey)
+): RejectionTracker {
+  const newTracker: RejectionTracker = new Map(tracker)
+  const group = newTracker.get(groupKey)
   if (group) {
-    group.dismissedPatterns.add(patternName)
-    group.entries = [] // Clear entries so only new post-reset rejections count
+    const newDismissed = new Set(group.dismissedPatterns)
+    newDismissed.add(patternName)
+    newTracker.set(groupKey, { entries: [], dismissedPatterns: newDismissed })
   }
+  return newTracker
 }
 
 // ── Suppression Check ──
 
-/** Check if a finding matches any active suppression rule */
+/** Check if a finding matches any active suppression rule.
+ * @param fileId - current file ID, used to verify 'file' scope rules (CR-M1 fix) */
 export function isAlreadySuppressed(
   activeSuppressions: SuppressionRule[],
   finding: FindingForDisplay,
   sourceLang: string,
   targetLang: string,
+  fileId: string | null,
 ): boolean {
   const findingKeywords = extractKeywords(finding.description)
 
@@ -230,10 +255,12 @@ export function isAlreadySuppressed(
     if (rule.category !== finding.category) continue
 
     // Scope check
+    if (rule.scope === 'file') {
+      if (rule.fileId !== fileId) continue
+    }
     if (rule.scope === 'language_pair') {
       if (rule.sourceLang !== sourceLang || rule.targetLang !== targetLang) continue
     }
-    // 'file' scope: caller must pre-filter by fileId before calling
     // 'all' scope: matches all language pairs
 
     // Keyword overlap check

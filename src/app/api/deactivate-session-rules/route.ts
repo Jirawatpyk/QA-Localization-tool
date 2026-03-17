@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { suppressionRules } from '@/db/schema/suppressionRules'
+import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
 
@@ -51,6 +52,20 @@ export async function POST(request: Request) {
   } catch (err) {
     logger.error({ err, ruleIds }, 'Failed to deactivate session rules')
     return NextResponse.json({ error: 'Failed to deactivate' }, { status: 500 })
+  }
+
+  // CR-L4: best-effort audit log for session deactivation (Guardrail #2)
+  try {
+    await writeAuditLog({
+      tenantId,
+      userId: user.id,
+      entityType: 'suppression_rule',
+      entityId: ruleIds[0]!,
+      action: 'suppression_rule.session_deactivated',
+      newValue: { ruleIds, count: ruleIds.length },
+    })
+  } catch (auditErr) {
+    logger.error({ err: auditErr, ruleIds }, 'Audit log failed for session rule deactivation')
   }
 
   return NextResponse.json({ ok: true })

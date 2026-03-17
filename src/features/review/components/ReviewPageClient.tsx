@@ -634,7 +634,6 @@ export function ReviewPageClient({
 
   // Story 4.6: Pattern detection toast + suppress dialog
   const detectedPattern = useFileState((fs) => fs.detectedPattern, fileId)
-  const rejectionTracker = useFileState((fs) => fs.rejectionTracker, fileId)
   const clearDetectedPattern = useReviewStore((s) => s.clearDetectedPattern)
   const addSuppression = useReviewStore((s) => s.addSuppression)
   const [suppressDialogOpen, setSuppressDialogOpen] = useState(false)
@@ -664,8 +663,10 @@ export function ReviewPageClient({
           onClick: () => {
             const groupKey = `${patternRef.category}::${patternRef.sourceLang}::${patternRef.targetLang}`
             // CF-C1 fix: read live tracker from store, not stale closure ref
+            // CR-H1 fix: resetPatternCounter returns new Map (immutable pattern for Zustand)
             const liveTracker = useReviewStore.getState().rejectionTracker
-            resetPatternCounter(liveTracker, groupKey, patternRef.patternName)
+            const newTracker = resetPatternCounter(liveTracker, groupKey, patternRef.patternName)
+            useReviewStore.getState().setRejectionTracker(newTracker)
           },
         },
       },
@@ -679,6 +680,8 @@ export function ReviewPageClient({
       const pattern = pendingPatternRef.current ?? pendingPattern
       if (!pattern) return
       setSuppressDialogOpen(false)
+      // CR-M2: always pass sourceLang/targetLang from pattern (even for file/all scope)
+      // so feedback_events get real language pair, not 'unknown'
       const result = await createSuppressionRule({
         projectId,
         fileId: config.fileId,
@@ -687,8 +690,8 @@ export function ReviewPageClient({
         pattern: pattern.keywords.join(', '),
         scope: config.scope,
         duration: config.duration,
-        sourceLang: config.sourceLang,
-        targetLang: config.targetLang,
+        sourceLang: config.sourceLang ?? pattern.sourceLang,
+        targetLang: config.targetLang ?? pattern.targetLang,
       })
       if (result.success) {
         const rule: SuppressionRule = {
@@ -710,11 +713,15 @@ export function ReviewPageClient({
           createdAt: new Date().toISOString(),
         }
         addSuppression(rule)
+        // CR-L5/IF-1: sync ref immediately (no render-cycle gap for beforeunload)
+        activeSuppressionRef.current = [...activeSuppressionRef.current, rule]
 
         // Production bug fix: update client-side store to reflect server auto-rejects
         // Without this, the UI still shows auto-rejected findings as "pending"
+        // CR-H2: use server timestamp (not client clock) to prevent Realtime merge guard drift
         if (result.data.autoRejectedIds.length > 0) {
           const autoRejectedSet = new Set(result.data.autoRejectedIds)
+          const updatedAt = result.data.serverUpdatedAt ?? new Date().toISOString()
           const currentState = useReviewStore.getState()
           for (const id of autoRejectedSet) {
             const finding = currentState.findingsMap.get(id)
@@ -722,7 +729,7 @@ export function ReviewPageClient({
               currentState.setFinding(id, {
                 ...finding,
                 status: 'rejected',
-                updatedAt: new Date().toISOString(),
+                updatedAt,
               })
             }
           }
@@ -737,7 +744,7 @@ export function ReviewPageClient({
       pendingPatternRef.current = null
       setPendingPattern(null)
     },
-    [pendingPattern, projectId, tenantId, addSuppression],
+    [pendingPattern, projectId, fileId, tenantId, addSuppression],
   )
 
   const handleSuppressCancel = useCallback(() => {

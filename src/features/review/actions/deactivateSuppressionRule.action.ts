@@ -3,6 +3,7 @@
 import 'server-only'
 
 import { and, eq } from 'drizzle-orm'
+import { z } from 'zod'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
@@ -12,9 +13,17 @@ import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
 
+const ruleIdSchema = z.string().uuid()
+
 export async function deactivateSuppressionRule(
   ruleId: string,
 ): Promise<ActionResult<{ ruleId: string }>> {
+  // CR-H7: UUID validation
+  const parsed = ruleIdSchema.safeParse(ruleId)
+  if (!parsed.success) {
+    return { success: false, error: 'Invalid rule ID', code: 'VALIDATION_ERROR' }
+  }
+
   // Auth: admin-only
   let user: Awaited<ReturnType<typeof requireRole>>
   try {

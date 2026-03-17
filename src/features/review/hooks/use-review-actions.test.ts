@@ -64,6 +64,8 @@ const mockSetFinding = vi.fn((id: string, finding: { id: string; status: Finding
 })
 
 const mockSetSelectedFinding = vi.fn()
+const mockTrackRejectionInStore = vi.fn()
+const mockSetRejectionTracker = vi.fn()
 
 vi.mock('@/features/review/stores/review.store', () => ({
   useReviewStore: Object.assign(
@@ -91,7 +93,8 @@ vi.mock('@/features/review/stores/review.store', () => ({
         setOverrideCount: vi.fn(),
         // Story 4.6: suppression state
         rejectionTracker: new Map(),
-        trackRejectionInStore: vi.fn(),
+        trackRejectionInStore: mockTrackRejectionInStore,
+        setRejectionTracker: mockSetRejectionTracker,
         detectedPattern: null,
         activeSuppressions: [],
       })),
@@ -148,9 +151,14 @@ vi.mock('@/features/review/utils/announce', () => ({
 }))
 
 // Story 4.6: mock pattern detection
+const mockTrackRejection = vi.fn((..._args: unknown[]) => ({
+  tracker: new Map(),
+  pattern: null as unknown,
+}))
+const mockIsAlreadySuppressed = vi.fn((..._args: unknown[]) => false)
 vi.mock('@/features/review/utils/pattern-detection', () => ({
-  trackRejection: vi.fn(() => null),
-  isAlreadySuppressed: vi.fn(() => false),
+  trackRejection: (...args: unknown[]) => mockTrackRejection(...args),
+  isAlreadySuppressed: (...args: unknown[]) => mockIsAlreadySuppressed(...args),
 }))
 
 // ── Constants ──
@@ -172,6 +180,9 @@ describe('useReviewActions', () => {
     mockAcceptFinding.mockResolvedValue({ success: true, data: {} })
     mockRejectFinding.mockResolvedValue({ success: true, data: {} })
     mockFlagFinding.mockResolvedValue({ success: true, data: {} })
+    // Re-set pattern detection mocks (clearAllMocks resets implementations)
+    mockTrackRejection.mockReturnValue({ tracker: new Map(), pattern: null as unknown })
+    mockIsAlreadySuppressed.mockReturnValue(false)
   })
 
   it('[P0] U-H1: should optimistically update Zustand store when handleAccept is called', async () => {
@@ -415,5 +426,107 @@ describe('useReviewActions', () => {
     // Assert: returns 'open-note-input' signal (no action dispatched, no advance)
     expect(noteResult).toBe('open-note-input')
     expect(mockAnnounce).not.toHaveBeenCalled()
+  })
+
+  // ── Story 4.6: Pattern detection integration (CR-H6) ──
+
+  it('[P1] should call trackRejection when handleReject succeeds', async () => {
+    mockFindingsMap.set(VALID_FINDING_ID, {
+      id: VALID_FINDING_ID,
+      status: 'pending',
+    })
+
+    const { result } = renderHook(() =>
+      useReviewActions({
+        fileId: VALID_FILE_ID,
+        projectId: VALID_PROJECT_ID,
+        sourceLang: 'en-US',
+        targetLang: 'th-TH',
+      }),
+    )
+
+    await act(async () => {
+      await result.current.handleReject(VALID_FINDING_ID)
+    })
+
+    expect(mockTrackRejection).toHaveBeenCalledTimes(1)
+  })
+
+  it('[P1] should NOT call trackRejection on accept action (only reject)', async () => {
+    mockFindingsMap.set(VALID_FINDING_ID, {
+      id: VALID_FINDING_ID,
+      status: 'pending',
+    })
+
+    const { result } = renderHook(() =>
+      useReviewActions({
+        fileId: VALID_FILE_ID,
+        projectId: VALID_PROJECT_ID,
+        sourceLang: 'en-US',
+        targetLang: 'th-TH',
+      }),
+    )
+
+    await act(async () => {
+      await result.current.handleAccept(VALID_FINDING_ID)
+    })
+
+    expect(mockTrackRejection).not.toHaveBeenCalled()
+  })
+
+  it('[P1] should NOT call trackRejection when isAlreadySuppressed returns true', async () => {
+    mockIsAlreadySuppressed.mockReturnValue(true)
+    mockFindingsMap.set(VALID_FINDING_ID, {
+      id: VALID_FINDING_ID,
+      status: 'pending',
+    })
+
+    const { result } = renderHook(() =>
+      useReviewActions({
+        fileId: VALID_FILE_ID,
+        projectId: VALID_PROJECT_ID,
+        sourceLang: 'en-US',
+        targetLang: 'th-TH',
+      }),
+    )
+
+    await act(async () => {
+      await result.current.handleReject(VALID_FINDING_ID)
+    })
+
+    expect(mockIsAlreadySuppressed).toHaveBeenCalled()
+    expect(mockTrackRejection).not.toHaveBeenCalled()
+  })
+
+  it('[P1] should call trackRejectionInStore when pattern detected', async () => {
+    const mockPattern = {
+      category: 'Terminology',
+      keywords: ['bank', 'terminology', 'translation'],
+      patternName: 'Terminology: bank, terminology, translation',
+      matchingFindingIds: ['a', 'b', 'c'],
+      sourceLang: 'en-US',
+      targetLang: 'th-TH',
+    }
+    mockTrackRejection.mockReturnValue({ tracker: new Map(), pattern: mockPattern as unknown })
+    mockFindingsMap.set(VALID_FINDING_ID, {
+      id: VALID_FINDING_ID,
+      status: 'pending',
+    })
+
+    const { result } = renderHook(() =>
+      useReviewActions({
+        fileId: VALID_FILE_ID,
+        projectId: VALID_PROJECT_ID,
+        sourceLang: 'en-US',
+        targetLang: 'th-TH',
+      }),
+    )
+
+    await act(async () => {
+      await result.current.handleReject(VALID_FINDING_ID)
+    })
+
+    // trackRejectionInStore should be called with the detected pattern
+    expect(mockTrackRejectionInStore).toHaveBeenCalledWith(mockPattern)
   })
 })

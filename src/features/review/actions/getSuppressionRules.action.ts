@@ -3,6 +3,7 @@
 import 'server-only'
 
 import { and, desc, eq } from 'drizzle-orm'
+import { z } from 'zod'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
@@ -12,9 +13,16 @@ import type { SuppressionRule } from '@/features/review/types'
 import { requireRole } from '@/lib/auth/requireRole'
 import type { ActionResult } from '@/types/actionResult'
 
+const optionalUuidSchema = z.string().uuid().nullable()
+
 export async function getSuppressionRules(
   projectId: string | null,
 ): Promise<ActionResult<SuppressionRule[]>> {
+  // CR-M11: validate projectId if provided
+  if (projectId !== null && !optionalUuidSchema.safeParse(projectId).success) {
+    return { success: false, error: 'Invalid project ID', code: 'VALIDATION_ERROR' }
+  }
+
   let user: Awaited<ReturnType<typeof requireRole>>
   try {
     user = await requireRole('qa_reviewer')

@@ -20,7 +20,7 @@ export default async function SuppressionRulesPage() {
     <>
       <PageHeader title="Suppression Rules" />
       <CompactLayout>
-        <SuppressionRulesPageClient tenantId={currentUser.tenantId} />
+        <SuppressionRulesPageClient />
       </CompactLayout>
     </>
   )

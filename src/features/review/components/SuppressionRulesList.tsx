@@ -39,7 +39,7 @@ export function SuppressionRulesList({ rules, onDeactivate }: SuppressionRulesLi
 
   return (
     <div>
-      <table className="w-full text-sm" role="grid" aria-label="Suppression rules">
+      <table className="w-full text-sm" role="table" aria-label="Suppression rules">
         <thead>
           <tr role="row" className="border-b">
             <th className="px-3 py-2 text-left font-medium">Pattern</th>
