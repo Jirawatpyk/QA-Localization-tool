@@ -362,6 +362,9 @@ test.describe.serial('Extended Review Actions — Story 4.3 ATDD', () => {
   test('[P0] E-N1: Keyboard N on pending → noted state + auto-advance', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, seededFileId)
+    // Story 4.5: default filter is 'pending' — switch to 'all' so acted-upon findings remain visible
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     const grid = page.getByRole('grid')
     const pendingRow = grid.locator('[role="row"][data-status="pending"]').first()
@@ -386,6 +389,8 @@ test.describe.serial('Extended Review Actions — Story 4.3 ATDD', () => {
   test('[P1] E-N2: Keyboard N on noted → NoteInput popover opens', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, seededFileId)
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     const grid = page.getByRole('grid')
     // Find the noted finding from E-N1
@@ -406,6 +411,8 @@ test.describe.serial('Extended Review Actions — Story 4.3 ATDD', () => {
   test('[P1] E-N3: NoteInput: type text + Enter → note saved', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, seededFileId)
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     const grid = page.getByRole('grid')
     // Find noted finding, click to activate, press N to open NoteInput
@@ -436,6 +443,8 @@ test.describe.serial('Extended Review Actions — Story 4.3 ATDD', () => {
   test('[P0] E-S1: Keyboard S on pending → source_issue state + auto-advance', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, seededFileId)
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     const grid = page.getByRole('grid')
     const pendingRow = grid.locator('[role="row"][data-status="pending"]').first()
@@ -531,6 +540,8 @@ test.describe.serial('Extended Review Actions — Story 4.3 ATDD', () => {
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, seededFileId)
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     // Click Add button in action bar
     const actionBar = page.getByTestId('review-action-bar')
@@ -576,6 +587,8 @@ test.describe.serial('Extended Review Actions — Story 4.3 ATDD', () => {
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, seededFileId)
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     const grid = page.getByRole('grid')
     // Find the manual finding from E-AF1 (has manual-badge)
@@ -625,6 +638,8 @@ test.describe.serial('Extended Review Actions — Story 4.3 ATDD', () => {
     await page.setViewportSize({ width: 1500, height: 900 })
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, seededFileId)
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     const grid = page.getByRole('grid')
     await expect(grid).toBeVisible({ timeout: 30_000 })
@@ -693,6 +708,8 @@ test.describe.serial('Extended Review Actions — Story 4.3 ATDD', () => {
   test('[P2] G7: NoteInput Esc → popover closes without saving', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, seededFileId)
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     const grid = page.getByRole('grid')
     // Find a noted finding (from E-N1)

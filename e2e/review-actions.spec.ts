@@ -275,6 +275,9 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, seededFileId)
+    // Story 4.5: default filter is 'pending' — switch to 'all' so acted-upon findings remain visible
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     const grid = page.getByRole('grid')
     const rows = grid.getByRole('row')
@@ -306,6 +309,8 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, seededFileId)
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     const grid = page.getByRole('grid')
     const pendingRow = grid.locator('[role="row"][data-status="pending"]').first()
@@ -330,6 +335,8 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, seededFileId)
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     const grid = page.getByRole('grid')
     const pendingRow = grid.locator('[role="row"][data-status="pending"]').first()
@@ -394,6 +401,8 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
   test('[P1] E-R5: should accept finding via mouse click on Accept button', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, seededFileId)
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     const grid = page.getByRole('grid')
     const pendingRow = grid.locator('[role="row"][data-status="pending"]').first()
@@ -414,6 +423,8 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
   test('[P1] E-R6: should accept finding via quick-action icon click on row', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, seededFileId)
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     const grid = page.getByRole('grid')
     const pendingRow = grid.locator('[role="row"][data-status="pending"]').first()
@@ -430,6 +441,8 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, seededFileId)
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     const grid = page.getByRole('grid')
     const pendingRow = grid.locator('[role="row"][data-status="pending"]').first()
@@ -446,6 +459,9 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
 
     await page.reload()
     await waitForReviewPageHydrated(page)
+    // After reload: default filter resets to 'pending' — switch to 'all' again
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     // After reload: finding status should persist from DB
     const reloadedRow = page
@@ -460,6 +476,8 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, seededFileId)
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     // Find an already-accepted finding from previous tests, or accept a pending one first
     const grid = page.getByRole('grid')

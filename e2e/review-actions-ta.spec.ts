@@ -212,6 +212,9 @@ test.describe.serial('Review Actions — TA Expansion', () => {
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, fileAId)
+    // Story 4.5: default filter is 'pending' — switch to 'all' so acted-upon findings remain visible
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     const grid = page.getByRole('grid')
 
@@ -266,6 +269,8 @@ test.describe.serial('Review Actions — TA Expansion', () => {
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, fileAId)
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     const grid = page.getByRole('grid')
     const pendingRow = grid.locator('[role="row"][data-status="pending"]').first()
@@ -286,6 +291,8 @@ test.describe.serial('Review Actions — TA Expansion', () => {
 
     // Navigate back to file A
     await gotoReviewPageWithRetry(page, projectId, fileAId)
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     // Verify the accepted finding is still accepted (processedFileIdRef regression — H1 bug)
     const restoredRow = page
@@ -299,6 +306,8 @@ test.describe.serial('Review Actions — TA Expansion', () => {
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, fileAId)
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     // Minor accordion header — click to expand (it may already be expanded from hydration helper)
     const minorAccordion = page.getByText(/Minor \(\d+\)/i)
@@ -349,6 +358,8 @@ test.describe.serial('Review Actions — TA Expansion', () => {
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, fileAId)
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     const grid = page.getByRole('grid')
     const pendingRow = grid.locator('[role="row"][data-status="pending"]').first()

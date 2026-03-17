@@ -313,6 +313,9 @@ test.describe.serial('Bulk Operations & Decision Override — Story 4.4a ATDD', 
 
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, seededFileId)
+    // Story 4.5: default filter is 'pending' — switch to 'all' so acted-upon findings remain visible
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     const grid = page.getByRole('grid')
     const pendingRows = grid.locator('[role="row"][data-status="pending"]')
@@ -520,6 +523,8 @@ test.describe.serial('Bulk Operations & Decision Override — Story 4.4a ATDD', 
   test('[P1] E-BK6: should show Override badge after re-deciding a finding', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, seededFileId)
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     const grid = page.getByRole('grid')
 
@@ -557,6 +562,8 @@ test.describe.serial('Bulk Operations & Decision Override — Story 4.4a ATDD', 
     // Desktop viewport set at suite level — detail panel auto-shows
     await signupOrLogin(page, TEST_EMAIL)
     await gotoReviewPageWithRetry(page, projectId, seededFileId)
+    await page.getByTestId('filter-status-all').click()
+    await expect(page.getByRole('grid').getByRole('row').first()).toBeVisible({ timeout: 5_000 })
 
     const grid = page.getByRole('grid')
 
