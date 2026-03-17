@@ -630,7 +630,7 @@ test.describe.serial('Story 4.6: Suppress False Positive Patterns', () => {
     })
 
     // Verify the rule is shown in the grid table
-    const rulesGrid = page.getByRole('grid', { name: /suppression rules/i })
+    const rulesGrid = page.getByRole('table', { name: /suppression rules/i })
     await expect(rulesGrid).toBeVisible()
 
     // Table should contain the Terminology pattern rule
@@ -652,7 +652,7 @@ test.describe.serial('Story 4.6: Suppress False Positive Patterns', () => {
     })
 
     // Find the active Terminology rule row
-    const rulesGrid = page.getByRole('grid', { name: /suppression rules/i })
+    const rulesGrid = page.getByRole('table', { name: /suppression rules/i })
     await expect(rulesGrid).toBeVisible()
     const ruleRow = rulesGrid.getByRole('row').filter({ hasText: /terminology/i })
     await expect(ruleRow).toBeVisible()
