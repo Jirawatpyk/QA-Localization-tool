@@ -406,12 +406,12 @@ test.describe.serial('Story 4.5: Search, Filter & AI Layer Toggle', () => {
     // Apply severity=critical filter (hides most selections)
     await page.getByTestId('filter-severity-critical').click()
 
-    // Selection reduced: only 1 critical pending → bulk mode should exit (selection empty or 1)
-    // Verify filter applied correctly + no crash
+    // Selection reduced: only 1 critical pending remains visible + selected
+    // Verify filter applied correctly + selection intersected (no crash, no ghost selections)
     await expect(page.getByTestId('filter-count')).toContainText('Showing 1 of 6')
-    // Bulk checkboxes should not be visible (exited bulk mode or reduced to single)
+    // Bulk mode stays active with 1 remaining selected finding (1 checkbox visible)
     const checkboxes = page.locator('[role="checkbox"][aria-label^="Select finding"]')
-    await expect(checkboxes).toHaveCount(0)
+    await expect(checkboxes).toHaveCount(1)
   })
 
   test('[P1] E-10: should auto-advance within filtered view after action', async ({ page }) => {

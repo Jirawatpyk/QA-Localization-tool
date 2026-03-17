@@ -89,6 +89,11 @@ vi.mock('@/features/review/stores/review.store', () => ({
         overrideCounts: new Map(),
         incrementOverrideCount: vi.fn(),
         setOverrideCount: vi.fn(),
+        // Story 4.6: suppression state
+        rejectionTracker: new Map(),
+        trackRejectionInStore: vi.fn(),
+        detectedPattern: null,
+        activeSuppressions: [],
       })),
     },
   ),
@@ -140,6 +145,12 @@ vi.mock('sonner', () => ({
 
 vi.mock('@/features/review/utils/announce', () => ({
   announce: mockAnnounce,
+}))
+
+// Story 4.6: mock pattern detection
+vi.mock('@/features/review/utils/pattern-detection', () => ({
+  trackRejection: vi.fn(() => null),
+  isAlreadySuppressed: vi.fn(() => false),
 }))
 
 // ── Constants ──

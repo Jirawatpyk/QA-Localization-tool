@@ -169,6 +169,7 @@ function FindingCardCompactInner({
       data-testid="finding-compact-row"
       data-finding-id={finding.id}
       data-status={finding.status}
+      data-category={finding.category.toLowerCase()}
       tabIndex={isActive ? 0 : -1}
       aria-expanded={isExpanded ? 'true' : 'false'}
       aria-label={ariaLabel}

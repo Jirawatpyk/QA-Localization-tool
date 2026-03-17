@@ -165,10 +165,15 @@ describe('processFile', () => {
       tenantId: 'c3d4e5f6-a1b2-4c3d-ae4f-5a6b7c8d9e0f',
       pattern: 'TODO',
       category: 'custom_rule',
-      scope: 'project',
+      scope: 'all',
+      duration: 'until_improved',
       reason: 'No TODOs',
       createdBy: 'd4e5f6a1-b2c3-4d4e-bf5a-6b7c8d9e0f1a',
       isActive: true,
+      fileId: null,
+      sourceLang: null,
+      targetLang: null,
+      matchCount: 0,
       createdAt: new Date(),
     }
     const segments = [

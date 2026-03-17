@@ -84,6 +84,7 @@ export function FindingCard({
       data-testid="finding-card"
       data-finding-id={finding.id}
       data-status={finding.status}
+      data-category={finding.category.toLowerCase()}
       className={`border rounded-lg p-3 ${borderClass} ${bgClass} ${stateClass} ${transitionClass} ${showNewAnimation ? 'animate-fade-in' : ''}`}
     >
       {/* Header row: severity + category + layer + finding number */}

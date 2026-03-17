@@ -3,14 +3,7 @@
 import { createContext, useContext } from 'react'
 import { create } from 'zustand'
 
-import type {
-  DetectedByLayer,
-  Finding,
-  FindingSeverity,
-  FindingStatus,
-  LayerCompleted,
-  ScoreStatus,
-} from '@/types/finding'
+import type { DetectedPattern, SuppressionRule } from '@/features/review/types'
 
 // ── Undo/Redo Types (Story 4.4b — SINGLE SOURCE OF TRUTH) ──
 
@@ -75,6 +68,15 @@ export type UndoEntry = {
 import { loadFilterCache, clearFilterCache } from '@/features/review/utils/filter-cache'
 import { findingMatchesFilters, DEFAULT_FILTER_STATE } from '@/features/review/utils/filter-helpers'
 import type { FilterState } from '@/features/review/utils/filter-helpers'
+import type { RejectionTracker } from '@/features/review/utils/pattern-detection'
+import type {
+  DetectedByLayer,
+  Finding,
+  FindingSeverity,
+  FindingStatus,
+  LayerCompleted,
+  ScoreStatus,
+} from '@/types/finding'
 
 /** Compute selection adjustments after any filter/search/AI-toggle change */
 function computeSelectionAfterFilterChange(state: ReviewState): Partial<ReviewState> {
@@ -473,9 +475,43 @@ const createUndoRedoSlice = (
     }),
 })
 
+// ── Suppression Slice (Story 4.6) ──
+
+type SuppressionSlice = {
+  rejectionTracker: RejectionTracker
+  detectedPattern: DetectedPattern | null
+  activeSuppressions: SuppressionRule[]
+  trackRejectionInStore: (pattern: DetectedPattern | null) => void
+  clearDetectedPattern: () => void
+  addSuppression: (rule: SuppressionRule) => void
+  removeSuppression: (ruleId: string) => void
+  setActiveSuppressions: (rules: SuppressionRule[]) => void
+  setRejectionTracker: (tracker: RejectionTracker) => void
+}
+
+const createSuppressionSlice = (
+  setState: (fn: Partial<ReviewState> | ((s: ReviewState) => Partial<ReviewState>)) => void,
+): SuppressionSlice => ({
+  rejectionTracker: new Map(),
+  detectedPattern: null,
+  activeSuppressions: [],
+  trackRejectionInStore: (pattern) => setState({ detectedPattern: pattern }),
+  clearDetectedPattern: () => setState({ detectedPattern: null }),
+  addSuppression: (rule) =>
+    setState((s) => ({
+      activeSuppressions: [...s.activeSuppressions, rule],
+    })),
+  removeSuppression: (ruleId) =>
+    setState((s) => ({
+      activeSuppressions: s.activeSuppressions.filter((r) => r.id !== ruleId),
+    })),
+  setActiveSuppressions: (rules) => setState({ activeSuppressions: rules }),
+  setRejectionTracker: (tracker) => setState({ rejectionTracker: tracker }),
+})
+
 // ── File-Scoped State (TD-ARCH-001 refactor) ──
 
-/** All 17 file-scoped fields — isolated per file in the Map */
+/** All 25 file-scoped fields — isolated per file in the Map */
 export type FileState = {
   // FindingsSlice fields
   findingsMap: Map<string, Finding>
@@ -502,6 +538,10 @@ export type FileState = {
   undoStack: UndoEntry[]
   redoStack: UndoEntry[]
   undoFindingIndex: Map<string, Set<string>>
+  // SuppressionSlice fields (Story 4.6)
+  rejectionTracker: RejectionTracker
+  detectedPattern: DetectedPattern | null
+  activeSuppressions: SuppressionRule[]
   // Init guard (replaces processedFileIdRef — F5 fix)
   initialized: boolean
 }
@@ -528,6 +568,9 @@ export const DEFAULT_FILE_STATE: Readonly<FileState> = Object.freeze({
   undoStack: [] as UndoEntry[],
   redoStack: [] as UndoEntry[],
   undoFindingIndex: new Map<string, Set<string>>(),
+  rejectionTracker: new Map() as RejectionTracker,
+  detectedPattern: null,
+  activeSuppressions: [] as SuppressionRule[],
   initialized: false,
 } satisfies FileState)
 
@@ -554,6 +597,9 @@ function createFreshFileState(): FileState {
     undoStack: [],
     redoStack: [],
     undoFindingIndex: new Map(),
+    rejectionTracker: new Map(),
+    detectedPattern: null,
+    activeSuppressions: [],
     initialized: false,
   }
 }
@@ -599,6 +645,9 @@ const FILE_STATE_KEYS: ReadonlySet<string> = new Set<keyof FileState>([
   'undoStack',
   'redoStack',
   'undoFindingIndex',
+  'rejectionTracker',
+  'detectedPattern',
+  'activeSuppressions',
 ])
 
 /**
@@ -655,7 +704,8 @@ type ReviewState = FindingsSlice &
   ScoreSlice &
   ThresholdSlice &
   SelectionSlice &
-  UndoRedoSlice & {
+  UndoRedoSlice &
+  SuppressionSlice & {
     currentFileId: string | null
     fileStates: Map<string, FileState>
     resetForFile: (fileId: string) => void
@@ -676,6 +726,7 @@ export const useReviewStore = create<ReviewState>()((set, get) => {
     ...createThresholdSlice(setState),
     ...createSelectionSlice(setState),
     ...createUndoRedoSlice(setState, get as () => ReviewState),
+    ...createSuppressionSlice(setState),
     currentFileId: null,
     fileStates: new Map<string, FileState>(),
     // TD-ARCH-001: resetForFile switches activeFileId, creates fresh FileState.
@@ -719,6 +770,9 @@ export const useReviewStore = create<ReviewState>()((set, get) => {
           undoStack: fs.undoStack,
           redoStack: fs.redoStack,
           undoFindingIndex: fs.undoFindingIndex,
+          rejectionTracker: fs.rejectionTracker,
+          detectedPattern: fs.detectedPattern,
+          activeSuppressions: fs.activeSuppressions,
         }
       }),
     // Task 4.4: selectRange — needs get() for sortedFindingIds

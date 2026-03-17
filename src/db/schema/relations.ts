@@ -253,6 +253,10 @@ export const suppressionRulesRelations = relations(suppressionRules, ({ one }) =
     fields: [suppressionRules.createdBy],
     references: [users.id],
   }),
+  file: one(files, {
+    fields: [suppressionRules.fileId],
+    references: [files.id],
+  }),
 }))
 
 // --- File Assignments ---

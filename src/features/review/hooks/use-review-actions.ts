@@ -9,7 +9,9 @@ import { sourceIssueFinding } from '@/features/review/actions/sourceIssueFinding
 import { useFocusManagement } from '@/features/review/hooks/use-focus-management'
 import { useReviewStore } from '@/features/review/stores/review.store'
 import type { UndoEntryAction } from '@/features/review/stores/review.store'
+import type { FindingForDisplay } from '@/features/review/types'
 import { announce } from '@/features/review/utils/announce'
+import { isAlreadySuppressed, trackRejection } from '@/features/review/utils/pattern-detection'
 import { getNewState } from '@/features/review/utils/state-transitions'
 import type { ReviewAction } from '@/features/review/utils/state-transitions'
 import { FINDING_STATUSES } from '@/types/finding'
@@ -27,6 +29,8 @@ const REVIEW_TO_UNDO_ACTION: Record<ReviewAction, UndoEntryAction> = {
 type UseReviewActionsOptions = {
   fileId: string
   projectId: string
+  sourceLang?: string | undefined
+  targetLang?: string | undefined
 }
 
 // State-transition actions that use executeReviewAction pattern
@@ -53,7 +57,12 @@ const ACTION_LABELS: Record<ReviewAction, { past: string; toast: ToastFn }> = {
   source: { past: 'marked as source issue', toast: toast },
 }
 
-export function useReviewActions({ fileId, projectId }: UseReviewActionsOptions) {
+export function useReviewActions({
+  fileId,
+  projectId,
+  sourceLang,
+  targetLang,
+}: UseReviewActionsOptions) {
   const { autoAdvance } = useFocusManagement()
   // H1 fix: useState for UI-facing loading state (triggers re-render for spinner)
   // Ref kept for synchronous double-click guard (checked before await)
@@ -161,6 +170,47 @@ export function useReviewActions({ fileId, projectId }: UseReviewActionsOptions)
           staleFindings: new Set(),
         })
 
+        // Story 4.6: Pattern detection on reject — track and detect recurring false positives
+        if (action === 'reject') {
+          const latestState = useReviewStore.getState()
+          const findingForDetection: FindingForDisplay = {
+            id: findingId,
+            segmentId: finding.segmentId ?? null,
+            severity: finding.severity,
+            originalSeverity: finding.originalSeverity ?? null,
+            category: finding.category,
+            description: finding.description,
+            status: newState,
+            detectedByLayer: finding.detectedByLayer,
+            aiConfidence: finding.aiConfidence ?? null,
+            sourceTextExcerpt: finding.sourceTextExcerpt ?? null,
+            targetTextExcerpt: finding.targetTextExcerpt ?? null,
+            suggestedFix: finding.suggestedFix ?? null,
+            aiModel: finding.aiModel ?? null,
+          }
+          // Use file's language pair passed from ReviewPageClient
+          const segSourceLang = sourceLang ?? 'unknown'
+          const segTargetLang = targetLang ?? 'unknown'
+          // CF-C2 fix: check if finding is already covered by active suppression rule
+          const alreadySuppressed = isAlreadySuppressed(
+            latestState.activeSuppressions,
+            findingForDetection,
+            segSourceLang,
+            segTargetLang,
+          )
+          if (!alreadySuppressed) {
+            const detectedPattern = trackRejection(
+              latestState.rejectionTracker,
+              findingForDetection,
+              segSourceLang,
+              segTargetLang,
+            )
+            if (detectedPattern) {
+              latestState.trackRejectionInStore(detectedPattern)
+            }
+          }
+        }
+
         // Success toast (Task 6.1)
         const label = ACTION_LABELS[action]
         label.toast(`Finding ${label.past}`, { duration: 3000 })
@@ -203,7 +253,7 @@ export function useReviewActions({ fileId, projectId }: UseReviewActionsOptions)
         setActiveAction(null)
       }
     },
-    [fileId, projectId, autoAdvance],
+    [fileId, projectId, autoAdvance, sourceLang, targetLang],
   )
 
   const handleAccept = useCallback(

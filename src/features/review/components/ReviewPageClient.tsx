@@ -10,7 +10,9 @@ import { retryAiAnalysis } from '@/features/pipeline/actions/retryAiAnalysis.act
 import { addFinding } from '@/features/review/actions/addFinding.action'
 import { approveFile } from '@/features/review/actions/approveFile.action'
 import { bulkAction } from '@/features/review/actions/bulkAction.action'
+import { createSuppressionRule } from '@/features/review/actions/createSuppressionRule.action'
 import { deleteFinding } from '@/features/review/actions/deleteFinding.action'
+import { getActiveSuppressions } from '@/features/review/actions/getActiveSuppressions.action'
 import type { FileReviewData } from '@/features/review/actions/getFileReviewData.action'
 import { getOverrideHistory } from '@/features/review/actions/getOverrideHistory.action'
 import { overrideSeverity } from '@/features/review/actions/overrideSeverity.action'
@@ -33,6 +35,7 @@ import { ReviewActionBar } from '@/features/review/components/ReviewActionBar'
 import { ReviewProgress } from '@/features/review/components/ReviewProgress'
 import { SearchInput } from '@/features/review/components/SearchInput'
 import { SeverityOverrideMenu } from '@/features/review/components/SeverityOverrideMenu'
+import { SuppressPatternDialog } from '@/features/review/components/SuppressPatternDialog'
 import { useFindingsSubscription } from '@/features/review/hooks/use-findings-subscription'
 import {
   useKeyboardActions,
@@ -49,10 +52,16 @@ import {
   ReviewFileIdContext,
 } from '@/features/review/stores/review.store'
 import type { UndoEntry } from '@/features/review/stores/review.store'
-import type { FindingForDisplay } from '@/features/review/types'
+import type {
+  DetectedPattern,
+  FindingForDisplay,
+  SuppressionConfig,
+  SuppressionRule,
+} from '@/features/review/types'
 import { mountAnnouncer, unmountAnnouncer } from '@/features/review/utils/announce'
 import { saveFilterCache } from '@/features/review/utils/filter-cache'
 import { findingMatchesFilters } from '@/features/review/utils/filter-helpers'
+import { resetPatternCounter } from '@/features/review/utils/pattern-detection'
 import { getNewState } from '@/features/review/utils/state-transitions'
 import { useIsDesktop, useIsLaptop } from '@/hooks/useMediaQuery'
 import type {
@@ -144,6 +153,8 @@ export function ReviewPageClient({
   } = useReviewActions({
     fileId,
     projectId,
+    sourceLang: initialData.sourceLang,
+    targetLang: initialData.targetLang ?? undefined,
   })
 
   // Story 4.4a: Bulk selection state from store
@@ -535,6 +546,49 @@ export function ReviewPageClient({
     // prevents re-initialization for the same file. Only genuine file navigation triggers init.
   }, [fileId, initialData, projectId, tenantId, resetForFile, setFindings, updateScore])
 
+  // Story 4.6: Load active suppressions on file load + session cleanup
+  const setActiveSuppressions = useReviewStore((s) => s.setActiveSuppressions)
+  const activeSuppressions = useFileState((fs) => fs.activeSuppressions, fileId)
+  useEffect(() => {
+    async function loadSuppressions() {
+      const result = await getActiveSuppressions(projectId, fileId)
+      if (result.success) {
+        setActiveSuppressions(result.data) // May be [] after deactivation — clear is correct
+      }
+    }
+    loadSuppressions().catch(() => {
+      /* non-critical — suppressions still work without preload */
+    })
+  }, [fileId, projectId, setActiveSuppressions])
+
+  // Story 4.6: Session-only suppression cleanup on page unload
+  // CQ-H1 fix: only fire on beforeunload (page close/navigation), not visibilitychange (tab switch)
+  // Defensive: 24h stale cleanup on file load handles missed cleanups
+  const activeSuppressionRef = useRef(activeSuppressions)
+  activeSuppressionRef.current = activeSuppressions
+
+  useEffect(() => {
+    function deactivateSessionRules() {
+      const sessionRuleIds = activeSuppressionRef.current
+        .filter((r) => r.duration === 'session' && r.isActive)
+        .map((r) => r.id)
+      if (sessionRuleIds.length === 0) return
+      try {
+        const blob = new Blob([JSON.stringify({ ruleIds: sessionRuleIds })], {
+          type: 'application/json',
+        })
+        navigator.sendBeacon('/api/deactivate-session-rules', blob)
+      } catch {
+        /* non-critical — 24h stale cleanup is defensive fallback */
+      }
+    }
+
+    window.addEventListener('beforeunload', deactivateSessionRules)
+    return () => {
+      window.removeEventListener('beforeunload', deactivateSessionRules)
+    }
+  }, [])
+
   // Retry AI analysis state
   const [isPending, startTransition] = useTransition()
   const [retryDispatched, setRetryDispatched] = useState(false)
@@ -577,6 +631,119 @@ export function ReviewPageClient({
   const sourceLang = initialData.sourceLang
   const targetLang = initialData.targetLang
   useThresholdSubscription(sourceLang, targetLang ?? '', tenantId)
+
+  // Story 4.6: Pattern detection toast + suppress dialog
+  const detectedPattern = useFileState((fs) => fs.detectedPattern, fileId)
+  const rejectionTracker = useFileState((fs) => fs.rejectionTracker, fileId)
+  const clearDetectedPattern = useReviewStore((s) => s.clearDetectedPattern)
+  const addSuppression = useReviewStore((s) => s.addSuppression)
+  const [suppressDialogOpen, setSuppressDialogOpen] = useState(false)
+  // CF-H2 fix: use ref to avoid race between two simultaneous pattern toasts overwriting state
+  const pendingPatternRef = useRef<DetectedPattern | null>(null)
+  const [pendingPattern, setPendingPattern] = useState<DetectedPattern | null>(null)
+
+  // Show toast when pattern detected
+  useEffect(() => {
+    if (!detectedPattern) return
+    const patternRef = detectedPattern
+    toast(
+      `Pattern detected: '${patternRef.patternName}' (${patternRef.matchingFindingIds.length} rejects)`,
+      {
+        duration: Infinity, // persistent — requires user decision
+        action: {
+          label: 'Suppress this pattern',
+          onClick: () => {
+            // CF-H2 fix: store in ref (stable) AND state (triggers render)
+            pendingPatternRef.current = patternRef
+            setPendingPattern(patternRef)
+            setSuppressDialogOpen(true)
+          },
+        },
+        cancel: {
+          label: 'Keep checking',
+          onClick: () => {
+            const groupKey = `${patternRef.category}::${patternRef.sourceLang}::${patternRef.targetLang}`
+            // CF-C1 fix: read live tracker from store, not stale closure ref
+            const liveTracker = useReviewStore.getState().rejectionTracker
+            resetPatternCounter(liveTracker, groupKey, patternRef.patternName)
+          },
+        },
+      },
+    )
+    clearDetectedPattern()
+  }, [detectedPattern, clearDetectedPattern])
+
+  const handleSuppressConfirm = useCallback(
+    async (config: SuppressionConfig) => {
+      // CF-H2 fix: prefer ref (stable across toast overwrites) over state
+      const pattern = pendingPatternRef.current ?? pendingPattern
+      if (!pattern) return
+      setSuppressDialogOpen(false)
+      const result = await createSuppressionRule({
+        projectId,
+        fileId: config.fileId,
+        currentFileId: fileId, // AC3: auto-reject scoped to current file
+        category: pattern.category,
+        pattern: pattern.keywords.join(', '),
+        scope: config.scope,
+        duration: config.duration,
+        sourceLang: config.sourceLang,
+        targetLang: config.targetLang,
+      })
+      if (result.success) {
+        const rule: SuppressionRule = {
+          id: result.data.ruleId,
+          projectId,
+          tenantId,
+          pattern: pattern.keywords.join(', '),
+          category: pattern.category,
+          scope: config.scope,
+          duration: config.duration,
+          reason: 'Auto-generated from pattern detection',
+          fileId: config.fileId,
+          sourceLang: config.sourceLang,
+          targetLang: config.targetLang,
+          matchCount: result.data.autoRejectedCount,
+          createdBy: '', // TODO(story-5.2): wire userId from auth context
+          createdByName: null,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+        }
+        addSuppression(rule)
+
+        // Production bug fix: update client-side store to reflect server auto-rejects
+        // Without this, the UI still shows auto-rejected findings as "pending"
+        if (result.data.autoRejectedIds.length > 0) {
+          const autoRejectedSet = new Set(result.data.autoRejectedIds)
+          const currentState = useReviewStore.getState()
+          for (const id of autoRejectedSet) {
+            const finding = currentState.findingsMap.get(id)
+            if (finding && finding.status === 'pending') {
+              currentState.setFinding(id, {
+                ...finding,
+                status: 'rejected',
+                updatedAt: new Date().toISOString(),
+              })
+            }
+          }
+        }
+
+        toast.success(
+          `Pattern suppressed — ${result.data.autoRejectedCount} findings auto-rejected`,
+        )
+      } else {
+        toast.error(`Suppression failed: ${result.error}`)
+      }
+      pendingPatternRef.current = null
+      setPendingPattern(null)
+    },
+    [pendingPattern, projectId, tenantId, addSuppression],
+  )
+
+  const handleSuppressCancel = useCallback(() => {
+    setSuppressDialogOpen(false)
+    setPendingPattern(null)
+  }, [])
 
   // Derive display values
   const effectiveScore = currentScore ?? initialData.score.mqmScore
@@ -1465,6 +1632,15 @@ export function ReviewPageClient({
 
         {/* Keyboard Cheat Sheet Modal (Ctrl+?) */}
         <KeyboardCheatSheet />
+
+        {/* Story 4.6: Suppress Pattern Dialog */}
+        <SuppressPatternDialog
+          open={suppressDialogOpen}
+          pattern={pendingPattern}
+          fileId={fileId}
+          onConfirm={handleSuppressConfirm}
+          onCancel={handleSuppressCancel}
+        />
       </div>
     </ReviewFileIdContext.Provider>
   )

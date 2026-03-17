@@ -1,6 +1,6 @@
 # Story 4.5: Search, Filter & AI Layer Toggle
 
-Status: review
+Status: done
 
 ## Story
 
@@ -334,6 +334,14 @@ Claude Opus 4.6 (1M context)
 - **L2:** Guard for empty flattenedIds → null instead of undefined
 - **L3:** Updated File List with 5 missing files
 - **L4:** Added Thai/CJK/Korean highlight tests
+
+### CR R2 Fixes Applied (2026-03-17)
+- **R2 regression:** FilterBar match counts bucket L3→L2 key + re_accepted→accepted key (consistent with filter group behavior)
+- **L2 (agent):** Wired onNavigateToFile in CommandPalette — save filter cache + navigate
+- **M1:** Extracted FilterableFinding type — removed `as Parameters<...>` cast in FilterBar + ReviewPageClient
+- **M5:** Replaced E2E waitForTimeout(500) with Playwright auto-retry expect (5s timeout)
+- **E2E E-09:** Fixed assertion — bulk mode stays active with 1 remaining selected (not exited to 0)
+- **CR exit:** 0C + 0H — all sub-agents (code-quality, cross-file, testing-qa) confirmed clean
 
 ### File List
 - src/features/review/stores/review.store.ts (MODIFIED)
