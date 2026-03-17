@@ -174,44 +174,49 @@ export function useReviewActions({
         // Story 4.6: Pattern detection on reject — track and detect recurring false positives
         if (action === 'reject') {
           const latestState = useReviewStore.getState()
-          const findingForDetection: FindingForDisplay = {
-            id: findingId,
-            segmentId: finding.segmentId ?? null,
-            severity: finding.severity,
-            originalSeverity: finding.originalSeverity ?? null,
-            category: finding.category,
-            description: finding.description,
-            status: newState,
-            detectedByLayer: finding.detectedByLayer,
-            aiConfidence: finding.aiConfidence ?? null,
-            sourceTextExcerpt: finding.sourceTextExcerpt ?? null,
-            targetTextExcerpt: finding.targetTextExcerpt ?? null,
-            suggestedFix: finding.suggestedFix ?? null,
-            aiModel: finding.aiModel ?? null,
-          }
-          // Use file's language pair passed from ReviewPageClient
-          const segSourceLang = sourceLang ?? 'unknown'
-          const segTargetLang = targetLang ?? 'unknown'
-          // CF-C2 fix: check if finding is already covered by active suppression rule
-          // CR-M1 fix: pass fileId for 'file' scope guard in isAlreadySuppressed
-          const alreadySuppressed = isAlreadySuppressed(
-            latestState.activeSuppressions,
-            findingForDetection,
-            segSourceLang,
-            segTargetLang,
-            fileId,
-          )
-          if (!alreadySuppressed) {
-            // CR-H1 fix: trackRejection returns new tracker (immutable pattern for Zustand)
-            const result: TrackRejectionResult = trackRejection(
-              latestState.rejectionTracker,
+          // R2-L8: guard — skip tracker update if user navigated away during in-flight request
+          if (latestState.currentFileId !== fileId) {
+            // File switched during await — don't contaminate new file's tracker
+          } else {
+            const findingForDetection: FindingForDisplay = {
+              id: findingId,
+              segmentId: finding.segmentId ?? null,
+              severity: finding.severity,
+              originalSeverity: finding.originalSeverity ?? null,
+              category: finding.category,
+              description: finding.description,
+              status: newState,
+              detectedByLayer: finding.detectedByLayer,
+              aiConfidence: finding.aiConfidence ?? null,
+              sourceTextExcerpt: finding.sourceTextExcerpt ?? null,
+              targetTextExcerpt: finding.targetTextExcerpt ?? null,
+              suggestedFix: finding.suggestedFix ?? null,
+              aiModel: finding.aiModel ?? null,
+            }
+            // Use file's language pair passed from ReviewPageClient
+            const segSourceLang = sourceLang ?? 'unknown'
+            const segTargetLang = targetLang ?? 'unknown'
+            // CF-C2 fix: check if finding is already covered by active suppression rule
+            // CR-M1 fix: pass fileId for 'file' scope guard in isAlreadySuppressed
+            const alreadySuppressed = isAlreadySuppressed(
+              latestState.activeSuppressions,
               findingForDetection,
               segSourceLang,
               segTargetLang,
+              fileId,
             )
-            latestState.setRejectionTracker(result.tracker)
-            if (result.pattern) {
-              latestState.trackRejectionInStore(result.pattern)
+            if (!alreadySuppressed) {
+              // CR-H1 fix: trackRejection returns new tracker (immutable pattern for Zustand)
+              const result: TrackRejectionResult = trackRejection(
+                latestState.rejectionTracker,
+                findingForDetection,
+                segSourceLang,
+                segTargetLang,
+              )
+              latestState.setRejectionTracker(result.tracker)
+              if (result.pattern) {
+                latestState.setDetectedPattern(result.pattern)
+              }
             }
           }
         }

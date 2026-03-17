@@ -145,7 +145,9 @@ describe('getActiveSuppressions', () => {
 
   it('[P1] should deactivate stale session rules before fetching (Task 10.3)', async () => {
     await getActiveSuppressions(VALID_PROJECT_ID, VALID_FILE_ID)
-    // callIndex should reach at least 2: UPDATE (stale cleanup) + SELECT
-    expect(dbState.callIndex).toBeGreaterThanOrEqual(2)
+    // R2-M8: exact call count: UPDATE (stale cleanup) + SELECT
+    expect(dbState.callIndex).toBe(2)
+    // R2-M9: verify stale cleanup payload
+    expect(dbState.setCaptures[0]).toMatchObject({ isActive: false })
   })
 })

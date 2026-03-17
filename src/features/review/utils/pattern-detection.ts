@@ -25,6 +25,9 @@ const MIN_UNIQUE_KEYWORDS = 4
 const MIN_OVERLAP = 3
 const MIN_CLUSTER_SIZE = 3
 
+// R2-L4: cache Intl.Segmenter instances per locale (avoid re-creation per call)
+const segmenterCache = new Map<string, Intl.Segmenter>()
+
 // ── Keyword Extraction ──
 
 /** Check if text likely contains CJK or Thai characters that need Intl.Segmenter */
@@ -52,7 +55,11 @@ export function extractKeywords(text: string): string[] {
           ? 'ja'
           : 'en'
 
-    const segmenter = new Intl.Segmenter(locale, { granularity: 'word' })
+    let segmenter = segmenterCache.get(locale)
+    if (!segmenter) {
+      segmenter = new Intl.Segmenter(locale, { granularity: 'word' })
+      segmenterCache.set(locale, segmenter)
+    }
     for (const { segment, isWordLike } of segmenter.segment(lower)) {
       if (isWordLike && segment.length >= MIN_WORD_LENGTH) {
         seen.add(segment)

@@ -1,6 +1,5 @@
 /**
  * Story 4.6: Suppress False Positive Patterns — Pattern Detection Algorithm
- * TDD RED phase: all tests skip (modules don't exist yet)
  */
 import { describe, it, expect } from 'vitest'
 
@@ -144,6 +143,18 @@ describe('trackRejection', () => {
     expect(pattern).not.toBeNull()
     expect(pattern!.category).toBe('Terminology')
     expect(pattern!.matchingFindingIds).toHaveLength(3)
+  })
+
+  it('[P0] should return SAME tracker reference when keywords < 4 (no unnecessary clone)', () => {
+    const tracker: RejectionTracker = new Map()
+    const result = trackRejection(
+      tracker,
+      makeFinding({ description: 'bad tag' }), // < 4 keywords → early return
+      'en-US',
+      'th-TH',
+    )
+    expect(result.tracker).toBe(tracker) // Same reference — no clone on early return
+    expect(result.pattern).toBeNull()
   })
 
   it('[P0] should return new tracker reference (immutable pattern for Zustand)', () => {

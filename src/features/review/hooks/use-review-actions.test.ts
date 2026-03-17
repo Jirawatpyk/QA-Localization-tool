@@ -64,7 +64,7 @@ const mockSetFinding = vi.fn((id: string, finding: { id: string; status: Finding
 })
 
 const mockSetSelectedFinding = vi.fn()
-const mockTrackRejectionInStore = vi.fn()
+const mockSetDetectedPattern = vi.fn()
 const mockSetRejectionTracker = vi.fn()
 
 vi.mock('@/features/review/stores/review.store', () => ({
@@ -93,7 +93,7 @@ vi.mock('@/features/review/stores/review.store', () => ({
         setOverrideCount: vi.fn(),
         // Story 4.6: suppression state
         rejectionTracker: new Map(),
-        trackRejectionInStore: mockTrackRejectionInStore,
+        setDetectedPattern: mockSetDetectedPattern,
         setRejectionTracker: mockSetRejectionTracker,
         detectedPattern: null,
         activeSuppressions: [],
@@ -494,11 +494,18 @@ describe('useReviewActions', () => {
       await result.current.handleReject(VALID_FINDING_ID)
     })
 
-    expect(mockIsAlreadySuppressed).toHaveBeenCalled()
+    // R2-M10: verify arguments passed to isAlreadySuppressed
+    expect(mockIsAlreadySuppressed).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({ id: VALID_FINDING_ID }),
+      'en-US',
+      'th-TH',
+      VALID_FILE_ID,
+    )
     expect(mockTrackRejection).not.toHaveBeenCalled()
   })
 
-  it('[P1] should call trackRejectionInStore when pattern detected', async () => {
+  it('[P1] should call setDetectedPattern when pattern detected', async () => {
     const mockPattern = {
       category: 'Terminology',
       keywords: ['bank', 'terminology', 'translation'],
@@ -526,7 +533,9 @@ describe('useReviewActions', () => {
       await result.current.handleReject(VALID_FINDING_ID)
     })
 
-    // trackRejectionInStore should be called with the detected pattern
-    expect(mockTrackRejectionInStore).toHaveBeenCalledWith(mockPattern)
+    // R2-L7: verify setRejectionTracker also called (immutability contract)
+    expect(mockSetRejectionTracker).toHaveBeenCalledWith(expect.any(Map))
+    // setDetectedPattern should be called with the detected pattern
+    expect(mockSetDetectedPattern).toHaveBeenCalledWith(mockPattern)
   })
 })

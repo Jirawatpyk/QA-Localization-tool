@@ -11,21 +11,24 @@ import type { SuppressionRule } from '@/features/review/types'
 export function SuppressionRulesPageClient() {
   const [rules, setRules] = useState<SuppressionRule[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Load all project suppression rules
-  // For admin page, we list all rules across projects in the tenant
-  // This requires a projectId — for now, we'll need a project selector or list all
-  // Simplified: load from first available project (admin can see all)
   useEffect(() => {
     async function loadRules() {
       setLoading(true)
+      setError(null)
       const result = await getSuppressionRules(null) // tenant-wide
       if (result.success) {
         setRules(result.data)
+      } else {
+        setError(result.error) // R2-M5: show error UI
       }
       setLoading(false)
     }
-    loadRules().catch(() => setLoading(false))
+    loadRules().catch(() => {
+      setError('Failed to load suppression rules')
+      setLoading(false)
+    })
   }, [])
 
   const handleDeactivate = useCallback(async (ruleId: string) => {
@@ -44,6 +47,10 @@ export function SuppressionRulesPageClient() {
         Loading suppression rules...
       </div>
     )
+  }
+
+  if (error) {
+    return <div className="py-8 text-center text-sm text-destructive">{error}</div>
   }
 
   return (

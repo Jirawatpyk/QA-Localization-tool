@@ -187,7 +187,8 @@ describe('createSuppressionRule', () => {
     const result = await createSuppressionRule(VALID_INPUT)
     expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.data.autoRejectedCount).toBeGreaterThan(0)
+      expect(result.data.autoRejectedCount).toBe(1) // R2-M7: exact count
+      expect(result.data.autoRejectedIds).toHaveLength(1)
     }
   })
 
@@ -201,14 +202,16 @@ describe('createSuppressionRule', () => {
       [],
     ]
     await createSuppressionRule(VALID_INPUT)
-    // Verify feedback_events were inserted via valuesCaptures
+    // R2-H1: valuesCaptures contains arrays of row objects — flatten before filtering
     const captures = dbState.valuesCaptures as unknown[]
-    const feedbackInserts = captures.filter((c) => {
-      const item = c as Record<string, unknown>
-      return item?.action === 'reject' && item?.metadata
-    })
+    const allRows = captures.flatMap((c) => (Array.isArray(c) ? c : [c])) as Record<
+      string,
+      unknown
+    >[]
+    const feedbackInserts = allRows.filter((item) => item?.action === 'reject' && item?.metadata)
+    expect(feedbackInserts.length).toBeGreaterThan(0) // Guard against vacuous loop
     for (const insert of feedbackInserts) {
-      expect((insert as Record<string, unknown>).metadata).toMatchObject({ suppressed: true })
+      expect(insert.metadata).toMatchObject({ suppressed: true })
     }
   })
 
@@ -234,14 +237,17 @@ describe('createSuppressionRule', () => {
     ]
     const result = await createSuppressionRule(VALID_INPUT)
     expect(result.success).toBe(true)
-    if (result.success) expect(result.data.autoRejectedCount).toBeLessThanOrEqual(100)
+    if (result.success) {
+      expect(result.data.autoRejectedCount).toBe(100) // R2-M6: exact cap boundary
+      expect(result.data.autoRejectedIds).toHaveLength(100)
+    }
   })
 
   it('[P0] should return UNAUTHORIZED if not authenticated', async () => {
     mockRequireRole.mockRejectedValue(new Error('UNAUTHORIZED'))
     const result = await createSuppressionRule(VALID_INPUT)
     expect(result.success).toBe(false)
-    if (!result.success) expect(result.code).toMatch(/UNAUTHORIZED/)
+    if (!result.success) expect(result.code).toBe('UNAUTHORIZED')
   })
 
   it('[P1] should send single Inngest event after batch (not per-finding)', async () => {

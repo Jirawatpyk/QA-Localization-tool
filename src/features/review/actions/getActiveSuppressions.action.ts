@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { suppressionRules } from '@/db/schema/suppressionRules'
+import { SUPPRESSION_DURATIONS, SUPPRESSION_SCOPES } from '@/features/review/types'
 import type { SuppressionRule } from '@/features/review/types'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
@@ -51,6 +52,7 @@ export async function getActiveSuppressions(
       .set({ isActive: false })
       .where(
         and(
+          eq(suppressionRules.projectId, projectId), // R2-M2: scope to project
           eq(suppressionRules.duration, 'session'),
           eq(suppressionRules.isActive, true),
           lt(suppressionRules.createdAt, staleThreshold),
@@ -99,10 +101,13 @@ export async function getActiveSuppressions(
       ),
     )
 
+  // R2-M4: runtime validation for scope/duration (Guardrail #3)
   const rules: SuppressionRule[] = rows.map((r) => ({
     ...r,
-    scope: r.scope as SuppressionRule['scope'],
-    duration: r.duration as SuppressionRule['duration'],
+    scope: (SUPPRESSION_SCOPES.has(r.scope) ? r.scope : 'all') as SuppressionRule['scope'],
+    duration: (SUPPRESSION_DURATIONS.has(r.duration)
+      ? r.duration
+      : 'until_improved') as SuppressionRule['duration'],
     createdByName: null, // No JOIN needed for this endpoint
     createdAt: r.createdAt.toISOString(),
   }))

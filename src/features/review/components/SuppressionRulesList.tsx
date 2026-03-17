@@ -42,14 +42,30 @@ export function SuppressionRulesList({ rules, onDeactivate }: SuppressionRulesLi
       <table className="w-full text-sm" role="table" aria-label="Suppression rules">
         <thead>
           <tr role="row" className="border-b">
-            <th className="px-3 py-2 text-left font-medium">Pattern</th>
-            <th className="px-3 py-2 text-left font-medium">Category</th>
-            <th className="px-3 py-2 text-left font-medium">Scope</th>
-            <th className="px-3 py-2 text-left font-medium">Duration</th>
-            <th className="px-3 py-2 text-left font-medium">Created by</th>
-            <th className="px-3 py-2 text-right font-medium">Matches</th>
-            <th className="px-3 py-2 text-left font-medium">Created</th>
-            <th className="px-3 py-2 text-right font-medium">Actions</th>
+            <th scope="col" className="px-3 py-2 text-left font-medium">
+              Pattern
+            </th>
+            <th scope="col" className="px-3 py-2 text-left font-medium">
+              Category
+            </th>
+            <th scope="col" className="px-3 py-2 text-left font-medium">
+              Scope
+            </th>
+            <th scope="col" className="px-3 py-2 text-left font-medium">
+              Duration
+            </th>
+            <th scope="col" className="px-3 py-2 text-left font-medium">
+              Created by
+            </th>
+            <th scope="col" className="px-3 py-2 text-right font-medium">
+              Matches
+            </th>
+            <th scope="col" className="px-3 py-2 text-left font-medium">
+              Created
+            </th>
+            <th scope="col" className="px-3 py-2 text-right font-medium">
+              Actions
+            </th>
           </tr>
         </thead>
         <tbody>

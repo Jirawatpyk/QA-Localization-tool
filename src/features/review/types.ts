@@ -22,6 +22,18 @@ export type FindingForDisplay = {
 export type SuppressionScope = 'file' | 'language_pair' | 'all'
 export type SuppressionDuration = 'session' | 'permanent' | 'until_improved'
 
+// R2-M4: runtime validation sets (Guardrail #3 — no bare string)
+export const SUPPRESSION_SCOPES: ReadonlySet<string> = new Set<SuppressionScope>([
+  'file',
+  'language_pair',
+  'all',
+])
+export const SUPPRESSION_DURATIONS: ReadonlySet<string> = new Set<SuppressionDuration>([
+  'session',
+  'permanent',
+  'until_improved',
+])
+
 export type SuppressionRule = {
   id: string
   projectId: string

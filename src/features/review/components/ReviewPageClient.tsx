@@ -749,6 +749,7 @@ export function ReviewPageClient({
 
   const handleSuppressCancel = useCallback(() => {
     setSuppressDialogOpen(false)
+    pendingPatternRef.current = null // R2-L1: clear ref alongside state
     setPendingPattern(null)
   }, [])
 

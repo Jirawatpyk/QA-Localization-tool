@@ -99,6 +99,7 @@ describe('deactivateSuppressionRule', () => {
     expect(mockWriteAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({
         entityType: 'suppression_rule',
+        entityId: VALID_RULE_ID, // R2-L5: verify correct rule ID
         action: 'suppression_rule.deactivated',
       }),
     )

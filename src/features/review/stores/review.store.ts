@@ -481,7 +481,7 @@ type SuppressionSlice = {
   rejectionTracker: RejectionTracker
   detectedPattern: DetectedPattern | null
   activeSuppressions: SuppressionRule[]
-  trackRejectionInStore: (pattern: DetectedPattern | null) => void
+  setDetectedPattern: (pattern: DetectedPattern | null) => void
   clearDetectedPattern: () => void
   addSuppression: (rule: SuppressionRule) => void
   removeSuppression: (ruleId: string) => void
@@ -495,7 +495,7 @@ const createSuppressionSlice = (
   rejectionTracker: new Map(),
   detectedPattern: null,
   activeSuppressions: [],
-  trackRejectionInStore: (pattern) => setState({ detectedPattern: pattern }),
+  setDetectedPattern: (pattern) => setState({ detectedPattern: pattern }),
   clearDetectedPattern: () => setState({ detectedPattern: null }),
   addSuppression: (rule) =>
     setState((s) => ({
