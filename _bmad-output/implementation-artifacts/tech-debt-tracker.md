@@ -697,6 +697,18 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Fix:** Added language-aware skip in `checkEndPunctuation`: skip period mismatch when target lang is Thai/Lao/Khmer/Myanmar AND target ends with non-punctuation character. If target has explicit punctuation (!/?) still flags correctly.
 - **Status:** RESOLVED (2026-03-18 — `formattingChecks.ts` + 55 unit tests GREEN)
 
+### TD-AI-004 (CRITICAL): L2/L3 findings silently dropped — segmentId bracket mismatch
+- **Date:** 2026-03-18 (discovered), existed since 2026-03-01 (Story 3.2a, commit `559c908`)
+- **Story:** 4.8 (discovered during pipeline verification)
+- **Phase:** verification
+- **Severity:** CRITICAL
+- **Files:** `build-l2-prompt.ts:88,103`, `build-l3-prompt.ts`, `runL2ForFile.ts:362`, `runL3ForFile.ts`
+- **Description:** Prompt displayed segments as `[uuid]` (with brackets). AI returned `[uuid]` in findings. Validation Set stored bare `uuid` → `has("[uuid]")` = false → **every L2/L3 finding silently dropped**. Pipeline reported "success, 0 findings" — no error, no exception, only `logger.warn`. L2/L3 never produced real findings for 17 days since Epic 3 launch.
+- **Impact:** CRITICAL — product core feature "AI-powered QA" did not work. All L2/L3 AI analysis results were discarded silently. Users saw 0 AI findings and assumed the file was clean.
+- **Root cause of escape:** Epic 3 unit tests mocked AI responses (no real brackets). E2E tests seeded findings directly into DB (skipped L2 pipeline). No integration test with real AI + finding verification existed.
+- **Fix:** (1) Prompt example: clarified UUID only, no brackets. (2) Parser: defensive bracket strip before validation. (3) L3: same fixes. (4) Regression test added.
+- **Status:** RESOLVED (2026-03-18 — L2 Precision 75%, Recall 60% after fix)
+
 ### TD-ARCH-002: Zustand review store dual-write (flat fields + fileStates Map)
 - **Date:** 2026-03-16
 - **Story:** TD-ARCH-001 refactor
