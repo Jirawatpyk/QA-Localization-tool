@@ -101,10 +101,9 @@ export function AddToGlossaryDialog({
 
   function handleUpdateExisting() {
     if (!duplicate) return
+    if (!formRef.current) return // CR-R1 L2: guard against null ref — don't silently send ''
 
-    const submittedTarget = formRef.current
-      ? (new FormData(formRef.current).get('targetTerm') as string)
-      : ''
+    const submittedTarget = new FormData(formRef.current).get('targetTerm') as string
 
     startTransition(async () => {
       const result = await updateGlossaryTerm({
@@ -170,6 +169,9 @@ export function AddToGlossaryDialog({
                 defaultValue={finding.sourceTextExcerpt ?? ''}
                 maxLength={500}
                 required
+                onChange={() => {
+                  if (duplicate) setDuplicate(null)
+                }}
               />
             </div>
 
@@ -220,7 +222,8 @@ export function AddToGlossaryDialog({
                 role="alert"
               >
                 <p className="text-sm font-medium text-warning-foreground">
-                  Term already exists with target: &ldquo;{duplicate.existingTarget}&rdquo;
+                  Term &ldquo;{finding.sourceTextExcerpt}&rdquo; already exists with target: &ldquo;
+                  {duplicate.existingTarget}&rdquo;
                 </p>
                 <div className="flex gap-2">
                   <Button

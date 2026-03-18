@@ -115,6 +115,79 @@ describe('updateGlossaryTerm', () => {
     expect(revalidateTag).toHaveBeenCalledWith(`glossary-${validInput.projectId}`, 'minutes')
   })
 
+  // ── CR-R1 M1: Validation error tests ──
+
+  it('[P1] should reject empty targetTerm', async () => {
+    const result = await updateGlossaryTerm({ ...validInput, targetTerm: '' })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('VALIDATION_ERROR')
+    }
+  })
+
+  it('[P1] should accept targetTerm at max length (500 chars)', async () => {
+    const longTarget = 'ก'.repeat(500)
+
+    dbState.returnValues = [
+      [
+        {
+          id: validInput.termId,
+          targetTerm: 'ธนาคาร',
+          glossaryId: '00000000-0000-4000-8000-000000000300',
+        },
+      ],
+      [{ id: validInput.termId, targetTerm: longTarget }],
+      [],
+    ]
+
+    const result = await updateGlossaryTerm({ ...validInput, targetTerm: longTarget })
+
+    expect(result.success).toBe(true)
+  })
+
+  it('[P1] should reject targetTerm over max length (501 chars)', async () => {
+    const tooLongTarget = 'ก'.repeat(501)
+
+    const result = await updateGlossaryTerm({ ...validInput, targetTerm: tooLongTarget })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('VALIDATION_ERROR')
+    }
+  })
+
+  it('[P2] should reject invalid UUID for termId', async () => {
+    const result = await updateGlossaryTerm({ ...validInput, termId: 'not-a-uuid' })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('VALIDATION_ERROR')
+    }
+  })
+
+  it('[P2] should return UPDATE_FAILED when UPDATE returning() is empty (Guardrail #4)', async () => {
+    dbState.returnValues = [
+      [
+        {
+          id: validInput.termId,
+          targetTerm: 'ธนาคาร',
+          glossaryId: '00000000-0000-4000-8000-000000000300',
+        },
+      ],
+      [], // UPDATE returning() → empty
+    ]
+
+    const result = await updateGlossaryTerm(validInput)
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('UPDATE_FAILED')
+    }
+  })
+
+  // ── Tenant isolation & auth ──
+
   it('[P2] should enforce tenant isolation — term not found for other tenant', async () => {
     // Term not found because withTenant filters it
     dbState.returnValues = [
@@ -142,5 +215,7 @@ describe('updateGlossaryTerm', () => {
     if (!result.success) {
       expect(result.code).toBe('FORBIDDEN')
     }
+    // CR-R1 M2: verify requireRole was called with correct args
+    expect(requireRole).toHaveBeenCalledWith('qa_reviewer', 'write')
   })
 })

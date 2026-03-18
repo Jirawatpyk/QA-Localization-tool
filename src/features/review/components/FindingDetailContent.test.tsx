@@ -408,4 +408,27 @@ describe('FindingDetailContent', () => {
 
     expect(screen.queryByTestId('add-to-glossary-button')).not.toBeInTheDocument()
   })
+
+  it('[P1][4.7-AC4][CR-R1-H1] should NOT show "Add to Glossary" when sourceLang is empty', () => {
+    const terminologyFinding = buildFindingForUI({
+      id: 'f-no-slang',
+      category: 'Terminology',
+      sourceTextExcerpt: 'bank',
+      severity: 'minor',
+      status: 'pending',
+      detectedByLayer: 'L1',
+    })
+
+    render(
+      <FindingDetailContent
+        {...defaultProps({
+          finding: terminologyFinding,
+          sourceLang: '',
+          projectId: '00000000-0000-4000-8000-000000000001',
+        })}
+      />,
+    )
+
+    expect(screen.queryByTestId('add-to-glossary-button')).not.toBeInTheDocument()
+  })
 })

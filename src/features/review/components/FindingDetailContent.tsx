@@ -82,7 +82,10 @@ export function FindingDetailContent({
     finding ? (s.overrideCounts.get(finding.id) ?? 0) : 0,
   )
 
-  // Reset history visibility when finding changes (render-time adjustment — React 19 pattern)
+  // Story 4.7: Add to Glossary dialog state (declared before ref check so setter is available)
+  const [glossaryDialogOpen, setGlossaryDialogOpen] = useState(false)
+
+  // Reset history + dialog visibility when finding changes (render-time adjustment — React 19 pattern)
   const prevFindingIdRef = useRef<string | null>(null)
   const currentFindingId = finding?.id ?? null
   if (currentFindingId !== prevFindingIdRef.current) {
@@ -90,18 +93,17 @@ export function FindingDetailContent({
     // Only reset if we have a new REAL finding (avoid setState on null → null transition)
     if (currentFindingId !== null) {
       setShowHistory(false)
+      setGlossaryDialogOpen(false) // CR-R1 M4: close dialog when finding changes (stale form data)
     }
   }
 
-  // Story 4.7: Add to Glossary dialog state
-  const [glossaryDialogOpen, setGlossaryDialogOpen] = useState(false)
-
-  // AC4: button visible only for Terminology findings with source text, target lang, and projectId
+  // AC4: button visible only for Terminology findings with source text, both langs, and projectId
   // Case-insensitive: taxonomy seed uses 'Terminology', L1 rule engine may use 'terminology'
   const showAddToGlossary =
     finding !== null &&
     finding.category.toLowerCase() === 'terminology' &&
     finding.sourceTextExcerpt != null &&
+    sourceLang !== '' &&
     targetLang !== '' &&
     projectId != null
 

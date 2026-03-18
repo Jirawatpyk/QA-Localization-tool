@@ -184,6 +184,33 @@ describe('addToGlossary', () => {
     )
   })
 
+  it('[P1] should include notes in audit log when provided (AC2)', async () => {
+    const glossaryId = '00000000-0000-4000-8000-000000000300'
+    const termId = '00000000-0000-4000-8000-000000000400'
+
+    dbState.returnValues = [
+      [{ id: glossaryId }],
+      [],
+      [{ id: termId, glossaryId, sourceTerm: 'test', targetTerm: 'ทดสอบ', caseSensitive: false }],
+      [],
+    ]
+
+    await addToGlossary({
+      ...validInput,
+      sourceTerm: 'test',
+      targetTerm: 'ทดสอบ',
+      notes: 'Reviewer context about this term',
+    })
+
+    expect(writeAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        newValue: expect.objectContaining({
+          notes: 'Reviewer context about this term',
+        }),
+      }),
+    )
+  })
+
   it('[P1] should invalidate glossary cache on success (AC2)', async () => {
     const glossaryId = '00000000-0000-4000-8000-000000000300'
     const termId = '00000000-0000-4000-8000-000000000400'
@@ -266,7 +293,24 @@ describe('addToGlossary', () => {
     }
   })
 
-  // ── P2: Edge Cases ──
+  // ── P2: Edge Cases & Defensive Guards ──
+
+  it('[P2] should return CREATE_FAILED when term INSERT returns empty (Guardrail #4)', async () => {
+    const glossaryId = '00000000-0000-4000-8000-000000000300'
+
+    dbState.returnValues = [
+      [{ id: glossaryId }],
+      [], // no duplicate
+      [], // INSERT returning() → empty
+    ]
+
+    const result = await addToGlossary(validInput)
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('CREATE_FAILED')
+    }
+  })
 
   it('[P2] should NFKC normalize sourceTerm before dedup check', async () => {
     const glossaryId = '00000000-0000-4000-8000-000000000300'
@@ -332,6 +376,8 @@ describe('addToGlossary', () => {
     if (!result.success) {
       expect(result.code).toBe('FORBIDDEN')
     }
+    // CR-R1 M2: verify requireRole was called with correct args
+    expect(requireRole).toHaveBeenCalledWith('qa_reviewer', 'write')
   })
 
   it('[P2] should handle glossary auto-create race condition', async () => {

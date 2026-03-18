@@ -1,6 +1,6 @@
 # Story 4.7: Add to Glossary from Review
 
-Status: review
+Status: done
 
 ## Story
 
@@ -88,11 +88,11 @@ So that I can build the glossary organically as I discover terminology issues du
   - [x] 6.4 `FindingDetailContent` integration — 4 tests: button visible for category='Terminology' + non-null sourceTextExcerpt + non-empty targetLang, button hidden for category='Accuracy', button hidden when sourceTextExcerpt=null, button hidden when targetLang=''
 
 - [x] **Task 7: E2E Test** (smoke)
-  - [ ] 7.1 Create `e2e/review-add-to-glossary.spec.ts`
-  - [ ] 7.2 Seed: project + file + terminology finding (category='Terminology') + glossary
-  - [ ] 7.3 Test: navigate to review → click finding → verify "Add to Glossary" button visible → click → verify dialog pre-filled → submit → verify toast → verify term in glossary
-  - [ ] 7.4 Test: verify button NOT shown for non-terminology finding (e.g., category='Tag')
-  - [ ] 7.5 Test: duplicate detection (seed existing term, attempt to add same source)
+  - [x] 7.1 Create `e2e/review-add-to-glossary.spec.ts`
+  - [x] 7.2 Seed: project + file + terminology finding (category='Terminology') + glossary
+  - [x] 7.3 Test: navigate to review → click finding → verify "Add to Glossary" button visible → click → verify dialog pre-filled → submit → verify toast → verify term in glossary
+  - [x] 7.4 Test: verify button NOT shown for non-terminology finding (e.g., category='Tag')
+  - [x] 7.5 Test: duplicate detection (seed existing term, attempt to add same source)
 
 ## Dev Notes
 
@@ -299,6 +299,28 @@ Claude Opus 4.6 (1M context)
 
 All CRITICAL and HIGH findings resolved. Story ready for CR.
 
+### CR R1 Fixes Applied (2026-03-18)
+
+- **H1 FIXED:** Added `sourceLang !== ''` guard to `showAddToGlossary` in FindingDetailContent.tsx (symmetric with targetLang)
+- **H2 FIXED:** Created `AddToGlossaryDialog.test.tsx` — 10 tests covering AC1 pre-fill, AC3 duplicate/update, AC5 future QA note, G#11 form reset, error toast
+- **M1 FIXED:** Added 4 validation tests to `updateGlossaryTerm.action.test.ts` (empty target, 500/501 boundary, invalid UUID)
+- **M2 FIXED:** Added `requireRole('qa_reviewer', 'write')` assertion to FORBIDDEN tests in both action files
+- **M3 FIXED:** Checked off Task 7 subtasks 7.1-7.5 in story file
+- **M4 FIXED:** Reset `glossaryDialogOpen` when finding changes (moved useState before ref check)
+- **L1 FIXED:** Added source term to AC3 duplicate warning message in AddToGlossaryDialog
+- **L2 FIXED:** Added early return guard for `formRef.current === null` in `handleUpdateExisting`
+
+### CR R2 Fixes Applied (2026-03-18)
+
+- **M1-R2 FIXED:** Clear `duplicate` state on sourceTerm input change — prevents stale existingTermId from updating wrong glossary entry
+- **M2-R2 FIXED:** Added `notes` audit log propagation test to `addToGlossary.action.test.ts`
+- **M3-R2 FIXED:** Added `CREATE_FAILED` and `UPDATE_FAILED` defensive guard tests (Guardrail #4)
+- **L1-R2 FIXED:** Added caseSensitive checkbox render test
+- **L2-R2 FIXED:** Added updateGlossaryTerm error toast test in AddToGlossaryDialog
+- **M1-R2 TEST:** Added stale duplicate clear test — verifies sourceTerm change dismisses warning
+
+Total tests: 74 (up from 53 pre-CR)
+
 ### Conditional Scans
 
 - RLS policy reviewer: SKIPPED (no schema/migration changes)
@@ -311,6 +333,7 @@ All CRITICAL and HIGH findings resolved. Story ready for CR.
 - `src/features/review/actions/addToGlossary.action.ts`
 - `src/features/review/actions/updateGlossaryTerm.action.ts`
 - `src/features/review/components/AddToGlossaryDialog.tsx`
+- `src/features/review/components/AddToGlossaryDialog.test.tsx`
 - `src/features/review/actions/addToGlossary.action.test.ts`
 - `src/features/review/actions/updateGlossaryTerm.action.test.ts`
 - `e2e/review-add-to-glossary.spec.ts`
