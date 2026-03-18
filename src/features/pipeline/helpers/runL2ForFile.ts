@@ -358,17 +358,26 @@ export async function runL2ForFile({
       const chunkModel = chunkActualModel.get(cr.chunkIndex) ?? modelId
 
       for (const f of cr.data.findings) {
+        // Defensive strip: AI may return "[uuid]" (with brackets) instead of "uuid".
+        // Prompt instructs UUID-only but strip defensively in case of AI non-compliance.
+        const segmentId = f.segmentId.replace(/^\[|\]$/g, '')
+
         // Validate segmentId exists in this file (open question #5 from spike guide)
-        if (!segmentIdSet.has(f.segmentId)) {
+        if (!segmentIdSet.has(segmentId)) {
           logger.warn(
-            { fileId, segmentId: f.segmentId, chunkIndex: cr.chunkIndex },
+            {
+              fileId,
+              segmentId: f.segmentId,
+              normalizedSegmentId: segmentId,
+              chunkIndex: cr.chunkIndex,
+            },
             'Dropped L2 finding with invalid segmentId',
           )
           continue
         }
 
         allFindings.push({
-          segmentId: f.segmentId,
+          segmentId,
           category: f.category,
           severity: f.severity,
           confidence: Math.min(100, Math.max(0, f.confidence)),

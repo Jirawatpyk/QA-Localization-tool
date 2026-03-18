@@ -85,7 +85,7 @@ Only report findings with confidence >= 50. Quality over quantity.`
 const OUTPUT_FORMAT_L2 = `## Output Format
 
 For each issue found, return:
-- **segmentId:** The exact segment ID from the input (e.g., "[abc-123]")
+- **segmentId:** The UUID from inside the brackets in the segment header (e.g., if the header is "[abc-123-uuid]", return "abc-123-uuid" — WITHOUT the surrounding brackets)
 - **category:** Issue category from the taxonomy above
 - **severity:** critical (meaning change/data loss), major (noticeable impact), minor (polish)
 - **confidence:** 0-100 certainty score

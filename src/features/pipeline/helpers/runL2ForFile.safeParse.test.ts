@@ -226,6 +226,55 @@ describe('runL2ForFile — Per-finding validation (R3-025)', () => {
     )
   })
 
+  it('[P0] should strip brackets from segmentId returned by AI (regression: bracket mismatch bug)', async () => {
+    // AI returns segmentId with brackets "[uuid]" instead of bare UUID "uuid".
+    // The prompt shows segments as "[uuid] (#1, en→th)" and example says e.g. "[abc-123]",
+    // which causes AI to include brackets in its response.
+    // runL2ForFile must strip them defensively before validation.
+    const bracketedId = `[${VALID_SEGMENT_ID_1}]`
+
+    mockGenerateText.mockResolvedValue(buildL2Response([{ segmentId: bracketedId }]))
+
+    // CAS(0), segments(1), l1Findings(2), glossary(3), taxonomy(4), project(5), txDelete(6), txInsert(7), statusUpdate(8)
+    dbState.returnValues = [
+      [mockFile],
+      [buildSegmentRow({ id: VALID_SEGMENT_ID_1 })],
+      [],
+      [],
+      [],
+      [mockProject],
+      [],
+      [],
+      [],
+    ]
+
+    const { runL2ForFile } = await import('./runL2ForFile')
+    const result = await runL2ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    // Finding MUST be kept — bracket stripping makes UUID match
+    expect(result.findingCount).toBe(1)
+
+    // Inserted segmentId must be the bare UUID (no brackets)
+    expect(dbState.valuesCaptures.length).toBeGreaterThan(0)
+    const insertedValues = dbState.valuesCaptures[dbState.valuesCaptures.length - 1] as Array<
+      Record<string, unknown>
+    >
+    const finding = Array.isArray(insertedValues) ? insertedValues[0] : insertedValues
+    expect(finding).toEqual(
+      expect.objectContaining({
+        segmentId: VALID_SEGMENT_ID_1, // bare UUID, not "[uuid]"
+      }),
+    )
+
+    // No warn logged (bracketed id normalises to valid uuid)
+    const { logger } = await import('@/lib/logger')
+    expect(vi.mocked(logger.warn)).not.toHaveBeenCalled()
+  })
+
   it('[P0] should save 0 findings when all findings have invalid segmentIds', async () => {
     const badId1 = faker.string.uuid()
     const badId2 = faker.string.uuid()

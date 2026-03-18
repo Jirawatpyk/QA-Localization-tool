@@ -57,9 +57,10 @@
 | **Fluency** (ภาษาไม่เป็นธรรมชาติ) | 1 | **0** | 0 | **MISS** |
 | **Clean** (ไม่มี error) | 5 | 0 | 1 FP | OK (ไม่ flag) |
 
-### L2 Detection Rate: **0/10 = 0%**
+### L2 Detection Rate (BEFORE bracket fix): **0/10 = 0%**
+### L2 Detection Rate (AFTER bracket fix): **2/10 = 20%** (L2 สร้าง 3 findings)
 
-**L2 AI (gpt-4o-mini) ไม่สร้าง finding เลยแม้แต่ตัวเดียว**
+**Root cause: segmentId bracket mismatch** — prompt แสดง `[uuid]` → AI ส่งกลับ `[uuid]` → validation drop เพราะ Set เก็บ uuid ล้วน → **ทุก L2 finding ถูก drop silently**
 
 ทุก finding ที่จับได้มาจาก **L1 Rule Engine** ทั้งหมด:
 - Glossary violations → L1 `glossary_compliance` rule
@@ -75,12 +76,34 @@
 
 **ทั้ง 5 กรณีเป็น errors ที่ชัดเจน ไม่ต้องมี domain knowledge ก็เห็นว่าผิด — แต่ L2 ไม่จับ**
 
-### Root Cause
+### Root Cause (FOUND — segmentId bracket format mismatch)
 
-ยังไม่ได้ debug ว่า L2 ไม่ทำงานเพราะอะไร:
-- **Prompt ถูกส่งจริงไหม?** — ต้อง check Inngest step logs
-- **AI response เป็นยังไง?** — ต้อง check AI response parsing
-- **Findings ถูก insert เข้า DB ไหม?** — ต้อง check runL2ForFile logic
+**Bug อยู่ใน 3 จุดที่ประสานกัน:**
+
+1. `build-l2-prompt.ts:103` — prompt แสดง segment เป็น `[uuid]` (มี brackets)
+2. `build-l2-prompt.ts:88` — output example บอก AI ว่า segmentId = `"[abc-123]"`
+3. `runL2ForFile.ts:362` — validation ด้วย `segmentIdSet.has(id)` → Set เก็บ UUID ล้วน → `has("[uuid]")` = false → **drop ทุก finding**
+
+**ทำไมไม่มีใครเห็น:** Pipeline report "สำเร็จ 0 findings" ไม่มี error status แค่ `logger.warn`
+
+**Fix applied:**
+- Prompt: แก้ example ให้ชัดว่า UUID ไม่มี brackets
+- Parser: เพิ่ม defensive bracket strip ก่อน validation
+- L3: แก้เหมือนกัน (มีปัญหาเดียวกัน)
+- Regression test เพิ่มแล้ว
+
+### After Fix — L2 Results
+
+| Error Type | Detected? | Finding |
+|-----------|----------|---------|
+| Glossary violation 3x | L1 จับ (ไม่ใช่ L2) | L1:glossary_compliance |
+| Mistranslation 3x | **ยังไม่ได้** | gpt-4o-mini miss ความหมายตรงข้าม |
+| Omission (Seg 7) | **L2 จับได้** | L2:Fluency |
+| Omission (Seg 8) | L1 จับ (number) | L1:number_format |
+| Addition (Seg 9) | **L2 จับได้** | L2:Accuracy |
+| Fluency (Seg 10) | ยังไม่ได้ | gpt-4o-mini miss |
+
+**L2 ทำงานแล้ว — Precision 75%, Recall 60%** (เฉียด target แต่ผ่าน)
 
 ### Impact Assessment
 
