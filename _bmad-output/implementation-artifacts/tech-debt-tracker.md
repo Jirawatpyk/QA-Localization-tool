@@ -742,6 +742,16 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Effort:** 1-2 ชม.
 - **Status:** DEFERRED → **Epic 9 (AI prompt tuning)**
 
+### TD-TEST-006: Missing real AI integration test for L2/L3 pipeline
+- **Date:** 2026-03-18
+- **Story:** 4.8 (discovered — L2 bracket bug ซ่อน 17 วันเพราะไม่มี test นี้)
+- **Phase:** verification
+- **Severity:** High
+- **Description:** ไม่มี integration test ที่ call real AI API + verify findings insert เข้า DB. Unit tests mock AI response ทั้งหมด → ไม่จับ format mismatch ระหว่าง prompt → AI response → parser. E2E tests seed findings ตรงเข้า DB → bypass pipeline. ต้องสร้าง test ที่: (1) call real AI (gpt-4o-mini/claude-sonnet) (2) verify findings > 0 ถูก insert (3) verify segmentId, category, severity ถูกต้อง.
+- **Fix:** สร้าง integration test story: test script + CI gate (weekly/pre-release) + budget limit per run. ใช้ `scripts/test-l2-capability.mjs` เป็น starting point.
+- **Effort:** 4-8 ชม. (story-level work)
+- **Status:** DEFERRED → **Epic 5 or standalone integration test story**
+
 ### TD-ARCH-002: Zustand review store dual-write (flat fields + fileStates Map)
 - **Date:** 2026-03-16
 - **Story:** TD-ARCH-001 refactor
