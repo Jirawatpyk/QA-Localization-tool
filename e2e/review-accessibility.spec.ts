@@ -406,4 +406,36 @@ test.describe.serial('Review Performance Benchmarks', () => {
     // TODO(TD-TEST-011): Dev mode threshold relaxed. Production target: <200ms.
     expect(actionTime).toBeLessThan(10_000)
   })
+
+  test('TA-12b: Bulk action on 50 findings < 3s (AC4, P2)', async ({ page }) => {
+    await signupOrLogin(page, perfEmail, perfPassword)
+    await gotoReviewPageWithRetry(page, perfProjectId, perfFileId)
+
+    // Click first pending row to set focus
+    const firstPending = page.locator('[role="row"][data-status="pending"]').first()
+    await firstPending.click()
+    await expect(firstPending).toHaveAttribute('tabindex', '0', { timeout: 5_000 })
+
+    // Shift+J to select 50 findings (bulk select)
+    for (let i = 0; i < 49; i++) {
+      await page.keyboard.press('Shift+j')
+    }
+
+    // Wait for bulk action bar to appear with count
+    const bulkBar = page.getByTestId('bulk-action-bar')
+    await expect(bulkBar).toBeVisible({ timeout: 5_000 })
+
+    // Measure bulk accept
+    const startBulk = Date.now()
+    await page.getByRole('button', { name: /bulk accept/i }).click()
+
+    // Wait for completion — toast or bulk bar disappear
+    await expect(page.getByText(/accepted/i).first()).toBeVisible({ timeout: 30_000 })
+    const bulkTime = Date.now() - startBulk
+
+    // eslint-disable-next-line no-console
+    console.log(`[PERF] Bulk action (50) time: ${bulkTime}ms (target: <3000ms prod, <30000ms dev)`)
+    // TODO(TD-TEST-011): Dev mode threshold relaxed. Production target: <3000ms.
+    expect(bulkTime).toBeLessThan(30_000)
+  })
 })

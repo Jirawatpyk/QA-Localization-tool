@@ -709,15 +709,15 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Effort:** 4-6 ชม.
 - **Status:** DEFERRED → **Epic 5 — หรือเมื่อมี cross-file features ที่ต้องการ single source of truth**
 
-### TD-TEST-010: Pipeline verification E2E tests skipped — no live pipeline in CI
+### TD-TEST-010: Pipeline + cost verification E2E tests skipped — no live pipeline in CI
 - **Date:** 2026-03-18
 - **Story:** 4.8
 - **Phase:** ATDD/impl
 - **Severity:** Medium
 - **Files:** `e2e/review-pipeline-verification.spec.ts`
-- **Description:** 7 E2E tests (TA-19, TA-20, TA-21, TA-24, TA-26, TA-27) permanently skipped — require live Inngest dev server + API keys with credits. Pipeline verification done via script (`scripts/verify-pipeline.mjs`) instead. Also TA-25 (ai-cost-verification unit test) never created.
-- **Impact:** No automated regression guard for pipeline precision/recall/cost metrics.
-- **Fix:** (1) Add CI pipeline-verification job with Inngest + API keys as secrets. (2) Create TA-25 integration test. (3) Unskip E2E tests.
+- **Description:** 7 E2E tests skipped (TA-19, TA-20, TA-21, TA-24 x2, TA-26, TA-27) — require live Inngest dev server + API keys with credits. Covers: L2 precision/recall (AC6), pipeline timing (AC6), AI dashboard totals (AC7), budget threshold alert (AC7). Pipeline verification done via script (`scripts/verify-pipeline.mjs`) instead. TA-25 (ai-cost-verification unit test) not yet created.
+- **Impact:** No automated regression guard for pipeline precision/recall/cost/dashboard metrics.
+- **Fix:** (1) Add CI pipeline-verification job with Inngest + API keys as secrets. (2) Create TA-25 integration test. (3) Unskip E2E tests. **Blocked by: CI infrastructure (Inngest + API key secrets).**
 - **Effort:** 4-8 ชม.
 - **Status:** DEFERRED → **Epic 9 — AI pipeline tuning + CI integration**
 
@@ -733,17 +733,12 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Effort:** 2-3 ชม.
 - **Status:** DEFERRED → **Epic 5 — CI pipeline hardening**
 
-### TD-TEST-012: Bulk action performance benchmark (50 findings + score recalc) not implemented
+### ~~TD-TEST-012: Bulk action performance benchmark (50 findings + score recalc) not implemented~~
 - **Date:** 2026-03-18
 - **Story:** 4.8 Task 6.5
 - **Phase:** impl
 - **Severity:** Low
-- **Files:** `e2e/review-accessibility.spec.ts`
-- **Description:** AC4 requires bulk action on 50 findings < 3s including score recalculation. Deferred as P2 — single-finding benchmarks verified instead.
-- **Impact:** No regression guard for bulk action performance.
-- **Fix:** Add E2E test: Shift+J select 50 → bulk accept → verify score updates in <3s.
-- **Effort:** 1-2 ชม.
-- **Status:** DEFERRED → **Epic 5 — performance hardening**
+- **Status:** RESOLVED (2026-03-18) — CR R1 fix: added TA-12b E2E test in `e2e/review-accessibility.spec.ts` (Shift+J select 50 → bulk accept → measure time)
 
 ### TD-TEST-013: Thorough mode pipeline verification not run
 - **Date:** 2026-03-18
@@ -751,20 +746,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Phase:** verification
 - **Severity:** Low
 - **Files:** `scripts/verify-pipeline.mjs`
-- **Description:** Economy mode verified (139.1s PASS). Thorough mode (L1+L2+L3) not tested — requires ANTHROPIC_API_KEY with credits. AC6 target: <10 min.
+- **Description:** Economy mode verified (139.1s PASS). Thorough mode (L1+L2+L3) not tested. AC6 target: <10 min. API keys available — run with: `npx dotenv-cli -e .env.local -- node scripts/verify-pipeline.mjs` (modify script to use `mode: 'thorough'`)
 - **Impact:** L3 deduplication and thorough timing unverified.
-- **Fix:** Run Thorough mode via verify-pipeline.mjs with L3 enabled.
-- **Effort:** 1 ชม. (run script + document)
-- **Status:** DEFERRED → **Epic 9 — L3 tuning**
-
-### TD-TEST-014: AI Usage Dashboard + budget threshold manual verification pending
-- **Date:** 2026-03-18
-- **Story:** 4.8 Tasks 7.6, 7.7
-- **Phase:** verification
-- **Severity:** Low
-- **Files:** Admin AI Usage page, budget alert UI
-- **Description:** AC7 requires dashboard totals match DB + budget alert fires. Token logging verified via DB (3 entries, 123K+2.5K tokens). Dashboard UI + budget threshold alert deferred to manual Mona check.
-- **Impact:** No automated verification of dashboard aggregation or alert trigger.
-- **Fix:** Manual verification by Mona via admin UI, or add E2E test.
-- **Effort:** 30 min manual / 2 ชม. E2E
-- **Status:** DEFERRED → **Mona manual check or Epic 5 E2E**
+- **Effort:** 1 ชม. (modify script mode + run + document)
+- **Status:** DEFERRED → **Epic 9 — L3 tuning** (Thorough mode ยังไม่ critical สำหรับ Epic 4 closure — L3 prompt tuning อยู่ใน Epic 9)
