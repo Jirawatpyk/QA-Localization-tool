@@ -1,8 +1,10 @@
 'use client'
 
-import { Check, Flag, Trash2, X } from 'lucide-react'
+import { BookMarked, Check, Flag, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { Button } from '@/components/ui/button'
+import { AddToGlossaryDialog } from '@/features/review/components/AddToGlossaryDialog'
 import { ConfidenceBadge } from '@/features/review/components/ConfidenceBadge'
 import { LayerBadge } from '@/features/review/components/LayerBadge'
 import type { OverrideHistoryEntry } from '@/features/review/components/OverrideHistoryPanel'
@@ -52,8 +54,8 @@ type FindingDetailContentProps = {
  */
 export function FindingDetailContent({
   finding,
-  sourceLang: _sourceLang,
-  targetLang: _targetLang,
+  sourceLang,
+  targetLang,
   fileId,
   contextRange: contextRangeProp,
   onNavigateToFinding,
@@ -90,6 +92,18 @@ export function FindingDetailContent({
       setShowHistory(false)
     }
   }
+
+  // Story 4.7: Add to Glossary dialog state
+  const [glossaryDialogOpen, setGlossaryDialogOpen] = useState(false)
+
+  // AC4: button visible only for Terminology findings with source text, target lang, and projectId
+  // Case-insensitive: taxonomy seed uses 'Terminology', L1 rule engine may use 'terminology'
+  const showAddToGlossary =
+    finding !== null &&
+    finding.category.toLowerCase() === 'terminology' &&
+    finding.sourceTextExcerpt != null &&
+    targetLang !== '' &&
+    projectId != null
 
   // Segment context hook
   const segmentCtx = useSegmentContext({
@@ -247,6 +261,34 @@ export function FindingDetailContent({
               </button>
             )}
           </div>
+
+          {/* Story 4.7: Add to Glossary — OUTSIDE toolbar (glossary action ≠ review action) */}
+          {showAddToGlossary && projectId && (
+            <div className="pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setGlossaryDialogOpen(true)}
+                data-testid="add-to-glossary-button"
+                className="focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
+              >
+                <BookMarked className="h-4 w-4 mr-1" aria-hidden="true" />
+                Add to Glossary
+              </Button>
+            </div>
+          )}
+
+          {/* Story 4.7: Glossary dialog */}
+          {finding && projectId && (
+            <AddToGlossaryDialog
+              open={glossaryDialogOpen}
+              onOpenChange={setGlossaryDialogOpen}
+              finding={finding}
+              sourceLang={sourceLang}
+              targetLang={targetLang}
+              projectId={projectId}
+            />
+          )}
         </>
       ) : (
         <p className="text-sm text-muted-foreground">Select a finding to view details</p>

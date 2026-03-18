@@ -13,6 +13,15 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+// Mock server-only for AddToGlossaryDialog's server action imports
+vi.mock('server-only', () => ({}))
+vi.mock('@/features/review/actions/addToGlossary.action', () => ({
+  addToGlossary: vi.fn(),
+}))
+vi.mock('@/features/review/actions/updateGlossaryTerm.action', () => ({
+  updateGlossaryTerm: vi.fn(),
+}))
+
 import { FindingDetailContent } from '@/features/review/components/FindingDetailContent'
 import type { FindingForDisplay } from '@/features/review/types'
 import { buildFindingForUI } from '@/test/factories'
@@ -289,5 +298,114 @@ describe('FindingDetailContent', () => {
     expect(hookArgs.contextRange).toBe(0)
     // Must NOT be the default value 2 (would happen if || was used instead of ??)
     expect(hookArgs.contextRange).not.toBe(2)
+  })
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // Story 4.7: Add to Glossary button visibility (AC4)
+  // ═══════════════════════════════════════════════════════════════════════
+
+  it('[P0][4.7-AC4] should show "Add to Glossary" button for Terminology finding with sourceTextExcerpt and targetLang', () => {
+    const terminologyFinding = buildFindingForUI({
+      id: 'f-term',
+      category: 'Terminology',
+      sourceTextExcerpt: 'bank',
+      suggestedFix: 'ธนาคาร',
+      severity: 'minor',
+      status: 'pending',
+      detectedByLayer: 'L1',
+    })
+
+    render(
+      <FindingDetailContent
+        {...defaultProps({
+          finding: terminologyFinding,
+          projectId: '00000000-0000-4000-8000-000000000001',
+        })}
+      />,
+    )
+
+    expect(screen.getByTestId('add-to-glossary-button')).toBeInTheDocument()
+    expect(screen.getByText('Add to Glossary')).toBeInTheDocument()
+  })
+
+  it('[P0][4.7-AC4] should show "Add to Glossary" button with lowercase category (case-insensitive)', () => {
+    const terminologyFinding = buildFindingForUI({
+      id: 'f-term-lower',
+      category: 'terminology', // lowercase — L1 rule engine produces this
+      sourceTextExcerpt: 'bank',
+      suggestedFix: 'ธนาคาร',
+      severity: 'minor',
+      status: 'pending',
+      detectedByLayer: 'L1',
+    })
+
+    render(
+      <FindingDetailContent
+        {...defaultProps({
+          finding: terminologyFinding,
+          projectId: '00000000-0000-4000-8000-000000000001',
+        })}
+      />,
+    )
+
+    expect(screen.getByTestId('add-to-glossary-button')).toBeInTheDocument()
+  })
+
+  it('[P0][4.7-AC4] should NOT show "Add to Glossary" button for non-Terminology finding', () => {
+    // mockFinding has category='accuracy'
+    render(
+      <FindingDetailContent
+        {...defaultProps({
+          projectId: '00000000-0000-4000-8000-000000000001',
+        })}
+      />,
+    )
+
+    expect(screen.queryByTestId('add-to-glossary-button')).not.toBeInTheDocument()
+  })
+
+  it('[P1][4.7-AC4] should NOT show "Add to Glossary" when sourceTextExcerpt is null', () => {
+    const noExcerptFinding = buildFindingForUI({
+      id: 'f-no-excerpt',
+      category: 'Terminology',
+      sourceTextExcerpt: null,
+      severity: 'minor',
+      status: 'pending',
+      detectedByLayer: 'L1',
+    })
+
+    render(
+      <FindingDetailContent
+        {...defaultProps({
+          finding: noExcerptFinding,
+          projectId: '00000000-0000-4000-8000-000000000001',
+        })}
+      />,
+    )
+
+    expect(screen.queryByTestId('add-to-glossary-button')).not.toBeInTheDocument()
+  })
+
+  it('[P1][4.7-AC4] should NOT show "Add to Glossary" when targetLang is empty', () => {
+    const terminologyFinding = buildFindingForUI({
+      id: 'f-no-lang',
+      category: 'Terminology',
+      sourceTextExcerpt: 'bank',
+      severity: 'minor',
+      status: 'pending',
+      detectedByLayer: 'L1',
+    })
+
+    render(
+      <FindingDetailContent
+        {...defaultProps({
+          finding: terminologyFinding,
+          targetLang: '',
+          projectId: '00000000-0000-4000-8000-000000000001',
+        })}
+      />,
+    )
+
+    expect(screen.queryByTestId('add-to-glossary-button')).not.toBeInTheDocument()
   })
 })

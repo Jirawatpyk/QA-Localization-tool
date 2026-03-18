@@ -7,6 +7,15 @@
 import { render, screen, within } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+// Mock server-only for AddToGlossaryDialog's server action imports
+vi.mock('server-only', () => ({}))
+vi.mock('@/features/review/actions/addToGlossary.action', () => ({
+  addToGlossary: vi.fn(),
+}))
+vi.mock('@/features/review/actions/updateGlossaryTerm.action', () => ({
+  updateGlossaryTerm: vi.fn(),
+}))
+
 import { FindingDetailSheet } from '@/features/review/components/FindingDetailSheet'
 import { buildFindingForUI } from '@/test/factories'
 
