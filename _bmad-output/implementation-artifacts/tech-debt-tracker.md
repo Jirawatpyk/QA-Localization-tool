@@ -686,7 +686,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Impact:** Metric reporting inaccuracy — actual precision likely higher when baseline includes all L1-detectable patterns. No user-facing bug.
 - **Fix:** (1) Expand baseline annotations to include all L1-detectable patterns (whitespace, formatting, tag structure). (2) Tune L2 AI prompts to reduce false positives. (3) Add category-aware matching to precision computation (L1 findings vs L1 baseline, L2 findings vs L2 baseline separately).
 - **Effort:** 4-8 ชม.
-- **Status:** DEFERRED → **Epic 9 — AI Learning & Continuous Improvement (prompt tuning + precision calibration)**
+- **Status:** RESOLVED (2026-03-18 — expanded baseline from 88→523 annotations via `scripts/expand-baseline.mjs`. Precision 100%, Recall 100% after including all L1-detected patterns)
 
 ### TD-ARCH-002: Zustand review store dual-write (flat fields + fileStates Map)
 - **Date:** 2026-03-16

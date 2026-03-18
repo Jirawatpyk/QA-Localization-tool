@@ -1,11 +1,74 @@
 {
   "segments": {
+    "1": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "2": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ว\""
+    },
+    "3": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ป\""
+    },
+    "5": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "6": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
     "7": {
       "expected_category": "markup",
       "expected_severity": "major",
       "injected_type": "L1",
       "error_type": "tag_error",
       "description": "Missing closing tag in target: source has <g id=\"7\">...</g> but target has no tags"
+    },
+    "8": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "9": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "10": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "11": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
     },
     "12": {
       "expected_category": "accuracy",
@@ -14,12 +77,40 @@
       "error_type": "number_mismatch",
       "description": "Number mismatch: source has \"197\" but target has \"227\""
     },
+    "13": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "14": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"%\""
+    },
     "15": {
       "expected_category": "terminology",
       "expected_severity": "major",
       "injected_type": "L2",
       "error_type": "glossary_violation",
       "description": "Glossary term translated incorrectly (wrong synonym used)"
+    },
+    "16": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "17": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
     },
     "18": {
       "expected_category": "whitespace",
@@ -28,6 +119,13 @@
       "error_type": "whitespace_issue",
       "description": "Double space in target text"
     },
+    "19": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"V\""
+    },
     "20": {
       "expected_category": "consistency",
       "expected_severity": "minor",
@@ -35,12 +133,89 @@
       "error_type": "consistency_error",
       "description": "Consistency pair source segment (pair target at segment 120)"
     },
+    "21": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"1\""
+    },
     "22": {
       "expected_category": "accuracy",
       "expected_severity": "critical",
       "injected_type": "L1",
       "error_type": "placeholder_mismatch",
       "description": "Placeholder missing in target: number \"267\" removed from translation"
+    },
+    "23": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ล\""
+    },
+    "24": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "25": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "26": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"์\""
+    },
+    "27": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "28": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "29": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"่\""
+    },
+    "30": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"e\""
+    },
+    "31": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "32": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ว\""
     },
     "33": {
       "expected_category": "markup",
@@ -56,12 +231,89 @@
       "error_type": "number_mismatch",
       "description": "Number mismatch: source has \"358\" but target has \"368\""
     },
+    "36": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "37": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ง\""
+    },
+    "38": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "39": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "40": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "41": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "42": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "43": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "44": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"%\""
+    },
     "45": {
       "expected_category": "terminology",
       "expected_severity": "major",
       "injected_type": "L2",
       "error_type": "glossary_violation",
       "description": "Glossary term translated incorrectly (wrong synonym used)"
+    },
+    "46": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "47": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
     },
     "48": {
       "expected_category": "whitespace",
@@ -70,12 +322,68 @@
       "error_type": "whitespace_issue",
       "description": "Double space in target text"
     },
+    "49": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"V\""
+    },
     "50": {
       "expected_category": "consistency",
       "expected_severity": "minor",
       "injected_type": "L2",
       "error_type": "consistency_error",
       "description": "Consistency pair source segment (pair target at segment 150)"
+    },
+    "51": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"1\""
+    },
+    "52": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
+    },
+    "53": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ล\""
+    },
+    "54": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "55": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "56": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"์\""
+    },
+    "57": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
     },
     "58": {
       "expected_category": "accuracy",
@@ -91,12 +399,103 @@
       "error_type": "tag_error",
       "description": "Missing closing tag in target: source has <g id=\"59\">...</g> but target has no tags"
     },
+    "60": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"e\""
+    },
+    "61": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
     "62": {
       "expected_category": "accuracy",
       "expected_severity": "critical",
       "injected_type": "L1",
       "error_type": "placeholder_mismatch",
       "description": "Placeholder missing in target: number \"547\" removed from translation"
+    },
+    "63": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ป\""
+    },
+    "65": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "66": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "67": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ง\""
+    },
+    "68": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "69": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "70": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "71": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "72": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "73": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "74": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"%\""
     },
     "75": {
       "expected_category": "terminology",
@@ -105,12 +504,33 @@
       "error_type": "glossary_violation",
       "description": "Glossary term translated incorrectly (wrong synonym used)"
     },
+    "76": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "77": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
+    },
     "78": {
       "expected_category": "whitespace",
       "expected_severity": "minor",
       "injected_type": "L1",
       "error_type": "whitespace_issue",
       "description": "Double space in target text"
+    },
+    "79": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"V\""
     },
     "80": {
       "expected_category": "consistency",
@@ -126,6 +546,27 @@
       "error_type": "number_mismatch",
       "description": "Number mismatch: source has \"680\" but target has \"700\""
     },
+    "82": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
+    },
+    "83": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ล\""
+    },
+    "84": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
     "85": {
       "expected_category": "markup",
       "expected_severity": "major",
@@ -133,12 +574,124 @@
       "error_type": "tag_error",
       "description": "Missing closing tag in target: source has <g id=\"85\">...</g> but target has no tags"
     },
+    "86": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"์\""
+    },
+    "87": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "88": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "89": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"่\""
+    },
+    "90": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"e\""
+    },
+    "91": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "92": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ว\""
+    },
+    "93": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ป\""
+    },
+    "95": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "96": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "97": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ง\""
+    },
+    "98": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "99": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "100": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "101": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
     "102": {
       "expected_category": "accuracy",
       "expected_severity": "critical",
       "injected_type": "L1",
       "error_type": "placeholder_mismatch",
       "description": "Placeholder missing in target: number \"827\" removed from translation"
+    },
+    "103": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
     },
     "104": {
       "expected_category": "accuracy",
@@ -154,12 +707,33 @@
       "error_type": "glossary_violation",
       "description": "Glossary term translated incorrectly (wrong synonym used)"
     },
+    "106": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "107": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
+    },
     "108": {
       "expected_category": "whitespace",
       "expected_severity": "minor",
       "injected_type": "L1",
       "error_type": "whitespace_issue",
       "description": "Double space in target text"
+    },
+    "109": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"V\""
     },
     "110": {
       "expected_category": "consistency",
@@ -175,12 +749,103 @@
       "error_type": "tag_error",
       "description": "Missing closing tag in target: source has <g id=\"111\">...</g> but target has no tags"
     },
+    "112": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
+    },
+    "113": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ล\""
+    },
+    "114": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "115": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "116": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"์\""
+    },
+    "117": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "118": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "119": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"่\""
+    },
     "120": {
       "expected_category": "consistency",
       "expected_severity": "minor",
       "injected_type": "L2",
       "error_type": "consistency_error",
       "description": "Inconsistent translation: same source as segment 20 but different target"
+    },
+    "121": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "122": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ว\""
+    },
+    "123": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ป\""
+    },
+    "125": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "126": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
     },
     "127": {
       "expected_category": "accuracy",
@@ -189,12 +854,68 @@
       "error_type": "number_mismatch",
       "description": "Number mismatch: source has \"102\" but target has \"132\""
     },
+    "128": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "129": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "130": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "131": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "132": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "133": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "134": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"%\""
+    },
     "135": {
       "expected_category": "terminology",
       "expected_severity": "major",
       "injected_type": "L2",
       "error_type": "glossary_violation",
       "description": "Glossary term translated incorrectly (wrong synonym used)"
+    },
+    "136": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
     },
     "137": {
       "expected_category": "markup",
@@ -203,12 +924,33 @@
       "error_type": "tag_error",
       "description": "Missing closing tag in target: source has <g id=\"137\">...</g> but target has no tags"
     },
+    "138": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ด\""
+    },
+    "139": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"V\""
+    },
     "140": {
       "expected_category": "consistency",
       "expected_severity": "minor",
       "injected_type": "L2",
       "error_type": "consistency_error",
       "description": "Inconsistent translation: same source as segment 40 but different target"
+    },
+    "141": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"1\""
     },
     "142": {
       "expected_category": "accuracy",
@@ -217,12 +959,138 @@
       "error_type": "placeholder_mismatch",
       "description": "Placeholder missing in target: number \"207\" removed from translation"
     },
+    "143": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ล\""
+    },
+    "144": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "145": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "146": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"์\""
+    },
+    "147": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "148": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "149": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"่\""
+    },
     "150": {
       "expected_category": "accuracy",
       "expected_severity": "critical",
       "injected_type": "L1",
       "error_type": "number_mismatch",
       "description": "Number mismatch: source has \"263\" but target has \"273\""
+    },
+    "151": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "152": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ว\""
+    },
+    "153": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ป\""
+    },
+    "155": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "156": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "157": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ง\""
+    },
+    "158": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "159": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "160": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "161": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "162": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
     },
     "163": {
       "expected_category": "markup",
@@ -231,12 +1099,33 @@
       "error_type": "tag_error",
       "description": "Missing closing tag in target: source has <g id=\"163\">...</g> but target has no tags"
     },
+    "164": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"%\""
+    },
     "165": {
       "expected_category": "terminology",
       "expected_severity": "major",
       "injected_type": "L2",
       "error_type": "glossary_violation",
       "description": "Glossary term translated incorrectly (wrong synonym used)"
+    },
+    "166": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "167": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
     },
     "168": {
       "expected_category": "whitespace",
@@ -245,12 +1134,33 @@
       "error_type": "whitespace_issue",
       "description": "Double space in target text"
     },
+    "169": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"V\""
+    },
     "170": {
       "expected_category": "consistency",
       "expected_severity": "minor",
       "injected_type": "L2",
       "error_type": "consistency_error",
       "description": "Inconsistent translation: same source as segment 70 but different target"
+    },
+    "171": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"1\""
+    },
+    "172": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
     },
     "173": {
       "expected_category": "accuracy",
@@ -259,12 +1169,61 @@
       "error_type": "number_mismatch",
       "description": "Number mismatch: source has \"424\" but target has \"464\""
     },
+    "174": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "175": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "176": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"์\""
+    },
+    "177": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "178": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "179": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"่\""
+    },
     "180": {
       "expected_category": "consistency",
       "expected_severity": "minor",
       "injected_type": "L2",
       "error_type": "consistency_error",
       "description": "Inconsistent translation: same source as segment 80 but different target"
+    },
+    "181": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
     },
     "182": {
       "expected_category": "accuracy",
@@ -273,12 +1232,82 @@
       "error_type": "placeholder_mismatch",
       "description": "Placeholder missing in target: number \"487\" removed from translation"
     },
+    "183": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ป\""
+    },
+    "185": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "186": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "187": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ง\""
+    },
+    "188": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
     "189": {
       "expected_category": "markup",
       "expected_severity": "major",
       "injected_type": "L1",
       "error_type": "tag_error",
       "description": "Missing closing tag in target: source has <g id=\"189\">...</g> but target has no tags"
+    },
+    "190": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "191": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "192": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "193": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "194": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"%\""
     },
     "195": {
       "expected_category": "terminology",
@@ -294,12 +1323,26 @@
       "error_type": "number_mismatch",
       "description": "Number mismatch: source has \"585\" but target has \"605\""
     },
+    "197": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
+    },
     "198": {
       "expected_category": "whitespace",
       "expected_severity": "minor",
       "injected_type": "L1",
       "error_type": "whitespace_issue",
       "description": "Double space in target text"
+    },
+    "199": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"V\""
     },
     "200": {
       "expected_category": "consistency",
@@ -308,12 +1351,96 @@
       "error_type": "consistency_error",
       "description": "Inconsistent translation: same source as segment 100 but different target"
     },
+    "201": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"1\""
+    },
+    "202": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
+    },
+    "203": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ล\""
+    },
+    "204": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "205": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "206": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"์\""
+    },
+    "207": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "208": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "209": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"่\""
+    },
     "210": {
       "expected_category": "consistency",
       "expected_severity": "minor",
       "injected_type": "L2",
       "error_type": "consistency_error",
       "description": "Inconsistent translation: same source as segment 110 but different target"
+    },
+    "211": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "212": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ว\""
+    },
+    "213": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ป\""
     },
     "215": {
       "expected_category": "markup",
@@ -322,12 +1449,47 @@
       "error_type": "tag_error",
       "description": "Missing closing tag in target: source has <g id=\"215\">...</g> but target has no tags"
     },
+    "216": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "217": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ง\""
+    },
+    "218": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
     "219": {
       "expected_category": "accuracy",
       "expected_severity": "critical",
       "injected_type": "L1",
       "error_type": "number_mismatch",
       "description": "Number mismatch: source has \"746\" but target has \"796\""
+    },
+    "220": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "221": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
     },
     "222": {
       "expected_category": "accuracy",
@@ -336,6 +1498,20 @@
       "error_type": "placeholder_mismatch",
       "description": "Placeholder missing in target: number \"767\" removed from translation"
     },
+    "223": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "224": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"%\""
+    },
     "225": {
       "expected_category": "terminology",
       "expected_severity": "major",
@@ -343,12 +1519,103 @@
       "error_type": "glossary_violation",
       "description": "Glossary term translated incorrectly (wrong synonym used)"
     },
+    "226": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "227": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
+    },
+    "228": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ด\""
+    },
+    "229": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"V\""
+    },
     "230": {
       "expected_category": "consistency",
       "expected_severity": "minor",
       "injected_type": "L2",
       "error_type": "consistency_error",
       "description": "Inconsistent translation: same source as segment 130 but different target"
+    },
+    "231": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"1\""
+    },
+    "232": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
+    },
+    "233": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ล\""
+    },
+    "234": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "235": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "236": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"์\""
+    },
+    "237": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "238": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "239": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"่\""
     },
     "240": {
       "expected_category": "consistency",
@@ -371,12 +1638,117 @@
       "error_type": "number_mismatch",
       "description": "Number mismatch: source has \"907\" but target has \"937\""
     },
+    "243": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ป\""
+    },
+    "245": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "246": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "247": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ง\""
+    },
+    "248": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "249": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "250": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "251": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "252": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "253": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "254": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"%\""
+    },
     "255": {
       "expected_category": "terminology",
       "expected_severity": "major",
       "injected_type": "L2",
       "error_type": "glossary_violation",
       "description": "Glossary term translated incorrectly (wrong synonym used)"
+    },
+    "256": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "257": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
+    },
+    "258": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ด\""
+    },
+    "259": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"V\""
     },
     "260": {
       "expected_category": "consistency",
@@ -385,6 +1757,13 @@
       "error_type": "consistency_error",
       "description": "Inconsistent translation: same source as segment 160 but different target"
     },
+    "261": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"1\""
+    },
     "262": {
       "expected_category": "accuracy",
       "expected_severity": "critical",
@@ -392,12 +1771,33 @@
       "error_type": "placeholder_mismatch",
       "description": "Placeholder missing in target: number \"147\" removed from translation"
     },
+    "263": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ล\""
+    },
     "264": {
       "expected_category": "accuracy",
       "expected_severity": "critical",
       "injected_type": "L1",
       "error_type": "number_mismatch",
       "description": "Number mismatch: source has \"161\" but target has \"211\""
+    },
+    "265": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "266": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"์\""
     },
     "267": {
       "expected_category": "markup",
@@ -413,12 +1813,110 @@
       "error_type": "whitespace_issue",
       "description": "Double space in target text"
     },
+    "269": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"่\""
+    },
     "270": {
       "expected_category": "consistency",
       "expected_severity": "minor",
       "injected_type": "L2",
       "error_type": "consistency_error",
       "description": "Inconsistent translation: same source as segment 170 but different target"
+    },
+    "271": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "272": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ว\""
+    },
+    "273": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ป\""
+    },
+    "275": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "276": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "277": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ง\""
+    },
+    "278": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "279": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "280": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "281": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "282": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "283": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "284": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"%\""
     },
     "285": {
       "expected_category": "terminology",
@@ -434,12 +1932,47 @@
       "error_type": "number_mismatch",
       "description": "Number mismatch: source has \"315\" but target has \"335\""
     },
+    "287": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
+    },
+    "288": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ด\""
+    },
+    "289": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"V\""
+    },
     "290": {
       "expected_category": "consistency",
       "expected_severity": "minor",
       "injected_type": "L2",
       "error_type": "consistency_error",
       "description": "Inconsistent translation: same source as segment 190 but different target"
+    },
+    "291": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"1\""
+    },
+    "292": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
     },
     "293": {
       "expected_category": "markup",
@@ -448,12 +1981,96 @@
       "error_type": "tag_error",
       "description": "Missing closing tag in target: source has <g id=\"293\">...</g> but target has no tags"
     },
+    "294": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "295": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "296": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"์\""
+    },
+    "297": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "298": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "299": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"่\""
+    },
     "300": {
       "expected_category": "consistency",
       "expected_severity": "minor",
       "injected_type": "L2",
       "error_type": "consistency_error",
       "description": "Inconsistent translation: same source as segment 200 but different target"
+    },
+    "301": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "302": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ว\""
+    },
+    "303": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ป\""
+    },
+    "305": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "306": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "307": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ง\""
     },
     "308": {
       "expected_category": "accuracy",
@@ -462,12 +2079,75 @@
       "error_type": "number_mismatch",
       "description": "Number mismatch: source has \"469\" but target has \"509\""
     },
+    "309": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "310": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "311": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "312": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "313": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "314": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"%\""
+    },
     "315": {
       "expected_category": "terminology",
       "expected_severity": "major",
       "injected_type": "L2",
       "error_type": "glossary_violation",
       "description": "Glossary term translated incorrectly (wrong synonym used)"
+    },
+    "316": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "317": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
+    },
+    "318": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ด\""
     },
     "319": {
       "expected_category": "markup",
@@ -476,12 +2156,124 @@
       "error_type": "tag_error",
       "description": "Missing closing tag in target: source has <g id=\"319\">...</g> but target has no tags"
     },
+    "320": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "321": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"1\""
+    },
+    "322": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
+    },
+    "323": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ล\""
+    },
+    "324": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "325": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "326": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"์\""
+    },
+    "327": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "328": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "329": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"่\""
+    },
     "330": {
       "expected_category": "accuracy",
       "expected_severity": "critical",
       "injected_type": "L1",
       "error_type": "number_mismatch",
       "description": "Number mismatch: source has \"623\" but target has \"633\""
+    },
+    "331": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "332": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ว\""
+    },
+    "333": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ป\""
+    },
+    "335": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "336": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "337": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ง\""
     },
     "338": {
       "expected_category": "whitespace",
@@ -490,12 +2282,47 @@
       "error_type": "whitespace_issue",
       "description": "Double space in target text"
     },
+    "339": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "340": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "341": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
     "342": {
       "expected_category": "accuracy",
       "expected_severity": "critical",
       "injected_type": "L1",
       "error_type": "placeholder_mismatch",
       "description": "Placeholder missing in target: number \"707\" removed from translation"
+    },
+    "343": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "344": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"%\""
     },
     "345": {
       "expected_category": "terminology",
@@ -504,12 +2331,103 @@
       "error_type": "glossary_violation",
       "description": "Glossary term translated incorrectly (wrong synonym used)"
     },
+    "346": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "347": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
+    },
+    "348": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ด\""
+    },
+    "349": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"V\""
+    },
+    "350": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "351": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"1\""
+    },
     "352": {
       "expected_category": "accuracy",
       "expected_severity": "critical",
       "injected_type": "L1",
       "error_type": "number_mismatch",
       "description": "Number mismatch: source has \"777\" but target has \"807\""
+    },
+    "353": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ล\""
+    },
+    "354": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "355": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "356": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"์\""
+    },
+    "357": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "358": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "359": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"่\""
     },
     "360": {
       "expected_category": "consistency",
@@ -518,12 +2436,89 @@
       "error_type": "consistency_error",
       "description": "Inconsistent translation: same source as segment 260 but different target"
     },
+    "361": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "362": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ว\""
+    },
+    "363": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ป\""
+    },
     "365": {
       "expected_category": "markup",
       "expected_severity": "major",
       "injected_type": "L1",
       "error_type": "tag_error",
       "description": "Missing closing tag in target: source has <g id=\"365\">...</g> but target has no tags"
+    },
+    "366": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "367": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ง\""
+    },
+    "368": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "369": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "370": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "371": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "372": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "373": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
     },
     "374": {
       "expected_category": "accuracy",
@@ -539,12 +2534,138 @@
       "error_type": "glossary_violation",
       "description": "Glossary term translated incorrectly (wrong synonym used)"
     },
+    "376": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "377": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
+    },
+    "378": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ด\""
+    },
+    "379": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"V\""
+    },
+    "380": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "381": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"1\""
+    },
+    "382": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
+    },
+    "383": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ล\""
+    },
+    "384": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "385": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "386": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"์\""
+    },
+    "387": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "388": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "389": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"่\""
+    },
     "390": {
       "expected_category": "consistency",
       "expected_severity": "minor",
       "injected_type": "L2",
       "error_type": "consistency_error",
       "description": "Inconsistent translation: same source as segment 290 but different target"
+    },
+    "391": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "392": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ว\""
+    },
+    "393": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ป\""
+    },
+    "395": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
     },
     "396": {
       "expected_category": "accuracy",
@@ -553,12 +2674,82 @@
       "error_type": "number_mismatch",
       "description": "Number mismatch: source has \"185\" but target has \"205\""
     },
+    "397": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ง\""
+    },
+    "398": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "399": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "400": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "401": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "402": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "403": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "404": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"%\""
+    },
     "405": {
       "expected_category": "terminology",
       "expected_severity": "major",
       "injected_type": "L2",
       "error_type": "glossary_violation",
       "description": "Glossary term translated incorrectly (wrong synonym used)"
+    },
+    "406": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "407": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
     },
     "408": {
       "expected_category": "whitespace",
@@ -567,12 +2758,68 @@
       "error_type": "whitespace_issue",
       "description": "Double space in target text"
     },
+    "409": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"V\""
+    },
+    "410": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
     "411": {
       "expected_category": "markup",
       "expected_severity": "major",
       "injected_type": "L1",
       "error_type": "tag_error",
       "description": "Missing closing tag in target: source has <g id=\"411\">...</g> but target has no tags"
+    },
+    "412": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
+    },
+    "413": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ล\""
+    },
+    "414": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "415": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "416": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"์\""
+    },
+    "417": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
     },
     "418": {
       "expected_category": "accuracy",
@@ -581,12 +2828,110 @@
       "error_type": "number_mismatch",
       "description": "Number mismatch: source has \"339\" but target has \"379\""
     },
+    "419": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"่\""
+    },
+    "420": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"e\""
+    },
+    "421": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
     "422": {
       "expected_category": "accuracy",
       "expected_severity": "critical",
       "injected_type": "L1",
       "error_type": "placeholder_mismatch",
       "description": "Placeholder missing in target: number \"367\" removed from translation"
+    },
+    "423": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ป\""
+    },
+    "425": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "426": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "427": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ง\""
+    },
+    "428": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "429": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "430": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "431": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "432": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "433": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "434": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"%\""
     },
     "435": {
       "expected_category": "terminology",
@@ -595,12 +2940,180 @@
       "error_type": "glossary_violation",
       "description": "Glossary term translated incorrectly (wrong synonym used)"
     },
+    "436": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "437": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
+    },
+    "438": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ด\""
+    },
+    "439": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"V\""
+    },
     "440": {
       "expected_category": "accuracy",
       "expected_severity": "critical",
       "injected_type": "L1",
       "error_type": "number_mismatch",
       "description": "Number mismatch: source has \"493\" but target has \"503\""
+    },
+    "441": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"1\""
+    },
+    "442": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
+    },
+    "443": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ล\""
+    },
+    "444": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "445": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "446": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"์\""
+    },
+    "447": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "448": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "449": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"่\""
+    },
+    "450": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"e\""
+    },
+    "451": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "452": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ว\""
+    },
+    "453": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ป\""
+    },
+    "455": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "456": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "457": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ง\""
+    },
+    "458": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "459": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "460": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "461": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
     },
     "462": {
       "expected_category": "accuracy",
@@ -609,12 +3122,544 @@
       "error_type": "placeholder_mismatch",
       "description": "Placeholder missing in target: number \"647\" removed from translation"
     },
+    "463": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "464": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"%\""
+    },
+    "465": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "466": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "467": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
+    },
+    "468": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ด\""
+    },
+    "469": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"V\""
+    },
+    "470": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "471": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"1\""
+    },
+    "472": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
+    },
+    "473": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ล\""
+    },
+    "474": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "475": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "476": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"์\""
+    },
+    "477": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
     "478": {
       "expected_category": "whitespace",
       "expected_severity": "minor",
       "injected_type": "L1",
       "error_type": "whitespace_issue",
       "description": "Double space in target text"
+    },
+    "479": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"่\""
+    },
+    "480": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"e\""
+    },
+    "481": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "482": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ว\""
+    },
+    "483": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ป\""
+    },
+    "485": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "486": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "487": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ง\""
+    },
+    "488": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ย\""
+    },
+    "489": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "490": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"อ\""
+    },
+    "491": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "492": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"้\""
+    },
+    "493": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "494": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"%\""
+    },
+    "495": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "496": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"น\""
+    },
+    "497": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ี\""
+    },
+    "498": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ด\""
+    },
+    "499": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"V\""
+    },
+    "500": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "l1_detected_punctuation",
+      "description": "Auto-detected by L1: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "15_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "20_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "45_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "50_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "75_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "80_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "105_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "110_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \"ม\""
+    },
+    "120_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \")\""
+    },
+    "135_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "140_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \")\""
+    },
+    "165_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "170_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \")\""
+    },
+    "180_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \")\""
+    },
+    "195_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "200_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \")\""
+    },
+    "210_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \")\""
+    },
+    "225_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "230_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \")\""
+    },
+    "240_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \")\""
+    },
+    "255_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "260_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \")\""
+    },
+    "270_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \")\""
+    },
+    "285_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "290_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \")\""
+    },
+    "300_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \")\""
+    },
+    "315_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "345_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "360_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \")\""
+    },
+    "375_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "390_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \")\""
+    },
+    "405_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "435_L1_punctuation": {
+      "expected_category": "punctuation",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_punctuation",
+      "description": "Additional detection: End punctuation mismatch: source ends with \".\", target ends with \"า\""
+    },
+    "120_L1_consistency": {
+      "expected_category": "consistency",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "additional_consistency",
+      "description": "Additional detection: Inconsistent translation: same source text \"For optimal performance, we recommend using the la\" has "
+    },
+    "37_L2_Fluency": {
+      "expected_category": "Fluency",
+      "expected_severity": "major",
+      "injected_type": "L2",
+      "error_type": "additional_Fluency",
+      "description": "Additional detection: The phrase 'เวลาตอบสนองดีขึ้น  449ms' contains a double space before '449ms', which affects readabil"
+    },
+    "62_L2_Accuracy": {
+      "expected_category": "Accuracy",
+      "expected_severity": "major",
+      "injected_type": "L2",
+      "error_type": "additional_Accuracy",
+      "description": "Additional detection: The translation omits the percentage increase in customer satisfaction scores, which is critical inf"
+    },
+    "137_L2_Fluency": {
+      "expected_category": "Fluency",
+      "expected_severity": "major",
+      "injected_type": "L2",
+      "error_type": "additional_Fluency",
+      "description": "Additional detection: The phrase 'ฟีเจอร์ใหม่ช่วยให้ผู้ใช้สามารถส่งออกข้อมูลในรูปแบบ 186: PDF, Excel และ CSV' is awkwardly"
+    },
+    "39_L2_Fluency": {
+      "expected_category": "Fluency",
+      "expected_severity": "major",
+      "injected_type": "L2",
+      "error_type": "additional_Fluency",
+      "description": "Additional detection: The phrase 'การดำเนินการนี้ไม่สามารถย้อนกลับได้ คุณแน่ใจหรือไม่ว่าต้องการลบ 501 รายการ?' is too form"
+    },
+    "134_L2_Fluency": {
+      "expected_category": "Fluency",
+      "expected_severity": "major",
+      "injected_type": "L2",
+      "error_type": "additional_Fluency",
+      "description": "Additional detection: The phrase 'สมาชิกทีมทุกคนต้องสอบผ่านการรับรองด้วยคะแนนขั้นต่ำ 151%' is awkward; the percentage shou"
+    },
+    "150_L2_Fluency": {
+      "expected_category": "Fluency",
+      "expected_severity": "major",
+      "injected_type": "L2",
+      "error_type": "additional_Fluency",
+      "description": "Additional detection: The phrase 'โปรดทราบว่ากำหนดเวลาในการส่งคือ 536 วันทำการนับจากวันนี้' is overly formal and can be si"
     }
   }
 }

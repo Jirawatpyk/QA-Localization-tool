@@ -35,7 +35,9 @@ Synthetic test data for Epic 4 terminal verification (Story 4.8). Contains a 500
 }
 ```
 
-## Injected Error Types
+## Annotation Sources
+
+### Deliberately Injected (88 errors)
 
 | Error Type | Count | Severity | Category | Layer | Description |
 |-----------|-------|----------|----------|-------|-------------|
@@ -45,7 +47,13 @@ Synthetic test data for Epic 4 terminal verification (Story 4.8). Contains a 500
 | consistency_error | 18 | minor | consistency | L2 | Same source text, different target translation |
 | whitespace_issue | 10 | minor | whitespace | L1 | Double spaces or trailing whitespace |
 | placeholder_mismatch | 10 | critical | accuracy | L1 | Placeholder number removed from target |
-| **Total** | **88** | | | | |
+| **Subtotal** | **88** | | | | |
+
+### Auto-Detected by L1 Pipeline (435 additional)
+
+Added by `scripts/expand-baseline.mjs` — legitimate L1 rule engine detections on the generated Thai/EN content (whitespace patterns, number formatting, punctuation differences, etc.).
+
+| **Total Annotations** | **523** | | | | |
 
 ## Computing Precision / Recall
 
