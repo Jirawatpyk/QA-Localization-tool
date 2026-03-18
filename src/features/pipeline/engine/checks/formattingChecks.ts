@@ -151,14 +151,27 @@ export function checkUrlMismatches(
   }
 }
 
+// Languages where period (.) is NOT used as sentence-ending punctuation.
+// Thai, Lao, Khmer, Myanmar use space or no punctuation at sentence boundaries.
+// CJK uses fullwidth period (。) which is handled by isFullwidthEquivalent.
+const NO_PERIOD_LANGS = new Set(['th', 'lo', 'km', 'my'])
+
+function isNoPeriodLang(lang: string): boolean {
+  if (NO_PERIOD_LANGS.has(lang)) return true
+  // BCP-47: check primary subtag (e.g., "th-TH" → "th")
+  const primary = lang.split('-')[0]?.toLowerCase()
+  return primary ? NO_PERIOD_LANGS.has(primary) : false
+}
+
 /**
  * Check end punctuation mismatch between source and target.
  * Skip if both end with alphanumeric characters.
+ * Skip if target language does not use period as sentence terminator (Thai, Lao, Khmer, Myanmar).
  * Map CJK fullwidth terminal punctuation as equivalent.
  */
 export function checkEndPunctuation(
   segment: SegmentRecord,
-  _ctx: SegmentCheckContext,
+  ctx: SegmentCheckContext,
 ): RuleCheckResult | null {
   const sourceEnd = getLastNonWhitespace(segment.sourceText)
   const targetEnd = getLastNonWhitespace(segment.targetText)
@@ -167,6 +180,13 @@ export function checkEndPunctuation(
 
   // Skip if both end with alphanumeric
   if (/[a-zA-Z0-9]/.test(sourceEnd) && /[a-zA-Z0-9]/.test(targetEnd)) return null
+
+  // Skip period mismatch for languages that don't use period as sentence terminator,
+  // but ONLY when target ends with a non-punctuation character (letter/digit/script char).
+  // If target has explicit punctuation (! ? etc.), still flag the mismatch.
+  if (sourceEnd === '.' && isNoPeriodLang(ctx.targetLang) && !/[!?;:。！？]/.test(targetEnd)) {
+    return null
+  }
 
   // Check exact match or fullwidth ↔ halfwidth equivalence
   if (sourceEnd === targetEnd) return null

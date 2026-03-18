@@ -281,9 +281,16 @@ describe('checkEndPunctuation', () => {
     expect(checkEndPunctuation(segment, ctx)).toBeNull()
   })
 
-  it('should flag when source ends with . but target ends with nothing', () => {
+  it('should skip period mismatch for Thai target (Thai does not use . as sentence-ender)', () => {
     const segment = buildSegment({ sourceText: 'Hello.', targetText: 'สวัสดี' })
-    const result = checkEndPunctuation(segment, ctx)
+    // Thai target language → period mismatch is NOT an error
+    expect(checkEndPunctuation(segment, ctx)).toBeNull()
+  })
+
+  it('should flag period mismatch for non-Thai target (e.g., French)', () => {
+    const frCtx: SegmentCheckContext = { sourceLang: 'en-US', targetLang: 'fr-FR' }
+    const segment = buildSegment({ sourceText: 'Hello.', targetText: 'Bonjour' })
+    const result = checkEndPunctuation(segment, frCtx)
     expect(result).not.toBeNull()
     expect(result!.severity).toBe('minor')
     expect(result!.category).toBe('punctuation')
@@ -324,12 +331,17 @@ describe('checkEndPunctuation', () => {
 
   // ── M4: mixed alphanumeric + punctuation end combinations ──
 
-  it('should flag when source ends with . but target ends with digit', () => {
-    // source ends with punct (not alphanumeric), target ends with digit → falls through to mismatch
+  it('should skip period mismatch for Thai target even when target ends with digit', () => {
+    // source ends with '.', Thai target → skip (Thai no-period rule)
     const segment = buildSegment({ sourceText: 'Chapter 3.', targetText: 'บทที่ 3' })
-    const result = checkEndPunctuation(segment, ctx)
+    expect(checkEndPunctuation(segment, ctx)).toBeNull()
+  })
+
+  it('should flag . vs digit for non-Thai target', () => {
+    const deCtx: SegmentCheckContext = { sourceLang: 'en-US', targetLang: 'de-DE' }
+    const segment = buildSegment({ sourceText: 'Chapter 3.', targetText: 'Kapitel 3' })
+    const result = checkEndPunctuation(segment, deCtx)
     expect(result).not.toBeNull()
-    expect(result!.description).toContain('.')
   })
 
   it('should flag when source ends with digit but target ends with .', () => {
@@ -363,28 +375,35 @@ describe('checkEndPunctuation', () => {
 describe('TA: Coverage Gap Tests — formattingChecks', () => {
   const ctx = { sourceLang: 'en-US', targetLang: 'th-TH' } as const
 
-  // G10 (P1): Ellipsis U+2026 vs three dots — different last char
-  it('should flag ellipsis U+2026 vs period as end punctuation mismatch', () => {
+  // G10 (P1): Ellipsis U+2026 vs three dots — Thai target skips period check
+  it('should skip ellipsis vs period for Thai target (no-period lang)', () => {
     const segment = buildSegment({
       sourceText: 'Loading...',
       targetText: 'กำลังโหลด\u2026',
     })
-    const result = checkEndPunctuation(segment, ctx)
-    // Source ends ".", target ends "…" (U+2026) → not in fullwidth map → mismatch
+    // Source ends ".", Thai target → no-period skip applies
+    expect(checkEndPunctuation(segment, ctx)).toBeNull()
+  })
+
+  it('should flag ellipsis vs period for non-Thai target', () => {
+    const esCtx: SegmentCheckContext = { sourceLang: 'en-US', targetLang: 'es-ES' }
+    const segment = buildSegment({
+      sourceText: 'Loading...',
+      targetText: 'Cargando\u2026',
+    })
+    const result = checkEndPunctuation(segment, esCtx)
     expect(result).not.toBeNull()
     expect(result!.category).toBe('punctuation')
   })
 
-  // G6 (P1): Thai maiyamok — different from period
-  it('should flag Thai maiyamok as end punctuation mismatch vs period', () => {
+  // G6 (P1): Thai maiyamok — source ".", Thai target → skip
+  it('should skip Thai maiyamok vs period (no-period lang)', () => {
     const segment = buildSegment({
       sourceText: 'Repeat data.',
       targetText: 'ข้อมูลๆ',
     })
-    const result = checkEndPunctuation(segment, ctx)
-    // Source ends ".", target ends "ๆ" (U+0E46) → mismatch
-    expect(result).not.toBeNull()
-    expect(result!.description).toContain('.')
+    // Source ends ".", Thai target → no-period skip
+    expect(checkEndPunctuation(segment, ctx)).toBeNull()
   })
 
   // G31 (P1): CJK period on Thai target — equiv should NOT apply but currently does

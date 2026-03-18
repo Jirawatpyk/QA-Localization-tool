@@ -686,7 +686,16 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Impact:** Metric reporting inaccuracy — actual precision likely higher when baseline includes all L1-detectable patterns. No user-facing bug.
 - **Fix:** (1) Expand baseline annotations to include all L1-detectable patterns (whitespace, formatting, tag structure). (2) Tune L2 AI prompts to reduce false positives. (3) Add category-aware matching to precision computation (L1 findings vs L1 baseline, L2 findings vs L2 baseline separately).
 - **Effort:** 4-8 ชม.
-- **Status:** RESOLVED (2026-03-18 — expanded baseline from 88→523 annotations via `scripts/expand-baseline.mjs`. Precision 100%, Recall 100% after including all L1-detected patterns)
+- **Status:** SUPERSEDED by TD-AI-003
+
+### TD-AI-003: L1 end-punctuation rule false positive for Thai/Lao/Khmer/Myanmar target languages
+- **Date:** 2026-03-18
+- **Story:** 4.8 (discovered during pipeline verification)
+- **Phase:** verification
+- **Severity:** Medium
+- **Description:** L1 "End punctuation mismatch" flagged ~395/500 Thai segments: source `.` vs Thai character without period. Thai does not use period as sentence terminator.
+- **Fix:** Added language-aware skip in `checkEndPunctuation`: skip period mismatch when target lang is Thai/Lao/Khmer/Myanmar AND target ends with non-punctuation character. If target has explicit punctuation (!/?) still flags correctly.
+- **Status:** RESOLVED (2026-03-18 — `formattingChecks.ts` + 55 unit tests GREEN)
 
 ### TD-ARCH-002: Zustand review store dual-write (flat fields + fileStates Map)
 - **Date:** 2026-03-16
@@ -699,3 +708,63 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Ideal fix:** (1) Refactor 4 Realtime hooks ให้ pass `fileId` param, (2) `selectAllFiltered`/`selectRange` อ่านจาก Map, (3) ลบ flat fields + `createSyncingSet`, (4) Update 9+ test mocks
 - **Effort:** 4-6 ชม.
 - **Status:** DEFERRED → **Epic 5 — หรือเมื่อมี cross-file features ที่ต้องการ single source of truth**
+
+### TD-TEST-010: Pipeline verification E2E tests skipped — no live pipeline in CI
+- **Date:** 2026-03-18
+- **Story:** 4.8
+- **Phase:** ATDD/impl
+- **Severity:** Medium
+- **Files:** `e2e/review-pipeline-verification.spec.ts`
+- **Description:** 7 E2E tests (TA-19, TA-20, TA-21, TA-24, TA-26, TA-27) permanently skipped — require live Inngest dev server + API keys with credits. Pipeline verification done via script (`scripts/verify-pipeline.mjs`) instead. Also TA-25 (ai-cost-verification unit test) never created.
+- **Impact:** No automated regression guard for pipeline precision/recall/cost metrics.
+- **Fix:** (1) Add CI pipeline-verification job with Inngest + API keys as secrets. (2) Create TA-25 integration test. (3) Unskip E2E tests.
+- **Effort:** 4-8 ชม.
+- **Status:** DEFERRED → **Epic 9 — AI pipeline tuning + CI integration**
+
+### TD-TEST-011: Performance benchmark E2E thresholds relaxed for dev mode
+- **Date:** 2026-03-18
+- **Story:** 4.8
+- **Phase:** impl
+- **Severity:** Medium
+- **Files:** `e2e/review-accessibility.spec.ts` (TA-12, TA-13, TA-14)
+- **Description:** AC4 targets: render <2s, nav <100ms, action <200ms. E2E uses 15s/2s/10s (5-50x relaxed) due to React Strict Mode + Turbopack dev overhead. No production-mode CI gate exists.
+- **Impact:** Cannot catch real performance regressions in dev-mode E2E.
+- **Fix:** Add `npm run build && npx playwright test --grep perf` production-mode perf gate in CI with AC4 thresholds.
+- **Effort:** 2-3 ชม.
+- **Status:** DEFERRED → **Epic 5 — CI pipeline hardening**
+
+### TD-TEST-012: Bulk action performance benchmark (50 findings + score recalc) not implemented
+- **Date:** 2026-03-18
+- **Story:** 4.8 Task 6.5
+- **Phase:** impl
+- **Severity:** Low
+- **Files:** `e2e/review-accessibility.spec.ts`
+- **Description:** AC4 requires bulk action on 50 findings < 3s including score recalculation. Deferred as P2 — single-finding benchmarks verified instead.
+- **Impact:** No regression guard for bulk action performance.
+- **Fix:** Add E2E test: Shift+J select 50 → bulk accept → verify score updates in <3s.
+- **Effort:** 1-2 ชม.
+- **Status:** DEFERRED → **Epic 5 — performance hardening**
+
+### TD-TEST-013: Thorough mode pipeline verification not run
+- **Date:** 2026-03-18
+- **Story:** 4.8 Task 7.4
+- **Phase:** verification
+- **Severity:** Low
+- **Files:** `scripts/verify-pipeline.mjs`
+- **Description:** Economy mode verified (139.1s PASS). Thorough mode (L1+L2+L3) not tested — requires ANTHROPIC_API_KEY with credits. AC6 target: <10 min.
+- **Impact:** L3 deduplication and thorough timing unverified.
+- **Fix:** Run Thorough mode via verify-pipeline.mjs with L3 enabled.
+- **Effort:** 1 ชม. (run script + document)
+- **Status:** DEFERRED → **Epic 9 — L3 tuning**
+
+### TD-TEST-014: AI Usage Dashboard + budget threshold manual verification pending
+- **Date:** 2026-03-18
+- **Story:** 4.8 Tasks 7.6, 7.7
+- **Phase:** verification
+- **Severity:** Low
+- **Files:** Admin AI Usage page, budget alert UI
+- **Description:** AC7 requires dashboard totals match DB + budget alert fires. Token logging verified via DB (3 entries, 123K+2.5K tokens). Dashboard UI + budget threshold alert deferred to manual Mona check.
+- **Impact:** No automated verification of dashboard aggregation or alert trigger.
+- **Fix:** Manual verification by Mona via admin UI, or add E2E test.
+- **Effort:** 30 min manual / 2 ชม. E2E
+- **Status:** DEFERRED → **Mona manual check or Epic 5 E2E**
