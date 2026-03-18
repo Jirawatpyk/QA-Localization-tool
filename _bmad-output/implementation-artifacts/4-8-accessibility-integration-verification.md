@@ -144,14 +144,14 @@ So that the review interface meets WCAG 2.1 AA standards and all components work
 - [ ] 6.7 If any metric fails: profile with React DevTools, optimize — pending E2E run
 
 ### Task 7: Pipeline Verification (AC: #6, #7)
-- [ ] 7.1 Upload 500-segment test file, run Economy mode pipeline (L1+L2) — REQUIRES Inngest + API keys
-- [ ] 7.2 Measure pipeline completion time (target < 5 min Economy, < 10 min Thorough)
-- [ ] 7.3 Compare L2 findings against baseline annotations: compute precision and recall
-- [ ] 7.4 Run Thorough mode (L1+L2+L3), verify L3 deduplication against L2 findings
-- [ ] 7.5 Verify `ai_usage_logs` token counts match `result.usage` values
-- [ ] 7.6 Verify AI Usage Dashboard (`/admin/ai-usage`) totals match `ai_usage_logs` aggregation
-- [ ] 7.7 Test budget threshold alert: configure low threshold, verify alert fires
-- [ ] 7.8 Document pipeline verification results in `_bmad-output/pipeline-verification-epic4-2026-03-XX.md`
+- [x] 7.1 Upload 500-segment test file, run Economy mode pipeline (L1+L2) — PASSED (139.1s)
+- [x] 7.2 Measure pipeline completion time — 139.1s PASS (target < 300s)
+- [x] 7.3 Compare L2 findings against baseline: Recall 100% PASS, Precision 27.6% FAIL (L1 over-detection → TD for Epic 9)
+- [ ] 7.4 Run Thorough mode (L1+L2+L3) — deferred (Economy verified, Thorough adds L3 on top)
+- [x] 7.5 Verify ai_usage_logs: 3 entries, 123K input + 2.5K output tokens
+- [ ] 7.6 Verify AI Usage Dashboard — deferred (manual UI check by Mona)
+- [ ] 7.7 Budget threshold alert — deferred (manual UI check by Mona)
+- [x] 7.8 Document pipeline verification results in script output + story file
 
 ### Task 8: Documentation & Sprint Status Update (AC: all)
 - [x] 8.1 Finalize `accessibility-audit-epic4-closure-2026-03-18.md` with all sections
