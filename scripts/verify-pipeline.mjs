@@ -299,15 +299,45 @@ async function main() {
     console.log(`  Status: ${score.status}`)
   }
 
-  // Check ai_usage_logs
+  // Check ai_usage_logs (AC7)
+  console.log('\n[7b/7] Verifying AI cost tracking (AC7)...')
   const aiLogs = await query(`/rest/v1/ai_usage_logs?file_id=eq.${fileId}&select=*&limit=100`)
-  let totalInput = 0, totalOutput = 0
+  let totalInput = 0, totalOutput = 0, totalCost = 0
   for (const log of aiLogs) {
     totalInput += log.input_tokens || 0
     totalOutput += log.output_tokens || 0
+    totalCost += log.estimated_cost_usd || 0
   }
   console.log(`  AI Usage Logs: ${aiLogs.length} entries`)
   console.log(`  Total tokens: ${totalInput} input + ${totalOutput} output`)
+  console.log(`  Estimated cost: $${totalCost.toFixed(4)}`)
+
+  // AC7: Verify token counts are non-zero (basic sanity — exact match requires provider billing)
+  const tokenVerified = totalInput > 0 && totalOutput > 0
+  console.log(`  Token logging: ${tokenVerified ? 'PASS' : 'FAIL'} (input>0 && output>0)`)
+
+  // AC7: Verify each log entry has required fields
+  let logIntegrity = true
+  for (const log of aiLogs) {
+    if (!log.model || !log.layer || log.input_tokens == null || log.output_tokens == null) {
+      console.log(`  WARNING: Incomplete log entry: ${JSON.stringify(log)}`)
+      logIntegrity = false
+    }
+  }
+  console.log(`  Log integrity: ${logIntegrity ? 'PASS' : 'FAIL'} (all entries have model, layer, tokens)`)
+
+  // AC7: Check project-level aggregation matches sum of individual logs
+  const projectAiLogs = await query(
+    `/rest/v1/ai_usage_logs?select=input_tokens,output_tokens,estimated_cost_usd&project_id=eq.${projectId}&limit=1000`
+  )
+  let projInput = 0, projOutput = 0, projCost = 0
+  for (const log of projectAiLogs) {
+    projInput += log.input_tokens || 0
+    projOutput += log.output_tokens || 0
+    projCost += log.estimated_cost_usd || 0
+  }
+  const aggregationMatch = projInput === totalInput && projOutput === totalOutput
+  console.log(`  Aggregation match: ${aggregationMatch ? 'PASS' : 'FAIL'} (project sum == file sum)`)
 
   // Summary
   console.log('\n=== VERIFICATION SUMMARY ===')
@@ -317,6 +347,9 @@ async function main() {
   console.log(`Pipeline time:  ${pipelineTime < 300_000 ? 'PASS' : 'FAIL'}`)
   console.log(`Precision:      ${precision >= 0.7 ? 'PASS' : 'FAIL'}`)
   console.log(`Recall:         ${recall >= 0.6 ? 'PASS' : 'FAIL'}`)
+  console.log(`Token logging:  ${tokenVerified ? 'PASS' : 'FAIL'}`)
+  console.log(`Log integrity:  ${logIntegrity ? 'PASS' : 'FAIL'}`)
+  console.log(`Aggregation:    ${aggregationMatch ? 'PASS' : 'FAIL'}`)
 
   // Cleanup
   console.log('\nCleaning up test data...')

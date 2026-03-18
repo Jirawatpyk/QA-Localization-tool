@@ -709,15 +709,15 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Effort:** 4-6 ชม.
 - **Status:** DEFERRED → **Epic 5 — หรือเมื่อมี cross-file features ที่ต้องการ single source of truth**
 
-### TD-TEST-010: Pipeline + cost verification E2E tests skipped — no live pipeline in CI
+### TD-TEST-010: Pipeline precision/recall E2E tests skipped — no live pipeline in CI
 - **Date:** 2026-03-18
 - **Story:** 4.8
 - **Phase:** ATDD/impl
 - **Severity:** Medium
 - **Files:** `e2e/review-pipeline-verification.spec.ts`
-- **Description:** 7 E2E tests skipped (TA-19, TA-20, TA-21, TA-24 x2, TA-26, TA-27) — require live Inngest dev server + API keys with credits. Covers: L2 precision/recall (AC6), pipeline timing (AC6), AI dashboard totals (AC7), budget threshold alert (AC7). Pipeline verification done via script (`scripts/verify-pipeline.mjs`) instead. TA-25 (ai-cost-verification unit test) not yet created.
-- **Impact:** No automated regression guard for pipeline precision/recall/cost/dashboard metrics.
-- **Fix:** (1) Add CI pipeline-verification job with Inngest + API keys as secrets. (2) Create TA-25 integration test. (3) Unskip E2E tests. **Blocked by: CI infrastructure (Inngest + API key secrets).**
+- **Description:** 5 E2E tests skipped (TA-19, TA-20, TA-21, TA-24 x2) — require live Inngest dev server + API keys. Covers: L2 precision/recall (AC6), L3 deduplication, pipeline timing. Pipeline verification done via script (`scripts/verify-pipeline.mjs`) instead. NOTE: AC7 cost tests (TA-26, TA-27) moved to `e2e/ai-cost-verification.spec.ts` — these seed data via PostgREST and run without live pipeline.
+- **Impact:** No automated regression guard for pipeline precision/recall metrics.
+- **Fix:** (1) Add CI pipeline-verification job with Inngest + API keys as secrets. (2) Unskip E2E tests. **Blocked by: CI infrastructure.**
 - **Effort:** 4-8 ชม.
 - **Status:** DEFERRED → **Epic 9 — AI pipeline tuning + CI integration**
 
@@ -750,3 +750,10 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Impact:** L3 deduplication and thorough timing unverified.
 - **Effort:** 1 ชม. (modify script mode + run + document)
 - **Status:** DEFERRED → **Epic 9 — L3 tuning** (Thorough mode ยังไม่ critical สำหรับ Epic 4 closure — L3 prompt tuning อยู่ใน Epic 9)
+
+### ~~TD-TEST-014: AI Usage Dashboard + budget threshold verification~~
+- **Date:** 2026-03-18
+- **Story:** 4.8 Tasks 7.6, 7.7
+- **Phase:** verification
+- **Severity:** Low
+- **Status:** RESOLVED (2026-03-18) — E2E tests created in `e2e/ai-cost-verification.spec.ts`: TA-26 seeds ai_usage_logs + verifies `/admin/ai-usage` dashboard totals, TA-27 seeds budget + verifies `/projects/:id/settings` budget card. Script verification in `scripts/verify-pipeline.mjs` also enhanced with token/integrity/aggregation checks.

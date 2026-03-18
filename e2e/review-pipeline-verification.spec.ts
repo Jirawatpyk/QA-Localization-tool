@@ -1,10 +1,12 @@
 /**
- * ATDD Story 4.8 — Pipeline & Cost Verification (TDD Red Phase)
- * Tests: TA-19, TA-20, TA-21, TA-24, TA-25, TA-26, TA-27
+ * ATDD Story 4.8 — Pipeline Verification (TDD Red Phase)
+ * Tests: TA-19, TA-20, TA-21, TA-24
  *
  * E2E tests verifying:
  * - AC6: Pipeline precision/recall on 500-segment test file
- * - AC7: AI cost tracking accuracy
+ *
+ * NOTE: AC7 (AI cost tracking) tests moved to e2e/ai-cost-verification.spec.ts
+ * — those tests seed data via PostgREST and don't need live pipeline.
  *
  * Prerequisites:
  * - 500-segment test file at docs/test-data/verification-baseline/verification-500.sdlxliff
@@ -66,32 +68,6 @@ test.describe('Pipeline Verification — L2 Precision & Recall', () => {
 
     test('should complete Thorough mode in under 10 minutes for 500 segments', async ({ page }) => {
       // ASSERT: Pipeline start-to-completion < 600000ms (10 min)
-      expect(true).toBe(false)
-    })
-  })
-})
-
-test.describe('AI Cost Tracking Verification', () => {
-  test.describe('TA-26: Dashboard totals match DB (AC7, P2)', () => {
-    test.skip(true, SKIP_REASON)
-
-    test('should display AI Usage Dashboard totals matching ai_usage_logs aggregation', async ({
-      page,
-    }) => {
-      // ARRANGE: After pipeline run, navigate to /admin/ai-usage
-      // ACT: Read displayed totals
-      // ASSERT: Match against SELECT SUM(input_tokens), SUM(output_tokens) FROM ai_usage_logs
-      expect(true).toBe(false)
-    })
-  })
-
-  test.describe('TA-27: Budget threshold alert (AC7, P2)', () => {
-    test.skip(true, SKIP_REASON)
-
-    test('should fire budget alert when spend exceeds configured threshold', async ({ page }) => {
-      // ARRANGE: Set low budget threshold (e.g., $0.01)
-      // ACT: Run pipeline (will exceed threshold)
-      // ASSERT: Budget alert notification visible in UI
       expect(true).toBe(false)
     })
   })
