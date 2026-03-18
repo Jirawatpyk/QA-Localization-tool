@@ -200,7 +200,7 @@ async function main() {
         fileIds: [fileId],
         projectId,
         tenantId,
-        userId: 'system-verification',
+        userId: '00000000-0000-4000-a000-000000000002',
         mode: 'thorough',
         uploadBatchId: batchId,
       },

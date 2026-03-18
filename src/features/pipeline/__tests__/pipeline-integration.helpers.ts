@@ -100,7 +100,7 @@ export async function triggerPipeline(opts: {
         fileIds: opts.fileIds,
         projectId: opts.projectId,
         tenantId: opts.tenantId,
-        userId: 'integration-test',
+        userId: '00000000-0000-4000-a000-000000000001', // static UUID for integration test audit logs
         mode: opts.mode,
         uploadBatchId: batchId,
       },

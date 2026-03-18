@@ -114,7 +114,7 @@ async function main() {
       name: 'pipeline.batch-started',
       data: {
         batchId: randomUUID(), fileIds: [fileId], projectId, tenantId,
-        userId: 'system', mode: 'economy', uploadBatchId: randomUUID(),
+        userId: '00000000-0000-4000-a000-000000000003', mode: 'economy', uploadBatchId: randomUUID(),
       },
     }),
   })
