@@ -709,6 +709,39 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Fix:** (1) Prompt example: clarified UUID only, no brackets. (2) Parser: defensive bracket strip before validation. (3) L3: same fixes. (4) Regression test added.
 - **Status:** RESOLVED (2026-03-18 — L2 Precision 75%, Recall 60% after fix)
 
+### TD-AI-005: CAS guard race — findings orphaned when status UPDATE fails after INSERT
+- **Date:** 2026-03-18
+- **Story:** 4.8 (discovered during pipeline audit)
+- **Phase:** verification
+- **Severity:** High
+- **Files:** `runL2ForFile.ts`, `runL3ForFile.ts`
+- **Description:** If L2 findings INSERT succeeds but file status UPDATE to `l2_completed` fails → Inngest retry → CAS guard (`WHERE status='l1_completed'`) fails because status = `l2_processing` → `NonRetriableError` → findings orphaned in DB without being scored.
+- **Fix:** Wrap findings INSERT + status UPDATE in same transaction, or use compensating DELETE on retry.
+- **Effort:** 2-4 ชม.
+- **Status:** DEFERRED → **Epic 5 or dedicated pipeline reliability story**
+
+### TD-AI-006: L3 segment filter excludes segments from failed L2 chunks
+- **Date:** 2026-03-18
+- **Story:** 4.8 (discovered during pipeline audit)
+- **Phase:** verification
+- **Severity:** High
+- **Files:** `runL3ForFile.ts:228-239`
+- **Description:** L3 filters segments to only those flagged by L2 (`l2FlaggedSegmentIds`). If an L2 chunk fails (partial failure), segments in that chunk have 0 L2 findings → excluded from L3 analysis. But exclusion is because L2 failed, not because segment is clean.
+- **Fix:** Track which segments were in failed chunks. Include those in L3 scope as "unscreened" segments.
+- **Effort:** 2-4 ชม.
+- **Status:** DEFERRED → **Epic 5 or dedicated pipeline reliability story**
+
+### TD-AI-007: L2 prompt "L1 checks glossary" gap with lowConfidenceMatch
+- **Date:** 2026-03-18
+- **Story:** 4.8 (discovered during pipeline audit)
+- **Phase:** verification
+- **Severity:** Medium
+- **Files:** `build-l2-prompt.ts:67`, `glossaryChecks.ts:31`
+- **Description:** L2 prompt says "L1 already checks glossary terms" but L1 `checkGlossaryComplianceRule` skips `lowConfidenceMatches`. If L1 doesn't flag a low-confidence glossary issue, it's not in `formatL1Findings` → AI doesn't know L1 "looked and decided not to flag" → AI may skip it too.
+- **Fix:** Either (a) send lowConfidenceMatches as "reviewed but below threshold" in L1 findings section, or (b) remove "glossary terms" from L2 prompt's "L1 already checks" list.
+- **Effort:** 1-2 ชม.
+- **Status:** DEFERRED → **Epic 9 (AI prompt tuning)**
+
 ### TD-ARCH-002: Zustand review store dual-write (flat fields + fileStates Map)
 - **Date:** 2026-03-16
 - **Story:** TD-ARCH-001 refactor

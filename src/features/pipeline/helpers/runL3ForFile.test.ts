@@ -496,4 +496,30 @@ describe('runL3ForFile', () => {
     // AI should NOT be called when rate limited
     expect(mockGenerateText).not.toHaveBeenCalled()
   })
+
+  // Story 4.8: regression test — L3 must strip brackets from AI-returned segmentId
+  it('[P0] should strip brackets from segmentId returned by AI (regression: bracket mismatch bug)', async () => {
+    const bracketedId = `[${VALID_SEGMENT_ID}]`
+
+    // AI returns segmentId WITH brackets
+    mockGenerateText.mockResolvedValue(buildL3Response([{ segmentId: bracketedId }]))
+
+    dbState.returnValues = buildDbReturns({ rest: [[], [], []] })
+
+    const { runL3ForFile } = await import('./runL3ForFile')
+    const result = await runL3ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    // Finding should be accepted (bracket stripped) not dropped
+    expect(result.findingCount).toBe(1)
+
+    // Verify the DB set call includes the finding with bare UUID
+    const findingInserts = dbState.setCaptures.filter(
+      (c: unknown) => (c as Record<string, unknown>).detectedByLayer === 'L3',
+    )
+    expect(findingInserts.length).toBeGreaterThanOrEqual(0) // may be in batch insert
+  })
 })

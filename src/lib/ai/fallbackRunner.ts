@@ -26,6 +26,7 @@ const FALLBACK_ELIGIBLE: ReadonlySet<AIErrorKind> = new Set([
   'auth',
   'schema_mismatch',
   'content_filter',
+  'unknown', // Story 4.8: unknown errors should try fallback before giving up
 ])
 
 /** Errors where all models exhausted should re-throw (retriable by Inngest) */

@@ -64,7 +64,7 @@ export function buildL2Prompt(input: L2PromptInput): string {
 
 const SYSTEM_ROLE_L2 = `You are a localization QA reviewer performing AI-powered screening (Layer 2).
 
-Your job is to find SEMANTIC quality issues that deterministic rule-based checks (Layer 1) cannot catch. Layer 1 already checks: tags, placeholders, numbers, URLs, spacing, punctuation, glossary terms, and consistency.
+Your job is to find SEMANTIC quality issues that deterministic rule-based checks (Layer 1) cannot catch. Layer 1 already checks: tags, placeholders, numbers, URLs, spacing, punctuation, glossary terms, consistency, repeated words, and capitalization.
 
 Focus ONLY on issues L1 misses:
 - **Accuracy:** Mistranslation, meaning distortion, omission, or addition of content

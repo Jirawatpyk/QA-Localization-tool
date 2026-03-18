@@ -4,23 +4,28 @@ import type { RuleCheckResult, SegmentCheckContext, SegmentRecord } from '../typ
 
 /**
  * Check for double (multiple consecutive) spaces in target text.
+ * Skip if source also has double spaces at the same positions (intentional formatting).
  */
 export function checkDoubleSpaces(
   segment: SegmentRecord,
   _ctx: SegmentCheckContext,
 ): RuleCheckResult | null {
-  if (/ {2,}/.test(segment.targetText)) {
-    return {
-      segmentId: segment.id,
-      category: 'spacing',
-      severity: 'minor',
-      description: 'Double spaces detected in target text',
-      suggestedFix: 'Replace multiple consecutive spaces with a single space',
-      sourceExcerpt: segment.sourceText,
-      targetExcerpt: segment.targetText,
-    }
+  const targetHasDouble = / {2,}/.test(segment.targetText)
+  if (!targetHasDouble) return null
+
+  // Skip if source also has double spaces (likely intentional formatting preserved from source)
+  const sourceHasDouble = / {2,}/.test(segment.sourceText)
+  if (sourceHasDouble) return null
+
+  return {
+    segmentId: segment.id,
+    category: 'spacing',
+    severity: 'minor',
+    description: 'Double spaces detected in target text',
+    suggestedFix: 'Replace multiple consecutive spaces with a single space',
+    sourceExcerpt: segment.sourceText,
+    targetExcerpt: segment.targetText,
   }
-  return null
 }
 
 /**
