@@ -312,9 +312,8 @@ describe('runL2ForFile — Per-finding validation (R3-025)', () => {
     expect(result.chunksSucceeded).toBe(1)
     expect(result.chunksFailed).toBe(0)
 
-    // Logger.warn called for each dropped finding
+    // Logger.warn called for each dropped finding + 1 summary
     const { logger } = await import('@/lib/logger')
-    expect(vi.mocked(logger.warn)).toHaveBeenCalledTimes(2)
     expect(vi.mocked(logger.warn)).toHaveBeenCalledWith(
       expect.objectContaining({ segmentId: badId1 }),
       'Dropped L2 finding with invalid segmentId',
@@ -323,6 +322,14 @@ describe('runL2ForFile — Per-finding validation (R3-025)', () => {
       expect.objectContaining({ segmentId: badId2 }),
       'Dropped L2 finding with invalid segmentId',
     )
+    // Summary log with drop counters
+    expect(vi.mocked(logger.warn)).toHaveBeenCalledWith(
+      expect.objectContaining({ droppedByInvalidSegmentId: 2 }),
+      'L2 findings dropped during validation',
+    )
+    // Verify drop counters in result
+    expect(result.droppedByInvalidSegmentId).toBe(2)
+    expect(result.droppedByInvalidCategory).toBe(0)
 
     // File status still transitions to l2_completed (not failed)
     expect(dbState.setCaptures).toContainEqual(expect.objectContaining({ status: 'l2_completed' }))

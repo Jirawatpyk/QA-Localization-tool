@@ -393,6 +393,7 @@ Claude Opus 4.6 (1M context)
 ### Production Bugs Found During Verification
 - **PB-1 (TD-AI-003)**: L1 Rule Engine `checkEndPunctuation` false positive for Thai — source `.` vs Thai target without period flagged as error on ~395/500 segments (79%). Thai does not use period as sentence terminator. **FIXED**: added language-aware skip for Thai/Lao/Khmer/Myanmar in `formattingChecks.ts`. 55 unit tests GREEN.
 - **PB-2 (TD-AI-004) CRITICAL**: L2/L3 AI findings silently dropped since Story 3.2a (2026-03-01, 17 days). Prompt displayed segments as `[uuid]`, AI returned `[uuid]`, but validation Set stored bare `uuid` → `has("[uuid]")` = false → every finding dropped. Pipeline reported "success, 0 findings" with no error. **FIXED**: prompt example clarified + defensive bracket strip in runL2ForFile/runL3ForFile. L2 now works: Precision 75%, Recall 60%. Root cause: no integration test with real AI call in Epic 3.
+- **PB-3: L2 category validation missing + drop counter absent.** AI could return invalid category → inserted to DB without validation. Drop counter not tracked in return value. **FIXED**: added runtime taxonomy category validation in runL2ForFile + `droppedByInvalidSegmentId`/`droppedByInvalidCategory` counters in L2Result type.
 
 ### Completion Notes List
 - Task 1: Generated 500-segment SDLXLIFF (88 injected errors) via `scripts/generate-verification-data.mjs`. Parser-compatible verified via fast-xml-parser.

@@ -296,6 +296,8 @@ describe('retryFailedLayers finding deduplication (R3-030)', () => {
     // Both calls return findingCount=3 (the mock simulates fresh L2 analysis).
     const consistentL2Result: L2Result = {
       findingCount: 3,
+      droppedByInvalidSegmentId: 0,
+      droppedByInvalidCategory: 0,
       duration: 200,
       aiModel: 'gpt-4o-mini',
       chunksTotal: 1,

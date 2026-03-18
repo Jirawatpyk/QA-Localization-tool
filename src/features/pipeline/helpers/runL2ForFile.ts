@@ -50,6 +50,8 @@ export type L2MappedFinding = {
 
 export type L2Result = {
   findingCount: number
+  droppedByInvalidSegmentId: number
+  droppedByInvalidCategory: number
   duration: number
   aiModel: string
   chunksTotal: number
@@ -352,6 +354,12 @@ export async function runL2ForFile({
     // Step 7: Flatten + validate findings from successful chunks
     const segmentIdSet = new Set(segmentRows.map((s) => s.id))
     const allFindings: (L2MappedFinding & { actualModel: string })[] = []
+    let droppedByInvalidSegmentId = 0
+    let droppedByInvalidCategory = 0
+
+    // Build valid category set from taxonomy (if provided)
+    const validCategories =
+      taxonomyRows.length > 0 ? new Set(taxonomyRows.map((t) => t.category.toLowerCase())) : null // null = no taxonomy → accept any category
 
     for (const cr of chunkResults) {
       if (!cr.success || !cr.data) continue
@@ -364,6 +372,7 @@ export async function runL2ForFile({
 
         // Validate segmentId exists in this file (open question #5 from spike guide)
         if (!segmentIdSet.has(segmentId)) {
+          droppedByInvalidSegmentId++
           logger.warn(
             {
               fileId,
@@ -372,6 +381,21 @@ export async function runL2ForFile({
               chunkIndex: cr.chunkIndex,
             },
             'Dropped L2 finding with invalid segmentId',
+          )
+          continue
+        }
+
+        // Validate category against taxonomy (if taxonomy provided)
+        if (validCategories && !validCategories.has(f.category.toLowerCase())) {
+          droppedByInvalidCategory++
+          logger.warn(
+            {
+              fileId,
+              segmentId,
+              category: f.category,
+              chunkIndex: cr.chunkIndex,
+            },
+            'Dropped L2 finding with invalid category (not in taxonomy)',
           )
           continue
         }
@@ -386,6 +410,13 @@ export async function runL2ForFile({
           actualModel: chunkModel,
         })
       }
+    }
+
+    if (droppedByInvalidSegmentId > 0 || droppedByInvalidCategory > 0) {
+      logger.warn(
+        { fileId, droppedByInvalidSegmentId, droppedByInvalidCategory },
+        'L2 findings dropped during validation',
+      )
     }
 
     // Step 8: Map to DB inserts (enrich with excerpts from loaded segments)
@@ -487,6 +518,8 @@ export async function runL2ForFile({
 
     return {
       findingCount: allFindings.length,
+      droppedByInvalidSegmentId,
+      droppedByInvalidCategory,
       duration,
       aiModel: modelId,
       chunksTotal: chunks.length,
