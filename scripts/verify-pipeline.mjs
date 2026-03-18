@@ -306,7 +306,7 @@ async function main() {
   for (const log of aiLogs) {
     totalInput += log.input_tokens || 0
     totalOutput += log.output_tokens || 0
-    totalCost += log.estimated_cost_usd || 0
+    totalCost += log.estimated_cost || 0
   }
   console.log(`  AI Usage Logs: ${aiLogs.length} entries`)
   console.log(`  Total tokens: ${totalInput} input + ${totalOutput} output`)
@@ -328,13 +328,13 @@ async function main() {
 
   // AC7: Check project-level aggregation matches sum of individual logs
   const projectAiLogs = await query(
-    `/rest/v1/ai_usage_logs?select=input_tokens,output_tokens,estimated_cost_usd&project_id=eq.${projectId}&limit=1000`
+    `/rest/v1/ai_usage_logs?select=input_tokens,output_tokens,estimated_cost&project_id=eq.${projectId}&limit=1000`
   )
   let projInput = 0, projOutput = 0, projCost = 0
   for (const log of projectAiLogs) {
     projInput += log.input_tokens || 0
     projOutput += log.output_tokens || 0
-    projCost += log.estimated_cost_usd || 0
+    projCost += log.estimated_cost || 0
   }
   const aggregationMatch = projInput === totalInput && projOutput === totalOutput
   console.log(`  Aggregation match: ${aggregationMatch ? 'PASS' : 'FAIL'} (project sum == file sum)`)
