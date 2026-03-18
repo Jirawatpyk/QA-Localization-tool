@@ -201,7 +201,7 @@ async function main() {
         projectId,
         tenantId,
         userId: 'system-verification',
-        mode: 'economy',
+        mode: 'thorough',
         uploadBatchId: batchId,
       },
     }),
@@ -214,7 +214,7 @@ async function main() {
   const startTime = Date.now()
 
   try {
-    await pollFileStatus(fileId, 'l2_completed', 300_000) // 5 min timeout
+    await pollFileStatus(fileId, 'l3_completed', 600_000) // 10 min timeout (Thorough: L1+L2+L3)
   } catch (err) {
     // Check if file is still in 'uploaded' — means pipeline didn't pick it up
     const [currentFile] = await query(`/rest/v1/files?id=eq.${fileId}&select=status`)

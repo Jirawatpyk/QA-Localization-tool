@@ -177,6 +177,65 @@ export async function cleanupTenantProject(
   }
 }
 
+export async function parseVerificationSegments(): Promise<
+  Array<{
+    segmentNumber: number
+    sourceText: string
+    targetText: string
+  }>
+> {
+  const fs = await import('node:fs')
+  const path = await import('node:path')
+  const sdlxliffPath = path.join(
+    process.cwd(),
+    'docs/test-data/verification-baseline/verification-500.sdlxliff',
+  )
+  const sdlxliffText = fs.readFileSync(sdlxliffPath, 'utf-8')
+
+  const decode = (s: string) =>
+    s
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+
+  const segments: Array<{ segmentNumber: number; sourceText: string; targetText: string }> = []
+  for (let i = 1; i <= 500; i++) {
+    const re = new RegExp(
+      `<trans-unit id="tu-${i}">.*?<seg-source>\\s*<mrk[^>]*>(.*?)</mrk>.*?<target>\\s*<mrk[^>]*>(.*?)</mrk>`,
+      's',
+    )
+    const match = sdlxliffText.match(re)
+    if (match) {
+      segments.push({
+        segmentNumber: i,
+        sourceText: decode(match[1]!),
+        targetText: decode(match[2]!),
+      })
+    }
+  }
+  return segments
+}
+
+export async function loadBaselineAnnotations(): Promise<
+  Record<string, { expected_category: string; expected_severity: string; injected_type: string }>
+> {
+  const fs = await import('node:fs')
+  const path = await import('node:path')
+  const annotationsPath = path.join(
+    process.cwd(),
+    'docs/test-data/verification-baseline/baseline-annotations.json',
+  )
+  const data = JSON.parse(fs.readFileSync(annotationsPath, 'utf-8')) as {
+    segments: Record<
+      string,
+      { expected_category: string; expected_severity: string; injected_type: string }
+    >
+  }
+  return data.segments
+}
+
 export const TEST_SEGMENTS = [
   {
     segmentNumber: 1,
