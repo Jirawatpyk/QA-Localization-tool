@@ -731,16 +731,35 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Effort:** 2-4 ชม.
 - **Status:** DEFERRED → **Epic 5 or dedicated pipeline reliability story**
 
-### TD-AI-007: L2 prompt "L1 checks glossary" gap with lowConfidenceMatch
+### ~~TD-AI-007: L2 prompt "L1 checks glossary" gap with lowConfidenceMatch~~
 - **Date:** 2026-03-18
 - **Story:** 4.8 (discovered during pipeline audit)
 - **Phase:** verification
 - **Severity:** Medium
 - **Files:** `build-l2-prompt.ts:67`, `glossaryChecks.ts:31`
-- **Description:** L2 prompt says "L1 already checks glossary terms" but L1 `checkGlossaryComplianceRule` skips `lowConfidenceMatches`. If L1 doesn't flag a low-confidence glossary issue, it's not in `formatL1Findings` → AI doesn't know L1 "looked and decided not to flag" → AI may skip it too.
-- **Fix:** Either (a) send lowConfidenceMatches as "reviewed but below threshold" in L1 findings section, or (b) remove "glossary terms" from L2 prompt's "L1 already checks" list.
-- **Effort:** 1-2 ชม.
-- **Status:** DEFERRED → **Epic 9 (AI prompt tuning)**
+- **Description:** L2 prompt says "L1 already checks glossary terms" but L1 `checkGlossaryComplianceRule` skips `lowConfidenceMatches`.
+- **Status:** RESOLVED (2026-03-18) — Updated L2 prompt: removed "glossary terms" from L1-checks list, added "glossary violations that L1 missed (partial matches, context-dependent terms)" to Terminology focus area.
+
+### ~~TD-AI-008: L3 findings not deduplicated against L2 — duplicate segment+category~~
+- **Date:** 2026-03-18
+- **Story:** 4.8 (discovered during Thorough mode E2E)
+- **Phase:** verification
+- **Severity:** Medium
+- **Files:** `runL3ForFile.ts:523-576`
+- **Description:** L3 findings that confirm L2 (same segment+category) were inserted into DB but never deleted after confirm. Step 9b boosted L2 confidence + appended [L3 Confirmed] but left the duplicate L3 row. Also category comparison was case-sensitive (L2 "Accuracy" vs L3 "accuracy" = no match).
+- **Status:** RESOLVED (2026-03-18) — Added dedup deletion after confirm + case-insensitive category matching.
+
+### TD-AI-009: L2 recall 52% — gpt-4o-mini low detection rate for semantic issues
+- **Date:** 2026-03-18
+- **Story:** 4.8 (discovered during pipeline verification)
+- **Phase:** verification
+- **Severity:** Medium
+- **Files:** `build-l2-prompt.ts`, pipeline prompts
+- **Description:** L2 (gpt-4o-mini) detects only ~16/33 semantic baseline issues (glossary_violation, consistency_error). Recall 52% vs AC6 target 60%. L1 detects 46/55 deterministic issues correctly. Combined recall limited by L2 prompt effectiveness.
+- **Impact:** Users miss ~48% of semantic QA issues in Economy mode.
+- **Fix:** (1) Improve L2 prompt with examples and few-shot patterns. (2) Add glossary context to L2 prompt. (3) Consider model upgrade for L2.
+- **Effort:** 4-8 ชม.
+- **Status:** DEFERRED → **Epic 9 — AI prompt tuning + model evaluation**
 
 ### TD-TEST-006: Missing real AI integration test for L2/L3 pipeline
 - **Date:** 2026-03-18

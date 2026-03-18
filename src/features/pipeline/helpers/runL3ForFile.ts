@@ -525,9 +525,27 @@ export async function runL3ForFile({
     // for the same segment, skip confirm to prevent inconsistent state (confidence boosted but
     // description says disagrees). See TA Gap Q analysis.
     const l2Findings = priorFindings.filter((f) => f.detectedByLayer === 'L2')
+    // Track L3 finding IDs that duplicate L2 (same segment+category) — will be deleted after confirm
+    const l3DuplicateIds: string[] = []
+
     if (l2Findings.length > 0 && allFindings.length > 0) {
       const contradictedSegmentIds = new Set(
         allFindings.filter((f) => f.category === 'false_positive_review').map((f) => f.segmentId),
+      )
+
+      // Query freshly inserted L3 findings to get their DB IDs for dedup deletion
+      const insertedL3 = await db
+        .select({ id: findings.id, segmentId: findings.segmentId, category: findings.category })
+        .from(findings)
+        .where(
+          and(
+            withTenant(findings.tenantId, tenantId),
+            eq(findings.fileId, fileId),
+            eq(findings.detectedByLayer, 'L3'),
+          ),
+        )
+      const l3BySegCat = new Map(
+        insertedL3.map((f) => [`${f.segmentId}:${f.category.toLowerCase()}`, f.id]),
       )
 
       await db.transaction(async (tx) => {
@@ -552,8 +570,11 @@ export async function runL3ForFile({
             // Skip if this segment also has a false_positive_review (contradict takes priority)
             if (contradictedSegmentIds.has(l3Finding.segmentId)) continue
 
+            // Case-insensitive category match (L2 may use "Accuracy", L3 "accuracy")
             const matchedL2 = l2Findings.find(
-              (l2) => l2.segmentId === l3Finding.segmentId && l2.category === l3Finding.category,
+              (l2) =>
+                l2.segmentId === l3Finding.segmentId &&
+                l2.category.toLowerCase() === l3Finding.category.toLowerCase(),
             )
             if (!matchedL2) continue
 
@@ -570,7 +591,25 @@ export async function runL3ForFile({
                 description: `${matchedL2.description}\n\n[L3 Confirmed]`,
               })
               .where(and(withTenant(findings.tenantId, tenantId), eq(findings.id, matchedL2.id)))
+
+            // Mark the duplicate L3 finding for deletion
+            const l3Key = `${l3Finding.segmentId}:${l3Finding.category.toLowerCase()}`
+            const l3DbId = l3BySegCat.get(l3Key)
+            if (l3DbId) l3DuplicateIds.push(l3DbId)
           }
+        }
+
+        // Delete L3 findings that confirmed L2 (dedup — AC6)
+        if (l3DuplicateIds.length > 0) {
+          for (const dupId of l3DuplicateIds) {
+            await tx
+              .delete(findings)
+              .where(and(withTenant(findings.tenantId, tenantId), eq(findings.id, dupId)))
+          }
+          logger.info(
+            { fileId, count: l3DuplicateIds.length },
+            'L3 dedup: removed confirmed-duplicate findings',
+          )
         }
       })
     }
