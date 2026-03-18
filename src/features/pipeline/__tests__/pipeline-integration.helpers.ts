@@ -13,6 +13,20 @@ export const INNGEST_DEV_URL = process.env.INNGEST_DEV_URL ?? ''
 const OPENAI_KEY = process.env.OPENAI_API_KEY ?? ''
 /* eslint-enable no-restricted-syntax */
 
+// ── Timeout Constants (no magic numbers — TEA quality rule) ──
+export const TIMEOUT = {
+  SETUP: 30_000,
+  CLEANUP: 10_000,
+  ECONOMY_PIPELINE: 300_000, // 5 min
+  THOROUGH_PIPELINE: 600_000, // 10 min
+  ECONOMY_TEST: 360_000, // 6 min (pipeline + assertions)
+  THOROUGH_TEST: 660_000, // 11 min
+  EDGE_CASE: 120_000, // 2 min
+  GLOSSARY_TEST: 360_000, // 6 min
+  SCORE_POLL: 30_000,
+  POLL_INTERVAL: 3_000,
+} as const
+
 export const HAS_PREREQUISITES =
   SUPABASE_URL.length > 0 &&
   SERVICE_ROLE_KEY.length > 0 &&
@@ -139,6 +153,28 @@ export async function setFileParsed(fileId: string): Promise<void> {
     headers: { ...adminHeaders, Prefer: 'return=minimal' },
     body: JSON.stringify({ status: 'parsed' }),
   })
+}
+
+export async function cleanupTenantProject(
+  tenantId: string | undefined,
+  projectId: string | undefined,
+): Promise<void> {
+  if (projectId) {
+    await fetch(`${SUPABASE_URL}/rest/v1/files?project_id=eq.${projectId}`, {
+      method: 'DELETE',
+      headers: adminHeaders,
+    })
+    await fetch(`${SUPABASE_URL}/rest/v1/projects?id=eq.${projectId}`, {
+      method: 'DELETE',
+      headers: adminHeaders,
+    })
+  }
+  if (tenantId) {
+    await fetch(`${SUPABASE_URL}/rest/v1/tenants?id=eq.${tenantId}`, {
+      method: 'DELETE',
+      headers: adminHeaders,
+    })
+  }
 }
 
 export const TEST_SEGMENTS = [
