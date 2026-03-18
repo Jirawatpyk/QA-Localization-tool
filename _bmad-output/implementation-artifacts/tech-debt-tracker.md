@@ -810,16 +810,13 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Low
 - **Status:** RESOLVED (2026-03-18) — CR R1 fix: added TA-12b E2E test in `e2e/review-accessibility.spec.ts` (Shift+J select 50 → bulk accept → measure time)
 
-### TD-TEST-013: Thorough mode pipeline verification not run
+### ~~TD-TEST-013: Thorough mode pipeline verification not run~~
 - **Date:** 2026-03-18
 - **Story:** 4.8 Task 7.4
 - **Phase:** verification
 - **Severity:** Low
-- **Files:** `scripts/verify-pipeline.mjs`
-- **Description:** Economy mode verified (139.1s PASS). Thorough mode (L1+L2+L3) not tested. AC6 target: <10 min. API keys available — run with: `npx dotenv-cli -e .env.local -- node scripts/verify-pipeline.mjs` (modify script to use `mode: 'thorough'`)
-- **Impact:** L3 deduplication and thorough timing unverified.
-- **Effort:** 1 ชม. (modify script mode + run + document)
-- **Status:** DEFERRED → **Epic 9 — L3 tuning** (Thorough mode ยังไม่ critical สำหรับ Epic 4 closure — L3 prompt tuning อยู่ใน Epic 9)
+- **Files:** `e2e/review-pipeline-verification.spec.ts`
+- **Status:** RESOLVED (2026-03-18) — Thorough mode E2E fully implemented + verified. L1 (70 findings) + L2 (5 findings) + L3 (1 finding, 10K tokens, success). L3 dedup: 0 duplicates. Thorough timing: 238.8s (<10m). 12/12 E2E PASSED.
 
 ### ~~TD-TEST-014: AI Usage Dashboard + budget threshold verification~~
 - **Date:** 2026-03-18
