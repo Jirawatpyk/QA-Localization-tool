@@ -84,7 +84,13 @@
 2. `build-l2-prompt.ts:88` — output example บอก AI ว่า segmentId = `"[abc-123]"`
 3. `runL2ForFile.ts:362` — validation ด้วย `segmentIdSet.has(id)` → Set เก็บ UUID ล้วน → `has("[uuid]")` = false → **drop ทุก finding**
 
-**ทำไมไม่มีใครเห็น:** Pipeline report "สำเร็จ 0 findings" ไม่มี error status แค่ `logger.warn`
+**Bug มีมาตั้งแต่ Story 3.2a (commit `559c908`, 2026-03-01)** — L2 ไม่เคยสร้าง finding จริงเลย 17 วัน
+
+**ทำไมไม่มีใครเห็น:**
+- Pipeline report "สำเร็จ 0 findings" — ไม่มี error status แค่ `logger.warn`
+- Epic 3 unit tests mock AI response → ไม่ผ่าน real AI call → ไม่เจอ bracket issue
+- Epic 3 E2E tests seed findings ตรงเข้า DB → ไม่ผ่าน L2 pipeline → ไม่เจอ
+- **ไม่เคยมี integration test ที่ run real AI + verify findings insert**
 
 **Fix applied:**
 - Prompt: แก้ example ให้ชัดว่า UUID ไม่มี brackets
