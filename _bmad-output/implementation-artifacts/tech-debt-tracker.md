@@ -731,14 +731,16 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Effort:** 2-4 ชม.
 - **Status:** DEFERRED → **Epic 5 or dedicated pipeline reliability story**
 
-### ~~TD-AI-007: L2 prompt "L1 checks glossary" gap with lowConfidenceMatch~~
+### TD-AI-007: L2 prompt "L1 checks glossary" gap with lowConfidenceMatch
 - **Date:** 2026-03-18
 - **Story:** 4.8 (discovered during pipeline audit)
 - **Phase:** verification
 - **Severity:** Medium
 - **Files:** `build-l2-prompt.ts:67`, `glossaryChecks.ts:31`
-- **Description:** L2 prompt says "L1 already checks glossary terms" but L1 `checkGlossaryComplianceRule` skips `lowConfidenceMatches`.
-- **Status:** RESOLVED (2026-03-18) — Updated L2 prompt: removed "glossary terms" from L1-checks list, added "glossary violations that L1 missed (partial matches, context-dependent terms)" to Terminology focus area.
+- **Description:** L2 prompt says "L1 already checks glossary terms" but L1 `checkGlossaryComplianceRule` skips `lowConfidenceMatches`. Partial fix applied (removed "glossary terms" from L1-checks list) but no measurable improvement — L2 still needs `lowConfidenceMatches` sent as context to effectively detect glossary violations.
+- **Fix:** Send `lowConfidenceMatches` from L1 glossary check as additional context in L2 prompt (option a from original TD).
+- **Effort:** 2-3 ชม.
+- **Status:** DEFERRED → **Epic 9 — AI prompt tuning** (prompt text change alone insufficient, needs data pipeline change)
 
 ### ~~TD-AI-008: L3 findings not deduplicated against L2 — duplicate segment+category~~
 - **Date:** 2026-03-18
@@ -803,12 +805,15 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Effort:** 2-3 ชม.
 - **Status:** DEFERRED → **Epic 5 — CI pipeline hardening**
 
-### ~~TD-TEST-012: Bulk action performance benchmark (50 findings + score recalc) not implemented~~
+### TD-TEST-012: Bulk action performance benchmark (50 findings + score recalc) not implemented
 - **Date:** 2026-03-18
 - **Story:** 4.8 Task 6.5
 - **Phase:** impl
 - **Severity:** Low
-- **Status:** RESOLVED (2026-03-18) — CR R1 fix: added TA-12b E2E test in `e2e/review-accessibility.spec.ts` (Shift+J select 50 → bulk accept → measure time)
+- **Files:** `e2e/review-accessibility.spec.ts`
+- **Description:** AC4 requires bulk action on 50 findings < 3s. TA-12b test written but FAILED — used Shift+J (not a registered shortcut). Bulk selection uses Shift+Click, not Shift+J. Test needs rewrite with correct bulk select mechanism.
+- **Effort:** 1 ชม.
+- **Status:** DEFERRED → **Epic 5** (TA-12b test needs correct Shift+Click bulk select implementation)
 
 ### ~~TD-TEST-013: Thorough mode pipeline verification not run~~
 - **Date:** 2026-03-18
