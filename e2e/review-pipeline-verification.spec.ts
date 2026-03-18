@@ -46,7 +46,7 @@ async function queryRest(path: string): Promise<unknown[]> {
 
 // ── Test ─────────────────────────────────────────────────────────────────────
 
-test.describe('Pipeline Verification — L2 Precision & Recall', () => {
+test.describe.serial('Pipeline Verification — L2 Precision & Recall', () => {
   test.skip(
     !process.env.INNGEST_DEV_URL,
     'Requires Inngest dev server (set INNGEST_DEV_URL=http://localhost:8288 to enable)',

@@ -81,7 +81,7 @@ async function setProjectBudget(projectId: string, monthlyBudgetUsd: number, thr
     method: 'PATCH',
     headers: { ...adminHeaders(), Prefer: 'return=minimal' },
     body: JSON.stringify({
-      monthly_budget_usd: monthlyBudgetUsd,
+      ai_budget_monthly_usd: monthlyBudgetUsd,
       budget_alert_threshold_pct: thresholdPct,
     }),
   })
