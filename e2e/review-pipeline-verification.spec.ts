@@ -164,7 +164,7 @@ test.describe.serial('Pipeline Verification — L2 Precision & Recall', () => {
           fileIds: [fileId],
           projectId,
           tenantId,
-          userId: 'e2e-verification',
+          userId: crypto.randomUUID(),
           mode: 'economy',
           uploadBatchId: batchId,
         },
