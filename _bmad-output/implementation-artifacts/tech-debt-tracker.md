@@ -677,6 +677,17 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Verified:** E2E E-04 passes with `<Link>` nav (24.6s vs 29s full reload), 12/12 E2E green, 3668 unit tests green
 - **Status:** RESOLVED (2026-03-16 — file-scoped store refactor)
 
+### TD-AI-002: L2 Precision below 70% target — baseline annotation gap + L1 over-detection
+- **Date:** 2026-03-18
+- **Story:** 4.8
+- **Phase:** verification
+- **Severity:** Medium
+- **Description:** Pipeline verification on 500-segment test file: L2 Recall=100% (PASS), L2 Precision=27.6% (FAIL, target >=70%). Root cause: (1) L1 rule engine detects 538 findings — many are legitimate issues (whitespace, number format) not in the 88-error baseline annotation set. (2) Baseline annotations only cover deliberately injected errors, not all L1-detectable issues. Precision computation penalizes correct L1 detections as FP.
+- **Impact:** Metric reporting inaccuracy — actual precision likely higher when baseline includes all L1-detectable patterns. No user-facing bug.
+- **Fix:** (1) Expand baseline annotations to include all L1-detectable patterns (whitespace, formatting, tag structure). (2) Tune L2 AI prompts to reduce false positives. (3) Add category-aware matching to precision computation (L1 findings vs L1 baseline, L2 findings vs L2 baseline separately).
+- **Effort:** 4-8 ชม.
+- **Status:** DEFERRED → **Epic 9 — AI Learning & Continuous Improvement (prompt tuning + precision calibration)**
+
 ### TD-ARCH-002: Zustand review store dual-write (flat fields + fileStates Map)
 - **Date:** 2026-03-16
 - **Story:** TD-ARCH-001 refactor
