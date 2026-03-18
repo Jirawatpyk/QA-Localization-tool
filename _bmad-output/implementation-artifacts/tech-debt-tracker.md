@@ -709,17 +709,13 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Effort:** 4-6 ชม.
 - **Status:** DEFERRED → **Epic 5 — หรือเมื่อมี cross-file features ที่ต้องการ single source of truth**
 
-### TD-TEST-010: Pipeline precision/recall E2E tests skipped — no live pipeline in CI
+### ~~TD-TEST-010: Pipeline precision/recall E2E tests~~
 - **Date:** 2026-03-18
 - **Story:** 4.8
 - **Phase:** ATDD/impl
 - **Severity:** Medium
 - **Files:** `e2e/review-pipeline-verification.spec.ts`
-- **Description:** 5 E2E tests skipped (TA-19, TA-20, TA-21, TA-24 x2) — require live Inngest dev server + API keys. Covers: L2 precision/recall (AC6), L3 deduplication, pipeline timing. Pipeline verification done via script (`scripts/verify-pipeline.mjs`) instead. NOTE: AC7 cost tests (TA-26, TA-27) moved to `e2e/ai-cost-verification.spec.ts` — these seed data via PostgREST and run without live pipeline.
-- **Impact:** No automated regression guard for pipeline precision/recall metrics.
-- **Fix:** (1) Add CI pipeline-verification job with Inngest + API keys as secrets. (2) Unskip E2E tests. **Blocked by: CI infrastructure (no Epic owns CI setup).**
-- **Effort:** 4-8 ชม.
-- **Status:** DEFERRED → **Standalone infra task — ไม่มี Epic ที่ครอบคลุม CI pipeline secrets. สร้าง story แยกเมื่อ set up CI**
+- **Status:** RESOLVED (2026-03-18) — E2E tests fully implemented (TA-19 precision, TA-20 recall, TA-24 timing). Runtime skip guard `test.skip(!process.env.INNGEST_DEV_URL)` — runs when Inngest available. Run: `INNGEST_DEV_URL=http://localhost:8288 npx dotenv-cli -e .env.local -- npx playwright test e2e/review-pipeline-verification.spec.ts`. TA-21 (L3 dedup) deferred to TD-TEST-013 (Thorough mode scope).
 
 ### TD-TEST-011: Performance benchmark E2E thresholds relaxed for dev mode
 - **Date:** 2026-03-18
