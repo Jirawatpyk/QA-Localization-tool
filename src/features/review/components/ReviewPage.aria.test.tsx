@@ -6,8 +6,9 @@
  * for screen reader compatibility (AC5) and baseline closure (AC2).
  *
  * Strategy: Test individual components rather than full page (avoids heavy RSC deps).
+ * Server actions mocked where needed (vi.mock server-only + action modules).
  */
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // ── TA-08 & TA-10: FindingList grid structure ──
@@ -48,36 +49,67 @@ vi.mock('sonner', () => ({
   },
 }))
 
+// Mock server-only for AddToGlossaryDialog
+vi.mock('server-only', () => ({}))
+vi.mock('@/features/review/actions/addToGlossary.action', () => ({
+  addToGlossary: vi.fn(),
+}))
+vi.mock('@/features/review/actions/updateGlossaryTerm.action', () => ({
+  updateGlossaryTerm: vi.fn(),
+}))
+
 describe('ReviewPage ARIA Structure', () => {
   describe('TA-08: FindingList grid role (AC5, P0)', () => {
-    // These tests verify static ARIA attributes on key elements.
-    // Testing via direct component render would require complex setup,
-    // so we verify the attribute patterns directly.
-
-    it('should have role="grid" on FindingList container', async () => {
-      // Verify by reading the component source — the rendered output has role="grid"
-      const { FindingList } = await import('./FindingList')
-
-      // FindingList requires many props; we verify the source already has role="grid"
-      // by checking the imported module exports the component
-      expect(FindingList).toBeDefined()
-
-      // Source verification: FindingList.tsx line 439 contains role="grid"
-      // This is confirmed by the Explore agent analysis above
+    it('should have role="grid" attribute in FindingList source', async () => {
+      // Verify by reading the actual source file for role="grid"
+      // FindingList requires complex store + hook wiring, so we verify the
+      // source directly rather than attempting full render
+      const fs = await import('node:fs')
+      const path = await import('node:path')
+      const source = fs.readFileSync(
+        path.resolve('src/features/review/components/FindingList.tsx'),
+        'utf-8',
+      )
+      expect(source).toContain('role="grid"')
+      expect(source).toContain('aria-rowcount')
     })
 
-    it('should have correct ARIA attributes defined in ACTION_BUTTONS config', async () => {
-      // Verify the static config has all 7 aria-keyshortcuts
-      const mod = await import('./ReviewActionBar')
-      expect(mod.ReviewActionBar).toBeDefined()
+    it('should have aria-keyshortcuts config for all 7 action buttons in ReviewActionBar source', async () => {
+      const fs = await import('node:fs')
+      const path = await import('node:path')
+      const source = fs.readFileSync(
+        path.resolve('src/features/review/components/ReviewActionBar.tsx'),
+        'utf-8',
+      )
+      // Verify all 7 shortcuts defined in ACTION_BUTTONS config
+      const shortcuts = [
+        "ariaKeyshortcuts: 'a'",
+        "ariaKeyshortcuts: 'r'",
+        "ariaKeyshortcuts: 'f'",
+        "ariaKeyshortcuts: 'n'",
+        "ariaKeyshortcuts: 's'",
+        "ariaKeyshortcuts: '-'",
+        "ariaKeyshortcuts: '+'",
+      ]
+      for (const shortcut of shortcuts) {
+        expect(source).toContain(shortcut)
+      }
+      // Also verify the JSX attribute binding
+      expect(source).toContain('aria-keyshortcuts={btn.ariaKeyshortcuts}')
     })
   })
 
   describe('TA-10: Baseline #13-15 — keyboard navigability (AC2, P1)', () => {
-    it('should export FindingCardCompact with roving tabindex support', async () => {
-      const mod = await import('./FindingCardCompact')
-      expect(mod.FindingCardCompact).toBeDefined()
-      // Component accepts isActive prop which controls tabindex 0/-1
+    it('should have role="row" and tabIndex roving pattern in FindingCardCompact source', async () => {
+      const fs = await import('node:fs')
+      const path = await import('node:path')
+      const source = fs.readFileSync(
+        path.resolve('src/features/review/components/FindingCardCompact.tsx'),
+        'utf-8',
+      )
+      expect(source).toContain('role="row"')
+      // Roving tabindex: tabIndex depends on isActive prop
+      expect(source).toContain('tabIndex={isActive ? 0 : -1}')
     })
   })
 
@@ -146,20 +178,28 @@ describe('ReviewPage ARIA Structure', () => {
       expect(mod.SuppressPatternDialog).toBeDefined()
     })
 
-    it('should verify AddToGlossaryDialog exports correctly', () => {
-      // AddToGlossaryDialog imports server-only actions — verify via file existence
-      // The component uses shadcn Dialog which provides aria-modal and role="dialog"
-      // Cannot render in jsdom due to server-only imports
-      expect(true).toBe(true) // Structural verification: component confirmed present
+    it('should have aria-modal="true" in AddToGlossaryDialog source', async () => {
+      const fs = await import('node:fs')
+      const path = await import('node:path')
+      const source = fs.readFileSync(
+        path.resolve('src/features/review/components/AddToGlossaryDialog.tsx'),
+        'utf-8',
+      )
+      expect(source).toContain('aria-modal="true"')
+      expect(source).toContain('DialogContent')
     })
   })
 
   describe('TA-18: ARIA landmarks (AC5, P1)', () => {
-    it('should verify FindingDetailSheet structure', () => {
-      // FindingDetailSheet imports server-only actions — verify structurally
-      // Component renders as aside with role="complementary" in review layout
-      // Cannot render in jsdom due to server-only imports
-      expect(true).toBe(true) // Structural verification: component confirmed present
+    it('should have role="complementary" in FindingDetailSheet source', async () => {
+      const fs = await import('node:fs')
+      const path = await import('node:path')
+      const source = fs.readFileSync(
+        path.resolve('src/features/review/components/FindingDetailSheet.tsx'),
+        'utf-8',
+      )
+      expect(source).toContain('role="complementary"')
+      expect(source).toContain('aria-label="Finding detail"')
     })
   })
 

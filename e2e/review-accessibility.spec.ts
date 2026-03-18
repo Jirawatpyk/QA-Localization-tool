@@ -214,8 +214,10 @@ test.describe.serial('Review Accessibility — Keyboard-Only Flow', () => {
     // Press A to accept
     await page.keyboard.press('a')
 
-    // Wait for toast — toast text may vary (accepted / already accepted / error)
-    await expect(page.getByText(/accepted|error|failed/i).first()).toBeVisible({ timeout: 10_000 })
+    // Wait for accept toast
+    await expect(page.getByText('Finding accepted', { exact: true })).toBeVisible({
+      timeout: 10_000,
+    })
   })
 
   test('TA-01c: should reject finding using R hotkey', async ({ page }) => {
@@ -263,9 +265,9 @@ test.describe.serial('Review Accessibility — Keyboard-Only Flow', () => {
     // Wait for inFlightRef to clear
     await page.waitForTimeout(2000)
 
-    // Undo
+    // Undo — toast shows "Undone: <description>"
     await page.keyboard.press('Control+z')
-    await expect(page.getByText(/undo|reverted|pending/i).first()).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText(/^Undone:/).first()).toBeVisible({ timeout: 10_000 })
   })
 
   // ── TA-03: Esc hierarchy (AC1, P0) ──
@@ -274,16 +276,34 @@ test.describe.serial('Review Accessibility — Keyboard-Only Flow', () => {
     await signupOrLogin(page, testEmail, testPassword)
     await gotoReviewPageWithRetry(page, projectId, fileId)
 
-    // Click first finding to expand
-    await page.locator('[role="row"]').first().click()
-    await page.waitForTimeout(300)
+    // Click a finding to activate + expand detail panel
+    const row = page.locator('[role="row"]').nth(1)
+    await row.click()
+    await expect(row).toHaveAttribute('tabindex', '0', { timeout: 5_000 })
 
-    // Press Escape — should close detail or collapse expanded card
-    await page.keyboard.press('Escape')
-    await page.waitForTimeout(300)
+    // Verify detail sheet is visible after click
+    const detailSheet = page.getByTestId('finding-detail-sheet')
+    const detailVisible = await detailSheet.isVisible().catch(() => false)
 
-    // Verify something closed (detail panel or expanded card)
-    // This is a structural test — exact behavior depends on what's open
+    if (detailVisible) {
+      // Esc should close the detail panel first (innermost layer)
+      await page.keyboard.press('Escape')
+      await expect(detailSheet).not.toBeVisible({ timeout: 5_000 })
+    } else {
+      // If no detail panel, check aria-expanded on the row
+      const isExpanded = await row.getAttribute('aria-expanded')
+      if (isExpanded === 'true') {
+        await page.keyboard.press('Escape')
+        await expect(row).toHaveAttribute('aria-expanded', 'false', { timeout: 5_000 })
+      } else {
+        // Activate expansion by clicking again, then Esc
+        await row.click()
+        await page.waitForTimeout(300)
+        await page.keyboard.press('Escape')
+        // After Esc, row should still be focused (not navigated away)
+        await expect(row).toHaveAttribute('tabindex', '0', { timeout: 5_000 })
+      }
+    }
   })
 })
 
@@ -336,8 +356,8 @@ test.describe.serial('Review Performance Benchmarks', () => {
     // Log for benchmark report
     // eslint-disable-next-line no-console
     console.log(`[PERF] Page render time: ${renderTime}ms (target: <2000ms prod, <15000ms dev)`)
-    // Dev mode: React Strict Mode (2x render) + Turbopack overhead → 5-15s typical
-    // Production target is <2000ms; dev threshold relaxed to 15s
+    // TODO(TD-TEST-011): Dev mode threshold relaxed (React Strict Mode 2x + Turbopack).
+    // Production target: <2000ms. Add prod CI gate with AC4 thresholds.
     expect(renderTime).toBeLessThan(15_000)
   })
 
@@ -362,7 +382,7 @@ test.describe.serial('Review Performance Benchmarks', () => {
 
     // eslint-disable-next-line no-console
     console.log(`[PERF] J/K nav time: ${navTime}ms (target: <100ms prod, <2000ms dev)`)
-    // Dev mode: React Strict Mode + 350 findings re-render overhead
+    // TODO(TD-TEST-011): Dev mode threshold relaxed. Production target: <100ms.
     expect(navTime).toBeLessThan(2000)
   })
 
@@ -383,7 +403,7 @@ test.describe.serial('Review Performance Benchmarks', () => {
 
     // eslint-disable-next-line no-console
     console.log(`[PERF] Hotkey action time: ${actionTime}ms (target: <200ms prod, <10000ms dev)`)
-    // Dev mode: server action + React re-render + Strict Mode overhead
+    // TODO(TD-TEST-011): Dev mode threshold relaxed. Production target: <200ms.
     expect(actionTime).toBeLessThan(10_000)
   })
 })

@@ -390,6 +390,9 @@ Claude Opus 4.6 (1M context)
 - debug-explorer invoked for E2E TA-01b accept failure — found 3-layer root cause: activeFindingId NO-OP on first row click + activeFindingIdRef.current null + time-based waits
 - E2E file-level `test.describe.configure({ mode: 'serial' })` caused shared browser context → signupOrLogin redirect loop (misdiagnosed as Supabase rate limit)
 
+### Production Bugs Found During Verification
+- **PB-1 (TD-AI-003)**: L1 Rule Engine `checkEndPunctuation` false positive for Thai — source `.` vs Thai target without period flagged as error on ~395/500 segments (79%). Thai does not use period as sentence terminator. **FIXED**: added language-aware skip for Thai/Lao/Khmer/Myanmar in `formattingChecks.ts`. 55 unit tests GREEN.
+
 ### Completion Notes List
 - Task 1: Generated 500-segment SDLXLIFF (88 injected errors) via `scripts/generate-verification-data.mjs`. Parser-compatible verified via fast-xml-parser.
 - Task 2: Fixed Critical #1 (AiSpendByProjectTable: color-only dot → icon + visible text label), Major #5 (NotificationDropdown: added sr-only "Unread"), Major #16 (keyboard headers), Major #17 (listbox arrow nav + focusedIndex reset). All 14 major + 5 critical issues verified resolved.
@@ -414,7 +417,8 @@ Claude Opus 4.6 (1M context)
 - `docs/test-data/verification-baseline/baseline-annotations.json` (NEW)
 - `docs/test-data/verification-baseline/README.md` (NEW)
 - `scripts/generate-verification-data.mjs` (NEW)
-- `src/test/factories/verification-findings.ts` (NEW)
+- `scripts/expand-baseline.mjs` (NEW — baseline annotation expansion)
+- `scripts/verify-pipeline.mjs` (NEW — pipeline verification runner)
 - `src/test/a11y-helpers.ts` (NEW)
 - `src/test/a11y-helpers.test.ts` (NEW)
 - `src/features/review/components/contrast.test.ts` (MODIFIED — activated ATDD stubs)

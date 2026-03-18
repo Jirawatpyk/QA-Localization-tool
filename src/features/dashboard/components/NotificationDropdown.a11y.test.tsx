@@ -5,7 +5,7 @@
  * Verifies that unread notification indicator has sr-only text
  * for screen reader accessibility (WCAG SC 1.4.1 — Guardrail #25).
  */
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi } from 'vitest'
 
@@ -57,10 +57,10 @@ describe('NotificationDropdown Accessibility', () => {
       // Find the unread notification item
       const unreadItem = screen.getByTestId('notification-item-n1')
 
-      // Should have sr-only "Unread" text
-      const srOnly = unreadItem.querySelector('.sr-only')
-      expect(srOnly).toBeTruthy()
-      expect(srOnly?.textContent).toBe('Unread')
+      // Should have visually hidden "Unread" text (accessible to screen readers)
+      const unreadText = within(unreadItem).getByText('Unread')
+      expect(unreadText).toBeTruthy()
+      expect(unreadText.textContent).toBe('Unread')
     })
 
     it('should not render sr-only text when notification is read', async () => {
@@ -74,9 +74,9 @@ describe('NotificationDropdown Accessibility', () => {
       // Find the read notification item
       const readItem = screen.getByTestId('notification-item-n2')
 
-      // Should NOT have sr-only "Unread" text
-      const srOnly = readItem.querySelector('.sr-only')
-      expect(srOnly).toBeNull()
+      // Should NOT have "Unread" text for read notifications
+      const unreadTexts = within(readItem).queryAllByText('Unread')
+      expect(unreadTexts).toHaveLength(0)
     })
   })
 })

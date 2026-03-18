@@ -12,11 +12,13 @@
  * - Inngest dev server running (INNGEST_DEV_URL=http://localhost:8288)
  * - Valid OPENAI_API_KEY + ANTHROPIC_API_KEY with credits
  * - Supabase running
+ *
+ * TODO(TD-TEST-010): Unskip when CI has live Inngest + API keys — Epic 9
  */
 import { test, expect } from '@playwright/test'
 
-// Suite-level skip: requires live pipeline + API keys + test data
-const SKIP_REASON = 'Story 4.8 Task 1 (test data) + Task 7 prerequisites not met'
+// TODO(TD-TEST-010): Suite-level skip — requires live pipeline + API keys
+const SKIP_REASON = 'Requires live Inngest + API keys (TD-TEST-010)'
 
 test.describe('Pipeline Verification — L2 Precision & Recall', () => {
   test.describe('TA-19: L2 Precision >= 70% (AC6, P1)', () => {

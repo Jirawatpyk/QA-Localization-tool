@@ -47,10 +47,12 @@ describe('WCAG Contrast Compliance', () => {
       expect(ratio).toBeGreaterThanOrEqual(4.5)
     })
 
-    it('should have severity-minor (#3b82f6) on white >= 4.5:1', () => {
+    it('should have severity-minor (#3b82f6) on white >= 3:1 (non-text icon, SC 1.4.11)', () => {
       const ratio = getContrastRatio(SEVERITY_MINOR, WHITE)
-      // Blue might be < 4.5 — verify actual ratio
-      expect(ratio).toBeGreaterThanOrEqual(3.0) // at minimum large-text AA
+      // #3b82f6 achieves ~3.6:1 — passes SC 1.4.11 (non-text UI >= 3:1).
+      // Does NOT meet SC 1.4.3 normal text (4.5:1) — severity text label uses
+      // TEXT_PRIMARY (#111827) alongside the icon, so color is not sole carrier (Guardrail #25).
+      expect(ratio).toBeGreaterThanOrEqual(3.0)
     })
 
     it('should have success (#047857) on white >= 4.5:1', () => {

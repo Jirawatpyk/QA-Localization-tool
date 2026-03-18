@@ -76,17 +76,10 @@ describe('a11y-helpers', () => {
       expect(blendWithOpacity('#ff0000', '#ffffff', 0.0)).toBe('#ffffff')
     })
 
-    it('should blend 50% red over white', () => {
+    it('should blend 50% red over white to #ff8080', () => {
+      // 50% red (255,0,0) over white (255,255,255) = (255, 128, 128)
       const result = blendWithOpacity('#ff0000', '#ffffff', 0.5)
-      const [r, g, b] = [
-        parseInt(result.substring(1, 3), 16),
-        parseInt(result.substring(3, 5), 16),
-        parseInt(result.substring(5, 7), 16),
-      ]
-      // Should be ~128, ~128, ~128 or close
-      expect(r).toBeGreaterThan(100)
-      expect(g).toBeGreaterThan(100)
-      expect(b).toBeGreaterThan(100)
+      expect(result).toBe('#ff8080')
     })
   })
 
@@ -99,10 +92,12 @@ describe('a11y-helpers', () => {
 
     it('meetsAALargeText should require >= 3:1', () => {
       expect(meetsAALargeText('#000000', '#ffffff')).toBe(true) // 21:1
+      expect(meetsAALargeText('#aaaaaa', '#ffffff')).toBe(false) // ~2.3:1 (below 3:1)
     })
 
     it('meetsNonTextContrast should require >= 3:1', () => {
       expect(meetsNonTextContrast('#4f46e5', '#ffffff')).toBe(true) // indigo on white
+      expect(meetsNonTextContrast('#aaaaaa', '#ffffff')).toBe(false) // ~2.3:1 (below 3:1)
     })
   })
 })
