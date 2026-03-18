@@ -8,7 +8,7 @@
  * - Requires: Supabase running + .env.local with API keys + Inngest dev server
  * - Costs real money (~$0.05-0.10 per run)
  * - Non-deterministic: AI output varies → assert structure not exact content
- * - Run: npx vitest run src/features/pipeline/__tests__/pipeline-integration.test.ts --project rls
+ * - Run: INNGEST_DEV_URL=http://localhost:8288 npx dotenv-cli -e .env.local -- npx vitest run src/features/pipeline/__tests__/pipeline-integration.test.ts --project unit
  *
  * Created: Story 4.8 (TD-TEST-006) — L2 bracket bug hid 17 days because no real AI test existed
  */
@@ -261,6 +261,8 @@ describe.skipIf(!HAS_PREREQUISITES)('AI Pipeline Integration (real AI calls)', (
     )
     // eslint-disable-next-line no-console
     console.log(`[INTEGRATION] L1: ${l1Count} findings, L2: ${l2Count} findings`)
+    // L2 MUST produce findings — 0 means L2 is broken (TD-AI-004 regression guard)
+    expect(l2Count).toBeGreaterThan(0)
 
     // 3. Total findings > 0
     const totalCount = await queryCount(`/rest/v1/findings?file_id=eq.${fileId}&select=id`)
