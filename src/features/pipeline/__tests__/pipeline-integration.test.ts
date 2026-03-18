@@ -479,4 +479,175 @@ describe.skipIf(!HAS_PREREQUISITES)('AI Pipeline Integration (real AI calls)', (
       }
     }
   }, 660_000) // 11 min timeout
+
+  // ── P1: Edge case — empty file (0 segments) ──
+
+  it('should handle empty file (0 segments) gracefully without crash', async () => {
+    const [emptyFile] = (await postRest('/rest/v1/files', {
+      project_id: projectId,
+      tenant_id: tenantId,
+      file_name: 'empty-file.sdlxliff',
+      file_type: 'sdlxliff',
+      file_size_bytes: 100,
+      file_hash: randomUUID().replace(/-/g, ''),
+      storage_path: `${tenantId}/${projectId}/empty-file.sdlxliff`,
+      status: 'uploaded',
+    })) as Array<{ id: string }>
+    const emptyFileId = emptyFile!.id
+
+    // No segments inserted — file is empty
+    await fetch(`${SUPABASE_URL}/rest/v1/files?id=eq.${emptyFileId}`, {
+      method: 'PATCH',
+      headers: { ...adminHeaders, Prefer: 'return=minimal' },
+      body: JSON.stringify({ status: 'parsed' }),
+    })
+
+    const batchId = randomUUID()
+    await fetch(`${INNGEST_DEV_URL}/e/${ANON_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'pipeline.batch-started',
+        data: {
+          batchId,
+          fileIds: [emptyFileId],
+          projectId,
+          tenantId,
+          userId: 'integration-test',
+          mode: 'economy',
+          uploadBatchId: batchId,
+        },
+      }),
+    })
+
+    // Pipeline should complete or fail gracefully — not hang
+    const start = Date.now()
+    let finalStatus = ''
+    while (Date.now() - start < 60_000) {
+      const rows = (await queryRest(`/rest/v1/files?id=eq.${emptyFileId}&select=status`)) as Array<{
+        status: string
+      }>
+      finalStatus = rows[0]?.status ?? ''
+      if (finalStatus !== 'parsed' && finalStatus !== 'l1_processing') break
+      await new Promise((r) => setTimeout(r, 3000))
+    }
+
+    // Should reach a terminal state (completed or failed — not stuck)
+    expect(['l1_completed', 'l2_completed', 'failed']).toContain(finalStatus)
+
+    // 0 findings for empty file
+    const count = await queryCount(`/rest/v1/findings?file_id=eq.${emptyFileId}&select=id`)
+    expect(count).toBe(0)
+  }, 120_000)
+
+  // ── P1: Glossary-seeded pipeline ──
+
+  it('should detect glossary violations when glossary is seeded', async () => {
+    // Create glossary
+    const [glossary] = (await postRest('/rest/v1/glossaries', {
+      id: randomUUID(),
+      tenant_id: tenantId,
+      project_id: projectId,
+      name: 'Test Glossary',
+      source_lang: 'en-US',
+      target_lang: 'th-TH',
+    })) as Array<{ id: string }>
+
+    await postRest('/rest/v1/glossary_terms', [
+      {
+        glossary_id: glossary!.id,
+        source_term: 'employee',
+        target_term: 'พนักงาน',
+        case_sensitive: false,
+      },
+      {
+        glossary_id: glossary!.id,
+        source_term: 'building',
+        target_term: 'อาคาร',
+        case_sensitive: false,
+      },
+    ])
+
+    // Create file with glossary violation
+    const [gFile] = (await postRest('/rest/v1/files', {
+      project_id: projectId,
+      tenant_id: tenantId,
+      file_name: 'glossary-test.sdlxliff',
+      file_type: 'sdlxliff',
+      file_size_bytes: 512,
+      file_hash: randomUUID().replace(/-/g, ''),
+      storage_path: `${tenantId}/${projectId}/glossary-test.sdlxliff`,
+      status: 'uploaded',
+    })) as Array<{ id: string }>
+    const gFileId = gFile!.id
+
+    // Segment with wrong glossary term: "employee" → "คนงาน" (should be "พนักงาน")
+    await postRest('/rest/v1/segments', [
+      {
+        file_id: gFileId,
+        project_id: projectId,
+        tenant_id: tenantId,
+        segment_number: 1,
+        source_text: 'All employee must attend the training.',
+        target_text: 'คนงานทุกคนต้องเข้าร่วมการฝึกอบรม',
+        source_lang: 'en-US',
+        target_lang: 'th-TH',
+        word_count: 7,
+      },
+    ])
+
+    await fetch(`${SUPABASE_URL}/rest/v1/files?id=eq.${gFileId}`, {
+      method: 'PATCH',
+      headers: { ...adminHeaders, Prefer: 'return=minimal' },
+      body: JSON.stringify({ status: 'parsed' }),
+    })
+
+    const batchId = randomUUID()
+    await fetch(`${INNGEST_DEV_URL}/e/${ANON_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'pipeline.batch-started',
+        data: {
+          batchId,
+          fileIds: [gFileId],
+          projectId,
+          tenantId,
+          userId: 'integration-test',
+          mode: 'economy',
+          uploadBatchId: batchId,
+        },
+      }),
+    })
+
+    await pollFileStatus(gFileId, 'l2_completed', 300_000)
+
+    // L1 should catch glossary violation
+    const findings = (await queryRest(
+      `/rest/v1/findings?file_id=eq.${gFileId}&select=category,detected_by_layer&limit=50`,
+    )) as Array<{ category: string; detected_by_layer: string }>
+
+    // eslint-disable-next-line no-console
+    console.log(
+      `[GLOSSARY] Findings: ${findings.map((f) => `${f.detected_by_layer}:${f.category}`).join(', ')}`,
+    )
+
+    // At least 1 finding related to glossary/terminology
+    const glossaryFindings = findings.filter(
+      (f) =>
+        f.category.toLowerCase().includes('glossary') ||
+        f.category.toLowerCase().includes('terminology'),
+    )
+    expect(glossaryFindings.length).toBeGreaterThan(0)
+
+    // Cleanup glossary
+    await fetch(`${SUPABASE_URL}/rest/v1/glossary_terms?glossary_id=eq.${glossary!.id}`, {
+      method: 'DELETE',
+      headers: adminHeaders,
+    })
+    await fetch(`${SUPABASE_URL}/rest/v1/glossaries?id=eq.${glossary!.id}`, {
+      method: 'DELETE',
+      headers: adminHeaders,
+    })
+  }, 360_000)
 })
