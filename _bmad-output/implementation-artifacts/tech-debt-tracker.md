@@ -773,6 +773,17 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Effort:** 4-8 ชม. (story-level work)
 - **Status:** DEFERRED → **Epic 5 or standalone integration test story**
 
+### TD-TEST-007: Test data generator inject bugs — 25/88 baseline annotations invalid
+- **Date:** 2026-03-18
+- **Story:** 4.8 (discovered during pipeline verification)
+- **Phase:** verification
+- **Severity:** Medium
+- **Files:** `scripts/generate-verification-data.mjs`, `docs/test-data/verification-baseline/baseline-annotations.json`
+- **Description:** 3 script bugs cause 25/88 baseline annotations to not have actual errors in segments: (1) 6 number_mismatch on templates without `{0}`, (2) 4 placeholder_mismatch same, (3) 15 glossary_violation on templates without glossary terms. Recall measured as 52% but actual on real errors is ~73%.
+- **Fix:** Validate template has required placeholder/term before injecting. Assign error types only to compatible templates.
+- **Effort:** 1-2 ชม.
+- **Status:** DEFERRED → **Epic 5 or standalone test data fix**
+
 ### TD-ARCH-002: Zustand review store dual-write (flat fields + fileStates Map)
 - **Date:** 2026-03-16
 - **Story:** TD-ARCH-001 refactor
