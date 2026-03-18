@@ -54,7 +54,7 @@ export function useNotifications(userId: string, tenantId: string) {
     fetchInitial().catch(() => {
       // Non-critical: toast.error shown for result.success=false inside fetchInitial
     })
-  }, [userId])
+  }, [userId, tenantId])
 
   // Subscribe to Supabase Realtime for new notifications
   useEffect(() => {

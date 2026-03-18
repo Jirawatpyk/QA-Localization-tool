@@ -77,7 +77,9 @@ export function NotificationDropdown({ userId, tenantId }: NotificationDropdownP
               >
                 <div className="flex w-full items-start gap-2">
                   {!notif.isRead && (
-                    <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                    <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary">
+                      <span className="sr-only">Unread</span>
+                    </span>
                   )}
                   <div className="flex-1">
                     <p

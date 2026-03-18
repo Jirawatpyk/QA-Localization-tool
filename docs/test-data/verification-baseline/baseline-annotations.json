@@ -1,0 +1,620 @@
+{
+  "segments": {
+    "7": {
+      "expected_category": "markup",
+      "expected_severity": "major",
+      "injected_type": "L1",
+      "error_type": "tag_error",
+      "description": "Missing closing tag in target: source has <g id=\"7\">...</g> but target has no tags"
+    },
+    "12": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "number_mismatch",
+      "description": "Number mismatch: source has \"197\" but target has \"227\""
+    },
+    "15": {
+      "expected_category": "terminology",
+      "expected_severity": "major",
+      "injected_type": "L2",
+      "error_type": "glossary_violation",
+      "description": "Glossary term translated incorrectly (wrong synonym used)"
+    },
+    "18": {
+      "expected_category": "whitespace",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "whitespace_issue",
+      "description": "Double space in target text"
+    },
+    "20": {
+      "expected_category": "consistency",
+      "expected_severity": "minor",
+      "injected_type": "L2",
+      "error_type": "consistency_error",
+      "description": "Consistency pair source segment (pair target at segment 120)"
+    },
+    "22": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "placeholder_mismatch",
+      "description": "Placeholder missing in target: number \"267\" removed from translation"
+    },
+    "33": {
+      "expected_category": "markup",
+      "expected_severity": "major",
+      "injected_type": "L1",
+      "error_type": "tag_error",
+      "description": "Missing closing tag in target: source has <g id=\"33\">...</g> but target has no tags"
+    },
+    "35": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "number_mismatch",
+      "description": "Number mismatch: source has \"358\" but target has \"368\""
+    },
+    "45": {
+      "expected_category": "terminology",
+      "expected_severity": "major",
+      "injected_type": "L2",
+      "error_type": "glossary_violation",
+      "description": "Glossary term translated incorrectly (wrong synonym used)"
+    },
+    "48": {
+      "expected_category": "whitespace",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "whitespace_issue",
+      "description": "Double space in target text"
+    },
+    "50": {
+      "expected_category": "consistency",
+      "expected_severity": "minor",
+      "injected_type": "L2",
+      "error_type": "consistency_error",
+      "description": "Consistency pair source segment (pair target at segment 150)"
+    },
+    "58": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "number_mismatch",
+      "description": "Number mismatch: source has \"519\" but target has \"559\""
+    },
+    "59": {
+      "expected_category": "markup",
+      "expected_severity": "major",
+      "injected_type": "L1",
+      "error_type": "tag_error",
+      "description": "Missing closing tag in target: source has <g id=\"59\">...</g> but target has no tags"
+    },
+    "62": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "placeholder_mismatch",
+      "description": "Placeholder missing in target: number \"547\" removed from translation"
+    },
+    "75": {
+      "expected_category": "terminology",
+      "expected_severity": "major",
+      "injected_type": "L2",
+      "error_type": "glossary_violation",
+      "description": "Glossary term translated incorrectly (wrong synonym used)"
+    },
+    "78": {
+      "expected_category": "whitespace",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "whitespace_issue",
+      "description": "Double space in target text"
+    },
+    "80": {
+      "expected_category": "consistency",
+      "expected_severity": "minor",
+      "injected_type": "L2",
+      "error_type": "consistency_error",
+      "description": "Consistency pair source segment (pair target at segment 180)"
+    },
+    "81": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "number_mismatch",
+      "description": "Number mismatch: source has \"680\" but target has \"700\""
+    },
+    "85": {
+      "expected_category": "markup",
+      "expected_severity": "major",
+      "injected_type": "L1",
+      "error_type": "tag_error",
+      "description": "Missing closing tag in target: source has <g id=\"85\">...</g> but target has no tags"
+    },
+    "102": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "placeholder_mismatch",
+      "description": "Placeholder missing in target: number \"827\" removed from translation"
+    },
+    "104": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "number_mismatch",
+      "description": "Number mismatch: source has \"841\" but target has \"891\""
+    },
+    "105": {
+      "expected_category": "terminology",
+      "expected_severity": "major",
+      "injected_type": "L2",
+      "error_type": "glossary_violation",
+      "description": "Glossary term translated incorrectly (wrong synonym used)"
+    },
+    "108": {
+      "expected_category": "whitespace",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "whitespace_issue",
+      "description": "Double space in target text"
+    },
+    "110": {
+      "expected_category": "consistency",
+      "expected_severity": "minor",
+      "injected_type": "L2",
+      "error_type": "consistency_error",
+      "description": "Consistency pair source segment (pair target at segment 210)"
+    },
+    "111": {
+      "expected_category": "markup",
+      "expected_severity": "major",
+      "injected_type": "L1",
+      "error_type": "tag_error",
+      "description": "Missing closing tag in target: source has <g id=\"111\">...</g> but target has no tags"
+    },
+    "120": {
+      "expected_category": "consistency",
+      "expected_severity": "minor",
+      "injected_type": "L2",
+      "error_type": "consistency_error",
+      "description": "Inconsistent translation: same source as segment 20 but different target"
+    },
+    "127": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "number_mismatch",
+      "description": "Number mismatch: source has \"102\" but target has \"132\""
+    },
+    "135": {
+      "expected_category": "terminology",
+      "expected_severity": "major",
+      "injected_type": "L2",
+      "error_type": "glossary_violation",
+      "description": "Glossary term translated incorrectly (wrong synonym used)"
+    },
+    "137": {
+      "expected_category": "markup",
+      "expected_severity": "major",
+      "injected_type": "L1",
+      "error_type": "tag_error",
+      "description": "Missing closing tag in target: source has <g id=\"137\">...</g> but target has no tags"
+    },
+    "140": {
+      "expected_category": "consistency",
+      "expected_severity": "minor",
+      "injected_type": "L2",
+      "error_type": "consistency_error",
+      "description": "Inconsistent translation: same source as segment 40 but different target"
+    },
+    "142": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "placeholder_mismatch",
+      "description": "Placeholder missing in target: number \"207\" removed from translation"
+    },
+    "150": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "number_mismatch",
+      "description": "Number mismatch: source has \"263\" but target has \"273\""
+    },
+    "163": {
+      "expected_category": "markup",
+      "expected_severity": "major",
+      "injected_type": "L1",
+      "error_type": "tag_error",
+      "description": "Missing closing tag in target: source has <g id=\"163\">...</g> but target has no tags"
+    },
+    "165": {
+      "expected_category": "terminology",
+      "expected_severity": "major",
+      "injected_type": "L2",
+      "error_type": "glossary_violation",
+      "description": "Glossary term translated incorrectly (wrong synonym used)"
+    },
+    "168": {
+      "expected_category": "whitespace",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "whitespace_issue",
+      "description": "Double space in target text"
+    },
+    "170": {
+      "expected_category": "consistency",
+      "expected_severity": "minor",
+      "injected_type": "L2",
+      "error_type": "consistency_error",
+      "description": "Inconsistent translation: same source as segment 70 but different target"
+    },
+    "173": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "number_mismatch",
+      "description": "Number mismatch: source has \"424\" but target has \"464\""
+    },
+    "180": {
+      "expected_category": "consistency",
+      "expected_severity": "minor",
+      "injected_type": "L2",
+      "error_type": "consistency_error",
+      "description": "Inconsistent translation: same source as segment 80 but different target"
+    },
+    "182": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "placeholder_mismatch",
+      "description": "Placeholder missing in target: number \"487\" removed from translation"
+    },
+    "189": {
+      "expected_category": "markup",
+      "expected_severity": "major",
+      "injected_type": "L1",
+      "error_type": "tag_error",
+      "description": "Missing closing tag in target: source has <g id=\"189\">...</g> but target has no tags"
+    },
+    "195": {
+      "expected_category": "terminology",
+      "expected_severity": "major",
+      "injected_type": "L2",
+      "error_type": "glossary_violation",
+      "description": "Glossary term translated incorrectly (wrong synonym used)"
+    },
+    "196": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "number_mismatch",
+      "description": "Number mismatch: source has \"585\" but target has \"605\""
+    },
+    "198": {
+      "expected_category": "whitespace",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "whitespace_issue",
+      "description": "Double space in target text"
+    },
+    "200": {
+      "expected_category": "consistency",
+      "expected_severity": "minor",
+      "injected_type": "L2",
+      "error_type": "consistency_error",
+      "description": "Inconsistent translation: same source as segment 100 but different target"
+    },
+    "210": {
+      "expected_category": "consistency",
+      "expected_severity": "minor",
+      "injected_type": "L2",
+      "error_type": "consistency_error",
+      "description": "Inconsistent translation: same source as segment 110 but different target"
+    },
+    "215": {
+      "expected_category": "markup",
+      "expected_severity": "major",
+      "injected_type": "L1",
+      "error_type": "tag_error",
+      "description": "Missing closing tag in target: source has <g id=\"215\">...</g> but target has no tags"
+    },
+    "219": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "number_mismatch",
+      "description": "Number mismatch: source has \"746\" but target has \"796\""
+    },
+    "222": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "placeholder_mismatch",
+      "description": "Placeholder missing in target: number \"767\" removed from translation"
+    },
+    "225": {
+      "expected_category": "terminology",
+      "expected_severity": "major",
+      "injected_type": "L2",
+      "error_type": "glossary_violation",
+      "description": "Glossary term translated incorrectly (wrong synonym used)"
+    },
+    "230": {
+      "expected_category": "consistency",
+      "expected_severity": "minor",
+      "injected_type": "L2",
+      "error_type": "consistency_error",
+      "description": "Inconsistent translation: same source as segment 130 but different target"
+    },
+    "240": {
+      "expected_category": "consistency",
+      "expected_severity": "minor",
+      "injected_type": "L2",
+      "error_type": "consistency_error",
+      "description": "Inconsistent translation: same source as segment 140 but different target"
+    },
+    "241": {
+      "expected_category": "markup",
+      "expected_severity": "major",
+      "injected_type": "L1",
+      "error_type": "tag_error",
+      "description": "Missing closing tag in target: source has <g id=\"241\">...</g> but target has no tags"
+    },
+    "242": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "number_mismatch",
+      "description": "Number mismatch: source has \"907\" but target has \"937\""
+    },
+    "255": {
+      "expected_category": "terminology",
+      "expected_severity": "major",
+      "injected_type": "L2",
+      "error_type": "glossary_violation",
+      "description": "Glossary term translated incorrectly (wrong synonym used)"
+    },
+    "260": {
+      "expected_category": "consistency",
+      "expected_severity": "minor",
+      "injected_type": "L2",
+      "error_type": "consistency_error",
+      "description": "Inconsistent translation: same source as segment 160 but different target"
+    },
+    "262": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "placeholder_mismatch",
+      "description": "Placeholder missing in target: number \"147\" removed from translation"
+    },
+    "264": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "number_mismatch",
+      "description": "Number mismatch: source has \"161\" but target has \"211\""
+    },
+    "267": {
+      "expected_category": "markup",
+      "expected_severity": "major",
+      "injected_type": "L1",
+      "error_type": "tag_error",
+      "description": "Missing closing tag in target: source has <g id=\"267\">...</g> but target has no tags"
+    },
+    "268": {
+      "expected_category": "whitespace",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "whitespace_issue",
+      "description": "Double space in target text"
+    },
+    "270": {
+      "expected_category": "consistency",
+      "expected_severity": "minor",
+      "injected_type": "L2",
+      "error_type": "consistency_error",
+      "description": "Inconsistent translation: same source as segment 170 but different target"
+    },
+    "285": {
+      "expected_category": "terminology",
+      "expected_severity": "major",
+      "injected_type": "L2",
+      "error_type": "glossary_violation",
+      "description": "Glossary term translated incorrectly (wrong synonym used)"
+    },
+    "286": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "number_mismatch",
+      "description": "Number mismatch: source has \"315\" but target has \"335\""
+    },
+    "290": {
+      "expected_category": "consistency",
+      "expected_severity": "minor",
+      "injected_type": "L2",
+      "error_type": "consistency_error",
+      "description": "Inconsistent translation: same source as segment 190 but different target"
+    },
+    "293": {
+      "expected_category": "markup",
+      "expected_severity": "major",
+      "injected_type": "L1",
+      "error_type": "tag_error",
+      "description": "Missing closing tag in target: source has <g id=\"293\">...</g> but target has no tags"
+    },
+    "300": {
+      "expected_category": "consistency",
+      "expected_severity": "minor",
+      "injected_type": "L2",
+      "error_type": "consistency_error",
+      "description": "Inconsistent translation: same source as segment 200 but different target"
+    },
+    "308": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "number_mismatch",
+      "description": "Number mismatch: source has \"469\" but target has \"509\""
+    },
+    "315": {
+      "expected_category": "terminology",
+      "expected_severity": "major",
+      "injected_type": "L2",
+      "error_type": "glossary_violation",
+      "description": "Glossary term translated incorrectly (wrong synonym used)"
+    },
+    "319": {
+      "expected_category": "markup",
+      "expected_severity": "major",
+      "injected_type": "L1",
+      "error_type": "tag_error",
+      "description": "Missing closing tag in target: source has <g id=\"319\">...</g> but target has no tags"
+    },
+    "330": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "number_mismatch",
+      "description": "Number mismatch: source has \"623\" but target has \"633\""
+    },
+    "338": {
+      "expected_category": "whitespace",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "whitespace_issue",
+      "description": "Double space in target text"
+    },
+    "342": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "placeholder_mismatch",
+      "description": "Placeholder missing in target: number \"707\" removed from translation"
+    },
+    "345": {
+      "expected_category": "terminology",
+      "expected_severity": "major",
+      "injected_type": "L2",
+      "error_type": "glossary_violation",
+      "description": "Glossary term translated incorrectly (wrong synonym used)"
+    },
+    "352": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "number_mismatch",
+      "description": "Number mismatch: source has \"777\" but target has \"807\""
+    },
+    "360": {
+      "expected_category": "consistency",
+      "expected_severity": "minor",
+      "injected_type": "L2",
+      "error_type": "consistency_error",
+      "description": "Inconsistent translation: same source as segment 260 but different target"
+    },
+    "365": {
+      "expected_category": "markup",
+      "expected_severity": "major",
+      "injected_type": "L1",
+      "error_type": "tag_error",
+      "description": "Missing closing tag in target: source has <g id=\"365\">...</g> but target has no tags"
+    },
+    "374": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "number_mismatch",
+      "description": "Number mismatch: source has \"931\" but target has \"981\""
+    },
+    "375": {
+      "expected_category": "terminology",
+      "expected_severity": "major",
+      "injected_type": "L2",
+      "error_type": "glossary_violation",
+      "description": "Glossary term translated incorrectly (wrong synonym used)"
+    },
+    "390": {
+      "expected_category": "consistency",
+      "expected_severity": "minor",
+      "injected_type": "L2",
+      "error_type": "consistency_error",
+      "description": "Inconsistent translation: same source as segment 290 but different target"
+    },
+    "396": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "number_mismatch",
+      "description": "Number mismatch: source has \"185\" but target has \"205\""
+    },
+    "405": {
+      "expected_category": "terminology",
+      "expected_severity": "major",
+      "injected_type": "L2",
+      "error_type": "glossary_violation",
+      "description": "Glossary term translated incorrectly (wrong synonym used)"
+    },
+    "408": {
+      "expected_category": "whitespace",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "whitespace_issue",
+      "description": "Double space in target text"
+    },
+    "411": {
+      "expected_category": "markup",
+      "expected_severity": "major",
+      "injected_type": "L1",
+      "error_type": "tag_error",
+      "description": "Missing closing tag in target: source has <g id=\"411\">...</g> but target has no tags"
+    },
+    "418": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "number_mismatch",
+      "description": "Number mismatch: source has \"339\" but target has \"379\""
+    },
+    "422": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "placeholder_mismatch",
+      "description": "Placeholder missing in target: number \"367\" removed from translation"
+    },
+    "435": {
+      "expected_category": "terminology",
+      "expected_severity": "major",
+      "injected_type": "L2",
+      "error_type": "glossary_violation",
+      "description": "Glossary term translated incorrectly (wrong synonym used)"
+    },
+    "440": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "number_mismatch",
+      "description": "Number mismatch: source has \"493\" but target has \"503\""
+    },
+    "462": {
+      "expected_category": "accuracy",
+      "expected_severity": "critical",
+      "injected_type": "L1",
+      "error_type": "placeholder_mismatch",
+      "description": "Placeholder missing in target: number \"647\" removed from translation"
+    },
+    "478": {
+      "expected_category": "whitespace",
+      "expected_severity": "minor",
+      "injected_type": "L1",
+      "error_type": "whitespace_issue",
+      "description": "Double space in target text"
+    }
+  }
+}

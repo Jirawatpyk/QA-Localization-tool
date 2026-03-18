@@ -32,12 +32,18 @@ function ModelSelect({
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [selectedModel, setSelectedModel] = useState(currentModel)
+  const [focusedIndex, setFocusedIndex] = useState(-1)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Sync state when prop changes (Guardrail #12: useState only captures initial value)
   useEffect(() => {
     setSelectedModel(currentModel)
   }, [currentModel])
+
+  // Guardrail #11: reset focusedIndex when dropdown closes (same as dialog state reset on re-open)
+  useEffect(() => {
+    if (!isOpen) setFocusedIndex(-1)
+  }, [isOpen])
 
   // Close on click outside or Escape key
   useEffect(() => {
@@ -76,11 +82,14 @@ function ModelSelect({
 
   return (
     <div ref={dropdownRef} className="relative">
-      <label id={`${testId}-label`}>{label}</label>
+      <label id={`${testId}-label`} htmlFor={testId}>
+        {label}
+      </label>
       <button
         type="button"
+        id={testId}
         data-testid={testId}
-        aria-label={label}
+        aria-labelledby={`${testId}-label`}
         aria-expanded={isOpen}
         onClick={() => setIsOpen(!isOpen)}
         className="w-full rounded-md border px-3 py-2 text-left text-sm"
@@ -90,19 +99,38 @@ function ModelSelect({
       {isOpen && (
         <div
           role="listbox"
+          aria-labelledby={`${testId}-label`}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowDown') {
+              e.preventDefault()
+              setFocusedIndex((prev) => Math.min(prev + 1, options.length - 1))
+            } else if (e.key === 'ArrowUp') {
+              e.preventDefault()
+              setFocusedIndex((prev) => Math.max(prev - 1, 0))
+            } else if (e.key === 'Enter' && focusedIndex >= 0) {
+              e.preventDefault()
+              handleSelect(options[focusedIndex]!.value).catch(() => {
+                /* non-critical */
+              })
+            }
+          }}
           className="absolute z-10 mt-1 w-full rounded-md border bg-popover shadow-md"
         >
-          {options.map((opt) => (
+          {options.map((opt, idx) => (
             <div
               key={opt.label}
               role="option"
+              tabIndex={idx === focusedIndex ? 0 : -1}
+              ref={(el) => {
+                if (idx === focusedIndex) el?.focus()
+              }}
               aria-selected={selectedModel === opt.value}
               onClick={() => {
                 handleSelect(opt.value).catch(() => {
                   /* non-critical — toast handles user feedback inside handleSelect */
                 })
               }}
-              className="cursor-pointer px-3 py-2 text-sm hover:bg-accent"
+              className={`cursor-pointer px-3 py-2 text-sm hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary ${idx === focusedIndex ? 'bg-accent' : ''}`}
             >
               {opt.label}
             </div>

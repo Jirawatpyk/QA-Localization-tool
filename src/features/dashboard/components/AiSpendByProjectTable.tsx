@@ -1,5 +1,6 @@
 'use client'
 
+import { AlertTriangle, CheckCircle, XCircle } from 'lucide-react'
 import { useState } from 'react'
 
 import type { AiProjectSpend } from '@/features/dashboard/types'
@@ -18,9 +19,21 @@ function getBudgetStatus(budgetPct: number, alertThreshold: number): 'ok' | 'war
 }
 
 const STATUS_COLORS: Record<'ok' | 'warning' | 'exceeded', string> = {
-  ok: 'bg-success',
-  warning: 'bg-warning',
-  exceeded: 'bg-error',
+  ok: 'text-success',
+  warning: 'text-warning',
+  exceeded: 'text-error',
+}
+
+const STATUS_LABELS: Record<'ok' | 'warning' | 'exceeded', string> = {
+  ok: 'OK',
+  warning: 'Warning',
+  exceeded: 'Exceeded',
+}
+
+const STATUS_ICONS: Record<'ok' | 'warning' | 'exceeded', typeof CheckCircle> = {
+  ok: CheckCircle,
+  warning: AlertTriangle,
+  exceeded: XCircle,
 }
 
 function getBudgetPct(p: AiProjectSpend): number {
@@ -87,8 +100,16 @@ export function AiSpendByProjectTable({ projects }: AiSpendByProjectTableProps) 
             <th
               data-testid="ai-project-sort-cost"
               aria-sort={ariaSort('cost')}
-              className="cursor-pointer select-none pb-2 font-medium hover:text-foreground"
+              tabIndex={0}
+              role="columnheader"
+              className="cursor-pointer select-none pb-2 font-medium hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
               onClick={() => handleSort('cost')}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  handleSort('cost')
+                }
+              }}
             >
               Cost (Month){sortIndicator('cost')}
             </th>
@@ -96,8 +117,16 @@ export function AiSpendByProjectTable({ projects }: AiSpendByProjectTableProps) 
             <th
               data-testid="ai-project-sort-budget"
               aria-sort={ariaSort('budget')}
-              className="cursor-pointer select-none pb-2 font-medium hover:text-foreground"
+              tabIndex={0}
+              role="columnheader"
+              className="cursor-pointer select-none pb-2 font-medium hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
               onClick={() => handleSort('budget')}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  handleSort('budget')
+                }
+              }}
             >
               Budget %{sortIndicator('budget')}
             </th>
@@ -120,11 +149,19 @@ export function AiSpendByProjectTable({ projects }: AiSpendByProjectTableProps) 
                 <td className="py-2">
                   {p.monthlyBudgetUsd !== null ? (
                     <div className="flex items-center gap-2">
-                      <span
-                        data-testid={`ai-budget-indicator-${p.projectId}`}
-                        data-status={status}
-                        className={`inline-block h-2 w-2 rounded-full ${STATUS_COLORS[status]}`}
-                      />
+                      {(() => {
+                        const Icon = STATUS_ICONS[status]
+                        return (
+                          <span
+                            data-testid={`ai-budget-indicator-${p.projectId}`}
+                            data-status={status}
+                            className={`inline-flex items-center gap-1 ${STATUS_COLORS[status]}`}
+                          >
+                            <Icon size={14} aria-hidden="true" />
+                            <span className="text-xs font-medium">{STATUS_LABELS[status]}</span>
+                          </span>
+                        )
+                      })()}
                       <span>
                         {budgetPct.toFixed(0)}% of ${p.monthlyBudgetUsd.toFixed(2)}
                       </span>
