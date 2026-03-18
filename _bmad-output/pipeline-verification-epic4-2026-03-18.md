@@ -42,31 +42,53 @@
 
 ---
 
-## L2 AI Screening (gpt-4o-mini) — ยังไม่สามารถ verify ได้
+## L2 AI Screening (gpt-4o-mini) — ใช้งานไม่ได้
 
-| Error Type | Injected | Actually Injected? | Detected | Verdict |
-|-----------|----------|-------------------|----------|---------|
-| glossary_violation | 15 | **0 (script bug)** | 0 | **UNTESTABLE** — script inject ไม่ทำงาน |
-| consistency_error | 18 | ~18 (partial) | 1 (6%) | L2 chunk-based → miss cross-segment |
+### ผลทดสอบจริง (hand-crafted 15 segments — ไม่ใช้ generator)
 
-### Root Cause Analysis (Updated 2026-03-18 — after 3 rounds of investigation)
+ทดสอบด้วย `scripts/test-l2-capability.mjs` — 10 segments มี error ชัดเจน + 5 segments clean + glossary seeded ครบ
 
-**Round 1:** L2 0% glossary → สงสัยว่า L2 ไม่ทำงาน
-**Round 2:** Seed glossary terms แล้ว retest → ยัง 0% → สงสัยว่า AI ห่วย
-**Round 3:** ตรวจ segment content จริง → **glossary violations ไม่ได้ถูก inject เลย!**
+| Error Type | Segments | L2 Detected | L1 Detected | Result |
+|-----------|----------|-------------|-------------|--------|
+| **Glossary violation** | 3 | **0** | 3 (L1 rule) | L1 จับ ไม่ใช่ L2 |
+| **Mistranslation** (ความหมายตรงข้าม) | 3 | **0** | 0 | **MISS ทั้งหมด** |
+| **Omission** (เนื้อหาหาย) | 2 | **0** | 2 (L1 number) | L1 จับเลข ไม่ใช่ omission |
+| **Addition** (เพิ่มเนื้อหา) | 1 | **0** | 0 | **MISS** |
+| **Fluency** (ภาษาไม่เป็นธรรมชาติ) | 1 | **0** | 0 | **MISS** |
+| **Clean** (ไม่มี error) | 5 | 0 | 1 FP | OK (ไม่ flag) |
 
-**Script Bug #3: glossary_violation inject ไม่ทำงาน**
-- Script เลือก template `(segNum - 1) % 5` แล้ว replace คำ `correctTgt` → `wrongTgt`
-- แต่ glossary segments ทั้ง 15 ตัว map ไป template "inventory system" (ระบบสินค้าคงคลัง)
-- Template นี้ **ไม่มีคำ** "การฝึกอบรม", "ประสิทธิภาพ", "แอปพลิเคชัน" → `replace()` ไม่เกิดผล
-- **Segment content ปกติดี ไม่มี error จริง** → L2 ถูกต้องที่ไม่ flag
+### L2 Detection Rate: **0/10 = 0%**
 
-**Consistency errors (6%):** inject ทำงานจริง (เพิ่ม "(ฉบับแก้ไข)") แต่ L2 screen ทีละ chunk → ไม่เห็น cross-segment pattern → expected limitation สำหรับ Economy mode
+**L2 AI (gpt-4o-mini) ไม่สร้าง finding เลยแม้แต่ตัวเดียว**
 
-### สรุป L2 AI
-- **L2 ทำงานถูกต้อง** — ไม่ได้ flag segment ที่ไม่มี error (correct behavior)
-- **Glossary detection ยังไม่ได้ทดสอบจริง** — ต้อง fix script ก่อนแล้ว retest
-- **Consistency detection 6%** — expected limitation ของ chunk-based L2 screening
+ทุก finding ที่จับได้มาจาก **L1 Rule Engine** ทั้งหมด:
+- Glossary violations → L1 `glossary_compliance` rule
+- Omissions → L1 `number_format` rule (จับเลขหาย ไม่ใช่ omission)
+
+### สิ่งที่ L2 ควรจับได้แต่จับไม่ได้
+
+1. **"The meeting has been postponed"** → target แปลว่า **"ถูกยกเลิก" (cancelled)** — ความหมายตรงข้าม
+2. **"Please decrease the temperature"** → target แปลว่า **"เพิ่มอุณหภูมิ" (increase)** — ความหมายตรงข้าม
+3. **"The project was approved"** → target แปลว่า **"ถูกปฏิเสธ" (rejected)** — ความหมายตรงข้าม
+4. **"Click Save to continue"** → target เพิ่มประโยค **"โปรดตรวจสอบข้อมูลให้ถูกต้องก่อนบันทึก"** ที่ไม่มีใน source
+5. **Overly literal translation** → "ความอดทนของคุณในขณะที่เราประมวลผลคำร้องขอของคุณ" — ไม่เป็นธรรมชาติ
+
+**ทั้ง 5 กรณีเป็น errors ที่ชัดเจน ไม่ต้องมี domain knowledge ก็เห็นว่าผิด — แต่ L2 ไม่จับ**
+
+### Root Cause
+
+ยังไม่ได้ debug ว่า L2 ไม่ทำงานเพราะอะไร:
+- **Prompt ถูกส่งจริงไหม?** — ต้อง check Inngest step logs
+- **AI response เป็นยังไง?** — ต้อง check AI response parsing
+- **Findings ถูก insert เข้า DB ไหม?** — ต้อง check runL2ForFile logic
+
+### Impact Assessment
+
+**L2 ไม่ทำงาน = core value proposition ของ product หายไป:**
+- Product promise: "AI-powered localization QA" → L2 เป็น AI layer หลัก
+- L1 เป็น deterministic rules → จับได้แค่ pattern-based errors
+- Semantic errors (mistranslation, omission, addition, fluency) **ไม่มีอะไรจับ**
+- ไม่ควรผ่าน Epic 3 (AI-Powered Quality Analysis) โดยไม่มี verification ว่า L2 จับ semantic issues ได้จริง
 
 ---
 
@@ -98,45 +120,55 @@
 
 | Component | Detection Rate | Notes |
 |-----------|---------------|-------|
-| **L1 Tag mismatch** | **100%** (15/15) | จับได้ทุกตัวที่ inject ถูกต้อง |
-| **L1 Whitespace** | **100%** (10/10) | จับได้ทุกตัว |
-| **L1 Number mismatch** | **100%** (14/14 ที่ inject จริง) | 6 miss = script bug ไม่ใช่ L1 bug |
-| **L1 Placeholder** | **100%** (6/6 ที่ inject จริง) | 4 miss = script bug ไม่ใช่ L1 bug |
-| **L2 AI Screening** | **ถูกต้อง** | ไม่ flag segment ที่ไม่มี error (correct behavior) |
+| **L1 Tag mismatch** | **100%** | จับได้ทุกตัว |
+| **L1 Whitespace** | **100%** | จับได้ทุกตัว |
+| **L1 Number mismatch** | **100%** | จับได้ทุกตัวที่ inject จริง |
+| **L1 Placeholder** | **100%** | จับได้ทุกตัวที่ inject จริง |
+| **L1 Glossary compliance** | **100%** | จับ glossary term ผิดได้ (เมื่อ glossary seeded) |
 | **Pipeline orchestration** | **100%** | Inngest L1→L2 flow ทำงานสมบูรณ์ |
 | **Pipeline timing** | **80-278s** | Well within 300s target |
 | **MQM Score calculation** | **ถูกต้อง** | คำนวณหลัง pipeline complete |
 | **AI cost tracking** | **ถูกต้อง** | Token usage logged ทุก AI call |
-| **Thai punctuation** | **แก้แล้ว** | TD-AI-003 fixed — skip period mismatch |
+| **Thai punctuation** | **แก้แล้ว** | TD-AI-003 fixed |
 
-## What Doesn't Work (Test Script)
+## What Doesn't Work (Production Code)
 
-| Issue | Impact | Fix |
-|-------|--------|-----|
-| **Script bug #1:** Number inject เลือก template ไม่มี `{0}` | 6/20 numbers ไม่ถูก inject | เลือก template ที่มี placeholder |
-| **Script bug #2:** Placeholder inject เลือก template ไม่มี `{0}` | 4/10 placeholders ไม่ถูก inject | เหมือนข้อ 1 |
-| **Script bug #3:** Glossary inject replace คำที่ไม่อยู่ใน template | **15/15 ไม่ถูก inject เลย** | เลือก template ที่มี glossary term |
+| Component | Detection Rate | Impact |
+|-----------|---------------|--------|
+| **L2 AI Screening** | **0%** (0/10) | **ใช้งานไม่ได้** — ไม่จับ semantic errors เลย |
+| **L2 Mistranslation** | **0%** (0/3) | ความหมายตรงข้าม (เลื่อน→ยกเลิก) ไม่ถูกจับ |
+| **L2 Omission** | **0%** (0/2) | เนื้อหาหายครึ่งประโยค ไม่ถูกจับ |
+| **L2 Addition** | **0%** (0/1) | เพิ่มเนื้อหาที่ไม่มีใน source ไม่ถูกจับ |
+| **L2 Fluency** | **0%** (0/1) | แปลแข็ง/robotic ไม่ถูกจับ |
 
-## What's Untested (ต้อง fix script ก่อน)
+**L2 เป็น core feature ของ product — "AI-powered localization QA"**
+**L2 ไม่ทำงาน = product ไม่มี AI จริง — เหลือแค่ rule-based L1**
+
+## What's Untested
 
 | Feature | Status | Why |
 |---------|--------|-----|
-| **L2 Glossary detection** | **ยังไม่ทดสอบ** | Script ไม่ inject glossary error จริง → ไม่รู้ว่า L2+glossary ทำงานไหม |
-| **L3 Deep analysis** | **ยังไม่ทดสอบ** | ไม่ได้ run Thorough mode |
-| **L2 Consistency** | **6%** (1/18) | Expected limitation — L2 chunks ไม่เห็น cross-segment |
+| **L3 Deep analysis** | ยังไม่ทดสอบ | ไม่ได้ run Thorough mode |
+| **L2 root cause** | ยังไม่ debug | ต้อง check: prompt ถูกส่งไหม, AI ตอบอะไร, findings ถูก insert ไหม |
 
 ## Conclusions
 
-1. **Production code ทำงานถูกต้อง 100%** — ทุก FN ที่พบเป็น script bugs หรือ expected AI limitations
-2. **Production bug 1 ตัวที่เจอ (TD-AI-003)** — Thai punctuation FP → **แก้แล้ว**
-3. **Test data script มี 3 bugs** → 25/88 annotations ไม่มี error จริง → **Recall ที่วัดได้ต่ำกว่าความจริง**
-4. **Actual L1 Recall (เฉพาะ errors ที่ inject จริง):** 46/63 = **73%** (ไม่นับ 25 script bugs)
-5. **L2 Glossary + L3 ยังไม่ได้ verify จริง** → ต้อง fix script แล้ว retest
+1. **L1 Rule Engine ทำงานถูกต้อง 100%**
+2. **L2 AI Screening ใช้งานไม่ได้ — 0% detection rate บน hand-crafted semantic errors**
+3. **Production bug 1 ตัวแก้แล้ว** (TD-AI-003 Thai punctuation)
+4. **Production bug ตัวใหญ่: L2 ไม่สร้าง findings** — ต้อง debug root cause
+5. **Test data script มี 3 bugs** — ส่งผลให้ initial verification ไม่แม่นยำ
 
-## Recommendations
+## Severity Assessment
 
-1. **Fix test data script** — ปรับ template selection ให้ inject ถูกที่ (quick fix ~1 ชม.)
-2. **Retest หลัง fix** — run pipeline ใหม่เพื่อ verify L1 + L2 ด้วย data ที่ถูกต้อง
-3. **L2 Glossary test** — seed glossary + inject glossary errors ที่ถูกต้อง → verify L2 จับได้ไหม
-4. **L3 Thorough test** — run Thorough mode → verify L3 consistency + glossary
-5. **Defer Epic 9:** L2 consistency (chunk limitation) เป็น architectural limitation ต้องแก้ prompt/chunking
+**L2 ไม่ทำงาน = CRITICAL**
+- Product promise "AI-powered QA" → L2 เป็น layer หลักที่ distinguish จาก rule-based tools (Xbench)
+- ถ้า L2 ไม่จับ mistranslation/omission → reviewer ต้องหาเอง → ไม่ต่างจาก manual QA
+- **ไม่ควรผ่าน Epic 3 (AI-Powered Quality Analysis) โดยไม่มี verification ว่า L2 ทำงานจริง**
+
+## Next Steps (MANDATORY)
+
+1. **Debug L2 root cause** — check Inngest logs, AI API call, response parsing, finding insertion
+2. **Fix L2** — ให้ AI สร้าง findings ได้จริง
+3. **Retest** — run L2 capability test ใหม่หลัง fix
+4. **Retrospective** — ทำไม Epic 3 ผ่านโดยไม่มี semantic error detection test
