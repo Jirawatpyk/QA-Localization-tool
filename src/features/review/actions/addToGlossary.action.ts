@@ -39,7 +39,7 @@ export async function addToGlossary(input: unknown): Promise<ActionResult<AddToG
     targetLang,
     sourceTerm,
     targetTerm,
-    notes,
+    notes, // TODO(TD-GLOSSARY-001): notes column not yet in DB — field accepted but not persisted
     caseSensitive,
   } = parsed.data
 

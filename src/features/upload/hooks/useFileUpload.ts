@@ -187,6 +187,11 @@ export function useFileUpload({ projectId }: UseFileUploadOptions): UseFileUploa
   }
 
   async function processFiles(files: File[], batchId?: string, append = false) {
+    // CR-R2 C1 (defense-in-depth): ensure a fresh AbortController for each new upload batch
+    // (reset() also does this, but processFiles may be called directly via confirmRerun)
+    if (!append) {
+      abortControllerRef.current = new AbortController()
+    }
     setIsUploading(true)
 
     // client-side validation
@@ -364,6 +369,7 @@ export function useFileUpload({ projectId }: UseFileUploadOptions): UseFileUploa
     setPendingQueue([])
     setUploadedFiles([])
     setCurrentBatchId(undefined)
+    abortControllerRef.current = new AbortController() // CR-R2 C1: fresh controller for next upload session
   }
 
   return {

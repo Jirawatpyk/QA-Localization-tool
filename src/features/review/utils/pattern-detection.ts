@@ -177,7 +177,7 @@ export function trackRejection(
     }
   }
 
-  // BFS from new entry to find connected component
+  // DFS traversal to find connected component (pop = stack = DFS; results identical to BFS for undirected graph)
   const visited = new Set<string>()
   const queue = [entry.findingId]
   while (queue.length > 0) {

@@ -94,7 +94,7 @@ export async function parseFile(
     return {
       success: false,
       code: 'CONFLICT',
-      error: `File cannot be re-parsed: current status is '${file.status}'`,
+      error: 'File is already being processed by another request',
     }
   }
 
