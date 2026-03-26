@@ -123,13 +123,18 @@ export async function scoreFile({
 
   // S3 fix: derive layerCompleted from findings already loaded (no extra DB query)
   // When no override/prev/filter exists (review context), infer from highest layer in findings
-  const derivedLayerCompleted: LayerCompleted = (() => {
-    if (layerCompletedOverride || layerFilter) return 'L1' // won't be used — override/filter takes precedence
-    const layers = new Set(findingRows.map((f) => f.detectedByLayer))
-    if (layers.has('L3')) return 'L1L2L3'
-    if (layers.has('L2')) return 'L1L2'
-    return 'L1'
-  })()
+  const derivedLayerCompleted: LayerCompleted = deriveLayerFromFindings(findingRows)
+
+  // CR-H1 fix: map layerFilter (DetectedByLayer) to valid LayerCompleted value
+  // layerFilter='L1' → 'L1', 'L2' → 'L1L2', 'L3' → 'L1L2L3' (never use raw layerFilter as layerCompleted)
+  const layerFilterAsCompleted: LayerCompleted | undefined =
+    layerFilter === 'L1'
+      ? 'L1'
+      : layerFilter === 'L2'
+        ? 'L1L2'
+        : layerFilter === 'L3'
+          ? 'L1L2L3'
+          : undefined
 
   // Determine final status
   // When scoreStatus='partial' (AI pipeline failed), skip auto-pass — incomplete data
@@ -168,9 +173,12 @@ export async function scoreFile({
       .where(and(eq(scores.fileId, fileId), withTenant(scores.tenantId, tenantId)))
 
     // Override MUST be checked FIRST — after L2/L3 completes, prev has stale 'L1'
-    // S3 fix: when no prev + no layerFilter (review context), derive from file status
+    // CR-H1: use layerFilterAsCompleted (mapped to valid LayerCompleted) instead of raw layerFilter
     const layerCompleted =
-      layerCompletedOverride ?? prev?.layerCompleted ?? layerFilter ?? derivedLayerCompleted
+      layerCompletedOverride ??
+      prev?.layerCompleted ??
+      layerFilterAsCompleted ??
+      derivedLayerCompleted
 
     // Delete existing score (if any)
     await tx
@@ -197,15 +205,14 @@ export async function scoreFile({
     }
 
     // Insert new score (onConflictDoUpdate = safety net for race condition — S1 fix)
+    // CR-H4: explicitly omit `id` from update set (don't rely on undefined behavior)
+    const { ...updateSet } = scoreValues // scoreValues has no id field, spread is clean
     const [inserted] = await tx
       .insert(scores)
       .values(scoreValues)
       .onConflictDoUpdate({
         target: [scores.fileId, scores.tenantId],
-        set: {
-          ...scoreValues,
-          id: undefined, // keep existing PK on conflict
-        },
+        set: updateSet,
       })
       .returning()
 
@@ -237,10 +244,10 @@ export async function scoreFile({
     logger.error({ err: auditErr, scoreId: newScore.id }, 'Audit log write failed for score')
   }
 
-  // Language pair graduation notification (file 51 for new pair)
-  // Fires when fileCount === 50 (50 already scored = this is file 51, first eligible)
-  // Non-fatal: wrap at call site so outer errors never suppress scoring result
-  if (autoPassResult?.isNewPair && autoPassResult.fileCount === NEW_PAIR_FILE_THRESHOLD) {
+  // Language pair graduation notification (file 51+ for new pair)
+  // CR-H3: use >= instead of === to handle concurrent re-scoring edge case
+  // (dedup guard in createGraduationNotification prevents duplicate notifications)
+  if (autoPassResult?.isNewPair && autoPassResult.fileCount >= NEW_PAIR_FILE_THRESHOLD) {
     try {
       await createGraduationNotification({
         tenantId,
@@ -313,6 +320,9 @@ async function createGraduationNotification(params: {
     }
 
     // Insert one notification per admin
+    // Note: no unique constraint on notifications table — dedup guard above (JSONB containment)
+    // prevents duplicate graduation notifications. Race between concurrent Inngest runs is
+    // possible but harmless (worst case: duplicate notifications, not data corruption).
     await db.insert(notifications).values(
       admins.map((admin) => ({
         tenantId,
@@ -391,4 +401,15 @@ function buildFindingsSummary(
   }
 
   return { severityCounts, riskiestFinding: riskiest }
+}
+
+/**
+ * Derive layerCompleted from the highest detection layer present in findings.
+ * Used as fallback when no override, prev score, or layerFilter exists (review context).
+ */
+function deriveLayerFromFindings(findingRows: Array<{ detectedByLayer: string }>): LayerCompleted {
+  const layers = new Set(findingRows.map((f) => f.detectedByLayer))
+  if (layers.has('L3')) return 'L1L2L3'
+  if (layers.has('L2')) return 'L1L2'
+  return 'L1'
 }

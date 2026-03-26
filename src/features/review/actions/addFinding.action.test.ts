@@ -104,6 +104,7 @@ describe('addFinding.action', () => {
       id: ACTION_TEST_IDS.userId,
       tenantId: ACTION_TEST_IDS.tenantId,
       role: 'qa_reviewer',
+      nativeLanguages: [] as string[],
     })
   })
 
