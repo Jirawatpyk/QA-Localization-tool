@@ -816,15 +816,24 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Effort:** 2-3 ชม.
 - **Status:** DEFERRED → **Epic 5 — CI pipeline hardening**
 
-### TD-TEST-012: Bulk action performance benchmark (50 findings + score recalc) not implemented
+### ~~TD-TEST-012: Bulk action performance benchmark (50 findings + score recalc) not implemented~~
 - **Date:** 2026-03-18
 - **Story:** 4.8 Task 6.5
 - **Phase:** impl
 - **Severity:** Low
-- **Files:** `e2e/review-accessibility.spec.ts`
-- **Description:** AC4 requires bulk action on 50 findings < 3s. TA-12b test written but FAILED — used Shift+J (not a registered shortcut). Bulk selection uses Shift+Click, not Shift+J. Test needs rewrite with correct bulk select mechanism.
-- **Effort:** 1 ชม.
-- **Status:** DEFERRED → **Epic 5** (TA-12b test needs correct Shift+Click bulk select implementation)
+- **Status:** RESOLVED (2026-03-18) — TA-12b rewritten with Shift+Click (correct mechanism). 776ms PASSED.
+
+### TD-UX-004: Shift+J/K bulk selection not implemented — AC1 of Story 4.4a
+- **Date:** 2026-03-18
+- **Story:** 4.4a (discovered during Story 4.8 CR)
+- **Phase:** impl
+- **Severity:** Medium
+- **Files:** `src/features/review/hooks/use-keyboard-actions.ts`, `src/features/review/components/FindingCardCompact.tsx`
+- **Description:** Epic 4 spec (line 241) and Story 4.4a AC1 require both `Shift+Click` AND `Shift+J/K` for bulk selection. Story 4.4a Task 5.2 marked `[x]` with note "deferred — uses existing J/K navigation with store selectRange" but Shift+J/K was never implemented and no TD was logged. Only Shift+Click works. `KeyboardCheatSheet.tsx:53` correctly shows `Shift+Click` only.
+- **Impact:** Keyboard-only users cannot extend selection without mouse — accessibility gap (WCAG SC 2.1.1 keyboard-only).
+- **Fix:** Register `shift+j` and `shift+k` in keyboard actions hook → call `selectRange` from current selection anchor to next/prev finding.
+- **Effort:** 2-3 ชม.
+- **Status:** DEFERRED → **Epic 5 — keyboard accessibility hardening**
 
 ### ~~TD-TEST-013: Thorough mode pipeline verification not run~~
 - **Date:** 2026-03-18
