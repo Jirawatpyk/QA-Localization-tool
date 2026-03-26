@@ -9,9 +9,9 @@
 - Added Zod `.uuid()` validation on tenantId in processBatch, processFile, batchComplete
 - NonRetriableError thrown on invalid tenantId
 
-### Goal H — Rate Limiting & Compensation (Findings #11, #13)
-- #11: IP-based rate limiting spoofable via x-forwarded-for — consider Vercel's cf-connecting-ip
-- #13: createUser compensation retry — add retry logic for orphaned Supabase Auth user cleanup
+### ~~Goal H — Rate Limiting & Compensation (Findings #11, #13)~~ ✅ DONE (2026-03-26)
+- #11: Swapped IP priority: x-real-ip first (Vercel-set, not spoofable), x-forwarded-for fallback
+- #13: Added retry (max 2) + error logging for orphaned auth user compensation
 
 ### Goal F — Tenant Resource Limits (Finding #9)
 - Add per-tenant user quota (e.g., max users per plan tier)

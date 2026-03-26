@@ -9,8 +9,11 @@ import { users } from '@/db/schema/users'
 import { createUserSchema } from '@/features/admin/validation/userSchemas'
 import type { AppRole } from '@/lib/auth/getCurrentUser'
 import { requireRole } from '@/lib/auth/requireRole'
+import { logger } from '@/lib/logger'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { ActionResult } from '@/types/actionResult'
+
+const COMPENSATION_MAX_RETRIES = 2
 
 type CreateUserResult = { id: string; email: string; role: AppRole }
 
@@ -78,7 +81,26 @@ export async function createUser(input: unknown): Promise<ActionResult<CreateUse
     })
   } catch {
     // Compensate: delete orphaned Supabase Auth user (DB transaction already rolled back)
-    await adminClient.auth.admin.deleteUser(authData.user.id)
+    // Retry up to COMPENSATION_MAX_RETRIES times — orphaned auth user is a security risk
+    let compensated = false
+    for (let attempt = 1; attempt <= COMPENSATION_MAX_RETRIES; attempt++) {
+      try {
+        await adminClient.auth.admin.deleteUser(authData.user.id)
+        compensated = true
+        break
+      } catch (compErr) {
+        logger.warn(
+          { err: compErr, userId: authData.user.id, attempt },
+          'createUser: compensation deleteUser failed — retrying',
+        )
+      }
+    }
+    if (!compensated) {
+      logger.error(
+        { userId: authData.user.id, email },
+        'createUser: ORPHANED AUTH USER — compensation exhausted, manual cleanup required',
+      )
+    }
     return { success: false, code: 'INTERNAL_ERROR', error: 'Failed to create user records' }
   }
 
