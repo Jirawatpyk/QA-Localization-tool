@@ -981,3 +981,14 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Fix:** When implementing aggregate scores, add separate constraint or table.
 - **Effort:** N/A (future feature design)
 - **Status:** ACCEPTED — no current code path inserts NULL-fileId; constraint handles it correctly via SQL NULL semantics
+
+### TD-SCORE-007: 'overridden' status in autoPassChecker fileCount filter has no writer in codebase
+- **Date:** 2026-03-26
+- **Story:** Scoring CR R2 finding M4
+- **Phase:** CR
+- **Severity:** Low
+- **Files:** `src/features/scoring/autoPassChecker.ts`
+- **Description:** `inArray(scores.status, ['calculated', 'auto_passed', 'overridden'])` includes `'overridden'` but no code path currently writes `status: 'overridden'` to the `scores` table. `scoreFile.ts` only writes `'calculated' | 'na' | 'auto_passed' | 'partial'`. The `ScoreStatus` union type includes `'overridden'` for future PM override feature. Including it in the graduation count is harmless today but establishes an undocumented forward dependency.
+- **Fix:** When override-score feature is added (Epic 6), verify the override action writes consistent status through `scoreFile` and that overridden files should count toward graduation threshold.
+- **Effort:** N/A (verification when feature is built)
+- **Status:** DEFERRED → **Epic 6** (override-score feature — `TODO(Epic 6)` comment added in code)
