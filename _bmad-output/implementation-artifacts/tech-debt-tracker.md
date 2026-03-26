@@ -915,3 +915,69 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Fix:** Make cost logging part of the main transaction, or at minimum retry once on failure. Alternatively, implement the reservation pattern in TD-PIPE-003 which makes post-hoc logging less critical.
 - **Effort:** 2-3 ชม.
 - **Status:** DEFERRED → **Epic 6** (billing infrastructure — coupled with TD-PIPE-003 budget reservation redesign)
+
+## Category 10: Scoring Adversarial Review (2026-03-26)
+
+### ~~TD-SCORE-001: Graduation notification dedup is per-tenant per-language-pair, not per-project~~
+- **Date:** 2026-03-26
+- **Story:** Scoring adversarial review finding #5
+- **Phase:** review
+- **Severity:** Low
+- **Files:** `src/features/scoring/helpers/scoreFile.ts`
+- **Description:** JSONB containment check `metadata @> {sourceLang, targetLang}` doesn't include `projectId`. If tenant has 2 projects with same language pair, only the first project to reach 50 files gets the graduation notification — second project never gets one.
+- **Fix:** Added `projectId` to JSONB containment check. Party Mode decision: graduation is per-project (threshold is per-project).
+- **Status:** RESOLVED (2026-03-26)
+
+### TD-SCORE-002: Debounce emitter unused in Server Action path — N finding changes = N recalculations
+- **Date:** 2026-03-26
+- **Story:** Scoring adversarial review finding #8
+- **Phase:** review
+- **Severity:** Low
+- **Files:** `src/features/review/actions/helpers/executeReviewAction.ts`, `src/features/review/utils/finding-changed-emitter.ts`
+- **Description:** `executeReviewAction` sends `finding.changed` via `inngest.send()` directly. The 500ms debounce emitter (`finding-changed-emitter.ts`) is only used client-side. 5 rapid single-finding actions = 5 Inngest events = 5 sequential scoreFile calls. Not a bug (final score is always correct) but unnecessary work. Inngest projectId concurrency serializes them safely.
+- **Fix:** Add Inngest-level debounce (`debounce` config) or batch event accumulation.
+- **Effort:** 2-3 ชม.
+- **Status:** DEFERRED → **Epic 6** (performance optimization — current behavior is correct, just wasteful)
+
+### TD-SCORE-003: penaltyWeight uses PostgreSQL `real` (float32) — precision loss with very small custom weights
+- **Date:** 2026-03-26
+- **Story:** Scoring adversarial review finding #9
+- **Phase:** review
+- **Severity:** Low
+- **Files:** `src/db/schema/severityConfigs.ts`, `src/features/scoring/mqmCalculator.ts`
+- **Description:** `penaltyWeight: real` = float32. Default weights (25, 5, 1) are exact integers — no issue. Custom weights like `0.001` accumulate float32 errors across many findings. Mitigated by 2dp rounding in calculator. Would need `numeric` type for arbitrary-precision.
+- **Effort:** 2 ชม. (migration + type changes)
+- **Status:** DEFERRED → **Epic 6** (admin config — no current admin UI sets custom weights)
+
+### TD-SCORE-004: Score DELETE+INSERT may cause brief Realtime "no score" flash
+- **Date:** 2026-03-26
+- **Story:** Scoring adversarial review finding #11
+- **Phase:** review
+- **Severity:** Low
+- **Files:** `src/features/scoring/helpers/scoreFile.ts`, `src/features/review/hooks/use-score-subscription.ts`
+- **Description:** scoreFile uses DELETE+INSERT (not UPDATE) in transaction. If Supabase CDC emits statement-level events, Realtime subscriber may see DELETE before INSERT. Mitigated: useScoreSubscription only listens to INSERT+UPDATE (not DELETE), and polling fallback has exponential backoff. Visual glitch is unlikely but possible.
+- **Fix:** Switch to UPDATE on existing row + INSERT only when no row exists (upsert pattern). Partially addressed by S1 onConflictDoUpdate.
+- **Effort:** 1 ชม.
+- **Status:** ACCEPTED — mitigated by Realtime event filter + S1 upsert pattern
+
+### TD-SCORE-005: autoPassRationale stored as text (JSON string) — no schema versioning
+- **Date:** 2026-03-26
+- **Story:** Scoring adversarial review finding #12
+- **Phase:** review
+- **Severity:** Low
+- **Files:** `src/db/schema/scores.ts`, `src/features/review/components/AutoPassRationale.tsx`
+- **Description:** `autoPassRationale` is `text` column storing JSON string. Component parses with Zod + falls back to raw text for legacy. If schema changes (Epic 5+), old rows parse fail → structured display breaks. Fallback handles it but not graceful.
+- **Fix:** Add schema version field to JSON. Or use JSONB column type with explicit version key.
+- **Effort:** 2 ชม.
+- **Status:** DEFERRED → **Epic 6** (when rationale schema actually changes — premature to version now)
+
+### TD-SCORE-006: scores.fileId nullable for future project-level aggregates — unused, confusing schema
+- **Date:** 2026-03-26
+- **Story:** Scoring adversarial review finding #13
+- **Phase:** review
+- **Severity:** Low
+- **Files:** `src/db/schema/scores.ts`
+- **Description:** `fileId` is nullable (null = project-level aggregate). Feature not implemented yet. uq_scores_file_tenant unique constraint uses nullable column — PostgreSQL treats NULL != NULL, so multiple NULL-fileId rows per tenant are allowed (correct for future aggregates but could confuse). No current code inserts NULL-fileId rows.
+- **Fix:** When implementing aggregate scores, add separate constraint or table.
+- **Effort:** N/A (future feature design)
+- **Status:** ACCEPTED — no current code path inserts NULL-fileId; constraint handles it correctly via SQL NULL semantics

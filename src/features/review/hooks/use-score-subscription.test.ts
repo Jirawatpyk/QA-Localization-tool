@@ -20,7 +20,10 @@ const mockSingle = vi.fn((..._args: unknown[]) =>
     error: null as { message: string } | null,
   }),
 )
-const mockEq = vi.fn().mockReturnValue({ single: mockSingle })
+// S4 fix: mockEq must be chainable — code calls .eq('file_id').eq('tenant_id').single()
+const mockEqResult: Record<string, unknown> = { single: mockSingle }
+const mockEq = vi.fn().mockReturnValue(mockEqResult)
+mockEqResult.eq = mockEq // chainable: .eq().eq() returns self
 const mockSelect = vi.fn().mockReturnValue({ eq: mockEq })
 const mockFrom = vi.fn().mockReturnValue({ select: mockSelect })
 
@@ -56,7 +59,7 @@ describe('useScoreSubscription', () => {
   // ── P0: Subscription Setup ──
 
   it('should subscribe to INSERT (primary) and UPDATE (secondary) on scores table', () => {
-    renderHook(() => useScoreSubscription('file-123'))
+    renderHook(() => useScoreSubscription('file-123', 'tenant-test'))
 
     expect(mockSupabase.channel).toHaveBeenCalledWith('scores:file-123')
 
@@ -67,7 +70,7 @@ describe('useScoreSubscription', () => {
         event: 'INSERT',
         schema: 'public',
         table: 'scores',
-        filter: 'file_id=eq.file-123',
+        filter: 'file_id=eq.file-123&tenant_id=eq.tenant-test',
       }),
       expect.any(Function),
     )
@@ -79,7 +82,7 @@ describe('useScoreSubscription', () => {
         event: 'UPDATE',
         schema: 'public',
         table: 'scores',
-        filter: 'file_id=eq.file-123',
+        filter: 'file_id=eq.file-123&tenant_id=eq.tenant-test',
       }),
       expect.any(Function),
     )
@@ -88,7 +91,7 @@ describe('useScoreSubscription', () => {
   })
 
   it('should update store currentScore on score change event', () => {
-    renderHook(() => useScoreSubscription('file-123'))
+    renderHook(() => useScoreSubscription('file-123', 'tenant-test'))
 
     // Simulate Realtime payload
     const onHandler = mockChannel.on.mock.calls[0]![2] as (payload: {
@@ -104,7 +107,7 @@ describe('useScoreSubscription', () => {
   })
 
   it('should update store scoreStatus on score change event', () => {
-    renderHook(() => useScoreSubscription('file-123'))
+    renderHook(() => useScoreSubscription('file-123', 'tenant-test'))
 
     const onHandler = mockChannel.on.mock.calls[0]![2] as (payload: {
       new: { mqm_score: number; status: string }
@@ -121,7 +124,7 @@ describe('useScoreSubscription', () => {
   // ── P0: Cleanup ──
 
   it('should cleanup channel on unmount', () => {
-    const { unmount } = renderHook(() => useScoreSubscription('file-123'))
+    const { unmount } = renderHook(() => useScoreSubscription('file-123', 'tenant-test'))
 
     unmount()
 
@@ -131,7 +134,7 @@ describe('useScoreSubscription', () => {
   // ── P1: Error Handling ──
 
   it('should fallback to polling on CHANNEL_ERROR and fetch score', async () => {
-    renderHook(() => useScoreSubscription('file-123'))
+    renderHook(() => useScoreSubscription('file-123', 'tenant-test'))
 
     // Simulate channel error via subscribe callback
     const subscribeCallback = mockChannel.subscribe.mock.calls[0]![0] as (status: string) => void
@@ -153,7 +156,7 @@ describe('useScoreSubscription', () => {
   })
 
   it('should resubscribe after channel recovery and stop polling', async () => {
-    renderHook(() => useScoreSubscription('file-123'))
+    renderHook(() => useScoreSubscription('file-123', 'tenant-test'))
 
     // Simulate error then recovery
     const subscribeCallback = mockChannel.subscribe.mock.calls[0]![0] as (status: string) => void
@@ -179,7 +182,7 @@ describe('useScoreSubscription', () => {
 
   it('should unsubscribe from old channel when fileId changes', () => {
     const { rerender } = renderHook(
-      ({ fileId }: { fileId: string }) => useScoreSubscription(fileId),
+      ({ fileId }: { fileId: string }) => useScoreSubscription(fileId, 'tenant-test'),
       { initialProps: { fileId: 'file-123' } },
     )
 
@@ -192,7 +195,7 @@ describe('useScoreSubscription', () => {
   // ── P1-BV: Exponential Backoff Boundary Values ──
 
   it('should poll at 5s initial interval', async () => {
-    renderHook(() => useScoreSubscription('file-123'))
+    renderHook(() => useScoreSubscription('file-123', 'tenant-test'))
 
     // Trigger channel error
     const subscribeCallback = mockChannel.subscribe.mock.calls[0]![0] as (status: string) => void
@@ -211,7 +214,7 @@ describe('useScoreSubscription', () => {
   })
 
   it('should increase polling interval: 5s → 10s → 20s → 40s', async () => {
-    renderHook(() => useScoreSubscription('file-123'))
+    renderHook(() => useScoreSubscription('file-123', 'tenant-test'))
 
     const subscribeCallback = mockChannel.subscribe.mock.calls[0]![0] as (status: string) => void
     act(() => {
@@ -240,7 +243,7 @@ describe('useScoreSubscription', () => {
   })
 
   it('should cap polling interval at 60s (NOT 80s)', async () => {
-    renderHook(() => useScoreSubscription('file-123'))
+    renderHook(() => useScoreSubscription('file-123', 'tenant-test'))
 
     const subscribeCallback = mockChannel.subscribe.mock.calls[0]![0] as (status: string) => void
     act(() => {
@@ -267,7 +270,7 @@ describe('useScoreSubscription', () => {
   // ── Story 3.2c AC6: BUG FIX — INSERT event + layerCompleted ──
 
   it('[P0] should subscribe to INSERT event (not UPDATE) — BUG FIX for score lifecycle', () => {
-    renderHook(() => useScoreSubscription('file-123'))
+    renderHook(() => useScoreSubscription('file-123', 'tenant-test'))
 
     // Verify that at least one .on() call uses INSERT event
     const insertCall = mockChannel.on.mock.calls.find(
@@ -279,13 +282,13 @@ describe('useScoreSubscription', () => {
         event: 'INSERT',
         schema: 'public',
         table: 'scores',
-        filter: 'file_id=eq.file-123',
+        filter: 'file_id=eq.file-123&tenant_id=eq.tenant-test',
       }),
     )
   })
 
   it('[P0] should pass layer_completed from Realtime INSERT payload to updateScore', () => {
-    renderHook(() => useScoreSubscription('file-123'))
+    renderHook(() => useScoreSubscription('file-123', 'tenant-test'))
 
     // Find the INSERT handler
     const insertCall = mockChannel.on.mock.calls.find(
@@ -311,7 +314,7 @@ describe('useScoreSubscription', () => {
   })
 
   it('[P0] should include layer_completed in polling fallback select', async () => {
-    renderHook(() => useScoreSubscription('file-123'))
+    renderHook(() => useScoreSubscription('file-123', 'tenant-test'))
 
     const subscribeCallback = mockChannel.subscribe.mock.calls[0]![0] as (status: string) => void
     act(() => {
@@ -327,7 +330,7 @@ describe('useScoreSubscription', () => {
 
   // B9 [P1]: score=0 in Realtime payload — falsy but valid number
   it('[P1] should update store when mqm_score is 0 (falsy but valid boundary)', () => {
-    renderHook(() => useScoreSubscription('file-123'))
+    renderHook(() => useScoreSubscription('file-123', 'tenant-test'))
 
     const onHandler = mockChannel.on.mock.calls[0]![2] as (payload: {
       new: Record<string, unknown>
@@ -344,7 +347,7 @@ describe('useScoreSubscription', () => {
 
   // B6 [P2]: polling interval resets to 5s after recovery then re-error
   it('[P2] should reset polling interval to 5s after recovery and re-error', async () => {
-    renderHook(() => useScoreSubscription('file-123'))
+    renderHook(() => useScoreSubscription('file-123', 'tenant-test'))
 
     const subscribeCallback = mockChannel.subscribe.mock.calls[0]![0] as (status: string) => void
 
@@ -378,7 +381,7 @@ describe('useScoreSubscription', () => {
 
   // F6 [P1]: handleScoreChange ignores non-number mqm_score
   it('[P1] should not update store when mqm_score is not a number', () => {
-    renderHook(() => useScoreSubscription('file-123'))
+    renderHook(() => useScoreSubscription('file-123', 'tenant-test'))
 
     const onHandler = mockChannel.on.mock.calls[0]![2] as (payload: {
       new: Record<string, unknown>
@@ -394,7 +397,7 @@ describe('useScoreSubscription', () => {
 
   // F7 [P1]: handleScoreChange ignores invalid status string
   it('[P1] should not update store when status is not a valid ScoreStatus', () => {
-    renderHook(() => useScoreSubscription('file-123'))
+    renderHook(() => useScoreSubscription('file-123', 'tenant-test'))
 
     const onHandler = mockChannel.on.mock.calls[0]![2] as (payload: {
       new: Record<string, unknown>
@@ -410,7 +413,7 @@ describe('useScoreSubscription', () => {
 
   // F8 [P2]: non-string layer_completed passes null to store
   it('[P2] should pass null layerCompleted when layer_completed is not a string', () => {
-    renderHook(() => useScoreSubscription('file-123'))
+    renderHook(() => useScoreSubscription('file-123', 'tenant-test'))
 
     const onHandler = mockChannel.on.mock.calls[0]![2] as (payload: {
       new: Record<string, unknown>
@@ -429,7 +432,7 @@ describe('useScoreSubscription', () => {
     // Override mockSingle to return null data (no score row)
     mockSingle.mockResolvedValueOnce({ data: null, error: { message: 'No rows found' } })
 
-    renderHook(() => useScoreSubscription('file-123'))
+    renderHook(() => useScoreSubscription('file-123', 'tenant-test'))
 
     // Trigger channel error to start polling
     const subscribeCallback = mockChannel.subscribe.mock.calls[0]![0] as (status: string) => void
@@ -464,7 +467,7 @@ describe('useScoreSubscription', () => {
   // ── Story 4.0 TD Regression ──
 
   it('[P1] TD7: should update autoPassRationale on Realtime transition to auto_passed', () => {
-    renderHook(() => useScoreSubscription('file-123'))
+    renderHook(() => useScoreSubscription('file-123', 'tenant-test'))
 
     const insertCall = mockChannel.on.mock.calls.find(
       (call: unknown[]) => (call[1] as Record<string, unknown>)?.event === 'INSERT',

@@ -24,7 +24,8 @@ function isValidLayerCompleted(value: string): value is LayerCompleted {
  * Subscribe to scores table changes for a specific file via Supabase Realtime.
  * Falls back to polling with exponential backoff on channel error.
  */
-export function useScoreSubscription(fileId: string, tenantId?: string | undefined) {
+// S4 fix: tenantId is required — Realtime filter MUST include tenant_id for isolation
+export function useScoreSubscription(fileId: string, tenantId: string) {
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pollIntervalRef = useRef(INITIAL_POLL_INTERVAL)
   const isPollingRef = useRef(false)
@@ -112,10 +113,8 @@ export function useScoreSubscription(fileId: string, tenantId?: string | undefin
       useReviewStore.getState().updateScore(mqm_score, status, layerCompleted, autoPassRationale)
     }
 
-    // TD-TENANT-003: compound filter with tenant_id when available
-    const realtimeFilter = tenantId
-      ? `file_id=eq.${fileId}&tenant_id=eq.${tenantId}`
-      : `file_id=eq.${fileId}`
+    // TD-TENANT-003 + S4 fix: compound filter always includes tenant_id (now required param)
+    const realtimeFilter = `file_id=eq.${fileId}&tenant_id=eq.${tenantId}`
 
     const channel = supabase
       .channel(`scores:${fileId}`)

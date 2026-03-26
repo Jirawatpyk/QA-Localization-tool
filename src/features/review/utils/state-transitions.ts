@@ -85,7 +85,7 @@ export const SCORE_IMPACT_MAP: Record<FindingStatus, ScoreImpact> = {
   accepted: { countsPenalty: true },
   re_accepted: { countsPenalty: true },
   rejected: { countsPenalty: false },
-  flagged: { countsPenalty: true },
+  flagged: { countsPenalty: false }, // S2 fix: flagged = uncertain, not confirmed → no penalty (aligned with CONTRIBUTING_STATUSES)
   noted: { countsPenalty: false },
   source_issue: { countsPenalty: false },
   manual: { countsPenalty: true },

@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, inArray, sql } from 'drizzle-orm'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
@@ -47,6 +47,8 @@ export async function checkAutoPass(input: AutoPassInput): Promise<AutoPassResul
       )
       .limit(1),
     // Count distinct scored files for this language pair within the project+tenant
+    // S6 fix: only count terminal score statuses — exclude 'calculating'/'partial' to prevent
+    // inflated fileCount from triggering premature graduation notification
     db
       .select({ count: sql<number>`count(distinct ${scores.fileId})` })
       .from(scores)
@@ -58,6 +60,7 @@ export async function checkAutoPass(input: AutoPassInput): Promise<AutoPassResul
           eq(segments.targetLang, targetLang),
           withTenant(scores.tenantId, tenantId),
           withTenant(segments.tenantId, tenantId), // defense-in-depth on JOIN
+          inArray(scores.status, ['calculated', 'auto_passed', 'overridden']),
         ),
       ),
   ])

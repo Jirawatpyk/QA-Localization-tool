@@ -8,11 +8,14 @@ export const DEFAULT_PENALTY_WEIGHTS: PenaltyWeights = {
 
 // Finding statuses that contribute to MQM score penalty
 // 're_accepted' included because it's semantically "accepted again after re-review"
+// 'manual' included because reviewer-added findings are confirmed issues (S2 adversarial review)
+// 'flagged' EXCLUDED — uncertain/unconfirmed, no penalty until resolved (S2 fix)
 // Typed as ReadonlySet<FindingStatus> (not string) so TS catches invalid status literals
 export const CONTRIBUTING_STATUSES: ReadonlySet<FindingStatus> = new Set<FindingStatus>([
   'pending',
   'accepted',
   're_accepted',
+  'manual',
 ])
 
 // Default project auto-pass threshold (matches DB column default in projects.auto_pass_threshold)

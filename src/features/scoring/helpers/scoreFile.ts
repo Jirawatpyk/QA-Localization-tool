@@ -121,6 +121,16 @@ export async function scoreFile({
     penaltyWeights,
   )
 
+  // S3 fix: derive layerCompleted from findings already loaded (no extra DB query)
+  // When no override/prev/filter exists (review context), infer from highest layer in findings
+  const derivedLayerCompleted: LayerCompleted = (() => {
+    if (layerCompletedOverride || layerFilter) return 'L1' // won't be used — override/filter takes precedence
+    const layers = new Set(findingRows.map((f) => f.detectedByLayer))
+    if (layers.has('L3')) return 'L1L2L3'
+    if (layers.has('L2')) return 'L1L2'
+    return 'L1'
+  })()
+
   // Determine final status
   // When scoreStatus='partial' (AI pipeline failed), skip auto-pass — incomplete data
   let status: 'na' | 'auto_passed' | 'calculated' | 'partial'
@@ -128,6 +138,9 @@ export async function scoreFile({
 
   if (scoreStatus === 'partial') {
     status = 'partial'
+  } else if (scoreResult.status === 'na') {
+    // S5 fix: skip checkAutoPass when totalWords=0 (result would be overridden to 'na' anyway)
+    status = 'na'
   } else {
     // Story 3.5: build findings summary for structured auto-pass rationale
     const findingsSummary = buildFindingsSummary(findingRows)
@@ -141,11 +154,12 @@ export async function scoreFile({
       targetLang,
       findingsSummary,
     })
-    status =
-      scoreResult.status === 'na' ? 'na' : autoPassResult.eligible ? 'auto_passed' : 'calculated'
+    status = autoPassResult.eligible ? 'auto_passed' : 'calculated'
   }
 
   // Persist in transaction: load previous score → delete → insert (idempotent)
+  // S1 fix: uq_scores_file_tenant constraint prevents duplicate rows from concurrent
+  // Server Action + Inngest race. onConflictDoUpdate is the safety net.
   const { newScore, previousScore } = await db.transaction(async (tx) => {
     // Load previous score for audit old_value (before delete)
     const [prev] = await tx
@@ -154,33 +168,44 @@ export async function scoreFile({
       .where(and(eq(scores.fileId, fileId), withTenant(scores.tenantId, tenantId)))
 
     // Override MUST be checked FIRST — after L2/L3 completes, prev has stale 'L1'
-    const layerCompleted = layerCompletedOverride ?? prev?.layerCompleted ?? layerFilter ?? 'L1'
+    // S3 fix: when no prev + no layerFilter (review context), derive from file status
+    const layerCompleted =
+      layerCompletedOverride ?? prev?.layerCompleted ?? layerFilter ?? derivedLayerCompleted
 
     // Delete existing score (if any)
     await tx
       .delete(scores)
       .where(and(eq(scores.fileId, fileId), withTenant(scores.tenantId, tenantId)))
 
-    // Insert new score
+    const scoreValues = {
+      fileId,
+      projectId,
+      tenantId,
+      mqmScore: scoreResult.mqmScore,
+      totalWords: scoreResult.totalWords,
+      criticalCount: scoreResult.criticalCount,
+      majorCount: scoreResult.majorCount,
+      minorCount: scoreResult.minorCount,
+      npt: scoreResult.npt,
+      layerCompleted,
+      status,
+      // Only store rationale when file actually auto-passed (H2: prevents non-null rationale
+      // being persisted when status='na' overrides auto-pass)
+      autoPassRationale:
+        status === 'auto_passed' && autoPassResult ? autoPassResult.rationale : null,
+      calculatedAt: new Date(),
+    }
+
+    // Insert new score (onConflictDoUpdate = safety net for race condition — S1 fix)
     const [inserted] = await tx
       .insert(scores)
-      .values({
-        fileId,
-        projectId,
-        tenantId,
-        mqmScore: scoreResult.mqmScore,
-        totalWords: scoreResult.totalWords,
-        criticalCount: scoreResult.criticalCount,
-        majorCount: scoreResult.majorCount,
-        minorCount: scoreResult.minorCount,
-        npt: scoreResult.npt,
-        layerCompleted,
-        status,
-        // Only store rationale when file actually auto-passed (H2: prevents non-null rationale
-        // being persisted when status='na' overrides auto-pass)
-        autoPassRationale:
-          status === 'auto_passed' && autoPassResult ? autoPassResult.rationale : null,
-        calculatedAt: new Date(),
+      .values(scoreValues)
+      .onConflictDoUpdate({
+        target: [scores.fileId, scores.tenantId],
+        set: {
+          ...scoreValues,
+          id: undefined, // keep existing PK on conflict
+        },
       })
       .returning()
 
@@ -259,8 +284,8 @@ async function createGraduationNotification(params: {
   const { tenantId, projectId, sourceLang, targetLang } = params
 
   try {
-    // Deduplication guard: check if graduation notification already exists for this pair
-    // Uses JSONB containment query — prevents duplicates on idempotent re-runs of file 51
+    // Deduplication guard: check if graduation notification already exists for this pair+project
+    // TD-SCORE-001 fix: include projectId — graduation is per-project (threshold is per-project)
     const [existing] = await db
       .select({ id: notifications.id })
       .from(notifications)
@@ -268,7 +293,7 @@ async function createGraduationNotification(params: {
         and(
           withTenant(notifications.tenantId, tenantId),
           eq(notifications.type, 'language_pair_graduated'),
-          sql`${notifications.metadata} @> ${JSON.stringify({ sourceLang, targetLang })}::jsonb`,
+          sql`${notifications.metadata} @> ${JSON.stringify({ sourceLang, targetLang, projectId })}::jsonb`,
         ),
       )
       .limit(1)

@@ -46,6 +46,7 @@ vi.mock('@/db/schema/projects', () => ({
 vi.mock('drizzle-orm', () => ({
   and: vi.fn((...args: unknown[]) => args),
   eq: vi.fn((...args: unknown[]) => args),
+  inArray: vi.fn((...args: unknown[]) => args),
   sql: vi.fn(() => 'count-expr'),
 }))
 

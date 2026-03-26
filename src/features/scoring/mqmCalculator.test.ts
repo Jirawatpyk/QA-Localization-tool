@@ -144,10 +144,11 @@ describe('calculateMqmScore', () => {
     expect(result.mqmScore).toBe(100)
   })
 
-  it('should exclude manual findings from penalty', () => {
+  it('should include manual findings in penalty (S2 fix: reviewer-added = confirmed issue)', () => {
     const result = calculateMqmScore([mkFinding('critical', 'manual')], 1000)
-    expect(result.criticalCount).toBe(0)
-    expect(result.mqmScore).toBe(100)
+    expect(result.criticalCount).toBe(1)
+    expect(result.npt).toBe(25) // critical weight = 25
+    expect(result.mqmScore).toBe(75) // 100 - 25
   })
 
   it('should only score contributing statuses in a mixed list', () => {

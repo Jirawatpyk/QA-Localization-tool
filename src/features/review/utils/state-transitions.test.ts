@@ -73,7 +73,7 @@ const EXPECTED_SCORE_IMPACT: Record<FindingStatus, { countsPenalty: boolean }> =
   accepted: { countsPenalty: true },
   re_accepted: { countsPenalty: true },
   rejected: { countsPenalty: false },
-  flagged: { countsPenalty: true },
+  flagged: { countsPenalty: false }, // S2 fix: flagged = uncertain → no penalty
   noted: { countsPenalty: false },
   source_issue: { countsPenalty: false },
   manual: { countsPenalty: true },
@@ -224,10 +224,10 @@ describe('state-transitions', () => {
         expect(r).not.toBeNull()
         expect(r).not.toBe('pending')
       }
-      // Verify score impact: rejected has no penalty, others do
+      // Verify score impact: rejected + flagged have no penalty, accepted does
       expect(SCORE_IMPACT_MAP.accepted.countsPenalty).toBe(true)
       expect(SCORE_IMPACT_MAP.rejected.countsPenalty).toBe(false)
-      expect(SCORE_IMPACT_MAP.flagged.countsPenalty).toBe(true)
+      expect(SCORE_IMPACT_MAP.flagged.countsPenalty).toBe(false) // S2 fix: uncertain → no penalty
     })
 
     it('[P0] U-B2: 1 pending among non-pending — getNewState on pending produces valid target', () => {
@@ -255,10 +255,10 @@ describe('state-transitions', () => {
       const reviewedStatuses: FindingStatus[] = ['accepted', 'rejected', 'flagged']
       const reviewedCount = reviewedStatuses.filter((s) => s !== 'pending').length
       expect(reviewedCount).toBe(reviewedStatuses.length)
-      // rejected = no penalty, accepted + flagged = penalty
+      // rejected + flagged = no penalty, accepted = penalty (S2 fix)
       expect(SCORE_IMPACT_MAP.rejected.countsPenalty).toBe(false)
       expect(SCORE_IMPACT_MAP.accepted.countsPenalty).toBe(true)
-      expect(SCORE_IMPACT_MAP.flagged.countsPenalty).toBe(true)
+      expect(SCORE_IMPACT_MAP.flagged.countsPenalty).toBe(false)
     })
   })
 })
