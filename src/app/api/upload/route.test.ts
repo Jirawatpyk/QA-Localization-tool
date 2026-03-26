@@ -1,5 +1,12 @@
 vi.mock('server-only', () => ({}))
 
+// Mock rate limiter — always allow (tests focus on upload logic, not rate limiting)
+vi.mock('@/lib/ratelimit', () => ({
+  mutationLimiter: {
+    limit: vi.fn().mockResolvedValue({ success: true, limit: 100, remaining: 99, reset: 0 }),
+  },
+}))
+
 const mockUploadStorage = vi.fn().mockResolvedValue({ error: null })
 const mockRemoveStorage = vi.fn().mockResolvedValue({ error: null })
 const mockStorageFrom = vi
@@ -22,11 +29,20 @@ const mockLimitFn = vi.fn().mockResolvedValue([{ id: 'some-id' }])
 const mockWhereFn = vi.fn().mockReturnValue({ limit: mockLimitFn })
 const mockFromFn = vi.fn().mockReturnValue({ where: mockWhereFn })
 const mockSelectFn = vi.fn().mockReturnValue({ from: mockFromFn })
+// Transaction mock: forward callback with tx that has same mocks as db
+const mockTransactionFn = vi.fn(async (fn: (tx: Record<string, unknown>) => Promise<unknown>) => {
+  return fn({
+    select: (...args: unknown[]) => mockSelectFn(...args),
+    insert: (...args: unknown[]) => mockInsertFn(...args),
+    update: (...args: unknown[]) => mockUpdateFn(...args),
+  })
+})
 vi.mock('@/db/client', () => ({
   db: {
     insert: (...args: unknown[]) => mockInsertFn(...args),
     select: (...args: unknown[]) => mockSelectFn(...args),
     update: (...args: unknown[]) => mockUpdateFn(...args),
+    transaction: (...args: unknown[]) => mockTransactionFn(...(args as [never])),
   },
 }))
 

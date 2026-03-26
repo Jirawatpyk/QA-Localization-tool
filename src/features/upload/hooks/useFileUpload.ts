@@ -103,10 +103,18 @@ export function useFileUpload({ projectId }: UseFileUploadOptions): UseFileUploa
   // Abort any in-flight XHR upload on unmount to prevent orphan requests
   useEffect(() => {
     return () => {
-      abortControllerRef.current.abort()
-      if (xhrRef.current) {
-        xhrRef.current.abort()
-        xhrRef.current = null
+      try {
+        abortControllerRef.current.abort()
+      } catch {
+        /* AbortController may already be aborted */
+      }
+      try {
+        if (xhrRef.current) {
+          xhrRef.current.abort()
+          xhrRef.current = null
+        }
+      } catch {
+        /* XHR may be in invalid state during test teardown */
       }
     }
   }, [])
