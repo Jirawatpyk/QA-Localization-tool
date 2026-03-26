@@ -1,4 +1,5 @@
 import { and, eq, isNull } from 'drizzle-orm'
+import { NonRetriableError } from 'inngest'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
@@ -11,7 +12,12 @@ import { scoreFile } from '@/features/scoring/helpers/scoreFile'
 import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
 import type { LayerCompleted } from '@/types/finding'
-import { L1_COMPLETED_STATUSES, type DbFileStatus, type PipelineLayer } from '@/types/pipeline'
+import {
+  L1_COMPLETED_STATUSES,
+  pipelineFileEventSchema,
+  type DbFileStatus,
+  type PipelineLayer,
+} from '@/types/pipeline'
 
 import type { PipelineFileEventData } from './types'
 
@@ -26,6 +32,11 @@ const handlerFn = async ({
     sendEvent: (id: string, event: unknown) => Promise<void>
   }
 }) => {
+  // Validate event data — prevents forged/corrupted tenantId (Goal D: Inngest tenantId validation)
+  const parsed = pipelineFileEventSchema.safeParse(event.data)
+  if (!parsed.success) {
+    throw new NonRetriableError(`Invalid file event data: ${parsed.error.message}`)
+  }
   const { fileId, projectId, tenantId, userId, mode, uploadBatchId } = event.data
   const failedLayers: PipelineLayer[] = []
 

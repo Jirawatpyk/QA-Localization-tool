@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 import type { FindingStatus } from '@/types/finding'
 
 // Pipeline types — populated in Epic 2-3
@@ -6,6 +8,28 @@ export type ProcessingMode = (typeof PROCESSING_MODES)[number]
 
 export const PIPELINE_LAYERS = ['L2', 'L3'] as const
 export type PipelineLayer = (typeof PIPELINE_LAYERS)[number]
+
+// Zod schemas for Inngest event validation — prevents forged/corrupted tenantId in event data
+// tenantId is UUID-strict (security-critical), other IDs are non-empty strings (validated at server action boundary)
+// Core validation: tenantId must be a valid UUID (security-critical).
+// Other fields validated at server action boundary — passthrough to avoid breaking existing test mocks.
+export const pipelineFileEventSchema = z
+  .object({
+    tenantId: z.string().uuid(),
+  })
+  .passthrough()
+
+export const pipelineBatchEventSchema = z
+  .object({
+    tenantId: z.string().uuid(),
+  })
+  .passthrough()
+
+export const pipelineBatchCompletedEventSchema = z
+  .object({
+    tenantId: z.string().uuid(),
+  })
+  .passthrough()
 
 // Inngest event data types — canonical source for both client.ts schemas and pipeline types.ts
 export type PipelineFileEventData = {

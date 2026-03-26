@@ -1,5 +1,8 @@
+import { NonRetriableError } from 'inngest'
+
 import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
+import { pipelineBatchEventSchema } from '@/types/pipeline'
 
 import type { PipelineBatchEventData } from './types'
 
@@ -17,6 +20,11 @@ const handlerFn = async ({
     ) => Promise<string[]>
   }
 }) => {
+  // Validate tenantId is a valid UUID — prevents forged/corrupted tenantId (Goal D: Inngest tenantId validation)
+  const parsed = pipelineBatchEventSchema.safeParse(event.data)
+  if (!parsed.success) {
+    throw new NonRetriableError(`Invalid batch event data: ${parsed.error.message}`)
+  }
   const { batchId, fileIds, projectId, tenantId, userId, mode, uploadBatchId } = event.data
 
   // Fan-out: batch-send all process-file events in a single step checkpoint (Inngest v3 pattern)

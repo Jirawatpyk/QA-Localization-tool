@@ -1,4 +1,5 @@
 import { and, eq } from 'drizzle-orm'
+import { NonRetriableError } from 'inngest'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
@@ -6,7 +7,10 @@ import { files } from '@/db/schema/files'
 import { crossFileConsistency } from '@/features/pipeline/helpers/crossFileConsistency'
 import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
-import type { PipelineBatchCompletedEventData } from '@/types/pipeline'
+import {
+  pipelineBatchCompletedEventSchema,
+  type PipelineBatchCompletedEventData,
+} from '@/types/pipeline'
 
 const handlerFn = async ({
   event,
@@ -18,6 +22,11 @@ const handlerFn = async ({
     sendEvent: (...args: unknown[]) => Promise<void>
   }
 }) => {
+  // Validate event data — prevents forged/corrupted tenantId (Goal D: Inngest tenantId validation)
+  const parsed = pipelineBatchCompletedEventSchema.safeParse(event.data)
+  if (!parsed.success) {
+    throw new NonRetriableError(`Invalid batch-completed event data: ${parsed.error.message}`)
+  }
   const { batchId, projectId, tenantId } = event.data
 
   logger.info({ batchId }, 'Batch complete: running cross-file consistency')
