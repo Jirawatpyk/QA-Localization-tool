@@ -1138,3 +1138,25 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Files:** `supabase/config.toml`
 - **Description:** Bucket must be created manually in Supabase dashboard. Fresh deploy has no bucket → upload fails immediately. Should be in seed or migration.
 - **Status:** DEFERRED → **Epic 6** (add bucket creation to supabase/seed.sql or migration)
+
+---
+
+## Category 12: Auth & Multi-tenancy Hardening (2026-03-26)
+
+### TD-AUTH-001: createUser compensation retry has zero test coverage
+- **Date:** 2026-03-26
+- **Severity:** Medium
+- **Story:** Auth & Multi-tenancy Adversarial Review
+- **Phase:** CR R1
+- **Files:** `src/features/admin/actions/createUser.action.ts:78-101`
+- **Description:** Compensation retry loop (max 2 attempts) for orphaned Supabase Auth user has no test. Should verify: (a) success on first attempt, (b) retry on transient failure, (c) exhaustion logs CRITICAL error. No existing createUser.action.test.ts file.
+- **Status:** RESOLVED (2026-03-26 — createUser.action.test.ts created with 7 tests including compensation retry scenarios)
+
+### TD-AUTH-002: OAuth callback route has no unit test for redirect validation
+- **Date:** 2026-03-26
+- **Severity:** Medium
+- **Story:** Auth & Multi-tenancy Adversarial Review
+- **Phase:** CR R1
+- **Files:** `src/app/(auth)/callback/route.ts`
+- **Description:** Regex-based redirect validation (reject //, \, #, non-path chars) has no test. Should verify: `//evil.com`, `/\evil.com`, `///evil.com`, `/#fragment`, `/dashboard` (valid). Route handler needs integration-style test or extracted validator function with unit tests.
+- **Status:** RESOLVED (2026-03-26 — extracted validateRedirectPath() + 12 test cases covering open redirect attacks)

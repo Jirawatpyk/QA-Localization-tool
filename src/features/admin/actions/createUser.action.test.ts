@@ -3,6 +3,11 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 // Mock server-only
 vi.mock('server-only', () => ({}))
 
+// Test UUIDs
+const ADMIN_ID = '550e8400-e29b-41d4-a716-446655440001'
+const TENANT_ID = '550e8400-e29b-41d4-a716-446655440000'
+const NEW_USER_ID = '550e8400-e29b-41d4-a716-446655440003'
+
 // Mock requireRole
 const mockRequireRole = vi.fn()
 vi.mock('@/lib/auth/requireRole', () => ({
@@ -10,14 +15,14 @@ vi.mock('@/lib/auth/requireRole', () => ({
 }))
 
 // Mock admin client
-const mockCreateUser = vi.fn()
-const mockDeleteUser = vi.fn().mockResolvedValue({ error: null })
+const mockAuthCreateUser = vi.fn()
+const mockAuthDeleteUser = vi.fn()
 vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: () => ({
     auth: {
       admin: {
-        createUser: (data: unknown) => mockCreateUser(data),
-        deleteUser: (id: string) => mockDeleteUser(id),
+        createUser: (data: unknown) => mockAuthCreateUser(data),
+        deleteUser: (id: string) => mockAuthDeleteUser(id),
       },
     },
   }),
@@ -35,11 +40,17 @@ vi.mock('@/db/schema/auditLogs', () => ({ auditLogs: {} }))
 vi.mock('@/db/schema/userRoles', () => ({ userRoles: {} }))
 vi.mock('@/db/schema/users', () => ({ users: {} }))
 
+// Mock logger
+const mockLogger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }
+vi.mock('@/lib/logger', () => ({
+  logger: mockLogger,
+}))
+
 describe('createUser', () => {
   const adminUser = {
-    id: 'admin-1',
+    id: ADMIN_ID,
     email: 'admin@test.com',
-    tenantId: 'tenant-1',
+    tenantId: TENANT_ID,
     role: 'admin' as const,
   }
 
@@ -56,55 +67,10 @@ describe('createUser', () => {
     mockTransactionCb.mockImplementation(async (cb) => cb(successfulTx))
   })
 
-  it('should return FORBIDDEN when requireRole throws', async () => {
-    mockRequireRole.mockRejectedValue({ success: false, code: 'UNAUTHORIZED' })
-
-    const { createUser } = await import('./createUser.action')
-    const result = await createUser({
-      email: 'new@test.com',
-      displayName: 'New',
-      role: 'qa_reviewer',
-    })
-
-    expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.code).toBe('FORBIDDEN')
-    }
-  })
-
-  it('should return VALIDATION_ERROR for invalid input', async () => {
+  it('should create user successfully when auth + DB transaction succeeds', async () => {
     mockRequireRole.mockResolvedValue(adminUser)
-
-    const { createUser } = await import('./createUser.action')
-    const result = await createUser({ email: 'not-an-email', displayName: '', role: 'invalid' })
-
-    expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.code).toBe('VALIDATION_ERROR')
-    }
-  })
-
-  it('should return error when Supabase auth createUser fails', async () => {
-    mockRequireRole.mockResolvedValue(adminUser)
-    mockCreateUser.mockResolvedValue({ data: { user: null }, error: { message: 'Email exists' } })
-
-    const { createUser } = await import('./createUser.action')
-    const result = await createUser({
-      email: 'exists@test.com',
-      displayName: 'Exists',
-      role: 'qa_reviewer',
-    })
-
-    expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.error).toBe('Email exists')
-    }
-  })
-
-  it('should create user with app_metadata and transaction', async () => {
-    mockRequireRole.mockResolvedValue(adminUser)
-    mockCreateUser.mockResolvedValue({
-      data: { user: { id: 'new-user-1' } },
+    mockAuthCreateUser.mockResolvedValue({
+      data: { user: { id: NEW_USER_ID } },
       error: null,
     })
 
@@ -117,27 +83,91 @@ describe('createUser', () => {
 
     expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.data.id).toBe('new-user-1')
+      expect(result.data.id).toBe(NEW_USER_ID)
+      expect(result.data.email).toBe('new@test.com')
       expect(result.data.role).toBe('qa_reviewer')
     }
-    // Verify app_metadata was passed
-    expect(mockCreateUser).toHaveBeenCalledWith(
+    // Verify app_metadata was passed with tenant_id and role
+    expect(mockAuthCreateUser).toHaveBeenCalledWith(
       expect.objectContaining({
-        app_metadata: { user_role: 'qa_reviewer', tenant_id: 'tenant-1' },
+        email: 'new@test.com',
+        email_confirm: true,
+        app_metadata: { user_role: 'qa_reviewer', tenant_id: TENANT_ID },
       }),
     )
     // Verify transaction was used
     expect(mockTransactionCb).toHaveBeenCalled()
+    // Verify no compensation was attempted
+    expect(mockAuthDeleteUser).not.toHaveBeenCalled()
   })
 
-  it('should rollback auth user when transaction fails', async () => {
+  it('should return INTERNAL_ERROR when auth creation fails (no compensation needed)', async () => {
     mockRequireRole.mockResolvedValue(adminUser)
-    mockCreateUser.mockResolvedValue({
-      data: { user: { id: 'orphan-user' } },
+    mockAuthCreateUser.mockResolvedValue({
+      data: { user: null },
+      error: { message: 'Email already registered' },
+    })
+
+    const { createUser } = await import('./createUser.action')
+    const result = await createUser({
+      email: 'exists@test.com',
+      displayName: 'Exists',
+      role: 'qa_reviewer',
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('INTERNAL_ERROR')
+      expect(result.error).toBe('Email already registered')
+    }
+    // No DB transaction should have been attempted
+    expect(mockTransactionCb).not.toHaveBeenCalled()
+    // No compensation needed — auth user was never created
+    expect(mockAuthDeleteUser).not.toHaveBeenCalled()
+  })
+
+  it('should return INTERNAL_ERROR and clean orphan when DB transaction fails and compensation succeeds on first attempt', async () => {
+    mockRequireRole.mockResolvedValue(adminUser)
+    mockAuthCreateUser.mockResolvedValue({
+      data: { user: { id: NEW_USER_ID } },
       error: null,
     })
-    // Transaction throws (simulates DB failure — entire tx is rolled back)
+    // DB transaction fails
     mockTransactionCb.mockRejectedValue(new Error('DB insert failed'))
+    // Compensation succeeds on first attempt
+    mockAuthDeleteUser.mockResolvedValueOnce({ error: null })
+
+    const { createUser } = await import('./createUser.action')
+    const result = await createUser({
+      email: 'fail@test.com',
+      displayName: 'Fail',
+      role: 'qa_reviewer',
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('INTERNAL_ERROR')
+      expect(result.error).toBe('Failed to create user records')
+    }
+    // Verify orphan was cleaned up
+    expect(mockAuthDeleteUser).toHaveBeenCalledWith(NEW_USER_ID)
+    expect(mockAuthDeleteUser).toHaveBeenCalledTimes(1)
+    // No CRITICAL orphan warning
+    expect(mockLogger.error).not.toHaveBeenCalled()
+  })
+
+  it('should return INTERNAL_ERROR and clean orphan after retry when compensation fails once then succeeds', async () => {
+    mockRequireRole.mockResolvedValue(adminUser)
+    mockAuthCreateUser.mockResolvedValue({
+      data: { user: { id: NEW_USER_ID } },
+      error: null,
+    })
+    // DB transaction fails
+    mockTransactionCb.mockRejectedValue(new Error('DB insert failed'))
+    // First compensation attempt fails, second succeeds
+    mockAuthDeleteUser
+      .mockRejectedValueOnce(new Error('Network timeout'))
+      .mockResolvedValueOnce({ error: null })
 
     const { createUser } = await import('./createUser.action')
     const result = await createUser({
@@ -150,7 +180,84 @@ describe('createUser', () => {
     if (!result.success) {
       expect(result.code).toBe('INTERNAL_ERROR')
     }
-    // Verify orphan cleanup (Auth user deleted since DB tx rolled back)
-    expect(mockDeleteUser).toHaveBeenCalledWith('orphan-user')
+    // Verify 2 compensation attempts
+    expect(mockAuthDeleteUser).toHaveBeenCalledTimes(2)
+    // First attempt logged a warning
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: NEW_USER_ID, attempt: 1 }),
+      expect.stringContaining('compensation deleteUser failed'),
+    )
+    // No CRITICAL orphan warning (compensation eventually succeeded)
+    expect(mockLogger.error).not.toHaveBeenCalled()
+  })
+
+  it('should return INTERNAL_ERROR and log CRITICAL orphan warning when compensation fails all retries', async () => {
+    mockRequireRole.mockResolvedValue(adminUser)
+    mockAuthCreateUser.mockResolvedValue({
+      data: { user: { id: NEW_USER_ID } },
+      error: null,
+    })
+    // DB transaction fails
+    mockTransactionCb.mockRejectedValue(new Error('DB insert failed'))
+    // All compensation attempts fail
+    mockAuthDeleteUser
+      .mockRejectedValueOnce(new Error('Network timeout'))
+      .mockRejectedValueOnce(new Error('Service unavailable'))
+
+    const { createUser } = await import('./createUser.action')
+    const result = await createUser({
+      email: 'orphan@test.com',
+      displayName: 'Orphan',
+      role: 'qa_reviewer',
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('INTERNAL_ERROR')
+    }
+    // Verify all compensation attempts were made (COMPENSATION_MAX_RETRIES = 2)
+    expect(mockAuthDeleteUser).toHaveBeenCalledTimes(2)
+    // Verify CRITICAL orphan warning was logged
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: NEW_USER_ID, email: 'orphan@test.com' }),
+      expect.stringContaining('ORPHANED AUTH USER'),
+    )
+    // Both retry warnings logged
+    expect(mockLogger.warn).toHaveBeenCalledTimes(2)
+  })
+
+  it('should return VALIDATION_ERROR when input is invalid', async () => {
+    mockRequireRole.mockResolvedValue(adminUser)
+
+    const { createUser } = await import('./createUser.action')
+    const result = await createUser({ email: 'not-an-email', displayName: '', role: 'invalid' })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('VALIDATION_ERROR')
+    }
+    // No auth or DB calls should have been made
+    expect(mockAuthCreateUser).not.toHaveBeenCalled()
+    expect(mockTransactionCb).not.toHaveBeenCalled()
+  })
+
+  it('should return FORBIDDEN when user is not admin', async () => {
+    mockRequireRole.mockRejectedValue(new Error('Unauthorized'))
+
+    const { createUser } = await import('./createUser.action')
+    const result = await createUser({
+      email: 'new@test.com',
+      displayName: 'New',
+      role: 'qa_reviewer',
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('FORBIDDEN')
+      expect(result.error).toBe('Admin access required')
+    }
+    // No auth or DB calls should have been made
+    expect(mockAuthCreateUser).not.toHaveBeenCalled()
+    expect(mockTransactionCb).not.toHaveBeenCalled()
   })
 })

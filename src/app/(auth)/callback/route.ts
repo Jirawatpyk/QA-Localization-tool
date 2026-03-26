@@ -3,18 +3,12 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { setupNewUser } from '@/features/admin/actions/setupNewUser.action'
 import { createServerClient } from '@/lib/supabase/server'
 
+import { validateRedirectPath } from './validateRedirect'
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  // Validate redirect target to prevent open redirect attacks
-  // Reject: protocol-relative (//), backslash (/\), fragment (#), non-path chars
-  const rawNext = searchParams.get('next') ?? '/dashboard'
-  const isSafePath =
-    /^\/[a-zA-Z0-9\-._~:/?[\]@!$&'()*+,;=%]+$/.test(rawNext) &&
-    !rawNext.startsWith('//') &&
-    !rawNext.includes('\\') &&
-    !rawNext.includes('#')
-  const next = isSafePath ? rawNext : '/dashboard'
+  const next = validateRedirectPath(searchParams.get('next'))
 
   if (code) {
     const supabase = await createServerClient()
