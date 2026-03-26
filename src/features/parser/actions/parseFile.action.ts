@@ -289,6 +289,15 @@ export async function parseFile(
   }
 
   const parseDuration = Math.round(performance.now() - parseStart)
+
+  // M2 fix: warn when valid parse produces 0 segments (empty <body>, all rows filtered, etc.)
+  if (parsedSegments.length === 0) {
+    logger.warn(
+      { fileId, parseDuration, fileType: file.fileType, fileName: file.fileName },
+      'File parsed successfully but produced 0 segments — file may have empty content',
+    )
+  }
+
   logger.info(
     { fileId, segmentCount: parsedSegments.length, parseDuration, fileType: file.fileType },
     'File parsed successfully',
