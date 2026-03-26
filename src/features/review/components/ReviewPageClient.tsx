@@ -614,8 +614,11 @@ export function ReviewPageClient({
     }
 
     window.addEventListener('beforeunload', persistFilterState)
+    // TD-REVIEW-002 fix: pagehide fires reliably on iOS Safari where beforeunload doesn't
+    window.addEventListener('pagehide', persistFilterState)
     return () => {
       window.removeEventListener('beforeunload', persistFilterState)
+      window.removeEventListener('pagehide', persistFilterState)
       // Also save on unmount (client-side navigation away from review page)
       persistFilterState()
     }

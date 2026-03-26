@@ -997,12 +997,12 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 
 ## Category 11: Review Workflow Adversarial Review (2026-03-26)
 
-### TD-REVIEW-002: Filter cache missing pagehide/visibilitychange fallback for mobile
+### ~~TD-REVIEW-002: Filter cache missing pagehide/visibilitychange fallback for mobile~~
 - **Date:** 2026-03-26
 - **Severity:** Low
 - **Files:** `src/features/review/components/ReviewPageClient.tsx`
 - **Description:** beforeunload doesn't fire reliably on iOS Safari. React unmount cleanup covers client-side nav but not browser close on mobile.
-- **Status:** DEFERRED → **Epic 6** (mobile optimization)
+- **Status:** RESOLVED (2026-03-26) — Added `pagehide` event listener as fallback alongside `beforeunload`. iOS Safari fires `pagehide` reliably.
 
 ### TD-REVIEW-003: Double-tap Escape closes ConflictDialog + Sheet simultaneously
 - **Date:** 2026-03-26
@@ -1011,12 +1011,12 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** First Escape closes dialog (Radix stops propagation), second Escape hits Sheet. Violates Guardrail #31 (one layer per Esc). Would need debounce or cooldown on Sheet's Escape handler.
 - **Status:** DEFERRED → **Epic 6** (UX polish)
 
-### TD-REVIEW-004: J/K keyboard navigation may double-fire between grid and review-zone handlers
+### ~~TD-REVIEW-004: J/K keyboard navigation may double-fire between grid and review-zone handlers~~
 - **Date:** 2026-03-26
 - **Severity:** Low
 - **Files:** `src/features/review/components/FindingList.tsx`, `src/features/review/components/ReviewPageClient.tsx`
 - **Description:** Both components handle J/K. Comment says intentional (grid + fallback) but needs verification that event.stopPropagation() prevents double navigation.
-- **Status:** DEFERRED → **Epic 5** (keyboard accessibility — Story 5.3)
+- **Status:** RESOLVED (2026-03-26) — Verified: FindingList grid handler has `event.stopPropagation()` (lines 346, 350) preventing bubble to ReviewPageClient. Review-zone handler only fires when focus is outside grid (intended fallback for detail panel/action bar). No double-fire.
 
 ### TD-REVIEW-005: undoDeleteFinding uses client snapshot with potentially stale category
 - **Date:** 2026-03-26

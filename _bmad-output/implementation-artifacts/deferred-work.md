@@ -5,9 +5,9 @@
 
 ## Deferred Goals
 
-### Goal D — Inngest Event tenantId Validation (Finding #5)
-- Add validation layer in Inngest functions to verify tenantId from event data
-- Medium effort, requires changes across pipeline functions
+### ~~Goal D — Inngest Event tenantId Validation (Finding #5)~~ ✅ DONE (2026-03-26)
+- Added Zod `.uuid()` validation on tenantId in processBatch, processFile, batchComplete
+- NonRetriableError thrown on invalid tenantId
 
 ### Goal H — Rate Limiting & Compensation (Findings #11, #13)
 - #11: IP-based rate limiting spoofable via x-forwarded-for — consider Vercel's cf-connecting-ip
@@ -31,7 +31,7 @@
 
 ## Deferred from Code Review (Step 4)
 
-### Idle Timeout UX Improvements (Review F4+F5)
-- Add `visibilitychange` listener to pause timer when tab is background (prevents logout during multi-tab workflow)
-- Add warning toast at T-5 minutes before session expiry
-- Source: Blind hunter + Edge case hunter review
+### ~~Idle Timeout UX Improvements (Review F4+F5)~~ ✅ DONE (2026-03-26)
+- Added `visibilitychange` listener to pause/resume timer when tab hidden/visible
+- Added warning toast at T-5 minutes before session expiry
+- 5 tests covering: no-timeout, warning-at-25min, timeout-at-30min, activity-reset, background-tab-pause
