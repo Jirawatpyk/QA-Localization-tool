@@ -2,12 +2,12 @@ import { z } from 'zod'
 
 export const excelColumnMappingSchema = z
   .object({
-    sourceColumn: z.string().min(1, 'Source column is required'),
-    targetColumn: z.string().min(1, 'Target column is required'),
+    sourceColumn: z.string().min(1, 'Source column is required').max(200),
+    targetColumn: z.string().min(1, 'Target column is required').max(200),
     hasHeader: z.boolean().default(true),
-    segmentIdColumn: z.string().optional(),
-    contextColumn: z.string().optional(),
-    languageColumn: z.string().optional(),
+    segmentIdColumn: z.string().max(200).optional(),
+    contextColumn: z.string().max(200).optional(),
+    languageColumn: z.string().max(200).optional(),
   })
   .refine((data) => data.sourceColumn !== data.targetColumn, {
     message: 'Source and Target columns must be different',

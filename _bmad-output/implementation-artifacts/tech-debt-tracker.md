@@ -1038,3 +1038,46 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Files:** `src/features/review/actions/approveFile.action.ts`
 - **Description:** Checks score.status but not whether score is the latest version. Score could change (recalculation) between user viewing and approving. Race window is small but real.
 - **Status:** DEFERRED → **Epic 6** (add score.calculatedAt comparison or optimistic lock)
+
+## Category 12: Parser Adversarial Review (2026-03-26)
+
+### TD-PARSER-001: XXE regex doesn't catch parameter entities (<!ENTITY %)
+- **Date:** 2026-03-26
+- **Severity:** Low
+- **Files:** `src/features/parser/sdlxliffParser.ts`
+- **Description:** DOCTYPE/ENTITY regex guard catches general entities but not parameter entities. Mitigated by processEntities:false in fast-xml-parser (defense-in-depth). Regex is early-reject only.
+- **Status:** ACCEPTED — processEntities:false provides real protection
+
+### TD-PARSER-002: segmentId (mrk mid / trans-unit id) not persisted to DB
+- **Date:** 2026-03-26
+- **Severity:** Low
+- **Description:** Cross-ref existing TD-DB-004. Pipeline uses segments.id (DB UUID). Original XLIFF IDs lost after parse.
+- **Status:** ACCEPTED — existing TD-DB-004 tracks this
+
+### TD-PARSER-003: Excel fileSizeBytes from metadata not actual buffer
+- **Date:** 2026-03-26
+- **Severity:** Low
+- **Files:** `src/features/parser/excelParser.ts`
+- **Description:** Size guard uses caller-provided fileSizeBytes, not buffer.byteLength. Zip bomb guard uses actual buffer, providing secondary protection.
+- **Status:** ACCEPTED — zip bomb guard is the real size protection for Excel
+
+### TD-PARSER-004: stripMarkup doesn't decode HTML entities before word count
+- **Date:** 2026-03-26
+- **Severity:** Low
+- **Files:** `src/lib/language/markupStripper.ts`
+- **Description:** &amp; &lt; &gt; remain in stripped text, counted as words. Impact: word count off by ≤1-2% for entity-heavy files.
+- **Status:** ACCEPTED — cosmetic impact only, MQM score difference negligible
+
+### TD-PARSER-005: Excel auto-detect keywords limited to English + Thai
+- **Date:** 2026-03-26
+- **Severity:** Low
+- **Files:** `src/features/parser/constants.ts`
+- **Description:** EXCEL_AUTO_DETECT_KEYWORDS missing Chinese, Japanese, Korean, German keywords. Users must map columns manually for non-EN/TH headers.
+- **Status:** DEFERRED → **Epic 7** (i18n improvement — add CJK/European keywords)
+
+### TD-PARSER-006: computeFileHash SHA-256 sequential for batch uploads
+- **Date:** 2026-03-26
+- **Severity:** Low
+- **Files:** `src/app/api/upload/route.ts`
+- **Description:** 50 files × 15MB = 750MB hashed sequentially. ~2.5s blocking. No streaming hash or parallelization.
+- **Status:** DEFERRED → **Epic 7** (performance — use crypto.createHash streaming + worker threads)

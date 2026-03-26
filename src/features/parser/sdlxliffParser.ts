@@ -1,9 +1,12 @@
 import { XMLParser } from 'fast-xml-parser'
 
+import { logger } from '@/lib/logger'
+
 import {
   COMMENT_SEPARATOR,
   CONFIRMATION_STATES,
   MAX_PARSE_SIZE_BYTES,
+  MAX_SEGMENT_COUNT,
   SDL_NAMESPACE_URI,
   XLIFF_STATE_MAP,
 } from './constants'
@@ -186,6 +189,18 @@ export function parseXliff(
         segments.push(seg)
         segmentNumber++
       }
+    }
+  }
+
+  // Defense-in-depth: reject files with excessive segment count to prevent OOM
+  if (segments.length > MAX_SEGMENT_COUNT) {
+    return {
+      success: false,
+      error: {
+        code: 'SEGMENT_LIMIT_EXCEEDED',
+        message: `File contains ${segments.length} segments, exceeding the maximum of ${MAX_SEGMENT_COUNT}`,
+        details: 'Reduce file size or split into smaller files',
+      },
     }
   }
 
@@ -430,9 +445,13 @@ function buildTargetMrkMap(targetEl: XmlNode | undefined): Map<string, XmlNode[]
 const MAX_GROUP_DEPTH = 50
 
 function collectTransUnits(nodes: XmlNode[], depth = 0): XmlNode[] {
-  // Silent drop is intentional: depth > 50 = malicious/malformed input, not legitimate use.
-  // Real SDLXLIFF/XLIFF files have 1-3 group levels max (Trados, memoQ, Memsource).
-  if (depth > MAX_GROUP_DEPTH) return []
+  if (depth > MAX_GROUP_DEPTH) {
+    logger.warn(
+      { depth, maxDepth: MAX_GROUP_DEPTH },
+      'SDLXLIFF group nesting exceeds maximum — deeper segments skipped',
+    )
+    return []
+  }
   const units: XmlNode[] = []
   for (const node of nodes) {
     const tag = getTagName(node)

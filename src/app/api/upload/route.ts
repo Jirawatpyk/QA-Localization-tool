@@ -205,6 +205,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       .limit(1)
 
     if (existingFile) {
+      // Guard: don't reset a file that's actively being processed (race condition)
+      const ACTIVE_STATUSES = new Set([
+        'parsing',
+        'l1_processing',
+        'l2_processing',
+        'l3_processing',
+      ])
+      if (ACTIVE_STATUSES.has(existingFile.status)) {
+        warnings.push(`${file.name}: File is currently being processed — skipped`)
+        continue
+      }
+
       // Re-run: reset file status to 'uploaded' for re-processing
       const [updated] = await db
         .update(files)

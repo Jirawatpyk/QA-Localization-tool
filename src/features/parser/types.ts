@@ -70,6 +70,7 @@ export type ParserError = {
     | 'INVALID_EXCEL'
     | 'INVALID_COLUMNS'
     | 'EMPTY_SHEET'
+    | 'SEGMENT_LIMIT_EXCEEDED'
   message: string
   details?: string // additional context (tag id, position, etc.)
 }

@@ -107,6 +107,8 @@ export async function parseFile(
     newValue: { fileName: file.fileName, fileType: file.fileType },
   })
 
+  const parseStart = performance.now()
+
   // 6.2 — Fetch file from Supabase Storage
   const admin = createAdminClient()
   const { data: blob, error: downloadError } = await admin.storage
@@ -221,10 +223,24 @@ export async function parseFile(
     // Language may be overridden per-row via languageColumn; use project defaults for batch insert
     // (per-row language is already stored in each ParsedSegment.targetLang)
   } else {
-    // XLIFF/SDLXLIFF branch (unchanged)
+    // XLIFF/SDLXLIFF branch — UTF-16 BOM detection before text decoding
     let xmlContent: string
     try {
-      xmlContent = await blob.text()
+      const rawBuffer = Buffer.from(await blob.arrayBuffer())
+      // UTF-16 LE BOM
+      if (rawBuffer.length >= 2 && rawBuffer[0] === 0xff && rawBuffer[1] === 0xfe) {
+        xmlContent = rawBuffer.toString('utf16le')
+      } else if (rawBuffer.length >= 2 && rawBuffer[0] === 0xfe && rawBuffer[1] === 0xff) {
+        // UTF-16 BE: swap bytes then decode as UTF-16 LE
+        const swapped = Buffer.alloc(rawBuffer.length)
+        for (let i = 0; i < rawBuffer.length - 1; i += 2) {
+          swapped[i] = rawBuffer[i + 1]!
+          swapped[i + 1] = rawBuffer[i]!
+        }
+        xmlContent = swapped.toString('utf16le')
+      } else {
+        xmlContent = rawBuffer.toString('utf8')
+      }
     } catch (err) {
       await markFileFailed(fileId, currentUser.tenantId, currentUser.id, file.fileName, {
         reason: err instanceof Error ? err.message : 'Failed to read file content from blob',
@@ -256,9 +272,10 @@ export async function parseFile(
     targetLang = parseResult.data.targetLang
   }
 
-  // 6.4 — Batch insert segments (100 per INSERT for memory efficiency)
+  // 6.4 — Batch insert segments + atomically update file status to 'parsed'
+  // Both happen inside a single transaction for consistency (no orphan 'parsing' state)
   try {
-    await batchInsertSegments(parsedSegments, file.id, file.projectId, currentUser.tenantId)
+    await batchInsertSegments(parsedSegments, file.id, file.projectId, currentUser.tenantId, fileId)
   } catch (err) {
     await markFileFailed(fileId, currentUser.tenantId, currentUser.id, file.fileName, {
       reason: err instanceof Error ? err.message : 'Batch insert failed',
@@ -270,11 +287,11 @@ export async function parseFile(
     }
   }
 
-  // 6.3 — Update file status to 'parsed'
-  await db
-    .update(files)
-    .set({ status: 'parsed' })
-    .where(and(eq(files.id, fileId), withTenant(files.tenantId, currentUser.tenantId)))
+  const parseDuration = Math.round(performance.now() - parseStart)
+  logger.info(
+    { fileId, segmentCount: parsedSegments.length, parseDuration, fileType: file.fileType },
+    'File parsed successfully',
+  )
 
   // Audit log: file.parsed (must throw on failure)
   await writeAuditLog({
@@ -307,8 +324,10 @@ async function batchInsertSegments(
   fileId: string,
   projectId: string,
   tenantId: string,
+  fileRecordId: string,
 ): Promise<void> {
-  // H7: Wrap DELETE + batch INSERT in a single transaction (Guardrail #6 — idempotent re-run)
+  // H7: Wrap DELETE + batch INSERT + status update in a single transaction
+  // (Guardrail #6 — idempotent re-run, atomic status transition)
   await db.transaction(async (tx) => {
     // Delete old segments first (re-run case: file reset to 'uploaded' still has old segments)
     await tx.delete(segments).where(eq(segments.fileId, fileId))
@@ -333,6 +352,12 @@ async function batchInsertSegments(
 
       await tx.insert(segments).values(values)
     }
+
+    // Atomically update file status to 'parsed' within the same transaction
+    await tx
+      .update(files)
+      .set({ status: 'parsed', updatedAt: new Date() })
+      .where(and(eq(files.id, fileRecordId), withTenant(files.tenantId, tenantId)))
   })
 }
 

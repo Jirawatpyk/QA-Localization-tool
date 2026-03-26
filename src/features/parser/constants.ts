@@ -62,3 +62,6 @@ export const EXCEL_AUTO_DETECT_KEYWORDS = {
   source: ['source', 'original', 'src', 'english', 'ต้นฉบับ', 'ภาษาต้นทาง'],
   target: ['target', 'translation', 'tgt', 'translated', 'คำแปล', 'ภาษาปลายทาง'],
 } as const
+
+/** Maximum segments per file — prevents OOM from crafted files with millions of tiny segments */
+export const MAX_SEGMENT_COUNT = 50_000

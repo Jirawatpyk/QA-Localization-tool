@@ -209,11 +209,17 @@ describe('parseFile action', () => {
     mockWriteAuditLog.mockResolvedValue(undefined)
     // Re-bind mockStorage.from each time since clearAllMocks resets it
     mockStorage.from.mockReturnValue({ download: mockDownload })
-    // H7: transaction mock — forward to callback with tx.delete + tx.insert (Guardrail #6)
+    // H7: transaction mock — forward to callback with tx.delete + tx.insert + tx.update (Guardrail #6)
+    // tx.update is required because batchInsertSegments does tx.update(files).set({ status: 'parsed' })
     mockDelete.mockReturnValue({ where: vi.fn() })
     mockTransaction.mockImplementation(
-      async (fn: (tx: { insert: typeof mockInsert; delete: typeof mockDelete }) => Promise<void>) =>
-        fn({ insert: mockInsert, delete: mockDelete }),
+      async (
+        fn: (tx: {
+          insert: typeof mockInsert
+          delete: typeof mockDelete
+          update: typeof mockUpdate
+        }) => Promise<void>,
+      ) => fn({ insert: mockInsert, delete: mockDelete, update: mockUpdate }),
     )
   })
 
@@ -319,7 +325,8 @@ describe('parseFile action', () => {
       await parseFile(FILE_ID)
 
       expect(updateChain.set).toHaveBeenCalledWith({ status: 'parsing' })
-      expect(updateChain.set).toHaveBeenCalledWith({ status: 'parsed' })
+      // Status update now inside batchInsertSegments transaction — includes updatedAt
+      expect(updateChain.set).toHaveBeenCalledWith(expect.objectContaining({ status: 'parsed' }))
     })
 
     it('should include all required fields in segment batch values (H6)', async () => {
@@ -571,12 +578,12 @@ describe('parseFile action', () => {
     })
   })
 
-  describe('blob.text() read failure (tH1)', () => {
-    it('should return STORAGE_ERROR when blob.text() throws', async () => {
+  describe('blob.arrayBuffer() read failure (tH1)', () => {
+    it('should return STORAGE_ERROR when blob.arrayBuffer() throws', async () => {
       buildSelectChain([mockFile])
       buildUpdateChain()
       mockDownload.mockResolvedValue({
-        data: { text: vi.fn().mockRejectedValue(new Error('OOM: buffer exceeded')) },
+        data: { arrayBuffer: vi.fn().mockRejectedValue(new Error('OOM: buffer exceeded')) },
         error: null,
       })
 
@@ -587,11 +594,11 @@ describe('parseFile action', () => {
       expect(result.code).toBe('STORAGE_ERROR')
     })
 
-    it('should mark file as failed with blob error reason when blob.text() throws (tH1, H4)', async () => {
+    it('should mark file as failed with blob error reason when blob.arrayBuffer() throws (tH1, H4)', async () => {
       buildSelectChain([mockFile])
       buildUpdateChain()
       mockDownload.mockResolvedValue({
-        data: { text: vi.fn().mockRejectedValue(new Error('encoding error')) },
+        data: { arrayBuffer: vi.fn().mockRejectedValue(new Error('encoding error')) },
         error: null,
       })
 
@@ -693,7 +700,7 @@ describe('parseFile action', () => {
 
       await parseFile(FILE_ID)
 
-      expect(updateChain.set).toHaveBeenCalledWith({ status: 'parsed' })
+      expect(updateChain.set).toHaveBeenCalledWith(expect.objectContaining({ status: 'parsed' }))
     })
 
     it('should write audit log with segmentCount=0 when parse returns 0 segments (G6)', async () => {

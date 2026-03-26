@@ -2,7 +2,11 @@ import 'server-only'
 
 import type ExcelJS from 'exceljs'
 
-import { EXCEL_AUTO_DETECT_KEYWORDS, MAX_PARSE_SIZE_BYTES } from '@/features/parser/constants'
+import {
+  EXCEL_AUTO_DETECT_KEYWORDS,
+  MAX_PARSE_SIZE_BYTES,
+  MAX_SEGMENT_COUNT,
+} from '@/features/parser/constants'
 import { loadExcelWorkbook } from '@/features/parser/excelLoader'
 import type { ParsedSegment, ParseOutcome } from '@/features/parser/types'
 import type { ExcelColumnMapping } from '@/features/parser/validation/excelMappingSchema'
@@ -98,8 +102,10 @@ export async function parseExcelBilingual(
   const startRow = mapping.hasHeader ? 2 : 1
   const segments: ParsedSegment[] = []
   let segmentNumber = 0
+  let limitExceeded = false
 
   worksheet.eachRow((row, rowNumber) => {
+    if (limitExceeded) return
     if (rowNumber < startRow) return
 
     const sourceText = extractCellValue(row.getCell(sourceColIndex))
@@ -143,7 +149,22 @@ export async function parseExcelBilingual(
     }
 
     segments.push(segment)
+
+    if (segments.length > MAX_SEGMENT_COUNT) {
+      limitExceeded = true
+    }
   })
+
+  if (limitExceeded) {
+    return {
+      success: false,
+      error: {
+        code: 'SEGMENT_LIMIT_EXCEEDED',
+        message: `File contains more than ${MAX_SEGMENT_COUNT} segments, exceeding the maximum allowed`,
+        details: 'Reduce file size or split into smaller files',
+      },
+    }
+  }
 
   return {
     success: true,
