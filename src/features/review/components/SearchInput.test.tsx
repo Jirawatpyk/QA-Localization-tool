@@ -92,7 +92,7 @@ describe('SearchInput', () => {
     expect(input).toHaveValue('')
   })
 
-  it('should not propagate Escape to parent (Guardrail #31)', () => {
+  it('should not propagate Escape to parent when query has text (Guardrail #31)', () => {
     const parentHandler = vi.fn()
     render(
       <div onKeyDown={parentHandler}>
@@ -104,11 +104,29 @@ describe('SearchInput', () => {
     fireEvent.change(input, { target: { value: 'x' } })
     fireEvent.keyDown(input, { key: 'Escape' })
 
-    // Escape should NOT reach parent (stopPropagation)
+    // Escape should NOT reach parent (stopPropagation) when query has text
     const escapeEvents = parentHandler.mock.calls.filter(
       (call: unknown[]) => (call[0] as KeyboardEvent).key === 'Escape',
     )
     expect(escapeEvents).toHaveLength(0)
+  })
+
+  it('should propagate Escape to parent when query is empty (BUG-1 fix)', () => {
+    const parentHandler = vi.fn()
+    render(
+      <div onKeyDown={parentHandler}>
+        <SearchInput />
+      </div>,
+    )
+    const input = screen.getByTestId('search-input')
+
+    // Query is empty — Escape should propagate to parent layer (Guardrail #31)
+    fireEvent.keyDown(input, { key: 'Escape' })
+
+    const escapeEvents = parentHandler.mock.calls.filter(
+      (call: unknown[]) => (call[0] as KeyboardEvent).key === 'Escape',
+    )
+    expect(escapeEvents).toHaveLength(1)
   })
 
   it('should clean up debounce timer on unmount (Guardrail #12)', () => {

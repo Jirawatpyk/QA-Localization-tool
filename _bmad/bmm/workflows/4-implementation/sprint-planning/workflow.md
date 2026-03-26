@@ -269,3 +269,4 @@ optional ↔ done
 3. **Parallel Work Supported**: Multiple stories can be `in-progress` if team capacity allows
 4. **Review Before Done**: Stories should pass through `review` before `done`
 5. **Learning Transfer**: SM typically creates next story after previous one is `done` to incorporate learnings
+6. **Verification Story MANDATORY (Epic 4 Retro A5, Guardrail #49)**: Every epic MUST end with a verification/integration story that tests real flows across the entire epic (real AI calls, real DB, real Realtime, real E2E). This story must NOT use mocks. If the epic definition does not include a verification story, SM must add one before the epic is considered fully planned. This catches integration bugs that unit tests miss (e.g., TD-AI-004 — 17-day silent failure caught by Story 4.8 verification).

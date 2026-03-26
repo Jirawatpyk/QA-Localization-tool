@@ -26,14 +26,19 @@ vi.mock('@/db/client', () => ({
 }))
 
 vi.mock('@/db/schema/users', () => ({
-  users: { id: 'id', displayName: 'display_name', metadata: 'metadata' },
+  users: {
+    id: 'id',
+    displayName: 'display_name',
+    metadata: 'metadata',
+    nativeLanguages: 'native_languages',
+  },
 }))
 
 describe('getCurrentUser', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     // Default: DB returns a user row
-    mockLimit.mockResolvedValue([{ displayName: 'Test User', metadata: null }])
+    mockLimit.mockResolvedValue([{ displayName: 'Test User', metadata: null, nativeLanguages: [] }])
   })
 
   it('should return null when not authenticated', async () => {
@@ -113,7 +118,9 @@ describe('getCurrentUser', () => {
       error: null,
     })
 
-    mockLimit.mockResolvedValue([{ displayName: 'Admin User', metadata: null }])
+    mockLimit.mockResolvedValue([
+      { displayName: 'Admin User', metadata: null, nativeLanguages: [] },
+    ])
 
     const { getCurrentUser } = await import('./getCurrentUser')
     const result = await getCurrentUser()
@@ -125,6 +132,7 @@ describe('getCurrentUser', () => {
       role: 'admin',
       displayName: 'Admin User',
       metadata: null,
+      nativeLanguages: [],
     })
   })
 
@@ -153,6 +161,7 @@ describe('getCurrentUser', () => {
       role: 'admin',
       displayName: 'admin@example.com',
       metadata: null,
+      nativeLanguages: [],
     })
   })
 })

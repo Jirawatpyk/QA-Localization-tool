@@ -133,6 +133,18 @@ describe('findingMatchesFilters', () => {
     expect(findingMatchesFilters(f, filter, '', true)).toBe(true)
   })
 
+  it('should match Manual when layer filter is L1 (DG-1 fix: Rule-based group includes Manual)', () => {
+    const f = makeFinding({ detectedByLayer: 'Manual' })
+    const filter = { ...ALL_PASS, layer: 'L1' as const }
+    expect(findingMatchesFilters(f, filter, '', true)).toBe(true)
+  })
+
+  it('should NOT match Manual when layer filter is L2 (AI group)', () => {
+    const f = makeFinding({ detectedByLayer: 'Manual' })
+    const filter = { ...ALL_PASS, layer: 'L2' as const }
+    expect(findingMatchesFilters(f, filter, '', true)).toBe(false)
+  })
+
   // ── Category ──
 
   it('should filter by category', () => {
@@ -287,5 +299,72 @@ describe('findingMatchesFilters', () => {
       confidence: null,
     }
     expect(findingMatchesFilters(f, filter, '', true)).toBe(false)
+  })
+})
+
+// ── TA Gap G-5: Performance — filter 500+ findings within 16ms budget ──
+
+describe('Performance: large finding set (TA Gap G-5)', () => {
+  it('should filter 500 findings within 16ms (60fps budget)', () => {
+    const findings: FilterableFinding[] = Array.from({ length: 500 }, (_, i) =>
+      makeFinding({
+        severity: i % 3 === 0 ? 'critical' : i % 3 === 1 ? 'major' : 'minor',
+        status: i % 4 === 0 ? 'accepted' : 'pending',
+        detectedByLayer: i % 5 === 0 ? 'L2' : 'L1',
+        category: i % 2 === 0 ? 'accuracy' : 'terminology',
+        aiConfidence: i % 5 === 0 ? 80 + (i % 20) : null,
+        description: `Finding number ${i} with searchable content`,
+        sourceTextExcerpt: `Source text for finding ${i}`,
+        targetTextExcerpt: `Target text for finding ${i}`,
+      }),
+    )
+
+    const filter: FilterState = {
+      severity: 'critical',
+      status: 'pending',
+      layer: null,
+      category: 'accuracy',
+      confidence: null,
+    }
+
+    const start = performance.now()
+    const results = findings.filter((f) => findingMatchesFilters(f, filter, 'searchable', true))
+    const elapsed = performance.now() - start
+
+    // Must complete within 16ms (single frame at 60fps)
+    expect(elapsed).toBeLessThan(16)
+    // Sanity: some findings should match
+    expect(results.length).toBeGreaterThan(0)
+    expect(results.length).toBeLessThan(500)
+  })
+
+  it('should filter 1000 findings with all dimensions + search within 32ms', () => {
+    const findings: FilterableFinding[] = Array.from({ length: 1000 }, (_, i) =>
+      makeFinding({
+        severity: 'major',
+        status: 'pending',
+        detectedByLayer: 'L2',
+        category: 'accuracy',
+        aiConfidence: 75 + (i % 30),
+        description: `Description with keyword-${i % 10} in it`,
+        suggestedFix: `Suggested fix for finding ${i}`,
+      }),
+    )
+
+    const filter: FilterState = {
+      severity: 'major',
+      status: 'pending',
+      layer: 'L2',
+      category: 'accuracy',
+      confidence: 'medium',
+    }
+
+    const start = performance.now()
+    const results = findings.filter((f) => findingMatchesFilters(f, filter, 'keyword-5', true))
+    const elapsed = performance.now() - start
+
+    // 1000 findings with full filter chain should still be fast
+    expect(elapsed).toBeLessThan(32)
+    expect(results.length).toBeGreaterThan(0)
   })
 })

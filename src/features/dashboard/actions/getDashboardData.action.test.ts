@@ -78,6 +78,7 @@ const MOCK_USER = {
   role: 'qa_reviewer' as const,
   displayName: 'Test',
   metadata: null,
+  nativeLanguages: [] as string[],
 }
 
 describe('getDashboardData', () => {

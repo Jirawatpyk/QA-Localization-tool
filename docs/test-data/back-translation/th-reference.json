@@ -1,0 +1,702 @@
+[
+  {
+    "id": 1,
+    "source_en": "automatic transmission car",
+    "target": "รถยนต์เกียร์อัตโนมัติ",
+    "reference_back_translation": "automatic transmission car",
+    "notes": "Direct translation — automotive domain. Thai uses English loanword เกียร์ (gear) alongside native อัตโนมัติ (automatic)."
+  },
+  {
+    "id": 2,
+    "source_en": "biotechnology",
+    "target": "ไบโอเทคโนโลยี",
+    "reference_back_translation": "biotechnology",
+    "notes": "Direct translation — science domain. Full English transliteration; formal Thai alternative ชีวเทคโนโลยี exists but is less common."
+  },
+  {
+    "id": 3,
+    "source_en": "Automatic Teller Machine",
+    "target": "ตู้เอทีเอ็ม",
+    "reference_back_translation": "Automatic Teller Machine",
+    "notes": "Direct translation — banking domain. Thai prefixes ตู้ (cabinet/machine) to the transliterated acronym เอทีเอ็ม."
+  },
+  {
+    "id": 4,
+    "source_en": "hardware",
+    "target": "ฮาร์ดแวร์",
+    "reference_back_translation": "hardware",
+    "notes": "Direct translation — IT domain. Pure transliteration; no commonly used Thai-native equivalent."
+  },
+  {
+    "id": 5,
+    "source_en": "integrated services digital network",
+    "target": "ไอเอสดีเอ็น",
+    "reference_back_translation": "integrated services digital network",
+    "notes": "Direct translation — telecom domain. Acronym transliterated letter-by-letter to Thai script."
+  },
+  {
+    "id": 6,
+    "source_en": "electronic mail",
+    "target": "จดหมายอิเล็กทรอนิกส์",
+    "reference_back_translation": "electronic mail",
+    "notes": "Direct translation — IT domain. จดหมาย (letter/mail) + อิเล็กทรอนิกส์ (electronic loanword). Formal; colloquial uses อีเมล."
+  },
+  {
+    "id": 7,
+    "source_en": "information technology",
+    "target": "เทคโนโลยีสารสนเทศ",
+    "reference_back_translation": "information technology",
+    "notes": "Direct translation — IT domain. Hybrid: เทคโนโลยี (loanword) + สารสนเทศ (Pali-Sanskrit for 'information')."
+  },
+  {
+    "id": 8,
+    "source_en": "minicomputer",
+    "target": "มินิคอมพิวเตอร์",
+    "reference_back_translation": "minicomputer",
+    "notes": "Direct translation — IT domain. Full transliteration of English compound."
+  },
+  {
+    "id": 9,
+    "source_en": "microcomputer",
+    "target": "ไมโครคอมพิวเตอร์",
+    "reference_back_translation": "microcomputer",
+    "notes": "Direct translation — IT domain. Full transliteration; ไมโคร preserves Greek-origin prefix."
+  },
+  {
+    "id": 10,
+    "source_en": "digital",
+    "target": "ระบบดิจิตอล",
+    "reference_back_translation": "digital system",
+    "notes": "Direct translation — IT domain. Thai adds ระบบ (system) as classifier; bare ดิจิตอล is used as adjective only."
+  },
+  {
+    "id": 11,
+    "source_en": "according to law",
+    "target": "ตามกฎหมาย",
+    "reference_back_translation": "according to law",
+    "notes": "Direct translation — legal domain. ตาม (following/according to) + กฎหมาย (law). Standard legal phrasing."
+  },
+  {
+    "id": 12,
+    "source_en": "annual government statement of expenditure",
+    "target": "งบประมาณแผ่นดิน",
+    "reference_back_translation": "national budget",
+    "notes": "Direct translation — fiscal/government domain. งบประมาณ (budget) + แผ่นดิน (land/nation). Thai term is shorter and more idiomatic than the English source."
+  },
+  {
+    "id": 13,
+    "source_en": "younger brother-in-law",
+    "target": "น้องเขย",
+    "reference_back_translation": "younger brother-in-law",
+    "notes": "Direct translation — kinship domain. Thai has distinct kinship terms by relative age: น้อง (younger) + เขย (male in-law)."
+  },
+  {
+    "id": 14,
+    "source_en": "government administrator",
+    "target": "ผู้บริหารประเทศ",
+    "reference_back_translation": "country administrator",
+    "notes": "Direct translation — government domain. ผู้บริหาร (administrator) + ประเทศ (country). Thai uses 'country' rather than 'government'."
+  },
+  {
+    "id": 15,
+    "source_en": "government leader",
+    "target": "ผู้นำรัฐบาล",
+    "reference_back_translation": "government leader",
+    "notes": "Direct translation — political domain. ผู้นำ (leader) + รัฐบาล (government). Standard political terminology."
+  },
+  {
+    "id": 16,
+    "source_en": "government setting",
+    "target": "วงราชการ",
+    "reference_back_translation": "government circle",
+    "notes": "Direct translation — government domain. วง (circle/sphere) + ราชการ (government service). Implies bureaucratic circles."
+  },
+  {
+    "id": 17,
+    "source_en": "according to regulations",
+    "target": "ตามระเบียบ",
+    "reference_back_translation": "according to regulations",
+    "notes": "Direct translation — administrative domain. ตาม (following) + ระเบียบ (regulations/rules). Common bureaucratic phrase."
+  },
+  {
+    "id": 18,
+    "source_en": "net income",
+    "target": "รายได้สุทธิ",
+    "reference_back_translation": "net income",
+    "notes": "Direct translation — finance domain. รายได้ (income/revenue) + สุทธิ (net/pure, Pali origin)."
+  },
+  {
+    "id": 19,
+    "source_en": "income tax",
+    "target": "ภาษีเงินได้",
+    "reference_back_translation": "income tax",
+    "notes": "Direct translation — tax/legal domain. ภาษี (tax) + เงินได้ (income/earned money)."
+  },
+  {
+    "id": 20,
+    "source_en": "local maintenance tax",
+    "target": "ภาษีบำรุงท้องที่",
+    "reference_back_translation": "local maintenance tax",
+    "notes": "Direct translation — tax/municipal domain. ภาษี (tax) + บำรุง (maintain) + ท้องที่ (local area)."
+  },
+  {
+    "id": 21,
+    "source_en": "death tax",
+    "target": "ภาษีมรดก",
+    "reference_back_translation": "inheritance tax",
+    "notes": "Direct translation — tax/legal domain. Thai uses มรดก (inheritance/estate) rather than 'death'. More formal register."
+  },
+  {
+    "id": 22,
+    "source_en": "value added tax",
+    "target": "ภาษีมูลค่าเพิ่ม",
+    "reference_back_translation": "value added tax",
+    "notes": "Direct translation — tax domain. ภาษี (tax) + มูลค่า (value) + เพิ่ม (added). Exact structural match."
+  },
+  {
+    "id": 23,
+    "source_en": "property tax",
+    "target": "ภาษีโรงเรือนและที่ดิน",
+    "reference_back_translation": "building and land tax",
+    "notes": "Direct translation — tax/real estate domain. Thai is more specific: โรงเรือน (building) + และ (and) + ที่ดิน (land)."
+  },
+  {
+    "id": 24,
+    "source_en": "financial budget",
+    "target": "งบการเงิน",
+    "reference_back_translation": "financial statement",
+    "notes": "Direct translation — accounting domain. งบ (statement/budget) + การเงิน (financial). Note: งบการเงิน typically means 'financial statement', not 'budget'."
+  },
+  {
+    "id": 25,
+    "source_en": "patient's record",
+    "target": "ทะเบียนคนไข้",
+    "reference_back_translation": "patient's record",
+    "notes": "Direct translation — medical domain. ทะเบียน (register/record) + คนไข้ (patient, lit. 'sick person')."
+  },
+  {
+    "id": 26,
+    "source_en": "medical profession",
+    "target": "วงการแพทย์",
+    "reference_back_translation": "medical profession",
+    "notes": "Direct translation - technical/formal term. Back-translation should match source exactly."
+  },
+  {
+    "id": 27,
+    "source_en": "treatment area",
+    "target": "สถานบำบัด",
+    "reference_back_translation": "treatment area",
+    "notes": "Direct translation - technical/formal term. Back-translation should match source exactly."
+  },
+  {
+    "id": 28,
+    "source_en": "medical device",
+    "target": "เครื่องมือแพทย์",
+    "reference_back_translation": "medical device",
+    "notes": "Direct translation - technical/formal term. Back-translation should match source exactly."
+  },
+  {
+    "id": 29,
+    "source_en": "medical appliance",
+    "target": "อุปกรณ์การแพทย์",
+    "reference_back_translation": "medical appliance",
+    "notes": "Direct translation - technical/formal term. Back-translation should match source exactly."
+  },
+  {
+    "id": 30,
+    "source_en": "instruments for surgery",
+    "target": "เครื่องมือผ่าตัด",
+    "reference_back_translation": "instruments for surgery",
+    "notes": "Direct translation - technical/formal term. Back-translation should match source exactly."
+  },
+  {
+    "id": 31,
+    "source_en": "draft contract",
+    "target": "ร่างสัญญา",
+    "reference_back_translation": "draft contract",
+    "notes": "Direct translation - technical/formal term. Back-translation should match source exactly."
+  },
+  {
+    "id": 32,
+    "source_en": "world market",
+    "target": "ตลาดโลก",
+    "reference_back_translation": "world market",
+    "notes": "Direct translation - technical/formal term. Back-translation should match source exactly."
+  },
+  {
+    "id": 33,
+    "source_en": "business registration",
+    "target": "ทะเบียนการค้า",
+    "reference_back_translation": "business registration",
+    "notes": "Direct translation - technical/formal term. Back-translation should match source exactly."
+  },
+  {
+    "id": 34,
+    "source_en": "motor vehicle registration",
+    "target": "ทะเบียนรถ",
+    "reference_back_translation": "vehicle registration",
+    "notes": "Direct translation — transport/legal domain. Thai shortens to ทะเบียน (registration) + รถ (vehicle), dropping 'motor'."
+  },
+  {
+    "id": 35,
+    "source_en": "24-hour market",
+    "target": "ตลาดโต้รุ่ง",
+    "reference_back_translation": "late-night/dawn market",
+    "notes": "Cultural nuance in direct translation — ตลาด (market) + โต้รุ่ง (staying up until dawn). Not literally 24-hour; implies nighttime market open until morning."
+  },
+  {
+    "id": 36,
+    "source_en": "examination candidate",
+    "target": "ผู้สมัครสอบ",
+    "reference_back_translation": "examination candidate",
+    "notes": "Direct translation - technical/formal term. Back-translation should match source exactly."
+  },
+  {
+    "id": 37,
+    "source_en": "lower secondary school",
+    "target": "มัธยมต้น",
+    "reference_back_translation": "lower secondary school",
+    "notes": "Direct translation - technical/formal term. Back-translation should match source exactly."
+  },
+  {
+    "id": 38,
+    "source_en": "upper secondary school",
+    "target": "มัธยมปลาย",
+    "reference_back_translation": "upper secondary school",
+    "notes": "Direct translation - technical/formal term. Back-translation should match source exactly."
+  },
+  {
+    "id": 39,
+    "source_en": "research institute",
+    "target": "สถาบันวิจัย",
+    "reference_back_translation": "research institute",
+    "notes": "Direct translation - technical/formal term. Back-translation should match source exactly."
+  },
+  {
+    "id": 40,
+    "source_en": "public library",
+    "target": "ห้องสมุดประชาชน",
+    "reference_back_translation": "public library",
+    "notes": "Direct translation - technical/formal term. Back-translation should match source exactly."
+  },
+  {
+    "id": 41,
+    "source_en": "thank",
+    "target": "คำขอบคุณ",
+    "reference_back_translation": "word of thanks/gratitude",
+    "notes": "Politeness particle — คำ (word/expression) + ขอบคุณ (thank). Thai nominalizes the verb into a formal noun phrase 'expression of gratitude'."
+  },
+  {
+    "id": 42,
+    "source_en": "excuse",
+    "target": "คำขอโทษ",
+    "reference_back_translation": "word of apology",
+    "notes": "Politeness particle — คำ (word/expression) + ขอโทษ (apologize). Nominalized form meaning 'an apology' or 'expression of apology'."
+  },
+  {
+    "id": 43,
+    "source_en": "hello",
+    "target": "สวัสดี",
+    "reference_back_translation": "greeting of well-being/auspiciousness",
+    "notes": "Politeness particle — สวัสดี derives from Sanskrit svasti (well-being). In use always requires particle: สวัสดีครับ (male) / สวัสดีค่ะ (female)."
+  },
+  {
+    "id": 44,
+    "source_en": "please",
+    "target": "กรุณา",
+    "reference_back_translation": "kindly / please (formal)",
+    "notes": "Politeness particle — กรุณา is formal register from Pali karuṇā (compassion). Soft request uses นะ particle instead. Higher formality than English 'please'."
+  },
+  {
+    "id": 45,
+    "source_en": "understand",
+    "target": "เข้าใจ",
+    "reference_back_translation": "enter the heart/mind (to comprehend)",
+    "notes": "Politeness particle — เข้า (enter) + ใจ (heart/mind). Literal compound meaning 'enter the heart'. Polite form requires ครับ/ค่ะ particle."
+  },
+  {
+    "id": 46,
+    "source_en": "agree",
+    "target": "เห็นด้วย",
+    "reference_back_translation": "see along with / concur",
+    "notes": "Politeness particle — เห็น (see) + ด้วย (with/along). Literal: 'see along with [you]'. Softened with นะ particle: เห็นด้วยนะ."
+  },
+  {
+    "id": 47,
+    "source_en": "confirm",
+    "target": "ยืนยัน",
+    "reference_back_translation": "stand firm / affirm",
+    "notes": "Politeness particle — ยืน (stand) + ยัน (brace/prop). Literal: 'stand braced'. คะ (rising tone) for questions vs ค่ะ (falling) for statements."
+  },
+  {
+    "id": 48,
+    "source_en": "request",
+    "target": "คำวิงวอน",
+    "reference_back_translation": "word of plea/earnest entreaty",
+    "notes": "Politeness particle — คำ (word) + วิงวอน (plead/implore). Much stronger register than English 'request'; implies earnest supplication."
+  },
+  {
+    "id": 49,
+    "source_en": "welcome",
+    "target": "ต้อนรับ",
+    "reference_back_translation": "receive/greet (as host)",
+    "notes": "Politeness particle — ต้อนรับ means to receive a guest. Full phrase ยินดีต้อนรับ = 'glad to receive [you]'. Often followed by นะครับ/นะคะ for warmth."
+  },
+  {
+    "id": 50,
+    "source_en": "goodbye",
+    "target": "ลาก่อน",
+    "reference_back_translation": "take leave first",
+    "notes": "Politeness particle — ลา (take leave) + ก่อน (first/before). Implies 'I take my leave before [you do]'. Warm version adds นะครับ/นะคะ."
+  },
+  {
+    "id": 51,
+    "source_en": "how are you",
+    "target": "สบายดีไหม",
+    "reference_back_translation": "are you well/comfortable?",
+    "notes": "Politeness particle — สบาย (comfortable) + ดี (good/well) + ไหม (question particle). Literal: 'comfortable-good [yes/no]?'. คะ particle adds female politeness."
+  },
+  {
+    "id": 52,
+    "source_en": "congratulations",
+    "target": "แสดงความยินดี",
+    "reference_back_translation": "express happiness/joy",
+    "notes": "Politeness particle — แสดง (express/show) + ความยินดี (happiness/gladness). Formal: 'showing of gladness'. More formal than colloquial ยินดีด้วย."
+  },
+  {
+    "id": 53,
+    "source_en": "I am sorry",
+    "target": "ขอโทษ",
+    "reference_back_translation": "ask for punishment / beg pardon",
+    "notes": "Politeness particle — ขอ (ask for/request) + โทษ (punishment/penalty). Literal: 'request punishment'. Much more contrite register than English 'sorry'."
+  },
+  {
+    "id": 54,
+    "source_en": "never mind",
+    "target": "ไม่เป็นไร",
+    "reference_back_translation": "it is nothing / no matter",
+    "notes": "Politeness particle — ไม่ (not) + เป็นไร (be anything/matter). Literal: 'not be anything'. จ้ะ/จ๊ะ used by older speakers to younger."
+  },
+  {
+    "id": 55,
+    "source_en": "yes",
+    "target": "ใช่",
+    "reference_back_translation": "correct / that's right",
+    "notes": "Politeness particle — ใช่ is informal affirmative meaning 'correct/right'. Formal male yes = ครับ; formal female yes = ค่ะ (the particle alone serves as 'yes')."
+  },
+  {
+    "id": 56,
+    "source_en": "hospital",
+    "target": "โรงพยาบาล",
+    "reference_back_translation": "building for nursing/healing",
+    "notes": "Compound word — โรง (building/establishment) + พยาบาล (nursing/caring for the sick). Must not decompose into separate words."
+  },
+  {
+    "id": 57,
+    "source_en": "university",
+    "target": "มหาวิทยาลัย",
+    "reference_back_translation": "great place of knowledge",
+    "notes": "Compound word — มหา (great, Pali) + วิทยาลัย (college/place of knowledge). Single concept, not literally 'great college'."
+  },
+  {
+    "id": 58,
+    "source_en": "motorcycle",
+    "target": "รถจักรยานยนต์",
+    "reference_back_translation": "engine-powered bicycle vehicle",
+    "notes": "Compound word — รถ (vehicle) + จักรยาน (bicycle) + ยนต์ (engine/motor). Three-part compound; must translate as single unit."
+  },
+  {
+    "id": 59,
+    "source_en": "airplane",
+    "target": "เครื่องบิน",
+    "reference_back_translation": "flying machine",
+    "notes": "Compound word — เครื่อง (machine/apparatus) + บิน (fly). Literal: 'machine that flies'. Decomposition would lose meaning."
+  },
+  {
+    "id": 60,
+    "source_en": "refrigerator",
+    "target": "ตู้เย็น",
+    "reference_back_translation": "cold cabinet",
+    "notes": "Compound word — ตู้ (cabinet/cupboard) + เย็น (cold/cool). Literal: 'cold cabinet'. Single appliance concept despite transparent compound."
+  },
+  {
+    "id": 61,
+    "source_en": "telephone",
+    "target": "โทรศัพท์",
+    "reference_back_translation": "far-sound / distant speech",
+    "notes": "Compound word — โทร (far/distant, from tele-) + ศัพท์ (sound/speech, Pali). Pali-Sanskrit loanword compound paralleling Greek etymology."
+  },
+  {
+    "id": 62,
+    "source_en": "railway",
+    "target": "ทางรถไฟ",
+    "reference_back_translation": "fire-vehicle road / train track",
+    "notes": "Compound word — ทาง (way/road) + รถไฟ (train, lit. 'fire vehicle'). รถไฟ itself is compound: รถ (vehicle) + ไฟ (fire)."
+  },
+  {
+    "id": 63,
+    "source_en": "volcano",
+    "target": "ภูเขาไฟ",
+    "reference_back_translation": "fire mountain",
+    "notes": "Compound word — ภูเขา (mountain) + ไฟ (fire). Literal 'fire mountain' but must translate as single concept 'volcano'."
+  },
+  {
+    "id": 64,
+    "source_en": "globalization",
+    "target": "โลกาภิวัตน์",
+    "reference_back_translation": "world-development / world-progress",
+    "notes": "Compound word — โลกา (world, Pali) + อภิวัตน์ (development/progress). Pali-derived neologism for modern concept."
+  },
+  {
+    "id": 65,
+    "source_en": "democracy",
+    "target": "ประชาธิปไตย",
+    "reference_back_translation": "sovereignty of the people",
+    "notes": "Compound word — ประชา (people/citizens) + ธิปไตย (sovereignty/supremacy). Pali-Sanskrit compound paralleling Greek demos+kratos."
+  },
+  {
+    "id": 66,
+    "source_en": "television set",
+    "target": "จอรับภาพ",
+    "reference_back_translation": "image-receiving screen",
+    "notes": "Compound word — จอ (screen) + รับ (receive) + ภาพ (image/picture). Formal Thai term describing function of TV."
+  },
+  {
+    "id": 67,
+    "source_en": "washing machine",
+    "target": "เครื่องซักผ้า",
+    "reference_back_translation": "cloth-washing machine",
+    "notes": "Compound word — เครื่อง (machine) + ซัก (wash) + ผ้า (cloth). Three-part compound describing function. Replaces duplicate of ID 1."
+  },
+  {
+    "id": 68,
+    "source_en": "air conditioning",
+    "target": "เครื่องปรับอากาศ",
+    "reference_back_translation": "air-adjusting machine",
+    "notes": "Compound word — เครื่อง (machine) + ปรับ (adjust) + อากาศ (air/atmosphere). Descriptive compound."
+  },
+  {
+    "id": 69,
+    "source_en": "department store",
+    "target": "ห้างสรรพสินค้า",
+    "reference_back_translation": "store of all goods",
+    "notes": "Compound word — ห้าง (store/shop) + สรรพ (all/every) + สินค้า (goods/merchandise). Formal; colloquial shortens to ห้าง alone."
+  },
+  {
+    "id": 70,
+    "source_en": "ice cream",
+    "target": "ไอศกรีม",
+    "reference_back_translation": "ice cream (transliterated loanword)",
+    "notes": "Compound word — Transliteration treated as single Thai compound. Thai also has rare native form กะแหล่ม."
+  },
+  {
+    "id": 71,
+    "source_en": "Buddhist monk",
+    "target": "ภิกษุสงฆ์",
+    "reference_back_translation": "ordained mendicant of the Sangha",
+    "notes": "Cultural adaptation — ภิกษุ (Pali: bhikkhu, ordained mendicant) + สงฆ์ (Sangha, monastic community). Highest formality level for 'monk'."
+  },
+  {
+    "id": 72,
+    "source_en": "auspicious ceremony",
+    "target": "งานมงคล",
+    "reference_back_translation": "auspicious/blessed occasion",
+    "notes": "Cultural adaptation — งาน (event/occasion) + มงคล (auspicious/blessed, Pali maṅgala). Covers weddings, housewarming, ordination ceremonies."
+  },
+  {
+    "id": 73,
+    "source_en": "Buddhist principles",
+    "target": "หลักพระพุทธศาสนา",
+    "reference_back_translation": "principles of the religion of the Buddha",
+    "notes": "Cultural adaptation — หลัก (principle/pillar) + พระพุทธศาสนา (Buddhism, lit. 'religion of the Buddha'). พระ is an honorific prefix."
+  },
+  {
+    "id": 74,
+    "source_en": "temple",
+    "target": "วัด",
+    "reference_back_translation": "Buddhist temple/monastery",
+    "notes": "Cultural adaptation — วัด specifically means Buddhist temple compound (with monks' quarters). Distinct from ศาลเจ้า (Chinese shrine) or โบสถ์ (church)."
+  },
+  {
+    "id": 75,
+    "source_en": "merit making",
+    "target": "ทำบุญ",
+    "reference_back_translation": "make merit (Buddhist act of generating good karma)",
+    "notes": "Cultural adaptation — ทำ (make/do) + บุญ (merit, Pali puñña). Central Buddhist practice with no single English equivalent; encompasses almsgiving, temple offerings, ordination support."
+  },
+  {
+    "id": 76,
+    "source_en": "karma",
+    "target": "กรรม",
+    "reference_back_translation": "action and its moral consequence (kamma)",
+    "notes": "Cultural adaptation — กรรม from Pali kamma / Sanskrit karma. In Thai daily speech implies both the deed and its inevitable consequence. Broader meaning than English 'karma'."
+  },
+  {
+    "id": 77,
+    "source_en": "spirit house",
+    "target": "ศาลพระภูมิ",
+    "reference_back_translation": "shrine of the guardian spirit of the land",
+    "notes": "Cultural adaptation — ศาล (shrine/court) + พระภูมิ (lord of the land/guardian spirit). Miniature shrine for land guardian spirits; unique to Thai/SE Asian animist-Buddhist culture."
+  },
+  {
+    "id": 78,
+    "source_en": "prostration",
+    "target": "กราบ",
+    "reference_back_translation": "prostrate with palms and forehead to the floor",
+    "notes": "Cultural adaptation — กราบ is a specific Thai gesture of deep respect (five-point prostration: forehead, two palms, two knees). Reserved for monks, Buddha images, royalty, elders."
+  },
+  {
+    "id": 79,
+    "source_en": "ordination",
+    "target": "บวช",
+    "reference_back_translation": "enter monkhood / be ordained as a Buddhist monk",
+    "notes": "Cultural adaptation — บวช is the act of being ordained into the monastic order. A rite of passage for Thai men; temporary ordination (usually one rainy season) is common."
+  },
+  {
+    "id": 80,
+    "source_en": "water festival",
+    "target": "สงกรานต์",
+    "reference_back_translation": "Songkran (Thai New Year water festival, April 13-15)",
+    "notes": "Cultural adaptation — สงกรานต์ from Sanskrit saṁkrānti (astrological passage). Thai New Year celebrated with water pouring as blessing. 'Water festival' is a cultural adaptation, not literal."
+  },
+  {
+    "id": 81,
+    "source_en": "near",
+    "target": "ใกล้",
+    "reference_back_translation": "near/close (falling tone)",
+    "notes": "Tone marker — ใกล้ (glâi, falling tone) = near. Minimal pair: ไกล (glai, mid tone) = far. Opposite meanings from tone alone!"
+  },
+  {
+    "id": 82,
+    "source_en": "new",
+    "target": "ใหม่",
+    "reference_back_translation": "new/recent (falling tone)",
+    "notes": "Tone marker — ใหม่ (mài, falling) = new. Minimal pairs: ไหม (mǎi, rising) = question particle; ไม่ (mâi, low) = not. Three tones, three meanings."
+  },
+  {
+    "id": 83,
+    "source_en": "forest",
+    "target": "ป่า",
+    "reference_back_translation": "forest/jungle (low tone)",
+    "notes": "Tone marker — ป่า (bpàa, low tone) = forest. Minimal pairs: ป้า (bpâa, falling) = aunt; ปา (bpaa, mid) = to throw."
+  },
+  {
+    "id": 84,
+    "source_en": "horse",
+    "target": "ม้า",
+    "reference_back_translation": "horse (high tone)",
+    "notes": "Tone marker — ม้า (máa, high tone) = horse. Minimal pairs: มา (maa, mid) = come; หมา (mǎa, rising) = dog."
+  },
+  {
+    "id": 85,
+    "source_en": "eye",
+    "target": "ตา",
+    "reference_back_translation": "eye / maternal grandfather (mid tone)",
+    "notes": "Tone marker — ตา (dtaa, mid tone) = eye or maternal grandfather (homophone). Context-dependent. Tone change to low: ต่า = low/inferior."
+  },
+  {
+    "id": 86,
+    "source_en": "rice",
+    "target": "ข้าว",
+    "reference_back_translation": "rice/cooked rice (falling tone)",
+    "notes": "Tone marker — ข้าว (kâao, falling) = rice (cooked or uncooked). Minimal pair: ขาว (kǎao, rising) = white."
+  },
+  {
+    "id": 87,
+    "source_en": "beautiful",
+    "target": "สวย",
+    "reference_back_translation": "beautiful/pretty (rising tone)",
+    "notes": "Tone marker — สวย (sǔai, rising) = beautiful. Minimal pair: ซวย (suai, mid) = unlucky. Tone confusion is a common learner error."
+  },
+  {
+    "id": 88,
+    "source_en": "medicine",
+    "target": "ยา",
+    "reference_back_translation": "medicine/drug (mid tone)",
+    "notes": "Tone marker — ยา (yaa, mid) = medicine/drug. Minimal pair: ย่า (yàa, low) = paternal grandmother."
+  },
+  {
+    "id": 89,
+    "source_en": "cloth",
+    "target": "ผ้า",
+    "reference_back_translation": "cloth/fabric (falling tone)",
+    "notes": "Tone marker — ผ้า (pâa, falling) = cloth/fabric. Related: ฟ้า (fáa, high) = sky/blue. Different initial consonant class affects tone."
+  },
+  {
+    "id": 90,
+    "source_en": "island",
+    "target": "เกาะ",
+    "reference_back_translation": "island (low tone, glottal stop)",
+    "notes": "Tone marker — เกาะ (gò, low tone with glottal stop) = island. Minimal pair: เก้า (gâo, falling) = nine; เก่า (gào, low) = old."
+  },
+  {
+    "id": 91,
+    "source_en": "bar code",
+    "target": "บาร์โค้ด",
+    "reference_back_translation": "bar code (Thai transliteration)",
+    "notes": "Mixed Thai+English — English loanword transliterated to Thai script. บาร์ (bar) + โค้ด (code). Tone marks added to approximate English pronunciation."
+  },
+  {
+    "id": 92,
+    "source_en": "E-Commerce",
+    "target": "อี-คอมเมิร์ช",
+    "reference_back_translation": "e-commerce (Thai transliteration)",
+    "notes": "Mixed Thai+English — English tech term transliterated. อี (E) + คอมเมิร์ช (commerce). Hyphen retained from English. Thai has no native equivalent."
+  },
+  {
+    "id": 93,
+    "source_en": "flash drive",
+    "target": "แฟลชไดรฟ์",
+    "reference_back_translation": "flash drive (Thai transliteration)",
+    "notes": "Mixed Thai+English — แฟลช (flash) + ไดรฟ์ (drive). Common tech loanword. Thai also uses ธัมบ์ไดรฟ์ (thumb drive). Replaces duplicate of ID 3."
+  },
+  {
+    "id": 94,
+    "source_en": "smartphone",
+    "target": "สมาร์ทโฟน",
+    "reference_back_translation": "smartphone (Thai transliteration)",
+    "notes": "Mixed Thai+English — สมาร์ท (smart) + โฟน (phone). Full transliteration. Thai also uses โทรศัพท์มือถืออัจฉริยะ (intelligent mobile telephone) in formal contexts. Replaces duplicate of ID 2."
+  },
+  {
+    "id": 95,
+    "source_en": "online",
+    "target": "ออนไลน์",
+    "reference_back_translation": "online (Thai transliteration)",
+    "notes": "Mixed Thai+English — Direct transliteration. ออน (on) + ไลน์ (line). Thai has no native equivalent; English tech term fully adopted."
+  },
+  {
+    "id": 96,
+    "source_en": "website",
+    "target": "เว็บไซต์",
+    "reference_back_translation": "website (Thai transliteration)",
+    "notes": "Mixed Thai+English — เว็บ (web) + ไซต์ (site) in Thai script. Short vowel mark ็ on เว็บ approximates English pronunciation."
+  },
+  {
+    "id": 97,
+    "source_en": "download",
+    "target": "ดาวน์โหลด",
+    "reference_back_translation": "download (Thai transliteration)",
+    "notes": "Mixed Thai+English — ดาวน์ (down) + โหลด (load). Thai has formal equivalent ดาวน์โหลด is universally preferred over any native coinage."
+  },
+  {
+    "id": 98,
+    "source_en": "chocolate",
+    "target": "ช็อกโกแลต",
+    "reference_back_translation": "chocolate (Thai transliteration)",
+    "notes": "Mixed Thai+English — Food loanword. ช็อก (choc) + โก (o) + แลต (late). Thai transliteration approximates English pronunciation with tone marks."
+  },
+  {
+    "id": 99,
+    "source_en": "computer",
+    "target": "คอมพิวเตอร์",
+    "reference_back_translation": "computer (Thai transliteration)",
+    "notes": "Mixed Thai+English — Transliterated English. Formal Thai alternative คณิตกรณ์ (calculation device) exists but is rarely used; loanword dominates."
+  },
+  {
+    "id": 100,
+    "source_en": "taxi",
+    "target": "แท็กซี่",
+    "reference_back_translation": "taxi (Thai transliteration)",
+    "notes": "Mixed Thai+English — English loanword transliterated. แท็ก (tax) + ซี่ (i). Thai tone marks added to approximate English stress pattern."
+  }
+]

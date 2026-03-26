@@ -64,6 +64,8 @@ export type L2Result = {
     outputTokens: number
     estimatedCostUsd: number
   }
+  /** TD-AI-006: Segment IDs from failed L2 chunks — L3 must include these as "unscreened" */
+  failedChunkSegmentIds: string[]
 }
 
 // ── Internal Types ──
@@ -351,6 +353,19 @@ export async function runL2ForFile({
 
     const duration = Math.round(performance.now() - startTime)
 
+    // TD-AI-006: Collect segment IDs from failed chunks — these segments were never screened by L2.
+    // L3 must include them as "unscreened" so they are not silently excluded from deep analysis.
+    const failedChunkSegmentIds: string[] = []
+    for (const cr of chunkResults) {
+      if (cr.success) continue
+      const failedChunk = chunks.find((c) => c.chunkIndex === cr.chunkIndex)
+      if (failedChunk) {
+        for (const seg of failedChunk.segments) {
+          failedChunkSegmentIds.push(seg.id)
+        }
+      }
+    }
+
     // Step 7: Flatten + validate findings from successful chunks
     const segmentIdSet = new Set(segmentRows.map((s) => s.id))
     const allFindings: (L2MappedFinding & { actualModel: string })[] = []
@@ -443,7 +458,10 @@ export async function runL2ForFile({
       }
     })
 
-    // Step 9: Atomic DELETE + INSERT (idempotent re-run)
+    // Step 9+10: Atomic DELETE + INSERT + status UPDATE in single transaction
+    // TD-AI-005: Previously findings INSERT and status UPDATE were separate operations.
+    // If INSERT succeeded but UPDATE failed → Inngest retry → CAS guard fails (status='l2_processing')
+    // → NonRetriableError → findings orphaned. Now both are atomic. (Guardrail #6)
     await db.transaction(async (tx) => {
       await tx
         .delete(findings)
@@ -459,13 +477,13 @@ export async function runL2ForFile({
         const batch = findingInserts.slice(i, i + FINDING_BATCH_SIZE)
         await tx.insert(findings).values(batch)
       }
-    })
 
-    // Step 10: Update file status
-    await db
-      .update(files)
-      .set({ status: 'l2_completed', updatedAt: new Date() })
-      .where(and(withTenant(files.tenantId, tenantId), eq(files.id, fileId)))
+      // Status update inside same transaction — atomic with findings
+      await tx
+        .update(files)
+        .set({ status: 'l2_completed', updatedAt: new Date() })
+        .where(and(withTenant(files.tenantId, tenantId), eq(files.id, fileId)))
+    })
 
     // Step 11: Audit log (non-fatal)
     const chunksSucceeded = chunkResults.filter((c) => c.success).length
@@ -528,6 +546,7 @@ export async function runL2ForFile({
       partialFailure: chunksFailed > 0,
       fallbackUsed: anyFallbackUsed,
       totalUsage,
+      failedChunkSegmentIds, // TD-AI-006: pass to L3 for "unscreened" inclusion
     }
   } catch (err) {
     logger.error({ err, fileId }, 'L2 screening failed')

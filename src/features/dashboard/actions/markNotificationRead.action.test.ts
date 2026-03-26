@@ -59,6 +59,7 @@ describe('markNotificationRead', () => {
       role: 'qa_reviewer',
       displayName: 'Test',
       metadata: null,
+      nativeLanguages: [],
     })
 
     const result = await markNotificationRead('not-a-uuid')
@@ -77,6 +78,7 @@ describe('markNotificationRead', () => {
       role: 'qa_reviewer',
       displayName: 'Test',
       metadata: null,
+      nativeLanguages: [],
     })
 
     const result = await markNotificationRead('550e8400-e29b-41d4-a716-446655440001')
@@ -94,6 +96,7 @@ describe('markNotificationRead', () => {
       role: 'qa_reviewer',
       displayName: 'Test',
       metadata: null,
+      nativeLanguages: [],
     })
 
     const result = await markNotificationRead('all')
@@ -111,6 +114,7 @@ describe('markNotificationRead', () => {
       role: 'qa_reviewer',
       displayName: 'Test',
       metadata: null,
+      nativeLanguages: [],
     })
 
     await markNotificationRead('all')
@@ -132,6 +136,7 @@ describe('markNotificationRead', () => {
       role: 'qa_reviewer',
       displayName: 'Test',
       metadata: null,
+      nativeLanguages: [],
     })
 
     await markNotificationRead('a1b2c3d4-e5f6-4789-abcd-ef0123456789')

@@ -45,6 +45,7 @@ describe('updateTourState action', () => {
       role: 'qa_reviewer',
       displayName: 'QA Reviewer',
       metadata: null,
+      nativeLanguages: [],
     })
 
     const { updateTourState } = await import('@/features/onboarding/actions/updateTourState.action')
@@ -76,6 +77,7 @@ describe('updateTourState action', () => {
       role: 'qa_reviewer',
       displayName: 'QA Reviewer',
       metadata: null,
+      nativeLanguages: [],
     })
 
     const { updateTourState } = await import('@/features/onboarding/actions/updateTourState.action')
@@ -102,6 +104,7 @@ describe('updateTourState action', () => {
       metadata: {
         dismissed_at_step: { setup: 2 },
       },
+      nativeLanguages: [],
     })
 
     const { updateTourState } = await import('@/features/onboarding/actions/updateTourState.action')
@@ -131,6 +134,7 @@ describe('updateTourState action', () => {
         setup_tour_completed: '2026-02-20T10:00:00.000Z',
         dismissed_at_step: { setup: 2 },
       },
+      nativeLanguages: [],
     })
 
     const { updateTourState } = await import('@/features/onboarding/actions/updateTourState.action')
@@ -177,6 +181,7 @@ describe('updateTourState action', () => {
       role: 'qa_reviewer',
       displayName: 'QA Reviewer',
       metadata: null,
+      nativeLanguages: [],
     })
 
     const { updateTourState } = await import('@/features/onboarding/actions/updateTourState.action')
@@ -208,6 +213,7 @@ describe('updateTourState action', () => {
       role: 'qa_reviewer',
       displayName: 'QA Reviewer',
       metadata: null,
+      nativeLanguages: [],
     })
 
     const { updateTourState } = await import('@/features/onboarding/actions/updateTourState.action')
@@ -239,6 +245,7 @@ describe('updateTourState action', () => {
         project_tour_completed: '2026-02-20T10:00:00.000Z',
         dismissed_at_step: { project: 2 },
       },
+      nativeLanguages: [],
     })
 
     const { updateTourState } = await import('@/features/onboarding/actions/updateTourState.action')
@@ -271,6 +278,7 @@ describe('updateTourState action', () => {
         project_tour_completed: '2026-02-20T10:00:00.000Z',
         // no dismissed_at_step
       },
+      nativeLanguages: [],
     })
 
     const { updateTourState } = await import('@/features/onboarding/actions/updateTourState.action')
@@ -295,6 +303,7 @@ describe('updateTourState action', () => {
       role: 'qa_reviewer',
       displayName: 'QA Reviewer',
       metadata: null,
+      nativeLanguages: [],
     })
     mockReturning.mockRejectedValueOnce(new Error('connection refused'))
 
@@ -315,6 +324,7 @@ describe('updateTourState action', () => {
       role: 'qa_reviewer',
       displayName: 'QA Reviewer',
       metadata: null,
+      nativeLanguages: [],
     })
     mockReturning.mockResolvedValueOnce([]) // 0 rows updated — user not found
 
@@ -337,6 +347,7 @@ describe('updateTourState action', () => {
       role: 'qa_reviewer',
       displayName: 'QA Reviewer',
       metadata: null,
+      nativeLanguages: [],
     })
 
     const { updateTourState } = await import('@/features/onboarding/actions/updateTourState.action')

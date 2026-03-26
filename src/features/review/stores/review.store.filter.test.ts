@@ -72,6 +72,21 @@ describe('FilterState Extensions (Story 4.5)', () => {
       useReviewStore.getState().setAiSuggestionsEnabled(true)
       expect(useReviewStore.getState().aiSuggestionsEnabled).toBe(true)
     })
+
+    it('should NOT reset aiSuggestionsEnabled when resetFilters called (DG-2 fix: AC8 separate)', () => {
+      // User intentionally turns off AI suggestions
+      useReviewStore.getState().setAiSuggestionsEnabled(false)
+      expect(useReviewStore.getState().aiSuggestionsEnabled).toBe(false)
+
+      // User clicks "Clear all filters" — should clear filters + search, NOT AI toggle
+      useReviewStore.getState().resetFilters()
+
+      // AI toggle should remain OFF
+      expect(useReviewStore.getState().aiSuggestionsEnabled).toBe(false)
+      // But filters + search should be reset to defaults
+      expect(useReviewStore.getState().filterState.status).toBe('pending')
+      expect(useReviewStore.getState().searchQuery).toBe('')
+    })
   })
 
   // -- Per-file Filter Cache (AC3) --
@@ -521,6 +536,65 @@ describe('FilterState Extensions (Story 4.5)', () => {
       useReviewStore.getState().setSearchQuery('some')
       useReviewStore.getState().selectAllFiltered()
       expect(useReviewStore.getState().selectedIds.size).toBe(1)
+    })
+  })
+
+  // -- G-3: Realtime new L2 finding while AI toggle OFF --
+
+  describe('Realtime finding arrival while AI toggle OFF (TA Gap G-3)', () => {
+    it('should exclude newly added L2 finding from selectAllFiltered when AI toggle OFF', () => {
+      // Start with L1 finding + AI toggle OFF
+      const f1 = buildFinding({ id: 'f1', detectedByLayer: 'L1', status: 'pending' })
+      useReviewStore.getState().setFinding('f1', f1)
+      useReviewStore.getState().setSortedFindingIds(['f1'])
+      useReviewStore.getState().setAiSuggestionsEnabled(false)
+
+      // Simulate Realtime arriving L2 finding (like use-findings-subscription would)
+      const f2 = buildFinding({ id: 'f2', detectedByLayer: 'L2', status: 'pending' })
+      useReviewStore.getState().setFinding('f2', f2)
+      useReviewStore.getState().setSortedFindingIds(['f1', 'f2'])
+
+      // findingsMap has 2 entries, but selectAllFiltered should only select L1
+      expect(useReviewStore.getState().findingsMap.size).toBe(2)
+      useReviewStore.getState().selectAllFiltered()
+      const selected = useReviewStore.getState().selectedIds
+      expect(selected.size).toBe(1)
+      expect(selected.has('f1')).toBe(true)
+      expect(selected.has('f2')).toBe(false)
+    })
+
+    it('should exclude newly added L3 finding from selectAllFiltered when AI toggle OFF', () => {
+      const f1 = buildFinding({ id: 'f1', detectedByLayer: 'L1', status: 'pending' })
+      useReviewStore.getState().setFinding('f1', f1)
+      useReviewStore.getState().setSortedFindingIds(['f1'])
+      useReviewStore.getState().setAiSuggestionsEnabled(false)
+
+      // Simulate Realtime arriving L3 finding
+      const f3 = buildFinding({ id: 'f3', detectedByLayer: 'L3', status: 'pending' })
+      useReviewStore.getState().setFinding('f3', f3)
+      useReviewStore.getState().setSortedFindingIds(['f1', 'f3'])
+
+      useReviewStore.getState().selectAllFiltered()
+      expect(useReviewStore.getState().selectedIds.size).toBe(1)
+      expect(useReviewStore.getState().selectedIds.has('f1')).toBe(true)
+    })
+
+    it('should include newly added L2 finding when AI toggle is re-enabled', () => {
+      const f1 = buildFinding({ id: 'f1', detectedByLayer: 'L1', status: 'pending' })
+      useReviewStore.getState().setFinding('f1', f1)
+      useReviewStore.getState().setSortedFindingIds(['f1'])
+      useReviewStore.getState().setAiSuggestionsEnabled(false)
+
+      // Realtime arrival while OFF
+      const f2 = buildFinding({ id: 'f2', detectedByLayer: 'L2', status: 'pending' })
+      useReviewStore.getState().setFinding('f2', f2)
+      useReviewStore.getState().setSortedFindingIds(['f1', 'f2'])
+
+      // Re-enable AI toggle
+      useReviewStore.getState().setAiSuggestionsEnabled(true)
+
+      useReviewStore.getState().selectAllFiltered()
+      expect(useReviewStore.getState().selectedIds.size).toBe(2)
     })
   })
 })

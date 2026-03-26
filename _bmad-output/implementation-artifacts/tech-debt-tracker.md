@@ -1,7 +1,7 @@
 # Tech Debt Tracker
 
 **Created:** 2026-02-25 (post Story 2.7 CR R4)
-**Last Verified:** 2026-03-02 (Guardrail #23 compliance sweep)
+**Last Verified:** 2026-03-26 (Epic 4 completion audit — TD-AI-005/006 resolved, all items verified)
 **Source:** Cross-referenced from agent memory (anti-pattern-detector, code-quality-analyzer, tenant-isolation-checker, testing-qa-expert, inngest-function-validator)
 
 ---
@@ -564,7 +564,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Low
 - **File:** `e2e/review-score.spec.ts` — test TD2
 - **Description:** E2E test for score recalculation after accepting a finding. Review actions are now implemented in Story 4.2. E2E test can be unskipped.
-- **Status:** OPEN → unskip in `e2e/review-score.spec.ts` during next E2E activation pass
+- **Status:** OPEN → **Story 5.2a** (non-native auto-tag adds review action changes → verify score recalc E2E at same time)
 
 ### ~~TD-REVIEW-002: Realtime auto_passed transition doesn't show rationale~~
 - **Date:** 2026-03-08
@@ -587,7 +587,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Medium
 - **File:** `e2e/review-detail-panel.spec.ts` — 7 tests (`E1` through `E7`)
 - **Description:** All 7 assertion E2E tests use `test.skip()`. Action buttons are now wired (Story 4.2). Tests can be unskipped.
-- **Status:** OPEN → unskip during next E2E activation pass (action buttons wired, Sheet open flow should work)
+- **Status:** OPEN → **Story 5.1** (Language Bridge adds back-translation sidebar to detail panel → implement E2E for both panel + new feature together)
 
 ### TD-E2E-017: Responsive Layout E2E tests skipped — 30 `test.skip` without TD ref
 - **Date:** 2026-03-13
@@ -596,7 +596,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Medium
 - **File:** `e2e/review-responsive.spec.ts` — 30 tests (desktop×10, laptop×10, mobile×10)
 - **Description:** All 30 E2E tests use `test.skip()`. Action buttons now wired (Story 4.2). Tests can be unskipped.
-- **Status:** OPEN → unskip during next E2E activation pass (all action buttons wired, responsive layout complete)
+- **Status:** OPEN → **Story 5.3** (Verification — responsive tests need all layouts finalized: 5.1 sidebar + 5.2c native workflow UI → verify in verification story)
 
 ### TD-UX-004: Minor accordion transient activeIndex=0 (1 frame glitch)
 - **Date:** 2026-03-14
@@ -653,8 +653,8 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Files:** `src/features/review/actions/rejectFinding.action.ts:88`, `src/features/review/actions/undoAction.action.ts:102`, `src/features/review/actions/undoBulkAction.action.ts:176`, `src/features/review/actions/addFinding.action.ts:194`
 - **Description:** `reviewerIsNative: false` is hardcoded in all `feedback_events` INSERT paths. Should be derived from user profile (native language pair setting). Affects AI training data quality — all feedback is tagged as non-native reviewer regardless of actual language pair proficiency.
 - **Mitigation:** Low impact until AI learning pipeline (Epic 9) consumes this field. All rows have consistent `false` value — no data inconsistency.
-- **Fix:** Wire from user profile `reviewer_is_native` field once Story 5.2 (Non-native auto-tag) implements the user language proficiency model.
-- **Status:** DEFERRED → **Story 5.2 — Non-native auto-tag, native reviewer access**
+- **Fix:** Wire from user profile `reviewer_is_native` field once Story 5.2a wires `determineNonNative()` into all 7 review actions that write `reviewerIsNative`.
+- **Status:** PARTIALLY RESOLVED (2026-03-26) — `determineNonNative()` helper created + `getCurrentUser` returns `nativeLanguages`. Full wiring into review actions deferred to Story 5.2a.
 
 ---
 
@@ -709,27 +709,27 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Fix:** (1) Prompt example: clarified UUID only, no brackets. (2) Parser: defensive bracket strip before validation. (3) L3: same fixes. (4) Regression test added.
 - **Status:** RESOLVED (2026-03-18 — L2 Precision 75%, Recall 60% after fix)
 
-### TD-AI-005: CAS guard race — findings orphaned when status UPDATE fails after INSERT
+### ~~TD-AI-005: CAS guard race — findings orphaned when status UPDATE fails after INSERT~~
 - **Date:** 2026-03-18
 - **Story:** 4.8 (discovered during pipeline audit)
 - **Phase:** verification
 - **Severity:** High
 - **Files:** `runL2ForFile.ts`, `runL3ForFile.ts`
 - **Description:** If L2 findings INSERT succeeds but file status UPDATE to `l2_completed` fails → Inngest retry → CAS guard (`WHERE status='l1_completed'`) fails because status = `l2_processing` → `NonRetriableError` → findings orphaned in DB without being scored.
-- **Fix:** Wrap findings INSERT + status UPDATE in same transaction, or use compensating DELETE on retry.
-- **Effort:** 2-4 ชม.
-- **Status:** DEFERRED → **Epic 5 or dedicated pipeline reliability story**
+- **Fix:** Wrap findings INSERT + status UPDATE in same `db.transaction()` (Guardrail #6).
+- **Resolution:** Both `runL2ForFile.ts` (lines 465-486) and `runL3ForFile.ts` (lines 527-548) now use `db.transaction()` that wraps DELETE old findings + INSERT new findings + UPDATE file status as a single atomic operation. If any step fails, the entire transaction rolls back — no orphaned findings, CAS guard remains valid on retry.
+- **Status:** RESOLVED (2026-03-26 — Epic 5 Prep Task P1, transaction-atomic findings+status update)
 
-### TD-AI-006: L3 segment filter excludes segments from failed L2 chunks
+### ~~TD-AI-006: L3 segment filter excludes segments from failed L2 chunks~~
 - **Date:** 2026-03-18
 - **Story:** 4.8 (discovered during pipeline audit)
 - **Phase:** verification
 - **Severity:** High
-- **Files:** `runL3ForFile.ts:228-239`
+- **Files:** `runL2ForFile.ts:356-367`, `runL3ForFile.ts:243-257`
 - **Description:** L3 filters segments to only those flagged by L2 (`l2FlaggedSegmentIds`). If an L2 chunk fails (partial failure), segments in that chunk have 0 L2 findings → excluded from L3 analysis. But exclusion is because L2 failed, not because segment is clean.
 - **Fix:** Track which segments were in failed chunks. Include those in L3 scope as "unscreened" segments.
-- **Effort:** 2-4 ชม.
-- **Status:** DEFERRED → **Epic 5 or dedicated pipeline reliability story**
+- **Resolution:** `runL2ForFile.ts` now collects `failedChunkSegmentIds` (lines 356-367) from failed chunk results and returns them in `L2Result`. `runL3ForFile.ts` accepts `l2FailedChunkSegmentIds` parameter (line 42-43, 107), creates `l2UnscreenedSegmentIds` Set (lines 247-253), and includes those segments in L3 filtered scope (line 256: `l2FlaggedSegmentIds.has(s.id) || l2UnscreenedSegmentIds.has(s.id)`). Failed L2 chunks no longer cause silent coverage gaps in L3.
+- **Status:** RESOLVED (2026-03-26 — Epic 5 Prep Task P1, failedChunkSegmentIds passed from L2 to L3)
 
 ### TD-AI-007: L2 prompt "L1 checks glossary" gap with lowConfidenceMatch
 - **Date:** 2026-03-18
@@ -823,7 +823,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Low
 - **Status:** RESOLVED (2026-03-18) — TA-12b rewritten with Shift+Click (correct mechanism). 776ms PASSED.
 
-### TD-UX-004: Shift+J/K bulk selection not implemented — AC1 of Story 4.4a
+### TD-UX-006: Shift+J/K bulk selection not implemented — AC1 of Story 4.4a
 - **Date:** 2026-03-18
 - **Story:** 4.4a (discovered during Story 4.8 CR)
 - **Phase:** impl

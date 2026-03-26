@@ -58,9 +58,12 @@ export function SearchInput() {
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Escape') {
-      // Guardrail #31: innermost layer handles Escape, stop propagation
-      e.stopPropagation()
-      handleClear()
+      // Guardrail #31: innermost layer closes first — only consume Escape when there's
+      // something to clear. If empty, let Escape propagate to parent layer (detail panel, etc.)
+      if (localValue.length > 0) {
+        e.stopPropagation()
+        handleClear()
+      }
       return
     }
     // Guardrail #28: stop single-key hotkeys from propagating when input focused

@@ -343,6 +343,34 @@ Claude Opus 4.6 (1M context)
 - **E2E E-09:** Fixed assertion — bulk mode stays active with 1 remaining selected (not exited to 0)
 - **CR exit:** 0C + 0H — all sub-agents (code-quality, cross-file, testing-qa) confirmed clean
 
+### Post-CR Bug Fixes (2026-03-18, TEA TA audit)
+
+**BUG-1 (MEDIUM): Escape key swallowed when search empty**
+- **File:** `SearchInput.tsx:60-65`
+- **Root cause:** `e.stopPropagation()` called unconditionally — empty search consumed Escape, blocking parent layers (Guardrail #31 violation)
+- **Fix:** Only `stopPropagation` when `localValue.length > 0`; empty → let Escape propagate to parent layer
+- **Test:** Added "should propagate Escape to parent when query is empty" in `SearchInput.test.tsx`
+
+**BUG-2 (LOW-MEDIUM): Filter state lost on F5 refresh**
+- **File:** `ReviewPageClient.tsx:592+`
+- **Root cause:** `saveFilterCache()` only called on explicit file navigation (dropdown/palette) — no save on beforeunload/unmount
+- **Fix:** Added `useEffect` with `beforeunload` listener + unmount cleanup that saves filter state to sessionStorage. Uses refs to avoid re-registering listener on every filter change
+- **Test:** Existing filter-cache.test.ts covers sessionStorage roundtrip; structural correctness verified via type-check + full suite
+
+**DG-1 (INFO→FIXED): Manual findings hidden by Layer filter**
+- **File:** `filter-helpers.ts:66-73`
+- **Root cause:** Layer filter 'L1' (Rule-based) only matched `detectedByLayer === 'L1'` — excluded Manual findings
+- **Fix:** Rule-based group now matches L1 + Manual (`finding.detectedByLayer !== 'L1' && finding.detectedByLayer !== 'Manual'`)
+- **Test:** Added 2 tests in `filter-helpers.test.ts`: Manual matches L1 filter, Manual excluded from L2 filter
+
+**DG-2 (INFO→FIXED): "Clear All Filters" also reset AI toggle**
+- **File:** `review.store.ts:193-207` (`resetFilters`)
+- **Root cause:** `resetFilters()` set `aiSuggestionsEnabled: true` — but AC8 specifies AI toggle is "separate from Layer filter"
+- **Fix:** Removed `aiSuggestionsEnabled` from `resetFilters` — only resets `filterState` + `searchQuery`
+- **Test:** Added "should NOT reset aiSuggestionsEnabled when resetFilters called" in `review.store.filter.test.ts`
+
+**Verification:** type-check 0 errors, 120 test files / 1129 tests ALL PASS
+
 ### File List
 - src/features/review/stores/review.store.ts (MODIFIED)
 - src/features/review/utils/filter-helpers.ts (NEW)

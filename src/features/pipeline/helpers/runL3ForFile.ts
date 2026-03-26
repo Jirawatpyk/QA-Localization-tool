@@ -39,6 +39,8 @@ type RunL3Input = {
   projectId: string
   tenantId: string
   userId?: string
+  /** TD-AI-006: Segment IDs from failed L2 chunks — included as "unscreened" in L3 scope */
+  l2FailedChunkSegmentIds?: string[]
 }
 
 export type { L3Finding }
@@ -102,6 +104,7 @@ export async function runL3ForFile({
   projectId,
   tenantId,
   userId,
+  l2FailedChunkSegmentIds = [],
 }: RunL3Input): Promise<L3Result> {
   const startTime = performance.now()
 
@@ -236,7 +239,22 @@ export async function runL3ForFile({
         )
         .map((stat) => stat.segmentId as string),
     )
-    const filteredSegments = segmentRows.filter((s) => l2FlaggedSegmentIds.has(s.id))
+
+    // TD-AI-006: Include segments from failed L2 chunks as "unscreened".
+    // If an L2 chunk failed (partial failure), segments in that chunk have 0 L2 findings —
+    // but exclusion is because L2 failed, not because segment is clean.
+    // These segments need L3 analysis to avoid silent coverage gaps.
+    const l2UnscreenedSegmentIds = new Set(l2FailedChunkSegmentIds)
+    if (l2UnscreenedSegmentIds.size > 0) {
+      logger.info(
+        { fileId, unscreenedCount: l2UnscreenedSegmentIds.size },
+        'TD-AI-006: Including unscreened segments from failed L2 chunks in L3 scope',
+      )
+    }
+
+    const filteredSegments = segmentRows.filter(
+      (s) => l2FlaggedSegmentIds.has(s.id) || l2UnscreenedSegmentIds.has(s.id),
+    )
 
     // Step 3e: Early return if zero segments flagged (Guardrail #5: no inArray([]))
     if (filteredSegments.length === 0) {
@@ -502,7 +520,10 @@ export async function runL3ForFile({
       }
     })
 
-    // Step 9: Atomic DELETE + INSERT (idempotent re-run)
+    // Step 9+10: Atomic DELETE + INSERT + status UPDATE in single transaction
+    // TD-AI-005: Previously findings INSERT and status UPDATE were separate operations.
+    // If INSERT succeeded but UPDATE failed → Inngest retry → CAS guard fails (status='l3_processing')
+    // → NonRetriableError → findings orphaned. Now both are atomic. (Guardrail #6)
     await db.transaction(async (tx) => {
       await tx
         .delete(findings)
@@ -518,6 +539,12 @@ export async function runL3ForFile({
         const batch = findingInserts.slice(i, i + FINDING_BATCH_SIZE)
         await tx.insert(findings).values(batch)
       }
+
+      // Status update inside same transaction — atomic with findings
+      await tx
+        .update(files)
+        .set({ status: 'l3_completed', updatedAt: new Date() })
+        .where(and(withTenant(files.tenantId, tenantId), eq(files.id, fileId)))
     })
 
     // Step 9b: L3 confirm/contradict L2 post-processing (AC4)
@@ -613,12 +640,6 @@ export async function runL3ForFile({
         }
       })
     }
-
-    // Step 10: Update file status
-    await db
-      .update(files)
-      .set({ status: 'l3_completed', updatedAt: new Date() })
-      .where(and(withTenant(files.tenantId, tenantId), eq(files.id, fileId)))
 
     // Step 11: Audit log (non-fatal)
     const chunksSucceeded = chunkResults.filter((c) => c.success).length

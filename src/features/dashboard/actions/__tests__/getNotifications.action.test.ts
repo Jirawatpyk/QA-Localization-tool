@@ -66,6 +66,7 @@ describe('getNotifications action', () => {
       role: 'qa_reviewer',
       displayName: 'QA Reviewer',
       metadata: null,
+      nativeLanguages: [],
     })
 
     queryResults.push([
@@ -104,6 +105,7 @@ describe('getNotifications action', () => {
       role: 'qa_reviewer',
       displayName: 'Other User',
       metadata: null,
+      nativeLanguages: [],
     })
 
     // DB returns only notifications for usr-test-002 (filtered by WHERE clause)
@@ -141,6 +143,7 @@ describe('getNotifications action', () => {
       role: 'qa_reviewer',
       displayName: 'Cross Tenant User',
       metadata: null,
+      nativeLanguages: [],
     })
 
     queryResults.push([])
@@ -180,6 +183,7 @@ describe('getNotifications action', () => {
       role: 'qa_reviewer',
       displayName: 'Clean User',
       metadata: null,
+      nativeLanguages: [],
     })
 
     queryResults.push([])

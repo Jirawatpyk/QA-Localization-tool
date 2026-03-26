@@ -1,0 +1,172 @@
+/**
+ * L3 Pipeline Real AI Integration Test
+ *
+ * Calls Anthropic claude-sonnet with real API key — NO mocking.
+ * Verifies the full flow: buildL3Prompt → generateText → l3OutputSchema parse → findings > 0
+ *
+ * WHY: TD-AI-004 showed mock-only tests hid a bracket bug for 17 days.
+ * This test catches prompt↔schema format mismatches that mocks cannot detect.
+ *
+ * COST: ~$0.01-0.05 per run (claude-sonnet is more expensive than gpt-4o-mini).
+ * SPEED: ~5-20 seconds per test.
+ *
+ * @see _bmad-output/implementation-artifacts/tech-debt-tracker.md TD-AI-004
+ */
+
+import { Output, generateText } from 'ai'
+import { describe, expect, it } from 'vitest'
+
+import { buildL3Prompt } from '@/features/pipeline/prompts/build-l3-prompt'
+import { l3OutputSchema } from '@/features/pipeline/schemas/l3-output'
+import { getModelById } from '@/lib/ai/client'
+import { getConfigForModel } from '@/lib/ai/types'
+
+import { L3_TEST_SEGMENTS, TEST_PROJECT, TEST_TAXONOMY } from './fixtures'
+
+// eslint-disable-next-line no-restricted-syntax -- integration test needs raw env check before app init
+const HAS_ANTHROPIC_KEY = Boolean(process.env['ANTHROPIC_API_KEY'])
+
+describe('L3 Pipeline — Real AI Integration', () => {
+  it.skipIf(!HAS_ANTHROPIC_KEY)(
+    'should produce findings from segments with known translation errors',
+    async () => {
+      // Arrange: build prompt with segments that have known issues
+      // L3 receives prior findings (simulating L2 having already run)
+      const prompt = buildL3Prompt({
+        segments: L3_TEST_SEGMENTS,
+        priorFindings: [],
+        glossaryTerms: [],
+        taxonomyCategories: TEST_TAXONOMY,
+        project: TEST_PROJECT,
+        surroundingContext: L3_TEST_SEGMENTS.map((seg, idx) => ({
+          previous: L3_TEST_SEGMENTS.slice(Math.max(0, idx - 2), idx),
+          current: seg,
+          next: L3_TEST_SEGMENTS.slice(idx + 1, idx + 3),
+        })),
+      })
+
+      // Act: call real Anthropic API
+      const config = getConfigForModel('claude-sonnet-4-5-20250929', 'L3')
+      const result = await generateText({
+        model: getModelById('claude-sonnet-4-5-20250929'),
+        output: Output.object({ schema: l3OutputSchema }),
+        temperature: config.temperature,
+        maxOutputTokens: config.maxOutputTokens,
+        prompt,
+      })
+
+      // Assert: structured output parsed successfully
+      expect(result.output).toBeDefined()
+      const output = result.output!
+
+      // Assert: findings array exists and has items
+      expect(output.findings).toBeDefined()
+      expect(Array.isArray(output.findings)).toBe(true)
+      expect(output.findings.length).toBeGreaterThan(0)
+
+      // Assert: at least 1 finding (L3 segments have 2 errors, 1 clean)
+      expect(output.findings.length).toBeGreaterThanOrEqual(1)
+
+      // Assert: every finding matches the L3 Zod schema (includes rationale)
+      for (const finding of output.findings) {
+        expect(finding.segmentId).toBeTruthy()
+        expect(finding.category).toBeTruthy()
+        expect(['critical', 'major', 'minor']).toContain(finding.severity)
+        expect(finding.confidence).toBeGreaterThanOrEqual(0)
+        expect(finding.confidence).toBeLessThanOrEqual(100)
+        expect(finding.description).toBeTruthy()
+        // L3-specific: rationale is REQUIRED
+        expect(finding.rationale).toBeTruthy()
+      }
+
+      // Assert: segmentIds reference our test segments (no hallucinated IDs)
+      const validSegmentIds = new Set(L3_TEST_SEGMENTS.map((s) => s.id))
+      for (const finding of output.findings) {
+        const normalizedId = finding.segmentId.replace(/^\[|\]$/g, '')
+        expect(validSegmentIds.has(normalizedId)).toBe(true)
+      }
+
+      // Assert: the "fast" (abstain from food → quick) mistranslation should be caught
+      const segment1Findings = output.findings.filter((f) => {
+        const id = f.segmentId.replace(/^\[|\]$/g, '')
+        return id === '00000000-0000-4000-8000-000000000010'
+      })
+      expect(segment1Findings.length).toBeGreaterThanOrEqual(1)
+
+      // Assert: token usage is tracked (Guardrail #19)
+      expect(result.usage).toBeDefined()
+      expect(result.usage.inputTokens).toBeGreaterThan(0)
+      expect(result.usage.outputTokens).toBeGreaterThan(0)
+
+      // Assert: summary exists
+      expect(output.summary).toBeTruthy()
+    },
+  )
+
+  it.skipIf(!HAS_ANTHROPIC_KEY)(
+    'should produce segmentIds WITHOUT brackets (TD-AI-004 regression)',
+    async () => {
+      const prompt = buildL3Prompt({
+        segments: L3_TEST_SEGMENTS.slice(0, 2),
+        priorFindings: [],
+        glossaryTerms: [],
+        taxonomyCategories: TEST_TAXONOMY,
+        project: TEST_PROJECT,
+      })
+
+      const config = getConfigForModel('claude-sonnet-4-5-20250929', 'L3')
+      const result = await generateText({
+        model: getModelById('claude-sonnet-4-5-20250929'),
+        output: Output.object({ schema: l3OutputSchema }),
+        temperature: config.temperature,
+        maxOutputTokens: config.maxOutputTokens,
+        prompt,
+      })
+
+      expect(result.output).toBeDefined()
+      const output = result.output!
+
+      for (const finding of output.findings) {
+        // Raw segmentId should NOT have brackets
+        expect(finding.segmentId).not.toMatch(/^\[/)
+        expect(finding.segmentId).not.toMatch(/\]$/)
+        // Should be a valid UUID format
+        expect(finding.segmentId).toMatch(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+        )
+      }
+    },
+  )
+
+  it.skipIf(!HAS_ANTHROPIC_KEY)(
+    'should include rationale for every finding (L3-specific requirement)',
+    async () => {
+      const prompt = buildL3Prompt({
+        segments: L3_TEST_SEGMENTS,
+        priorFindings: [],
+        glossaryTerms: [],
+        taxonomyCategories: TEST_TAXONOMY,
+        project: TEST_PROJECT,
+      })
+
+      const config = getConfigForModel('claude-sonnet-4-5-20250929', 'L3')
+      const result = await generateText({
+        model: getModelById('claude-sonnet-4-5-20250929'),
+        output: Output.object({ schema: l3OutputSchema }),
+        temperature: config.temperature,
+        maxOutputTokens: config.maxOutputTokens,
+        prompt,
+      })
+
+      expect(result.output).toBeDefined()
+      const output = result.output!
+
+      // Every L3 finding must have a non-empty rationale
+      for (const finding of output.findings) {
+        expect(finding.rationale).toBeTruthy()
+        // Rationale should be substantive (not just a single word)
+        expect(finding.rationale.length).toBeGreaterThan(20)
+      }
+    },
+  )
+})

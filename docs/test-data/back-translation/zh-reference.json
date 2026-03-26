@@ -1,0 +1,702 @@
+[
+  {
+    "id": 1,
+    "source_en": "Create Work Pack",
+    "target": "创建工作包",
+    "reference_back_translation": "Create Work Pack",
+    "notes": "Extracted from SAP XLIFF 191.xlf"
+  },
+  {
+    "id": 2,
+    "source_en": "Create a work pack based on selection of operations.",
+    "target": "根据选择的工序创建工作包。",
+    "reference_back_translation": "Create a work pack based on selection of operations.",
+    "notes": "Extracted from SAP XLIFF 191.xlf"
+  },
+  {
+    "id": 3,
+    "source_en": "In-App Help",
+    "target": "In-App Help",
+    "reference_back_translation": "In-App Help",
+    "notes": "Extracted from SAP XLIFF 191.xlf"
+  },
+  {
+    "id": 4,
+    "source_en": "Creates a work pack which will include your selection of operations.",
+    "target": "创建一个工作包，其中包括您选择的工序。",
+    "reference_back_translation": "Creates a work pack which will include your selection of operations.",
+    "notes": "Extracted from SAP XLIFF 191.xlf"
+  },
+  {
+    "id": 5,
+    "source_en": "To create a work pack, you need to select at least one operation from the list.",
+    "target": "要创建工作包，您需要从列表中选择至少一个工序。",
+    "reference_back_translation": "To create a work pack, you need to select at least one operation from the list.",
+    "notes": "Extracted from SAP XLIFF 191.xlf"
+  },
+  {
+    "id": 6,
+    "source_en": "Enter Work Pack Name: The name of the work pack is populated by the system but you can choose another name.",
+    "target": "输入工作包名称： 工作包名称由系统填充，但您可以选择其他名称。",
+    "reference_back_translation": "Enter Work Pack Name: The name of the work pack is populated by the system but you can choose another name.",
+    "notes": "Extracted from SAP XLIFF 191.xlf"
+  },
+  {
+    "id": 7,
+    "source_en": "Select Work Pack Type from the drop-down list.",
+    "target": "从下拉列表中选择工作包类型。",
+    "reference_back_translation": "Select Work Pack Type from the drop-down list.",
+    "notes": "Extracted from SAP XLIFF 191.xlf"
+  },
+  {
+    "id": 8,
+    "source_en": "Select Group By criteria: Grouping criteria selection depends on the entered Work Pack Type.",
+    "target": "选择分组方式条件： 分组条件选择取决于输入的“工作包类型”。",
+    "reference_back_translation": "Select Group By criteria: Grouping criteria selection depends on the entered Work Pack Type.",
+    "notes": "Extracted from SAP XLIFF 191.xlf"
+  },
+  {
+    "id": 9,
+    "source_en": "As well, you can decide if you want to include in your new work pack operations which are already included in other work packs.",
+    "target": "此外，还可以决定是否要包括在已包括在其他工作包中的新工作包工序中。",
+    "reference_back_translation": "As well, you can decide if you want to include in your new work pack operations which are already included in other work packs.",
+    "notes": "Extracted from SAP XLIFF 191.xlf"
+  },
+  {
+    "id": 10,
+    "source_en": "Select Save to trigger the application job which will create a new work pack. You can check the Application Logs to see the status of creation.",
+    "target": "选择保存以触发将创建新工作包的应用程序作业。 您可以检查应用程序日志以查看创建状态。",
+    "reference_back_translation": "Select Save to trigger the application job which will create a new work pack. You can check the Application Logs to see the status of creation.",
+    "notes": "Extracted from SAP XLIFF 191.xlf"
+  },
+  {
+    "id": 11,
+    "source_en": "Reference Key",
+    "target": "参考代码",
+    "reference_back_translation": "Reference Key",
+    "notes": "Extracted from SAP XLIFF 192.xlf"
+  },
+  {
+    "id": 12,
+    "source_en": "Enter additional information you need for subsequent processing.",
+    "target": "输入后续处理所需的附加信息。",
+    "reference_back_translation": "Enter additional information you need for subsequent processing.",
+    "notes": "Extracted from SAP XLIFF 192.xlf"
+  },
+  {
+    "id": 13,
+    "source_en": "In the Reference Key fields, you can enter customer/supplier details for the accounting transaction.",
+    "target": "在参考代码字段中，您可以输入会计核算事务的客户/供应商详细信息。",
+    "reference_back_translation": "In the Reference Key fields, you can enter customer/supplier details for the accounting transaction.",
+    "notes": "Extracted from SAP XLIFF 192.xlf"
+  },
+  {
+    "id": 14,
+    "source_en": "Enter the customer/supplier details which you need for subsequent processing according to your individual company's regulations.",
+    "target": "根据您各个公司的规定，输入进行后续处理所需要的客户/供应商详细信息。",
+    "reference_back_translation": "Enter the customer/supplier details which you need for subsequent processing according to your individual company's regulations.",
+    "notes": "Extracted from SAP XLIFF 192.xlf"
+  },
+  {
+    "id": 15,
+    "source_en": "This entry is then used as additional information for the following purposes:",
+    "target": "然后，此项输入将用作以下用途的附加信息：",
+    "reference_back_translation": "This entry is then used as additional information for the following purposes:",
+    "notes": "Extracted from SAP XLIFF 192.xlf"
+  },
+  {
+    "id": 16,
+    "source_en": "For correspondence with the customer/supplier",
+    "target": "用于客户/供应商的信函",
+    "reference_back_translation": "For correspondence with the customer/supplier",
+    "notes": "Extracted from SAP XLIFF 192.xlf"
+  },
+  {
+    "id": 17,
+    "source_en": "As a search criterion for items in the customer/supplier account",
+    "target": "作为客户/供应商账户中项目的搜索条件",
+    "reference_back_translation": "As a search criterion for items in the customer/supplier account",
+    "notes": "Extracted from SAP XLIFF 192.xlf"
+  },
+  {
+    "id": 18,
+    "source_en": "Possible entries could be as follows:",
+    "target": "可能的输入如下：",
+    "reference_back_translation": "Possible entries could be as follows:",
+    "notes": "Extracted from SAP XLIFF 192.xlf"
+  },
+  {
+    "id": 19,
+    "source_en": "Customer/supplier branch number",
+    "target": "客户/供应商分公司编号",
+    "reference_back_translation": "Customer/supplier branch number",
+    "notes": "Extracted from SAP XLIFF 192.xlf"
+  },
+  {
+    "id": 20,
+    "source_en": "Transaction number under which a controversial transaction is managed at the customer/supplier",
+    "target": "在客户/供应商处管理有争议交易的交易编号",
+    "reference_back_translation": "Transaction number under which a controversial transaction is managed at the customer/supplier",
+    "notes": "Extracted from SAP XLIFF 192.xlf"
+  },
+  {
+    "id": 21,
+    "source_en": "All Contracts",
+    "target": "所有合同",
+    "reference_back_translation": "All Contracts",
+    "notes": "Extracted from SAP XLIFF 193.xlf"
+  },
+  {
+    "id": 22,
+    "source_en": "Displays the list of settlement dates for all - customer and supplier - condition contracts.",
+    "target": "显示客户和供应商所有条件合同的结算日期清单。",
+    "reference_back_translation": "Displays the list of settlement dates for all - customer and supplier - condition contracts.",
+    "notes": "Extracted from SAP XLIFF 193.xlf"
+  },
+  {
+    "id": 23,
+    "source_en": "Filters the list of settlement dates with all corresponding customer and supplier condition contracts. The list displays condition contract data like the Condition Contract, the Settlement Date, the Settlement Date Type (for example: partial, delta or final settlement), Supplier, Customer and Settlement Status.",
+    "target": "过滤结算日期清单及其相应的客户和供应商条件合同。 该清单显示条件合同数据，如条件合同、结算日期、结算日期类型（例如：部分、增量或最终结算）、供应商、客户和结算状态。",
+    "reference_back_translation": "Filters the list of settlement dates with all corresponding customer and supplier condition contracts. The list displays condition contract data like the Condition Contract, the Settlement Date, the Settlement Date Type (for example: partial, delta or final settlement), Supplier, Customer and Settlement Status.",
+    "notes": "Extracted from SAP XLIFF 193.xlf"
+  },
+  {
+    "id": 24,
+    "source_en": "You select the All Contracts view to display the list of settlement dates with all related condition contracts.",
+    "target": "选择所有合同视图以显示结算日期清单及所有相关条件合同。",
+    "reference_back_translation": "You select the All Contracts view to display the list of settlement dates with all related condition contracts.",
+    "notes": "Extracted from SAP XLIFF 193.xlf"
+  },
+  {
+    "id": 25,
+    "source_en": "Unassigned Work",
+    "target": "未分配的工作",
+    "reference_back_translation": "Unassigned Work",
+    "notes": "Extracted from SAP XLIFF 194.xlf"
+  },
+  {
+    "id": 26,
+    "source_en": "This many hours of work have not yet been assigned to a person responsible.",
+    "target": "尚未分配给负责人的工作小时数。",
+    "reference_back_translation": "This many hours of work have not yet been assigned to a person responsible.",
+    "notes": "Extracted from SAP XLIFF 194.xlf"
+  },
+  {
+    "id": 27,
+    "source_en": "This card shows you how many hours of work in your work centers have not yet been assigned to a person responsible. The work is displayed based on the priority of the corresponding order operations.",
+    "target": "此卡片显示您的工作中心尚未分配给负责人的工作小时数。 根据相应订单工序的优先级显示工作。",
+    "reference_back_translation": "This card shows you how many hours of work in your work centers have not yet been assigned to a person responsible. The work is displayed based on the priority of the corresponding order operations.",
+    "notes": "Extracted from SAP XLIFF 194.xlf"
+  },
+  {
+    "id": 28,
+    "source_en": "Click this card to open the Assign Maintenance Order Operations app for order operations in your work centers whose planned dates overlap with the next 2 weeks.",
+    "target": "单击此卡可为您的工作中心中计划日期与接下来两周重叠的订单工序打开分配维护订单工序应用。",
+    "reference_back_translation": "Click this card to open the Assign Maintenance Order Operations app for order operations in your work centers whose planned dates overlap with the next 2 weeks.",
+    "notes": "Extracted from SAP XLIFF 194.xlf"
+  },
+  {
+    "id": 29,
+    "source_en": "The display time period starts today and continues until Sunday, the last day of the next calendar week. This means that if today is not the start of a calendar week, the actual display time period is shorter than two calendar weeks.",
+    "target": "显示时间期间开始于今天并持续到下一日历周的最后一天（周日）。 这意味着如果今天不是日历周的开始日期，则实际显示时间期间将小于两个日历周。",
+    "reference_back_translation": "The display time period starts today and continues until Sunday, the last day of the next calendar week. This means that if today is not the start of a calendar week, the actual display time period is shorter than two calendar weeks.",
+    "notes": "Extracted from SAP XLIFF 194.xlf"
+  },
+  {
+    "id": 30,
+    "source_en": "Schedule Data Destruction Runs for Archiving Files",
+    "target": "为归档文件计划数据销毁运行",
+    "reference_back_translation": "Schedule Data Destruction Runs for Archiving Files",
+    "notes": "Extracted from SAP XLIFF 195.xlf"
+  },
+  {
+    "id": 31,
+    "source_en": "You can select expired resources to be scheduled for deletion.",
+    "target": "您可以选择要计划删除的过期资源。",
+    "reference_back_translation": "You can select expired resources to be scheduled for deletion.",
+    "notes": "Extracted from SAP XLIFF 195.xlf"
+  },
+  {
+    "id": 32,
+    "source_en": "To schedule data destruction runs:",
+    "target": "要计划数据销毁运行：",
+    "reference_back_translation": "To schedule data destruction runs:",
+    "notes": "Extracted from SAP XLIFF 195.xlf"
+  },
+  {
+    "id": 33,
+    "source_en": "Select an ILM object and view more details like Expired Resources that belong to the ILM object with the Expiration Date and Mandatory Destruction Date.",
+    "target": "选择 ILM 对象并查看属于 ILM 对象的过期资源等详细信息，包括过期日期和强制销毁日期。",
+    "reference_back_translation": "Select an ILM object and view more details like Expired Resources that belong to the ILM object with the Expiration Date and Mandatory Destruction Date.",
+    "notes": "Extracted from SAP XLIFF 195.xlf"
+  },
+  {
+    "id": 34,
+    "source_en": "Select the expired resources that you want to permanently delete and click Schedule.",
+    "target": "选择想要永久删除的过期资源并单击计划。",
+    "reference_back_translation": "Select the expired resources that you want to permanently delete and click Schedule.",
+    "notes": "Extracted from SAP XLIFF 195.xlf"
+  },
+  {
+    "id": 35,
+    "source_en": "A popup window is displayed that asks for confirmation of the deletion.",
+    "target": "将出现弹出窗口要求您确认删除。",
+    "reference_back_translation": "A popup window is displayed that asks for confirmation of the deletion.",
+    "notes": "Extracted from SAP XLIFF 195.xlf"
+  },
+  {
+    "id": 36,
+    "source_en": "If you confirm the deletion, the expired resources are scheduled for a data destruction run.",
+    "target": "如果确认删除，将计划过期资源的数据销毁运行。",
+    "reference_back_translation": "If you confirm the deletion, the expired resources are scheduled for a data destruction run.",
+    "notes": "Extracted from SAP XLIFF 195.xlf"
+  },
+  {
+    "id": 37,
+    "source_en": "When the next schedule is run in the next seven days, all expired resources marked for deletion will be permanently destroyed.",
+    "target": "当在未来 7 天内运行下一个计划时，将会永久销毁加删除标记的所有过期资源。",
+    "reference_back_translation": "When the next schedule is run in the next seven days, all expired resources marked for deletion will be permanently destroyed.",
+    "notes": "Extracted from SAP XLIFF 195.xlf"
+  },
+  {
+    "id": 38,
+    "source_en": "Reset and Reverse",
+    "target": "重置和冲销",
+    "reference_back_translation": "Reset and Reverse",
+    "notes": "Extracted from SAP XLIFF 196.xlf"
+  },
+  {
+    "id": 39,
+    "source_en": "Use to reset clearing of line item and to reverse clearing entry.",
+    "target": "用于重置行项目的清算并冲销清算条目。",
+    "reference_back_translation": "Use to reset clearing of line item and to reverse clearing entry.",
+    "notes": "Extracted from SAP XLIFF 196.xlf"
+  },
+  {
+    "id": 40,
+    "source_en": "Use to reset the clearing of one or more line items and to reverse the clearing entry at the same time. You can use this function for line items of customer accounts and supplier accounts, as well as for line items of G/L accounts that are managed on an open item basis.",
+    "target": "用于重置一个或多个行项目的清算以及同时冲销清算条目。 您可以将此功能用于客户科目和供应商科目的行项目，以及用于基于未清项进行管理的总账科目的行项目。",
+    "reference_back_translation": "Use to reset the clearing of one or more line items and to reverse the clearing entry at the same time. You can use this function for line items of customer accounts and supplier accounts, as well as for line items of G/L accounts that are managed on an open item basis.",
+    "notes": "Extracted from SAP XLIFF 196.xlf"
+  },
+  {
+    "id": 41,
+    "source_en": "You may want to do this, for example, if the payment you posted to clear a customer invoice or credit memo was wrong.",
+    "target": "例如，如果您过账的付款用于清算错误的客户发票或贷项凭证，则您可能希望执行此操作。",
+    "reference_back_translation": "You may want to do this, for example, if the payment you posted to clear a customer invoice or credit memo was wrong.",
+    "notes": "Extracted from SAP XLIFF 196.xlf"
+  },
+  {
+    "id": 42,
+    "source_en": "If you choose Reset and Reverse, the line items are set back to status Open, the clearing entry is reversed, and a reversing entry is posted.",
+    "target": "如果您选择重置和冲销，则会将行项目状态设置回未清、冲销清算条目以及过账冲销的条目。",
+    "reference_back_translation": "If you choose Reset and Reverse, the line items are set back to status Open, the clearing entry is reversed, and a reversing entry is posted.",
+    "notes": "Extracted from SAP XLIFF 196.xlf"
+  },
+  {
+    "id": 43,
+    "source_en": "Note that you must always reverse the clearing entry if there is an exchange rate difference.",
+    "target": "注意，如果存在汇率差异，则您必须始终冲销清算条目。",
+    "reference_back_translation": "Note that you must always reverse the clearing entry if there is an exchange rate difference.",
+    "notes": "Extracted from SAP XLIFF 196.xlf"
+  },
+  {
+    "id": 44,
+    "source_en": "Cancel Dispatch",
+    "target": "取消分派",
+    "reference_back_translation": "Cancel Dispatch",
+    "notes": "Extracted from SAP XLIFF 197.xlf"
+  },
+  {
+    "id": 45,
+    "source_en": "Cancel the dispatch of the selected order operations.",
+    "target": "取消所选订单工序的分派。",
+    "reference_back_translation": "Cancel the dispatch of the selected order operations.",
+    "notes": "Extracted from SAP XLIFF 197.xlf"
+  },
+  {
+    "id": 46,
+    "source_en": "By canceling the dispatch of an order operation, you take back the confirmation of work center and planned dates.",
+    "target": "通过取消订单工序的分派，可撤销工作中心和计划日期的确认。",
+    "reference_back_translation": "By canceling the dispatch of an order operation, you take back the confirmation of work center and planned dates.",
+    "notes": "Extracted from SAP XLIFF 197.xlf"
+  },
+  {
+    "id": 47,
+    "source_en": "As a result, the app resets the processing status to Due. The Must start on constraint that is set automatically when an operation is dispatched, remains unchanged.",
+    "target": "因此，应用会将处理状态重置为到期。 在分派工序时自动进行设置的必须开始于约束保持不变。",
+    "reference_back_translation": "As a result, the app resets the processing status to Due. The Must start on constraint that is set automatically when an operation is dispatched, remains unchanged.",
+    "notes": "Extracted from SAP XLIFF 197.xlf"
+  },
+  {
+    "id": 48,
+    "source_en": "To enable this button, select at least one dispatched order operation. If you select multiple operations, and some of them have not yet been dispatched or are already in process, the processing status of these operations does not change.",
+    "target": "要启用此按钮，请至少选择一个已分派的订单工序。 如果选择多个工序，且其中某些工序尚未分派或已在处理中，则这些工序的处理状态不会更改。",
+    "reference_back_translation": "To enable this button, select at least one dispatched order operation. If you select multiple operations, and some of them have not yet been dispatched or are already in process, the processing status of these operations does not change.",
+    "notes": "Extracted from SAP XLIFF 197.xlf"
+  },
+  {
+    "id": 49,
+    "source_en": "Planned Prepayments",
+    "target": "计划预付款",
+    "reference_back_translation": "Planned Prepayments",
+    "notes": "Extracted from SAP XLIFF 198.xlf"
+  },
+  {
+    "id": 50,
+    "source_en": "Filter billing elements by included prepayments.",
+    "target": "按包括的预付款过滤开票要素。",
+    "reference_back_translation": "Filter billing elements by included prepayments.",
+    "notes": "Extracted from SAP XLIFF 198.xlf"
+  },
+  {
+    "id": 51,
+    "source_en": "Displays in the list report billing elements with or without planned prepayments.",
+    "target": "在清单报表中显示含或不含计划预付款的开票要素。",
+    "reference_back_translation": "Displays in the list report billing elements with or without planned prepayments.",
+    "notes": "Extracted from SAP XLIFF 198.xlf"
+  },
+  {
+    "id": 52,
+    "source_en": "Choose Yes to search for and display all billing elements which contain any prepayment items.",
+    "target": "选择是搜索并显示包含任何预付款项目的所有开票要素。",
+    "reference_back_translation": "Choose Yes to search for and display all billing elements which contain any prepayment items.",
+    "notes": "Extracted from SAP XLIFF 198.xlf"
+  },
+  {
+    "id": 53,
+    "source_en": "Choose Overdue to display only elements with prepayments which are overdue as of today's date.",
+    "target": "选择逾期以仅显示预付款截至今天日期逾期的要素。",
+    "reference_back_translation": "Choose Overdue to display only elements with prepayments which are overdue as of today's date.",
+    "notes": "Extracted from SAP XLIFF 198.xlf"
+  },
+  {
+    "id": 54,
+    "source_en": "If you choose No, the system will exclude from the list report all billing elements with prepayment items.",
+    "target": "如果选择否，系统将从清单中排除所有含预付款项目的开票要素。",
+    "reference_back_translation": "If you choose No, the system will exclude from the list report all billing elements with prepayment items.",
+    "notes": "Extracted from SAP XLIFF 198.xlf"
+  },
+  {
+    "id": 55,
+    "source_en": "Posting Category",
+    "target": "过账类别",
+    "reference_back_translation": "Posting Category",
+    "notes": "Extracted from SAP XLIFF 199.xlf"
+  },
+  {
+    "id": 56,
+    "source_en": "Specifies whether posting is needed after bank statements are imported.",
+    "target": "指定导入银行对账单后是否需要过账。",
+    "reference_back_translation": "Specifies whether posting is needed after bank statements are imported.",
+    "notes": "Extracted from SAP XLIFF 199.xlf"
+  },
+  {
+    "id": 57,
+    "source_en": "You specify one of the following options:",
+    "target": "指定以下选项之一：",
+    "reference_back_translation": "You specify one of the following options:",
+    "notes": "Extracted from SAP XLIFF 199.xlf"
+  },
+  {
+    "id": 58,
+    "source_en": "Posting to Be Processed: You select this option when you need to post bank statements after they are imported.",
+    "target": "要处理的过账： 如果在导入银行对账单后需要将其过账，则选择此选项。",
+    "reference_back_translation": "Posting to Be Processed: You select this option when you need to post bank statements after they are imported.",
+    "notes": "Extracted from SAP XLIFF 199.xlf"
+  },
+  {
+    "id": 59,
+    "source_en": "No Posting Processing: You select this option when you don't need to post bank statements after they are imported. For example, you can use this option for bank accounts managed in a remote system, as you only want to push bank statement information to cash management apps.",
+    "target": "无过账处理： 如果在导入银行对账单后不需要对其进行过账，则选择此选项。 例如，对于在远程系统中管理的银行账户，当您只希望将银行对账单信息推送到现金管理应用时，您可以使用此选项。",
+    "reference_back_translation": "No Posting Processing: You select this option when you don't need to post bank statements after they are imported. For example, you can use this option for bank accounts managed in a remote system, as you only want to push bank statement information to cash management apps.",
+    "notes": "Extracted from SAP XLIFF 199.xlf"
+  },
+  {
+    "id": 60,
+    "source_en": "Report Category",
+    "target": "报表类别",
+    "reference_back_translation": "Report Category",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 61,
+    "source_en": "Categorize reports based on business features and country/region",
+    "target": "对基于业务功能和国家/地区的报表进行分类",
+    "reference_back_translation": "Categorize reports based on business features and country/region",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 62,
+    "source_en": "Used to categorize statutory reports based on specific business features and the country/region of reporting",
+    "target": "用来基于特定业务功能和报税国家/地区分类法定报表",
+    "reference_back_translation": "Used to categorize statutory reports based on specific business features and the country/region of reporting",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 63,
+    "source_en": "To adhere to your statutory reporting requirements, you may need to submit tax reports to the government for a new functionality. You may also need to group versions of report based on functionality, country/region, organizational units, phases, or reporting activities. You can create such functional groups through Report Categories.",
+    "target": "为遵守法定报表要求，您可能需要将税务报表提交到政府以获得新功能。 您可能还需要根据功能、国家/地区、组织单位、阶段或报表活动对报表版本进行分组。 您可以通过报表类别创建此类功能组。",
+    "reference_back_translation": "To adhere to your statutory reporting requirements, you may need to submit tax reports to the government for a new functionality. You may also need to group versions of report based on functionality, country/region, organizational units, phases, or reporting activities. You can create such functional groups through Report Categories.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 64,
+    "source_en": "You can now create independent report categories using the Define Compliance Reports app. You must assign country/region, phases, organizational units, and activities to a report category. While assigning activities, you assign the phase to which it belongs. You can monitor and run the reporting activities in the Run Compliance Reports app. Creating a report category involves the following steps:",
+    "target": "现在，您可以使用定义合规性报表应用创建独立报表类别。 您必须将国家/地区、阶段、组织单位和活动分配至报表类别。 分配活动时，您可以分配其所属的阶段。 您可以在运行合规性报表应用中监控和运行报表活动。 创建报表类别包括以下步骤：",
+    "reference_back_translation": "You can now create independent report categories using the Define Compliance Reports app. You must assign country/region, phases, organizational units, and activities to a report category. While assigning activities, you assign the phase to which it belongs. You can monitor and run the reporting activities in the Run Compliance Reports app. Creating a report category involves the following steps:",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 65,
+    "source_en": "Assign country/region",
+    "target": "分配国家/地区",
+    "reference_back_translation": "Assign country/region",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 66,
+    "source_en": "You assign a country/region to the report category.",
+    "target": "将国家/地区分配至报表类别。",
+    "reference_back_translation": "You assign a country/region to the report category.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 67,
+    "source_en": "You create phases for your report category. A phase is used to identify the type of report run that is generated in the app. A phase can be of type - declaration, correction, or additional correction.",
+    "target": "为报表类别创建阶段。 阶段用于识别应用中生成的报表运行的类型。 阶段的类型可以为 - 申报、更正或附加更正。",
+    "reference_back_translation": "You create phases for your report category. A phase is used to identify the type of report run that is generated in the app. A phase can be of type - declaration, correction, or additional correction.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 68,
+    "source_en": "When you generate a report run, by default, the report run type is declaration. Standard phase is the first submission to the government. Based on the country/region-specific requirements, you can generate a correction report, or additional correction report for the documents from the previous submissions or for the documents that may have been omitted from the previous submissions or runs.",
+    "target": "生成报表运行时，缺省情况下，报表运行类型为申报。 标准阶段首先提交到政府。 根据国家/地区特定的要求，可以为上次提交的凭证或是为上次提交或运行时可能遗漏的凭证，生成更正报表或附加更正报表。",
+    "reference_back_translation": "When you generate a report run, by default, the report run type is declaration. Standard phase is the first submission to the government. Based on the country/region-specific requirements, you can generate a correction report, or additional correction report for the documents from the previous submissions or for the documents that may have been omitted from the previous submissions or runs.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 69,
+    "source_en": "You set the valid from date, and assign the phase occurrence as Single or Multiple for all the phases.",
+    "target": "设置有效起始日期，并将所有阶段的阶段出现次数分配为单次或多次。",
+    "reference_back_translation": "You set the valid from date, and assign the phase occurrence as Single or Multiple for all the phases.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 70,
+    "source_en": "When you set the phase occurrence as Single, all the activities of the phase can be submitted only once. After your activities are complete, you will not be able to process the activities again in the phase.",
+    "target": "当将阶段出现次数设置为单次时，该阶段的所有活动只能提交一次。 在活动完成之后，您将无法在该阶段再次处理这些活动。",
+    "reference_back_translation": "When you set the phase occurrence as Single, all the activities of the phase can be submitted only once. After your activities are complete, you will not be able to process the activities again in the phase.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 71,
+    "source_en": "When you choose the phase occurrence as Multiple, all the activities of the phase can be submitted any number of times after the report has been accepted, until the due date. You can repeat the phase multiple times.",
+    "target": "当选择该阶段作为多次时，接受报表后，在到期日之前，该阶段的所有活动可以多次提交。 您可以多次重复该阶段。",
+    "reference_back_translation": "When you choose the phase occurrence as Multiple, all the activities of the phase can be submitted any number of times after the report has been accepted, until the due date. You can repeat the phase multiple times.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 72,
+    "source_en": "You can set the submission possible until for correction and additional correction runs. It is set in years, months, or days. For example, if Submission Possible Until is set as 2 Months – It implies that you can start the correction runs after the standard submission and until 2 months after the current reporting period end date. You can also set negative values for months and days.",
+    "target": "您可以为更正和附加更正运行设置提交截止日期。 以天、月或年为单位进行设置。 例如，如果将提交截止日期设置为 2 个月 - 这意味着可以在标准提交后启动更正运行并持续到当前报表期间结束日期之后的 2 个月。 您还可以设置月和日的负值。",
+    "reference_back_translation": "You can set the submission possible until for correction and additional correction runs. It is set in years, months, or days. For example, if Submission Possible Until is set as 2 Months – It implies that you can start the correction runs after the standard submission and until 2 months after the current reporting period end date. You can also set negative values for months and days.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 73,
+    "source_en": "Assign Organizational Units",
+    "target": "分配组织单位",
+    "reference_back_translation": "Assign Organizational Units",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 74,
+    "source_en": "You assign organizational units to a report category. You can submit tax reports at different reporting levels via the use of organizational units. The reporting levels currently supported for both classic and enhanced modes are - company code, business place, jurisdiction code, and section code. This feature allows you to use the Run Compliance Reports app to submit reports for countries/regions that require reporting at these additional levels. For example, Canada tax authorities require tax reporting at company code and tax jurisdiction levels. You can set values for the reporting levels while configuring the reporting entity. The assigned values get defaulted when you run the reports. You can assign the organizational units to the report categories in the Define Compliance Reports app.",
+    "target": "将单位组织分配至报表类别。 您可以通过使用组织单位在不同的报表级别提交税务报表。 经典和增强模式当前支持的报表级别为公司代码、营业场所、管辖权代码和区段代码。 此功能允许您使用运行合规性报表应用为需要在这些附加级别进行报告的国家/地区提交报表。 例如，加拿大税务监管机构需要公司代码和税收管辖权级别的税务报表。 可在配置报表实体时设置报表级别的值。 运行报表时会缺省设置已分配的值。 可在定义合规性报表应用中将组织单位分配到报表类别。",
+    "reference_back_translation": "You assign organizational units to a report category. You can submit tax reports at different reporting levels via the use of organizational units. The reporting levels currently supported for both classic and enhanced modes are - company code, business place, jurisdiction code, and section code. This feature allows you to use the Run Compliance Reports app to submit reports for countries/regions that require reporting at these additional levels. For example, Canada tax authorities require tax reporting at company code and tax jurisdiction levels. You can set values for the reporting levels while configuring the reporting entity. The assigned values get defaulted when you run the reports. You can assign the organizational units to the report categories in the Define Compliance Reports app.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 75,
+    "source_en": "Assign Reporting Activities",
+    "target": "分配报表活动",
+    "reference_back_translation": "Assign Reporting Activities",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 76,
+    "source_en": "Reporting activities are steps that needs to be performed to complete end-to-end compliance reporting process. In the Define Compliance Reports app, you create new reporting activities. You assign activities to your report category, based on your legal reporting requirements. While assigning activities, you assign the phase to which it belongs. You can monitor and run the reporting activities in the Run Compliance Reports app.",
+    "target": "报表活动是需要执行的步骤，以完成端到端的合规性报表流程。 在定义合规性报表应用中，您可创建新的报表活动。 根据法定报表要求将活动分配至报表类别。 分配活动时，您可以分配其所属的阶段。 您可以在运行合规性报表应用中监控和运行报表活动。",
+    "reference_back_translation": "Reporting activities are steps that needs to be performed to complete end-to-end compliance reporting process. In the Define Compliance Reports app, you create new reporting activities. You assign activities to your report category, based on your legal reporting requirements. While assigning activities, you assign the phase to which it belongs. You can monitor and run the reporting activities in the Run Compliance Reports app.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 77,
+    "source_en": "To understand the complete flow in Run Compliance Reports app and Define Compliance Reports app, please see the below sample scenario:",
+    "target": "要了解运行合规性报表应用和定义合规性报表应用的完整流，请参阅以下样本场景：",
+    "reference_back_translation": "To understand the complete flow in Run Compliance Reports app and Define Compliance Reports app, please see the below sample scenario:",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 78,
+    "source_en": "To start with, in the Define Compliance Reports app, you should perform the following steps:",
+    "target": "首先，在定义合规性报表应用中，您应该执行以下步骤：",
+    "reference_back_translation": "To start with, in the Define Compliance Reports app, you should perform the following steps:",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 79,
+    "source_en": "Create a report category REPCAT.",
+    "target": "创建报表类别 REPCAT。",
+    "reference_back_translation": "Create a report category REPCAT.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 80,
+    "source_en": "Assign a country/region to the report category.",
+    "target": "将国家/地区分配至报表类别。",
+    "reference_back_translation": "Assign a country/region to the report category.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 81,
+    "source_en": "Create a declaration and a correction phase for the report category.",
+    "target": "为报表类别创建申报和更正阶段。",
+    "reference_back_translation": "Create a declaration and a correction phase for the report category.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 82,
+    "source_en": "Assign company code as the organizational unit to report category.",
+    "target": "将公司代码作为组织单位分配至报表类别。",
+    "reference_back_translation": "Assign company code as the organizational unit to report category.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 83,
+    "source_en": "Assign an activity A1 of type - SAP Fiori Application for the declaration phase. Add another activity A2 of type - Report Definition for the correction phase.",
+    "target": "为申报阶段分配类型为“SAP Fiori 应用程序”的活动 A1。 为更正阶段添加类型为“报表定义”的其他活动 A2。",
+    "reference_back_translation": "Assign an activity A1 of type - SAP Fiori Application for the declaration phase. Add another activity A2 of type - Report Definition for the correction phase.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 84,
+    "source_en": "In the Run Compliance Reports app, when you select the report category and choose Go, you can see all the reporting tasks for the category. Select the reporting task that you want to execute. When you start the new phase, you can see the activity A1 in the declaration phase. After the declaration phase is complete, the system allows you to start the new phase. Choose Start new phase to start the correction phase. The system executes the activity A2 assigned to the correction phase.",
+    "target": "在运行合规性报表应用中，选择报表类别，然后选择执行，可查看到该类别的所有报表任务。 选择要执行的报表任务。 启动新阶段时，可在申报阶段中查看活动 A1。 在申报阶段完成后，系统将允许您开始新阶段。 选择开始新阶段以开始更正阶段。 系统将执行分配到更正阶段的活动 A2。",
+    "reference_back_translation": "In the Run Compliance Reports app, when you select the report category and choose Go, you can see all the reporting tasks for the category. Select the reporting task that you want to execute. When you start the new phase, you can see the activity A1 in the declaration phase. After the declaration phase is complete, the system allows you to start the new phase. Choose Start new phase to start the correction phase. The system executes the activity A2 assigned to the correction phase.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 85,
+    "source_en": "Filter for different time slot views in the sequence table.",
+    "target": "过滤序列表中的不同时间段视图。",
+    "reference_back_translation": "Filter for different time slot views in the sequence table.",
+    "notes": "Extracted from SAP XLIFF 201.xlf"
+  },
+  {
+    "id": 86,
+    "source_en": "You can select any of the following options:",
+    "target": "可选择以下任意选项：",
+    "reference_back_translation": "You can select any of the following options:",
+    "notes": "Extracted from SAP XLIFF 201.xlf"
+  },
+  {
+    "id": 87,
+    "source_en": "All Slots- Displays all available time slots for a work center that also includes slots with dispatched orders.",
+    "target": "所有段 - 显示工作中心的所有可用时间段，也包括已调度订单的时间段。",
+    "reference_back_translation": "All Slots- Displays all available time slots for a work center that also includes slots with dispatched orders.",
+    "notes": "Extracted from SAP XLIFF 201.xlf"
+  },
+  {
+    "id": 88,
+    "source_en": "Slots with Sufficient Capacity- Displays time slots that have enough capacity to accommodate the order operation.",
+    "target": "具备足够产能的段 - 显示具有足够产能以容纳订单工序的时间段。",
+    "reference_back_translation": "Slots with Sufficient Capacity- Displays time slots that have enough capacity to accommodate the order operation.",
+    "notes": "Extracted from SAP XLIFF 201.xlf"
+  },
+  {
+    "id": 89,
+    "source_en": "Slots with Overlapping Capacity- Displays the conflicting time slots of multiple order operations that have been dispatched. You can deallocate and dispatch one of the orders on a different slot.",
+    "target": "具备重叠产能的段 - 显示已调度的多个订单工序的冲突时间段。 您可以取消分配和调度不同段的其中一个订单。",
+    "reference_back_translation": "Slots with Overlapping Capacity- Displays the conflicting time slots of multiple order operations that have been dispatched. You can deallocate and dispatch one of the orders on a different slot.",
+    "notes": "Extracted from SAP XLIFF 201.xlf"
+  },
+  {
+    "id": 90,
+    "source_en": "Top-Level Materials",
+    "target": "顶层物料",
+    "reference_back_translation": "Top-Level Materials",
+    "notes": "Extracted from SAP XLIFF 202.xlf"
+  },
+  {
+    "id": 91,
+    "source_en": "Shows the capacity consumption of the top-level materials of the work center.",
+    "target": "显示工作中心顶层物料的产能消耗。",
+    "reference_back_translation": "Shows the capacity consumption of the top-level materials of the work center.",
+    "notes": "Extracted from SAP XLIFF 202.xlf"
+  },
+  {
+    "id": 92,
+    "source_en": "In-app help",
+    "target": "In-app help",
+    "reference_back_translation": "In-app help",
+    "notes": "Extracted from SAP XLIFF 202.xlf"
+  },
+  {
+    "id": 93,
+    "source_en": "You can see how each top-level material contributes to the capacity consumption of the work center.",
+    "target": "您可以看到每种顶层物料如何引起工作中心的产能消耗。",
+    "reference_back_translation": "You can see how each top-level material contributes to the capacity consumption of the work center.",
+    "notes": "Extracted from SAP XLIFF 202.xlf"
+  },
+  {
+    "id": 94,
+    "source_en": "If there is a capacity issue, you have the possibility to shift the capacity demand to an earlier point in time. Check, if this mitigates the capacity issue and click Shift Top-Level Demand. Then check if the proposal is acceptable.",
+    "target": "如果存在产能问题，可以将产能需求转移到较早的时间点。 检查是否可以缓解产能问题，然后单击移动顶层需求。 然后检查该建议是否可以接受。",
+    "reference_back_translation": "If there is a capacity issue, you have the possibility to shift the capacity demand to an earlier point in time. Check, if this mitigates the capacity issue and click Shift Top-Level Demand. Then check if the proposal is acceptable.",
+    "notes": "Extracted from SAP XLIFF 202.xlf"
+  },
+  {
+    "id": 95,
+    "source_en": "From the top-level material you can navigate to the Multi-Level Material Simulation, a structured view of the bill of material, and make simulations on material component level. For example, you can change the source of supply or you have the possibility to preproduce a component.",
+    "target": "您可以从顶层物料导航到多级物料模拟（即物料清单的结构化视图），并在物料组件级别进行模拟。 例如，您可以更改货源，或者可以预先生产组件。",
+    "reference_back_translation": "From the top-level material you can navigate to the Multi-Level Material Simulation, a structured view of the bill of material, and make simulations on material component level. For example, you can change the source of supply or you have the possibility to preproduce a component.",
+    "notes": "Extracted from SAP XLIFF 202.xlf"
+  },
+  {
+    "id": 96,
+    "source_en": "Report Run Type",
+    "target": "报表运行类型",
+    "reference_back_translation": "Report Run Type",
+    "notes": "Extracted from SAP XLIFF 203.xlf"
+  },
+  {
+    "id": 97,
+    "source_en": "Shows the type of the report run",
+    "target": "显示报表运行类型",
+    "reference_back_translation": "Shows the type of the report run",
+    "notes": "Extracted from SAP XLIFF 203.xlf"
+  },
+  {
+    "id": 98,
+    "source_en": "Shows the type of the report run that you have generated for this report. A report run can be of type - declaration, correction, or additional correction.",
+    "target": "显示已为此报表生成的报表运行类型。 报表运行的类型可以为 - 申报、更正或附加更正。",
+    "reference_back_translation": "Shows the type of the report run that you have generated for this report. A report run can be of type - declaration, correction, or additional correction.",
+    "notes": "Extracted from SAP XLIFF 203.xlf"
+  },
+  {
+    "id": 99,
+    "source_en": "When you generate a report run, by default, the report run type is declaration. When you submit the report to the government, the government accepts the submitted report if its content is correct, or declines it, if it must be corrected.",
+    "target": "生成报表运行时，缺省情况下，报表运行类型为申报。 当您向政府提交报表时，若内容正确无误，政府会接受所提交的报表，若必须进行更正，则政府会拒绝此报表。",
+    "reference_back_translation": "When you generate a report run, by default, the report run type is declaration. When you submit the report to the government, the government accepts the submitted report if its content is correct, or declines it, if it must be corrected.",
+    "notes": "Extracted from SAP XLIFF 203.xlf"
+  },
+  {
+    "id": 100,
+    "source_en": "The tax authorities in some countries allow you to submit correction run, or additional correction run after the standard tax submission process. This ensures that you have an option to make the required modifications to the earlier tax submission documents. The additional correction run may require documents in formats and data, different than the standard or correction runs. You can configure additional correction phase for a report category in the Define Advanced Compliance Reports app. In the Run Advanced Compliance Reports app, after the standard submission, you can start a new phase, and choose correction or additional correction as per your requirements.",
+    "target": "一些国家的税务部门允许您提交更正运行，或在标准税务提交流程之后提交其他更正运行。 可确保您可以对早期税务提交凭证进行所需修改。 其他更正运行可能要求与标准运行或更正运行不同的凭证格式和数据。 可在定义高级合规性报表应用中为报表类别配置附加更正阶段。 在运行高级合规性报表应用中进行标准提交后，您可以开始新阶段，然后根据需求选择更正或附加更正。",
+    "reference_back_translation": "The tax authorities in some countries allow you to submit correction run, or additional correction run after the standard tax submission process. This ensures that you have an option to make the required modifications to the earlier tax submission documents. The additional correction run may require documents in formats and data, different than the standard or correction runs. You can configure additional correction phase for a report category in the Define Advanced Compliance Reports app. In the Run Advanced Compliance Reports app, after the standard submission, you can start a new phase, and choose correction or additional correction as per your requirements.",
+    "notes": "Extracted from SAP XLIFF 203.xlf"
+  }
+]

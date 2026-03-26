@@ -345,6 +345,20 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
   <template-output file="{default_output_file}">
   story_completion_status</template-output>
 
+  <!-- CRITICAL: Story Complexity Gate (Epic 4 Retro A4, Guardrail #48) -->
+  <action>COMPLEXITY GATE CHECK — Count acceptance criteria and cross-AC interactions:</action>
+  <action>1. Count total ACs in the story. If > 8 → HALT and require split before proceeding.</action>
+  <action>2. For each AC, identify which other ACs it must coordinate with (e.g., AC about optimistic UI must coordinate with AC about Realtime sync, AC about audit trail, AC about score recalculation).</action>
+  <action>3. If any AC coordinates with > 3 other ACs → FLAG as high-complexity and recommend split.</action>
+  <action>4. Document the cross-AC interaction matrix in the story file under "## Complexity Assessment".</action>
+  <check if="AC count > 8 OR any AC has > 3 cross-AC interactions">
+    <output>⚠️ COMPLEXITY GATE TRIGGERED — Story exceeds complexity threshold.
+    - AC count: {{ac_count}} (limit: 8)
+    - Max cross-AC interactions: {{max_interactions}} (limit: 3)
+    Recommend splitting story before locking AC. Present split options to user.</output>
+    <action>Propose 2-3 split options to {user_name} and WAIT for decision before proceeding.</action>
+  </check>
+
   <!-- CRITICAL: Set status to ready-for-dev -->
   <action>Set story Status to: "ready-for-dev"</action>
   <action>Add completion note: "Ultimate

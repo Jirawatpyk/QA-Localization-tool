@@ -179,7 +179,19 @@
       "Bash(for f:*)",
       "Bash(sed -i \"/vi.mock.*rejectFinding.action/a\\\\:*)",
       "Bash(git checkout:*)",
-      "mcp__plugin_playwright_playwright__browser_fill_form"
+      "mcp__plugin_playwright_playwright__browser_fill_form",
+      "Bash(npx tsx -e \":*)",
+      "Bash(npx tsx:*)",
+      "Bash(node_modules/.bin/tsx -e \"import { parseXliff } from ''./src/features/parser/sdlxliffParser.js''; import { readFileSync } from ''fs''; const xml = readFileSync\\(''docs/test-data/verification-baseline/verification-500.sdlxliff'', ''utf-8''\\); const r = parseXliff\\(xml, ''sdlxliff''\\); console.log\\(r.success ? ''OK segments='' + r.data.segmentCount : ''FAIL '' + JSON.stringify\\(r.error\\)\\);\")",
+      "Bash(node -e \":*)",
+      "Bash(sed 's/.*it\\(//')",
+      "Bash(sed \"s/['''',].*$//\")",
+      "Bash(jq:*)",
+      "Bash(grep -rn \"^[[:space:]]*//[[:space:]]*TODO[^\\(]\" src/ --include=\"*.ts\" --include=\"*.tsx\")"
     ]
+  },
+  "enabledPlugins": {
+    "serena@claude-plugins-official": false,
+    "greptile@claude-plugins-official": false
   }
 }

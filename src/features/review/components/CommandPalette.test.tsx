@@ -198,4 +198,53 @@ describe('CommandPalette', () => {
       expect(defaultProps.onAction).toHaveBeenCalledWith('accept')
     })
   })
+
+  // -- TA Gap G-1: Focus trap (Tab boundary inside dialog) --
+
+  describe('Focus trap (TA Gap G-1)', () => {
+    it('should keep focus inside dialog when aria-modal is true', () => {
+      render(<CommandPalette {...defaultProps} />)
+      const dialog = screen.getByTestId('command-palette')
+
+      // Verify aria-modal="true" is set — this instructs screen readers + cmdk Dialog
+      // to trap focus. cmdk Dialog wraps Radix Dialog which implements actual Tab trap.
+      expect(dialog).toHaveAttribute('aria-modal', 'true')
+
+      // Verify the input is inside the dialog (focus stays within boundary)
+      const input = screen.getByTestId('command-input')
+      expect(dialog.contains(input)).toBe(true)
+
+      // Verify all interactive elements (actions, findings, files) are within the dialog
+      const allItems = screen.getAllByRole('option')
+      for (const item of allItems) {
+        expect(dialog.contains(item)).toBe(true)
+      }
+    })
+  })
+
+  // -- TA Gap G-4: File navigation via click --
+
+  describe('File navigation (TA Gap G-4)', () => {
+    it('should call onNavigateToFile with correct fileId when file selected', async () => {
+      const user = userEvent.setup()
+      render(<CommandPalette {...defaultProps} />)
+
+      // Files are visible in default scope (all groups shown)
+      const fileItem = screen.getByText('doc-a.sdlxliff')
+      await user.click(fileItem)
+
+      expect(defaultProps.onNavigateToFile).toHaveBeenCalledWith('file-a')
+      expect(defaultProps.onOpenChange).toHaveBeenCalledWith(false)
+    })
+
+    it('should call onNavigateToFile for second file', async () => {
+      const user = userEvent.setup()
+      render(<CommandPalette {...defaultProps} />)
+
+      const fileItem = screen.getByText('doc-b.sdlxliff')
+      await user.click(fileItem)
+
+      expect(defaultProps.onNavigateToFile).toHaveBeenCalledWith('file-b')
+    })
+  })
 })

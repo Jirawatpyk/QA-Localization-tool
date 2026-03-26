@@ -114,7 +114,7 @@ development_status:
   # ============================================================
   # Epic 4: Review & Decision Workflow (MVP)
   # ============================================================
-  epic-4: in-progress
+  epic-4: done
   4-0-review-infrastructure-setup: done
   4-1a-finding-list-display-progressive-disclosure: done
   4-1b-keyboard-navigation-focus-management: done
@@ -128,14 +128,18 @@ development_status:
   4-6-suppress-false-positive-patterns: done
   4-7-add-to-glossary-from-review: done
   4-8-accessibility-integration-verification: done
-  epic-4-retrospective: optional
+  # Retrospective completed 2026-03-26
+  epic-4-retrospective: done
 
   # ============================================================
   # Epic 5: Language Intelligence & Non-Native Support (MVP)
   # ============================================================
   epic-5: backlog
   5-1-language-bridge-back-translation: backlog
-  5-2-non-native-auto-tag-native-reviewer-access: backlog
+  5-2a-non-native-auto-tag: backlog
+  5-2b-schema-rls-scoped-access: backlog
+  5-2c-native-reviewer-workflow: backlog
+  5-3-verification-integration: backlog
   epic-5-retrospective: optional
 
   # ============================================================

@@ -589,6 +589,33 @@ export function ReviewPageClient({
     }
   }, [])
 
+  // BUG-2 fix: Save filter state to sessionStorage on beforeunload + unmount.
+  // Without this, F5 refresh / browser back / tab close loses filter state.
+  // Uses refs to avoid re-registering the listener on every filter change.
+  const filterStateRef = useRef(filterState)
+  filterStateRef.current = filterState
+  const searchQueryRef = useRef(searchQuery)
+  searchQueryRef.current = searchQuery
+  const aiSuggestionsEnabledRef = useRef(aiSuggestionsEnabled)
+  aiSuggestionsEnabledRef.current = aiSuggestionsEnabled
+
+  useEffect(() => {
+    function persistFilterState() {
+      saveFilterCache(fileId, {
+        filterState: { ...filterStateRef.current },
+        searchQuery: searchQueryRef.current,
+        aiSuggestionsEnabled: aiSuggestionsEnabledRef.current,
+      })
+    }
+
+    window.addEventListener('beforeunload', persistFilterState)
+    return () => {
+      window.removeEventListener('beforeunload', persistFilterState)
+      // Also save on unmount (client-side navigation away from review page)
+      persistFilterState()
+    }
+  }, [fileId])
+
   // Retry AI analysis state
   const [isPending, startTransition] = useTransition()
   const [retryDispatched, setRetryDispatched] = useState(false)

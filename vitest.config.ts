@@ -32,7 +32,11 @@ export default defineConfig({
         test: {
           name: 'unit',
           include: ['src/**/*.test.{ts,tsx}'],
-          exclude: ['src/db/__tests__/**', 'src/__tests__/integration/**'],
+          exclude: [
+            'src/db/__tests__/**',
+            'src/__tests__/integration/**',
+            'src/__tests__/ai-integration/**',
+          ],
           environment: 'jsdom',
           setupFiles: ['./src/test/setup.ts'],
           testTimeout: 15000,
@@ -56,6 +60,16 @@ export default defineConfig({
           environment: 'node',
           setupFiles: ['./src/__tests__/integration/setup.ts'],
           testTimeout: 60000,
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'ai-integration',
+          include: ['src/__tests__/ai-integration/**/*.test.ts'],
+          environment: 'node',
+          setupFiles: ['./src/__tests__/ai-integration/setup.ts'],
+          testTimeout: 60000, // AI calls can be slow (30s+ for L3)
         },
       },
     ],

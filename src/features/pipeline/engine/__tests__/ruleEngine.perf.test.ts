@@ -149,9 +149,10 @@ describe('ruleEngine NFR2 Performance', () => {
       process.stderr.write(`\nG7: Categories triggered: ${[...categories].sort().join(', ')}\n`)
       process.stderr.write(`Distinct categories: ${categories.size}\n`)
 
-      // Baseline: 3 categories from synthetic data
-      // If this drops, a check function may have broken
-      expect(categories.size).toBeGreaterThanOrEqual(3)
+      // Baseline: 2 categories from synthetic data (th-TH target)
+      // TD-AI-003: checkEndPunctuation skips Thai → punctuation category no longer fires
+      // If this drops below 2, a check function may have broken
+      expect(categories.size).toBeGreaterThanOrEqual(2)
     })
   })
 

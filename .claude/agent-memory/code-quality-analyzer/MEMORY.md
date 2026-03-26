@@ -26,6 +26,7 @@
 - `story-3-3-findings.md` — Story 3.3 AI Layer 3 Deep Contextual Analysis CR R1 (0C/3H/5M/5L)
 - `story-3-4-findings.md` — Story 3.4 AI Resilience Fallback & Retry CR R1-R2 (R2: 0C/1H/3M/5L)
 - `story-3-5-findings.md` — Story 3.5 Score Lifecycle & Confidence Display CR R1 (0C/3H/7M/5L)
+- `story-4-8-findings.md` — Story 4.8 Accessibility Integration & Verification CR R1 (0C/3H/5M/5L)
 - `epic3-test-design-findings.md` — Epic 3 Test Design CR (0C/3H/5M/7L)
 - `story-4-2-findings.md` — Story 4.2 Core Review Actions CR R1-R2 (R2: 0C/3H/5M/5L)
 - `story-4-1d-findings.md` — Story 4.1d Responsive Layout CR R1-R2 (R2: 0C/3H/5M/5L)
@@ -38,7 +39,9 @@
 - `story-4-3-findings.md` — Story 4.3 Extended Review Actions CR R1 (0C/4H/5M/5L)
 - `story-4-4a-findings.md` — Story 4.4a Bulk Operations & Decision Override CR R1 (0C/4H/5M/6L)
 - `story-4-4b-findings.md` — Story 4.4b Undo/Redo & Conflict Resolution CR R1 (0C/4H/5M/5L)
-- `story-4-5-findings.md` — Story 4.5 Search, Filter & AI Layer Toggle CR R1 (1C/5H/5M/4L)
+- `story-4-5-findings.md` — Story 4.5 Search, Filter & AI Layer Toggle CR R1-R2 (R2: 0C/3H/5M/5L)
+- `story-td-arch-001-findings.md` — TD-ARCH-001 File-Scoped Store Refactor CR R1 (0C/4H/5M/8L)
+- `story-4-6-findings.md` — Story 4.6 Suppress False Positive Patterns CR R1 (1C/4H/5M/5L)
 
 ## Recurring Anti-Patterns (check EVERY review)
 

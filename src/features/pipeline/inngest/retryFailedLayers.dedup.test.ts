@@ -306,6 +306,7 @@ describe('retryFailedLayers finding deduplication (R3-030)', () => {
       partialFailure: false,
       fallbackUsed: false,
       totalUsage: { inputTokens: 800, outputTokens: 400, estimatedCostUsd: 0.001 },
+      failedChunkSegmentIds: [],
     }
 
     mockRunL2ForFile.mockResolvedValue(consistentL2Result)

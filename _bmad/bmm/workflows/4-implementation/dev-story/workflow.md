@@ -213,6 +213,57 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
         ATDD checklist: {{atdd_total_count}} tests ({{atdd_p0_count}} P0, {{atdd_p1_count}} P1)
       </output>
     </check>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- CODEBASE VERIFICATION (after ATDD gate, before implementation) -->
+    <!-- Prevents: stale story claims, mock drift, cross-file blind spots -->
+    <!-- Evidence: Story 4.5 CR (3 HIGH from stale assumptions), 4.4b CR (1C+2H from cross-file gaps) -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <critical>🔍 CODEBASE VERIFY: Validate story Dev Notes against actual code before implementation</critical>
+
+    <!-- 1. Verify "Existing Code to Extend" table -->
+    <action>Extract "Existing Code to Extend" table from Dev Notes (if exists)</action>
+    <check if="table exists">
+      <action>For EACH file in table:
+        1. Read actual file — verify signatures, types, props match story claims
+        2. Run: git log --oneline -10 -- {file_path} — check for recent refactors
+      </action>
+      <check if="critical drift: file no longer exists OR type/interface moved to different file OR drift impacts >50% of tasks">
+        <action>HALT: "Critical codebase drift — story assumptions fundamentally broken. SM should re-evaluate story scope."</action>
+      </check>
+      <check if="minor drift: signatures changed, fields added/removed, but file still exists at same path">
+        <action>Record drift in Dev Notes → "Codebase Verification" section with: file, expected vs actual, impact</action>
+        <action>Adjust implementation approach based on actual code state</action>
+        <output>⚠️ **Codebase drift detected** — {{mismatch_count}} file(s) differ from story spec.
+          Dev Notes updated with corrections. Implementation will use actual code state.
+        </output>
+      </check>
+      <check if="no mismatches found">
+        <output>✅ **Codebase verified** — all story assumptions match current code</output>
+      </check>
+    </check>
+    <check if="no Existing Code to Extend table">
+      <action>Identify key files from Tasks/Subtasks descriptions that will be modified</action>
+      <action>Read those files to understand current interfaces and patterns</action>
+      <output>ℹ️ No explicit code table in story — read {{file_count}} key files from task descriptions</output>
+    </check>
+
+    <!-- 2. Verify "New Files to Create" paths -->
+    <action>For EACH new file path in Dev Notes: verify target directory exists, check no file conflict at path</action>
+
+    <!-- 3. Scan existing tests for files being modified — catch mock drift early -->
+    <action>For EACH file that will be MODIFIED:
+      1. Find co-located test files (*.test.ts, *.test.tsx)
+      2. Note mocked interfaces that may need updating when source changes
+      3. Record in Dev Notes → "Test Files to Update" list
+    </action>
+
+    <!-- 4. Pre-identify cross-file data flows (Guardrail #44 prevention) -->
+    <action>From Tasks, list pairs where file A produces state consumed by file B.
+      Record as "Cross-file Pairs" in Dev Notes — feeds Step 9 pre-CR reviewer scope.
+    </action>
+
+    <output>✅ Codebase verification complete — {{verified_count}} files checked, {{pair_count}} cross-file pairs identified</output>
   </step>
 
   <step n="3" goal="Detect review continuation and extract review context">
@@ -406,12 +457,18 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
   <step n="9" goal="Pre-CR quality scan with sub-agents">
     <critical>Run automated scans BEFORE marking story for review</critical>
+
+    <!-- L1 fix: lint + type-check FIRST — agents should scan compilable code -->
+    <action>Run lint + type-check on the project. Fix any errors before launching agents.</action>
+
     <action>Launch FOUR sub-agents IN PARALLEL on all files in story File List:
       1. anti-pattern-detector — CLAUDE.md violations
       2. tenant-isolation-checker — missing tenant isolation
       3. code-quality-analyzer — code smells, mock drift (single-file)
       4. feature-dev:code-reviewer (subagent_type="feature-dev:code-reviewer") — CROSS-FILE Data Flow Reviewer (Guardrail #44).
          Scope: ONLY state/data that crosses file boundaries (single-file = agent #3).
+         INITIAL SCOPE: If "Cross-file Pairs" section exists in story Dev Notes (from Step 2 codebase verification),
+           use those pairs as starting scope — verify them FIRST, then discover additional pairs from code.
          Phase 1 — DISCOVERY (mandatory): List ALL cross-file pairs as [Producer] → [Consumer]: [what flows].
            If 0 pairs found → state "No cross-file data flows detected" and terminate. Do NOT skip to findings.
          Phase 2 — VERIFICATION per pair:
@@ -494,6 +551,9 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
     <action if="regression failures exist">HALT - Fix regression issues before completing</action>
     <action if="File List is incomplete">HALT - Update File List with all changed files</action>
     <action if="definition-of-done validation fails">HALT - Address DoD failures before completing</action>
+
+    <!-- Guardrail #50: MUST run tests before claiming done -->
+    <critical>FINAL VERIFICATION — Run `npm run test:unit`, `npm run lint`, `npm run type-check` NOW and verify GREEN output with your own eyes. "Probably passes" or "passed earlier" is NOT acceptable. If any test fails, HALT and fix before marking review. (Epic 4 Retro — 3 failing tests discovered during retro that nobody knew about)</critical>
   </step>
 
   <step n="11" goal="Completion communication and user support">

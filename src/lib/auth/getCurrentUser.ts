@@ -17,6 +17,7 @@ export type CurrentUser = {
   role: AppRole
   displayName: string
   metadata: UserMetadata | null
+  nativeLanguages: string[] // BCP-47 array from user profile (empty = non-native for all languages)
 }
 
 /**
@@ -54,10 +55,15 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   // use email as displayName and null metadata — don't return null for authenticated users.
   let displayName = email ?? ''
   let metadata: UserMetadata | null = null
+  let nativeLanguages: string[] = []
 
   try {
     const userRow = await db
-      .select({ displayName: users.displayName, metadata: users.metadata })
+      .select({
+        displayName: users.displayName,
+        metadata: users.metadata,
+        nativeLanguages: users.nativeLanguages,
+      })
       .from(users)
       .where(eq(users.id, userId))
       .limit(1)
@@ -70,6 +76,8 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
         rawMeta && typeof rawMeta === 'object' && !Array.isArray(rawMeta)
           ? (rawMeta as UserMetadata)
           : null
+      // TD-DATA-001: nativeLanguages from DB (empty array = non-native for all languages)
+      nativeLanguages = Array.isArray(userRow[0].nativeLanguages) ? userRow[0].nativeLanguages : []
     }
   } catch {
     // DB query failed (e.g., column mismatch, connection error) — proceed with JWT-only data
@@ -82,5 +90,6 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     role: role as AppRole,
     displayName,
     metadata,
+    nativeLanguages,
   }
 })

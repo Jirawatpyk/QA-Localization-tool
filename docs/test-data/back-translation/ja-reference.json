@@ -1,0 +1,702 @@
+[
+  {
+    "id": 1,
+    "source_en": "Create Work Pack",
+    "target": "作業パッケージ登録",
+    "reference_back_translation": "Create Work Pack",
+    "notes": "Extracted from SAP XLIFF 191.xlf"
+  },
+  {
+    "id": 2,
+    "source_en": "Create a work pack based on selection of operations.",
+    "target": "作業の選択に基づいて作業パッケージを登録します。",
+    "reference_back_translation": "Create a work pack based on selection of operations.",
+    "notes": "Extracted from SAP XLIFF 191.xlf"
+  },
+  {
+    "id": 3,
+    "source_en": "In-App Help",
+    "target": "In-App Help",
+    "reference_back_translation": "In-App Help",
+    "notes": "Extracted from SAP XLIFF 191.xlf"
+  },
+  {
+    "id": 4,
+    "source_en": "Creates a work pack which will include your selection of operations.",
+    "target": "作業の選択が含まれる作業パッケージを登録します。",
+    "reference_back_translation": "Creates a work pack which will include your selection of operations.",
+    "notes": "Extracted from SAP XLIFF 191.xlf"
+  },
+  {
+    "id": 5,
+    "source_en": "To create a work pack, you need to select at least one operation from the list.",
+    "target": "作業パッケージを登録するには、一覧から少なくとも 1 つの作業を選択する必要があります。",
+    "reference_back_translation": "To create a work pack, you need to select at least one operation from the list.",
+    "notes": "Extracted from SAP XLIFF 191.xlf"
+  },
+  {
+    "id": 6,
+    "source_en": "Enter Work Pack Name: The name of the work pack is populated by the system but you can choose another name.",
+    "target": "作業パッケージ名を入力します。 作業パッケージの名前は自動的に入力されますが、別の名前を選択することもできます。",
+    "reference_back_translation": "Enter Work Pack Name: The name of the work pack is populated by the system but you can choose another name.",
+    "notes": "Extracted from SAP XLIFF 191.xlf"
+  },
+  {
+    "id": 7,
+    "source_en": "Select Work Pack Type from the drop-down list.",
+    "target": "ドロップダウンリストから作業パッケージタイプを選択します。",
+    "reference_back_translation": "Select Work Pack Type from the drop-down list.",
+    "notes": "Extracted from SAP XLIFF 191.xlf"
+  },
+  {
+    "id": 8,
+    "source_en": "Select Group By criteria: Grouping criteria selection depends on the entered Work Pack Type.",
+    "target": "グループ化基準を選択します。 グループ化基準の選択は、入力された作業パッケージタイプによって異なります。",
+    "reference_back_translation": "Select Group By criteria: Grouping criteria selection depends on the entered Work Pack Type.",
+    "notes": "Extracted from SAP XLIFF 191.xlf"
+  },
+  {
+    "id": 9,
+    "source_en": "As well, you can decide if you want to include in your new work pack operations which are already included in other work packs.",
+    "target": "また、他の作業パッケージにすでに含まれている新規作業パッケージ作業に含めるかどうかを決定することもできます。",
+    "reference_back_translation": "As well, you can decide if you want to include in your new work pack operations which are already included in other work packs.",
+    "notes": "Extracted from SAP XLIFF 191.xlf"
+  },
+  {
+    "id": 10,
+    "source_en": "Select Save to trigger the application job which will create a new work pack. You can check the Application Logs to see the status of creation.",
+    "target": "保存を選択して、新規ワークパックを登録するアプリケーションジョブをトリガします。 アプリケーションログをチェックして、登録のステータスを確認することができます。",
+    "reference_back_translation": "Select Save to trigger the application job which will create a new work pack. You can check the Application Logs to see the status of creation.",
+    "notes": "Extracted from SAP XLIFF 191.xlf"
+  },
+  {
+    "id": 11,
+    "source_en": "Reference Key",
+    "target": "参照キー",
+    "reference_back_translation": "Reference Key",
+    "notes": "Extracted from SAP XLIFF 192.xlf"
+  },
+  {
+    "id": 12,
+    "source_en": "Enter additional information you need for subsequent processing.",
+    "target": "後続の処理で必要となる追加情報を入力します。",
+    "reference_back_translation": "Enter additional information you need for subsequent processing.",
+    "notes": "Extracted from SAP XLIFF 192.xlf"
+  },
+  {
+    "id": 13,
+    "source_en": "In the Reference Key fields, you can enter customer/supplier details for the accounting transaction.",
+    "target": "参照キー項目で、会計取引に対して得意先/サプライヤ詳細を入力することができます。",
+    "reference_back_translation": "In the Reference Key fields, you can enter customer/supplier details for the accounting transaction.",
+    "notes": "Extracted from SAP XLIFF 192.xlf"
+  },
+  {
+    "id": 14,
+    "source_en": "Enter the customer/supplier details which you need for subsequent processing according to your individual company's regulations.",
+    "target": "自社の規定に従って、後続の処理で必要となる得意先/サプライヤ詳細を入力します。",
+    "reference_back_translation": "Enter the customer/supplier details which you need for subsequent processing according to your individual company's regulations.",
+    "notes": "Extracted from SAP XLIFF 192.xlf"
+  },
+  {
+    "id": 15,
+    "source_en": "This entry is then used as additional information for the following purposes:",
+    "target": "入力したエントリは、以下の目的のために追加情報として使用されます。",
+    "reference_back_translation": "This entry is then used as additional information for the following purposes:",
+    "notes": "Extracted from SAP XLIFF 192.xlf"
+  },
+  {
+    "id": 16,
+    "source_en": "For correspondence with the customer/supplier",
+    "target": "得意先/サプライヤとの連絡文書",
+    "reference_back_translation": "For correspondence with the customer/supplier",
+    "notes": "Extracted from SAP XLIFF 192.xlf"
+  },
+  {
+    "id": 17,
+    "source_en": "As a search criterion for items in the customer/supplier account",
+    "target": "得意先/サプライヤの口座に含まれている明細の検索基準",
+    "reference_back_translation": "As a search criterion for items in the customer/supplier account",
+    "notes": "Extracted from SAP XLIFF 192.xlf"
+  },
+  {
+    "id": 18,
+    "source_en": "Possible entries could be as follows:",
+    "target": "入力可能な値は以下のとおりです。",
+    "reference_back_translation": "Possible entries could be as follows:",
+    "notes": "Extracted from SAP XLIFF 192.xlf"
+  },
+  {
+    "id": 19,
+    "source_en": "Customer/supplier branch number",
+    "target": "得意先/サプライヤの支店コード",
+    "reference_back_translation": "Customer/supplier branch number",
+    "notes": "Extracted from SAP XLIFF 192.xlf"
+  },
+  {
+    "id": 20,
+    "source_en": "Transaction number under which a controversial transaction is managed at the customer/supplier",
+    "target": "得意先/サプライヤの管理下にある問題の取引に割り当てられている取引番号",
+    "reference_back_translation": "Transaction number under which a controversial transaction is managed at the customer/supplier",
+    "notes": "Extracted from SAP XLIFF 192.xlf"
+  },
+  {
+    "id": 21,
+    "source_en": "All Contracts",
+    "target": "全契約",
+    "reference_back_translation": "All Contracts",
+    "notes": "Extracted from SAP XLIFF 193.xlf"
+  },
+  {
+    "id": 22,
+    "source_en": "Displays the list of settlement dates for all - customer and supplier - condition contracts.",
+    "target": "得意先およびサプライヤについて、すべての条件契約の決済日付の一覧を照会します。",
+    "reference_back_translation": "Displays the list of settlement dates for all - customer and supplier - condition contracts.",
+    "notes": "Extracted from SAP XLIFF 193.xlf"
+  },
+  {
+    "id": 23,
+    "source_en": "Filters the list of settlement dates with all corresponding customer and supplier condition contracts. The list displays condition contract data like the Condition Contract, the Settlement Date, the Settlement Date Type (for example: partial, delta or final settlement), Supplier, Customer and Settlement Status.",
+    "target": "対応するすべての得意先およびサプライヤ条件契約とともに決済日付の一覧をフィルタリングします。 一覧には、条件契約、決済日付、決済日付タイプ (部分、デルタまたは最終決済など)、サプライヤ、得意先および決済ステータスなどの条件契約データが表示されます。",
+    "reference_back_translation": "Filters the list of settlement dates with all corresponding customer and supplier condition contracts. The list displays condition contract data like the Condition Contract, the Settlement Date, the Settlement Date Type (for example: partial, delta or final settlement), Supplier, Customer and Settlement Status.",
+    "notes": "Extracted from SAP XLIFF 193.xlf"
+  },
+  {
+    "id": 24,
+    "source_en": "You select the All Contracts view to display the list of settlement dates with all related condition contracts.",
+    "target": "全契約ビューを選択して、関連するすべての条件契約とともに決済日付の一覧を照会します。",
+    "reference_back_translation": "You select the All Contracts view to display the list of settlement dates with all related condition contracts.",
+    "notes": "Extracted from SAP XLIFF 193.xlf"
+  },
+  {
+    "id": 25,
+    "source_en": "Unassigned Work",
+    "target": "未割当作業",
+    "reference_back_translation": "Unassigned Work",
+    "notes": "Extracted from SAP XLIFF 194.xlf"
+  },
+  {
+    "id": 26,
+    "source_en": "This many hours of work have not yet been assigned to a person responsible.",
+    "target": "責任者にまだ割り当てられていない作業の時間数です。",
+    "reference_back_translation": "This many hours of work have not yet been assigned to a person responsible.",
+    "notes": "Extracted from SAP XLIFF 194.xlf"
+  },
+  {
+    "id": 27,
+    "source_en": "This card shows you how many hours of work in your work centers have not yet been assigned to a person responsible. The work is displayed based on the priority of the corresponding order operations.",
+    "target": "このカードは、責任者にまだ割り当てられていない作業区における作業の時間数を示します。 この作業は、対応する指図作業の優先度に基づいて表示されます。",
+    "reference_back_translation": "This card shows you how many hours of work in your work centers have not yet been assigned to a person responsible. The work is displayed based on the priority of the corresponding order operations.",
+    "notes": "Extracted from SAP XLIFF 194.xlf"
+  },
+  {
+    "id": 28,
+    "source_en": "Click this card to open the Assign Maintenance Order Operations app for order operations in your work centers whose planned dates overlap with the next 2 weeks.",
+    "target": "このカードをクリックして、次の 2 週間と重複する計画日付が含まれる作業区の指図作業に対して、保全指図作業の割当アプリを開きます。",
+    "reference_back_translation": "Click this card to open the Assign Maintenance Order Operations app for order operations in your work centers whose planned dates overlap with the next 2 weeks.",
+    "notes": "Extracted from SAP XLIFF 194.xlf"
+  },
+  {
+    "id": 29,
+    "source_en": "The display time period starts today and continues until Sunday, the last day of the next calendar week. This means that if today is not the start of a calendar week, the actual display time period is shorter than two calendar weeks.",
+    "target": "照会期間は本日開始され、次のカレンダ週の最終日である日曜日まで続きます。 すなわち、本日がカレンダ週の開始日でない場合、実際の照会期間は 2 カレンダ週より短くなります。",
+    "reference_back_translation": "The display time period starts today and continues until Sunday, the last day of the next calendar week. This means that if today is not the start of a calendar week, the actual display time period is shorter than two calendar weeks.",
+    "notes": "Extracted from SAP XLIFF 194.xlf"
+  },
+  {
+    "id": 30,
+    "source_en": "Schedule Data Destruction Runs for Archiving Files",
+    "target": "アーカイブファイルのデータ破棄実行のスケジュール",
+    "reference_back_translation": "Schedule Data Destruction Runs for Archiving Files",
+    "notes": "Extracted from SAP XLIFF 195.xlf"
+  },
+  {
+    "id": 31,
+    "source_en": "You can select expired resources to be scheduled for deletion.",
+    "target": "期限超過リソースを削除対象としてスケジュールするよう選択できます。",
+    "reference_back_translation": "You can select expired resources to be scheduled for deletion.",
+    "notes": "Extracted from SAP XLIFF 195.xlf"
+  },
+  {
+    "id": 32,
+    "source_en": "To schedule data destruction runs:",
+    "target": "データ破棄実行をスケジュールするには、以下の手順を実行します。",
+    "reference_back_translation": "To schedule data destruction runs:",
+    "notes": "Extracted from SAP XLIFF 195.xlf"
+  },
+  {
+    "id": 33,
+    "source_en": "Select an ILM object and view more details like Expired Resources that belong to the ILM object with the Expiration Date and Mandatory Destruction Date.",
+    "target": "ILM オブジェクトを選択し、その ILM オブジェクトに属する期限超過リソースなどの詳細を、有効期限および必須破棄日付で参照します。",
+    "reference_back_translation": "Select an ILM object and view more details like Expired Resources that belong to the ILM object with the Expiration Date and Mandatory Destruction Date.",
+    "notes": "Extracted from SAP XLIFF 195.xlf"
+  },
+  {
+    "id": 34,
+    "source_en": "Select the expired resources that you want to permanently delete and click Schedule.",
+    "target": "恒久的に削除する期限超過リソースを選択し、スケジュールをクリックします。",
+    "reference_back_translation": "Select the expired resources that you want to permanently delete and click Schedule.",
+    "notes": "Extracted from SAP XLIFF 195.xlf"
+  },
+  {
+    "id": 35,
+    "source_en": "A popup window is displayed that asks for confirmation of the deletion.",
+    "target": "削除の確認を促すポップアップウィンドウが表示されます。",
+    "reference_back_translation": "A popup window is displayed that asks for confirmation of the deletion.",
+    "notes": "Extracted from SAP XLIFF 195.xlf"
+  },
+  {
+    "id": 36,
+    "source_en": "If you confirm the deletion, the expired resources are scheduled for a data destruction run.",
+    "target": "削除を確定すると、期限超過リソースがデータ破棄実行のためにスケジュールされます。",
+    "reference_back_translation": "If you confirm the deletion, the expired resources are scheduled for a data destruction run.",
+    "notes": "Extracted from SAP XLIFF 195.xlf"
+  },
+  {
+    "id": 37,
+    "source_en": "When the next schedule is run in the next seven days, all expired resources marked for deletion will be permanently destroyed.",
+    "target": "次回のスケジュールが以後 7 日以内に実行されると、削除対象のマークを付けたすべての期限超過リソースが恒久的に破棄されます。",
+    "reference_back_translation": "When the next schedule is run in the next seven days, all expired resources marked for deletion will be permanently destroyed.",
+    "notes": "Extracted from SAP XLIFF 195.xlf"
+  },
+  {
+    "id": 38,
+    "source_en": "Reset and Reverse",
+    "target": "再登録および反対仕訳",
+    "reference_back_translation": "Reset and Reverse",
+    "notes": "Extracted from SAP XLIFF 196.xlf"
+  },
+  {
+    "id": 39,
+    "source_en": "Use to reset clearing of line item and to reverse clearing entry.",
+    "target": "明細の消込を再登録し、消込伝票入力の反対仕訳を行うために使用します。",
+    "reference_back_translation": "Use to reset clearing of line item and to reverse clearing entry.",
+    "notes": "Extracted from SAP XLIFF 196.xlf"
+  },
+  {
+    "id": 40,
+    "source_en": "Use to reset the clearing of one or more line items and to reverse the clearing entry at the same time. You can use this function for line items of customer accounts and supplier accounts, as well as for line items of G/L accounts that are managed on an open item basis.",
+    "target": "1 つまたは複数の明細の消込を再登録し、同時に、消込伝票入力を反対仕訳するために使用します。 この機能は、得意先勘定および仕入先勘定の明細、および未消込明細ベースで管理される G/L 勘定の明細に対して使用することができます。",
+    "reference_back_translation": "Use to reset the clearing of one or more line items and to reverse the clearing entry at the same time. You can use this function for line items of customer accounts and supplier accounts, as well as for line items of G/L accounts that are managed on an open item basis.",
+    "notes": "Extracted from SAP XLIFF 196.xlf"
+  },
+  {
+    "id": 41,
+    "source_en": "You may want to do this, for example, if the payment you posted to clear a customer invoice or credit memo was wrong.",
+    "target": "この機能は、得意先請求書またはクレジットメモを消し込むために転記した支払が間違っている場合などに使用することができます。",
+    "reference_back_translation": "You may want to do this, for example, if the payment you posted to clear a customer invoice or credit memo was wrong.",
+    "notes": "Extracted from SAP XLIFF 196.xlf"
+  },
+  {
+    "id": 42,
+    "source_en": "If you choose Reset and Reverse, the line items are set back to status Open, the clearing entry is reversed, and a reversing entry is posted.",
+    "target": "再登録および反対仕訳を選択すると、明細がステータス未消込に設定し直され、消込伝票入力が反対仕訳され、取消転記が転記されます。",
+    "reference_back_translation": "If you choose Reset and Reverse, the line items are set back to status Open, the clearing entry is reversed, and a reversing entry is posted.",
+    "notes": "Extracted from SAP XLIFF 196.xlf"
+  },
+  {
+    "id": 43,
+    "source_en": "Note that you must always reverse the clearing entry if there is an exchange rate difference.",
+    "target": "換算レート差損益がある場合は、常に消込伝票入力を反対仕訳する必要があります。",
+    "reference_back_translation": "Note that you must always reverse the clearing entry if there is an exchange rate difference.",
+    "notes": "Extracted from SAP XLIFF 196.xlf"
+  },
+  {
+    "id": 44,
+    "source_en": "Cancel Dispatch",
+    "target": "差立の取消",
+    "reference_back_translation": "Cancel Dispatch",
+    "notes": "Extracted from SAP XLIFF 197.xlf"
+  },
+  {
+    "id": 45,
+    "source_en": "Cancel the dispatch of the selected order operations.",
+    "target": "選択した指図作業の差立を取り消します。",
+    "reference_back_translation": "Cancel the dispatch of the selected order operations.",
+    "notes": "Extracted from SAP XLIFF 197.xlf"
+  },
+  {
+    "id": 46,
+    "source_en": "By canceling the dispatch of an order operation, you take back the confirmation of work center and planned dates.",
+    "target": "指図作業の差立を取り消すと、作業区と計画日付の確認を取り消すことになります。",
+    "reference_back_translation": "By canceling the dispatch of an order operation, you take back the confirmation of work center and planned dates.",
+    "notes": "Extracted from SAP XLIFF 197.xlf"
+  },
+  {
+    "id": 47,
+    "source_en": "As a result, the app resets the processing status to Due. The Must start on constraint that is set automatically when an operation is dispatched, remains unchanged.",
+    "target": "その結果、アプリでは処理ステータスが期日に再設定されます。 作業の差立時に自動的に設定される必須開始日制約は変更されません。",
+    "reference_back_translation": "As a result, the app resets the processing status to Due. The Must start on constraint that is set automatically when an operation is dispatched, remains unchanged.",
+    "notes": "Extracted from SAP XLIFF 197.xlf"
+  },
+  {
+    "id": 48,
+    "source_en": "To enable this button, select at least one dispatched order operation. If you select multiple operations, and some of them have not yet been dispatched or are already in process, the processing status of these operations does not change.",
+    "target": "このボタンを有効化するには、少なくとも 1 つの差立済指図作業を選択します。 複数の作業を選択し、それらの一部が差立てられていないか、またはすでに処理中である場合、これらの作業の処理ステータスは変わりません。",
+    "reference_back_translation": "To enable this button, select at least one dispatched order operation. If you select multiple operations, and some of them have not yet been dispatched or are already in process, the processing status of these operations does not change.",
+    "notes": "Extracted from SAP XLIFF 197.xlf"
+  },
+  {
+    "id": 49,
+    "source_en": "Planned Prepayments",
+    "target": "計画前払",
+    "reference_back_translation": "Planned Prepayments",
+    "notes": "Extracted from SAP XLIFF 198.xlf"
+  },
+  {
+    "id": 50,
+    "source_en": "Filter billing elements by included prepayments.",
+    "target": "含まれている前払で請求要素をフィルタリングします。",
+    "reference_back_translation": "Filter billing elements by included prepayments.",
+    "notes": "Extracted from SAP XLIFF 198.xlf"
+  },
+  {
+    "id": 51,
+    "source_en": "Displays in the list report billing elements with or without planned prepayments.",
+    "target": "計画前払あり/なしの請求要素を一覧レポートに表示します。",
+    "reference_back_translation": "Displays in the list report billing elements with or without planned prepayments.",
+    "notes": "Extracted from SAP XLIFF 198.xlf"
+  },
+  {
+    "id": 52,
+    "source_en": "Choose Yes to search for and display all billing elements which contain any prepayment items.",
+    "target": "はいを選択して、前払明細を含むすべての請求要素を検索および照会します。",
+    "reference_back_translation": "Choose Yes to search for and display all billing elements which contain any prepayment items.",
+    "notes": "Extracted from SAP XLIFF 198.xlf"
+  },
+  {
+    "id": 53,
+    "source_en": "Choose Overdue to display only elements with prepayments which are overdue as of today's date.",
+    "target": "期日超過を選択して、本日の日付以降に期日超過する前払のある要素のみを表示します。",
+    "reference_back_translation": "Choose Overdue to display only elements with prepayments which are overdue as of today's date.",
+    "notes": "Extracted from SAP XLIFF 198.xlf"
+  },
+  {
+    "id": 54,
+    "source_en": "If you choose No, the system will exclude from the list report all billing elements with prepayment items.",
+    "target": "いいえを選択すると、前払明細を含むすべての請求要素が一覧レポートから除外されます。",
+    "reference_back_translation": "If you choose No, the system will exclude from the list report all billing elements with prepayment items.",
+    "notes": "Extracted from SAP XLIFF 198.xlf"
+  },
+  {
+    "id": 55,
+    "source_en": "Posting Category",
+    "target": "転記カテゴリ:",
+    "reference_back_translation": "Posting Category",
+    "notes": "Extracted from SAP XLIFF 199.xlf"
+  },
+  {
+    "id": 56,
+    "source_en": "Specifies whether posting is needed after bank statements are imported.",
+    "target": "銀行報告書のインポート後に転記が必要かどうかを指定します。",
+    "reference_back_translation": "Specifies whether posting is needed after bank statements are imported.",
+    "notes": "Extracted from SAP XLIFF 199.xlf"
+  },
+  {
+    "id": 57,
+    "source_en": "You specify one of the following options:",
+    "target": "以下のオプションのいずれかを指定します。",
+    "reference_back_translation": "You specify one of the following options:",
+    "notes": "Extracted from SAP XLIFF 199.xlf"
+  },
+  {
+    "id": 58,
+    "source_en": "Posting to Be Processed: You select this option when you need to post bank statements after they are imported.",
+    "target": "処理対象の転記: このオプションは、銀行報告書がインポートされた後に転記する必要がある場合に選択します。",
+    "reference_back_translation": "Posting to Be Processed: You select this option when you need to post bank statements after they are imported.",
+    "notes": "Extracted from SAP XLIFF 199.xlf"
+  },
+  {
+    "id": 59,
+    "source_en": "No Posting Processing: You select this option when you don't need to post bank statements after they are imported. For example, you can use this option for bank accounts managed in a remote system, as you only want to push bank statement information to cash management apps.",
+    "target": "転記処理なし: このオプションは、銀行報告書がインポートされた後に転記する必要がない場合に選択します。 たとえば、このオプションは、リモートシステムで管理される銀行口座に対して使用することができます。資金管理アプリへの報告書情報のプッシュのみを実行しようとしているためです。",
+    "reference_back_translation": "No Posting Processing: You select this option when you don't need to post bank statements after they are imported. For example, you can use this option for bank accounts managed in a remote system, as you only want to push bank statement information to cash management apps.",
+    "notes": "Extracted from SAP XLIFF 199.xlf"
+  },
+  {
+    "id": 60,
+    "source_en": "Report Category",
+    "target": "レポートカテゴリ",
+    "reference_back_translation": "Report Category",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 61,
+    "source_en": "Categorize reports based on business features and country/region",
+    "target": "ビジネス機能および国/地域に基づいてレポートを分類します。",
+    "reference_back_translation": "Categorize reports based on business features and country/region",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 62,
+    "source_en": "Used to categorize statutory reports based on specific business features and the country/region of reporting",
+    "target": "特定のビジネス機能およびレポートする国/地域に基づいて法定レポートを分類する場合に使用します。",
+    "reference_back_translation": "Used to categorize statutory reports based on specific business features and the country/region of reporting",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 63,
+    "source_en": "To adhere to your statutory reporting requirements, you may need to submit tax reports to the government for a new functionality. You may also need to group versions of report based on functionality, country/region, organizational units, phases, or reporting activities. You can create such functional groups through Report Categories.",
+    "target": "法定レポート要件を遵守するために、新機能に関して政府に税レポートを提出する必要がある可能性があります。 また、機能、国/地域、組織ユニット、フェーズ、またはレポートアクティビティに基づいて、レポートバージョンをグループ化する必要がある可能性があります。 レポートカテゴリから、そのような機能グループを登録することができます。",
+    "reference_back_translation": "To adhere to your statutory reporting requirements, you may need to submit tax reports to the government for a new functionality. You may also need to group versions of report based on functionality, country/region, organizational units, phases, or reporting activities. You can create such functional groups through Report Categories.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 64,
+    "source_en": "You can now create independent report categories using the Define Compliance Reports app. You must assign country/region, phases, organizational units, and activities to a report category. While assigning activities, you assign the phase to which it belongs. You can monitor and run the reporting activities in the Run Compliance Reports app. Creating a report category involves the following steps:",
+    "target": "コンプライアンスレポート定義アプリを使用して、個別レポートカテゴリを登録することができます。 レポートカテゴリに国/地域、フェーズ、組織ユニット、およびアクティビティを割り当てる必要があります。 アクティビティを割り当てると同時に、それが属するフェーズを割り当てます。 コンプライアンスレポート実行アプリで、レポートアクティビティを監視および実行することができます。 レポートカテゴリの登録には以下のステップが関係します。",
+    "reference_back_translation": "You can now create independent report categories using the Define Compliance Reports app. You must assign country/region, phases, organizational units, and activities to a report category. While assigning activities, you assign the phase to which it belongs. You can monitor and run the reporting activities in the Run Compliance Reports app. Creating a report category involves the following steps:",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 65,
+    "source_en": "Assign country/region",
+    "target": "国/地域の割当",
+    "reference_back_translation": "Assign country/region",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 66,
+    "source_en": "You assign a country/region to the report category.",
+    "target": "レポートカテゴリに国/地域を割り当てます。",
+    "reference_back_translation": "You assign a country/region to the report category.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 67,
+    "source_en": "You create phases for your report category. A phase is used to identify the type of report run that is generated in the app. A phase can be of type - declaration, correction, or additional correction.",
+    "target": "レポートカテゴリのフェーズを登録します。 フェーズはアプリで生成されるレポート実行のタイプを特定するために使用されます。 フェーズのタイプには申告、修正、または追加修正があります。",
+    "reference_back_translation": "You create phases for your report category. A phase is used to identify the type of report run that is generated in the app. A phase can be of type - declaration, correction, or additional correction.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 68,
+    "source_en": "When you generate a report run, by default, the report run type is declaration. Standard phase is the first submission to the government. Based on the country/region-specific requirements, you can generate a correction report, or additional correction report for the documents from the previous submissions or for the documents that may have been omitted from the previous submissions or runs.",
+    "target": "レポート実行を生成する際には、デフォルトで、レポート実行のタイプは申告です。 標準フェーズは、政府への最初の提出です。 国/地域依存の要件に基づいて、過去に提出した伝票に対して、または過去の提出または実行から省かれた可能性がある伝票に対して修正レポート、または追加修正レポートを生成することができます。",
+    "reference_back_translation": "When you generate a report run, by default, the report run type is declaration. Standard phase is the first submission to the government. Based on the country/region-specific requirements, you can generate a correction report, or additional correction report for the documents from the previous submissions or for the documents that may have been omitted from the previous submissions or runs.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 69,
+    "source_en": "You set the valid from date, and assign the phase occurrence as Single or Multiple for all the phases.",
+    "target": "有効開始日付を設定し、すべてのフェーズに対してフェーズ発生を単一または複数として割り当てます。",
+    "reference_back_translation": "You set the valid from date, and assign the phase occurrence as Single or Multiple for all the phases.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 70,
+    "source_en": "When you set the phase occurrence as Single, all the activities of the phase can be submitted only once. After your activities are complete, you will not be able to process the activities again in the phase.",
+    "target": "フェーズ発生を単一として設定すると、すべてのフェーズアクティビティは、1 回だけ提出できます。 アクティビティの完了後は、そのフェーズでアクティビティを再度処理することはできません。",
+    "reference_back_translation": "When you set the phase occurrence as Single, all the activities of the phase can be submitted only once. After your activities are complete, you will not be able to process the activities again in the phase.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 71,
+    "source_en": "When you choose the phase occurrence as Multiple, all the activities of the phase can be submitted any number of times after the report has been accepted, until the due date. You can repeat the phase multiple times.",
+    "target": "フェーズ発生を複数として選択すると、レポートが受け入れられた後、すべてのフェーズアクティビティを期日まで何度でも提出することができます。 フェーズを複数回繰り返すことができます。",
+    "reference_back_translation": "When you choose the phase occurrence as Multiple, all the activities of the phase can be submitted any number of times after the report has been accepted, until the due date. You can repeat the phase multiple times.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 72,
+    "source_en": "You can set the submission possible until for correction and additional correction runs. It is set in years, months, or days. For example, if Submission Possible Until is set as 2 Months – It implies that you can start the correction runs after the standard submission and until 2 months after the current reporting period end date. You can also set negative values for months and days.",
+    "target": "修正および追加修正が実行されるまで、提出を可能に設定することができます。 これは、年数、月数、または日数で設定されます。 たとえば、提出可能終了を 2 カ月に設定した場合、標準提出後、現在のレポート期間終了日付の 2 カ月後まで修正実行を開始できることを意味します。 また、月数および日数にマイナス値を設定することができます。",
+    "reference_back_translation": "You can set the submission possible until for correction and additional correction runs. It is set in years, months, or days. For example, if Submission Possible Until is set as 2 Months – It implies that you can start the correction runs after the standard submission and until 2 months after the current reporting period end date. You can also set negative values for months and days.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 73,
+    "source_en": "Assign Organizational Units",
+    "target": "組織ユニットの割当",
+    "reference_back_translation": "Assign Organizational Units",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 74,
+    "source_en": "You assign organizational units to a report category. You can submit tax reports at different reporting levels via the use of organizational units. The reporting levels currently supported for both classic and enhanced modes are - company code, business place, jurisdiction code, and section code. This feature allows you to use the Run Compliance Reports app to submit reports for countries/regions that require reporting at these additional levels. For example, Canada tax authorities require tax reporting at company code and tax jurisdiction levels. You can set values for the reporting levels while configuring the reporting entity. The assigned values get defaulted when you run the reports. You can assign the organizational units to the report categories in the Define Compliance Reports app.",
+    "target": "レポートカテゴリに組織ユニットを割り当てます。 組織ユニットの使用により、さまざまなレポートレベルで申告書を提出することができます。 従来モードと拡張モードの両方で現在サポートされているレポートレベルは、会社コード、事業場所、税管轄コード、およびセクションコードです。 この機能により、コンプライアンスレポート実行アプリを使用して、これらの追加レベルでのレポートを必要とする国/地域向けのレポートを提出することができます。 たとえば、カナダの税務当局は、会社コードレベルと税管轄レベルでの税レポートを必須としています。 レポートエンティティを設定するときに、レポートレベルの値を設定することができます。 レポートの実行時に、割り当てた値がデフォルト設定されます。 コンプライアンスレポート定義アプリで、組織ユニットをレポートカテゴリに割り当てることができます。",
+    "reference_back_translation": "You assign organizational units to a report category. You can submit tax reports at different reporting levels via the use of organizational units. The reporting levels currently supported for both classic and enhanced modes are - company code, business place, jurisdiction code, and section code. This feature allows you to use the Run Compliance Reports app to submit reports for countries/regions that require reporting at these additional levels. For example, Canada tax authorities require tax reporting at company code and tax jurisdiction levels. You can set values for the reporting levels while configuring the reporting entity. The assigned values get defaulted when you run the reports. You can assign the organizational units to the report categories in the Define Compliance Reports app.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 75,
+    "source_en": "Assign Reporting Activities",
+    "target": "レポートアクティビティの割当",
+    "reference_back_translation": "Assign Reporting Activities",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 76,
+    "source_en": "Reporting activities are steps that needs to be performed to complete end-to-end compliance reporting process. In the Define Compliance Reports app, you create new reporting activities. You assign activities to your report category, based on your legal reporting requirements. While assigning activities, you assign the phase to which it belongs. You can monitor and run the reporting activities in the Run Compliance Reports app.",
+    "target": "レポートアクティビティは、エンドツーエンドのコンプライアンスレポートプロセスを完了するために実行する必要があるステップです。 コンプライアンスレポート定義アプリでは、新規レポートアクティビティを登録します。 法的レポート要件に基づいて、レポートカテゴリにアクティビティを割り当てます。 アクティビティを割り当てると同時に、それが属するフェーズを割り当てます。 コンプライアンスレポート実行アプリで、レポートアクティビティを監視および実行することができます。",
+    "reference_back_translation": "Reporting activities are steps that needs to be performed to complete end-to-end compliance reporting process. In the Define Compliance Reports app, you create new reporting activities. You assign activities to your report category, based on your legal reporting requirements. While assigning activities, you assign the phase to which it belongs. You can monitor and run the reporting activities in the Run Compliance Reports app.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 77,
+    "source_en": "To understand the complete flow in Run Compliance Reports app and Define Compliance Reports app, please see the below sample scenario:",
+    "target": "コンプライアンスレポート実行アプリおよびコンプライアンスレポート定義アプリの完全フローを理解するには、以下のサンプルシナリオを参照してください。",
+    "reference_back_translation": "To understand the complete flow in Run Compliance Reports app and Define Compliance Reports app, please see the below sample scenario:",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 78,
+    "source_en": "To start with, in the Define Compliance Reports app, you should perform the following steps:",
+    "target": "まず最初に、コンプライアンスレポート定義アプリで、以下のステップを実行する必要があります。",
+    "reference_back_translation": "To start with, in the Define Compliance Reports app, you should perform the following steps:",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 79,
+    "source_en": "Create a report category REPCAT.",
+    "target": "レポートカテゴリ REPCAT を登録します。",
+    "reference_back_translation": "Create a report category REPCAT.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 80,
+    "source_en": "Assign a country/region to the report category.",
+    "target": "レポートカテゴリに国/地域を割り当てます。",
+    "reference_back_translation": "Assign a country/region to the report category.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 81,
+    "source_en": "Create a declaration and a correction phase for the report category.",
+    "target": "レポートカテゴリの申告および修正フェーズを登録します。",
+    "reference_back_translation": "Create a declaration and a correction phase for the report category.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 82,
+    "source_en": "Assign company code as the organizational unit to report category.",
+    "target": "会社コードを組織ユニットとしてレポートカテゴリに割り当てます。",
+    "reference_back_translation": "Assign company code as the organizational unit to report category.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 83,
+    "source_en": "Assign an activity A1 of type - SAP Fiori Application for the declaration phase. Add another activity A2 of type - Report Definition for the correction phase.",
+    "target": "タイプ A1 (申告フェーズの SAP Fiori アプリケーション) のアクティビティを割り当てます。 タイプ A2 (修正フェーズのレポート定義) の別のアクティビティを追加します。",
+    "reference_back_translation": "Assign an activity A1 of type - SAP Fiori Application for the declaration phase. Add another activity A2 of type - Report Definition for the correction phase.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 84,
+    "source_en": "In the Run Compliance Reports app, when you select the report category and choose Go, you can see all the reporting tasks for the category. Select the reporting task that you want to execute. When you start the new phase, you can see the activity A1 in the declaration phase. After the declaration phase is complete, the system allows you to start the new phase. Choose Start new phase to start the correction phase. The system executes the activity A2 assigned to the correction phase.",
+    "target": "コンプライアンスレポート実行アプリで、レポートカテゴリを選択して Go を選択すると、そのカテゴリのすべてのレポートタスクを確認することができます。 実行するレポートタスクを選択します。 新規フェーズを開始すると、申告フェーズにアクティビティ A1 が表示されます。 申告フェーズの完了後、新規フェーズを開始することができます。 新規フェーズ開始を選択して、修正フェーズを開始します。 修正フェーズに割り当てられたアクティビティ A2 が実行されます。",
+    "reference_back_translation": "In the Run Compliance Reports app, when you select the report category and choose Go, you can see all the reporting tasks for the category. Select the reporting task that you want to execute. When you start the new phase, you can see the activity A1 in the declaration phase. After the declaration phase is complete, the system allows you to start the new phase. Choose Start new phase to start the correction phase. The system executes the activity A2 assigned to the correction phase.",
+    "notes": "Extracted from SAP XLIFF 200.xlf"
+  },
+  {
+    "id": 85,
+    "source_en": "Filter for different time slot views in the sequence table.",
+    "target": "順序テーブルでさまざまなタイムスロットビューをフィルタします。",
+    "reference_back_translation": "Filter for different time slot views in the sequence table.",
+    "notes": "Extracted from SAP XLIFF 201.xlf"
+  },
+  {
+    "id": 86,
+    "source_en": "You can select any of the following options:",
+    "target": "以下のいずれかのオプションを選択することができます。",
+    "reference_back_translation": "You can select any of the following options:",
+    "notes": "Extracted from SAP XLIFF 201.xlf"
+  },
+  {
+    "id": 87,
+    "source_en": "All Slots- Displays all available time slots for a work center that also includes slots with dispatched orders.",
+    "target": "すべてのスロット - 差立済指図のスロットも含まれる作業区のすべての利用可能なタイムスロットを表示します。",
+    "reference_back_translation": "All Slots- Displays all available time slots for a work center that also includes slots with dispatched orders.",
+    "notes": "Extracted from SAP XLIFF 201.xlf"
+  },
+  {
+    "id": 88,
+    "source_en": "Slots with Sufficient Capacity- Displays time slots that have enough capacity to accommodate the order operation.",
+    "target": "十分な能力があるスロット - 指図作業に対応するために十分な能力があるタイムスロットを表示します。",
+    "reference_back_translation": "Slots with Sufficient Capacity- Displays time slots that have enough capacity to accommodate the order operation.",
+    "notes": "Extracted from SAP XLIFF 201.xlf"
+  },
+  {
+    "id": 89,
+    "source_en": "Slots with Overlapping Capacity- Displays the conflicting time slots of multiple order operations that have been dispatched. You can deallocate and dispatch one of the orders on a different slot.",
+    "target": "能力が重複しているスロット - 差立済の複数の指図作業のコンフリクトタイムスロットを表示します。 別のスロットで指図の 1 つを割当解除し、差立てることができます。",
+    "reference_back_translation": "Slots with Overlapping Capacity- Displays the conflicting time slots of multiple order operations that have been dispatched. You can deallocate and dispatch one of the orders on a different slot.",
+    "notes": "Extracted from SAP XLIFF 201.xlf"
+  },
+  {
+    "id": 90,
+    "source_en": "Top-Level Materials",
+    "target": "最上位品目",
+    "reference_back_translation": "Top-Level Materials",
+    "notes": "Extracted from SAP XLIFF 202.xlf"
+  },
+  {
+    "id": 91,
+    "source_en": "Shows the capacity consumption of the top-level materials of the work center.",
+    "target": "作業区の最上位品目の能力消費を表示します。",
+    "reference_back_translation": "Shows the capacity consumption of the top-level materials of the work center.",
+    "notes": "Extracted from SAP XLIFF 202.xlf"
+  },
+  {
+    "id": 92,
+    "source_en": "In-app help",
+    "target": "In-app help",
+    "reference_back_translation": "In-app help",
+    "notes": "Extracted from SAP XLIFF 202.xlf"
+  },
+  {
+    "id": 93,
+    "source_en": "You can see how each top-level material contributes to the capacity consumption of the work center.",
+    "target": "各最上位品目が、作業区の能力消費にどの程度関与しているかを確認できます。",
+    "reference_back_translation": "You can see how each top-level material contributes to the capacity consumption of the work center.",
+    "notes": "Extracted from SAP XLIFF 202.xlf"
+  },
+  {
+    "id": 94,
+    "source_en": "If there is a capacity issue, you have the possibility to shift the capacity demand to an earlier point in time. Check, if this mitigates the capacity issue and click Shift Top-Level Demand. Then check if the proposal is acceptable.",
+    "target": "能力の問題がある場合は、能力需要をそれより前の時点にシフトすることができます。 これによって能力の問題が緩和されるかをチェックし、最上位需要シフトをクリックします。 次に、提案が受入可能かどうかをチェックします。",
+    "reference_back_translation": "If there is a capacity issue, you have the possibility to shift the capacity demand to an earlier point in time. Check, if this mitigates the capacity issue and click Shift Top-Level Demand. Then check if the proposal is acceptable.",
+    "notes": "Extracted from SAP XLIFF 202.xlf"
+  },
+  {
+    "id": 95,
+    "source_en": "From the top-level material you can navigate to the Multi-Level Material Simulation, a structured view of the bill of material, and make simulations on material component level. For example, you can change the source of supply or you have the possibility to preproduce a component.",
+    "target": "最上位品目から、部品表/配合表の構造ビューである複数レベル品目シミュレーションにナビゲートし、構成品目レベルでシミュレーションを行います。 たとえば、供給元を変更したり、構成品目を再生産したりすることができます。",
+    "reference_back_translation": "From the top-level material you can navigate to the Multi-Level Material Simulation, a structured view of the bill of material, and make simulations on material component level. For example, you can change the source of supply or you have the possibility to preproduce a component.",
+    "notes": "Extracted from SAP XLIFF 202.xlf"
+  },
+  {
+    "id": 96,
+    "source_en": "Report Run Type",
+    "target": "レポート実行のタイプ",
+    "reference_back_translation": "Report Run Type",
+    "notes": "Extracted from SAP XLIFF 203.xlf"
+  },
+  {
+    "id": 97,
+    "source_en": "Shows the type of the report run",
+    "target": "レポート実行のタイプを表示します。",
+    "reference_back_translation": "Shows the type of the report run",
+    "notes": "Extracted from SAP XLIFF 203.xlf"
+  },
+  {
+    "id": 98,
+    "source_en": "Shows the type of the report run that you have generated for this report. A report run can be of type - declaration, correction, or additional correction.",
+    "target": "このレポートに対して生成したレポート実行のタイプを示します。 レポート実行のタイプは、申告、修正、または追加修正です。",
+    "reference_back_translation": "Shows the type of the report run that you have generated for this report. A report run can be of type - declaration, correction, or additional correction.",
+    "notes": "Extracted from SAP XLIFF 203.xlf"
+  },
+  {
+    "id": 99,
+    "source_en": "When you generate a report run, by default, the report run type is declaration. When you submit the report to the government, the government accepts the submitted report if its content is correct, or declines it, if it must be corrected.",
+    "target": "レポート実行を生成する際には、デフォルトで、レポート実行のタイプは申告です。 レポートを政府に提出すると、政府はレポートのコンテンツが正しい場合は提出されたレポートを承認し、修正する必要がある場合は却下します。",
+    "reference_back_translation": "When you generate a report run, by default, the report run type is declaration. When you submit the report to the government, the government accepts the submitted report if its content is correct, or declines it, if it must be corrected.",
+    "notes": "Extracted from SAP XLIFF 203.xlf"
+  },
+  {
+    "id": 100,
+    "source_en": "The tax authorities in some countries allow you to submit correction run, or additional correction run after the standard tax submission process. This ensures that you have an option to make the required modifications to the earlier tax submission documents. The additional correction run may require documents in formats and data, different than the standard or correction runs. You can configure additional correction phase for a report category in the Define Advanced Compliance Reports app. In the Run Advanced Compliance Reports app, after the standard submission, you can start a new phase, and choose correction or additional correction as per your requirements.",
+    "target": "一部の国の税務当局は、標準税書類提出のプロセス後に修正実行または追加修正実行を提出することを許可しています。 これによって、以前に提出した税書類に必要は修正を加えることが保証されます。 追加修正実行には、標準実行または修正実行と異なる、書式およびデータの文書が必要な場合があります。 拡張コンプライアンスレポートの定義アプリで、レポートカテゴリの追加修正フェーズを設定することができます。 拡張コンプライアンスレポート実行アプリでは、標準提出後、新規のフェーズを開始し、要件に従って修正または追加修正を選択することができます。",
+    "reference_back_translation": "The tax authorities in some countries allow you to submit correction run, or additional correction run after the standard tax submission process. This ensures that you have an option to make the required modifications to the earlier tax submission documents. The additional correction run may require documents in formats and data, different than the standard or correction runs. You can configure additional correction phase for a report category in the Define Advanced Compliance Reports app. In the Run Advanced Compliance Reports app, after the standard submission, you can start a new phase, and choose correction or additional correction as per your requirements.",
+    "notes": "Extracted from SAP XLIFF 203.xlf"
+  }
+]

@@ -190,18 +190,17 @@ const createFindingsSlice = (
         ...computeSelectionAfterFilterChange(hypothetical),
       }
     }),
+  // DG-2 fix: resetFilters clears filters + search ONLY — AI toggle is separate (AC8 "separate from Layer filter")
   resetFilters: () =>
     set((s) => {
       const hypothetical: ReviewState = {
         ...s,
         filterState: { ...DEFAULT_FILTER_STATE },
         searchQuery: '',
-        aiSuggestionsEnabled: true,
       } as ReviewState
       return {
         filterState: { ...DEFAULT_FILTER_STATE },
         searchQuery: '',
-        aiSuggestionsEnabled: true,
         ...computeSelectionAfterFilterChange(hypothetical),
       }
     }),

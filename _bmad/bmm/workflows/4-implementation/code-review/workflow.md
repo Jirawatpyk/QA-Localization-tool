@@ -103,7 +103,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
   <critical>R2+ ROUNDS: You MUST re-execute this ENTIRE Step 3 (sub-agents + manual review + AC validation) on EVERY round — NOT just verify R1 fixes. Fixes may introduce regressions in untouched code, and fresh review catches issues R1 missed. "Verify fixes only" is a forbidden shortcut.</critical>
 
   <!-- Automated Sub-agent Scans — run FIRST to enrich manual review -->
-  <action>Launch FOUR sub-agents IN PARALLEL on all files in comprehensive review list:
+  <action>Launch THREE sub-agents IN PARALLEL on all files in comprehensive review list:
     1. code-quality-analyzer — code quality, patterns, maintainability (single-file)
     2. testing-qa-expert — test coverage gaps, missing test scenarios
     3. feature-dev:code-reviewer (subagent_type="feature-dev:code-reviewer") — CROSS-FILE Data Flow Reviewer (Guardrail #44).
@@ -119,10 +119,9 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
        RISK FILTER: P0 (data corruption, wrong output, silent data loss) + P1 (race, stale state, unhandled error propagation). Skip P2+.
        OUTPUT: 1) Cross-file pair list 2) Findings per pair with severity + evidence (file:line).
        DO NOT report single-file issues (= agent #1's job)
-    4. bmad-review-edge-case-hunter — boundary conditions: walk every branching path,
-       report ONLY unhandled edge cases. Method-driven, not attitude-driven.
+    NOTE: bmad-review-edge-case-hunter removed (Party Mode retro 2026-03-17 — 75% overlap with agents #1/#3, unique findings = Low severity only). Use it ad-hoc for numeric/parser/pipeline stories if needed.
   </action>
-  <action>Collect findings from all four sub-agents and incorporate into review below.</action>
+  <action>Collect findings from all three sub-agents and incorporate into review below.</action>
 
   <!-- Git vs Story Discrepancies -->
   <action>Review git vs story File List discrepancies:

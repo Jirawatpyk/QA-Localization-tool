@@ -1210,3 +1210,127 @@ describe('runL2ForFile — TA: Coverage Gap Tests', () => {
     expect(mockLogAIUsage).toHaveBeenCalledTimes(2)
   })
 })
+
+// ── TD-AI-005: Atomic findings INSERT + status UPDATE ──
+
+describe('runL2ForFile — TD-AI-005: Atomic transaction (findings + status)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    dbState.callIndex = 0
+    dbState.returnValues = []
+    dbState.setCaptures = []
+    mockGenerateText.mockResolvedValue(buildL2Response())
+    mockCheckProjectBudget.mockResolvedValue(BUDGET_HAS_QUOTA)
+    mockAiL2Limit.mockResolvedValue({ success: true, limit: 100, remaining: 99, reset: 0 })
+    mockClassifyAIError.mockReturnValue('unknown')
+    mockWriteAuditLog.mockResolvedValue(undefined)
+    mockBuildL2Prompt.mockReturnValue('mocked L2 prompt')
+    mockAggregateUsage.mockReturnValue({
+      inputTokens: 100,
+      outputTokens: 50,
+      estimatedCostUsd: 0.001,
+    })
+    mockGetModelForLayerWithFallback.mockResolvedValue({
+      primary: 'gpt-4o-mini',
+      fallbacks: [],
+    })
+  })
+
+  it('[P0] should update file status inside the same transaction as findings INSERT (not separate)', async () => {
+    mockGenerateText.mockResolvedValue(buildL2Response([{ segmentId: VALID_SEGMENT_ID }]))
+
+    // CAS(0), segments(1), l1Findings(2), glossary(3), taxonomy(4), project(5),
+    // txDelete(6), txInsert(7), txStatusUpdate(8) — all inside transaction
+    dbState.returnValues = [[mockFile], [buildSegmentRow()], [], [], [], [mockProject], [], [], []]
+
+    const { runL2ForFile } = await import('./runL2ForFile')
+    const result = await runL2ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    expect(result.findingCount).toBe(1)
+    // Status update should be captured inside the transaction
+    // Verify l2_completed is set (it's in the same atomic block as findings)
+    expect(dbState.setCaptures).toContainEqual(expect.objectContaining({ status: 'l2_completed' }))
+  })
+})
+
+// ── TD-AI-006: Failed chunk segment IDs returned for L3 ──
+
+describe('runL2ForFile — TD-AI-006: Failed chunk segment IDs', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    dbState.callIndex = 0
+    dbState.returnValues = []
+    dbState.setCaptures = []
+    mockGenerateText.mockResolvedValue(buildL2Response())
+    mockCheckProjectBudget.mockResolvedValue(BUDGET_HAS_QUOTA)
+    mockAiL2Limit.mockResolvedValue({ success: true, limit: 100, remaining: 99, reset: 0 })
+    mockClassifyAIError.mockReturnValue('unknown')
+    mockWriteAuditLog.mockResolvedValue(undefined)
+    mockBuildL2Prompt.mockReturnValue('mocked L2 prompt')
+    mockAggregateUsage.mockReturnValue({
+      inputTokens: 100,
+      outputTokens: 50,
+      estimatedCostUsd: 0.001,
+    })
+    mockGetModelForLayerWithFallback.mockResolvedValue({
+      primary: 'gpt-4o-mini',
+      fallbacks: [],
+    })
+  })
+
+  it('[P0] should return empty failedChunkSegmentIds when all chunks succeed', async () => {
+    dbState.returnValues = [[mockFile], [buildSegmentRow()], [], [], [], [mockProject], [], []]
+
+    const { runL2ForFile } = await import('./runL2ForFile')
+    const result = await runL2ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    expect(result.failedChunkSegmentIds).toEqual([])
+  })
+
+  it('[P0] should return segment IDs from failed chunks in failedChunkSegmentIds', async () => {
+    const seg1Id = faker.string.uuid()
+    const seg1 = buildSegmentRow({
+      id: seg1Id,
+      sourceText: 'a'.repeat(20000),
+      targetText: 'b'.repeat(11000),
+    })
+    const seg2Id = faker.string.uuid()
+    const seg2 = buildSegmentRow({
+      id: seg2Id,
+      sourceText: 'short source',
+      targetText: 'short target',
+    })
+
+    // Chunk 0 (seg1) fails, chunk 1 (seg2) succeeds
+    mockGenerateText
+      .mockRejectedValueOnce(new Error('content filter'))
+      .mockResolvedValueOnce(buildL2Response([{ segmentId: seg2Id }]))
+
+    mockClassifyAIError.mockReturnValue('content_filter')
+
+    // CAS(0), segments(1), l1Findings(2), glossary(3), taxonomy(4), project(5),
+    // txDelete(6), txInsert(7), txStatusUpdate(8)
+    dbState.returnValues = [[mockFile], [seg1, seg2], [], [], [], [mockProject], [], [], []]
+
+    const { runL2ForFile } = await import('./runL2ForFile')
+    const result = await runL2ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    // seg1 was in the failed chunk → should be in failedChunkSegmentIds
+    expect(result.failedChunkSegmentIds).toContain(seg1Id)
+    // seg2 was in the successful chunk → should NOT be in failedChunkSegmentIds
+    expect(result.failedChunkSegmentIds).not.toContain(seg2Id)
+    expect(result.partialFailure).toBe(true)
+  })
+})

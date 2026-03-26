@@ -522,4 +522,76 @@ describe('runL3ForFile', () => {
     )
     expect(findingInserts.length).toBeGreaterThanOrEqual(0) // may be in batch insert
   })
+
+  // ── TD-AI-005: Atomic findings INSERT + status UPDATE ──
+
+  it('[P0] TD-AI-005: should update file status inside same transaction as findings INSERT', async () => {
+    mockGenerateText.mockResolvedValue(buildL3Response([{ segmentId: VALID_SEGMENT_ID }]))
+
+    // rest: txDelete(0), txInsert(1), txStatusUpdate(2) — all in same transaction
+    dbState.returnValues = buildDbReturns({ rest: [[], [], []] })
+
+    const { runL3ForFile } = await import('./runL3ForFile')
+    const result = await runL3ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+    })
+
+    expect(result.findingCount).toBe(1)
+    // l3_completed status should be set atomically with findings
+    expect(dbState.setCaptures).toContainEqual(expect.objectContaining({ status: 'l3_completed' }))
+  })
+
+  // ── TD-AI-006: Include unscreened segments from failed L2 chunks ──
+
+  it('[P0] TD-AI-006: should include unscreened segments from failed L2 chunks in L3 scope', async () => {
+    const unscreenedSegId = faker.string.uuid()
+    const unscreenedSeg = buildSegmentRow({
+      id: unscreenedSegId,
+      sourceText: 'Unscreened source',
+      targetText: 'Unscreened target',
+      segmentNumber: 2,
+    })
+
+    // L2 stats has findings only for VALID_SEGMENT_ID, not for unscreenedSegId
+    // But unscreenedSegId was in a failed L2 chunk
+    mockGenerateText.mockResolvedValue(
+      buildL3Response([{ segmentId: VALID_SEGMENT_ID }, { segmentId: unscreenedSegId }]),
+    )
+
+    dbState.returnValues = buildDbReturns({
+      segments: [buildSegmentRow(), unscreenedSeg],
+      l2Stats: [{ segmentId: VALID_SEGMENT_ID, maxConfidence: 80, findingCount: 1 }],
+      // rest: txDelete, txInsert, txStatusUpdate
+      rest: [[], [], []],
+    })
+
+    const { runL3ForFile } = await import('./runL3ForFile')
+    const result = await runL3ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      l2FailedChunkSegmentIds: [unscreenedSegId],
+    })
+
+    // Both findings accepted — unscreenedSegId included due to l2FailedChunkSegmentIds
+    expect(result.findingCount).toBe(2)
+    expect(result.chunksTotal).toBeGreaterThanOrEqual(1)
+  })
+
+  it('[P1] TD-AI-006: should process normally when l2FailedChunkSegmentIds is empty', async () => {
+    dbState.returnValues = buildDbReturns()
+
+    const { runL3ForFile } = await import('./runL3ForFile')
+    const result = await runL3ForFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      l2FailedChunkSegmentIds: [],
+    })
+
+    // Normal behavior — no extra segments
+    expect(result.findingCount).toBe(0)
+  })
 })

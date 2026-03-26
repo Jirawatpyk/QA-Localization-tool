@@ -1,6 +1,6 @@
 # Story 4.6: Suppress False Positive Patterns
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -533,9 +533,35 @@ Claude Opus 4.6 (1M context)
 - **rls-policy-reviewer**: 0C/0H/1M/1L — M1 (INSERT role check = defense-in-depth, deferred), L1 (no RLS test, deferred)
 - **Conditional scans**: rls-policy-reviewer ran (schema changed). inngest-function-validator skipped (no pipeline changes)
 
+### CR Results
+- **CR R1:** 2C+8H+11M+5L → all fixed → `cf9a320`
+- **CR R2 (full re-review):** 0C+1H+11M+9L → all fixed → `c2b23bd`
+- **CR EXIT:** 0C + 0H — 2 rounds, target met
+
+#### CR R1 Key Fixes
+- C1: 24h stale session cleanup in getActiveSuppressions (AC6 Task 10.3)
+- C2: 3 missing server action test files (19 tests added)
+- H1: Immutable trackRejection/resetPatternCounter (new Map pattern for Zustand)
+- H2: serverUpdatedAt returned from createSuppressionRule for client store
+- H3: Admin nav tab added to layout.tsx
+- H4-H6: isAlreadySuppressed tests (10) + reject→pattern integration tests (4)
+- H7: UUID validation on deactivateSuppressionRule
+- H8: Nullable findingFileId guard with fallback
+
+#### CR R2 Key Fixes
+- H1: Vacuous feedback_events test assertion (flatten captures + guard)
+- M4: Runtime validation for scope/duration (SUPPRESSION_SCOPES/DURATIONS sets)
+- M5: Error UI for admin page
+- M11: Renamed trackRejectionInStore → setDetectedPattern (semantic accuracy)
+- L4: Cached Intl.Segmenter per locale
+- L8: File-switch guard for tracker writes post-await
+
 ### Change Log
 - 2026-03-17: Story 4.6 implementation complete — all 11 tasks done, 320/320 unit test files pass (3747 tests), 0 lint errors, 0 TS errors
 - 2026-03-17: E2E debugging — found + fixed 6 production bugs (PB-1 to PB-6). Root cause: auto-reject scope leaked across files, client store not synced. 8/8 E2E tests GREEN
+- 2026-03-17: CR R1 — fixed 2C+8H+11M+5L. Key: immutable tracker, server timestamps, missing tests, admin nav
+- 2026-03-17: CR R2 — fixed 0C+1H+11M+9L. Key: vacuous assertion, runtime validation, rename setDetectedPattern, Segmenter cache
+- 2026-03-17: CR EXIT 0C+0H — Story marked done
 
 ### File List
 **NEW:**
@@ -554,17 +580,29 @@ Claude Opus 4.6 (1M context)
 - src/db/migrations/meta/0013_snapshot.json
 - e2e/review-suppress-patterns.spec.ts (unskipped)
 
+**NEW (CR-C2 test files):**
+- src/features/review/actions/deactivateSuppressionRule.action.test.ts
+- src/features/review/actions/getSuppressionRules.action.test.ts
+- src/features/review/actions/getActiveSuppressions.action.test.ts
+
 **MODIFIED:**
 - src/db/schema/suppressionRules.ts (5 new columns)
 - src/db/schema/relations.ts (file FK relation)
-- src/features/review/types.ts (5 new types)
-- src/features/review/stores/review.store.ts (SuppressionSlice + FileState)
-- src/features/review/hooks/use-review-actions.ts (pattern detection + isAlreadySuppressed)
-- src/features/review/components/ReviewPageClient.tsx (toast, dialog, suppression load, session cleanup, PB-2 client sync, PB-3 clear fix)
+- src/features/review/types.ts (5 new types + SUPPRESSION_SCOPES/DURATIONS validation sets)
+- src/features/review/stores/review.store.ts (SuppressionSlice + FileState + rename setDetectedPattern)
+- src/features/review/hooks/use-review-actions.ts (pattern detection + isAlreadySuppressed + file-switch guard)
+- src/features/review/components/ReviewPageClient.tsx (toast, dialog, suppression load, session cleanup, server timestamp, ref sync)
 - src/features/review/components/FindingCard.tsx (PB-5: data-category attribute)
 - src/features/review/components/FindingCardCompact.tsx (PB-5: data-category attribute)
-- src/features/review/utils/pattern-detection.ts (PB-4: resetPatternCounter clears entries)
-- src/features/review/validation/suppressionRule.schema.ts (PB-1: currentFileId field)
-- src/features/review/actions/createSuppressionRule.action.ts (PB-1: currentFileId scoping, PB-6: findingFileId, autoRejectedIds return)
+- src/features/review/components/SuppressionRulesList.tsx (role="table", scope="col")
+- src/features/review/utils/pattern-detection.ts (immutable tracker, fileId guard, Segmenter cache)
+- src/features/review/validation/suppressionRule.schema.ts (currentFileId, .max() bounds)
+- src/features/review/actions/createSuppressionRule.action.ts (serverUpdatedAt, nullable guard)
+- src/features/review/actions/getActiveSuppressions.action.ts (24h stale cleanup, UUID validation, runtime validation)
+- src/features/review/actions/getSuppressionRules.action.ts (UUID validation, runtime validation)
+- src/features/review/actions/deactivateSuppressionRule.action.ts (UUID validation)
+- src/app/(app)/admin/layout.tsx (Suppression Rules nav tab)
+- src/app/api/deactivate-session-rules/route.ts (audit log)
 - src/features/pipeline/engine/checks/customRuleChecks.test.ts (new schema fields in factory)
 - src/features/pipeline/engine/ruleEngine.test.ts (new schema fields in factory)
+- e2e/review-search-filter.spec.ts (bulk selection assertion fix)

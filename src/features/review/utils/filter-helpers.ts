@@ -62,10 +62,13 @@ export function findingMatchesFilters(
       if (finding.status !== filterState.status) return false
     }
   }
-  // Layer: 'L1' = exact match, 'L2' = AI group (L2+L3) per AC1 "All/Rule-based/AI"
+  // Layer: 'L1' = Rule-based group (L1+Manual), 'L2' = AI group (L2+L3) per AC1 "All/Rule-based/AI"
+  // DG-1 fix: Manual findings are human-added (deterministic), grouped with Rule-based
   if (filterState.layer !== null) {
     if (filterState.layer === 'L2') {
       if (finding.detectedByLayer !== 'L2' && finding.detectedByLayer !== 'L3') return false
+    } else if (filterState.layer === 'L1') {
+      if (finding.detectedByLayer !== 'L1' && finding.detectedByLayer !== 'Manual') return false
     } else {
       if (finding.detectedByLayer !== filterState.layer) return false
     }

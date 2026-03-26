@@ -65,8 +65,10 @@ const handlerFn = async ({
     // Steps 5-6: Thorough mode — run L3 deep analysis + final score
     if (mode === 'thorough') {
       try {
+        // TD-AI-006: Pass failed chunk segment IDs from L2 → L3 as "unscreened"
+        const l2FailedChunkSegmentIds = l2Result.failedChunkSegmentIds ?? []
         const l3Raw = await step.run(`l3-analysis-${fileId}`, () =>
-          runL3ForFile({ fileId, projectId, tenantId, userId }),
+          runL3ForFile({ fileId, projectId, tenantId, userId, l2FailedChunkSegmentIds }),
         )
         l3Result = { findingCount: l3Raw.findingCount }
       } catch (l3Err) {
