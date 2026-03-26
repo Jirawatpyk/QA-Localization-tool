@@ -61,7 +61,9 @@ export async function crossFileConsistency(
     .select({ sourceTerm: glossaryTerms.sourceTerm, targetTerm: glossaryTerms.targetTerm })
     .from(glossaryTerms)
     .innerJoin(glossaries, eq(glossaryTerms.glossaryId, glossaries.id))
-    .where(withTenant(glossaries.tenantId, tenantId))
+    .where(
+      and(withTenant(glossaries.tenantId, tenantId), withTenant(glossaryTerms.tenantId, tenantId)),
+    )
 
   // Build glossary lookup: both source and target terms for exclusion (M3: spec requires both sides)
   const glossaryTermSet = new Set<string>()

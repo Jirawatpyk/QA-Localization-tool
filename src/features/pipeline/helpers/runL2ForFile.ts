@@ -212,7 +212,13 @@ export async function runL2ForFile({
       })
       .from(glossaryTerms)
       .innerJoin(glossaries, eq(glossaryTerms.glossaryId, glossaries.id))
-      .where(and(withTenant(glossaries.tenantId, tenantId), eq(glossaries.projectId, projectId)))
+      .where(
+        and(
+          withTenant(glossaries.tenantId, tenantId),
+          withTenant(glossaryTerms.tenantId, tenantId),
+          eq(glossaries.projectId, projectId),
+        ),
+      )
 
     // Step 4c: Load taxonomy categories (shared global — NO withTenant)
     const taxonomyRows = await db

@@ -39,14 +39,23 @@ export async function deleteTerm(termId: string): Promise<ActionResult<{ id: str
     })
     .from(glossaryTerms)
     .innerJoin(glossaries, eq(glossaryTerms.glossaryId, glossaries.id))
-    .where(and(eq(glossaryTerms.id, termId), withTenant(glossaries.tenantId, currentUser.tenantId)))
+    .where(
+      and(
+        eq(glossaryTerms.id, termId),
+        withTenant(glossaries.tenantId, currentUser.tenantId),
+        withTenant(glossaryTerms.tenantId, currentUser.tenantId),
+      ),
+    )
 
   if (!existing) {
     return { success: false, code: 'NOT_FOUND', error: 'Term not found' }
   }
 
-  // termId tenant-verified via glossaries JOIN + withTenant() above (line 42)
-  await db.delete(glossaryTerms).where(eq(glossaryTerms.id, termId))
+  await db
+    .delete(glossaryTerms)
+    .where(
+      and(eq(glossaryTerms.id, termId), withTenant(glossaryTerms.tenantId, currentUser.tenantId)),
+    )
 
   await writeAuditLog({
     tenantId: currentUser.tenantId,

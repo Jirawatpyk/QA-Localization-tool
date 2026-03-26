@@ -28,6 +28,7 @@ const testCtx = { segmentId: SEGMENT_ID, projectId: PROJECT_ID, tenantId: TENANT
 function buildTerm(
   overrides?: Partial<{
     id: string
+    tenantId: string
     glossaryId: string
     sourceTerm: string
     targetTerm: string
@@ -37,6 +38,7 @@ function buildTerm(
 ) {
   return {
     id: '00000000-0000-4000-8000-000000000010',
+    tenantId: TENANT_ID,
     glossaryId: GLOSSARY_ID,
     sourceTerm: 'hospital',
     targetTerm: 'โรงพยาบาล',

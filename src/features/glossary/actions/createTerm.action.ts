@@ -54,7 +54,6 @@ export async function createTerm(input: unknown): Promise<ActionResult<TermResul
   const normalizedSource = parsed.data.sourceTerm.trim().normalize('NFKC')
 
   // Check for duplicate source term (case-insensitive, SQL-level)
-  // glossaryTerms has no tenant_id — glossaryId tenant-verified via withTenant() above (line 45)
   const [existingDup] = await db
     .select({ id: glossaryTerms.id })
     .from(glossaryTerms)
@@ -62,6 +61,7 @@ export async function createTerm(input: unknown): Promise<ActionResult<TermResul
       and(
         eq(glossaryTerms.glossaryId, parsed.data.glossaryId),
         sql`lower(${glossaryTerms.sourceTerm}) = lower(${normalizedSource})`,
+        withTenant(glossaryTerms.tenantId, currentUser.tenantId),
       ),
     )
     .limit(1)
@@ -74,6 +74,7 @@ export async function createTerm(input: unknown): Promise<ActionResult<TermResul
     .insert(glossaryTerms)
     .values({
       glossaryId: parsed.data.glossaryId,
+      tenantId: currentUser.tenantId,
       sourceTerm: normalizedSource,
       targetTerm: parsed.data.targetTerm.trim().normalize('NFKC'),
       caseSensitive: parsed.data.caseSensitive,

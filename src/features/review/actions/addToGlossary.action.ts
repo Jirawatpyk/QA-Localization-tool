@@ -122,7 +122,7 @@ export async function addToGlossary(input: unknown): Promise<ActionResult<AddToG
   }
 
   // Duplicate detection: case-insensitive exact match via SQL lower()
-  // Defense-in-depth: innerJoin glossaries + withTenant() (glossaryTerms has no tenant_id)
+  // Defense-in-depth: withTenant on both glossaries AND glossaryTerms
   const [existingDup] = await db
     .select({ id: glossaryTerms.id, targetTerm: glossaryTerms.targetTerm })
     .from(glossaryTerms)
@@ -132,6 +132,7 @@ export async function addToGlossary(input: unknown): Promise<ActionResult<AddToG
         eq(glossaryTerms.glossaryId, glossaryId),
         sql`lower(${glossaryTerms.sourceTerm}) = lower(${normalizedSource})`,
         withTenant(glossaries.tenantId, currentUser.tenantId),
+        withTenant(glossaryTerms.tenantId, currentUser.tenantId),
       ),
     )
     .limit(1)
@@ -155,6 +156,7 @@ export async function addToGlossary(input: unknown): Promise<ActionResult<AddToG
       .insert(glossaryTerms)
       .values({
         glossaryId,
+        tenantId: currentUser.tenantId,
         sourceTerm: normalizedSource,
         targetTerm: normalizedTarget,
         caseSensitive: caseSensitive ?? false,
@@ -178,6 +180,7 @@ export async function addToGlossary(input: unknown): Promise<ActionResult<AddToG
             eq(glossaryTerms.glossaryId, glossaryId),
             sql`lower(${glossaryTerms.sourceTerm}) = lower(${normalizedSource})`,
             withTenant(glossaries.tenantId, currentUser.tenantId),
+            withTenant(glossaryTerms.tenantId, currentUser.tenantId),
           ),
         )
         .limit(1)

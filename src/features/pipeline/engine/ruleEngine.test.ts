@@ -351,6 +351,7 @@ describe('processFile', () => {
     const glossaryTerms: GlossaryTermRecord[] = [
       {
         id: 'term-1',
+        tenantId: '00000000-0000-4000-8000-000000000001',
         glossaryId: 'g-1',
         sourceTerm: 'database',
         targetTerm: 'ฐานข้อมูล',

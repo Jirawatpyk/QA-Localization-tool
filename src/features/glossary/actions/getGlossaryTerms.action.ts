@@ -46,7 +46,12 @@ export async function getGlossaryTerms(glossaryId: string): Promise<ActionResult
   const terms = await db
     .select()
     .from(glossaryTerms)
-    .where(eq(glossaryTerms.glossaryId, glossaryId))
+    .where(
+      and(
+        eq(glossaryTerms.glossaryId, glossaryId),
+        withTenant(glossaryTerms.tenantId, currentUser.tenantId),
+      ),
+    )
 
   return {
     success: true,

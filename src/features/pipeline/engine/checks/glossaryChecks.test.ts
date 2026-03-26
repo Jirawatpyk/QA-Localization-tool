@@ -17,6 +17,7 @@ const TERM_UUID_2 = 'a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d'
 function makeGlossaryTerm(id: string, sourceTerm: string, targetTerm: string): GlossaryTermRecord {
   return {
     id,
+    tenantId: '00000000-0000-4000-8000-000000000001',
     glossaryId: GLOSSARY_UUID,
     sourceTerm,
     targetTerm,
@@ -168,6 +169,7 @@ describe('checkGlossaryComplianceRule', () => {
     })
     const term: GlossaryTermRecord = {
       id: TERM_UUID_1,
+      tenantId: '00000000-0000-4000-8000-000000000001',
       glossaryId: GLOSSARY_UUID,
       sourceTerm: 'Database',
       targetTerm: 'ฐานข้อมูล',
@@ -192,6 +194,7 @@ describe('TA: Coverage Gap Tests — glossaryChecks', () => {
       .mockResolvedValue({ matches: [], missingTerms: [], lowConfidenceMatches: [] })
     const term = {
       id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
+      tenantId: '00000000-0000-4000-8000-000000000001',
       glossaryId: 'b2c3d4e5-f6a1-4b2c-9d3e-4f5a6b7c8d9e',
       sourceTerm: '',
       targetTerm: 'anything',
@@ -213,6 +216,7 @@ describe('TA: Coverage Gap Tests — glossaryChecks', () => {
       .mockResolvedValue({ matches: [], missingTerms: [], lowConfidenceMatches: [] })
     const terms = Array.from({ length: 500 }, (_, i) => ({
       id: `a1b2c3d4-e5f6-4a1b-8c2d-${String(i).padStart(12, '0')}`,
+      tenantId: '00000000-0000-4000-8000-000000000001',
       glossaryId: 'b2c3d4e5-f6a1-4b2c-9d3e-4f5a6b7c8d9e',
       sourceTerm: `term_${i}`,
       targetTerm: `คำ_${i}`,
@@ -241,6 +245,7 @@ describe('TA: Coverage Gap Tests — glossaryChecks', () => {
       .mockResolvedValue({ matches: [], missingTerms: [], lowConfidenceMatches: [] })
     const term = {
       id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
+      tenantId: '00000000-0000-4000-8000-000000000001',
       glossaryId: 'b2c3d4e5-f6a1-4b2c-9d3e-4f5a6b7c8d9e',
       sourceTerm: 'find',
       targetTerm: 'ค้นหา',

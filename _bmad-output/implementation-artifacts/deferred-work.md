@@ -17,9 +17,9 @@
 - Add per-tenant user quota (e.g., max users per plan tier)
 - New feature, requires schema + enforcement logic
 
-### Goal A Full — Architectural Tenant Isolation (Findings #1, #6)
-- #1: Type-safe query builder requiring tenant context (compile-time enforcement)
-- #6: Denormalize tenant_id into glossaryTerms table for independent isolation
+### ~~Goal A Full — Architectural Tenant Isolation (Findings #1, #6)~~ ✅ DONE (2026-03-26)
+- #1: ✅ DONE — Branded `TenantId` type enforces compile-time safety on `withTenant()` (commit `473f50e`, 69 files)
+- #6: ✅ DONE — Denormalized tenant_id into glossaryTerms table + RLS + withTenant on all 15 query sites
 
 ### Goal C Remaining — Account Lockout (Finding #12)
 - Per-account lockout after N failed login attempts (distributed IP protection)

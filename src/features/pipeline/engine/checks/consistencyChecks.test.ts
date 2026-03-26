@@ -212,6 +212,7 @@ describe('checkSameTargetDiffSource', () => {
 describe('checkKeyTermConsistency', () => {
   const makeGlossaryTerm = (sourceTerm: string, targetTerm: string): GlossaryTermRecord => ({
     id: 'term-1',
+    tenantId: '00000000-0000-4000-8000-000000000001',
     glossaryId: 'glossary-1',
     sourceTerm,
     targetTerm,
@@ -301,6 +302,7 @@ describe('checkKeyTermConsistency', () => {
   it('should match source term with exact case when caseSensitive is true', () => {
     const term: GlossaryTermRecord = {
       id: 'term-cs-1',
+      tenantId: '00000000-0000-4000-8000-000000000001',
       glossaryId: 'glossary-1',
       sourceTerm: 'Database',
       targetTerm: 'ฐานข้อมูล',
@@ -321,6 +323,7 @@ describe('checkKeyTermConsistency', () => {
   it('should NOT match source when case differs and caseSensitive is true', () => {
     const term: GlossaryTermRecord = {
       id: 'term-cs-2',
+      tenantId: '00000000-0000-4000-8000-000000000001',
       glossaryId: 'glossary-1',
       sourceTerm: 'Database',
       targetTerm: 'ฐานข้อมูล',
@@ -339,6 +342,7 @@ describe('checkKeyTermConsistency', () => {
   it('should apply caseSensitive target match when caseSensitive is true', () => {
     const term: GlossaryTermRecord = {
       id: 'term-cs-3',
+      tenantId: '00000000-0000-4000-8000-000000000001',
       glossaryId: 'glossary-1',
       sourceTerm: 'API',
       targetTerm: 'เอพีไอ',

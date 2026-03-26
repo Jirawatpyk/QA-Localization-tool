@@ -44,7 +44,13 @@ export async function updateGlossaryTerm(input: unknown): Promise<ActionResult<U
     })
     .from(glossaryTerms)
     .innerJoin(glossaries, eq(glossaryTerms.glossaryId, glossaries.id))
-    .where(and(eq(glossaryTerms.id, termId), withTenant(glossaries.tenantId, currentUser.tenantId)))
+    .where(
+      and(
+        eq(glossaryTerms.id, termId),
+        withTenant(glossaries.tenantId, currentUser.tenantId),
+        withTenant(glossaryTerms.tenantId, currentUser.tenantId),
+      ),
+    )
     .limit(1)
 
   if (!existingTerm) {
@@ -57,7 +63,13 @@ export async function updateGlossaryTerm(input: unknown): Promise<ActionResult<U
   const [updated] = await db
     .update(glossaryTerms)
     .set({ targetTerm: normalizedTarget })
-    .where(and(eq(glossaryTerms.id, termId), eq(glossaryTerms.glossaryId, existingTerm.glossaryId)))
+    .where(
+      and(
+        eq(glossaryTerms.id, termId),
+        eq(glossaryTerms.glossaryId, existingTerm.glossaryId),
+        withTenant(glossaryTerms.tenantId, currentUser.tenantId),
+      ),
+    )
     .returning()
 
   if (!updated) {

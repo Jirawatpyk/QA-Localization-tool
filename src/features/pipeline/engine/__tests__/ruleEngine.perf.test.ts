@@ -116,6 +116,7 @@ describe('ruleEngine NFR2 Performance', () => {
       const segments = buildPerfSegments(5000)
       const glossaryTerms: GlossaryTermRecord[] = Array.from({ length: 100 }, (_, i) => ({
         id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
+        tenantId: '00000000-0000-4000-8000-000000000001',
         glossaryId: '00000000-0000-4000-8000-100000000000',
         sourceTerm: `term${i}`,
         targetTerm: `คำศัพท์${i}`,

@@ -30,7 +30,12 @@ export async function getCachedGlossaryTerms(projectId: string, tenantId: Tenant
   const terms = await db
     .select()
     .from(glossaryTerms)
-    .where(inArray(glossaryTerms.glossaryId, glossaryIds))
+    .where(
+      and(
+        inArray(glossaryTerms.glossaryId, glossaryIds),
+        withTenant(glossaryTerms.tenantId, tenantId),
+      ),
+    )
 
   return terms
 }
@@ -47,6 +52,7 @@ export async function getGlossaryTerms(
   return await db
     .select({
       id: glossaryTerms.id,
+      tenantId: glossaryTerms.tenantId,
       glossaryId: glossaryTerms.glossaryId,
       sourceTerm: glossaryTerms.sourceTerm,
       targetTerm: glossaryTerms.targetTerm,
@@ -55,7 +61,13 @@ export async function getGlossaryTerms(
     })
     .from(glossaryTerms)
     .innerJoin(glossaries, eq(glossaryTerms.glossaryId, glossaries.id))
-    .where(and(eq(glossaries.projectId, projectId), withTenant(glossaries.tenantId, tenantId)))
+    .where(
+      and(
+        eq(glossaries.projectId, projectId),
+        withTenant(glossaries.tenantId, tenantId),
+        withTenant(glossaryTerms.tenantId, tenantId),
+      ),
+    )
 }
 
 /**

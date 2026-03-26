@@ -337,7 +337,6 @@ export async function runL3ForFile({
     })
 
     // Step 4c: Load glossary terms for prompt context
-    // glossaryTerms has no tenantId — JOIN through glossaries (established pattern from glossaryCache.ts)
     const glossaryRows = await db
       .select({
         sourceTerm: glossaryTerms.sourceTerm,
@@ -346,7 +345,13 @@ export async function runL3ForFile({
       })
       .from(glossaryTerms)
       .innerJoin(glossaries, eq(glossaryTerms.glossaryId, glossaries.id))
-      .where(and(withTenant(glossaries.tenantId, tenantId), eq(glossaries.projectId, projectId)))
+      .where(
+        and(
+          withTenant(glossaries.tenantId, tenantId),
+          withTenant(glossaryTerms.tenantId, tenantId),
+          eq(glossaries.projectId, projectId),
+        ),
+      )
 
     // Step 4d: Load taxonomy categories
     // No withTenant() — taxonomyDefinitions is a global table with no tenant_id column (ERD 1.9)

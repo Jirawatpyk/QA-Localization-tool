@@ -56,7 +56,13 @@ export async function updateTerm(
     })
     .from(glossaryTerms)
     .innerJoin(glossaries, eq(glossaryTerms.glossaryId, glossaries.id))
-    .where(and(eq(glossaryTerms.id, termId), withTenant(glossaries.tenantId, currentUser.tenantId)))
+    .where(
+      and(
+        eq(glossaryTerms.id, termId),
+        withTenant(glossaries.tenantId, currentUser.tenantId),
+        withTenant(glossaryTerms.tenantId, currentUser.tenantId),
+      ),
+    )
 
   if (!existing) {
     return { success: false, code: 'NOT_FOUND', error: 'Term not found' }
@@ -75,7 +81,6 @@ export async function updateTerm(
   }
 
   // Check for duplicate source term when sourceTerm is being changed (case-insensitive, exclude self)
-  // glossaryTerms has no tenant_id — existing.glossaryId tenant-verified via JOIN + withTenant() above (line 59)
   if (updateValues['sourceTerm']) {
     const [existingDup] = await db
       .select({ id: glossaryTerms.id })
@@ -85,6 +90,7 @@ export async function updateTerm(
           eq(glossaryTerms.glossaryId, existing.glossaryId),
           sql`lower(${glossaryTerms.sourceTerm}) = lower(${updateValues['sourceTerm'] as string})`,
           sql`${glossaryTerms.id} != ${termId}`,
+          withTenant(glossaryTerms.tenantId, currentUser.tenantId),
         ),
       )
       .limit(1)
@@ -94,11 +100,12 @@ export async function updateTerm(
     }
   }
 
-  // termId tenant-verified via glossaries JOIN + withTenant() above (line 59)
   const [updated] = await db
     .update(glossaryTerms)
     .set(updateValues)
-    .where(eq(glossaryTerms.id, termId))
+    .where(
+      and(eq(glossaryTerms.id, termId), withTenant(glossaryTerms.tenantId, currentUser.tenantId)),
+    )
     .returning()
 
   if (!updated) {

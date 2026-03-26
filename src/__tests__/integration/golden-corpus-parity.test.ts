@@ -154,6 +154,7 @@ async function readXbenchReport(filePath: string): Promise<{
         if (termMatch) {
           glossaryTerms.push({
             id: faker.string.uuid(),
+            tenantId: faker.string.uuid(),
             glossaryId,
             sourceTerm: termMatch[1]!.trim(),
             targetTerm: termMatch[2]!.trim(),

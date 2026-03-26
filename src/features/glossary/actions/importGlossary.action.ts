@@ -127,6 +127,7 @@ export async function importGlossary(formData: FormData): Promise<ActionResult<I
   for (let i = 0; i < uniqueTerms.length; i += BATCH_SIZE) {
     const batch = uniqueTerms.slice(i, i + BATCH_SIZE).map((term) => ({
       glossaryId: glossary.id,
+      tenantId: currentUser.tenantId,
       sourceTerm: term.sourceTerm,
       targetTerm: term.targetTerm,
     }))
