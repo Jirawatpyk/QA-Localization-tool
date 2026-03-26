@@ -127,7 +127,7 @@ development_status:
   4-5-search-filter-ai-layer-toggle: done
   4-6-suppress-false-positive-patterns: done
   4-7-add-to-glossary-from-review: done
-  4-8-accessibility-integration-verification: review
+  4-8-accessibility-integration-verification: done
   epic-4-retrospective: optional
 
   # ============================================================

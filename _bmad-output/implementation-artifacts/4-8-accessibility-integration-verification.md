@@ -1,6 +1,6 @@
 # Story 4.8: Accessibility & Integration Verification
 
-Status: review
+Status: done
 
 ## Story
 
