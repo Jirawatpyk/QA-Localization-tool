@@ -21,7 +21,7 @@ import { l2OutputSchema } from '@/features/pipeline/schemas/l2-output'
 import { checkProjectBudget } from '@/lib/ai/budget'
 import { getModelById } from '@/lib/ai/client'
 import { aggregateUsage, estimateCost, logAIUsage } from '@/lib/ai/costs'
-import { classifyAIError } from '@/lib/ai/errors'
+import { AIRateLimitExceededError, classifyAIError } from '@/lib/ai/errors'
 import { callWithFallback } from '@/lib/ai/fallbackRunner'
 import { getModelForLayerWithFallback } from '@/lib/ai/providers'
 import type { AIUsageRecord, ChunkResult } from '@/lib/ai/types'
@@ -131,9 +131,21 @@ export async function runL2ForFile({
 
   try {
     // Step 2a: Per-project L2 rate limit (retriable — Inngest retries with backoff)
-    const { success: rateLimitAllowed } = await aiL2ProjectLimiter.limit(projectId)
-    if (!rateLimitAllowed) {
-      throw new Error('L2 analysis queue full for this project. Resuming shortly.')
+    // Fail-open: if Redis is unreachable, log warning and proceed (infra issue ≠ file failure)
+    try {
+      const { success: rateLimitAllowed } = await aiL2ProjectLimiter.limit(projectId)
+      if (!rateLimitAllowed) {
+        throw new AIRateLimitExceededError('L2', projectId)
+      }
+    } catch (rateLimitErr) {
+      if (rateLimitErr instanceof AIRateLimitExceededError) {
+        throw rateLimitErr // genuine rate limit → let Inngest retry
+      }
+      // Redis/infra error → fail-open with warning
+      logger.warn(
+        { err: rateLimitErr, fileId, projectId },
+        'L2 rate limiter unavailable — proceeding (fail-open)',
+      )
     }
 
     // Step 2b: Budget guard (Guardrail #22)
@@ -432,6 +444,25 @@ export async function runL2ForFile({
         { fileId, droppedByInvalidSegmentId, droppedByInvalidCategory },
         'L2 findings dropped during validation',
       )
+    }
+
+    // Guardrail #47: Fail loud if excessive findings dropped (> 30% = likely AI hallucination)
+    const totalRawFindings =
+      allFindings.length + droppedByInvalidSegmentId + droppedByInvalidCategory
+    if (totalRawFindings > 0) {
+      const dropRate = (droppedByInvalidSegmentId + droppedByInvalidCategory) / totalRawFindings
+      if (dropRate > 0.3) {
+        logger.error(
+          {
+            fileId,
+            dropRate,
+            droppedByInvalidSegmentId,
+            droppedByInvalidCategory,
+            totalRawFindings,
+          },
+          'L2 findings drop rate exceeds 30% — possible AI hallucination or prompt issue',
+        )
+      }
     }
 
     // Step 8: Map to DB inserts (enrich with excerpts from loaded segments)

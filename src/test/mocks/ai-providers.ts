@@ -156,6 +156,12 @@ export function createAIMock(options?: AIMockOptions): AIMockResult {
     },
     aiErrors: {
       classifyAIError: (...args: unknown[]) => mockClassifyAIError(...args),
+      AIRateLimitExceededError: class AIRateLimitExceededError extends Error {
+        constructor(layer: string, projectId: string) {
+          super(`${layer} analysis queue full for project ${projectId}. Resuming shortly.`)
+          this.name = 'AIRateLimitExceededError'
+        }
+      },
     },
     aiFallbackRunner: {
       callWithFallback: (...args: unknown[]) => mockCallWithFallback(...args),

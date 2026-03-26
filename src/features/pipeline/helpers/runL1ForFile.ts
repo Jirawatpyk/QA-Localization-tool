@@ -115,7 +115,7 @@ export async function runL1ForFile({
       segmentCount: 1,
     }))
 
-    // Delete existing L1 findings + batch-insert new findings (idempotent re-run)
+    // Atomic: DELETE old findings + INSERT new findings + UPDATE file status (TD-AI-005 parity with L2/L3)
     await db.transaction(async (tx) => {
       await tx
         .delete(findings)
@@ -131,18 +131,18 @@ export async function runL1ForFile({
         const batch = findingInserts.slice(i, i + FINDING_BATCH_SIZE)
         await tx.insert(findings).values(batch)
       }
+
+      // Status update inside transaction — crash between findings and status is no longer possible
+      await tx
+        .update(files)
+        .set({ status: 'l1_completed', updatedAt: new Date() })
+        .where(and(withTenant(files.tenantId, tenantId), eq(files.id, fileId)))
     })
 
     // Severity counts for audit
     const criticalCount = results.filter((r) => r.severity === 'critical').length
     const majorCount = results.filter((r) => r.severity === 'major').length
     const minorCount = results.filter((r) => r.severity === 'minor').length
-
-    // Update file status to l1_completed (before audit — audit failure must not revert findings)
-    await db
-      .update(files)
-      .set({ status: 'l1_completed', updatedAt: new Date() })
-      .where(and(withTenant(files.tenantId, tenantId), eq(files.id, fileId)))
 
     // Write audit log (non-fatal — findings + status already committed)
     try {

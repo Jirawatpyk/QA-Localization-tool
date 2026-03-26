@@ -39,6 +39,8 @@ type RetryEvent = {
     userId: string
     layersToRetry: PipelineLayer[]
     mode: ProcessingMode
+    /** CR-C1: L2 failed chunk segment IDs from original run — forwarded to L3 as "unscreened" */
+    l2FailedChunkSegmentIds?: string[]
   }
 }
 
@@ -90,6 +92,10 @@ const handlerFn = async ({ event, step }: { event: RetryEvent; step: StepApi }) 
   const retryL2 = layersToRetry.includes('L2')
   const retryL3 = layersToRetry.includes('L3')
   let lastCompletedLayer: 'L1' | 'L1L2' | 'L1L2L3' = retryL2 ? 'L1' : 'L1L2'
+  // CR-C1 fix: when L2 is not retried, use forwarded IDs from event data (TD-AI-006)
+  let l2FailedChunkSegmentIds: string[] = retryL2
+    ? [] // Will be populated from L2 result below
+    : (event.data.l2FailedChunkSegmentIds ?? [])
 
   // Try-catch at handler level (NOT inside step.run) per Inngest guardrail
   try {
@@ -100,7 +106,7 @@ const handlerFn = async ({ event, step }: { event: RetryEvent; step: StepApi }) 
       // memoized steps are replayed from cache (NOT re-executed). If reset and L2
       // were separate steps, the reset would NOT re-execute on retry, leaving status
       // as 'failed' → CAS guard always fails. Merging ensures reset runs on every retry.
-      await step.run(`retry-l2-${fileId}`, async () => {
+      const l2Result = await step.run(`retry-l2-${fileId}`, async () => {
         await db
           .update(files)
           .set({ status: 'l1_completed', updatedAt: new Date() })
@@ -108,6 +114,9 @@ const handlerFn = async ({ event, step }: { event: RetryEvent; step: StepApi }) 
 
         return runL2ForFile({ fileId, projectId, tenantId, userId })
       })
+
+      // CR-C2: capture failed chunk segment IDs for L3 (TD-AI-006 parity with processFile.ts)
+      l2FailedChunkSegmentIds = l2Result.failedChunkSegmentIds
 
       // Score after L2
       await step.run(`score-retry-l2-${fileId}`, () =>
@@ -126,7 +135,7 @@ const handlerFn = async ({ event, step }: { event: RetryEvent; step: StepApi }) 
           .set({ status: 'l2_completed', updatedAt: new Date() })
           .where(and(withTenant(files.tenantId, tenantId), eq(files.id, fileId)))
 
-        return runL3ForFile({ fileId, projectId, tenantId, userId })
+        return runL3ForFile({ fileId, projectId, tenantId, userId, l2FailedChunkSegmentIds })
       })
 
       // Score after L3

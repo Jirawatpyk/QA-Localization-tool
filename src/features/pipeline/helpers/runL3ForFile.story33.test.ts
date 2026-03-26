@@ -892,30 +892,24 @@ describe('runL3ForFile — Story 3.3: Selective Filtering & Context', () => {
     expect(result.findingCount).toBe(0)
   })
 
-  it('[P1] should use fallback project context when project row not found', async () => {
+  it('[P1] should throw NonRetriableError when project not found (CR-M3 guard)', async () => {
     const segId = faker.string.uuid()
     const seg = buildSegmentRow({ id: segId, segmentNumber: 1, sourceLang: 'ja', targetLang: 'en' })
 
     dbState.returnValues = buildDbReturns({
       segments: [seg],
       l2Stats: [{ segmentId: segId, maxConfidence: 80, findingCount: 1 }],
-      project: [], // No project found — triggers fallback
+      project: [], // No project found → NonRetriableError (parity with L2)
     })
 
     const { runL3ForFile } = await import('./runL3ForFile')
-    await runL3ForFile({
-      fileId: VALID_FILE_ID,
-      projectId: VALID_PROJECT_ID,
-      tenantId: VALID_TENANT_ID,
-    })
-
-    // Should still call buildL3Prompt with fallback project
-    expect(mockBuildL3Prompt).toHaveBeenCalledTimes(1)
-    const promptInput = mockBuildL3Prompt.mock.calls[0]?.[0] as {
-      project: { name: string; processingMode: string }
-    }
-    expect(promptInput.project.name).toBe('Unknown')
-    expect(promptInput.project.processingMode).toBe('thorough')
+    await expect(
+      runL3ForFile({
+        fileId: VALID_FILE_ID,
+        projectId: VALID_PROJECT_ID,
+        tenantId: VALID_TENANT_ID,
+      }),
+    ).rejects.toThrow('Project not found')
   })
 
   it('[P1] should throw and set file status to failed on unexpected error', async () => {
@@ -945,11 +939,22 @@ describe('runL3ForFile — Story 3.3: Selective Filtering & Context', () => {
       targetLang: '',
     })
 
-    dbState.returnValues = buildDbReturns({
-      segments: [seg],
-      l2Stats: [{ segmentId: segId, maxConfidence: 80, findingCount: 1 }],
-      langConfig: [], // no config found for empty langs
-    })
+    // When sourceLang/targetLang are empty, deriveLanguagePair returns null → langConfig query SKIPPED.
+    // buildDbReturns positions shift by -1 after langConfig. We must NOT include langConfig in overrides
+    // because the query never runs. Instead we provide a custom returnValues array matching actual call order:
+    // [0] CAS file, [1] segments, [2] priorFindings, [3] l2Stats, [4] glossary, [5] taxonomy, [6] project, [7+] rest
+    dbState.returnValues = [
+      [mockFile], // CAS update
+      [seg], // segments
+      [], // priorFindings
+      [{ segmentId: segId, maxConfidence: 80, findingCount: 1 }], // l2Stats
+      // langConfig SKIPPED — deriveLanguagePair('', '') returns null
+      [], // glossary
+      [], // taxonomy
+      [defaultProject], // project
+      [], // transaction (DELETE+INSERT+UPDATE+confirm/contradict)
+      [], // rest
+    ]
 
     const { runL3ForFile } = await import('./runL3ForFile')
     await runL3ForFile({

@@ -1,7 +1,7 @@
 # Tech Debt Tracker
 
 **Created:** 2026-02-25 (post Story 2.7 CR R4)
-**Last Verified:** 2026-03-26 (Epic 4 completion audit — TD-AI-005/006 resolved, all items verified)
+**Last Verified:** 2026-03-26 (DEFERRED target audit — Guardrail #23 compliance: all vague/stale targets re-assigned to specific Story IDs or Epic+Story)
 **Source:** Cross-referenced from agent memory (anti-pattern-detector, code-quality-analyzer, tenant-isolation-checker, testing-qa-expert, inngest-function-validator)
 
 ---
@@ -67,7 +67,7 @@
 - **Mitigation:** Notes persisted in audit trail for traceability; glossary management can reconstruct from audit log
 - **Fix:** `ALTER TABLE glossary_terms ADD COLUMN notes TEXT` + update createTerm/addToGlossary actions
 - **Origin:** Story 4.7 Dev Notes — schema change deferred to avoid migration in review workflow story
-- **Status:** DEFERRED → **Epic 5+ — Glossary Enhancements** (notes column adds value only when glossary management UI shows notes)
+- **Status:** DEFERRED → **Epic 8 — Story 8.1** (reporting/export needs glossary notes; notes column adds value only when glossary management UI shows notes)
 
 ---
 
@@ -116,8 +116,8 @@
 - **Fix:** Replace `toLowerCase()` with `caseFold()` function that handles ß→ss, İ→i with position mapping infrastructure (folded text → original position map array). Approach: build `{ folded: string, posMap: number[] }` since case folding can change string length. Estimated effort: 4-6 hours
 - **Research:** `Intl.Collator` sliding window won't work (ß expands 1→2 chars, window size mismatch). Manual position-mapped case folding is the correct approach
 - **Origin:** Story 1.5 TA Run 15, FMEA finding + Party Mode discussion (2026-03-09)
-- **Target:** Epic 5 — Multi-language Quality Expansion (German/Turkish glossary + QA workflow ยังไม่มี)
-- **Status:** DEFERRED → Epic 5
+- **Target:** Story 5.1 — Language Bridge (German/Turkish glossary + QA workflow ยังไม่มี)
+- **Status:** DEFERRED → **Story 5.1** (Language Bridge handles multi-language text; Unicode case folding needed for German/Turkish glossary)
 
 ### TD-CODE-003: getFileHistory fetches ALL files + JS filter/paginate
 - **Severity:** Medium
@@ -313,7 +313,7 @@
 - **Risk:** Review panel doesn't exist yet (Epic 4) — legitimate skip but no TD entry
 - **Fix:** Implement when Epic 4 review infrastructure is built
 - **Origin:** Epic 1 skeleton, identified during full scan (2026-03-02)
-- **Status:** DEFERRED → **Story 4.0 — Review Infrastructure Setup** (unskip + implement review score E2E)
+- **Status:** RESOLVED (2026-03-26 — Story 4.0 implemented review score E2E tests in `e2e/review-score.spec.ts`; original placeholder stub replaced with real tests. Suite-level env guard `test.skip(!process.env.INNGEST_DEV_URL)` is operational, not a real skip.)
 
 ### TD-CODE-006: console.warn in glossary-matching-real-data.test.ts
 - **Severity:** Low
@@ -358,7 +358,7 @@
 - **File:** `src/features/batch/actions/getFileHistory.action.ts:95`
 - **Fix:** Join audit_logs (review actions) + auth.users for actual reviewer name. Story 4.2 creates the audit trail entries but getFileHistory JOIN is a batch/dashboard concern.
 - **Origin:** Story 2.7, identified during TODO scan (2026-03-02)
-- **Status:** DEFERRED → **Story 4.3 or Epic 5** (audit trail data now exists from Story 4.2; JOIN query is dashboard feature scope)
+- **Status:** RESOLVED (2026-03-26) — Added Query 3: review_actions INNER JOIN users, ordered DESC by createdAt, picks most recent reviewer per file. Guardrail #5 respected (skip inArray when fileIds empty). 16 unit tests pass.
 
 ### TD-UX-003: File selection UI before processing — all files auto-selected
 - **Severity:** Low
@@ -366,7 +366,7 @@
 - **File:** `src/features/upload/components/UploadPageClient.tsx` (Story 3.2b5 wired ProcessingModeDialog → fileIds = all parsed files)
 - **Fix:** เพิ่ม checkbox per file ให้ user เลือก/ยกเลิกก่อนกด "Start Processing" — filter `fileIds` ก่อนส่งให้ `ProcessingModeDialog`
 - **Origin:** Story 3.2b5 scope boundary, identified during story review (2026-03-02)
-- **Status:** DEFERRED → **Epic 4 — Review & Decision Workflow** (file selection is pre-review UX; create story "4.x: File Selection Before Processing" during Epic 4 sprint planning)
+- **Status:** DEFERRED → **Epic 6 — Story 6.1** (file assignment; file selection before processing is pre-review UX that belongs in batch processing workflow)
 
 ### ~~TD-E2E-008: Pipeline E2E tests skipped in CI — no Inngest/AI infra~~
 - **Status:** RESOLVED (2026-03-02) — All secrets wired (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `INNGEST_*`, `UPSTASH_*`). Inngest dev server added as background service in `e2e-gate.yml`. `INNGEST_DEV_URL` env var set. Skip condition `!process.env.INNGEST_DEV_URL` now passes in CI. Pipeline E2E runs fully.
@@ -422,7 +422,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Phase:** CR
 - **Severity:** Medium
 - **Description:** `getFileHistory.action.ts` fetches up to 10K files with QUERY_HARD_CAP then filters and paginates in JavaScript. Should use SQL LIMIT/OFFSET + WHERE for server-side pagination to reduce memory usage on large projects.
-- **Status:** DEFERRED → Epic 5 (Dashboard & Reporting — performance optimization)
+- **Status:** DEFERRED → **Epic 8 — Story 8.1** (reporting dashboard optimization; server-side pagination needed for large project file history)
 
 ### TD-BATCH-002: Hardcoded auto_pass_threshold fallback (95)
 - **Date:** 2026-03-03
@@ -467,7 +467,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Low
 - **File:** `e2e/pipeline-resilience.spec.ts:11`
 - **Description:** E2E spec uses PostgREST seeding to simulate `ai_partial` status. Real fallback failure injection (chaos testing) is impractical in standard E2E. A dedicated chaos-test workflow could inject provider errors to validate actual fallback chain behavior end-to-end.
-- **Status:** DEFERRED → **Weekly chaos-test workflow** (CI `chaos-test.yml` already runs weekly; add fallback failure scenario there)
+- **Status:** DEFERRED → **Epic 9 — Story 9.1** (AI reliability tracking; add fallback failure chaos scenario to weekly CI `chaos-test.yml`)
 
 ### TD-PARITY-001: Redundant in-memory filter after query fileId fix
 - **Date:** 2026-03-03
@@ -483,7 +483,6 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 
 ### ~~TD-PIPE-005: L3 chunk total failure silently loses findings~~
 - **Status:** RESOLVED (2026-03-07) — Story 3.4: (1) `callWithFallback()` retries with fallback models per chunk before failing, (2) file status set to `ai_partial` (not `l3_completed`) when chunks fail after fallback exhaustion, (3) ReviewPageClient shows "Deep analysis unavailable — showing screening results" warning banner + ScoreBadge `'partial'` state
-- **Status:** DEFERRED → **Story 3.4 — AI Resilience, Fallback & Retry**
 
 ### TD-REVIEW-001: getFileReviewData Q4 JOIN matches sourceLang only
 - **Date:** 2026-03-03
@@ -546,7 +545,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Low
 - **File:** `e2e/review-keyboard.spec.ts` — test F5e
 - **Description:** E2E test for Esc key hierarchy (dropdown inside Sheet closes before Sheet) is skipped because FindingDetailSheet has no interactive dropdowns yet. Story 4.2 added action buttons (not dropdowns) inside Sheet. Dropdown (severity override) is a future story.
-- **Status:** DEFERRED → **Story 4.3 — Severity Override & Extended Actions** (dropdown controls inside Sheet)
+- **Status:** RESOLVED (2026-03-26 — Story 4.3 implemented SeverityOverrideMenu as dropdown inside Sheet. E2E test F5e fully implemented in `e2e/review-keyboard.spec.ts` and not skipped.)
 
 ### TD-E2E-014: E1 — Full keyboard review flow (review-keyboard E2E)
 - **Date:** 2026-03-09
@@ -605,7 +604,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Low
 - **File:** `src/features/review/components/FindingList.tsx:177-189`
 - **Description:** When storeSelectedId targets a minor finding with accordion collapsed, `setActiveFindingId` fires in the same effect as `setMinorAccordionValue`. React batches them, but `activeIndex` derivation returns 0 for one frame before flattenedIds includes the minor ID. Visual: keyboard cursor flashes to row 0 for ~16ms. No functional impact — DOM focus fires correctly after accordion re-render.
-- **Status:** DEFERRED → Story 4.3 (accordion lifecycle management)
+- **Status:** DEFERRED → **Story 5.3** (verification — accordion lifecycle; 1-frame glitch is cosmetic-only, verify during responsive/accessibility pass)
 
 ### TD-E2E-018: E-B1 action bar focus blocked by Radix Sheet aria-hidden
 - **Date:** 2026-03-14
@@ -614,7 +613,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Medium
 - **File:** `e2e/review-actions.spec.ts` E-B1 test + `src/features/review/hooks/use-focus-management.ts`
 - **Description:** When all findings are reviewed, autoAdvance calls `actionBar.focus()` via rAF. But if Radix Sheet (finding detail panel) is open, it sets `aria-hidden="true"` on background content including the action bar, preventing actual DOM focus. E2E test asserts `tabindex="0"` (intent correct) instead of `toBeFocused()` (blocked by Sheet). Fix: close Sheet when no pending left, or use `inert` instead of `aria-hidden`.
-- **Status:** DEFERRED → Story 4.3 (Sheet/detail panel lifecycle)
+- **Status:** DEFERRED → **Story 5.3** (verification — Sheet/detail panel lifecycle; close Sheet when no pending findings left, or use `inert` instead of `aria-hidden`)
 
 ### TD-E2E-019: E-R9 score direction assertion weakened to scoreChanged
 - **Date:** 2026-03-14
@@ -634,7 +633,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** `updateNoteText` finds the latest `review_actions` row with `actionType='note'` for a finding, but does NOT filter by `userId`. User B (same tenant, qa_reviewer role) can overwrite User A's note text. The AC doesn't specify cross-user note ownership behavior — design decision needed: is note per-user or per-finding?
 - **Mitigation:** Same-tenant users collaborating on same file is rare in current product. RLS prevents cross-tenant access.
 - **Fix:** Add `eq(reviewActions.userId, userId)` to the WHERE clause, OR make the design decision that notes are per-finding (shared). Requires UX design input.
-- **Status:** DEFERRED → **Epic 5 — Multi-reviewer collaboration** (collaboration features + note ownership model)
+- **Status:** DEFERRED → **Story 5.2c** (native reviewer workflow — collaboration features + note ownership model)
 
 ### TD-UX-005: Desktop→laptop viewport resize leaves detail panel blank
 - **Date:** 2026-03-15
@@ -643,7 +642,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Low
 - **File:** `src/features/review/components/ReviewPageClient.tsx` — `handleActiveFindingChange` + `detailFindingId` derivation
 - **Description:** On desktop (>=1440px), `handleActiveFindingChange` syncs `selectedId` via `setSelectedFinding(id)`. On laptop/mobile, it does NOT sync (Sheet would open and block finding list). If user is on desktop with finding X active, then resizes browser to laptop viewport: `detailFindingId` switches from `activeFindingState` to `selectedId`. Since `selectedId` was set on desktop, it still holds the correct value. However, if `activeFindingState` and `selectedId` diverge (e.g., user navigates findings after resize), the detail panel shows stale finding. Edge case: users don't resize dev tools in production. Fix: add `useEffect` that syncs `selectedId` from `activeFindingState` when `isDesktop` transitions from `true` to `false`.
-- **Status:** DEFERRED → Epic 5 (responsive polish)
+- **Status:** DEFERRED → **Story 5.3** (verification — responsive check; sync `selectedId` on viewport transition)
 
 ### TD-DATA-001: `reviewerIsNative` hardcoded to `false` in feedback_events inserts
 - **Date:** 2026-03-15
@@ -771,7 +770,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** ไม่มี integration test ที่ call real AI API + verify findings insert เข้า DB. Unit tests mock AI response ทั้งหมด → ไม่จับ format mismatch ระหว่าง prompt → AI response → parser. E2E tests seed findings ตรงเข้า DB → bypass pipeline. ต้องสร้าง test ที่: (1) call real AI (gpt-4o-mini/claude-sonnet) (2) verify findings > 0 ถูก insert (3) verify segmentId, category, severity ถูกต้อง.
 - **Fix:** สร้าง integration test story: test script + CI gate (weekly/pre-release) + budget limit per run. ใช้ `scripts/test-l2-capability.mjs` เป็น starting point.
 - **Effort:** 4-8 ชม. (story-level work)
-- **Status:** DEFERRED → **Epic 5 or standalone integration test story**
+- **Status:** RESOLVED (2026-03-26 — `e2e/review-pipeline-verification.spec.ts` calls real AI (gpt-4o-mini + claude-sonnet) + verifies `l1.length > 0` and `l2.length > 0` findings inserted into DB. Precision/recall assertions included. `scripts/verify-pipeline.mjs` + `scripts/test-l2-capability.mjs` also exist for manual verification.)
 
 ### TD-TEST-007: Test data generator inject bugs — 25/88 baseline annotations invalid
 - **Date:** 2026-03-18
@@ -782,7 +781,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** 3 script bugs cause 25/88 baseline annotations to not have actual errors in segments: (1) 6 number_mismatch on templates without `{0}`, (2) 4 placeholder_mismatch same, (3) 15 glossary_violation on templates without glossary terms. Recall measured as 52% but actual on real errors is ~73%.
 - **Fix:** Validate template has required placeholder/term before injecting. Assign error types only to compatible templates.
 - **Effort:** 1-2 ชม.
-- **Status:** DEFERRED → **Epic 5 or standalone test data fix**
+- **Status:** DEFERRED → **Story 5.3** (verification — fix test data generator to validate template compatibility before injecting errors)
 
 ### TD-ARCH-002: Zustand review store dual-write (flat fields + fileStates Map)
 - **Date:** 2026-03-16
@@ -794,7 +793,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Impact:** Zero functional impact — `createSyncingSet` ทำ dual-write อัตโนมัติ ไม่มี data inconsistency. เพิ่ม ~200 bytes memory + ~0.01ms overhead ต่อ `set()` call (สร้าง Map ใหม่ทุก sync).
 - **Ideal fix:** (1) Refactor 4 Realtime hooks ให้ pass `fileId` param, (2) `selectAllFiltered`/`selectRange` อ่านจาก Map, (3) ลบ flat fields + `createSyncingSet`, (4) Update 9+ test mocks
 - **Effort:** 4-6 ชม.
-- **Status:** DEFERRED → **Epic 5 — หรือเมื่อมี cross-file features ที่ต้องการ single source of truth**
+- **Status:** DEFERRED → **Story 5.2c** (native reviewer workflow has cross-file features that need single source of truth from Map-based store)
 
 ### ~~TD-TEST-010: Pipeline precision/recall E2E tests~~
 - **Date:** 2026-03-18
@@ -814,7 +813,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Impact:** Cannot catch real performance regressions in dev-mode E2E.
 - **Fix:** Add `npm run build && npx playwright test --grep perf` production-mode perf gate in CI with AC4 thresholds.
 - **Effort:** 2-3 ชม.
-- **Status:** DEFERRED → **Epic 5 — CI pipeline hardening**
+- **Status:** DEFERRED → **Epic 8 — Story 8.2** (CI/CD optimization; add production-mode perf gate with AC4 thresholds)
 
 ### ~~TD-TEST-012: Bulk action performance benchmark (50 findings + score recalc) not implemented~~
 - **Date:** 2026-03-18
@@ -833,7 +832,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Impact:** Keyboard-only users cannot extend selection without mouse — accessibility gap (WCAG SC 2.1.1 keyboard-only).
 - **Fix:** Register `shift+j` and `shift+k` in keyboard actions hook → call `selectRange` from current selection anchor to next/prev finding.
 - **Effort:** 2-3 ชม.
-- **Status:** DEFERRED → **Epic 5 — keyboard accessibility hardening**
+- **Status:** DEFERRED → **Story 5.3** (verification — keyboard accessibility; implement Shift+J/K for WCAG SC 2.1.1 compliance)
 
 ### ~~TD-TEST-013: Thorough mode pipeline verification not run~~
 - **Date:** 2026-03-18
@@ -849,3 +848,70 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Phase:** verification
 - **Severity:** Low
 - **Status:** RESOLVED (2026-03-18) — E2E tests created in `e2e/ai-cost-verification.spec.ts`: TA-26 seeds ai_usage_logs + verifies `/admin/ai-usage` dashboard totals, TA-27 seeds budget + verifies `/projects/:id/settings` budget card. Script verification in `scripts/verify-pipeline.mjs` also enhanced with token/integrity/aggregation checks.
+
+## Category 9: Pipeline Adversarial Review (2026-03-26)
+
+### ~~TD-PIPE-002: L3 confirm/contradict in separate transaction from L3 findings INSERT~~
+- **Date:** 2026-03-26
+- **Story:** Adversarial review finding #2
+- **Phase:** review
+- **Severity:** Medium
+- **Files:** `src/features/pipeline/helpers/runL3ForFile.ts`
+- **Description:** L3 confirm/contradict logic (updating L2 findings with `[L3 Confirmed]`/`[L3 Disagrees]` + deleting duplicate L3 findings) runs in a SEPARATE transaction from the L3 findings INSERT + file status UPDATE. If process crashes between the two transactions: file is `l3_completed`, CAS guard blocks retry, L2 findings never get confirm/contradict markers → permanent data inconsistency.
+- **Fix:** Merged all operations (DELETE old L3 → INSERT new L3 with `.returning()` → status UPDATE → confirm/contradict L2 → dedup DELETE) into single `db.transaction()`. Used `.returning()` to get L3 DB IDs in-transaction instead of separate query.
+- **Status:** RESOLVED (2026-03-26) — Single atomic transaction. 60/60 L3 tests PASSED including all confirm/contradict edge cases.
+
+### TD-PIPE-003: Budget check TOCTOU race — no reservation mechanism
+- **Date:** 2026-03-26
+- **Story:** Adversarial review finding #3
+- **Phase:** review
+- **Severity:** Medium
+- **Files:** `src/lib/ai/budget.ts`, `src/features/pipeline/helpers/runL2ForFile.ts`, `src/features/pipeline/helpers/runL3ForFile.ts`
+- **Description:** `checkProjectBudget()` does a snapshot `SUM(estimated_cost)` read. Between budget check and AI call, 4+ DB round-trips occur. Concurrent pipelines on the same project can all pass the check and overshoot by `N × cost_per_chunk`. Cost logging is fire-and-forget (`.catch()`), compounding the issue.
+- **Fix:** Implement budget reservation pattern: atomically reserve estimated cost BEFORE AI call, release/adjust after actual cost is known.
+- **Effort:** 6-8 ชม.
+- **Status:** DEFERRED → **Epic 6** (billing infrastructure — requires reservation table + atomic decrement pattern)
+
+### TD-PIPE-004: Oversized single segment — no pre-flight token limit check
+- **Date:** 2026-03-26
+- **Story:** Adversarial review finding #7
+- **Phase:** review
+- **Severity:** Low
+- **Files:** `src/features/pipeline/helpers/chunkSegments.ts`, `src/features/pipeline/helpers/runL2ForFile.ts`, `src/features/pipeline/helpers/runL3ForFile.ts`
+- **Description:** `chunkSegments()` places a single segment that exceeds 30K chars into its own chunk without checking total prompt token count. If prompt (segment + context + glossary + instructions) exceeds model context limit, `maxOutputTokens` may be insufficient for structured JSON output → `NoObjectGeneratedError` → `NonRetriableError`. Same segment fails in both L2 and L3.
+- **Fix:** Add pre-flight check: estimate total tokens (segment chars / 4 + prompt overhead), warn/skip segments that would exceed model context limit.
+- **Effort:** 3-4 ชม.
+- **Status:** DEFERRED → **Epic 6** (pipeline optimization — requires token estimation utility; real-world risk is low because 30K-char single segments are extremely rare in localization files)
+
+### ~~TD-PIPE-005: L3 has no category validation against taxonomy~~
+- **Date:** 2026-03-26
+- **Story:** Adversarial review finding #5
+- **Phase:** review
+- **Severity:** Medium
+- **Files:** `src/features/pipeline/helpers/runL3ForFile.ts`
+- **Description:** L2 validates AI-returned categories against taxonomy definitions (drops invalid categories). L3 has NO category validation — any category string the AI returns is persisted to DB. Invalid categories may not match UI filters, confusing users.
+- **Fix:** Port L2's `validCategories` check to L3's finding validation loop (identical pattern).
+- **Effort:** 1 ชม.
+- **Status:** RESOLVED (2026-03-26) — Ported L2's `validCategories` + `droppedByInvalidCategory` pattern to L3. Guardrail #23 quick fix.
+
+### TD-PIPE-006: Hardcoded AI cost rates in MODEL_CONFIG
+- **Date:** 2026-03-26
+- **Story:** Adversarial review finding #8
+- **Phase:** review
+- **Severity:** Low
+- **Files:** `src/lib/ai/types.ts`
+- **Description:** `costPer1kInput` and `costPer1kOutput` are hardcoded constants. If OpenAI or Anthropic change pricing (frequent), cost estimates drift → budget checks become inaccurate. No mechanism to update rates without code deploy.
+- **Fix:** Move cost rates to DB table (admin-configurable) or external config. Add periodic pricing validation.
+- **Effort:** 4-6 ชม.
+- **Status:** DEFERRED → **Epic 6** (billing infrastructure — cost rate management is part of billing admin feature)
+
+### TD-PIPE-007: Cost logging fire-and-forget may undercount budget usage
+- **Date:** 2026-03-26
+- **Story:** Adversarial review finding #12
+- **Phase:** review
+- **Severity:** Low
+- **Files:** `src/features/pipeline/helpers/runL2ForFile.ts`, `src/features/pipeline/helpers/runL3ForFile.ts`, `src/lib/ai/costs.ts`
+- **Description:** `logAIUsage(record).catch()` is fire-and-forget. If DB insert fails (constraint violation, connection timeout), cost is not recorded → `checkProjectBudget()` undercounts → budget can be exceeded silently. Compounds with TD-PIPE-003 TOCTOU race.
+- **Fix:** Make cost logging part of the main transaction, or at minimum retry once on failure. Alternatively, implement the reservation pattern in TD-PIPE-003 which makes post-hoc logging less critical.
+- **Effort:** 2-3 ชม.
+- **Status:** DEFERRED → **Epic 6** (billing infrastructure — coupled with TD-PIPE-003 budget reservation redesign)

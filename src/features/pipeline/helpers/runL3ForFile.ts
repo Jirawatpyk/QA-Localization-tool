@@ -23,7 +23,7 @@ import type { L3Finding, L3Output } from '@/features/pipeline/schemas/l3-output'
 import { checkProjectBudget } from '@/lib/ai/budget'
 import { getModelById } from '@/lib/ai/client'
 import { aggregateUsage, estimateCost, logAIUsage } from '@/lib/ai/costs'
-import { classifyAIError } from '@/lib/ai/errors'
+import { AIRateLimitExceededError, classifyAIError } from '@/lib/ai/errors'
 import { callWithFallback } from '@/lib/ai/fallbackRunner'
 import { getModelForLayerWithFallback } from '@/lib/ai/providers'
 import type { AIUsageRecord, ChunkResult } from '@/lib/ai/types'
@@ -47,6 +47,8 @@ export type { L3Finding }
 
 export type L3Result = {
   findingCount: number
+  droppedByInvalidSegmentId: number
+  droppedByInvalidCategory: number
   duration: number
   aiModel: string
   chunksTotal: number
@@ -127,9 +129,21 @@ export async function runL3ForFile({
 
   try {
     // Step 2a: Per-project L3 rate limit (retriable — Inngest retries with backoff)
-    const { success: rateLimitAllowed } = await aiL3ProjectLimiter.limit(projectId)
-    if (!rateLimitAllowed) {
-      throw new Error('L3 deep analysis queue full. Resuming shortly.')
+    // Fail-open: if Redis is unreachable, log warning and proceed (infra issue ≠ file failure)
+    try {
+      const { success: rateLimitAllowed } = await aiL3ProjectLimiter.limit(projectId)
+      if (!rateLimitAllowed) {
+        throw new AIRateLimitExceededError('L3', projectId)
+      }
+    } catch (rateLimitErr) {
+      if (rateLimitErr instanceof AIRateLimitExceededError) {
+        throw rateLimitErr // genuine rate limit → let Inngest retry
+      }
+      // Redis/infra error → fail-open with warning
+      logger.warn(
+        { err: rateLimitErr, fileId, projectId },
+        'L3 rate limiter unavailable — proceeding (fail-open)',
+      )
     }
 
     // Step 2b: Budget guard (Guardrail #22)
@@ -257,16 +271,51 @@ export async function runL3ForFile({
     )
 
     // Step 3e: Early return if zero segments flagged (Guardrail #5: no inArray([]))
+    // CR-P1 fix: DELETE old L3 findings before early-return (idempotent re-run safety — Guardrail #6)
+    // CR-M1 fix: add audit log for state change (architectural rule: every state change → audit)
     if (filteredSegments.length === 0) {
       logger.info({ fileId }, 'Zero segments flagged by L2 — skipping L3 AI processing')
 
-      await db
-        .update(files)
-        .set({ status: 'l3_completed', updatedAt: new Date() })
-        .where(and(withTenant(files.tenantId, tenantId), eq(files.id, fileId)))
+      await db.transaction(async (tx) => {
+        // Clear any stale L3 findings from prior runs (retry path safety)
+        await tx
+          .delete(findings)
+          .where(
+            and(
+              withTenant(findings.tenantId, tenantId),
+              eq(findings.fileId, fileId),
+              eq(findings.detectedByLayer, 'L3'),
+            ),
+          )
+
+        await tx
+          .update(files)
+          .set({ status: 'l3_completed', updatedAt: new Date() })
+          .where(and(withTenant(files.tenantId, tenantId), eq(files.id, fileId)))
+      })
+
+      // Audit log (non-fatal — state change already committed)
+      try {
+        await writeAuditLog({
+          tenantId,
+          ...(userId !== undefined ? { userId } : {}),
+          entityType: 'file',
+          entityId: fileId,
+          action: 'file.l3_completed',
+          newValue: {
+            findingCount: 0,
+            reason: 'no_segments_flagged_by_l2',
+            duration: Math.round(performance.now() - startTime),
+          },
+        })
+      } catch (auditErr) {
+        logger.error({ err: auditErr, fileId }, 'L3 early-exit audit log failed (non-fatal)')
+      }
 
       return {
         findingCount: 0,
+        droppedByInvalidSegmentId: 0,
+        droppedByInvalidCategory: 0,
         duration: Math.round(performance.now() - startTime),
         aiModel: modelId,
         chunksTotal: 0,
@@ -322,6 +371,11 @@ export async function runL3ForFile({
       .from(projects)
       .where(and(withTenant(projects.tenantId, tenantId), eq(projects.id, projectId)))
 
+    // CR-M3: Guard projectRow — parity with L2 (Guardrail #4)
+    if (!projectRow) {
+      throw new NonRetriableError('Project not found')
+    }
+
     // Step 5: Chunk FILTERED segments (Guardrail #21)
     const chunks = chunkSegments(filteredSegments)
 
@@ -353,18 +407,10 @@ export async function runL3ForFile({
             ...t,
             severity: t.severity as FindingSeverity | null,
           })),
-          project: projectRow
-            ? {
-                ...projectRow,
-                processingMode: projectRow.processingMode as 'economy' | 'thorough',
-              }
-            : {
-                name: 'Unknown',
-                description: null,
-                sourceLang: segmentRows[0]?.sourceLang ?? 'en',
-                targetLangs: segmentRows[0]?.targetLang ? [segmentRows[0].targetLang] : [],
-                processingMode: 'thorough',
-              },
+          project: {
+            ...projectRow,
+            processingMode: projectRow.processingMode as 'economy' | 'thorough',
+          },
           surroundingContext: chunkSurroundingContext,
         })
 
@@ -460,6 +506,12 @@ export async function runL3ForFile({
     // Step 7: Flatten + validate findings
     const segmentIdSet = new Set(segmentRows.map((s) => s.id))
     const allFindings: (L3Finding & { actualModel: string })[] = []
+    let droppedByInvalidSegmentId = 0
+    let droppedByInvalidCategory = 0
+
+    // Build valid category set from taxonomy (parity with L2 — TD-PIPE-005 fix)
+    const validCategories =
+      taxonomyRows.length > 0 ? new Set(taxonomyRows.map((t) => t.category.toLowerCase())) : null // null = no taxonomy → accept any category
 
     for (const cr of chunkResults) {
       if (!cr.success || !cr.data) continue
@@ -471,6 +523,7 @@ export async function runL3ForFile({
         const segmentId = f.segmentId.replace(/^\[|\]$/g, '')
 
         if (!segmentIdSet.has(segmentId)) {
+          droppedByInvalidSegmentId++
           logger.warn(
             {
               fileId,
@@ -479,6 +532,21 @@ export async function runL3ForFile({
               chunkIndex: cr.chunkIndex,
             },
             'Dropped L3 finding with invalid segmentId',
+          )
+          continue
+        }
+
+        // Validate category against taxonomy (parity with L2 — TD-PIPE-005 fix)
+        if (validCategories && !validCategories.has(f.category.toLowerCase())) {
+          droppedByInvalidCategory++
+          logger.warn(
+            {
+              fileId,
+              segmentId,
+              category: f.category,
+              chunkIndex: cr.chunkIndex,
+            },
+            'Dropped L3 finding with invalid category (not in taxonomy)',
           )
           continue
         }
@@ -493,6 +561,25 @@ export async function runL3ForFile({
           rationale: f.rationale,
           actualModel: chunkModel,
         })
+      }
+    }
+
+    // Guardrail #47: Fail loud if excessive findings dropped (> 30% = likely AI hallucination)
+    const totalRawFindings =
+      allFindings.length + droppedByInvalidSegmentId + droppedByInvalidCategory
+    if (totalRawFindings > 0) {
+      const dropRate = (droppedByInvalidSegmentId + droppedByInvalidCategory) / totalRawFindings
+      if (dropRate > 0.3) {
+        logger.error(
+          {
+            fileId,
+            dropRate,
+            droppedByInvalidSegmentId,
+            droppedByInvalidCategory,
+            totalRawFindings,
+          },
+          'L3 findings drop rate exceeds 30% — possible AI hallucination or prompt issue',
+        )
       }
     }
 
@@ -520,11 +607,20 @@ export async function runL3ForFile({
       }
     })
 
-    // Step 9+10: Atomic DELETE + INSERT + status UPDATE in single transaction
-    // TD-AI-005: Previously findings INSERT and status UPDATE were separate operations.
-    // If INSERT succeeded but UPDATE failed → Inngest retry → CAS guard fails (status='l3_processing')
-    // → NonRetriableError → findings orphaned. Now both are atomic. (Guardrail #6)
+    // Step 9+10+9b: Atomic DELETE + INSERT + status UPDATE + confirm/contradict in SINGLE transaction
+    // TD-AI-005: findings INSERT and status UPDATE must be atomic (Guardrail #6)
+    // TD-PIPE-002 fix: confirm/contradict L2 was previously a SEPARATE transaction — if crash
+    // between the two, file is l3_completed but L2 findings never updated. CAS guard blocks retry
+    // → permanent data inconsistency. Now everything is in one transaction.
+    const l2Findings = priorFindings.filter((f) => f.detectedByLayer === 'L2')
+
+    // Pre-compute contradict set outside transaction (pure logic, no DB)
+    const contradictedSegmentIds = new Set(
+      allFindings.filter((f) => f.category === 'false_positive_review').map((f) => f.segmentId),
+    )
+
     await db.transaction(async (tx) => {
+      // 1. DELETE old L3 findings
       await tx
         .delete(findings)
         .where(
@@ -535,47 +631,39 @@ export async function runL3ForFile({
           ),
         )
 
+      // 2. INSERT new L3 findings with .returning() to get DB IDs (no separate query needed)
+      const insertedL3Rows: { id: string; segmentId: string | null; category: string }[] = []
       for (let i = 0; i < findingInserts.length; i += FINDING_BATCH_SIZE) {
         const batch = findingInserts.slice(i, i + FINDING_BATCH_SIZE)
-        await tx.insert(findings).values(batch)
+        const rows = await tx
+          .insert(findings)
+          .values(batch)
+          .returning({
+            id: findings.id,
+            segmentId: findings.segmentId,
+            category: findings.category,
+          })
+        insertedL3Rows.push(...rows)
       }
 
-      // Status update inside same transaction — atomic with findings
+      // 3. Status update — atomic with findings
       await tx
         .update(files)
         .set({ status: 'l3_completed', updatedAt: new Date() })
         .where(and(withTenant(files.tenantId, tenantId), eq(files.id, fileId)))
-    })
 
-    // Step 9b: L3 confirm/contradict L2 post-processing (AC4)
-    // Contradict takes priority: if L3 issues both a regular finding AND false_positive_review
-    // for the same segment, skip confirm to prevent inconsistent state (confidence boosted but
-    // description says disagrees). See TA Gap Q analysis.
-    const l2Findings = priorFindings.filter((f) => f.detectedByLayer === 'L2')
-    // Track L3 finding IDs that duplicate L2 (same segment+category) — will be deleted after confirm
-    const l3DuplicateIds: string[] = []
-
-    if (l2Findings.length > 0 && allFindings.length > 0) {
-      const contradictedSegmentIds = new Set(
-        allFindings.filter((f) => f.category === 'false_positive_review').map((f) => f.segmentId),
-      )
-
-      // Query freshly inserted L3 findings to get their DB IDs for dedup deletion
-      const insertedL3 = await db
-        .select({ id: findings.id, segmentId: findings.segmentId, category: findings.category })
-        .from(findings)
-        .where(
-          and(
-            withTenant(findings.tenantId, tenantId),
-            eq(findings.fileId, fileId),
-            eq(findings.detectedByLayer, 'L3'),
-          ),
+      // 4. L3 confirm/contradict L2 post-processing (AC4)
+      // Contradict takes priority: if L3 issues both a regular finding AND false_positive_review
+      // for the same segment, skip confirm to prevent inconsistent state.
+      // CR-C1 fix: confirmedL2Ids prevents double-boost when allFindings has duplicate (segmentId, category)
+      // CR-M4 fix: l3DuplicateIds declared inside transaction to prevent stale data on retry
+      if (l2Findings.length > 0 && allFindings.length > 0) {
+        const l3BySegCat = new Map(
+          insertedL3Rows.map((f) => [`${f.segmentId}:${f.category.toLowerCase()}`, f.id]),
         )
-      const l3BySegCat = new Map(
-        insertedL3.map((f) => [`${f.segmentId}:${f.category.toLowerCase()}`, f.id]),
-      )
+        const confirmedL2Ids = new Set<string>()
+        const txL3DuplicateIds: string[] = []
 
-      await db.transaction(async (tx) => {
         for (const l3Finding of allFindings) {
           if (l3Finding.category === 'false_positive_review') {
             // Contradict: L3's false_positive_review targets L2 findings on same segment
@@ -607,6 +695,9 @@ export async function runL3ForFile({
 
             // Idempotent: skip both confidence boost and marker append on re-run
             if (matchedL2.description.includes('[L3 Confirmed]')) continue
+            // CR-C1: prevent double-boost when multiple L3 findings match same L2 finding
+            if (confirmedL2Ids.has(matchedL2.id)) continue
+            confirmedL2Ids.add(matchedL2.id)
 
             const currentConfidence = matchedL2.aiConfidence ?? 0
             const newConfidence = Math.min(100, Math.round(currentConfidence * 1.1))
@@ -622,24 +713,24 @@ export async function runL3ForFile({
             // Mark the duplicate L3 finding for deletion
             const l3Key = `${l3Finding.segmentId}:${l3Finding.category.toLowerCase()}`
             const l3DbId = l3BySegCat.get(l3Key)
-            if (l3DbId) l3DuplicateIds.push(l3DbId)
+            if (l3DbId) txL3DuplicateIds.push(l3DbId)
           }
         }
 
         // Delete L3 findings that confirmed L2 (dedup — AC6)
-        if (l3DuplicateIds.length > 0) {
-          for (const dupId of l3DuplicateIds) {
+        if (txL3DuplicateIds.length > 0) {
+          for (const dupId of txL3DuplicateIds) {
             await tx
               .delete(findings)
               .where(and(withTenant(findings.tenantId, tenantId), eq(findings.id, dupId)))
           }
           logger.info(
-            { fileId, count: l3DuplicateIds.length },
+            { fileId, count: txL3DuplicateIds.length },
             'L3 dedup: removed confirmed-duplicate findings',
           )
         }
-      })
-    }
+      }
+    })
 
     // Step 11: Audit log (non-fatal)
     const chunksSucceeded = chunkResults.filter((c) => c.success).length
@@ -692,6 +783,8 @@ export async function runL3ForFile({
 
     return {
       findingCount: allFindings.length,
+      droppedByInvalidSegmentId,
+      droppedByInvalidCategory,
       duration,
       aiModel: modelId,
       chunksTotal: chunks.length,

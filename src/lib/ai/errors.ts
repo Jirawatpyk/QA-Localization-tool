@@ -8,6 +8,17 @@ import { logger } from '@/lib/logger'
 import type { AIErrorKind } from './types'
 
 /**
+ * Thrown when per-project AI rate limit is exceeded (genuine queue full, not Redis infra error).
+ * Used in L2/L3 fail-open pattern — instanceof check replaces fragile string matching.
+ */
+export class AIRateLimitExceededError extends Error {
+  constructor(layer: string, projectId: string) {
+    super(`${layer} analysis queue full for project ${projectId}. Resuming shortly.`)
+    this.name = 'AIRateLimitExceededError'
+  }
+}
+
+/**
  * Classify an AI SDK error into retriable vs non-retriable.
  *
  * Guardrail #18: RateLimitError = retriable, schema/auth = NonRetriableError.
