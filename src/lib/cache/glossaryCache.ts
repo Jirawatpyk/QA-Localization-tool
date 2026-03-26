@@ -6,13 +6,14 @@ import { withTenant } from '@/db/helpers/withTenant'
 import { glossaries } from '@/db/schema/glossaries'
 import { glossaryTerms } from '@/db/schema/glossaryTerms'
 import type { GlossaryTermRecord } from '@/features/pipeline/engine/types'
+import type { TenantId } from '@/types/tenant'
 
 /**
  * Load all glossary terms for a project's glossaries.
  * Used by the matching engine (Story 1.5) and term display.
  * Cached per project with "use cache" + cacheTag.
  */
-export async function getCachedGlossaryTerms(projectId: string, tenantId: string) {
+export async function getCachedGlossaryTerms(projectId: string, tenantId: TenantId) {
   'use cache'
   cacheTag(`glossary-${projectId}`)
   cacheLife('minutes')
@@ -41,7 +42,7 @@ export async function getCachedGlossaryTerms(projectId: string, tenantId: string
  */
 export async function getGlossaryTerms(
   projectId: string,
-  tenantId: string,
+  tenantId: TenantId,
 ): Promise<GlossaryTermRecord[]> {
   return await db
     .select({
@@ -61,7 +62,7 @@ export async function getGlossaryTerms(
  * Load glossary metadata for a project.
  * Cached per project with "use cache" + cacheTag.
  */
-export async function getCachedGlossaries(projectId: string, tenantId: string) {
+export async function getCachedGlossaries(projectId: string, tenantId: TenantId) {
   'use cache'
   cacheTag(`glossary-${projectId}`)
   cacheLife('minutes')

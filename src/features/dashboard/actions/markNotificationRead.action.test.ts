@@ -2,6 +2,9 @@ vi.mock('server-only', () => ({}))
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+import { getCurrentUser } from '@/lib/auth/getCurrentUser'
+import { asTenantId } from '@/types/tenant'
+
 vi.mock('@/lib/auth/getCurrentUser', () => ({
   getCurrentUser: vi.fn(),
 }))
@@ -31,8 +34,6 @@ vi.mock('@/db/schema/notifications', () => ({
   },
 }))
 
-import { getCurrentUser } from '@/lib/auth/getCurrentUser'
-
 import { markNotificationRead } from './markNotificationRead.action'
 
 describe('markNotificationRead', () => {
@@ -55,7 +56,7 @@ describe('markNotificationRead', () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'usr-1',
       email: 'test@test.com',
-      tenantId: 'ten-1',
+      tenantId: asTenantId('ten-1'),
       role: 'qa_reviewer',
       displayName: 'Test',
       metadata: null,
@@ -74,7 +75,7 @@ describe('markNotificationRead', () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'usr-1',
       email: 'test@test.com',
-      tenantId: 'ten-1',
+      tenantId: asTenantId('ten-1'),
       role: 'qa_reviewer',
       displayName: 'Test',
       metadata: null,
@@ -92,7 +93,7 @@ describe('markNotificationRead', () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'usr-1',
       email: 'test@test.com',
-      tenantId: 'ten-1',
+      tenantId: asTenantId('ten-1'),
       role: 'qa_reviewer',
       displayName: 'Test',
       metadata: null,
@@ -110,7 +111,7 @@ describe('markNotificationRead', () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'usr-1',
       email: 'test@test.com',
-      tenantId: 'ten-1',
+      tenantId: asTenantId('ten-1'),
       role: 'qa_reviewer',
       displayName: 'Test',
       metadata: null,
@@ -132,7 +133,7 @@ describe('markNotificationRead', () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'usr-1',
       email: 'test@test.com',
-      tenantId: 'ten-1',
+      tenantId: asTenantId('ten-1'),
       role: 'qa_reviewer',
       displayName: 'Test',
       metadata: null,

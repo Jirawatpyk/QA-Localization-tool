@@ -6,6 +6,7 @@ import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { aiUsageLogs } from '@/db/schema/aiUsageLogs'
 import { projects } from '@/db/schema/projects'
+import type { TenantId } from '@/types/tenant'
 
 import type { BudgetCheckResult } from './types'
 
@@ -15,7 +16,7 @@ import type { BudgetCheckResult } from './types'
  * STUB: Always returns hasQuota=true.
  * Retained for backward compatibility — callers migrating to checkProjectBudget.
  */
-export async function checkTenantBudget(_tenantId: string): Promise<BudgetCheckResult> {
+export async function checkTenantBudget(_tenantId: TenantId): Promise<BudgetCheckResult> {
   return {
     hasQuota: true,
     remainingBudgetUsd: Infinity,
@@ -37,7 +38,7 @@ export async function checkTenantBudget(_tenantId: string): Promise<BudgetCheckR
  */
 export async function checkProjectBudget(
   projectId: string,
-  tenantId: string,
+  tenantId: TenantId,
 ): Promise<BudgetCheckResult> {
   // Step 1: Get project budget
   const [project] = await db

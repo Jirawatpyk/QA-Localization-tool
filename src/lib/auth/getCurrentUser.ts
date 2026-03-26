@@ -8,13 +8,14 @@ import { withTenant } from '@/db/helpers/withTenant'
 import { users } from '@/db/schema/users'
 import type { UserMetadata } from '@/features/onboarding/types'
 import { createServerClient } from '@/lib/supabase/server'
+import { type TenantId, validateTenantId } from '@/types/tenant'
 
 export type AppRole = 'admin' | 'qa_reviewer' | 'native_reviewer'
 
 export type CurrentUser = {
   id: string
   email: string
-  tenantId: string
+  tenantId: TenantId
   role: AppRole
   displayName: string
   metadata: UserMetadata | null
@@ -66,7 +67,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
         nativeLanguages: users.nativeLanguages,
       })
       .from(users)
-      .where(and(eq(users.id, userId), withTenant(users.tenantId, tenantId)))
+      .where(and(eq(users.id, userId), withTenant(users.tenantId, validateTenantId(tenantId))))
       .limit(1)
 
     if (userRow[0]) {
@@ -87,7 +88,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   return {
     id: userId,
     email: email ?? '',
-    tenantId,
+    tenantId: validateTenantId(tenantId),
     role: role as AppRole,
     displayName,
     metadata,

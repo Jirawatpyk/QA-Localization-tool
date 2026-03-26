@@ -11,6 +11,7 @@ import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
 import type { FindingStatus } from '@/types/finding'
+import type { TenantId } from '@/types/tenant'
 
 export type UndoRedoResult = {
   findingId: string
@@ -27,7 +28,7 @@ type ExecuteUndoRedoParams = {
   expectedCurrentState: FindingStatus
   force: boolean
   actionType: 'undo' | 'redo'
-  user: { id: string; tenantId: string }
+  user: { id: string; tenantId: TenantId }
 }
 
 /**

@@ -14,6 +14,7 @@ import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
 import { DETECTED_BY_LAYERS, FINDING_SEVERITIES, FINDING_STATUSES } from '@/types/finding'
 import type { DetectedByLayer, FindingSeverity, FindingStatus } from '@/types/finding'
+import type { TenantId } from '@/types/tenant'
 
 export type ReviewActionInput = {
   findingId: string
@@ -48,7 +49,7 @@ export type ReviewActionNoOp = {
 type ExecuteReviewActionParams = {
   input: ReviewActionInput
   action: ReviewAction
-  user: { id: string; tenantId: string }
+  user: { id: string; tenantId: TenantId }
 }
 
 /**

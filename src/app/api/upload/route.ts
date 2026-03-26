@@ -241,7 +241,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             batchId: batchId ?? null,
             updatedAt: new Date(),
           })
-          .where(eq(files.id, existingFile.id))
+          .where(
+            and(eq(files.id, existingFile.id), withTenant(files.tenantId, currentUser.tenantId)),
+          )
           .returning()
         return { fileRecord: updated, isRerun: true, skipped: false }
       }

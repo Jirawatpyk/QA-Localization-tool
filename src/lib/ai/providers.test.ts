@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+import { asTenantId } from '@/types/tenant'
+
 // Must be first
 vi.mock('server-only', () => ({}))
 
@@ -52,7 +54,7 @@ vi.mock('@/lib/logger', () => ({
 // ── Test constants ──
 
 const VALID_PROJECT_ID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
-const VALID_TENANT_ID = 'b2c3d4e5-f6a7-4b2c-9d3e-4f5a6b7c8d9e'
+const VALID_TENANT_ID = asTenantId('b2c3d4e5-f6a7-4b2c-9d3e-4f5a6b7c8d9e')
 
 describe('buildFallbackChain', () => {
   // ── P0: Core logic ──

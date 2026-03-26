@@ -5,6 +5,8 @@ vi.mock('server-only', () => ({}))
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+import { asTenantId } from '@/types/tenant'
+
 vi.mock('@/lib/auth/getCurrentUser', () => ({
   getCurrentUser: vi.fn(),
 }))
@@ -62,7 +64,7 @@ describe('getNotifications action', () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'usr-test-001',
       email: 'qa@tenant-a.test',
-      tenantId: 'ten-a-001',
+      tenantId: asTenantId('ten-a-001'),
       role: 'qa_reviewer',
       displayName: 'QA Reviewer',
       metadata: null,
@@ -72,7 +74,7 @@ describe('getNotifications action', () => {
     queryResults.push([
       {
         id: 'notif-1',
-        tenantId: 'ten-a-001',
+        tenantId: asTenantId('ten-a-001'),
         userId: 'usr-test-001',
         type: 'glossary_updated',
         title: 'Glossary Updated',
@@ -101,7 +103,7 @@ describe('getNotifications action', () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'usr-test-002',
       email: 'other@tenant-a.test',
-      tenantId: 'ten-a-001',
+      tenantId: asTenantId('ten-a-001'),
       role: 'qa_reviewer',
       displayName: 'Other User',
       metadata: null,
@@ -112,7 +114,7 @@ describe('getNotifications action', () => {
     queryResults.push([
       {
         id: 'notif-2',
-        tenantId: 'ten-a-001',
+        tenantId: asTenantId('ten-a-001'),
         userId: 'usr-test-002',
         type: 'analysis_complete',
         title: 'Analysis Done',
@@ -139,7 +141,7 @@ describe('getNotifications action', () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'usr-test-003',
       email: 'qa@tenant-b.test',
-      tenantId: 'ten-b-002',
+      tenantId: asTenantId('ten-b-002'),
       role: 'qa_reviewer',
       displayName: 'Cross Tenant User',
       metadata: null,
@@ -181,7 +183,7 @@ describe('getNotifications action', () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'usr-no-notifs',
       email: 'clean@tenant-a.test',
-      tenantId: 'ten-a-001',
+      tenantId: asTenantId('ten-a-001'),
       role: 'qa_reviewer',
       displayName: 'Clean User',
       metadata: null,

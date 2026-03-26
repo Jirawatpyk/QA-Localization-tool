@@ -16,11 +16,12 @@ import { loadPenaltyWeights } from '@/features/scoring/penaltyWeightLoader'
 import type { ContributingFinding, FindingsSummary, FindingStatus } from '@/features/scoring/types'
 import { logger } from '@/lib/logger'
 import type { DetectedByLayer, LayerCompleted } from '@/types/finding'
+import type { TenantId } from '@/types/tenant'
 
 type ScoreFileInput = {
   fileId: string
   projectId: string
-  tenantId: string
+  tenantId: TenantId
   userId: string
   /** Filter findings to a specific layer. undefined = all layers (review context). */
   layerFilter?: DetectedByLayer | undefined
@@ -285,7 +286,7 @@ export async function scoreFile({
  * Non-fatal — scoring must not fail because of notification failure.
  */
 async function createGraduationNotification(params: {
-  tenantId: string
+  tenantId: TenantId
   projectId: string
   sourceLang: string
   targetLang: string

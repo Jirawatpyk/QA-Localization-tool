@@ -7,6 +7,7 @@ import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
 import { FINDING_STATUSES } from '@/types/finding'
 import type { FindingChangedEventData } from '@/types/pipeline'
+import { validateTenantId } from '@/types/tenant'
 
 const findingChangedSchema = z.object({
   findingId: z.string().uuid(),
@@ -33,7 +34,8 @@ const handlerFn = async ({
   if (!parsed.success) {
     throw new NonRetriableError(`Invalid finding.changed event data: ${parsed.error.message}`)
   }
-  const { fileId, projectId, tenantId, triggeredBy } = parsed.data
+  const { fileId, projectId, tenantId: rawTenantId, triggeredBy } = parsed.data
+  const tenantId = validateTenantId(rawTenantId)
 
   const scoreResult = await step.run(`recalculate-score-${fileId}`, () =>
     scoreFile({

@@ -6,6 +6,7 @@ import { languagePairConfigs } from '@/db/schema/languagePairConfigs'
 import { projects } from '@/db/schema/projects'
 import { scores } from '@/db/schema/scores'
 import { segments } from '@/db/schema/segments'
+import type { TenantId } from '@/types/tenant'
 
 import { CONSERVATIVE_AUTO_PASS_THRESHOLD, NEW_PAIR_FILE_THRESHOLD } from './constants'
 import type { AutoPassRationaleData, AutoPassResult, FindingsSummary } from './types'
@@ -14,7 +15,7 @@ type AutoPassInput = {
   mqmScore: number
   criticalCount: number
   projectId: string
-  tenantId: string
+  tenantId: TenantId
   sourceLang: string
   targetLang: string
   findingsSummary?: FindingsSummary | undefined

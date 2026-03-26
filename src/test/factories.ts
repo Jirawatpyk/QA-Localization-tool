@@ -22,6 +22,7 @@ import type { BatchRecord, UploadFileResult } from '@/features/upload/types'
 import type { DetectedByLayer, Finding, FindingSeverity, FindingStatus } from '@/types/finding'
 import type { FindingChangedEventData, ProcessingMode, PipelineRun } from '@/types/pipeline'
 import type { ReviewSession } from '@/types/review'
+import { asTenantId } from '@/types/tenant'
 
 type SegmentRecord = typeof segments.$inferSelect
 type DbFindingInsert = typeof findings.$inferInsert
@@ -71,7 +72,7 @@ export function buildReviewSession(overrides?: Partial<ReviewSession>): ReviewSe
 export function buildPipelineRun(overrides?: Partial<PipelineRun>): PipelineRun {
   return {
     id: faker.string.uuid(),
-    tenantId: faker.string.uuid(),
+    tenantId: asTenantId(faker.string.uuid()),
     projectId: faker.string.uuid(),
     sessionId: faker.string.uuid(),
     mode: 'economy',
@@ -454,7 +455,7 @@ export function buildFindingChangedEvent(
     findingId: faker.string.uuid(),
     fileId: faker.string.uuid(),
     projectId: faker.string.uuid(),
-    tenantId: faker.string.uuid(),
+    tenantId: asTenantId(faker.string.uuid()),
     previousState: 'pending',
     newState: 'accepted',
     triggeredBy: faker.string.uuid(),

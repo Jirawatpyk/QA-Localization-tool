@@ -23,6 +23,7 @@ import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { ActionResult } from '@/types/actionResult'
+import type { TenantId } from '@/types/tenant'
 
 type ParseFileResult = {
   segmentCount: number
@@ -323,7 +324,7 @@ async function batchInsertSegments(
   parsedSegments: ParsedSegment[],
   fileId: string,
   projectId: string,
-  tenantId: string,
+  tenantId: TenantId,
   fileRecordId: string,
 ): Promise<void> {
   // H7: Wrap DELETE + batch INSERT + status update in a single transaction
@@ -363,7 +364,7 @@ async function batchInsertSegments(
 
 async function markFileFailed(
   fileId: string,
-  tenantId: string,
+  tenantId: TenantId,
   userId: string,
   fileName: string,
   errorDetails: Record<string, unknown>,

@@ -17,6 +17,7 @@ import {
   type PipelineLayer,
   type ProcessingMode,
 } from '@/types/pipeline'
+import type { TenantId } from '@/types/tenant'
 
 // ── Config ──
 
@@ -35,7 +36,7 @@ type RetryEvent = {
   data: {
     fileId: string
     projectId: string
-    tenantId: string
+    tenantId: TenantId
     userId: string
     layersToRetry: PipelineLayer[]
     mode: ProcessingMode

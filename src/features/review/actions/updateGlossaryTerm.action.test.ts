@@ -22,11 +22,12 @@ vi.mock('@/features/audit/actions/writeAuditLog', () => ({
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { updateGlossaryTerm } from '@/features/review/actions/updateGlossaryTerm.action'
 import { requireRole } from '@/lib/auth/requireRole'
+import { asTenantId } from '@/types/tenant'
 
 const mockUser = {
   id: '00000000-0000-4000-8000-000000000001',
   email: 'reviewer@test.com',
-  tenantId: '00000000-0000-4000-8000-000000000010',
+  tenantId: asTenantId('00000000-0000-4000-8000-000000000010'),
   role: 'qa_reviewer' as const,
   nativeLanguages: [] as string[],
 }

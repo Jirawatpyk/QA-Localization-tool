@@ -4,6 +4,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+import { asTenantId } from '@/types/tenant'
+
 // ── Hoisted mocks — MUST be first ──
 const { dbState, dbMockModule, mockRequireRole, mockGetCurrentUser, mockWriteAuditLog } =
   vi.hoisted(() => {
@@ -94,7 +96,7 @@ import { approveFile } from '@/features/review/actions/approveFile.action'
 
 const VALID_FILE_ID = 'f1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
 const VALID_PROJECT_ID = 'b1c2d3e4-f5a6-4b2c-9d3e-4f5a6b7c8d9e'
-const VALID_TENANT_ID = 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f'
+const VALID_TENANT_ID = asTenantId('c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f')
 const VALID_USER_ID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
 
 function buildScoreMock(overrides?: Partial<Record<string, unknown>>) {

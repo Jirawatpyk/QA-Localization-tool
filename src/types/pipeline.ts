@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import type { FindingStatus } from '@/types/finding'
+import type { TenantId } from '@/types/tenant'
 
 // Pipeline types — populated in Epic 2-3
 export const PROCESSING_MODES = ['economy', 'thorough'] as const
@@ -35,7 +36,7 @@ export const pipelineBatchCompletedEventSchema = z
 export type PipelineFileEventData = {
   fileId: string
   projectId: string
-  tenantId: string
+  tenantId: TenantId
   mode: ProcessingMode
   uploadBatchId: string
   userId: string
@@ -44,7 +45,7 @@ export type PipelineFileEventData = {
 export type PipelineBatchEventData = {
   batchId: string
   projectId: string
-  tenantId: string
+  tenantId: TenantId
   fileIds: string[]
   mode: ProcessingMode
   uploadBatchId: string
@@ -54,7 +55,7 @@ export type PipelineBatchEventData = {
 export type PipelineBatchCompletedEventData = {
   batchId: string
   projectId: string
-  tenantId: string
+  tenantId: TenantId
   mode: ProcessingMode
   userId: string
 }
@@ -64,7 +65,7 @@ export type FindingChangedEventData = {
   findingId: string
   fileId: string
   projectId: string
-  tenantId: string
+  tenantId: TenantId
   previousState: FindingStatus
   newState: FindingStatus
   triggeredBy: string // userId
@@ -106,7 +107,7 @@ export const PRIMARY_MODELS: Record<PipelineLayer, string> = {
 export type RetryFailedLayersEventData = {
   fileId: string
   projectId: string
-  tenantId: string
+  tenantId: TenantId
   userId: string
   layersToRetry: PipelineLayer[]
   mode: ProcessingMode
@@ -116,7 +117,7 @@ export type PipelineStatus = 'queued' | 'processing' | 'completed' | 'failed'
 
 export type PipelineRun = {
   id: string
-  tenantId: string
+  tenantId: TenantId
   projectId: string
   sessionId: string
   mode: ProcessingMode

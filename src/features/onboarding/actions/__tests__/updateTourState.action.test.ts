@@ -5,6 +5,9 @@ vi.mock('server-only', () => ({}))
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+import { getCurrentUser } from '@/lib/auth/getCurrentUser'
+import { asTenantId } from '@/types/tenant'
+
 vi.mock('@/lib/auth/getCurrentUser', () => ({
   getCurrentUser: vi.fn(),
 }))
@@ -25,8 +28,6 @@ vi.mock('@/db/schema/users', () => ({
   users: { id: 'id', tenantId: 'tenant_id', metadata: 'metadata' },
 }))
 
-import { getCurrentUser } from '@/lib/auth/getCurrentUser'
-
 describe('updateTourState action', () => {
   beforeEach(() => {
     vi.resetAllMocks()
@@ -41,7 +42,7 @@ describe('updateTourState action', () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'usr-test-001',
       email: 'qa@tenant-a.test',
-      tenantId: 'ten-a-001',
+      tenantId: asTenantId('ten-a-001'),
       role: 'qa_reviewer',
       displayName: 'QA Reviewer',
       metadata: null,
@@ -73,7 +74,7 @@ describe('updateTourState action', () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'usr-test-001',
       email: 'qa@tenant-a.test',
-      tenantId: 'ten-a-001',
+      tenantId: asTenantId('ten-a-001'),
       role: 'qa_reviewer',
       displayName: 'QA Reviewer',
       metadata: null,
@@ -98,7 +99,7 @@ describe('updateTourState action', () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'usr-test-001',
       email: 'qa@tenant-a.test',
-      tenantId: 'ten-a-001',
+      tenantId: asTenantId('ten-a-001'),
       role: 'qa_reviewer',
       displayName: 'QA Reviewer',
       metadata: {
@@ -127,7 +128,7 @@ describe('updateTourState action', () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'usr-test-001',
       email: 'qa@tenant-a.test',
-      tenantId: 'ten-a-001',
+      tenantId: asTenantId('ten-a-001'),
       role: 'qa_reviewer',
       displayName: 'QA Reviewer',
       metadata: {
@@ -177,7 +178,7 @@ describe('updateTourState action', () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'usr-test-001',
       email: 'qa@tenant-a.test',
-      tenantId: 'ten-a-001',
+      tenantId: asTenantId('ten-a-001'),
       role: 'qa_reviewer',
       displayName: 'QA Reviewer',
       metadata: null,
@@ -209,7 +210,7 @@ describe('updateTourState action', () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'usr-test-001',
       email: 'qa@tenant-a.test',
-      tenantId: 'ten-a-001',
+      tenantId: asTenantId('ten-a-001'),
       role: 'qa_reviewer',
       displayName: 'QA Reviewer',
       metadata: null,
@@ -238,7 +239,7 @@ describe('updateTourState action', () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'usr-test-001',
       email: 'qa@tenant-a.test',
-      tenantId: 'ten-a-001',
+      tenantId: asTenantId('ten-a-001'),
       role: 'qa_reviewer',
       displayName: 'QA Reviewer',
       metadata: {
@@ -271,7 +272,7 @@ describe('updateTourState action', () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'usr-test-001',
       email: 'qa@tenant-a.test',
-      tenantId: 'ten-a-001',
+      tenantId: asTenantId('ten-a-001'),
       role: 'qa_reviewer',
       displayName: 'QA Reviewer',
       metadata: {
@@ -299,7 +300,7 @@ describe('updateTourState action', () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'usr-test-001',
       email: 'qa@tenant-a.test',
-      tenantId: 'ten-a-001',
+      tenantId: asTenantId('ten-a-001'),
       role: 'qa_reviewer',
       displayName: 'QA Reviewer',
       metadata: null,
@@ -320,7 +321,7 @@ describe('updateTourState action', () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'usr-test-001',
       email: 'qa@tenant-a.test',
-      tenantId: 'ten-a-001',
+      tenantId: asTenantId('ten-a-001'),
       role: 'qa_reviewer',
       displayName: 'QA Reviewer',
       metadata: null,
@@ -343,7 +344,7 @@ describe('updateTourState action', () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'usr-test-001',
       email: 'qa@tenant-a.test',
-      tenantId: 'ten-a-001',
+      tenantId: asTenantId('ten-a-001'),
       role: 'qa_reviewer',
       displayName: 'QA Reviewer',
       metadata: null,

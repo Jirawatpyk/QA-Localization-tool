@@ -7,6 +7,7 @@ import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { projects } from '@/db/schema/projects'
 import { logger } from '@/lib/logger'
+import type { TenantId } from '@/types/tenant'
 
 import { getModelById } from './client'
 import type { AILayer } from './types'
@@ -60,7 +61,7 @@ export function buildFallbackChain(layer: AILayer, pinnedModel: string | null): 
 export async function getModelForLayerWithFallback(
   layer: AILayer,
   projectId: string,
-  tenantId: string,
+  tenantId: TenantId,
 ): Promise<FallbackChain> {
   const [project] = await db
     .select({

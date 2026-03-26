@@ -7,6 +7,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+import { asTenantId } from '@/types/tenant'
+
 // Must be first — prevents 'server-only' from throwing in node test environment
 vi.mock('server-only', () => ({}))
 
@@ -46,7 +48,7 @@ vi.mock('@/db/schema/aiUsageLogs', () => ({
 // ── Test constants ──
 
 const VALID_PROJECT_ID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
-const VALID_TENANT_ID = 'b2c3d4e5-f6a7-4b2c-9d3e-4f5a6b7c8d9e'
+const VALID_TENANT_ID = asTenantId('b2c3d4e5-f6a7-4b2c-9d3e-4f5a6b7c8d9e')
 
 describe('checkProjectBudget concurrent budget exhaustion (R3-001)', () => {
   beforeEach(() => {

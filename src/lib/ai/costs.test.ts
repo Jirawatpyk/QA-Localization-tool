@@ -1,6 +1,8 @@
 import type { LanguageModelUsage } from 'ai'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+import { asTenantId } from '@/types/tenant'
+
 // Must be first
 vi.mock('server-only', () => ({}))
 
@@ -36,7 +38,7 @@ vi.mock('@/db/schema/aiUsageLogs', () => ({
 
 const VALID_FILE_ID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
 const VALID_PROJECT_ID = 'b2c3d4e5-f6a7-4b2c-9d3e-4f5a6b7c8d9e'
-const VALID_TENANT_ID = 'c3d4e5f6-a7b8-4c9d-8e1f-2a3b4c5d6e7f'
+const VALID_TENANT_ID = asTenantId('c3d4e5f6-a7b8-4c9d-8e1f-2a3b4c5d6e7f')
 
 const baseRecord = {
   tenantId: VALID_TENANT_ID,

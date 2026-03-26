@@ -2,6 +2,9 @@ vi.mock('server-only', () => ({}))
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+import { getCurrentUser } from '@/lib/auth/getCurrentUser'
+import { asTenantId } from '@/types/tenant'
+
 vi.mock('@/lib/auth/getCurrentUser', () => ({
   getCurrentUser: vi.fn(),
 }))
@@ -67,14 +70,12 @@ vi.mock('@/db/schema/findings', () => ({
   findings: { fileId: 'file_id', tenantId: 'tenant_id' },
 }))
 
-import { getCurrentUser } from '@/lib/auth/getCurrentUser'
-
 import { getDashboardData } from './getDashboardData.action'
 
 const MOCK_USER = {
   id: 'usr-1',
   email: 'test@test.com',
-  tenantId: 'ten-1',
+  tenantId: asTenantId('ten-1'),
   role: 'qa_reviewer' as const,
   displayName: 'Test',
   metadata: null,

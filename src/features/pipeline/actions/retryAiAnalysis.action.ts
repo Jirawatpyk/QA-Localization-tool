@@ -18,6 +18,7 @@ import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
 import type { LayerCompleted } from '@/types/finding'
 import type { PipelineLayer, ProcessingMode } from '@/types/pipeline'
+import type { TenantId } from '@/types/tenant'
 
 // ── Validation ──
 
@@ -66,7 +67,7 @@ export async function retryAiAnalysis(input: unknown): Promise<ActionResult<Retr
 
   // ── Auth ──
   let userId: string
-  let tenantId: string
+  let tenantId: TenantId
   try {
     const auth = await requireRole('qa_reviewer', 'write')
     userId = auth.id

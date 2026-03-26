@@ -13,11 +13,12 @@ import { processFile } from '@/features/pipeline/engine/ruleEngine'
 import type { RuleCheckResult } from '@/features/pipeline/engine/types'
 import { getGlossaryTerms } from '@/lib/cache/glossaryCache'
 import { logger } from '@/lib/logger'
+import type { TenantId } from '@/types/tenant'
 
 type RunL1Input = {
   fileId: string
   projectId: string
-  tenantId: string
+  tenantId: TenantId
   userId?: string
 }
 

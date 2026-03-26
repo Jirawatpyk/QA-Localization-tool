@@ -31,13 +31,14 @@ import { getConfigForModel } from '@/lib/ai/types'
 import { logger } from '@/lib/logger'
 import { aiL3ProjectLimiter } from '@/lib/ratelimit'
 import type { DetectedByLayer, FindingSeverity } from '@/types/finding'
+import type { TenantId } from '@/types/tenant'
 
 // ── Types ──
 
 type RunL3Input = {
   fileId: string
   projectId: string
-  tenantId: string
+  tenantId: TenantId
   userId?: string
   /** TD-AI-006: Segment IDs from failed L2 chunks — included as "unscreened" in L3 scope */
   l2FailedChunkSegmentIds?: string[]
@@ -635,14 +636,11 @@ export async function runL3ForFile({
       const insertedL3Rows: { id: string; segmentId: string | null; category: string }[] = []
       for (let i = 0; i < findingInserts.length; i += FINDING_BATCH_SIZE) {
         const batch = findingInserts.slice(i, i + FINDING_BATCH_SIZE)
-        const rows = await tx
-          .insert(findings)
-          .values(batch)
-          .returning({
-            id: findings.id,
-            segmentId: findings.segmentId,
-            category: findings.category,
-          })
+        const rows = await tx.insert(findings).values(batch).returning({
+          id: findings.id,
+          segmentId: findings.segmentId,
+          category: findings.category,
+        })
         insertedL3Rows.push(...rows)
       }
 

@@ -4,6 +4,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+import { asTenantId } from '@/types/tenant'
+
 import type { AutoPassRationaleData, FindingsSummary } from './types'
 
 // ── Hoisted mocks ──
@@ -57,7 +59,7 @@ const BASE_INPUT = {
   mqmScore: 96,
   criticalCount: 0,
   projectId: 'b1c2d3e4-f5a6-4b2c-9d3e-4f5a6b7c8d9e',
-  tenantId: 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f',
+  tenantId: asTenantId('c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f'),
   sourceLang: 'en-US',
   targetLang: 'th-TH',
 }

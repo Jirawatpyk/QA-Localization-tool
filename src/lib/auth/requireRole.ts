@@ -7,11 +7,12 @@ import { withTenant } from '@/db/helpers/withTenant'
 import { userRoles } from '@/db/schema/userRoles'
 import type { AppRole } from '@/lib/auth/getCurrentUser'
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
+import type { TenantId } from '@/types/tenant'
 
 type RequireRoleResult = {
   id: string
   email: string
-  tenantId: string
+  tenantId: TenantId
   role: AppRole
   nativeLanguages: string[]
 }

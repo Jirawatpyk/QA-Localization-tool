@@ -1,6 +1,8 @@
 import { pgTable, uuid, varchar } from 'drizzle-orm/pg-core'
 import { describe, expect, it } from 'vitest'
 
+import { asTenantId } from '@/types/tenant'
+
 import { withTenant } from './withTenant'
 
 // Test table with tenant_id column
@@ -12,7 +14,7 @@ const testTable = pgTable('test_table', {
 
 describe('withTenant', () => {
   it('should return an SQL expression for tenant filtering', () => {
-    const tenantId = '550e8400-e29b-41d4-a716-446655440000'
+    const tenantId = asTenantId('550e8400-e29b-41d4-a716-446655440000')
     const result = withTenant(testTable.tenantId, tenantId)
 
     // The result should be a valid Drizzle SQL expression
@@ -22,8 +24,8 @@ describe('withTenant', () => {
   })
 
   it('should accept different tenant IDs', () => {
-    const tenantA = '11111111-1111-1111-1111-111111111111'
-    const tenantB = '22222222-2222-2222-2222-222222222222'
+    const tenantA = asTenantId('11111111-1111-1111-1111-111111111111')
+    const tenantB = asTenantId('22222222-2222-2222-2222-222222222222')
 
     const resultA = withTenant(testTable.tenantId, tenantA)
     const resultB = withTenant(testTable.tenantId, tenantB)

@@ -29,13 +29,14 @@ import { getConfigForModel } from '@/lib/ai/types'
 import { logger } from '@/lib/logger'
 import { aiL2ProjectLimiter } from '@/lib/ratelimit'
 import type { DetectedByLayer, FindingSeverity } from '@/types/finding'
+import type { TenantId } from '@/types/tenant'
 
 // ── Types ──
 
 type RunL2Input = {
   fileId: string
   projectId: string
-  tenantId: string
+  tenantId: TenantId
   userId?: string
 }
 

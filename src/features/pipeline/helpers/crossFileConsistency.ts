@@ -7,10 +7,11 @@ import { glossaries } from '@/db/schema/glossaries'
 import { glossaryTerms } from '@/db/schema/glossaryTerms'
 import { segments } from '@/db/schema/segments'
 import { logger } from '@/lib/logger'
+import type { TenantId } from '@/types/tenant'
 
 type CrossFileConsistencyInput = {
   projectId: string
-  tenantId: string
+  tenantId: TenantId
   batchId: string
   fileIds: string[]
 }

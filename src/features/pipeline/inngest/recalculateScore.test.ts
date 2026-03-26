@@ -4,6 +4,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+import { asTenantId } from '@/types/tenant'
+
 const { mockScoreFile, mockWriteAuditLog, dbState, dbMockModule } = vi.hoisted(() => {
   const { dbState, dbMockModule } = createDrizzleMock()
   return {
@@ -61,7 +63,7 @@ describe('recalculateScore', () => {
     const event = buildFindingChangedEvent({
       fileId: 'b2c3d4e5-f6a1-4b2c-9d3e-4f5a6b7c8d9e',
       projectId: 'c3d4e5f6-a1b2-4c3d-ae4f-5a6b7c8d9e0f',
-      tenantId: 'd4e5f6a1-b2c3-4d4e-bf5a-6b7c8d9e0f1a',
+      tenantId: asTenantId('d4e5f6a1-b2c3-4d4e-bf5a-6b7c8d9e0f1a'),
       triggeredBy: 'e5f6a1b2-c3d4-4e5f-a6a7-b8c9d0e1f2a3',
     })
 
@@ -72,7 +74,7 @@ describe('recalculateScore', () => {
       expect.objectContaining({
         fileId: 'b2c3d4e5-f6a1-4b2c-9d3e-4f5a6b7c8d9e',
         projectId: 'c3d4e5f6-a1b2-4c3d-ae4f-5a6b7c8d9e0f',
-        tenantId: 'd4e5f6a1-b2c3-4d4e-bf5a-6b7c8d9e0f1a',
+        tenantId: asTenantId('d4e5f6a1-b2c3-4d4e-bf5a-6b7c8d9e0f1a'),
         userId: 'e5f6a1b2-c3d4-4e5f-a6a7-b8c9d0e1f2a3',
       }),
     )

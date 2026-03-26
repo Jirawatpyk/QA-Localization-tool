@@ -50,13 +50,15 @@ vi.mock('drizzle-orm', () => ({
   sql: vi.fn(() => 'count-expr'),
 }))
 
+import { asTenantId } from '@/types/tenant'
+
 import { checkAutoPass } from './autoPassChecker'
 
 const BASE_INPUT = {
   mqmScore: 96,
   criticalCount: 0,
   projectId: 'project-abc',
-  tenantId: 'tenant-abc',
+  tenantId: asTenantId('tenant-abc'),
   sourceLang: 'en-US',
   targetLang: 'th-TH',
 }
