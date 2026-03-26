@@ -46,14 +46,21 @@ describe('useRoleSync', () => {
 
   it('should not subscribe when userId is undefined', async () => {
     const { useRoleSync } = await import('./useRoleSync')
-    renderHook(() => useRoleSync(undefined))
+    renderHook(() => useRoleSync(undefined, undefined))
+
+    expect(mockChannel.subscribe).not.toHaveBeenCalled()
+  })
+
+  it('should not subscribe when tenantId is undefined', async () => {
+    const { useRoleSync } = await import('./useRoleSync')
+    renderHook(() => useRoleSync('user-123', undefined))
 
     expect(mockChannel.subscribe).not.toHaveBeenCalled()
   })
 
   it('should subscribe to user_roles changes for given userId', async () => {
     const { useRoleSync } = await import('./useRoleSync')
-    renderHook(() => useRoleSync('user-123'))
+    renderHook(() => useRoleSync('user-123', 'tenant-abc'))
 
     expect(mockChannel.on).toHaveBeenCalledWith(
       'postgres_changes',
@@ -67,22 +74,35 @@ describe('useRoleSync', () => {
     expect(mockChannel.subscribe).toHaveBeenCalled()
   })
 
-  it('should refresh session when role change detected', async () => {
+  it('should refresh session when role change detected with matching tenant', async () => {
     const { useRoleSync } = await import('./useRoleSync')
-    renderHook(() => useRoleSync('user-123'))
+    renderHook(() => useRoleSync('user-123', 'tenant-abc'))
 
-    // Simulate realtime role change event
+    // Simulate realtime role change event with matching tenant_id
     await act(async () => {
-      realtimeCallback?.({ new: { role: 'qa_reviewer' } })
+      realtimeCallback?.({ new: { role: 'qa_reviewer', tenant_id: 'tenant-abc' } })
     })
 
     expect(mockRefreshSession).toHaveBeenCalled()
     expect(mockRefresh).toHaveBeenCalled()
   })
 
+  it('should ignore role change from different tenant', async () => {
+    const { useRoleSync } = await import('./useRoleSync')
+    renderHook(() => useRoleSync('user-123', 'tenant-abc'))
+
+    // Simulate realtime role change event with DIFFERENT tenant_id
+    await act(async () => {
+      realtimeCallback?.({ new: { role: 'admin', tenant_id: 'tenant-other' } })
+    })
+
+    expect(mockRefreshSession).not.toHaveBeenCalled()
+    expect(mockRefresh).not.toHaveBeenCalled()
+  })
+
   it('should poll every 5 minutes as fallback', async () => {
     const { useRoleSync } = await import('./useRoleSync')
-    renderHook(() => useRoleSync('user-123'))
+    renderHook(() => useRoleSync('user-123', 'tenant-abc'))
 
     // Advance 5 minutes
     await act(async () => {
@@ -94,7 +114,7 @@ describe('useRoleSync', () => {
 
   it('should cleanup subscription and interval on unmount', async () => {
     const { useRoleSync } = await import('./useRoleSync')
-    const { unmount } = renderHook(() => useRoleSync('user-123'))
+    const { unmount } = renderHook(() => useRoleSync('user-123', 'tenant-abc'))
 
     unmount()
 

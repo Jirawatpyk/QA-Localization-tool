@@ -37,7 +37,7 @@ export default async function ProjectsPage() {
     .from(projects)
     .leftJoin(
       files,
-      and(eq(projects.id, files.projectId), eq(files.tenantId, currentUser.tenantId)),
+      and(eq(projects.id, files.projectId), withTenant(files.tenantId, currentUser.tenantId)),
     )
     .where(withTenant(projects.tenantId, currentUser.tenantId))
     .groupBy(projects.id)

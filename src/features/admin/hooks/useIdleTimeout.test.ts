@@ -34,21 +34,21 @@ describe('useIdleTimeout', () => {
     const { useIdleTimeout } = await import('./useIdleTimeout')
     renderHook(() => useIdleTimeout())
 
-    // Advance 7 hours (less than 8 hour timeout)
+    // Advance 25 minutes (less than 30 minute timeout)
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(7 * 60 * 60 * 1000)
+      await vi.advanceTimersByTimeAsync(25 * 60 * 1000)
     })
 
     expect(mockSignOut).not.toHaveBeenCalled()
   })
 
-  it('should sign out after 8 hours of inactivity', async () => {
+  it('should sign out after 30 minutes of inactivity', async () => {
     const { useIdleTimeout } = await import('./useIdleTimeout')
     renderHook(() => useIdleTimeout())
 
-    // Advance 8 hours
+    // Advance 30 minutes
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(8 * 60 * 60 * 1000)
+      await vi.advanceTimersByTimeAsync(30 * 60 * 1000)
     })
 
     expect(mockSignOut).toHaveBeenCalled()
@@ -59,9 +59,9 @@ describe('useIdleTimeout', () => {
     const { useIdleTimeout } = await import('./useIdleTimeout')
     renderHook(() => useIdleTimeout())
 
-    // Advance 7 hours
+    // Advance 25 minutes
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(7 * 60 * 60 * 1000)
+      await vi.advanceTimersByTimeAsync(25 * 60 * 1000)
     })
 
     // Simulate user activity
@@ -69,17 +69,17 @@ describe('useIdleTimeout', () => {
       window.dispatchEvent(new Event('mousedown'))
     })
 
-    // Advance another 7 hours (only 7 from last activity)
+    // Advance another 25 minutes (only 25 from last activity)
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(7 * 60 * 60 * 1000)
+      await vi.advanceTimersByTimeAsync(25 * 60 * 1000)
     })
 
     // Should NOT have signed out
     expect(mockSignOut).not.toHaveBeenCalled()
 
-    // Advance 1 more hour (8 hours since last activity)
+    // Advance 5 more minutes (30 minutes since last activity)
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(1 * 60 * 60 * 1000)
+      await vi.advanceTimersByTimeAsync(5 * 60 * 1000)
     })
 
     expect(mockSignOut).toHaveBeenCalled()

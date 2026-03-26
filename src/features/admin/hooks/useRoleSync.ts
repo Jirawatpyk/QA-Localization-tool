@@ -13,16 +13,18 @@ const POLL_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes fallback
  * On role change: refreshes session to get new JWT claims.
  * Fallback: polls every 5 minutes.
  */
-export function useRoleSync(userId: string | undefined) {
+export function useRoleSync(userId: string | undefined, tenantId: string | undefined) {
   const router = useRouter()
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
-    if (!userId) return
+    if (!userId || !tenantId) return
 
     const supabase = createBrowserClient()
 
     // Primary: Realtime subscription
+    // Note: Supabase Realtime filter supports single column only.
+    // tenant_id is validated in the callback for defense-in-depth.
     const channel = supabase
       .channel('role-sync')
       .on(
@@ -34,6 +36,10 @@ export function useRoleSync(userId: string | undefined) {
           filter: `user_id=eq.${userId}`,
         },
         async (payload) => {
+          // Defense-in-depth: verify tenant_id matches to prevent cross-tenant event leakage
+          const eventTenantId = (payload.new as { tenant_id?: string }).tenant_id
+          if (eventTenantId && eventTenantId !== tenantId) return
+
           const newRole = (payload.new as { role?: string }).role
           toast.info(`Your role has been updated to ${newRole}`)
 
@@ -53,5 +59,5 @@ export function useRoleSync(userId: string | undefined) {
       supabase.removeChannel(channel)
       if (pollRef.current) clearInterval(pollRef.current)
     }
-  }, [userId, router])
+  }, [userId, tenantId, router])
 }

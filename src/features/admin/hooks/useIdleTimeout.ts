@@ -6,11 +6,11 @@ import { toast } from 'sonner'
 
 import { createBrowserClient } from '@/lib/supabase/client'
 
-const IDLE_TIMEOUT_MS = 8 * 60 * 60 * 1000 // 8 hours
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
 const ACTIVITY_EVENTS = ['mousedown', 'keydown', 'scroll', 'touchstart'] as const
 
 /**
- * Tracks user activity and signs out after 8 hours of inactivity.
+ * Tracks user activity and signs out after 30 minutes of inactivity.
  * Redirects to /login with ?reason=session_expired.
  */
 export function useIdleTimeout() {
