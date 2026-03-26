@@ -411,17 +411,16 @@ test.describe.serial('Review Performance Benchmarks', () => {
     await signupOrLogin(page, perfEmail, perfPassword)
     await gotoReviewPageWithRetry(page, perfProjectId, perfFileId)
 
-    // Click first pending row to set focus
+    // Click first pending row as anchor for Shift+Click range selection
     const firstPending = page.locator('[role="row"][data-status="pending"]').first()
     await firstPending.click()
     await expect(firstPending).toHaveAttribute('tabindex', '0', { timeout: 5_000 })
 
-    // Shift+J to select 50 findings (bulk select)
-    for (let i = 0; i < 49; i++) {
-      await page.keyboard.press('Shift+j')
-    }
+    // Shift+Click on 50th row to select range (bulk select via Story 4.4a)
+    const targetRow = page.locator('[role="row"][data-status="pending"]').nth(49)
+    await targetRow.click({ modifiers: ['Shift'] })
 
-    // Wait for bulk action bar to appear with count
+    // Wait for bulk action bar to appear
     const bulkBar = page.getByTestId('bulk-action-bar')
     await expect(bulkBar).toBeVisible({ timeout: 5_000 })
 
