@@ -19,6 +19,7 @@ import { buildStoragePath } from '@/features/upload/utils/storagePath'
 import { requireRole } from '@/lib/auth/requireRole'
 import { DEFAULT_BATCH_SIZE, MAX_FILE_SIZE_BYTES } from '@/lib/constants'
 import { logger } from '@/lib/logger'
+import { mutationLimiter } from '@/lib/ratelimit'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 const STORAGE_ALREADY_EXISTS_ERROR = 'The resource already exists'
@@ -33,7 +34,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // 2. Check Content-Length BEFORE reading body (fast reject for unreasonably large requests)
+  // 2. Rate limit
+  const { success: rateLimitOk } = await mutationLimiter.limit(currentUser.id)
+  if (!rateLimitOk) {
+    return NextResponse.json(
+      { error: 'Too many upload requests. Please try again later.' },
+      { status: 429 },
+    )
+  }
+
+  // 3. Check Content-Length BEFORE reading body (fast reject for unreasonably large requests)
   // Allow up to DEFAULT_BATCH_SIZE files × (15MB + 64KB multipart overhead) each
   const contentLength = request.headers.get('content-length')
   if (
@@ -137,7 +147,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       )
     }
 
-    // 5b. Streaming size validation
+    // 5b. File name length validation
+    if (file.name.length > 500) {
+      return NextResponse.json(
+        {
+          error: `File name too long (${file.name.length} chars, max 500): ${file.name.slice(0, 50)}...`,
+        },
+        { status: 400 },
+      )
+    }
+
+    // 5c. Streaming size validation
     if (file.size > MAX_FILE_SIZE_BYTES) {
       return NextResponse.json(
         {
@@ -189,51 +209,45 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // 5e. Check for existing file with same hash (duplicate re-run case)
     // When user clicks "Re-run QA", the file has the same (projectId, fileHash)
     // — reset existing record instead of inserting a duplicate
-    let fileRecord: typeof files.$inferSelect | undefined
-    let isRerun = false
+    // Wrapped in transaction to prevent TOCTOU race on concurrent uploads
+    const ACTIVE_STATUSES = new Set(['parsing', 'l1_processing', 'l2_processing', 'l3_processing'])
 
-    const [existingFile] = await db
-      .select()
-      .from(files)
-      .where(
-        and(
-          withTenant(files.tenantId, currentUser.tenantId),
-          eq(files.projectId, projectId),
-          eq(files.fileHash, fileHash),
-        ),
-      )
-      .limit(1)
+    const txResult = await db.transaction(async (tx) => {
+      const [existingFile] = await tx
+        .select()
+        .from(files)
+        .where(
+          and(
+            withTenant(files.tenantId, currentUser.tenantId),
+            eq(files.projectId, projectId),
+            eq(files.fileHash, fileHash),
+          ),
+        )
+        .limit(1)
 
-    if (existingFile) {
-      // Guard: don't reset a file that's actively being processed (race condition)
-      const ACTIVE_STATUSES = new Set([
-        'parsing',
-        'l1_processing',
-        'l2_processing',
-        'l3_processing',
-      ])
-      if (ACTIVE_STATUSES.has(existingFile.status)) {
-        warnings.push(`${file.name}: File is currently being processed — skipped`)
-        continue
+      if (existingFile) {
+        // Guard: don't reset a file that's actively being processed
+        if (ACTIVE_STATUSES.has(existingFile.status)) {
+          return { fileRecord: undefined, isRerun: false, skipped: true }
+        }
+
+        // Re-run: reset file status to 'uploaded' for re-processing
+        const [updated] = await tx
+          .update(files)
+          .set({
+            status: 'uploaded',
+            storagePath,
+            uploadedBy: currentUser.id,
+            batchId: batchId ?? null,
+            updatedAt: new Date(),
+          })
+          .where(eq(files.id, existingFile.id))
+          .returning()
+        return { fileRecord: updated, isRerun: true, skipped: false }
       }
 
-      // Re-run: reset file status to 'uploaded' for re-processing
-      const [updated] = await db
-        .update(files)
-        .set({
-          status: 'uploaded',
-          storagePath,
-          uploadedBy: currentUser.id,
-          batchId: batchId ?? null,
-          updatedAt: new Date(),
-        })
-        .where(eq(files.id, existingFile.id))
-        .returning()
-      fileRecord = updated
-      isRerun = true
-    } else {
       // New file: INSERT record
-      const [inserted] = await db
+      const [inserted] = await tx
         .insert(files)
         .values({
           tenantId: currentUser.tenantId,
@@ -248,8 +262,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           batchId: batchId ?? undefined,
         })
         .returning()
-      fileRecord = inserted
+      return { fileRecord: inserted, isRerun: false, skipped: false }
+    })
+
+    if (txResult.skipped) {
+      warnings.push(`${file.name}: File is currently being processed — skipped`)
+      continue
     }
+
+    const { fileRecord, isRerun } = txResult
 
     if (!fileRecord) {
       // H1: cleanup storage to prevent orphan when DB insert fails
@@ -274,6 +295,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           fileName: file.name,
           fileSizeBytes: file.size,
           fileType,
+          storagePath,
           fileHash,
           projectId,
           batchId: batchId ?? null,

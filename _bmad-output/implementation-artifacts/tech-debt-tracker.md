@@ -1081,3 +1081,63 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Files:** `src/app/api/upload/route.ts`
 - **Description:** 50 files × 15MB = 750MB hashed sequentially. ~2.5s blocking. No streaming hash or parallelization.
 - **Status:** DEFERRED → **Epic 7** (performance — use crypto.createHash streaming + worker threads)
+
+---
+
+## Category 13: Upload & Storage Adversarial Review (2026-03-26)
+
+### TD-UPLOAD-003: Supabase Storage has no RLS policies (storage.objects)
+- **Date:** 2026-03-26
+- **Severity:** Medium
+- **Files:** `supabase/migrations/`
+- **Description:** Upload uses service_role admin client bypassing all RLS. No storage.objects policies in migrations. If service_role key leaks, cross-tenant file access possible. Application-level path check ({tenantId}/...) is sole defense.
+- **Status:** DEFERRED → **Epic 6** (add storage.objects RLS policies matching tenant_id in path prefix)
+
+### TD-UPLOAD-004: File type detection is extension-only — no magic byte sniffing
+- **Date:** 2026-03-26
+- **Severity:** Low
+- **Files:** `src/features/upload/utils/fileType.ts`
+- **Description:** getFileType uses extension only. Renamed executables pass type check. Zip bomb guard catches non-ZIP, ExcelJS catches non-XLSX. Risk is low but defense-in-depth gap.
+- **Status:** ACCEPTED — parser-level validation catches malformed content
+
+### TD-UPLOAD-005: Partial batch failure has no rollback
+- **Date:** 2026-03-26
+- **Severity:** Medium
+- **Files:** `src/app/api/upload/route.ts`
+- **Description:** If file 2 of 3 fails, file 1 storage+DB remains, file 3 not processed. No batch-level rollback. Batch record has no status field tracking completion.
+- **Status:** DEFERRED → **Epic 7** (batch lifecycle management)
+
+### TD-UPLOAD-006: Sequential upload — no parallelism for batch uploads
+- **Date:** 2026-03-26
+- **Severity:** Low
+- **Files:** `src/features/upload/hooks/useFileUpload.ts`
+- **Description:** Files uploaded one-by-one in for loop. 50 files × 15MB = slow. No concurrent upload (Promise.all with concurrency limit).
+- **Status:** DEFERRED → **Epic 7** (performance — add 3-concurrent upload with p-limit)
+
+### TD-UPLOAD-007: Client + Server SHA-256 double hash
+- **Date:** 2026-03-26
+- **Severity:** Low
+- **Files:** `src/features/upload/hooks/useFileUpload.ts`, `src/app/api/upload/route.ts`
+- **Description:** Client hashes for duplicate pre-check, server re-hashes for trust. Both necessary but could optimize by sending client hash + server verify (cheaper than full re-hash).
+- **Status:** ACCEPTED — server hash is security requirement; client hash enables pre-check UX
+
+### TD-UPLOAD-008: Orphan storage cleanup not implemented
+- **Date:** 2026-03-26
+- **Severity:** Medium
+- **Files:** `src/features/pipeline/helpers/orphanFileDetector.test.ts`
+- **Description:** Files in 'uploaded' or 'failed' status indefinitely occupy storage. No cron/scheduled cleanup. orphanFileDetector is test-only concept — no production implementation.
+- **Status:** DEFERRED → **Epic 7** (add Inngest cron function to clean stale uploads > 30 days)
+
+### TD-UPLOAD-009: uploadedBy FK ON DELETE SET NULL loses attribution
+- **Date:** 2026-03-26
+- **Severity:** Low
+- **Files:** `src/db/schema/files.ts`
+- **Description:** User account deletion sets uploadedBy to null. Audit log retains userId but files table loses direct attribution. Compliance concern for regulated environments.
+- **Status:** ACCEPTED — audit log preserves full history; SET NULL prevents cascade
+
+### TD-UPLOAD-010: project-files bucket not declared in config.toml or migration
+- **Date:** 2026-03-26
+- **Severity:** Low
+- **Files:** `supabase/config.toml`
+- **Description:** Bucket must be created manually in Supabase dashboard. Fresh deploy has no bucket → upload fails immediately. Should be in seed or migration.
+- **Status:** DEFERRED → **Epic 6** (add bucket creation to supabase/seed.sql or migration)

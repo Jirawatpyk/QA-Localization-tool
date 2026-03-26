@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { MAX_FILE_SIZE_BYTES, DEFAULT_BATCH_SIZE } from '@/lib/constants'
 
@@ -47,6 +47,7 @@ function uploadWithProgress(
   projectId: string,
   batchId: string | undefined,
   onProgress: (bytesUploaded: number) => void,
+  xhrRef?: { current: XMLHttpRequest | null },
 ): Promise<{ ok: boolean; status: number; data: unknown }> {
   return new Promise((resolve) => {
     const formData = new FormData()
@@ -55,6 +56,7 @@ function uploadWithProgress(
     formData.append('files', file)
 
     const xhr = new XMLHttpRequest()
+    if (xhrRef) xhrRef.current = xhr
 
     xhr.upload.addEventListener('progress', (e) => {
       if (e.lengthComputable) onProgress(e.loaded)
@@ -67,15 +69,18 @@ function uploadWithProgress(
       } catch {
         data = null
       }
+      if (xhrRef) xhrRef.current = null
       resolve({ ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, data })
     })
 
     xhr.addEventListener('error', () => {
+      if (xhrRef) xhrRef.current = null
       resolve({ ok: false, status: 0, data: null })
     })
 
     // L2: treat abort as a network error so retry logic applies
     xhr.addEventListener('abort', () => {
+      if (xhrRef) xhrRef.current = null
       resolve({ ok: false, status: 0, data: null })
     })
 
@@ -85,6 +90,7 @@ function uploadWithProgress(
 }
 
 export function useFileUpload({ projectId }: UseFileUploadOptions): UseFileUploadReturn {
+  const xhrRef = useRef<XMLHttpRequest | null>(null)
   const [progress, setProgress] = useState<UploadProgress[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [largeFileWarnings, setLargeFileWarnings] = useState<string[]>([])
@@ -92,6 +98,16 @@ export function useFileUpload({ projectId }: UseFileUploadOptions): UseFileUploa
   const [uploadedFiles, setUploadedFiles] = useState<UploadFileResult[]>([])
   const [pendingQueue, setPendingQueue] = useState<File[]>([])
   const [currentBatchId, setCurrentBatchId] = useState<string | undefined>(undefined)
+
+  // Abort any in-flight XHR upload on unmount to prevent orphan requests
+  useEffect(() => {
+    return () => {
+      if (xhrRef.current) {
+        xhrRef.current.abort()
+        xhrRef.current = null
+      }
+    }
+  }, [])
 
   function updateFileProgress(fileId: string, patch: Partial<UploadProgress>) {
     setProgress((prev) => prev.map((f) => (f.fileId === fileId ? { ...f, ...patch } : f)))
@@ -105,20 +121,26 @@ export function useFileUpload({ projectId }: UseFileUploadOptions): UseFileUploa
   ): Promise<UploadFileResult | null> {
     const startTime = Date.now()
 
-    const result = await uploadWithProgress(file, projectId, batchId, (bytesUploaded) => {
-      const elapsed = (Date.now() - startTime) / 1000
-      const speed = elapsed > 0 ? bytesUploaded / elapsed : 0
-      const remaining = file.size - bytesUploaded
-      const etaSeconds = speed > 0 ? remaining / speed : null
-      const percent = Math.round((bytesUploaded / file.size) * 100)
+    const result = await uploadWithProgress(
+      file,
+      projectId,
+      batchId,
+      (bytesUploaded) => {
+        const elapsed = (Date.now() - startTime) / 1000
+        const speed = elapsed > 0 ? bytesUploaded / elapsed : 0
+        const remaining = file.size - bytesUploaded
+        const etaSeconds = speed > 0 ? remaining / speed : null
+        const percent = Math.round((bytesUploaded / file.size) * 100)
 
-      updateFileProgress(fileId, {
-        bytesUploaded,
-        percent,
-        etaSeconds,
-        status: 'uploading',
-      })
-    })
+        updateFileProgress(fileId, {
+          bytesUploaded,
+          percent,
+          etaSeconds,
+          status: 'uploading',
+        })
+      },
+      xhrRef,
+    )
 
     if (result.ok) {
       const body = result.data as { success: boolean; data?: { files?: UploadFileResult[] } }
