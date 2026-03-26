@@ -53,20 +53,17 @@ describe('useReviewStore — Bulk Operations Coverage Gaps (Story 4.4a)', () => 
 
   // ── P1: selectRange invalid IDs ──
 
-  it('[P1] selectRange should handle invalid IDs not in sorted list', () => {
+  it('[P1] selectRange should fallback to single-select when anchor not in sorted list (fix #7)', () => {
     const ids = seedFindings(4)
 
-    // Pre-select one item so we can verify nothing changes
     useReviewStore.getState().addToSelection(ids[0]!)
 
-    const selectedBefore = new Set(useReviewStore.getState().selectedIds)
-
-    // Call selectRange with an ID that is NOT in sortedFindingIds
+    // Anchor not in sortedFindingIds → fallback to single-select of toId
     useReviewStore.getState().selectRange('nonexistent-id', ids[1]!)
 
     const selectedAfter = useReviewStore.getState().selectedIds
-    // Selection should remain unchanged — indexOf returns -1, early return
-    expect(selectedAfter).toEqual(selectedBefore)
+    expect(selectedAfter).toEqual(new Set([ids[1]!]))
+    expect(useReviewStore.getState().selectionMode).toBe('bulk')
   })
 
   // ── P1: selectAllFiltered with 0 matches ──

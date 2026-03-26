@@ -992,3 +992,49 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Fix:** When override-score feature is added (Epic 6), verify the override action writes consistent status through `scoreFile` and that overridden files should count toward graduation threshold.
 - **Effort:** N/A (verification when feature is built)
 - **Status:** DEFERRED → **Epic 6** (override-score feature — `TODO(Epic 6)` comment added in code)
+
+---
+
+## Category 11: Review Workflow Adversarial Review (2026-03-26)
+
+### TD-REVIEW-002: Filter cache missing pagehide/visibilitychange fallback for mobile
+- **Date:** 2026-03-26
+- **Severity:** Low
+- **Files:** `src/features/review/components/ReviewPageClient.tsx`
+- **Description:** beforeunload doesn't fire reliably on iOS Safari. React unmount cleanup covers client-side nav but not browser close on mobile.
+- **Status:** DEFERRED → **Epic 6** (mobile optimization)
+
+### TD-REVIEW-003: Double-tap Escape closes ConflictDialog + Sheet simultaneously
+- **Date:** 2026-03-26
+- **Severity:** Low
+- **Files:** `src/features/review/components/ConflictDialog.tsx`, `src/features/review/components/FindingDetailSheet.tsx`
+- **Description:** First Escape closes dialog (Radix stops propagation), second Escape hits Sheet. Violates Guardrail #31 (one layer per Esc). Would need debounce or cooldown on Sheet's Escape handler.
+- **Status:** DEFERRED → **Epic 6** (UX polish)
+
+### TD-REVIEW-004: J/K keyboard navigation may double-fire between grid and review-zone handlers
+- **Date:** 2026-03-26
+- **Severity:** Low
+- **Files:** `src/features/review/components/FindingList.tsx`, `src/features/review/components/ReviewPageClient.tsx`
+- **Description:** Both components handle J/K. Comment says intentional (grid + fallback) but needs verification that event.stopPropagation() prevents double navigation.
+- **Status:** DEFERRED → **Epic 5** (keyboard accessibility — Story 5.3)
+
+### TD-REVIEW-005: undoDeleteFinding uses client snapshot with potentially stale category
+- **Date:** 2026-03-26
+- **Severity:** Low
+- **Files:** `src/features/review/actions/undoDeleteFinding.action.ts`
+- **Description:** Snapshot stored client-side. If taxonomy changes between delete and undo-delete, finding re-inserted with old category. findings.category is varchar not FK — no DB-level guard.
+- **Status:** ACCEPTED — edge case (taxonomy rarely changes mid-session)
+
+### TD-REVIEW-006: getFileReviewData loads ALL findings without pagination
+- **Date:** 2026-03-26
+- **Severity:** Medium
+- **Files:** `src/features/review/actions/getFileReviewData.action.ts`
+- **Description:** No LIMIT on findings query. Files with 5000+ findings → large response + high client memory. Virtualized list helps rendering but findingsMap holds all in memory.
+- **Status:** DEFERRED → **Epic 7** (performance optimization — add cursor pagination + virtual scroll)
+
+### TD-REVIEW-007: approveFile has no score version/timestamp check
+- **Date:** 2026-03-26
+- **Severity:** Medium
+- **Files:** `src/features/review/actions/approveFile.action.ts`
+- **Description:** Checks score.status but not whether score is the latest version. Score could change (recalculation) between user viewing and approving. Race window is small but real.
+- **Status:** DEFERRED → **Epic 6** (add score.calculatedAt comparison or optimistic lock)

@@ -216,27 +216,25 @@ export async function undoBulkAction(
     logger.error({ err: auditErr }, 'Audit log write failed for bulk undo')
   }
 
-  // Inngest events for score recalculation (best-effort, one per reverted finding)
-  for (const item of canRevert) {
+  // Inngest event for score recalculation (best-effort, single event for entire batch)
+  const firstReverted = canRevert[0]
+  if (firstReverted) {
     try {
       await inngest.send({
         name: 'finding.changed',
         data: {
-          findingId: item.findingId,
+          findingId: firstReverted.findingId,
           fileId,
           projectId,
           tenantId,
-          previousState: item.currentState,
-          newState: item.previousState,
+          previousState: firstReverted.currentState,
+          newState: firstReverted.previousState,
           triggeredBy: userId,
           timestamp: new Date().toISOString(),
         },
       })
     } catch (inngestErr) {
-      logger.error(
-        { err: inngestErr, findingId: item.findingId },
-        'Inngest event send failed for bulk undo finding',
-      )
+      logger.error({ err: inngestErr, fileId }, 'Undo bulk Inngest event failed (non-fatal)')
     }
   }
 

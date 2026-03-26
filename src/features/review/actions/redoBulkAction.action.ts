@@ -142,27 +142,25 @@ export async function redoBulkAction(
     logger.error({ err: auditErr }, 'Audit log write failed for bulk redo')
   }
 
-  // Inngest events
-  for (const item of canRedo) {
+  // Inngest event for score recalculation (best-effort, single event for entire batch)
+  const firstRedone = canRedo[0]
+  if (firstRedone) {
     try {
       await inngest.send({
         name: 'finding.changed',
         data: {
-          findingId: item.findingId,
+          findingId: firstRedone.findingId,
           fileId,
           projectId,
           tenantId,
-          previousState: item.currentState,
-          newState: item.targetState,
+          previousState: firstRedone.currentState,
+          newState: firstRedone.targetState,
           triggeredBy: userId,
           timestamp: new Date().toISOString(),
         },
       })
     } catch (inngestErr) {
-      logger.error(
-        { err: inngestErr, findingId: item.findingId },
-        'Inngest event send failed for bulk redo finding',
-      )
+      logger.error({ err: inngestErr, fileId }, 'Redo bulk Inngest event failed (non-fatal)')
     }
   }
 

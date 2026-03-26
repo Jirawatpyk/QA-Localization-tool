@@ -143,6 +143,8 @@ export function trackRejection(
   }
   newTracker.set(groupKey, group)
 
+  const PATTERN_ENTRIES_CAP = 100
+
   const entry: RejectionEntry = {
     findingId: finding.id,
     keywords,
@@ -151,6 +153,11 @@ export function trackRejection(
     targetLang,
   }
   group.entries.push(entry)
+
+  // Evict oldest entries if over cap to bound memory usage
+  if (group.entries.length > PATTERN_ENTRIES_CAP) {
+    group.entries = group.entries.slice(-PATTERN_ENTRIES_CAP)
+  }
 
   // Cluster detection via transitive overlap (connected component in overlap graph)
   // Build adjacency: entries connected if they share >= MIN_OVERLAP keywords

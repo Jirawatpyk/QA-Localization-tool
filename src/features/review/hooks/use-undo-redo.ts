@@ -47,8 +47,8 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
         })
 
         if (!result.success) {
-          // Restore entry to undo stack on failure
-          store.pushUndo(entry)
+          // Restore entry to undo stack on failure (preserve redo stack)
+          store.reinsertUndo(entry)
           if (result.code === 'CONFLICT') {
             onConflict(entry, entry.findingId, currentSeverity ?? 'unknown')
           } else {
@@ -77,7 +77,7 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
       if (entry.action === 'add' && entry.findingId) {
         const result = await undoAddFinding({ findingId: entry.findingId, fileId, projectId })
         if (!result.success) {
-          store.pushUndo(entry)
+          store.reinsertUndo(entry)
           toast.error(`Undo failed: ${result.error}`)
           return
         }
@@ -96,10 +96,15 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
           projectId,
         })
         if (!result.success) {
-          store.pushUndo(entry)
-          if (result.code === 'FK_VIOLATION') {
+          if (
+            result.code === 'FK_VIOLATION' ||
+            result.code === 'SEGMENT_DELETED' ||
+            result.code === 'FILE_DELETED'
+          ) {
+            // Permanent failure — discard entry (don't re-push to avoid stuck loop)
             toast.error(result.error)
           } else {
+            store.reinsertUndo(entry)
             toast.error(`Undo failed: ${result.error}`)
           }
           return
@@ -175,7 +180,7 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
           force: false,
         })
         if (!result.success) {
-          store.pushUndo(entry)
+          store.reinsertUndo(entry)
           toast.error(`Undo failed: ${result.error}`)
           return
         }
@@ -218,7 +223,7 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
 
       // Default: single status revert
       if (!entry.findingId) {
-        store.pushUndo(entry)
+        store.reinsertUndo(entry)
         return
       }
 
@@ -233,7 +238,7 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
       const prevState = entry.previousStates.get(entry.findingId)
       const expectedState = entry.newStates.get(entry.findingId)
       if (!prevState || !expectedState) {
-        store.pushUndo(entry)
+        store.reinsertUndo(entry)
         return
       }
 
@@ -265,7 +270,7 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
           onConflict(entry, entry.findingId, finding?.status ?? 'unknown')
         } else {
           toast.error(`Undo failed: ${result.error}`)
-          store.pushUndo(entry)
+          store.reinsertUndo(entry)
         }
         return
       }
@@ -286,8 +291,8 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
       announce(`Undone: ${entry.description}`)
     } catch {
       toast.error('Undo failed unexpectedly')
-      // Re-push entry so user can retry
-      useReviewStore.getState().pushUndo(entry)
+      // Re-insert entry so user can retry (preserves redo stack)
+      useReviewStore.getState().reinsertUndo(entry)
     } finally {
       inFlightRef.current = false
     }
@@ -539,8 +544,8 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
         announce(`Undone: ${entry.description}`)
       } else {
         toast.error(`Force undo failed: ${result.error}`)
-        // P1 fix: restore entry to undo stack so user can retry
-        useReviewStore.getState().pushUndo(entry)
+        // P1 fix: restore entry to undo stack so user can retry (preserves redo stack)
+        useReviewStore.getState().reinsertUndo(entry)
       }
     },
     [fileId, projectId],

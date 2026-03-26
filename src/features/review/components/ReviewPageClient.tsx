@@ -244,7 +244,12 @@ export function ReviewPageClient({
           for (const skippedId of result.data.skippedIds) {
             const snap = snapshots.get(skippedId)
             if (snap) {
-              useReviewStore.getState().setFinding(skippedId, snap)
+              const current = useReviewStore.getState().findingsMap.get(skippedId)
+              // Only rollback if store still has our optimistic value (Realtime hasn't overwritten)
+              const optimisticStatus = getNewState(action, snap.status)
+              if (current && optimisticStatus && current.status === optimisticStatus) {
+                useReviewStore.getState().setFinding(skippedId, snap)
+              }
             }
           }
           const processed = result.data.processedCount

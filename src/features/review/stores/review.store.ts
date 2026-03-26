@@ -339,6 +339,8 @@ type UndoRedoSlice = {
   /** findingId → Set of UndoEntry IDs for O(1) Realtime conflict lookup */
   undoFindingIndex: Map<string, Set<string>>
   pushUndo: (entry: UndoEntry) => void
+  /** Re-insert entry to undo stack WITHOUT clearing redo stack (for retry on failure) */
+  reinsertUndo: (entry: UndoEntry) => void
   popUndo: () => UndoEntry | undefined
   pushRedo: (entry: UndoEntry) => void
   popRedo: () => UndoEntry | undefined
@@ -382,6 +384,15 @@ const createUndoRedoSlice = (
       return {
         undoStack: newStack,
         redoStack: [], // Clear redo on new action (AC6)
+        undoFindingIndex: rebuildIndex(newStack),
+      }
+    }),
+  reinsertUndo: (entry) =>
+    set((s) => {
+      const newStack = [...s.undoStack, entry].slice(-UNDO_STACK_MAX)
+      return {
+        undoStack: newStack,
+        // Key difference from pushUndo: does NOT clear redoStack
         undoFindingIndex: rebuildIndex(newStack),
       }
     }),
@@ -780,7 +791,12 @@ export const useReviewStore = create<ReviewState>()((set, get) => {
       const ids = state.sortedFindingIds
       const fromIdx = ids.indexOf(fromId)
       const toIdx = ids.indexOf(toId)
-      if (fromIdx === -1 || toIdx === -1) return
+      if (fromIdx === -1) {
+        // Anchor filtered away — fallback to single select
+        setState({ selectedIds: new Set([toId]), selectionMode: 'bulk' })
+        return
+      }
+      if (toIdx === -1) return
       const start = Math.min(fromIdx, toIdx)
       const end = Math.max(fromIdx, toIdx)
       const rangeIds = ids.slice(start, end + 1)

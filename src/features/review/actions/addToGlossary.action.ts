@@ -148,16 +148,54 @@ export async function addToGlossary(input: unknown): Promise<ActionResult<AddToG
     }
   }
 
-  // Insert new term
-  const [term] = await db
-    .insert(glossaryTerms)
-    .values({
-      glossaryId,
-      sourceTerm: normalizedSource,
-      targetTerm: normalizedTarget,
-      caseSensitive: caseSensitive ?? false,
-    })
-    .returning()
+  // Insert new term (race-safe: handle unique constraint violation)
+  let term: typeof glossaryTerms.$inferSelect | undefined
+  try {
+    const [inserted] = await db
+      .insert(glossaryTerms)
+      .values({
+        glossaryId,
+        sourceTerm: normalizedSource,
+        targetTerm: normalizedTarget,
+        caseSensitive: caseSensitive ?? false,
+      })
+      .returning()
+
+    term = inserted
+  } catch (insertErr: unknown) {
+    // Check for PostgreSQL unique constraint violation (23505)
+    const pgCode =
+      (insertErr as { code?: string }).code ??
+      (insertErr as { cause?: { code?: string } }).cause?.code
+    if (pgCode === '23505') {
+      // Race condition: another reviewer inserted the same term concurrently
+      const [raceTerm] = await db
+        .select({ id: glossaryTerms.id, targetTerm: glossaryTerms.targetTerm })
+        .from(glossaryTerms)
+        .innerJoin(glossaries, eq(glossaryTerms.glossaryId, glossaries.id))
+        .where(
+          and(
+            eq(glossaryTerms.glossaryId, glossaryId),
+            sql`lower(${glossaryTerms.sourceTerm}) = lower(${normalizedSource})`,
+            withTenant(glossaries.tenantId, currentUser.tenantId),
+          ),
+        )
+        .limit(1)
+
+      if (raceTerm) {
+        return {
+          success: true,
+          data: {
+            created: false,
+            duplicate: true,
+            existingTermId: raceTerm.id,
+            existingTarget: raceTerm.targetTerm,
+          },
+        }
+      }
+    }
+    return { success: false, code: 'CREATE_FAILED', error: 'Failed to add glossary term' }
+  }
 
   if (!term) {
     return { success: false, code: 'CREATE_FAILED', error: 'Failed to create term' }
