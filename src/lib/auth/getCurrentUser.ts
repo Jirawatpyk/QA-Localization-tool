@@ -52,6 +52,14 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const validRoles: AppRole[] = ['admin', 'qa_reviewer', 'native_reviewer']
   if (!validRoles.includes(role as AppRole)) return null
 
+  // Validate tenantId UUID format once — return null (unauthenticated) if malformed
+  let validatedTenantId: TenantId
+  try {
+    validatedTenantId = validateTenantId(tenantId)
+  } catch {
+    return null
+  }
+
   // Fetch displayName + metadata from users table (M3 pattern: JWT for role, DB for profile)
   // Graceful fallback: if user row doesn't exist yet (race condition during signup),
   // use email as displayName and null metadata — don't return null for authenticated users.
@@ -67,7 +75,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
         nativeLanguages: users.nativeLanguages,
       })
       .from(users)
-      .where(and(eq(users.id, userId), withTenant(users.tenantId, validateTenantId(tenantId))))
+      .where(and(eq(users.id, userId), withTenant(users.tenantId, validatedTenantId)))
       .limit(1)
 
     if (userRow[0]) {
@@ -88,7 +96,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   return {
     id: userId,
     email: email ?? '',
-    tenantId: validateTenantId(tenantId),
+    tenantId: validatedTenantId,
     role: role as AppRole,
     displayName,
     metadata,

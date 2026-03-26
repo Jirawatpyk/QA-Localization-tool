@@ -7,12 +7,13 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   // Validate redirect target to prevent open redirect attacks
-  // Reject: protocol-relative (//), backslash (/\), triple+ slashes (///), non-path chars
+  // Reject: protocol-relative (//), backslash (/\), fragment (#), non-path chars
   const rawNext = searchParams.get('next') ?? '/dashboard'
   const isSafePath =
-    /^\/[a-zA-Z0-9\-._~:/?#[\]@!$&'()*+,;=%]+$/.test(rawNext) &&
+    /^\/[a-zA-Z0-9\-._~:/?[\]@!$&'()*+,;=%]+$/.test(rawNext) &&
     !rawNext.startsWith('//') &&
-    !rawNext.includes('\\')
+    !rawNext.includes('\\') &&
+    !rawNext.includes('#')
   const next = isSafePath ? rawNext : '/dashboard'
 
   if (code) {

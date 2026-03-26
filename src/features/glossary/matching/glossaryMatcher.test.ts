@@ -33,6 +33,7 @@ function buildTerm(
     sourceTerm: string
     targetTerm: string
     caseSensitive: boolean
+    notes: string | null
     createdAt: Date
   }>,
 ) {
@@ -43,6 +44,7 @@ function buildTerm(
     sourceTerm: 'hospital',
     targetTerm: 'โรงพยาบาล',
     caseSensitive: false,
+    notes: null as string | null,
     createdAt: new Date(),
     ...overrides,
   }

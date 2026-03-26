@@ -121,6 +121,7 @@ describe('ruleEngine NFR2 Performance', () => {
         sourceTerm: `term${i}`,
         targetTerm: `คำศัพท์${i}`,
         caseSensitive: false,
+        notes: null,
         createdAt: new Date('2026-01-01T00:00:00Z'),
       }))
 
