@@ -91,6 +91,7 @@ function uploadWithProgress(
 
 export function useFileUpload({ projectId }: UseFileUploadOptions): UseFileUploadReturn {
   const xhrRef = useRef<XMLHttpRequest | null>(null)
+  const abortControllerRef = useRef(new AbortController())
   const [progress, setProgress] = useState<UploadProgress[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [largeFileWarnings, setLargeFileWarnings] = useState<string[]>([])
@@ -102,6 +103,7 @@ export function useFileUpload({ projectId }: UseFileUploadOptions): UseFileUploa
   // Abort any in-flight XHR upload on unmount to prevent orphan requests
   useEffect(() => {
     return () => {
+      abortControllerRef.current.abort()
       if (xhrRef.current) {
         xhrRef.current.abort()
         xhrRef.current = null
@@ -156,8 +158,16 @@ export function useFileUpload({ projectId }: UseFileUploadOptions): UseFileUploa
       return fileResult
     }
 
+    // H1: rate-limited — do not retry, surface error immediately
+    if (result.status === 429) {
+      updateFileProgress(fileId, { status: 'error', error: 'RATE_LIMITED' })
+      return null
+    }
+
     // network error — retry with exponential backoff
     if (result.status === 0 && retryCount < UPLOAD_RETRY_COUNT) {
+      // H2: check abort signal before retrying to prevent loops after unmount
+      if (abortControllerRef.current.signal.aborted) return null
       const delay = UPLOAD_RETRY_BACKOFF_MS[retryCount] ?? 4000
       await sleep(delay)
       return uploadSingleFile(file, fileId, batchId, retryCount + 1)

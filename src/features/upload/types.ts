@@ -6,6 +6,7 @@ export type UploadErrorCode =
   | 'STORAGE_ERROR'
   | 'NETWORK_ERROR'
   | 'HASH_FAILED'
+  | 'RATE_LIMITED'
 
 export type FileStatus = 'pending' | 'uploading' | 'uploaded' | 'error'
 
