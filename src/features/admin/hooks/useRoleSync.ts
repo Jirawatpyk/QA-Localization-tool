@@ -36,9 +36,9 @@ export function useRoleSync(userId: string | undefined, tenantId: string | undef
           filter: `user_id=eq.${userId}`,
         },
         async (payload) => {
-          // Defense-in-depth: verify tenant_id matches to prevent cross-tenant event leakage
+          // Defense-in-depth: fail-closed — only process if tenant_id present AND matches
           const eventTenantId = (payload.new as { tenant_id?: string }).tenant_id
-          if (eventTenantId && eventTenantId !== tenantId) return
+          if (!eventTenantId || eventTenantId !== tenantId) return
 
           const newRole = (payload.new as { role?: string }).role
           toast.info(`Your role has been updated to ${newRole}`)

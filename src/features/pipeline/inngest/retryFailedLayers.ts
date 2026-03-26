@@ -13,6 +13,7 @@ import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
 import {
   L1_COMPLETED_STATUSES,
+  pipelineRetryEventSchema,
   type DbFileStatus,
   type PipelineLayer,
   type ProcessingMode,
@@ -60,6 +61,10 @@ type StepApi = {
 // ── Handler ──
 
 const handlerFn = async ({ event, step }: { event: RetryEvent; step: StepApi }) => {
+  // Goal D: Validate tenantId UUID — reject forged/corrupted event data
+  if (!pipelineRetryEventSchema.safeParse(event.data).success) {
+    throw new NonRetriableError('Invalid retry event data: tenantId must be a valid UUID')
+  }
   const { fileId, projectId, tenantId, userId, layersToRetry, mode } = event.data
 
   // Step 0: Validate project still exists (guard — project may be deleted between enqueue and execution)

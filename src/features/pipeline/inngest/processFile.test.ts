@@ -1,4 +1,5 @@
 import { faker } from '@faker-js/faker'
+import { NonRetriableError } from 'inngest'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 import type { L2Result } from '@/features/pipeline/helpers/runL2ForFile'
@@ -196,6 +197,21 @@ describe('processFilePipeline', () => {
       status: 'calculated',
       autoPassRationale: null,
     })
+  })
+
+  // ── H3: tenantId UUID validation ──
+
+  it('should throw NonRetriableError when tenantId is not a valid UUID', async () => {
+    const mockStep = createMockStep()
+    const eventData = buildPipelineEvent({ tenantId: 'not-a-uuid' })
+
+    const { processFilePipeline } = await import('./processFile')
+    await expect(
+      (processFilePipeline as { handler: (...args: unknown[]) => unknown }).handler({
+        event: { data: eventData },
+        step: mockStep,
+      }),
+    ).rejects.toThrow(NonRetriableError)
   })
 
   // ── P0: Core pipeline steps ──

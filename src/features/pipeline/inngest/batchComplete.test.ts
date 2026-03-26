@@ -1,5 +1,6 @@
 /// <reference types="vitest/globals" />
 import { faker } from '@faker-js/faker'
+import { NonRetriableError } from 'inngest'
 
 import { asTenantId } from '@/types/tenant'
 
@@ -68,6 +69,26 @@ describe('batchComplete', () => {
     dbState.callIndex = 0
     dbState.returnValues = []
     mockCrossFileConsistency.mockResolvedValue({ findingCount: 3 })
+  })
+
+  // ── H3: tenantId UUID validation ──
+
+  it('should throw NonRetriableError when tenantId is not a valid UUID', async () => {
+    const mockStep = createMockStep()
+
+    const { batchComplete } = await import('./batchComplete')
+    await expect(
+      (batchComplete as { handler: (...args: unknown[]) => unknown }).handler({
+        event: {
+          data: {
+            batchId: VALID_BATCH_ID,
+            projectId: VALID_PROJECT_ID,
+            tenantId: 'not-a-uuid',
+          },
+        },
+        step: mockStep,
+      }),
+    ).rejects.toThrow(NonRetriableError)
   })
 
   // ── P1: Core behavior ──

@@ -1,4 +1,5 @@
 import { faker } from '@faker-js/faker'
+import { NonRetriableError } from 'inngest'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 import type { ProcessingMode } from '@/types/pipeline'
@@ -344,6 +345,21 @@ describe('processBatch', () => {
       fileCount: 2,
       status: 'dispatched',
     })
+  })
+
+  // ── H3: tenantId UUID validation ──
+
+  it('should throw NonRetriableError when tenantId is not a valid UUID', async () => {
+    const mockStep = createMockStep()
+    const eventData = buildPipelineBatchEvent({ tenantId: 'not-a-uuid' })
+
+    const { processBatch } = await import('./processBatch')
+    await expect(
+      (processBatch as { handler: (...args: unknown[]) => unknown }).handler({
+        event: { data: eventData },
+        step: mockStep,
+      }),
+    ).rejects.toThrow(NonRetriableError)
   })
 
   // ── TA Gap Coverage: Story 2.6 (CV) ──

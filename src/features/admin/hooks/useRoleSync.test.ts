@@ -100,6 +100,19 @@ describe('useRoleSync', () => {
     expect(mockRefresh).not.toHaveBeenCalled()
   })
 
+  it('should ignore role change when payload is missing tenant_id', async () => {
+    const { useRoleSync } = await import('./useRoleSync')
+    renderHook(() => useRoleSync('user-123', 'tenant-abc'))
+
+    // Simulate realtime role change event WITHOUT tenant_id field (fail-closed guard)
+    await act(async () => {
+      realtimeCallback?.({ new: { role: 'admin' } })
+    })
+
+    expect(mockRefreshSession).not.toHaveBeenCalled()
+    expect(mockRefresh).not.toHaveBeenCalled()
+  })
+
   it('should poll every 5 minutes as fallback', async () => {
     const { useRoleSync } = await import('./useRoleSync')
     renderHook(() => useRoleSync('user-123', 'tenant-abc'))

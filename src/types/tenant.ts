@@ -12,8 +12,13 @@
 declare const TenantIdBrand: unique symbol
 export type TenantId = string & { readonly [TenantIdBrand]: typeof TenantIdBrand }
 
-/** Cast a validated UUID string to TenantId. Use in auth/Zod boundaries only. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** Validate UUID format and cast to TenantId. Throws on invalid format. Use at auth/Zod boundaries only. */
 export function validateTenantId(id: string): TenantId {
+  if (!UUID_RE.test(id)) {
+    throw new Error(`Invalid tenant ID format: ${id.slice(0, 36)}`)
+  }
   return id as TenantId
 }
 

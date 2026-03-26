@@ -20,10 +20,10 @@ const handlerFn = async ({
     ) => Promise<string[]>
   }
 }) => {
-  // Validate tenantId is a valid UUID — prevents forged/corrupted tenantId (Goal D: Inngest tenantId validation)
-  const parsed = pipelineBatchEventSchema.safeParse(event.data)
-  if (!parsed.success) {
-    throw new NonRetriableError(`Invalid batch event data: ${parsed.error.message}`)
+  // Validate tenantId UUID — reject forged/corrupted event data (Goal D)
+  // Note: schema uses .passthrough() — event.data used for typed destructuring after validation.
+  if (!pipelineBatchEventSchema.safeParse(event.data).success) {
+    throw new NonRetriableError('Invalid batch event data: tenantId must be a valid UUID')
   }
   const { batchId, fileIds, projectId, tenantId, userId, mode, uploadBatchId } = event.data
 

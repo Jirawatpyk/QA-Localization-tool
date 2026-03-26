@@ -32,6 +32,12 @@ export const pipelineBatchCompletedEventSchema = z
   })
   .passthrough()
 
+export const pipelineRetryEventSchema = z
+  .object({
+    tenantId: z.string().uuid(),
+  })
+  .passthrough()
+
 // Inngest event data types — canonical source for both client.ts schemas and pipeline types.ts
 export type PipelineFileEventData = {
   fileId: string

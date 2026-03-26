@@ -32,10 +32,11 @@ const handlerFn = async ({
     sendEvent: (id: string, event: unknown) => Promise<void>
   }
 }) => {
-  // Validate event data — prevents forged/corrupted tenantId (Goal D: Inngest tenantId validation)
-  const parsed = pipelineFileEventSchema.safeParse(event.data)
-  if (!parsed.success) {
-    throw new NonRetriableError(`Invalid file event data: ${parsed.error.message}`)
+  // Validate tenantId UUID — reject forged/corrupted event data (Goal D)
+  // Note: schema uses .passthrough() so parsed.data has unknown types for non-tenantId fields.
+  // We use event.data (typed via PipelineFileEventData) for destructuring after validation passes.
+  if (!pipelineFileEventSchema.safeParse(event.data).success) {
+    throw new NonRetriableError('Invalid file event data: tenantId must be a valid UUID')
   }
   const { fileId, projectId, tenantId, userId, mode, uploadBatchId } = event.data
   const failedLayers: PipelineLayer[] = []
