@@ -4,6 +4,7 @@ import type { InferSelectModel } from 'drizzle-orm'
 
 import type { glossaryTerms } from '@/db/schema/glossaryTerms'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
+import { normalizeForComparison } from '@/features/glossary/utils/normalizeForComparison'
 import { chunkText, stripMarkup, stripZeroWidth } from '@/lib/language/markupStripper'
 import { getSegmenter, isNoSpaceLanguage } from '@/lib/language/segmenterCache'
 import { logger } from '@/lib/logger'
@@ -14,6 +15,9 @@ import type {
   GlossaryTermMatch,
   SegmentContext,
 } from './matchingTypes'
+
+// Re-export for consumers that import from this module
+export { normalizeForComparison } from '@/features/glossary/utils/normalizeForComparison'
 
 type GlossaryTerm = InferSelectModel<typeof glossaryTerms>
 
@@ -99,11 +103,9 @@ export function validateEuropeanBoundary(
  * - Strips markup before boundary validation
  * - caseSensitive flag from glossary_terms.case_sensitive
  *
- * Known limitations (toLowerCase() ≠ Unicode case folding) — TODO(TD-CODE-008):
- * - German ß does not case-fold to "ss": "STRASSE" will NOT match "Straße".
- * - Turkish İ (U+0130) → toLowerCase() produces 2-char "i̇", shifting positions.
- * Neither German nor Turkish is in current target scope (CJK/Thai primary).
- * Fix deferred to Epic 5 — requires caseFold() with position mapping infrastructure.
+ * Unicode case folding support (TD-CODE-008 RESOLVED):
+ * - German ß ↔ ss: normalizeForComparison folds ß → ss for German locale
+ * - Turkish İ/ı: toLocaleLowerCase('tr') handles İ → i, I → ı correctly
  */
 export function findTermInText(
   rawText: string,
@@ -118,8 +120,9 @@ export function findTermInText(
   const normalizedTerm = stripZeroWidth(term.normalize('NFKC'))
 
   // Step 2: Prepare comparison strings (case sensitivity)
-  const searchText = caseSensitive ? normalizedText : normalizedText.toLowerCase()
-  const searchTerm = caseSensitive ? normalizedTerm : normalizedTerm.toLowerCase()
+  // Use normalizeForComparison for locale-aware case folding (German ß→ss, Turkish İ→i)
+  const searchText = caseSensitive ? normalizedText : normalizeForComparison(normalizedText, lang)
+  const searchTerm = caseSensitive ? normalizedTerm : normalizeForComparison(normalizedTerm, lang)
 
   if (searchTerm.length === 0) return []
 

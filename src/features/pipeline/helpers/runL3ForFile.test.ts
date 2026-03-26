@@ -516,11 +516,17 @@ describe('runL3ForFile', () => {
     // Finding should be accepted (bracket stripped) not dropped
     expect(result.findingCount).toBe(1)
 
-    // Verify the DB set call includes the finding with bare UUID
-    const findingInserts = dbState.setCaptures.filter(
-      (c: unknown) => (c as Record<string, unknown>).detectedByLayer === 'L3',
-    )
-    expect(findingInserts.length).toBeGreaterThanOrEqual(0) // may be in batch insert
+    // Verify the DB values() call includes the finding with bare UUID (no brackets)
+    // tx.insert(findings).values(batch) captures an array, so flatten all batches
+    const findingInserts = dbState.valuesCaptures
+      .flat()
+      .filter((c: unknown) => (c as Record<string, unknown>).detectedByLayer === 'L3')
+    expect(findingInserts.length).toBeGreaterThan(0)
+    for (const insert of findingInserts) {
+      const segId = (insert as Record<string, unknown>).segmentId as string
+      expect(segId).not.toMatch(/^\[/)
+      expect(segId).not.toMatch(/\]$/)
+    }
   })
 
   // ── TD-AI-005: Atomic findings INSERT + status UPDATE ──

@@ -28,6 +28,9 @@ const { mockRunL2ForFile, mockRunL3ForFile, mockScoreFile, dbState, dbMockModule
           chunksFailed: 0,
           partialFailure: false,
           fallbackUsed: false,
+          failedChunkSegmentIds: [],
+          droppedByInvalidSegmentId: 0,
+          droppedByInvalidCategory: 0,
           totalUsage: { inputTokens: 800, outputTokens: 400, estimatedCostUsd: 0.001 },
         } as L2Result),
       ),
@@ -41,6 +44,8 @@ const { mockRunL2ForFile, mockRunL3ForFile, mockScoreFile, dbState, dbMockModule
           chunksFailed: 0,
           partialFailure: false,
           fallbackUsed: false,
+          droppedByInvalidSegmentId: 0,
+          droppedByInvalidCategory: 0,
           totalUsage: { inputTokens: 1500, outputTokens: 600, estimatedCostUsd: 0.01 },
         } as L3Result),
       ),
@@ -286,6 +291,144 @@ describe('retryFailedLayers finding deduplication (R3-030)', () => {
       (s) => s.status === 'l1_completed',
     )
     expect(l1Reset).toBeUndefined()
+  })
+
+  it('[P0] CR-C1: L3-only retry forwards l2FailedChunkSegmentIds from event data', async () => {
+    // Arrange: Only L3 is retried. The event carries l2FailedChunkSegmentIds from the
+    // original run. The handler must forward these to runL3ForFile so unscreened
+    // segments are included in deep analysis (not silently lost).
+    const failedSegIds = ['e1e2e3e4-f5f6-4a1b-8c2d-aaa111222333']
+
+    const { retryFailedLayers } = await import('./retryFailedLayers')
+
+    const step = createMockStep()
+    const event = buildRetryEvent({
+      layersToRetry: ['L3'] as PipelineLayer[],
+      mode: 'thorough',
+      l2FailedChunkSegmentIds: failedSegIds,
+    })
+
+    await (retryFailedLayers as { handler: (...args: unknown[]) => Promise<unknown> }).handler({
+      event,
+      step,
+    })
+
+    // Assert: runL3ForFile receives the forwarded IDs from event data
+    expect(mockRunL3ForFile).toHaveBeenCalledTimes(1)
+    expect(mockRunL3ForFile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        l2FailedChunkSegmentIds: failedSegIds,
+      }),
+    )
+  })
+
+  it('[P0] CR-C1: L2+L3 combined retry — L3 receives failedChunkSegmentIds from L2 result', async () => {
+    // Arrange: Both L2 and L3 are retried. L2 has a failed chunk with segment IDs.
+    // L3 must receive those IDs so unscreened segments are included in deep analysis.
+    const failedSegIds = [
+      'e1e2e3e4-f5f6-4a1b-8c2d-aaa111222333',
+      'e1e2e3e4-f5f6-4a1b-8c2d-bbb444555666',
+    ]
+    mockRunL2ForFile.mockResolvedValue({
+      findingCount: 2,
+      droppedByInvalidSegmentId: 0,
+      droppedByInvalidCategory: 0,
+      duration: 200,
+      aiModel: 'gpt-4o-mini',
+      chunksTotal: 2,
+      chunksSucceeded: 1,
+      chunksFailed: 1,
+      partialFailure: true,
+      fallbackUsed: false,
+      totalUsage: { inputTokens: 800, outputTokens: 400, estimatedCostUsd: 0.001 },
+      failedChunkSegmentIds: failedSegIds,
+    } as L2Result)
+
+    const { retryFailedLayers } = await import('./retryFailedLayers')
+
+    const step = createMockStep()
+    const event = buildRetryEvent({
+      layersToRetry: ['L2', 'L3'] as PipelineLayer[],
+      mode: 'thorough',
+    })
+
+    await (retryFailedLayers as { handler: (...args: unknown[]) => Promise<unknown> }).handler({
+      event,
+      step,
+    })
+
+    // Assert: L3 was called with the failed chunk segment IDs from L2
+    expect(mockRunL3ForFile).toHaveBeenCalledTimes(1)
+    expect(mockRunL3ForFile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        l2FailedChunkSegmentIds: failedSegIds,
+      }),
+    )
+  })
+
+  it('[P1] onFailure handler — sets ai_partial when file has partial results (L1+ completed)', async () => {
+    // Arrange: After all Inngest retries exhausted, onFailure checks file status.
+    // If L1+ has completed (file has partial results), set ai_partial to preserve them.
+    const { retryFailedLayers } = await import('./retryFailedLayers')
+
+    // File is in l2_completed state — partial results exist
+    dbState.returnValues = [[{ id: VALID_FILE_ID, status: 'l2_completed' }]]
+    dbState.setCaptures = []
+
+    const onFailureEvent = {
+      data: {
+        event: buildRetryEvent({ layersToRetry: ['L3'] as PipelineLayer[], mode: 'thorough' }),
+        error: { message: 'L3 retry failed after all attempts' },
+      },
+    }
+
+    await (retryFailedLayers as { onFailure: (...args: unknown[]) => Promise<unknown> }).onFailure({
+      event: onFailureEvent,
+      step: createMockStep(),
+    })
+
+    // Assert: ai_partial status was set since partial results exist
+    const aiPartialUpdate = (dbState.setCaptures as Record<string, unknown>[])?.find(
+      (s) => s.status === 'ai_partial',
+    )
+    expect(aiPartialUpdate).toBeDefined()
+  })
+
+  it('[P1] partial failure catch — runL2/L3 throws during retry → ai_partial status + scoreFile with partial', async () => {
+    // Arrange: L2 succeeds but L3 throws during retry → handler catches,
+    // sets ai_partial status, and calls scoreFile with partial flag.
+    mockRunL3ForFile.mockRejectedValue(new Error('L3 chunk processing failed'))
+
+    const { retryFailedLayers } = await import('./retryFailedLayers')
+
+    const step = createMockStep()
+    const event = buildRetryEvent({
+      layersToRetry: ['L2', 'L3'] as PipelineLayer[],
+      mode: 'thorough',
+    })
+
+    const result = (await (
+      retryFailedLayers as { handler: (...args: unknown[]) => Promise<unknown> }
+    ).handler({ event, step })) as Record<string, unknown>
+
+    // Assert: result indicates partial failure
+    expect(result.aiPartial).toBe(true)
+    expect(result.lastCompletedLayer).toBe('L1L2')
+
+    // Assert: ai_partial status was set in DB
+    const aiPartialUpdate = (dbState.setCaptures as Record<string, unknown>[])?.find(
+      (s) => s.status === 'ai_partial',
+    )
+    expect(aiPartialUpdate).toBeDefined()
+
+    // Assert: scoreFile was called with partial flag using last completed layer
+    expect(mockScoreFile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fileId: VALID_FILE_ID,
+        scoreStatus: 'partial',
+        layerCompleted: 'L1L2',
+      }),
+    )
   })
 
   it('[P0] should produce same findingCount on double retry (idempotent via DELETE+INSERT)', async () => {

@@ -16,6 +16,7 @@ import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { getNewState } from '@/features/review/utils/state-transitions'
 import { bulkActionSchema } from '@/features/review/validation/reviewAction.schema'
 import type { BulkActionInput } from '@/features/review/validation/reviewAction.schema'
+import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { requireRole } from '@/lib/auth/requireRole'
 import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
@@ -295,7 +296,10 @@ export async function bulkAction(input: BulkActionInput): Promise<ActionResult<B
           findingCategory: p.category,
           originalSeverity: p.severity,
           isFalsePositive: true,
-          reviewerIsNative: false, // TODO(story-5.2): wire from user profile
+          reviewerIsNative: !determineNonNative(
+            user.nativeLanguages,
+            lang?.targetLang ?? 'unknown',
+          ),
           layer: p.detectedByLayer,
           detectedByLayer: p.detectedByLayer,
           sourceLang: lang?.sourceLang ?? 'unknown',

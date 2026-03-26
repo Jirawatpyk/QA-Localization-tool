@@ -13,6 +13,7 @@ import { segments } from '@/db/schema/segments'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { overrideSeveritySchema } from '@/features/review/validation/reviewAction.schema'
 import type { OverrideSeverityInput } from '@/features/review/validation/reviewAction.schema'
+import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { requireRole } from '@/lib/auth/requireRole'
 import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
@@ -213,7 +214,7 @@ export async function overrideSeverity(
       originalSeverity: currentSeverity,
       newSeverity,
       isFalsePositive: false,
-      reviewerIsNative: false, // TODO(story-5.2): wire from user profile
+      reviewerIsNative: !determineNonNative(user.nativeLanguages, targetLang),
       layer: finding.detectedByLayer,
       detectedByLayer: finding.detectedByLayer,
       sourceLang,

@@ -2,13 +2,15 @@
 
 import 'server-only'
 
-import { and, eq, desc } from 'drizzle-orm'
+import { and, eq, desc, inArray } from 'drizzle-orm'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { files } from '@/db/schema/files'
 import { projects } from '@/db/schema/projects'
+import { reviewActions } from '@/db/schema/reviewActions'
 import { scores } from '@/db/schema/scores'
+import { users } from '@/db/schema/users'
 import { FILE_HISTORY_PAGE_SIZE } from '@/features/batch/types'
 import { getFileHistorySchema } from '@/features/batch/validation/batchSchemas'
 import { DEFAULT_AUTO_PASS_THRESHOLD } from '@/features/scoring/constants'
@@ -91,12 +93,38 @@ export async function getFileHistory(input: unknown): Promise<ActionResult<FileH
       return true
     })
 
-    // Map to include lastReviewerName (null until Epic 4 implements review actions)
+    // Query 3: Get last reviewer name per file via review_actions JOIN users
+    // Guardrail #5: skip inArray if no file IDs
+    const fileIds = filtered.map((f) => f.fileId)
+    const reviewerMap = new Map<string, string>()
+
+    if (fileIds.length > 0) {
+      const reviewerRows = await db
+        .select({
+          fileId: reviewActions.fileId,
+          displayName: users.displayName,
+          createdAt: reviewActions.createdAt,
+        })
+        .from(reviewActions)
+        .innerJoin(users, eq(users.id, reviewActions.userId))
+        .where(
+          and(withTenant(reviewActions.tenantId, tenantId), inArray(reviewActions.fileId, fileIds)),
+        )
+        .orderBy(desc(reviewActions.createdAt))
+
+      // Keep only the most recent reviewer per file (first occurrence due to DESC order)
+      for (const row of reviewerRows) {
+        if (!reviewerMap.has(row.fileId)) {
+          reviewerMap.set(row.fileId, row.displayName)
+        }
+      }
+    }
+
     // SAFETY: Drizzle infers varchar → string; DB CHECK constraint guarantees valid DbFileStatus
     const mappedFiles: FileHistoryEntry[] = filtered.map((f) => ({
       ...f,
       status: f.status as DbFileStatus,
-      lastReviewerName: null as string | null, // TODO(TD-TODO-002): Epic 4 — join reviewActions + users for actual reviewer name
+      lastReviewerName: reviewerMap.get(f.fileId) ?? null,
     }))
 
     // Pagination

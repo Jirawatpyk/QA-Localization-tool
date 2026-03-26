@@ -14,7 +14,13 @@ export function SearchInput() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Sync local value from store when store resets (e.g., file switch)
+  // Cancel any pending debounce timer to prevent stale value overwriting the reset (M1 CR fix)
   useEffect(() => {
+    if (timerRef.current !== null) {
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- valid external→local state sync: Zustand store resets on file switch, local input must follow
     setLocalValue(storeQuery)
   }, [storeQuery])
 

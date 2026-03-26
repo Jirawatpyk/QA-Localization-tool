@@ -1,6 +1,7 @@
 /**
  * Story 4.7: Add to Glossary from Review — addToGlossary Server Action Tests
  */
+import { revalidateTag } from 'next/cache'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 vi.mock('server-only', () => ({}))
@@ -18,8 +19,6 @@ vi.mock('@/features/audit/actions/writeAuditLog', () => ({
   writeAuditLog: vi.fn(),
 }))
 
-import { revalidateTag } from 'next/cache'
-
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { addToGlossary } from '@/features/review/actions/addToGlossary.action'
 import { requireRole } from '@/lib/auth/requireRole'
@@ -29,6 +28,7 @@ const mockUser = {
   email: 'reviewer@test.com',
   tenantId: '00000000-0000-4000-8000-000000000010',
   role: 'qa_reviewer' as const,
+  nativeLanguages: [] as string[],
 }
 
 const validInput = {

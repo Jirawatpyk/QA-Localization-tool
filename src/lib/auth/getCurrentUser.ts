@@ -1,9 +1,10 @@
 import 'server-only'
 
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { cache } from 'react'
 
 import { db } from '@/db/client'
+import { withTenant } from '@/db/helpers/withTenant'
 import { users } from '@/db/schema/users'
 import type { UserMetadata } from '@/features/onboarding/types'
 import { createServerClient } from '@/lib/supabase/server'
@@ -65,7 +66,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
         nativeLanguages: users.nativeLanguages,
       })
       .from(users)
-      .where(eq(users.id, userId))
+      .where(and(eq(users.id, userId), withTenant(users.tenantId, tenantId)))
       .limit(1)
 
     if (userRow[0]) {

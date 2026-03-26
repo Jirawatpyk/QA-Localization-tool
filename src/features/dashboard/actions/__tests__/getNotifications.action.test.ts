@@ -146,6 +146,7 @@ describe('getNotifications action', () => {
       nativeLanguages: [],
     })
 
+    // Mock returns empty array — simulating DB WHERE clause filtering out cross-tenant data
     queryResults.push([])
 
     const { getNotifications } =
@@ -154,10 +155,11 @@ describe('getNotifications action', () => {
 
     expect(result.success).toBe(true)
     if (result.success) {
-      result.data.forEach((n) => {
-        expect(n.tenantId).toBe('ten-b-002')
-        expect(n.tenantId).not.toBe('ten-a-001')
-      })
+      // Vacuous assertion acknowledged: Proxy-based DB mock doesn't capture WHERE params,
+      // so we can only verify the action returns empty data for a different tenant.
+      // Real tenant isolation is verified by RLS tests in src/db/__tests__/rls/.
+      // TODO(TD-TEST-013): Replace Proxy mock with drizzleMock to verify withTenant() in WHERE clause
+      expect(result.data).toEqual([])
     }
   })
 

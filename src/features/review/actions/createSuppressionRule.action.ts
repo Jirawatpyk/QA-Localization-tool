@@ -17,6 +17,7 @@ import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { computeWordOverlap, extractKeywords } from '@/features/review/utils/pattern-detection'
 import { suppressionRuleSchema } from '@/features/review/validation/suppressionRule.schema'
 import type { CreateSuppressionRuleInput } from '@/features/review/validation/suppressionRule.schema'
+import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { requireRole } from '@/lib/auth/requireRole'
 import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
@@ -204,7 +205,10 @@ export async function createSuppressionRule(
             findingCategory: f.category,
             originalSeverity: f.severity as FindingSeverity,
             isFalsePositive: true,
-            reviewerIsNative: false,
+            reviewerIsNative: !determineNonNative(
+              user.nativeLanguages,
+              lang?.targetLang ?? targetLang ?? 'unknown',
+            ),
             layer: f.detectedByLayer as DetectedByLayer,
             detectedByLayer: f.detectedByLayer as DetectedByLayer,
             sourceLang: lang?.sourceLang ?? sourceLang ?? 'unknown',

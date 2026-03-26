@@ -14,6 +14,7 @@ import { taxonomyDefinitions } from '@/db/schema/taxonomyDefinitions'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { addFindingSchema } from '@/features/review/validation/reviewAction.schema'
 import type { AddFindingInput } from '@/features/review/validation/reviewAction.schema'
+import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { requireRole } from '@/lib/auth/requireRole'
 import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
@@ -191,7 +192,7 @@ export async function addFinding(input: AddFindingInput): Promise<ActionResult<A
       findingCategory: category,
       originalSeverity: severity,
       isFalsePositive: false,
-      reviewerIsNative: false, // TODO(story-5.2): wire from user profile
+      reviewerIsNative: !determineNonNative(user.nativeLanguages, segment.targetLang),
       layer: 'Manual',
       detectedByLayer: 'Manual',
       sourceLang: segment.sourceLang,

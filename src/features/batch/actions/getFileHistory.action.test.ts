@@ -137,9 +137,11 @@ describe('getFileHistory', () => {
   // ── P0: Tenant isolation ──
 
   it('[P0] should include withTenant on files and reviewActions queries', async () => {
+    const file = buildFileHistoryRow({ fileId: faker.string.uuid() })
     dbState.returnValues = [
       [{ autoPassThreshold: 95 }],
-      [], // files query
+      [file], // files query
+      [], // reviewActions query
     ]
 
     const { getFileHistory } = await import('./getFileHistory.action')
@@ -149,6 +151,7 @@ describe('getFileHistory', () => {
     })
 
     const { withTenant } = await import('@/db/helpers/withTenant')
+    // Called for: projects query, scores JOIN, files WHERE, reviewActions WHERE
     expect(withTenant).toHaveBeenCalledWith(expect.anything(), mockUser.tenantId)
   })
 
@@ -166,6 +169,7 @@ describe('getFileHistory', () => {
     dbState.returnValues = [
       [{ autoPassThreshold: 95 }],
       [newFile, oldFile], // already DESC order from DB
+      [], // reviewActions query
     ]
 
     const { getFileHistory } = await import('./getFileHistory.action')
@@ -202,6 +206,7 @@ describe('getFileHistory', () => {
     dbState.returnValues = [
       [{ autoPassThreshold: 95 }],
       [autoPassedFile, manualPassFile], // DB returns only matching rows
+      [], // reviewActions query
     ]
 
     const { getFileHistory } = await import('./getFileHistory.action')
@@ -226,7 +231,7 @@ describe('getFileHistory', () => {
       criticalCount: 0,
       status: 'l1_completed',
     })
-    dbState.returnValues = [[{ autoPassThreshold: 95 }], [reviewFile]]
+    dbState.returnValues = [[{ autoPassThreshold: 95 }], [reviewFile], []] // reviewActions query
 
     const { getFileHistory } = await import('./getFileHistory.action')
     const result = await getFileHistory({
@@ -245,7 +250,7 @@ describe('getFileHistory', () => {
       status: 'failed',
       mqmScore: null,
     })
-    dbState.returnValues = [[{ autoPassThreshold: 95 }], [failedFile]]
+    dbState.returnValues = [[{ autoPassThreshold: 95 }], [failedFile], []] // reviewActions query
 
     const { getFileHistory } = await import('./getFileHistory.action')
     const result = await getFileHistory({
@@ -259,11 +264,22 @@ describe('getFileHistory', () => {
     expect(result.data.files[0]!.status).toBe('failed')
   })
 
-  it('[P1] should return null lastReviewerName for all files (deferred to Epic 4)', async () => {
-    const file1 = buildFileHistoryRow({ fileId: faker.string.uuid() })
-    const file2 = buildFileHistoryRow({ fileId: faker.string.uuid() })
-    const file3 = buildFileHistoryRow({ fileId: faker.string.uuid() })
-    dbState.returnValues = [[{ autoPassThreshold: 95 }], [file1, file2, file3]]
+  it('[P1] should return lastReviewerName from most recent review action per file', async () => {
+    const file1 = buildFileHistoryRow({ fileId: 'a1a1a1a1-b2b2-4c3c-8d4d-e5e5e5e5e5e5' })
+    const file2 = buildFileHistoryRow({ fileId: 'b2b2b2b2-c3c3-4d4d-8e5e-f6f6f6f6f6f6' })
+    const file3 = buildFileHistoryRow({ fileId: 'c3c3c3c3-d4d4-4e5e-8f6f-a7a7a7a7a7a7' })
+    dbState.returnValues = [
+      [{ autoPassThreshold: 95 }],
+      [file1, file2, file3],
+      [
+        // Most recent reviewer for file1 (DESC order — first wins)
+        { fileId: file1.fileId, displayName: 'Alice', createdAt: new Date('2026-03-02') },
+        { fileId: file1.fileId, displayName: 'Bob', createdAt: new Date('2026-03-01') },
+        // Reviewer for file2
+        { fileId: file2.fileId, displayName: 'Charlie', createdAt: new Date('2026-03-01') },
+        // No reviewer for file3
+      ],
+    ]
 
     const { getFileHistory } = await import('./getFileHistory.action')
     const result = await getFileHistory({
@@ -274,14 +290,18 @@ describe('getFileHistory', () => {
     expect(result.success).toBe(true)
     if (!result.success) return
     expect(result.data.files).toHaveLength(3)
-    // lastReviewerName is always null until Epic 4 implements review actions JOIN
-    const reviewerNames = result.data.files.map((f) => f.lastReviewerName)
-    expect(reviewerNames).toEqual([null, null, null])
+    expect(result.data.files[0]!.lastReviewerName).toBe('Alice') // most recent, not Bob
+    expect(result.data.files[1]!.lastReviewerName).toBe('Charlie')
+    expect(result.data.files[2]!.lastReviewerName).toBeNull() // no review action
   })
 
   it('[P1] should return null lastReviewerName when file has no review actions', async () => {
     const noReviewFile = buildFileHistoryRow({ lastReviewerName: null })
-    dbState.returnValues = [[{ autoPassThreshold: 95 }], [noReviewFile]]
+    dbState.returnValues = [
+      [{ autoPassThreshold: 95 }],
+      [noReviewFile],
+      [], // no review actions found
+    ]
 
     const { getFileHistory } = await import('./getFileHistory.action')
     const result = await getFileHistory({
@@ -294,10 +314,13 @@ describe('getFileHistory', () => {
     expect(result.data.files[0]!.lastReviewerName).toBeNull()
   })
 
-  it('[P1] should return null lastReviewerName (deferred to Epic 4 — no review actions JOIN yet)', async () => {
-    // Even if DB row had reviewer data, the action maps lastReviewerName to null
-    const file = buildFileHistoryRow({})
-    dbState.returnValues = [[{ autoPassThreshold: 95 }], [file]]
+  it('[P1] should return reviewer display name when review action exists for file', async () => {
+    const file = buildFileHistoryRow({ fileId: 'a1a1a1a1-b2b2-4c3c-8d4d-e5e5e5e5e5e5' })
+    dbState.returnValues = [
+      [{ autoPassThreshold: 95 }],
+      [file],
+      [{ fileId: file.fileId, displayName: 'Jane Doe', createdAt: new Date('2026-03-01') }],
+    ]
 
     const { getFileHistory } = await import('./getFileHistory.action')
     const result = await getFileHistory({
@@ -307,7 +330,7 @@ describe('getFileHistory', () => {
 
     expect(result.success).toBe(true)
     if (!result.success) return
-    expect(result.data.files[0]!.lastReviewerName).toBeNull()
+    expect(result.data.files[0]!.lastReviewerName).toBe('Jane Doe')
   })
 
   // ── P2: Edge cases ──
@@ -334,7 +357,7 @@ describe('getFileHistory', () => {
 
   it('[P2] should return page 2 items with correct totalCount', async () => {
     const allFiles = Array.from({ length: 60 }, () => buildFileHistoryRow())
-    dbState.returnValues = [[{ autoPassThreshold: 95 }], allFiles]
+    dbState.returnValues = [[{ autoPassThreshold: 95 }], allFiles, []]
 
     const { getFileHistory } = await import('./getFileHistory.action')
     const result = await getFileHistory({
@@ -367,7 +390,7 @@ describe('getFileHistory', () => {
   it('[P2] should handle pagination with PAGE_SIZE=50', async () => {
     // Simulate 60 files — page 1 should get 50, page 2 should get 10
     const firstPage = Array.from({ length: 50 }, () => buildFileHistoryRow())
-    dbState.returnValues = [[{ autoPassThreshold: 95 }], firstPage]
+    dbState.returnValues = [[{ autoPassThreshold: 95 }], firstPage, []]
 
     const { getFileHistory } = await import('./getFileHistory.action')
     const result = await getFileHistory({
@@ -383,7 +406,7 @@ describe('getFileHistory', () => {
 
   it('[P2] should filter all returns every file', async () => {
     const files = Array.from({ length: 5 }, () => buildFileHistoryRow())
-    dbState.returnValues = [[{ autoPassThreshold: 95 }], files]
+    dbState.returnValues = [[{ autoPassThreshold: 95 }], files, []]
 
     const { getFileHistory } = await import('./getFileHistory.action')
     const result = await getFileHistory({
@@ -401,7 +424,7 @@ describe('getFileHistory', () => {
   it('[P2] should return empty items array when page number exceeds total pages (U9)', async () => {
     // U9: 5 files, PAGE_SIZE=50 → page 2 should return empty items, totalCount=5
     const allFiles = Array.from({ length: 5 }, () => buildFileHistoryRow())
-    dbState.returnValues = [[{ autoPassThreshold: 95 }], allFiles]
+    dbState.returnValues = [[{ autoPassThreshold: 95 }], allFiles, []]
 
     const { getFileHistory } = await import('./getFileHistory.action')
     const result = await getFileHistory({
@@ -418,8 +441,7 @@ describe('getFileHistory', () => {
 
   it('[P1] should not call inArray with empty array when files query returns 0 files (U10)', async () => {
     // U10: Guardrail #5 — inArray(col, []) = invalid SQL. When files query returns [],
-    // the action should not make a reviewActions query with empty file IDs.
-    // In getFileHistory, there is no separate inArray query — the action returns early with empty results.
+    // the action skips the reviewActions query (fileIds.length === 0 guard).
     dbState.returnValues = [[{ autoPassThreshold: 95 }], []]
 
     const { getFileHistory } = await import('./getFileHistory.action')

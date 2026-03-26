@@ -13,6 +13,7 @@ import { segments } from '@/db/schema/segments'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { undoBulkActionSchema } from '@/features/review/validation/undoAction.schema'
 import type { UndoBulkActionInput } from '@/features/review/validation/undoAction.schema'
+import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { requireRole } from '@/lib/auth/requireRole'
 import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
@@ -167,29 +168,33 @@ export async function undoBulkAction(
         }
       }
 
-      for (const meta of findingMeta) {
+      // CR-H2: Batch INSERT feedback_events (single round-trip instead of N)
+      const feedbackRows = findingMeta.map((meta) => {
         const langs = meta.segmentId ? segmentLangMap.get(meta.segmentId) : undefined
         const sourceLang = langs?.sourceLang ?? 'unknown'
         const targetLang = langs?.targetLang ?? 'unknown'
 
-        await db.insert(feedbackEvents).values({
+        return {
           tenantId,
           fileId,
           projectId,
           findingId: meta.id,
           reviewerId: userId,
-          action: 'undo_reject',
+          action: 'undo_reject' as const,
           findingCategory: meta.category,
           originalSeverity: meta.severity,
           isFalsePositive: false,
-          reviewerIsNative: false, // TODO(story-5.2): wire from user profile
+          reviewerIsNative: !determineNonNative(user.nativeLanguages, targetLang),
           layer: meta.detectedByLayer,
           detectedByLayer: meta.detectedByLayer,
           sourceLang,
           targetLang,
           sourceText: meta.sourceTextExcerpt ?? '',
           originalTarget: meta.targetTextExcerpt ?? '',
-        })
+        }
+      })
+      if (feedbackRows.length > 0) {
+        await db.insert(feedbackEvents).values(feedbackRows)
       }
     } catch (feedbackErr) {
       logger.error({ err: feedbackErr }, 'feedback_events insert failed for bulk undo-reject')

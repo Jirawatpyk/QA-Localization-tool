@@ -13,6 +13,7 @@ type RequireRoleResult = {
   email: string
   tenantId: string
   role: AppRole
+  nativeLanguages: string[]
 }
 
 /**

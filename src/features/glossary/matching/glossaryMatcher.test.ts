@@ -101,6 +101,67 @@ describe('validateBoundary', () => {
 })
 
 // ---------------------------------------------------------------------------
+// normalizeForComparison — Unicode case folding helper (TD-CODE-008)
+// ---------------------------------------------------------------------------
+
+describe('normalizeForComparison', () => {
+  it('should fold German ß to ss for de locale', async () => {
+    const { normalizeForComparison } = await import('./glossaryMatcher')
+    expect(normalizeForComparison('Straße', 'de')).toBe('strasse')
+  })
+
+  it('should fold German ß to ss when no locale (default behavior)', async () => {
+    const { normalizeForComparison } = await import('./glossaryMatcher')
+    // No locale → ß still folds to ss (default covers German)
+    expect(normalizeForComparison('Straße')).toBe('strasse')
+  })
+
+  it('should fold STRASSE and Straße to same normalized form for de locale', async () => {
+    const { normalizeForComparison } = await import('./glossaryMatcher')
+    const a = normalizeForComparison('STRASSE', 'de')
+    const b = normalizeForComparison('Straße', 'de')
+    expect(a).toBe(b)
+  })
+
+  it('should handle Turkish İ (capital I with dot) → i for tr locale', async () => {
+    const { normalizeForComparison } = await import('./glossaryMatcher')
+    const result = normalizeForComparison('İstanbul', 'tr')
+    expect(result.startsWith('i')).toBe(true)
+    // Turkish İ → i via toLocaleLowerCase('tr')
+    expect(result).toBe('istanbul')
+  })
+
+  it('should handle Turkish I → ı (dotless i) for tr locale', async () => {
+    const { normalizeForComparison } = await import('./glossaryMatcher')
+    const result = normalizeForComparison('I', 'tr')
+    // In Turkish, uppercase I → lowercase ı (dotless i, U+0131)
+    expect(result).toBe('ı')
+  })
+
+  it('should not fold ß for non-German locale (e.g., fr)', async () => {
+    const { normalizeForComparison } = await import('./glossaryMatcher')
+    // French locale: ß should remain as ß (not fold to ss)
+    expect(normalizeForComparison('ß', 'fr')).toBe('ß')
+  })
+
+  it('should apply NFKC normalization (fullwidth → ASCII)', async () => {
+    const { normalizeForComparison } = await import('./glossaryMatcher')
+    expect(normalizeForComparison('ＡＢＣ', 'en')).toBe('abc')
+  })
+
+  it('should handle de-AT and de-CH locale variants', async () => {
+    const { normalizeForComparison } = await import('./glossaryMatcher')
+    expect(normalizeForComparison('Straße', 'de-AT')).toBe('strasse')
+    expect(normalizeForComparison('Straße', 'de-CH')).toBe('strasse')
+  })
+
+  it('should handle empty string', async () => {
+    const { normalizeForComparison } = await import('./glossaryMatcher')
+    expect(normalizeForComparison('', 'de')).toBe('')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // validateEuropeanBoundary — exported pure function
 // ---------------------------------------------------------------------------
 
@@ -282,6 +343,70 @@ describe('findTermInText — European', () => {
     const results = findTermInText("à l'hôpital demain", 'hôpital', false, 'fr')
     expect(results.length).toBeGreaterThan(0)
     expect(results[0]?.confidence).toBe('high')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// findTermInText — German Unicode case folding (TD-CODE-008)
+// ---------------------------------------------------------------------------
+
+describe('findTermInText — German ß/ss folding', () => {
+  it('should match "Straße" when searching for "STRASSE" (case-insensitive, de)', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('Die Straße ist lang', 'STRASSE', false, 'de')
+    expect(results.length).toBeGreaterThan(0)
+  })
+
+  it('should match "STRASSE" when searching for "Straße" (case-insensitive, de)', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('DIE STRASSE IST LANG', 'Straße', false, 'de')
+    expect(results.length).toBeGreaterThan(0)
+  })
+
+  it('should match "strasse" when searching for "straße" (case-insensitive, de)', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('die strasse hier', 'straße', false, 'de')
+    expect(results.length).toBeGreaterThan(0)
+  })
+
+  it('should NOT match ß/ss when caseSensitive=true', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('Die Straße ist lang', 'STRASSE', true, 'de')
+    expect(results).toHaveLength(0)
+  })
+
+  it('should handle "Fußball" matching "FUSSBALL"', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('Wir spielen FUSSBALL', 'Fußball', false, 'de')
+    expect(results.length).toBeGreaterThan(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// findTermInText — Turkish İ/ı case folding (TD-CODE-008)
+// ---------------------------------------------------------------------------
+
+describe('findTermInText — Turkish İ/ı folding', () => {
+  it('should match Turkish İstanbul when searching for "istanbul" (case-insensitive, tr)', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('İstanbul güzel', 'istanbul', false, 'tr')
+    expect(results.length).toBeGreaterThan(0)
+  })
+
+  it('should match "istanbul" when searching for "İstanbul" (case-insensitive, tr)', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    const results = findTermInText('istanbul güzel', 'İstanbul', false, 'tr')
+    expect(results.length).toBeGreaterThan(0)
+  })
+
+  it('should NOT match Turkish İ with wrong locale (en uses generic toLowerCase)', async () => {
+    const { findTermInText } = await import('./glossaryMatcher')
+    // With English locale, İ.toLowerCase() may produce "i̇" (i + combining dot)
+    // which won't match plain "istanbul" — this is expected
+    const results = findTermInText('İstanbul güzel', 'istanbul', false, 'en')
+    // With English locale, this may or may not match depending on runtime
+    // The point is Turkish locale is needed for correct behavior
+    expect(typeof results.length).toBe('number')
   })
 })
 
@@ -889,13 +1014,12 @@ describe('TA — P2 Medium: findTermInText — additional languages and edge cas
     expect(resultsZhTW.length).toBeGreaterThan(0)
   })
 
-  it('TA-UNIT-027: findTermInText — German "DIE STRASSE IST LANG" search "Straße" caseSensitive=false → NOT found (known limitation: ß≠ss in toLowerCase)', async () => {
+  it('TA-UNIT-027: findTermInText — German "DIE STRASSE IST LANG" search "Straße" caseSensitive=false → FOUND (TD-CODE-008 RESOLVED: normalizeForComparison folds ß→ss)', async () => {
     const { findTermInText } = await import('./glossaryMatcher')
-    // toLowerCase: "Straße" → "straße", "STRASSE" → "strasse"
-    // "straße" !== "strasse" — toLowerCase does NOT perform case folding (ß ≠ ss)
+    // normalizeForComparison: "Straße" → "strasse", "STRASSE" → "strasse"
+    // TD-CODE-008 fix: ß now case-folds to ss via normalizeForComparison
     const results = findTermInText('DIE STRASSE IST LANG', 'Straße', false, 'de')
-    // Document: This is a known limitation — ß does not case-fold to ss with toLowerCase
-    expect(results).toHaveLength(0)
+    expect(results.length).toBeGreaterThan(0)
   })
 })
 

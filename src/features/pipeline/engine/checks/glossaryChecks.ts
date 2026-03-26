@@ -2,6 +2,7 @@ import type {
   GlossaryCheckResult,
   SegmentContext,
 } from '@/features/glossary/matching/matchingTypes'
+import { normalizeForComparison } from '@/features/glossary/utils/normalizeForComparison'
 
 import type {
   GlossaryTermRecord,
@@ -37,10 +38,10 @@ export async function checkGlossaryComplianceRule(
   checkFn: GlossaryCheckFn,
 ): Promise<RuleCheckResult[]> {
   // Pre-filter: only pass terms whose sourceTerm appears in source text (case-insensitive)
-  // NFKC normalization handles compat chars (e.g., ﬁ ligature U+FB01 → fi)
-  const normalizedSource = segment.sourceText.normalize('NFKC').toLowerCase()
+  // Uses normalizeForComparison for Unicode case folding (German ß→ss, Turkish İ→i)
+  const normalizedSource = normalizeForComparison(segment.sourceText, ctx.sourceLang)
   const filtered = glossaryTerms.filter((term) =>
-    normalizedSource.includes(term.sourceTerm.normalize('NFKC').toLowerCase()),
+    normalizedSource.includes(normalizeForComparison(term.sourceTerm, ctx.sourceLang)),
   )
 
   if (filtered.length === 0) return []

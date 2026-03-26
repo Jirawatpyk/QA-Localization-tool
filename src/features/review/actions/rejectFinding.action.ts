@@ -15,6 +15,7 @@ import type {
 } from '@/features/review/actions/helpers/executeReviewAction'
 import { rejectFindingSchema } from '@/features/review/validation/reviewAction.schema'
 import type { RejectFindingInput } from '@/features/review/validation/reviewAction.schema'
+import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
@@ -85,7 +86,7 @@ export async function rejectFinding(
       findingCategory: meta.category,
       originalSeverity: meta.severity,
       isFalsePositive: true,
-      reviewerIsNative: false, // TODO(story-5.2): wire from user profile
+      reviewerIsNative: !determineNonNative(user.nativeLanguages, targetLang ?? 'unknown'),
       layer: meta.detectedByLayer,
       detectedByLayer: meta.detectedByLayer,
       sourceLang: sourceLang ?? 'unknown',

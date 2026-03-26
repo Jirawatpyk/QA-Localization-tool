@@ -13,6 +13,7 @@ import { executeUndoRedo } from '@/features/review/actions/helpers/executeUndoRe
 import type { UndoRedoResult } from '@/features/review/actions/helpers/executeUndoRedo'
 import { undoActionSchema } from '@/features/review/validation/undoAction.schema'
 import type { UndoActionInput } from '@/features/review/validation/undoAction.schema'
+import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
@@ -99,7 +100,7 @@ export async function undoAction(input: UndoActionInput): Promise<ActionResult<U
           findingCategory: meta.category,
           originalSeverity: meta.severity,
           isFalsePositive: false,
-          reviewerIsNative: false, // TODO(story-5.2): wire from user profile
+          reviewerIsNative: !determineNonNative(user.nativeLanguages, targetLang),
           layer: meta.detectedByLayer,
           detectedByLayer: meta.detectedByLayer,
           sourceLang,
