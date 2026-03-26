@@ -159,6 +159,7 @@ async function readXbenchReport(filePath: string): Promise<{
             sourceTerm: termMatch[1]!.trim(),
             targetTerm: termMatch[2]!.trim(),
             caseSensitive: false,
+            notes: null,
             createdAt: new Date(),
           })
         }

@@ -217,6 +217,7 @@ describe('checkKeyTermConsistency', () => {
     sourceTerm,
     targetTerm,
     caseSensitive: false,
+    notes: null,
     createdAt: new Date(),
   })
 
@@ -307,6 +308,7 @@ describe('checkKeyTermConsistency', () => {
       sourceTerm: 'Database',
       targetTerm: 'ฐานข้อมูล',
       caseSensitive: true,
+      notes: null,
       createdAt: new Date(),
     }
     const segments = [
@@ -328,6 +330,7 @@ describe('checkKeyTermConsistency', () => {
       sourceTerm: 'Database',
       targetTerm: 'ฐานข้อมูล',
       caseSensitive: true,
+      notes: null,
       createdAt: new Date(),
     }
     const segments = [
@@ -347,6 +350,7 @@ describe('checkKeyTermConsistency', () => {
       sourceTerm: 'API',
       targetTerm: 'เอพีไอ',
       caseSensitive: true,
+      notes: null,
       createdAt: new Date(),
     }
     const segments = [

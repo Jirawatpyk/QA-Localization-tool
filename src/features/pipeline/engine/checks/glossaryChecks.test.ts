@@ -22,6 +22,7 @@ function makeGlossaryTerm(id: string, sourceTerm: string, targetTerm: string): G
     sourceTerm,
     targetTerm,
     caseSensitive: false,
+    notes: null,
     createdAt: new Date(),
   }
 }
@@ -174,6 +175,7 @@ describe('checkGlossaryComplianceRule', () => {
       sourceTerm: 'Database',
       targetTerm: 'ฐานข้อมูล',
       caseSensitive: true,
+      notes: null,
       createdAt: new Date(),
     }
     const checkFn = mockCheckFn({ matches: [], missingTerms: [], lowConfidenceMatches: [] })
@@ -199,6 +201,7 @@ describe('TA: Coverage Gap Tests — glossaryChecks', () => {
       sourceTerm: '',
       targetTerm: 'anything',
       caseSensitive: false,
+      notes: null,
       createdAt: new Date(),
     }
     const segment = buildSegment({ sourceText: 'Hello world', targetText: 'สวัสดีโลก' })
@@ -221,6 +224,7 @@ describe('TA: Coverage Gap Tests — glossaryChecks', () => {
       sourceTerm: `term_${i}`,
       targetTerm: `คำ_${i}`,
       caseSensitive: false,
+      notes: null,
       createdAt: new Date(),
     }))
     const segments = Array.from({ length: 100 }, (_, i) =>
@@ -250,6 +254,7 @@ describe('TA: Coverage Gap Tests — glossaryChecks', () => {
       sourceTerm: 'find',
       targetTerm: 'ค้นหา',
       caseSensitive: false,
+      notes: null,
       createdAt: new Date(),
     }
     // Source text uses fi ligature U+FB01: "ﬁnd" → NFKC normalizes to "find"

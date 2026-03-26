@@ -57,6 +57,7 @@ export async function getGlossaryTerms(
       sourceTerm: glossaryTerms.sourceTerm,
       targetTerm: glossaryTerms.targetTerm,
       caseSensitive: glossaryTerms.caseSensitive,
+      notes: glossaryTerms.notes,
       createdAt: glossaryTerms.createdAt,
     })
     .from(glossaryTerms)

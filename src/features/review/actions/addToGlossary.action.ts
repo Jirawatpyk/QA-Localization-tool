@@ -39,7 +39,7 @@ export async function addToGlossary(input: unknown): Promise<ActionResult<AddToG
     targetLang,
     sourceTerm,
     targetTerm,
-    notes, // TODO(TD-GLOSSARY-001): notes column not yet in DB — field accepted but not persisted
+    notes,
     caseSensitive,
   } = parsed.data
 
@@ -160,6 +160,7 @@ export async function addToGlossary(input: unknown): Promise<ActionResult<AddToG
         sourceTerm: normalizedSource,
         targetTerm: normalizedTarget,
         caseSensitive: caseSensitive ?? false,
+        notes: notes ?? null, // TD-GLOSSARY-001: now persisted
       })
       .returning()
 

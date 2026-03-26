@@ -356,6 +356,7 @@ describe('processFile', () => {
         sourceTerm: 'database',
         targetTerm: 'ฐานข้อมูล',
         caseSensitive: false,
+        notes: null,
         createdAt: new Date(),
       },
     ]

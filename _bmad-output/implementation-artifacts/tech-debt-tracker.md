@@ -58,16 +58,13 @@
 - **Origin:** Story 2.2, flagged by code-quality-analyzer
 - **Status:** DEFERRED → **Epic 5 — Language Intelligence & Non-Native Support** (cross-file analysis requires stable segment identity; arch decision = use composite key `fileId+segmentNumber` as FK, NOT add new column)
 
-### TD-GLOSSARY-001: Missing `notes` column on glossary_terms table
+### ~~TD-GLOSSARY-001: Missing `notes` column on glossary_terms table~~
 - **Date:** 2026-03-18
 - **Story:** Story 4.7
 - **Phase:** impl
 - **Severity:** Low
-- **Risk:** Notes entered by reviewer during "Add to Glossary" are stored only in audit log `newValue.notes` — not queryable from glossary management UI
-- **Mitigation:** Notes persisted in audit trail for traceability; glossary management can reconstruct from audit log
-- **Fix:** `ALTER TABLE glossary_terms ADD COLUMN notes TEXT` + update createTerm/addToGlossary actions
-- **Origin:** Story 4.7 Dev Notes — schema change deferred to avoid migration in review workflow story
-- **Status:** DEFERRED → **Epic 8 — Story 8.1** (reporting/export needs glossary notes; notes column adds value only when glossary management UI shows notes)
+- **Fix:** Added `notes text` nullable column to glossaryTerms schema. Wired through addToGlossary action. Migration 0014_solid_maestro.sql. All test mocks updated.
+- **Status:** RESOLVED (2026-03-26)
 
 ---
 
