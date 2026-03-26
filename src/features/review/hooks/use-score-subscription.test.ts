@@ -149,6 +149,8 @@ describe('useScoreSubscription', () => {
       'mqm_score, status, layer_completed, auto_pass_rationale',
     )
     expect(mockEq).toHaveBeenCalledWith('file_id', 'file-123')
+    // CR-R2 M2: verify polling path also filters by tenant_id (S4 fix)
+    expect(mockEq).toHaveBeenCalledWith('tenant_id', 'tenant-test')
 
     // Verify store updated from poll data
     await vi.advanceTimersByTimeAsync(5000)

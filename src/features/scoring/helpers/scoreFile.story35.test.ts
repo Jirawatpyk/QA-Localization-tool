@@ -596,6 +596,11 @@ describe('scoreFile — TA coverage gap tests (Story 3.5)', () => {
 
   // G16: scoreFile no previous score → layerCompleted defaults to 'L1'
   it('[P2] should default layerCompleted to L1 when no previous score exists and no override (G16)', async () => {
+    // CR-R2: explicit reset to prevent contamination from prior test (CM-7 uses non-empty findings)
+    dbState.callIndex = 0
+    dbState.valuesCaptures = []
+    dbState.setCaptures = []
+
     // Arrange: DB returns empty for previous score (no existing score record)
     dbState.returnValues = [
       mockSegmentRows, // 0: SELECT segments
@@ -632,12 +637,11 @@ describe('scoreFile — TA coverage gap tests (Story 3.5)', () => {
     expect(dbState.valuesCaptures.length).toBeGreaterThan(0)
     // S3 fix: layerCompleted is now derived from findings' detectedByLayer when no prev/override.
     // With empty findings [], derivedLayerCompleted = 'L1' (no L2/L3 findings detected)
+    // CR-R2 H2: find the INSERT values capture (has fileId field = score row, not DELETE/SELECT)
     const insertCapture = dbState.valuesCaptures.find(
-      (v: unknown) => v !== null && typeof v === 'object' && 'layerCompleted' in v,
+      (v: unknown) => v !== null && typeof v === 'object' && 'layerCompleted' in v && 'fileId' in v,
     ) as Record<string, unknown> | undefined
     expect(insertCapture).toBeDefined()
-    // Accept either 'L1' (correct derivation) or what the mock produces
-    // The key invariant is: no crash, and layerCompleted is a valid value
-    expect(['L1', 'L1L2', 'L1L2L3']).toContain(insertCapture?.layerCompleted)
+    expect(insertCapture?.layerCompleted).toBe('L1')
   })
 })

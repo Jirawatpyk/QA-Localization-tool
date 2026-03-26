@@ -151,6 +151,13 @@ describe('calculateMqmScore', () => {
     expect(result.mqmScore).toBe(75) // 100 - 25
   })
 
+  // CR-R2 M3: explicit regression test for S2 fix — flagged must NOT contribute
+  it('should exclude flagged findings from penalty (S2 fix: uncertain = no penalty)', () => {
+    const result = calculateMqmScore([mkFinding('critical', 'flagged')], 1000)
+    expect(result.criticalCount).toBe(0)
+    expect(result.mqmScore).toBe(100)
+  })
+
   it('should only score contributing statuses in a mixed list', () => {
     const findings = [
       mkFinding('critical', 'pending'), // contributes

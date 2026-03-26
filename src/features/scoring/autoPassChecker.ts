@@ -25,8 +25,8 @@ type AutoPassInput = {
  *
  * Threshold resolution (AC #5, #6):
  * 1. language_pair_configs entry → use its auto_pass_threshold
- * 2. No config (new pair), fileCount <= 50 → DISABLED (mandatory manual review)
- * 3. No config (established), fileCount > 50 → fall back to projects.auto_pass_threshold
+ * 2. No config (new pair), fileCount < 50 → DISABLED (mandatory manual review)
+ * 3. No config (established), fileCount >= 50 → fall back to projects.auto_pass_threshold
  */
 export async function checkAutoPass(input: AutoPassInput): Promise<AutoPassResult> {
   const { mqmScore, criticalCount, projectId, tenantId, sourceLang, targetLang, findingsSummary } =
@@ -61,8 +61,9 @@ export async function checkAutoPass(input: AutoPassInput): Promise<AutoPassResul
           withTenant(scores.tenantId, tenantId),
           withTenant(segments.tenantId, tenantId), // defense-in-depth on JOIN
           // CR-M3: only terminal statuses count toward graduation threshold
-          // overridden = PM-adjusted terminal score, file was fully processed → counts
           // excluded: calculating, partial, na (incomplete or not applicable)
+          // TODO(Epic 6): 'overridden' = PM-adjusted terminal score — currently no code writes this
+          // status. When override-score feature is added, verify it writes consistent status via scoreFile.
           inArray(scores.status, ['calculated', 'auto_passed', 'overridden']),
         ),
       ),
@@ -85,7 +86,7 @@ export async function checkAutoPass(input: AutoPassInput): Promise<AutoPassResul
       }
     }
 
-    // fileCount > 50 for new pair without config → fall back to projects.auto_pass_threshold
+    // fileCount >= 50 for new pair without config → fall back to projects.auto_pass_threshold
     const [project] = await db
       .select({ autoPassThreshold: projects.autoPassThreshold })
       .from(projects)

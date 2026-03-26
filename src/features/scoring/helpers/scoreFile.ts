@@ -122,7 +122,8 @@ export async function scoreFile({
   )
 
   // S3 fix: derive layerCompleted from findings already loaded (no extra DB query)
-  // When no override/prev/filter exists (review context), infer from highest layer in findings
+  // Reachable only on first score via Server Action (no pipeline run yet).
+  // Inngest paths always supply layerCompleted or layerFilter — derivedLayer is the last fallback.
   const derivedLayerCompleted: LayerCompleted = deriveLayerFromFindings(findingRows)
 
   // CR-H1 fix: map layerFilter (DetectedByLayer) to valid LayerCompleted value
@@ -254,6 +255,7 @@ export async function scoreFile({
         projectId,
         sourceLang,
         targetLang,
+        fileCount: autoPassResult.fileCount,
       })
     } catch (notifErr) {
       logger.warn(
@@ -278,7 +280,7 @@ export async function scoreFile({
 }
 
 /**
- * Create in-app notifications for all tenant admins when a language pair reaches file 51.
+ * Create in-app notifications for all tenant admins when a language pair graduates.
  * Includes deduplication guard to prevent duplicate notifications on idempotent re-runs.
  * Non-fatal — scoring must not fail because of notification failure.
  */
@@ -287,8 +289,9 @@ async function createGraduationNotification(params: {
   projectId: string
   sourceLang: string
   targetLang: string
+  fileCount: number
 }): Promise<void> {
-  const { tenantId, projectId, sourceLang, targetLang } = params
+  const { tenantId, projectId, sourceLang, targetLang, fileCount } = params
 
   try {
     // Deduplication guard: check if graduation notification already exists for this pair+project
@@ -329,8 +332,8 @@ async function createGraduationNotification(params: {
         userId: admin.userId,
         type: 'language_pair_graduated',
         title: 'Language pair ready for calibration',
-        body: `${sourceLang}->${targetLang} has processed 51 files. Review confidence thresholds in language pair settings.`,
-        metadata: { sourceLang, targetLang, fileCount: 51, projectId } as Record<string, unknown>,
+        body: `${sourceLang}->${targetLang} has processed ${fileCount} files. Review confidence thresholds in language pair settings.`,
+        metadata: { sourceLang, targetLang, fileCount, projectId } as Record<string, unknown>,
       })),
     )
   } catch (err) {
