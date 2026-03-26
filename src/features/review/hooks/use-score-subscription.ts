@@ -51,14 +51,13 @@ export function useScoreSubscription(fileId: string, tenantId: string) {
       const supabase = supabaseRef.current
       if (supabase) {
         try {
-          let query = supabase
+          // CR-H2: tenantId is required (S4 fix) — always filter by tenant_id
+          const { data } = await supabase
             .from('scores')
             .select('mqm_score, status, layer_completed, auto_pass_rationale')
             .eq('file_id', fileId)
-          if (tenantId) {
-            query = query.eq('tenant_id', tenantId)
-          }
-          const { data } = await query.single()
+            .eq('tenant_id', tenantId)
+            .single()
           if (data && isValidScoreStatus(data.status)) {
             // CR-H1: skip write if fileId no longer active (prevents cross-file corruption during transition)
             if (useReviewStore.getState().currentFileId !== fileId) return

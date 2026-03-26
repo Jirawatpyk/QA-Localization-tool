@@ -522,7 +522,7 @@ describe('scoreFile', () => {
     expect(dbState.callIndex).toBe(5)
   })
 
-  it('should not fire notification when fileCount is 51 (boundary above threshold)', async () => {
+  it('should fire notification when fileCount is 51 (CR-H3: >= threshold, dedup guard prevents duplicates)', async () => {
     mockCheckAutoPass.mockResolvedValue({
       eligible: true,
       rationale: 'Auto-pass',
@@ -530,16 +530,17 @@ describe('scoreFile', () => {
       fileCount: 51,
     })
     const autoScore = { ...mockNewScore, status: 'auto_passed' }
-    // Provide 8 slots — if notification guard breaks, extra DB calls will push callIndex > 5
+    // CR-H3: fileCount >= 50 → notification fires (dedup guard handles idempotency)
+    // Provide slots for: segments, findings, tx(prev, delete, insert), dedup-check, admins, insert-notif
     dbState.returnValues = [
       mockSegments,
       [],
       [undefined],
       [],
       [autoScore],
-      [],
+      [], // dedup check: no existing notification
       [{ userId: 'admin-1' }],
-      [],
+      [], // notification insert
     ]
 
     const { scoreFile } = await import('./scoreFile')
@@ -550,8 +551,8 @@ describe('scoreFile', () => {
       userId: VALID_USER_ID,
     })
 
-    // fileCount=51 !== NEW_PAIR_FILE_THRESHOLD(50) → notification NOT triggered
-    expect(dbState.callIndex).toBe(5)
+    // fileCount=51 >= 50 → notification triggered (callIndex > 5 = DB calls for notification)
+    expect(dbState.callIndex).toBeGreaterThan(5)
   })
 
   // ── P2: Edge cases ──
@@ -972,13 +973,13 @@ describe('scoreFile', () => {
   })
 
   // F19 [P1]: layerCompleted falls back to layerFilter (position 3 in chain)
-  it('[P1] should use layerFilter as layerCompleted when override and prev are both undefined', async () => {
+  it('[P1] should map layerFilter to valid LayerCompleted when override and prev are both undefined (CR-H1)', async () => {
     dbState.returnValues = [
       mockSegments,
       [],
       [undefined],
       [],
-      [{ ...mockNewScore, layerCompleted: 'L2' }],
+      [{ ...mockNewScore, layerCompleted: 'L1L2' }],
     ]
 
     const { scoreFile } = await import('./scoreFile')
@@ -990,7 +991,10 @@ describe('scoreFile', () => {
       layerFilter: 'L2',
     })
 
-    expect(dbState.valuesCaptures).toContainEqual(expect.objectContaining({ layerCompleted: 'L2' }))
+    // CR-H1: layerFilter='L2' maps to LayerCompleted='L1L2' (not raw 'L2')
+    expect(dbState.valuesCaptures).toContainEqual(
+      expect.objectContaining({ layerCompleted: 'L1L2' }),
+    )
   })
 
   // F16 [P2]: graduation dedup guard prevents duplicate notification

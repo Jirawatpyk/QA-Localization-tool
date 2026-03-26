@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest'
 
 import { getNewState, SCORE_IMPACT_MAP } from '@/features/review/utils/state-transitions'
 import type { ReviewAction } from '@/features/review/utils/state-transitions'
+import { CONTRIBUTING_STATUSES } from '@/features/scoring/constants'
 import type { FindingStatus } from '@/types/finding'
 import { FINDING_STATUSES } from '@/types/finding'
 
@@ -204,6 +205,16 @@ describe('state-transitions', () => {
       const mapKeys = Object.keys(SCORE_IMPACT_MAP).sort()
       const statusKeys = [...FINDING_STATUSES].sort()
       expect(mapKeys).toEqual(statusKeys)
+    })
+
+    // CR-M1: compile-time sync guard — SCORE_IMPACT_MAP.countsPenalty must match CONTRIBUTING_STATUSES
+    it('[P0] CR-M1: SCORE_IMPACT_MAP countsPenalty=true must exactly match CONTRIBUTING_STATUSES', () => {
+      const penaltyStatuses = Object.entries(SCORE_IMPACT_MAP)
+        .filter(([, v]) => v.countsPenalty)
+        .map(([k]) => k)
+        .sort()
+      const contributingStatuses = [...CONTRIBUTING_STATUSES].sort()
+      expect(penaltyStatuses).toEqual(contributingStatuses)
     })
   })
 

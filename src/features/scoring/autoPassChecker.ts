@@ -60,6 +60,9 @@ export async function checkAutoPass(input: AutoPassInput): Promise<AutoPassResul
           eq(segments.targetLang, targetLang),
           withTenant(scores.tenantId, tenantId),
           withTenant(segments.tenantId, tenantId), // defense-in-depth on JOIN
+          // CR-M3: only terminal statuses count toward graduation threshold
+          // overridden = PM-adjusted terminal score, file was fully processed → counts
+          // excluded: calculating, partial, na (incomplete or not applicable)
           inArray(scores.status, ['calculated', 'auto_passed', 'overridden']),
         ),
       ),
