@@ -664,9 +664,9 @@ test.describe.serial('Extended Review Actions — Story 4.3 ATDD', () => {
     // Click delete
     await deleteBtn.click()
 
-    // Verify toast
+    // Verify toast — extended timeout for dev mode on-demand compilation of server action
     await expect(page.getByText('Finding deleted', { exact: true })).toBeVisible({
-      timeout: 15_000,
+      timeout: 30_000,
     })
 
     // Verify finding removed from list
