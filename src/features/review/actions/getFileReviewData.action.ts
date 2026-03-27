@@ -109,6 +109,12 @@ export async function getFileReviewData(
 ): Promise<ActionResult<FileReviewData>> {
   const { fileId, projectId } = input
 
+  // Guard against invalid UUID params (e.g., URL with "undefined" string)
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!UUID_RE.test(fileId) || !UUID_RE.test(projectId)) {
+    return { success: false, error: 'Invalid file or project ID', code: 'VALIDATION_ERROR' }
+  }
+
   try {
     const currentUser = await requireRole('qa_reviewer')
     const tenantId = currentUser.tenantId
@@ -237,7 +243,8 @@ export async function getFileReviewData(
     // Story 5.1: Compute isNonNative for LanguageBridge panel visibility
     const isNonNative = targetLang
       ? determineNonNative(currentUser.nativeLanguages, targetLang)
-      : true // Conservative: show panel if targetLang unknown
+      : true // Conservative: show panel when targetLang unknown (no languagePairConfigs).
+    // Budget is checked per-call in getBackTranslation action (Guardrail #22).
 
     // Sort findings: severity priority (critical→major→minor), then aiConfidence DESC NULLS LAST
     const sortedFindings = sortFindings(findingRows as FileReviewData['findings'])

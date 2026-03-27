@@ -792,9 +792,9 @@ test.describe.serial('Detail Panel & Segment Context — Story 4.1c ATDD', () =>
     await page.waitForTimeout(500) // Acceptable: waiting for debounce + render
     const secondBTText = await btSection.getByTestId('bt-text').textContent()
 
-    // BT text should change (different segment = different translation)
-    // Note: could be same if same segment, so this is a soft assertion
-    expect(secondBTText).toBeDefined()
+    // BT text should be non-empty after segment focus change
+    expect(secondBTText).toBeTruthy()
+    expect(secondBTText!.length).toBeGreaterThan(0)
   })
 
   // ── 5.1-BT4 [P2]: Cached badge visible when result from cache ─────────

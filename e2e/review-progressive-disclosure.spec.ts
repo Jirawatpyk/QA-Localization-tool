@@ -258,11 +258,9 @@ test.describe.serial('Progressive Disclosure — Story 4.1a', () => {
     const minorGroup = page.locator('[role="rowgroup"][aria-label="Minor findings"]')
     const minorRows = minorGroup.getByTestId('finding-compact-row')
 
-    // The AccordionContent is collapsed — rows inside should not be visible
-    // (Radix Accordion hides content with data-state="closed")
-    const accordionContent = minorGroup.locator('[data-state="closed"]')
-    const closedCount = await accordionContent.count()
-    expect(closedCount).toBeGreaterThan(0)
+    // Check accordion is collapsed by default
+    const accordionTrigger = page.getByRole('button', { name: /Minor \(\d+\)/i })
+    await expect(accordionTrigger).toHaveAttribute('aria-expanded', 'false')
   })
 
   // ── E4 [P1]: Click Minor accordion → minor findings revealed ──────────
