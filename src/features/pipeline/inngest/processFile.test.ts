@@ -1055,10 +1055,11 @@ describe('processFilePipeline', () => {
   })
 
   // ── P2: auto_passed propagation (#20) ──
-  // TODO(TD-TEST-005): handler return shape doesn't include status — test needs
-  // Story 3.2c to add auto_passed awareness to pipeline return or batch logic
+  // TODO(TD-TEST-005): handler return doesn't expose score.status — only mqmScore.
+  // auto_passed propagation to batch/UI deferred to Story 3.2c.
+  // Test verifies mqmScore IS propagated (100 = perfect score from auto_passed).
 
-  it.skip('[P2] should propagate auto_passed mqmScore from scoreFile in return value', async () => {
+  it('[P2] should propagate auto_passed mqmScore from scoreFile in return value', async () => {
     mockScoreFile.mockResolvedValue({
       scoreId: 'e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a5b',
       fileId: VALID_FILE_ID,
@@ -1089,8 +1090,7 @@ describe('processFilePipeline', () => {
       step: mockStep,
     })) as Record<string, unknown>
 
-    // Handler return doesn't expose score.status (only mqmScore) — auto_passed
-    // propagation to batch/UI deferred to Story 3.2c
+    // mqmScore propagated; status field not in return shape yet (TD-TEST-005 → Story 3.2c)
     expect(result).toHaveProperty('mqmScore', 100)
     expect(result).toHaveProperty('layerCompleted', 'L1L2')
   })

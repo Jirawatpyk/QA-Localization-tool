@@ -1,10 +1,10 @@
 /**
  * P2-06 (R3-026): Orphan file detection — files stuck in "processing" with no Inngest activity
- * Source file does not exist yet — concept test with test.skip and TODO ref.
+ * Inline concept implementation — production orphanFileDetector.ts deferred to Epic 6 monitoring.
  */
 import { describe, it, expect } from 'vitest'
 
-// TODO(story-5.1): orphanFileDetector.ts will be implemented in Epic 5 monitoring
+// TODO(TD-PIPE-003): extract to src/features/pipeline/helpers/orphanFileDetector.ts in Epic 6 monitoring
 
 type FileStatus = 'l2_processing' | 'l2_completed' | 'l3_processing' | 'l3_completed' | 'failed'
 
