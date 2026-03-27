@@ -184,6 +184,8 @@ const handlerFn = async ({
     l2FindingCount: l2Result ? l2Result.findingCount : null,
     l3FindingCount: l3Result ? l3Result.findingCount : null,
     mqmScore: finalScoreResult?.mqmScore ?? 0,
+    scoreStatus: finalScoreResult?.status ?? null,
+    autoPassRationale: finalScoreResult?.autoPassRationale ?? null,
     layerCompleted,
     l2PartialFailure: l2Result?.partialFailure ?? false,
     aiPartial,

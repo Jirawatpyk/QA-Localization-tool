@@ -267,13 +267,11 @@
 ### ~~TD-PIPE-004: AI fallback chain resolved but not consumed~~
 - **Status:** RESOLVED (2026-03-07) — Story 3.4 Tasks 2-4: Created `callWithFallback()` utility in `src/lib/ai/fallbackRunner.ts`. Wired into both `runL2ForFile.ts` and `runL3ForFile.ts` chunk processing loops. Primary model → classify error → try fallback models. Each attempt logged with model/error/kind. `FallbackResult` type tracks `modelUsed`, `fallbackUsed`, `attemptsLog`.
 
-### TD-TEST-005: P2 skipped test — auto_passed propagation from scoreFile
+### ~~TD-TEST-005: P2 skipped test — auto_passed propagation from scoreFile~~
 - **Severity:** Low
-- **File:** `src/features/pipeline/inngest/processFile.test.ts` — line 982
-- **Risk:** `auto_passed` status from scoreFile return value not tested in pipeline return shape. Requires file-level auto-pass flow that doesn't exist yet
-- **Fix:** Remove `it.skip` and implement when file-level auto-pass is built
+- **File:** `src/features/pipeline/inngest/processFile.ts` + `processFile.test.ts`
 - **Origin:** Story 3.2b ATDD P2 #20, identified during dev-story
-- **Status:** DEFERRED → fix in **Epic 7** (auto-pass & trust automation)
+- **Status:** RESOLVED (2026-03-27 — added `scoreStatus` + `autoPassRationale` to handler return, test unskipped + asserts `auto_passed`)
 
 ### ~~TD-TEST-006: P2 skipped test — pipeline mock-based performance sanity~~
 - **Status:** RESOLVED (2026-03-02) — `it.skip` removed, test passing. Mock-based handler completes < 1s (sanity check). Real E2E perf test still needed in Story 3.4+
@@ -1159,6 +1157,15 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **File:** `e2e/review-detail-panel.spec.ts` E7 test
 - **Description:** At laptop viewport (1280px), the detail panel is a Radix Sheet overlay (not a static aside). The Sheet's focus trap (Tab cycles inside, Esc closes, focus restores to trigger) is NOT covered by any E2E test. Root cause: J key does NOT call `setSelectedFinding` at laptop breakpoint by design (prevents Sheet blocking finding list during navigation). The only paths that open the Sheet are `autoAdvance` (after accept/reject) or `setSelectedFinding` called from SegmentContextList click-to-navigate. E7 was repurposed to test desktop aside keyboard interaction instead. To restore laptop-mode Sheet focus trap test: seed a file with one Critical finding, auto-advance triggers setSelectedFinding → Sheet opens → test focus trap. Story 4.1c AC7.
 - **Status:** OPEN → Story 4.1c (same story scope)
+
+### TD-PIPE-003: Orphan file detector — extract inline concept to production module
+- **Date:** 2026-03-27
+- **Story:** Story 5.1 (CR R2 cleanup)
+- **Phase:** CR
+- **Severity:** Low
+- **File:** `src/features/pipeline/helpers/orphanFileDetector.test.ts`
+- **Description:** Inline concept implementation of orphan file detection (files stuck in `*_processing` > 1 hour). Tests pass against local function. Needs extraction to `orphanFileDetector.ts` module with DB query, Inngest cron trigger, and alert/notification system.
+- **Status:** DEFERRED → Epic 6 (monitoring & observability)
 
 ### TD-BT-001: Back-translation contextSegments not wired (surrounding context)
 - **Date:** 2026-03-27
