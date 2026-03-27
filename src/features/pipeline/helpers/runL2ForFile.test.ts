@@ -256,11 +256,9 @@ describe('runL2ForFile', () => {
     })
 
     const { withTenant } = await import('@/db/helpers/withTenant')
-    // CAS + segments + l1Findings + glossary + project + findings delete + status update = 7
+    // CAS + segments + l1Findings + glossary(glossaries) + glossary(glossaryTerms) + project + txDelete + statusUpdate = 8
     // (taxonomy has NO tenant_id — withTenant NOT called)
-    // CAS + segments + l1Findings + glossary + project + txDelete + statusUpdate = 7
-    // (taxonomy has NO tenant_id — withTenant NOT called)
-    expect(vi.mocked(withTenant).mock.calls.length).toBe(7)
+    expect(vi.mocked(withTenant).mock.calls.length).toBe(8)
   })
 
   // ── P1: AI + Chunking ──
@@ -684,9 +682,9 @@ describe('runL2ForFile — Story 3.2a: Context Loading (AC3)', () => {
     // taxonomy query should NOT call withTenant (shared global data)
     const { withTenant } = await import('@/db/helpers/withTenant')
     const calls = vi.mocked(withTenant).mock.calls
-    // CAS + segments + l1Findings + glossary + project + txDelete + statusUpdate = 7
+    // CAS + segments + l1Findings + glossary(glossaries) + glossary(glossaryTerms) + project + txDelete + statusUpdate = 8
     // taxonomy is NOT included (no tenant_id)
-    expect(calls.length).toBe(7)
+    expect(calls.length).toBe(8)
     // Verify taxonomy data passed to buildL2Prompt
     expect(mockBuildL2Prompt).toHaveBeenCalledWith(
       expect.objectContaining({

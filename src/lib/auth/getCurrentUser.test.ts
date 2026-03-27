@@ -92,7 +92,7 @@ describe('getCurrentUser', () => {
         claims: {
           sub: 'user-1',
           email: 'test@example.com',
-          tenant_id: 'tenant-1',
+          tenant_id: 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f',
           user_role: 'superadmin',
         },
       },
@@ -111,7 +111,7 @@ describe('getCurrentUser', () => {
         claims: {
           sub: 'user-1',
           email: 'admin@example.com',
-          tenant_id: 'tenant-1',
+          tenant_id: 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f',
           user_role: 'admin',
         },
       },
@@ -128,7 +128,7 @@ describe('getCurrentUser', () => {
     expect(result).toEqual({
       id: 'user-1',
       email: 'admin@example.com',
-      tenantId: 'tenant-1',
+      tenantId: 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f',
       role: 'admin',
       displayName: 'Admin User',
       metadata: null,
@@ -142,7 +142,7 @@ describe('getCurrentUser', () => {
         claims: {
           sub: 'user-1',
           email: 'admin@example.com',
-          tenant_id: 'tenant-1',
+          tenant_id: 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f',
           user_role: 'admin',
         },
       },
@@ -157,7 +157,7 @@ describe('getCurrentUser', () => {
     expect(result).toEqual({
       id: 'user-1',
       email: 'admin@example.com',
-      tenantId: 'tenant-1',
+      tenantId: 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f',
       role: 'admin',
       displayName: 'admin@example.com',
       metadata: null,

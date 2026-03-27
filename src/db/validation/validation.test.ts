@@ -184,6 +184,7 @@ describe('Drizzle-Zod Validation Schemas', () => {
     it('should accept valid term', () => {
       const result = glossaryTermInsertSchema.safeParse({
         glossaryId: '550e8400-e29b-41d4-a716-446655440000',
+        tenantId: '550e8400-e29b-41d4-a716-446655440001',
         sourceTerm: 'API',
         targetTerm: 'เอพีไอ',
       })
