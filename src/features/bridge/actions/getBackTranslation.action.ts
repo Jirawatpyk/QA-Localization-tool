@@ -66,6 +66,7 @@ export async function getBackTranslation(
     const [segment] = await db
       .select({
         id: segments.id,
+        fileId: segments.fileId,
         sourceText: segments.sourceText,
         targetText: segments.targetText,
         sourceLang: segments.sourceLang,
@@ -130,7 +131,7 @@ export async function getBackTranslation(
       targetText: segment.targetText,
       sourceLang: segment.sourceLang,
       targetLang: segment.targetLang,
-      contextSegments: [],
+      contextSegments: [], // TODO(TD-BT-001): wire surrounding context segments (Story 5.2+)
     })
 
     // AI call — primary model (Guardrail #16, #51)
@@ -147,7 +148,7 @@ export async function getBackTranslation(
     await logAIUsage({
       tenantId,
       projectId,
-      fileId: segmentId, // BT uses segmentId as fileId for logging
+      fileId: segment.fileId,
       model: 'gpt-4o-mini',
       layer: 'BT',
       inputTokens: result.usage.inputTokens ?? 0,
@@ -188,7 +189,7 @@ export async function getBackTranslation(
           await logAIUsage({
             tenantId,
             projectId,
-            fileId: segmentId,
+            fileId: segment.fileId,
             model: 'claude-sonnet-4-5-20250929',
             layer: 'BT',
             inputTokens: fallbackResult.usage.inputTokens ?? 0,

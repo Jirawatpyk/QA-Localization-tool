@@ -16,8 +16,9 @@ vi.mock('@/db/client', () => dbMockModule)
 vi.mock('@/lib/auth/requireRole', () => ({
   requireRole: (...args: unknown[]) => mockRequireRole(...args),
 }))
+const mockWithTenant = vi.fn((_col: unknown, _id: unknown) => 'tenant-filter')
 vi.mock('@/db/helpers/withTenant', () => ({
-  withTenant: vi.fn((..._args: unknown[]) => 'tenant-filter'),
+  withTenant: (_col: unknown, _id: unknown) => mockWithTenant(_col, _id),
 }))
 vi.mock('@/lib/logger', () => ({
   logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -113,6 +114,8 @@ describe('getBackTranslation', () => {
     expect(mockGenerateText).toHaveBeenCalledWith(
       expect.objectContaining({ maxOutputTokens: 4096 }),
     )
+    // Verify withTenant called for both segment + project queries (Guardrail #1)
+    expect(mockWithTenant).toHaveBeenCalledTimes(2)
   })
 
   // ── AC2 / Scenario 2.2 [P0]: Result shape ────────────────────────────
@@ -405,6 +408,31 @@ describe('getBackTranslation', () => {
     // Primary is cached (not fallback)
     expect(mockCacheBT).toHaveBeenCalledWith(
       expect.objectContaining({ modelVersion: 'gpt-4o-mini-bt-v1' }),
+    )
+  })
+
+  // ── H3: Fallback generateText throws → primary result returned ─────────
+  it('should return primary result when fallback generateText throws', async () => {
+    const { logger } = await import('@/lib/logger')
+
+    mockGenerateText
+      .mockResolvedValueOnce({ output: { ...MOCK_BT_RESULT, confidence: 0.4 }, usage: MOCK_USAGE })
+      .mockRejectedValueOnce(new Error('Fallback model unavailable'))
+    mockCheckProjectBudget.mockResolvedValue({ hasQuota: true, remainingBudgetUsd: 100 })
+
+    const { getBackTranslation } = await import('./getBackTranslation.action')
+    const result = await getBackTranslation({
+      segmentId: '11111111-1111-4111-a111-111111111111',
+      projectId: '22222222-2222-4222-a222-222222222222',
+    })
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.confidence).toBe(0.4) // Primary result, not fallback
+    }
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ err: expect.any(Error) }),
+      expect.stringContaining('fallback'),
     )
   })
 })

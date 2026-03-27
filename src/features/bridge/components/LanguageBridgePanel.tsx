@@ -9,6 +9,7 @@ import { ContextualExplanation } from '@/features/bridge/components/ContextualEx
 import { LanguageBridgeSkeleton } from '@/features/bridge/components/LanguageBridgeSkeleton'
 import { useBackTranslation } from '@/features/bridge/hooks/useBackTranslation'
 import type { BridgePanelState } from '@/features/bridge/types'
+import { cn } from '@/lib/utils'
 
 type LanguageBridgePanelProps = {
   segmentId: string | null
@@ -51,7 +52,7 @@ export function LanguageBridgePanel({
     <section
       data-testid="language-bridge-panel"
       data-state={panelState}
-      className={`rounded border p-3 space-y-3 ${getPanelBorderClass(panelState)}`}
+      className={cn('rounded border p-3 space-y-3', getPanelBorderClass(panelState))}
     >
       {/* Header with cached indicator (Guardrail #77) */}
       <div className="flex items-center justify-between">

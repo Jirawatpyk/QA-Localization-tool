@@ -1,19 +1,9 @@
 // Back-translation types for the Language Bridge feature (Story 5.1)
 
-export type LanguageNoteType =
-  | 'tone_marker'
-  | 'politeness_particle'
-  | 'compound_word'
-  | 'cultural_adaptation'
-  | 'register'
-  | 'idiom'
-  | 'ambiguity'
+import type { LanguageNote } from '@/types/bridge'
 
-export type LanguageNote = {
-  noteType: LanguageNoteType
-  originalText: string
-  explanation: string
-}
+// Re-export shared types from @/types/bridge (canonical source for db/schema + features)
+export type { LanguageNote, LanguageNoteType } from '@/types/bridge'
 
 export type BackTranslationResult = {
   backTranslation: string

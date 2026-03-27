@@ -43,15 +43,18 @@ describe('cleanBTCache', () => {
     expect(cleanBTCache.fnConfig.cron).toBe('0 3 * * *')
   })
 
+  // Shared mock step — matches Inngest step.run signature
+  function createMockStep() {
+    return {
+      run: vi.fn(async (_id: string, fn: () => Promise<unknown>): Promise<unknown> => fn()),
+    } as { run: <T>(id: string, fn: () => Promise<T>) => Promise<T> }
+  }
+
   // ── Handler ───────────────────────────────────────────────────────────
   it('should call deleteExpiredBTCache in step.run and return deletedCount', async () => {
     mockDeleteExpiredBTCache.mockResolvedValue(5)
 
-    const mockStep = {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      run: vi.fn(async (_id: string, fn: () => Promise<any>) => fn()),
-    }
-
+    const mockStep = createMockStep()
     const result = await cleanBTCache.handler({ step: mockStep })
 
     expect(mockStep.run).toHaveBeenCalledWith('delete-expired-bt-cache', expect.any(Function))
@@ -62,11 +65,7 @@ describe('cleanBTCache', () => {
   it('should return deletedCount 0 when no expired entries exist', async () => {
     mockDeleteExpiredBTCache.mockResolvedValue(0)
 
-    const mockStep = {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      run: vi.fn(async (_id: string, fn: () => Promise<any>) => fn()),
-    }
-
+    const mockStep = createMockStep()
     const result = await cleanBTCache.handler({ step: mockStep })
     expect(result).toEqual({ deletedCount: 0 })
   })

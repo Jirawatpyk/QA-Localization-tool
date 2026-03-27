@@ -186,6 +186,21 @@ describe('LanguageBridgePanel', () => {
     expect(screen.getByTestId('bt-retry-button')).toBeDefined()
   })
 
+  it('should call refresh when retry button is clicked in error state', async () => {
+    const mockRefresh = vi.fn()
+    mockUseBackTranslation.mockReturnValue({
+      data: null,
+      loading: false,
+      error: 'AI failed',
+      cached: false,
+      refresh: mockRefresh,
+    })
+
+    render(<LanguageBridgePanel {...DEFAULT_PROPS} />)
+    await userEvent.click(screen.getByTestId('bt-retry-button'))
+    expect(mockRefresh).toHaveBeenCalledOnce()
+  })
+
   // ── AC4 / Scenario 4.6 [P2]: Cached badge ─────────────────────────────
   it('should show "Cached" badge when result is from cache', () => {
     mockUseBackTranslation.mockReturnValue({

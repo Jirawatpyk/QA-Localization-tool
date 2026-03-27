@@ -93,6 +93,7 @@ describe('btCache', () => {
       expect(result).not.toBeNull()
       expect(result!.backTranslation).toBe('Hello')
       expect(result!.confidence).toBe(0.95)
+      expect(result!.translationApproach).toBeNull()
       expect(result!.cached).toBe(true)
     })
 

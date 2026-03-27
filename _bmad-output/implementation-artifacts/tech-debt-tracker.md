@@ -1160,6 +1160,15 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** At laptop viewport (1280px), the detail panel is a Radix Sheet overlay (not a static aside). The Sheet's focus trap (Tab cycles inside, Esc closes, focus restores to trigger) is NOT covered by any E2E test. Root cause: J key does NOT call `setSelectedFinding` at laptop breakpoint by design (prevents Sheet blocking finding list during navigation). The only paths that open the Sheet are `autoAdvance` (after accept/reject) or `setSelectedFinding` called from SegmentContextList click-to-navigate. E7 was repurposed to test desktop aside keyboard interaction instead. To restore laptop-mode Sheet focus trap test: seed a file with one Critical finding, auto-advance triggers setSelectedFinding → Sheet opens → test focus trap. Story 4.1c AC7.
 - **Status:** OPEN → Story 4.1c (same story scope)
 
+### TD-BT-001: Back-translation contextSegments not wired (surrounding context)
+- **Date:** 2026-03-27
+- **Story:** Story 5.1 (CR R2)
+- **Phase:** CR
+- **Severity:** Medium
+- **File:** `src/features/bridge/actions/getBackTranslation.action.ts:134`
+- **Description:** `buildBTPrompt` accepts `contextSegments` for surrounding segment context but action always passes `[]`. Query adjacent segments by `segmentNumber ± 2` would improve BT quality for ambiguous translations. Prompt builder and schema already support it.
+- **Status:** DEFERRED → Story 5.2+ (context segments feature enhancement)
+
 ### TD-AUTH-002: OAuth callback route has no unit test for redirect validation
 - **Date:** 2026-03-26
 - **Severity:** Medium

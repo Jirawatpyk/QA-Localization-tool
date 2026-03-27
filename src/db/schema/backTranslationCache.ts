@@ -11,7 +11,7 @@ import {
   index,
 } from 'drizzle-orm/pg-core'
 
-import type { LanguageNote } from '@/features/bridge/types'
+import type { LanguageNote } from '@/types/bridge'
 
 import { segments } from './segments'
 import { tenants } from './tenants'

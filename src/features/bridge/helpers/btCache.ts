@@ -1,10 +1,12 @@
 import 'server-only'
 
-import { and, eq, gte, lt, sql } from 'drizzle-orm'
+import { and, eq, gte, inArray, lt, sql } from 'drizzle-orm'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { backTranslationCache } from '@/db/schema/backTranslationCache'
+import { files } from '@/db/schema/files'
+import { segments } from '@/db/schema/segments'
 import type { TenantId } from '@/types/tenant'
 
 import type { BackTranslationResult } from '../types'
@@ -137,21 +139,26 @@ export async function invalidateBTCacheForGlossary(
   tenantId: TenantId,
 ): Promise<number> {
   // Delete cache entries for segments in this project with matching language pair.
-  // Uses a subquery through segments → files → projects chain.
+  // Drizzle subquery through segments → files (defense-in-depth: tenant filter on every table)
+  const segmentIdsSubquery = db
+    .select({ id: segments.id })
+    .from(segments)
+    .innerJoin(files, eq(segments.fileId, files.id))
+    .where(
+      and(
+        eq(files.projectId, projectId),
+        withTenant(segments.tenantId, tenantId),
+        withTenant(files.tenantId, tenantId),
+      ),
+    )
+
   const result = await db
     .delete(backTranslationCache)
     .where(
       and(
         eq(backTranslationCache.languagePair, languagePair),
         withTenant(backTranslationCache.tenantId, tenantId),
-        // Subquery: segment belongs to this project (defense-in-depth: tenant filter on every table)
-        sql`${backTranslationCache.segmentId} IN (
-          SELECT s.id FROM segments s
-          JOIN files f ON s.file_id = f.id
-          WHERE f.project_id = ${projectId}
-            AND s.tenant_id = ${tenantId}
-            AND f.tenant_id = ${tenantId}
-        )`,
+        inArray(backTranslationCache.segmentId, segmentIdsSubquery),
       ),
     )
     .returning({ id: backTranslationCache.id })

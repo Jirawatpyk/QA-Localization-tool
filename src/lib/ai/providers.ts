@@ -77,7 +77,8 @@ export async function getModelForLayerWithFallback(
     return buildFallbackChain(layer, null)
   }
 
-  const pinnedModel = layer === 'L2' ? project.l2PinnedModel : project.l3PinnedModel
+  const pinnedModel =
+    layer === 'L2' ? project.l2PinnedModel : layer === 'L3' ? project.l3PinnedModel : null // BT: no project-level pin, uses system default
   return buildFallbackChain(layer, pinnedModel ?? null)
 }
 

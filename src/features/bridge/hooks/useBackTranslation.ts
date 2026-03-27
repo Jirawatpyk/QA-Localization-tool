@@ -119,6 +119,12 @@ export function useBackTranslation({
       return
     }
 
+    // Clear stale data immediately to prevent showing old segment's BT during debounce
+    setData(null)
+    setLoading(true)
+    setError(null)
+    setCached(false)
+
     debounceTimerRef.current = setTimeout(() => {
       fetchBT(segmentId, skipCache).catch(() => {
         /* non-critical: handled in fetchBT */
