@@ -1151,6 +1151,15 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** Compensation retry loop (max 2 attempts) for orphaned Supabase Auth user has no test. Should verify: (a) success on first attempt, (b) retry on transient failure, (c) exhaustion logs CRITICAL error. No existing createUser.action.test.ts file.
 - **Status:** RESOLVED (2026-03-26 — createUser.action.test.ts created with 7 tests including compensation retry scenarios)
 
+### TD-E2E-020: Laptop-mode Radix Sheet focus trap not E2E tested
+- **Date:** 2026-03-27
+- **Story:** Story 4.1c (debug-explorer investigation — E7 viewport fix)
+- **Phase:** impl
+- **Severity:** Low
+- **File:** `e2e/review-detail-panel.spec.ts` E7 test
+- **Description:** At laptop viewport (1280px), the detail panel is a Radix Sheet overlay (not a static aside). The Sheet's focus trap (Tab cycles inside, Esc closes, focus restores to trigger) is NOT covered by any E2E test. Root cause: J key does NOT call `setSelectedFinding` at laptop breakpoint by design (prevents Sheet blocking finding list during navigation). The only paths that open the Sheet are `autoAdvance` (after accept/reject) or `setSelectedFinding` called from SegmentContextList click-to-navigate. E7 was repurposed to test desktop aside keyboard interaction instead. To restore laptop-mode Sheet focus trap test: seed a file with one Critical finding, auto-advance triggers setSelectedFinding → Sheet opens → test focus trap. Story 4.1c AC7.
+- **Status:** OPEN → Story 4.1c (same story scope)
+
 ### TD-AUTH-002: OAuth callback route has no unit test for redirect validation
 - **Date:** 2026-03-26
 - **Severity:** Medium
