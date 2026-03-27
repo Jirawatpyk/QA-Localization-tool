@@ -8,9 +8,11 @@ import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { findings } from '@/db/schema/findings'
 import { reviewActions } from '@/db/schema/reviewActions'
+import { segments } from '@/db/schema/segments'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { undoSeverityOverrideSchema } from '@/features/review/validation/undoAction.schema'
 import type { UndoSeverityOverrideInput } from '@/features/review/validation/undoAction.schema'
+import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { requireRole } from '@/lib/auth/requireRole'
 import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
@@ -59,6 +61,7 @@ export async function undoSeverityOverride(
   const rows = await db
     .select({
       id: findings.id,
+      segmentId: findings.segmentId,
       severity: findings.severity,
       status: findings.status,
     })
@@ -86,6 +89,20 @@ export async function undoSeverityOverride(
     return { success: false, error: 'Severity mismatch', code: 'CONFLICT' }
   }
 
+  // Story 5.2a: Determine non-native status for review_actions metadata
+  let undoSevTargetLang = 'unknown'
+  if (finding.segmentId) {
+    const segRows = await db
+      .select({ targetLang: segments.targetLang })
+      .from(segments)
+      .where(and(eq(segments.id, finding.segmentId), withTenant(segments.tenantId, tenantId)))
+      .limit(1)
+    if (segRows.length > 0) {
+      undoSevTargetLang = segRows[0]!.targetLang
+    }
+  }
+  const isNonNative = determineNonNative(user.nativeLanguages, undoSevTargetLang)
+
   // Transaction: UPDATE severity + original_severity + INSERT review_actions
   const serverUpdatedAt = new Date()
   await db.transaction(async (tx) => {
@@ -112,6 +129,7 @@ export async function undoSeverityOverride(
         undoType: 'severity_override',
         previousSeverity,
         restoredOriginalSeverity: previousOriginalSeverity,
+        non_native: isNonNative,
       },
     })
   })

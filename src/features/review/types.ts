@@ -15,6 +15,8 @@ export type FindingForDisplay = {
   targetTextExcerpt: string | null
   suggestedFix: string | null
   aiModel: string | null
+  /** Story 5.2a: Whether this finding has any review_action with non_native=true (not yet native_verified) */
+  hasNonNativeAction: boolean
 }
 
 // ── Suppression Types (Story 4.6) ──

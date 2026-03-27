@@ -6,6 +6,7 @@ import type { KeyboardEvent, MouseEvent } from 'react'
 
 import { ConfidenceBadge } from '@/features/review/components/ConfidenceBadge'
 import { LayerBadge } from '@/features/review/components/LayerBadge'
+import { NonNativeBadge } from '@/features/review/components/NonNativeBadge'
 import { OverrideBadge } from '@/features/review/components/OverrideBadge'
 import { SeverityIndicator } from '@/features/review/components/SeverityIndicator'
 import { useReviewStore, useFileState } from '@/features/review/stores/review.store'
@@ -68,6 +69,8 @@ export type FindingCardCompactProps = {
   isActionInFlight?: boolean | undefined
   onOverrideBadgeClick?: ((findingId: string) => void) | undefined
   searchQuery?: string | undefined
+  /** Story 5.2a: Whether this finding has any non-native review action */
+  hasNonNativeAction?: boolean | undefined
 }
 
 function FindingCardCompactInner({
@@ -87,6 +90,7 @@ function FindingCardCompactInner({
   isActionInFlight = false,
   onOverrideBadgeClick,
   searchQuery = '',
+  hasNonNativeAction = false,
 }: FindingCardCompactProps) {
   const reducedMotion = useReducedMotion()
   const selectionMode = useFileState((fs) => fs.selectionMode)
@@ -313,6 +317,9 @@ function FindingCardCompactInner({
             Source Issue
           </span>
         )}
+
+        {/* Story 5.2a: Non-native badge (AC4) — compact variant */}
+        {hasNonNativeAction && <NonNativeBadge compact />}
 
         {/* Quick action icons (Story 4.2) */}
         <div role="group" className="flex items-center gap-1 shrink-0" aria-label="Quick actions">

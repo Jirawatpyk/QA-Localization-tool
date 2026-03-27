@@ -13,6 +13,7 @@ import { segments } from '@/db/schema/segments'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { undoDeleteFindingSchema } from '@/features/review/validation/undoAction.schema'
 import type { UndoDeleteFindingInput } from '@/features/review/validation/undoAction.schema'
+import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { requireRole } from '@/lib/auth/requireRole'
 import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
@@ -56,10 +57,11 @@ export async function undoDeleteFinding(
     }
   }
 
-  // FK guard: verify segmentId still exists (AC4 — segments FK is onDelete: cascade)
+  // FK guard + Story 5.2a targetLang lookup (merged — single query instead of 2)
+  let undoTargetLang = 'unknown'
   if (snapshot.segmentId) {
     const segRows = await db
-      .select({ id: segments.id })
+      .select({ id: segments.id, targetLang: segments.targetLang })
       .from(segments)
       .where(and(eq(segments.id, snapshot.segmentId), withTenant(segments.tenantId, tenantId)))
       .limit(1)
@@ -71,6 +73,7 @@ export async function undoDeleteFinding(
         code: 'FK_VIOLATION',
       }
     }
+    undoTargetLang = segRows[0]!.targetLang
   }
 
   // FK guard: verify fileId still exists
@@ -87,6 +90,9 @@ export async function undoDeleteFinding(
       code: 'FK_VIOLATION',
     }
   }
+
+  // Story 5.2a: non-native determined from FK guard query above (merged)
+  const isNonNative = determineNonNative(user.nativeLanguages, undoTargetLang)
 
   // Transaction: INSERT finding FIRST → then INSERT review_actions (FK order)
   await db.transaction(async (tx) => {
@@ -127,7 +133,7 @@ export async function undoDeleteFinding(
       newState: snapshot.status,
       userId,
       batchId: null,
-      metadata: { undoType: 'delete_restore' },
+      metadata: { undoType: 'delete_restore', non_native: isNonNative },
     })
   })
 

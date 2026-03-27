@@ -132,7 +132,10 @@ export async function addFinding(input: AddFindingInput): Promise<ActionResult<A
       newState: 'manual',
       userId,
       batchId: null,
-      metadata: { isManual: true },
+      metadata: {
+        isManual: true,
+        non_native: determineNonNative(user.nativeLanguages, segment.targetLang),
+      },
     })
 
     return rows

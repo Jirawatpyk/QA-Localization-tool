@@ -58,6 +58,7 @@ export function buildFinding(overrides?: Partial<Finding>): Finding {
     scope: 'per-file',
     reviewSessionId: null,
     relatedFileIds: null,
+    hasNonNativeAction: false,
     ...overrides,
   }
 }
@@ -625,5 +626,6 @@ export function buildFindingForUI(overrides?: Record<string, unknown>): FindingF
     targetTextExcerpt: dbFinding.targetTextExcerpt ?? null,
     suggestedFix: dbFinding.suggestedFix ?? null,
     aiModel: (overrides?.['aiModel'] as string) ?? null,
+    hasNonNativeAction: (overrides?.['hasNonNativeAction'] as boolean) ?? false,
   }
 }

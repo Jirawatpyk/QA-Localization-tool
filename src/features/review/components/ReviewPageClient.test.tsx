@@ -196,6 +196,7 @@ describe('ReviewPageClient — file navigation init (Story 4.5 AC3)', () => {
           aiModel: null,
           segmentCount: 1,
           scope: 'per-file' as const,
+          hasNonNativeAction: false,
         },
       ],
     })
@@ -227,6 +228,7 @@ describe('ReviewPageClient — file navigation init (Story 4.5 AC3)', () => {
           aiModel: null,
           segmentCount: 1,
           scope: 'per-file' as const,
+          hasNonNativeAction: false,
         },
         {
           id: 'fb2',
@@ -244,6 +246,7 @@ describe('ReviewPageClient — file navigation init (Story 4.5 AC3)', () => {
           aiModel: null,
           segmentCount: 1,
           scope: 'per-file' as const,
+          hasNonNativeAction: false,
         },
       ],
     })
@@ -278,6 +281,7 @@ describe('ReviewPageClient — file navigation init (Story 4.5 AC3)', () => {
           aiModel: null,
           segmentCount: 1,
           scope: 'per-file' as const,
+          hasNonNativeAction: false,
         },
       ],
     })
@@ -317,6 +321,7 @@ describe('ReviewPageClient — file navigation init (Story 4.5 AC3)', () => {
           aiModel: null,
           segmentCount: 1,
           scope: 'per-file' as const,
+          hasNonNativeAction: false,
         },
       ],
     })
@@ -350,6 +355,7 @@ describe('ReviewPageClient — file navigation init (Story 4.5 AC3)', () => {
           aiModel: null,
           segmentCount: 1,
           scope: 'per-file' as const,
+          hasNonNativeAction: false,
         },
       ],
     })
@@ -382,6 +388,7 @@ describe('ReviewPageClient — file navigation init (Story 4.5 AC3)', () => {
           aiModel: null,
           segmentCount: 1,
           scope: 'per-file' as const,
+          hasNonNativeAction: false,
         },
       ],
     })

@@ -38,6 +38,6 @@ export async function redoAction(input: RedoActionInput): Promise<ActionResult<U
     expectedCurrentState,
     force: false,
     actionType: 'redo',
-    user: { id: user.id, tenantId: user.tenantId },
+    user: { id: user.id, tenantId: user.tenantId, nativeLanguages: user.nativeLanguages },
   })
 }

@@ -99,11 +99,16 @@ function setupMatchMedia(prefersReducedMotion = false) {
   })
 }
 
-function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
-  return {
+// Story 5.2a: overrides type allows Finding[] for findings (hasNonNativeAction optional on Finding)
+type BuildOverrides = Omit<Partial<FileReviewData>, 'findings'> & {
+  findings?: Array<FileReviewData['findings'][number] | ReturnType<typeof buildFinding>>
+}
+
+function buildInitialData(overrides?: BuildOverrides): FileReviewData {
+  const merged = {
     tenantId: 't1',
     file: { fileId: 'f1', fileName: 'test.sdlxliff', status: 'l2_completed' as DbFileStatus },
-    findings: [],
+    findings: [] as Array<Record<string, unknown>>,
     score: {
       mqmScore: 85,
       status: 'calculated',
@@ -126,6 +131,13 @@ function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
     btConfidenceThreshold: 0.6,
     ...overrides,
   }
+  // Ensure findings have hasNonNativeAction (Story 5.2a) — buildFinding returns Finding
+  // where hasNonNativeAction is optional, but FileReviewData expects it required
+  const findings = merged.findings.map((f) => ({
+    ...f,
+    hasNonNativeAction: (f as { hasNonNativeAction?: boolean }).hasNonNativeAction ?? false,
+  })) as FileReviewData['findings']
+  return { ...merged, findings } as FileReviewData
 }
 
 // ── ARIA Foundation Tests ──

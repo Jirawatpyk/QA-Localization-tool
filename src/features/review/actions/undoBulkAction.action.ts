@@ -100,6 +100,35 @@ export async function undoBulkAction(
     })
   }
 
+  // Story 5.2a: Determine non-native ONCE for entire bulk undo (AC2 pattern)
+  let undoBulkTargetLang = 'unknown'
+  const firstUndoSegmentId =
+    canRevert.length > 0
+      ? ((
+          await db
+            .select({ segmentId: findings.segmentId })
+            .from(findings)
+            .where(
+              and(
+                eq(findings.id, canRevert[0]!.findingId),
+                withTenant(findings.tenantId, tenantId),
+              ),
+            )
+            .limit(1)
+        )[0]?.segmentId ?? null)
+      : null
+  if (firstUndoSegmentId) {
+    const segRows = await db
+      .select({ targetLang: segments.targetLang })
+      .from(segments)
+      .where(and(eq(segments.id, firstUndoSegmentId), withTenant(segments.tenantId, tenantId)))
+      .limit(1)
+    if (segRows.length > 0) {
+      undoBulkTargetLang = segRows[0]!.targetLang
+    }
+  }
+  const isNonNative = determineNonNative(user.nativeLanguages, undoBulkTargetLang)
+
   const serverUpdatedAt = new Date()
   const reverted: string[] = []
 
@@ -123,7 +152,7 @@ export async function undoBulkAction(
           userId,
           batchId: null,
           isBulk: true,
-          metadata: null,
+          metadata: { non_native: isNonNative },
         })
 
         reverted.push(item.findingId)

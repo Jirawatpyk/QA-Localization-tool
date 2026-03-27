@@ -99,6 +99,10 @@ export function OverrideHistoryPanel({
               <span className="font-medium shrink-0">{formatState(entry.previousState)}</span>
               <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" aria-hidden="true" />
               <span className="font-medium shrink-0">{formatState(entry.newState)}</span>
+              {/* Story 5.2a AC5: Show "(non-native)" label for non-native actions */}
+              {entry.metadata?.non_native === true && (
+                <span className="italic text-muted-foreground shrink-0">(non-native)</span>
+              )}
             </li>
           ))}
         </ul>

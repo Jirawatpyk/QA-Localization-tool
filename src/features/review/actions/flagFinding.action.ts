@@ -40,6 +40,6 @@ export async function flagFinding(
   return executeReviewAction({
     input: parsed.data,
     action: 'flag',
-    user: { id: user.id, tenantId: user.tenantId },
+    user: { id: user.id, tenantId: user.tenantId, nativeLanguages: user.nativeLanguages },
   })
 }

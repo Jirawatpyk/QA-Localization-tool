@@ -32,6 +32,8 @@ type UseReviewActionsOptions = {
   projectId: string
   sourceLang?: string | undefined
   targetLang?: string | undefined
+  /** Story 5.2a: Whether current user is non-native for this file's target language */
+  isNonNative?: boolean | undefined
 }
 
 // State-transition actions that use executeReviewAction pattern
@@ -63,6 +65,7 @@ export function useReviewActions({
   projectId,
   sourceLang,
   targetLang,
+  isNonNative = false,
 }: UseReviewActionsOptions) {
   const { autoAdvance } = useFocusManagement()
   // H1 fix: useState for UI-facing loading state (triggers re-render for spinner)
@@ -94,10 +97,12 @@ export function useReviewActions({
       }
 
       // Optimistic update — set updatedAt to NOW so polling merge won't overwrite with stale data
+      // Story 5.2a: also set hasNonNativeAction optimistically (we know client-side if user is non-native)
       state.setFinding(findingId, {
         ...finding,
         status: newState,
         updatedAt: new Date().toISOString(),
+        hasNonNativeAction: finding.hasNonNativeAction || isNonNative,
       })
 
       inFlightRef.current = true
@@ -136,6 +141,9 @@ export function useReviewActions({
           successState.setFinding(findingId, {
             ...successFinding,
             updatedAt: result.data.serverUpdatedAt,
+            // Story 5.2a C1 fix: if current user is non-native, badge should appear immediately
+            // (server wrote metadata.non_native=true to review_actions — reflect in store)
+            hasNonNativeAction: successFinding.hasNonNativeAction || isNonNative,
           })
         }
 
@@ -192,6 +200,7 @@ export function useReviewActions({
               targetTextExcerpt: finding.targetTextExcerpt ?? null,
               suggestedFix: finding.suggestedFix ?? null,
               aiModel: finding.aiModel ?? null,
+              hasNonNativeAction: finding.hasNonNativeAction ?? false,
             }
             // Use file's language pair passed from ReviewPageClient
             const segSourceLang = sourceLang ?? 'unknown'

@@ -412,6 +412,7 @@ export function FindingList({
           isActionInFlight={isActionInFlight}
           onOverrideBadgeClick={onOverrideBadgeClick}
           searchQuery={searchQuery}
+          hasNonNativeAction={finding.hasNonNativeAction}
         />
         {isExpanded && (
           <FindingCard
@@ -427,6 +428,7 @@ export function FindingList({
             onReject={onReject}
             isActionInFlight={isActionInFlight}
             onOverrideBadgeClick={onOverrideBadgeClick}
+            hasNonNativeAction={finding.hasNonNativeAction}
           />
         )}
       </div>

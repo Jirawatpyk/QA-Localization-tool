@@ -6,9 +6,11 @@ import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { findings } from '@/db/schema/findings'
 import { reviewActions } from '@/db/schema/reviewActions'
+import { segments } from '@/db/schema/segments'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { getNewState } from '@/features/review/utils/state-transitions'
 import type { ReviewAction } from '@/features/review/utils/state-transitions'
+import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
@@ -49,7 +51,7 @@ export type ReviewActionNoOp = {
 type ExecuteReviewActionParams = {
   input: ReviewActionInput
   action: ReviewAction
-  user: { id: string; tenantId: TenantId }
+  user: { id: string; tenantId: TenantId; nativeLanguages: string[] }
 }
 
 /**
@@ -146,6 +148,21 @@ export async function executeReviewAction({
     }
   }
 
+  // Story 5.2a: Determine non-native status for review_actions metadata (Guardrail #66: write-once)
+  let targetLang = 'unknown'
+  if (finding.segmentId) {
+    const segRows = await db
+      .select({ targetLang: segments.targetLang })
+      .from(segments)
+      .where(and(eq(segments.id, finding.segmentId), withTenant(segments.tenantId, tenantId)))
+      .limit(1)
+    if (segRows.length > 0) {
+      targetLang = segRows[0]!.targetLang
+    }
+  }
+  // segmentId null (cross-file finding) → conservative default: non-native = true
+  const isNonNative = determineNonNative(user.nativeLanguages, targetLang)
+
   // H2 fix: UPDATE + INSERT in transaction (Guardrail #6)
   const serverUpdatedAt = new Date()
   await db.transaction(async (tx) => {
@@ -156,6 +173,7 @@ export async function executeReviewAction({
       .where(and(eq(findings.id, findingId), withTenant(findings.tenantId, tenantId)))
 
     // Insert review_actions row (INSERT = set tenantId in values)
+    // Story 5.2a: non_native set at INSERT, never updated (Guardrail #66)
     await tx.insert(reviewActions).values({
       findingId,
       fileId,
@@ -166,7 +184,7 @@ export async function executeReviewAction({
       newState,
       userId,
       batchId: null,
-      metadata: null,
+      metadata: { non_native: isNonNative },
     })
   })
 
@@ -183,7 +201,7 @@ export async function executeReviewAction({
       entityId: findingId,
       action: `finding.${action}`,
       oldValue: { status: currentState },
-      newValue: { status: newState },
+      newValue: { status: newState, non_native: isNonNative },
     })
   } catch (auditErr) {
     logger.error({ err: auditErr, findingId, action }, 'Audit log write failed for review action')

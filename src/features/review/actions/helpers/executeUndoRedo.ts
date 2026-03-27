@@ -6,7 +6,9 @@ import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { findings } from '@/db/schema/findings'
 import { reviewActions } from '@/db/schema/reviewActions'
+import { segments } from '@/db/schema/segments'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
+import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
@@ -28,7 +30,7 @@ type ExecuteUndoRedoParams = {
   expectedCurrentState: FindingStatus
   force: boolean
   actionType: 'undo' | 'redo'
-  user: { id: string; tenantId: TenantId }
+  user: { id: string; tenantId: TenantId; nativeLanguages: string[] }
 }
 
 /**
@@ -51,6 +53,7 @@ export async function executeUndoRedo({
   const rows = await db
     .select({
       id: findings.id,
+      segmentId: findings.segmentId,
       status: findings.status,
     })
     .from(findings)
@@ -81,6 +84,20 @@ export async function executeUndoRedo({
     }
   }
 
+  // Story 5.2a: Determine non-native status for review_actions metadata
+  let undoRedoTargetLang = 'unknown'
+  if (finding.segmentId) {
+    const segRows = await db
+      .select({ targetLang: segments.targetLang })
+      .from(segments)
+      .where(and(eq(segments.id, finding.segmentId), withTenant(segments.tenantId, tenantId)))
+      .limit(1)
+    if (segRows.length > 0) {
+      undoRedoTargetLang = segRows[0]!.targetLang
+    }
+  }
+  const isNonNative = determineNonNative(user.nativeLanguages, undoRedoTargetLang)
+
   // Transaction: UPDATE finding + INSERT review_actions (Guardrail #6)
   // CRITICAL: set updatedAt = new Date() — without this, Realtime merge guard drops the change
   const serverUpdatedAt = new Date()
@@ -100,7 +117,7 @@ export async function executeUndoRedo({
       newState: targetState,
       userId,
       batchId: null,
-      metadata: null,
+      metadata: { non_native: isNonNative },
     })
   })
 
@@ -113,7 +130,7 @@ export async function executeUndoRedo({
       entityId: findingId,
       action: `finding.${actionType}`,
       oldValue: { status: currentState },
-      newValue: { status: targetState },
+      newValue: { status: targetState, non_native: isNonNative },
     })
   } catch (auditErr) {
     logger.error({ err: auditErr, findingId, actionType }, 'Audit log write failed for undo/redo')

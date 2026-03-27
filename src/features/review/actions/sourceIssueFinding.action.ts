@@ -40,6 +40,6 @@ export async function sourceIssueFinding(
   return executeReviewAction({
     input: parsed.data,
     action: 'source',
-    user: { id: user.id, tenantId: user.tenantId },
+    user: { id: user.id, tenantId: user.tenantId, nativeLanguages: user.nativeLanguages },
   })
 }

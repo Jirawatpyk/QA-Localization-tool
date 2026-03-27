@@ -18,6 +18,7 @@ const { dbState, dbMockModule, mockRequireRole, mockWriteAuditLog, mockInngestSe
           id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
           tenantId: 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f',
           role: 'qa_reviewer',
+          nativeLanguages: [] as string[],
         }),
       ),
       mockWriteAuditLog: vi.fn((..._args: unknown[]) => Promise.resolve()),
@@ -83,6 +84,14 @@ vi.mock('@/db/schema/reviewActions', () => ({
   },
 }))
 
+vi.mock('@/db/schema/segments', () => ({
+  segments: {
+    id: 'id',
+    tenantId: 'tenant_id',
+    targetLang: 'target_lang',
+  },
+}))
+
 vi.mock('@/lib/logger', () => ({
   logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }))
@@ -145,13 +154,14 @@ describe('flagFinding.action', () => {
       id: VALID_USER_ID,
       tenantId: VALID_TENANT_ID,
       role: 'qa_reviewer',
+      nativeLanguages: [] as string[],
     })
   })
 
   it('[P0] U-SA8: should update finding status to flagged, write audit + review_actions, and send Inngest event', async () => {
     const findingMock = buildFindingMock({ status: 'pending' })
-    // Call order: 1) SELECT finding, 2) tx.update, 3) tx.insert review_actions
-    dbState.returnValues = [[findingMock], [], []]
+    // Call order: 1) SELECT finding, 2) segment lookup (determineNonNative), 3) tx.update, 4) tx.insert review_actions
+    dbState.returnValues = [[findingMock], [{ targetLang: 'th' }], [], []]
 
     const result = await flagFinding({
       findingId: VALID_FINDING_ID,
@@ -195,7 +205,7 @@ describe('flagFinding.action', () => {
 
   it('[P0] U-SA8b: should NOT insert feedback_events for flag action (only reject does)', async () => {
     const findingMock = buildFindingMock({ status: 'pending' })
-    dbState.returnValues = [[findingMock], [], []]
+    dbState.returnValues = [[findingMock], [{ targetLang: 'th' }], [], []]
 
     await flagFinding({
       findingId: VALID_FINDING_ID,

@@ -8,9 +8,11 @@ import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { findings } from '@/db/schema/findings'
 import { reviewActions } from '@/db/schema/reviewActions'
+import { segments } from '@/db/schema/segments'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { redoBulkActionSchema } from '@/features/review/validation/undoAction.schema'
 import type { RedoBulkActionInput } from '@/features/review/validation/undoAction.schema'
+import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { requireRole } from '@/lib/auth/requireRole'
 import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
@@ -97,6 +99,32 @@ export async function redoBulkAction(
     })
   }
 
+  // Story 5.2a: Determine non-native ONCE for entire bulk redo
+  let redoBulkTargetLang = 'unknown'
+  const firstRedoSegmentId =
+    canRedo.length > 0
+      ? ((
+          await db
+            .select({ segmentId: findings.segmentId })
+            .from(findings)
+            .where(
+              and(eq(findings.id, canRedo[0]!.findingId), withTenant(findings.tenantId, tenantId)),
+            )
+            .limit(1)
+        )[0]?.segmentId ?? null)
+      : null
+  if (firstRedoSegmentId) {
+    const segRows = await db
+      .select({ targetLang: segments.targetLang })
+      .from(segments)
+      .where(and(eq(segments.id, firstRedoSegmentId), withTenant(segments.tenantId, tenantId)))
+      .limit(1)
+    if (segRows.length > 0) {
+      redoBulkTargetLang = segRows[0]!.targetLang
+    }
+  }
+  const isNonNative = determineNonNative(user.nativeLanguages, redoBulkTargetLang)
+
   const serverUpdatedAt = new Date()
   const reverted: string[] = []
 
@@ -119,7 +147,7 @@ export async function redoBulkAction(
           userId,
           batchId: null,
           isBulk: true,
-          metadata: null,
+          metadata: { non_native: isNonNative },
         })
 
         reverted.push(item.findingId)

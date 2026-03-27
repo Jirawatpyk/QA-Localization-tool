@@ -50,6 +50,8 @@ export type FileReviewData = {
     targetTextExcerpt: string | null
     segmentCount: number
     scope: 'per-file' | 'cross-file'
+    /** Story 5.2a: Whether this finding has any review_action with non_native=true */
+    hasNonNativeAction: boolean
   }>
   score: {
     mqmScore: number | null
@@ -322,6 +324,33 @@ export async function getFileReviewData(
       )
     }
 
+    // Q8: Story 5.2a — Get finding IDs that have non-native review actions (non-fatal)
+    const nonNativeSet = new Set<string>()
+    try {
+      if (currentFindingIds.length > 0) {
+        const nonNativeRows = await db
+          .selectDistinct({ findingId: reviewActions.findingId })
+          .from(reviewActions)
+          .where(
+            and(
+              eq(reviewActions.fileId, fileId),
+              eq(reviewActions.projectId, projectId),
+              inArray(reviewActions.findingId, currentFindingIds),
+              withTenant(reviewActions.tenantId, tenantId),
+              sql`${reviewActions.metadata}->>'non_native' = 'true'`,
+            ),
+          )
+        for (const row of nonNativeRows) {
+          nonNativeSet.add(row.findingId)
+        }
+      }
+    } catch (nonNativeErr) {
+      logger.error(
+        { err: nonNativeErr, fileId },
+        'Q8 non-native query failed — non-native badges will not show',
+      )
+    }
+
     // Story 4.5: Query sibling files (same project, exclude current file)
     const siblingFileRows = await db
       .select({ fileId: files.id, fileName: files.fileName })
@@ -340,7 +369,10 @@ export async function getFileReviewData(
       data: {
         tenantId,
         file: file as FileReviewData['file'],
-        findings: sortedFindings,
+        findings: sortedFindings.map((f) => ({
+          ...f,
+          hasNonNativeAction: nonNativeSet.has(f.id),
+        })),
         score: score as FileReviewData['score'],
         processingMode,
         l2ConfidenceMin,

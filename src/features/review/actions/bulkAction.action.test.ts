@@ -338,9 +338,9 @@ describe('bulkAction.action', () => {
     const ids = [makeFindingId(50), makeFindingId(51)]
     const findingRows = ids.map((id) => buildFindingRow(id, { status: 'pending' }))
 
-    dbState.returnValues = [findingRows]
-    // Inject error during transaction
-    dbState.throwAtCallIndex = 1
+    dbState.returnValues = [findingRows, [{ targetLang: 'th' }]]
+    // Inject error during transaction (index 2: after SELECT findings + segment lookup)
+    dbState.throwAtCallIndex = 2
 
     const result = await bulkAction({
       findingIds: ids,

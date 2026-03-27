@@ -75,6 +75,7 @@ const baseFinding: FindingForDisplay = {
   targetTextExcerpt: 'สถาบันทางการเงิน',
   suggestedFix: 'สถาบันการเงิน',
   aiModel: null,
+  hasNonNativeAction: false,
 }
 
 function defaultProps(overrides?: Partial<Parameters<typeof AddToGlossaryDialog>[0]>) {

@@ -180,6 +180,7 @@ describe('FindingDetailContent', () => {
       targetTextExcerpt: null,
       suggestedFix: null,
       aiModel: null,
+      hasNonNativeAction: false,
     }
 
     render(<FindingDetailContent {...defaultProps({ finding: crossFileFinding })} />)

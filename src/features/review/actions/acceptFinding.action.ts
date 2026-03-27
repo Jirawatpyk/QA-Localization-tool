@@ -40,6 +40,6 @@ export async function acceptFinding(
   return executeReviewAction({
     input: parsed.data,
     action: 'accept',
-    user: { id: user.id, tenantId: user.tenantId },
+    user: { id: user.id, tenantId: user.tenantId, nativeLanguages: user.nativeLanguages },
   })
 }

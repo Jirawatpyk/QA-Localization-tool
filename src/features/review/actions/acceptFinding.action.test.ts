@@ -19,6 +19,7 @@ const { dbState, dbMockModule, mockRequireRole, mockWriteAuditLog, mockInngestSe
           id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
           tenantId: 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f',
           role: 'qa_reviewer',
+          nativeLanguages: [] as string[],
         }),
       ),
       mockWriteAuditLog: vi.fn((..._args: unknown[]) => Promise.resolve()),
@@ -81,6 +82,14 @@ vi.mock('@/db/schema/reviewActions', () => ({
     userId: 'user_id',
     batchId: 'batch_id',
     metadata: 'metadata',
+  },
+}))
+
+vi.mock('@/db/schema/segments', () => ({
+  segments: {
+    id: 'id',
+    tenantId: 'tenant_id',
+    targetLang: 'target_lang',
   },
 }))
 
@@ -147,14 +156,15 @@ describe('acceptFinding.action', () => {
       id: VALID_USER_ID,
       tenantId: VALID_TENANT_ID,
       role: 'qa_reviewer',
+      nativeLanguages: [] as string[],
     })
   })
 
   it('[P0] U-SA1: should update finding status, write audit + review_actions, and send Inngest event on success', async () => {
     // Arrange: finding exists with pending status
     const findingMock = buildFindingMock({ status: 'pending' })
-    // Call order: 1) SELECT finding, 2) tx.update, 3) tx.insert review_actions
-    dbState.returnValues = [[findingMock], [], []]
+    // Call order: 1) SELECT finding, 2) segment lookup (determineNonNative), 3) tx.update, 4) tx.insert review_actions
+    dbState.returnValues = [[findingMock], [{ targetLang: 'th' }], [], []]
 
     // Act
     const result = await acceptFinding({
@@ -180,7 +190,7 @@ describe('acceptFinding.action', () => {
       newState: 'accepted',
       userId: VALID_USER_ID,
       batchId: null,
-      metadata: null,
+      metadata: { non_native: true },
     })
 
     // Assert: audit log written

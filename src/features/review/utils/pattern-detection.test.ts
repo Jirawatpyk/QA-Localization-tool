@@ -30,6 +30,7 @@ function makeFinding(overrides: Partial<FindingForDisplay> = {}): FindingForDisp
     targetTextExcerpt: null,
     suggestedFix: null,
     aiModel: 'gpt-4o-mini',
+    hasNonNativeAction: false,
     ...overrides,
   }
 }

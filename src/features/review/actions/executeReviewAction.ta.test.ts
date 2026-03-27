@@ -140,7 +140,7 @@ describe('executeReviewAction — TA expansion', () => {
     const result = await executeReviewAction({
       input: { findingId: FINDING_ID, fileId: FILE_ID, projectId: PROJECT_ID },
       action: 'accept',
-      user: { id: USER_ID, tenantId: TENANT_ID },
+      user: { id: USER_ID, tenantId: TENANT_ID, nativeLanguages: [] },
     })
 
     // DB transaction committed successfully → return success
@@ -162,7 +162,7 @@ describe('executeReviewAction — TA expansion', () => {
     const result = await executeReviewAction({
       input: { findingId: FINDING_ID, fileId: FILE_ID, projectId: PROJECT_ID },
       action: 'accept',
-      user: { id: USER_ID, tenantId: TENANT_ID },
+      user: { id: USER_ID, tenantId: TENANT_ID, nativeLanguages: [] },
     })
 
     // Success returned — audit failure is non-fatal (try-catch in executeReviewAction)
@@ -187,7 +187,7 @@ describe('executeReviewAction — TA expansion', () => {
     const result = await executeReviewAction({
       input: { findingId: FINDING_ID, fileId: FILE_ID, projectId: PROJECT_ID },
       action: 'reject',
-      user: { id: USER_ID, tenantId: TENANT_ID },
+      user: { id: USER_ID, tenantId: TENANT_ID, nativeLanguages: [] },
     })
 
     // DB committed → success despite all post-commit failures
@@ -211,7 +211,7 @@ describe('executeReviewAction — TA expansion', () => {
       executeReviewAction({
         input: { findingId: FINDING_ID, fileId: FILE_ID, projectId: PROJECT_ID },
         action: 'accept',
-        user: { id: USER_ID, tenantId: TENANT_ID },
+        user: { id: USER_ID, tenantId: TENANT_ID, nativeLanguages: [] },
       }),
     ).rejects.toThrow()
   })

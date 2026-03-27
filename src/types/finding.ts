@@ -80,4 +80,6 @@ export type Finding = {
   scope: 'per-file' | 'cross-file'
   reviewSessionId: string | null
   relatedFileIds: string[] | null
+  /** Story 5.2a: Whether this finding has any non-native review action */
+  hasNonNativeAction?: boolean | undefined
 }

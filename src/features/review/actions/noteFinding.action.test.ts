@@ -61,6 +61,13 @@ vi.mock('@/db/schema/reviewActions', () => ({
     metadata: 'metadata',
   },
 }))
+vi.mock('@/db/schema/segments', () => ({
+  segments: {
+    id: 'id',
+    tenantId: 'tenant_id',
+    targetLang: 'target_lang',
+  },
+}))
 vi.mock('@/lib/logger', () => ({
   logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }))
@@ -90,11 +97,17 @@ describe('noteFinding.action', () => {
       id: ACTION_TEST_IDS.userId,
       tenantId: ACTION_TEST_IDS.tenantId,
       role: 'qa_reviewer',
+      nativeLanguages: [] as string[],
     })
   })
 
   it('[P0] U-NA1: should transition pending \u2192 noted with review_actions', async () => {
-    dbState.returnValues = [[buildFindingMock({ status: 'pending' })], [], []]
+    dbState.returnValues = [
+      [buildFindingMock({ status: 'pending' })],
+      [{ targetLang: 'th' }],
+      [],
+      [],
+    ]
 
     const result = await noteFinding({
       findingId: ACTION_TEST_IDS.findingId,

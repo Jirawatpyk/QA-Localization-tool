@@ -183,9 +183,16 @@ describe('rejectFinding.action', () => {
 
   it('[P0] U-SA6: should update finding status, write audit + review_actions + feedback_events, and send Inngest event', async () => {
     const findingMock = buildFindingMock({ status: 'pending' })
-    // Call order: 1) SELECT finding, 2) tx.update (transaction), 3) tx.insert review_actions (transaction),
-    // 4) segment SELECT, 5) INSERT feedback_events
-    dbState.returnValues = [[findingMock], [], [], [{ sourceLang: 'en', targetLang: 'th' }], []]
+    // Call order: 1) SELECT finding, 2) segment lookup (determineNonNative), 3) tx.update (transaction),
+    // 4) tx.insert review_actions (transaction), 5) segment SELECT (feedback), 6) INSERT feedback_events
+    dbState.returnValues = [
+      [findingMock],
+      [{ targetLang: 'th' }],
+      [],
+      [],
+      [{ sourceLang: 'en', targetLang: 'th' }],
+      [],
+    ]
 
     const result = await rejectFinding({
       findingId: VALID_FINDING_ID,
@@ -222,7 +229,14 @@ describe('rejectFinding.action', () => {
       category: 'accuracy',
       detectedByLayer: 'L2',
     })
-    dbState.returnValues = [[findingMock], [], [], [{ sourceLang: 'en', targetLang: 'th' }], []]
+    dbState.returnValues = [
+      [findingMock],
+      [{ targetLang: 'th' }],
+      [],
+      [],
+      [{ sourceLang: 'en', targetLang: 'th' }],
+      [],
+    ]
 
     await rejectFinding({
       findingId: VALID_FINDING_ID,

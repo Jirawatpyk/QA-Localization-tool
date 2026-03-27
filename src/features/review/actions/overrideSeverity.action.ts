@@ -105,6 +105,20 @@ export async function overrideSeverity(
   const isReset = finding.originalSeverity !== null && newSeverity === finding.originalSeverity
   const serverUpdatedAt = new Date()
 
+  // Story 5.2a: Determine non-native for review_actions metadata (before transaction for audit log access)
+  let overrideTargetLang = 'unknown'
+  if (finding.segmentId) {
+    const overrideSegRows = await db
+      .select({ targetLang: segments.targetLang })
+      .from(segments)
+      .where(and(eq(segments.id, finding.segmentId), withTenant(segments.tenantId, tenantId)))
+      .limit(1)
+    if (overrideSegRows.length > 0) {
+      overrideTargetLang = overrideSegRows[0]!.targetLang
+    }
+  }
+  const isNonNative = determineNonNative(user.nativeLanguages, overrideTargetLang)
+
   // Transaction: UPDATE finding + INSERT review_actions (Guardrail #6)
   await db.transaction(async (tx) => {
     if (isReset) {
@@ -129,7 +143,7 @@ export async function overrideSeverity(
         .where(and(eq(findings.id, findingId), withTenant(findings.tenantId, tenantId)))
     }
 
-    // Insert review_actions row
+    // Insert review_actions row (isNonNative computed before transaction)
     await tx.insert(reviewActions).values({
       findingId,
       fileId,
@@ -144,6 +158,7 @@ export async function overrideSeverity(
         originalSeverity: finding.originalSeverity ?? currentSeverity,
         newSeverity,
         isReset,
+        non_native: isNonNative,
       },
     })
   })
@@ -157,7 +172,7 @@ export async function overrideSeverity(
       entityId: findingId,
       action: 'finding.override',
       oldValue: { severity: currentSeverity },
-      newValue: { severity: newSeverity },
+      newValue: { severity: newSeverity, non_native: isNonNative },
     })
   } catch (auditErr) {
     logger.error({ err: auditErr, findingId }, 'Audit log write failed for severity override')

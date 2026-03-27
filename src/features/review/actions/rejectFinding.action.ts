@@ -49,7 +49,7 @@ export async function rejectFinding(
   const result = await executeReviewAction({
     input: parsed.data,
     action: 'reject',
-    user: { id: user.id, tenantId: user.tenantId },
+    user: { id: user.id, tenantId: user.tenantId, nativeLanguages: user.nativeLanguages },
   })
 
   // If not a real state change (no-op or error), skip feedback_events

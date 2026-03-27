@@ -4,6 +4,7 @@ import { Check, FileText, FileWarning, X } from 'lucide-react'
 
 import { ConfidenceBadge } from '@/features/review/components/ConfidenceBadge'
 import { LayerBadge } from '@/features/review/components/LayerBadge'
+import { NonNativeBadge } from '@/features/review/components/NonNativeBadge'
 import { OverrideBadge } from '@/features/review/components/OverrideBadge'
 import { SeverityIndicator } from '@/features/review/components/SeverityIndicator'
 import { useFileState } from '@/features/review/stores/review.store'
@@ -32,6 +33,8 @@ export type FindingCardProps = {
   onReject?: ((findingId: string) => void) | undefined
   isActionInFlight?: boolean | undefined
   onOverrideBadgeClick?: ((findingId: string) => void) | undefined
+  /** Story 5.2a: Whether this finding has any non-native review action */
+  hasNonNativeAction?: boolean | undefined
 }
 
 export function FindingCard({
@@ -47,6 +50,7 @@ export function FindingCard({
   onReject,
   isActionInFlight = false,
   onOverrideBadgeClick,
+  hasNonNativeAction = false,
 }: FindingCardProps) {
   const reducedMotion = useReducedMotion()
   const overrideCount = useFileState((fs) => fs.overrideCounts.get(finding.id) ?? 0)
@@ -177,6 +181,9 @@ export function FindingCard({
             Source Issue
           </span>
         )}
+
+        {/* Story 5.2a: Non-native badge (AC4) */}
+        {hasNonNativeAction && <NonNativeBadge />}
 
         <span className="ml-auto text-xs text-muted-foreground">
           #{findingIndex + 1}/{totalFindings}

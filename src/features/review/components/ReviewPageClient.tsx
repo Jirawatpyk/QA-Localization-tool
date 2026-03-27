@@ -155,6 +155,7 @@ export function ReviewPageClient({
     projectId,
     sourceLang: initialData.sourceLang,
     targetLang: initialData.targetLang ?? undefined,
+    isNonNative: initialData.isNonNative,
   })
 
   // Story 4.4a: Bulk selection state from store
@@ -867,6 +868,7 @@ export function ReviewPageClient({
         targetTextExcerpt: f.targetTextExcerpt,
         suggestedFix: f.suggestedFix,
         aiModel: f.aiModel,
+        hasNonNativeAction: f.hasNonNativeAction ?? false,
       })),
     [allFindings],
   )

@@ -40,6 +40,6 @@ export async function noteFinding(
   return executeReviewAction({
     input: parsed.data,
     action: 'note',
-    user: { id: user.id, tenantId: user.tenantId },
+    user: { id: user.id, tenantId: user.tenantId, nativeLanguages: user.nativeLanguages },
   })
 }

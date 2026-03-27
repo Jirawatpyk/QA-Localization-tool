@@ -16,6 +16,7 @@ const { dbState, dbMockModule, mockRequireRole, mockWriteAuditLog, mockInngestSe
           id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
           tenantId: 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f',
           role: 'qa_reviewer',
+          nativeLanguages: [] as string[],
         }),
       ),
       mockWriteAuditLog: vi.fn((..._args: unknown[]) => Promise.resolve()),
@@ -100,6 +101,7 @@ describe('undoDeleteFinding', () => {
     dbState.returnValues = [
       [{ id: SEGMENT_ID }], // SELECT segments (FK guard for segmentId)
       [{ id: FILE_ID }], // SELECT files (FK guard for fileId)
+      [{ targetLang: 'th' }], // SELECT segment targetLang (determineNonNative)
       undefined, // transaction (INSERT finding + INSERT review_actions)
     ]
 

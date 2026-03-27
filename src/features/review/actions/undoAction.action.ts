@@ -48,7 +48,7 @@ export async function undoAction(input: UndoActionInput): Promise<ActionResult<U
     expectedCurrentState,
     force,
     actionType: 'undo',
-    user: { id: user.id, tenantId: user.tenantId },
+    user: { id: user.id, tenantId: user.tenantId, nativeLanguages: user.nativeLanguages },
   })
 
   // If undo failed or not a real revert, skip feedback_events

@@ -116,6 +116,25 @@ export async function bulkAction(input: BulkActionInput): Promise<ActionResult<B
       ),
     )
 
+  // Story 5.2a: Determine non-native ONCE for entire bulk (AC2 — user status doesn't change mid-request)
+  // NOTE: Uses first segment's targetLang for all findings in batch. For multi-target-language projects
+  // this may tag some findings incorrectly — accepted per AC2 "determined once per bulk call".
+  // Cross-file findings (segmentId null) use the same targetLang (conservative: if user is non-native
+  // for the file's primary language, they're non-native for cross-file findings too).
+  let bulkTargetLang = 'unknown'
+  const firstSegmentId = foundFindings.find((f) => f.segmentId !== null)?.segmentId
+  if (firstSegmentId) {
+    const segLangRows = await db
+      .select({ targetLang: segments.targetLang })
+      .from(segments)
+      .where(and(eq(segments.id, firstSegmentId), withTenant(segments.tenantId, tenantId)))
+      .limit(1)
+    if (segLangRows.length > 0) {
+      bulkTargetLang = segLangRows[0]!.targetLang
+    }
+  }
+  const isNonNative = determineNonNative(user.nativeLanguages, bulkTargetLang)
+
   // Compute transitions — skip no-ops
   const processed: ProcessedFinding[] = []
   const skippedIds: string[] = []
@@ -203,10 +222,12 @@ export async function bulkAction(input: BulkActionInput): Promise<ActionResult<B
         userId,
         batchId,
         isBulk: true,
-        metadata: { is_bulk: true, batch_size: processed.length, action_index: i } as Record<
-          string,
-          unknown
-        >,
+        metadata: {
+          is_bulk: true,
+          batch_size: processed.length,
+          action_index: i,
+          non_native: isNonNative,
+        } as Record<string, unknown>,
       }))
       await tx.insert(reviewActions).values(reviewActionRows)
     })
@@ -231,7 +252,7 @@ export async function bulkAction(input: BulkActionInput): Promise<ActionResult<B
       entityId: batchId,
       action: `finding.bulk_${action}`,
       oldValue: { findingCount: processed.length },
-      newValue: { batchId, processedCount: processed.length },
+      newValue: { batchId, processedCount: processed.length, non_native: isNonNative },
     })
   } catch (auditErr) {
     logger.error({ err: auditErr, batchId }, 'Audit log write failed for bulk action')
