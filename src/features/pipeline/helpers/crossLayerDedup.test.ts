@@ -4,6 +4,8 @@
  */
 import { describe, it, expect } from 'vitest'
 
+// TODO(TD-PIPE-009): extract to src/features/pipeline/helpers/crossLayerDedup.ts in Epic 6 pipeline dedup
+
 // ── Types ──
 
 type LayerFinding = {
@@ -75,7 +77,8 @@ function crossLayerDedup(l2Findings: LayerFinding[], l3Findings: LayerFinding[])
 const SEG_ID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
 const SEG_ID_2 = 'b2c3d4e5-f6a7-4b2c-9d3e-4f5a6b7c8d9e'
 
-describe('crossLayerDedup (P2-01)', () => {
+// TD-PIPE-009: concept test — no production code yet (Epic 6). Skip to avoid false coverage.
+describe.skip('crossLayerDedup (P2-01)', () => {
   it('[P2] should merge L2+L3 same segmentId + same category into 1 finding with boosted confidence', () => {
     const l2: LayerFinding[] = [
       {

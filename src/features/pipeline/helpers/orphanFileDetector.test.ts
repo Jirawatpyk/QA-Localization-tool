@@ -4,7 +4,7 @@
  */
 import { describe, it, expect } from 'vitest'
 
-// TODO(TD-PIPE-003): extract to src/features/pipeline/helpers/orphanFileDetector.ts in Epic 6 monitoring
+// TODO(TD-PIPE-008): extract to src/features/pipeline/helpers/orphanFileDetector.ts in Epic 6 monitoring
 
 type FileStatus = 'l2_processing' | 'l2_completed' | 'l3_processing' | 'l3_completed' | 'failed'
 
@@ -38,7 +38,8 @@ function checkOrphan(file: FileRecord, now: Date): OrphanCheckResult {
   return { isOrphan: false, reason: null }
 }
 
-describe('orphanFileDetector (P2-06)', () => {
+// TD-PIPE-008: concept test — no production code yet (Epic 6). Skip to avoid false coverage.
+describe.skip('orphanFileDetector (P2-06)', () => {
   it('[P2] should flag file as orphan when status is l2_processing for >1 hour', () => {
     const now = new Date('2026-03-14T12:00:00Z')
     const file: FileRecord = {

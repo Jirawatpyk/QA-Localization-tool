@@ -1158,14 +1158,23 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** At laptop viewport (1280px), the detail panel is a Radix Sheet overlay (not a static aside). The Sheet's focus trap (Tab cycles inside, Esc closes, focus restores to trigger) is NOT covered by any E2E test. Root cause: J key does NOT call `setSelectedFinding` at laptop breakpoint by design (prevents Sheet blocking finding list during navigation). The only paths that open the Sheet are `autoAdvance` (after accept/reject) or `setSelectedFinding` called from SegmentContextList click-to-navigate. E7 was repurposed to test desktop aside keyboard interaction instead. To restore laptop-mode Sheet focus trap test: seed a file with one Critical finding, auto-advance triggers setSelectedFinding → Sheet opens → test focus trap. Story 4.1c AC7.
 - **Status:** OPEN → Story 4.1c (same story scope)
 
-### TD-PIPE-003: Orphan file detector — extract inline concept to production module
+### TD-PIPE-008: Orphan file detector — extract inline concept to production module
 - **Date:** 2026-03-27
 - **Story:** Story 5.1 (CR R2 cleanup)
 - **Phase:** CR
 - **Severity:** Low
 - **File:** `src/features/pipeline/helpers/orphanFileDetector.test.ts`
-- **Description:** Inline concept implementation of orphan file detection (files stuck in `*_processing` > 1 hour). Tests pass against local function. Needs extraction to `orphanFileDetector.ts` module with DB query, Inngest cron trigger, and alert/notification system.
+- **Description:** Inline concept implementation of orphan file detection (files stuck in `*_processing` > 1 hour). Tests pass against local function. Needs extraction to `orphanFileDetector.ts` module with DB query, Inngest cron trigger, and alert/notification system. Test wrapped in `describe.skip()` to prevent false coverage.
 - **Status:** DEFERRED → Epic 6 (monitoring & observability)
+
+### TD-PIPE-009: Cross-layer dedup — extract inline concept to production module
+- **Date:** 2026-03-27
+- **Story:** Story 5.1 (CR R2 cleanup)
+- **Phase:** CR
+- **Severity:** Low
+- **File:** `src/features/pipeline/helpers/crossLayerDedup.test.ts`
+- **Description:** Inline concept implementation of cross-layer deduplication (L2+L3 same segment/category → boost, disagree → marker). Tests pass against local function but do not test any production code. Needs extraction to production module when pipeline orchestrator implements dedup logic.
+- **Status:** DEFERRED → Epic 6 (pipeline orchestrator dedup)
 
 ### TD-BT-001: Back-translation contextSegments not wired (surrounding context)
 - **Date:** 2026-03-27

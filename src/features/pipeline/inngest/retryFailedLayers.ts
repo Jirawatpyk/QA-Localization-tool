@@ -5,6 +5,7 @@ import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { files } from '@/db/schema/files'
 import { projects } from '@/db/schema/projects'
+import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { runL2ForFile } from '@/features/pipeline/helpers/runL2ForFile'
 import { runL3ForFile } from '@/features/pipeline/helpers/runL3ForFile'
 import { scoreFile } from '@/features/scoring/helpers/scoreFile'
@@ -84,6 +85,24 @@ const handlerFn = async ({ event, step }: { event: RetryEvent; step: StepApi }) 
     const budget = await checkProjectBudget(projectId, tenantId)
 
     if (!budget.hasQuota) {
+      // Guardrail #2: error path — audit non-fatal (never let audit failure mask the real error)
+      try {
+        await writeAuditLog({
+          tenantId,
+          userId,
+          entityType: 'file',
+          entityId: fileId,
+          action: 'retry.budget_exhausted',
+          newValue: {
+            projectId,
+            remainingBudgetUsd: budget.remainingBudgetUsd,
+            layersToRetry,
+          },
+        })
+      } catch (auditErr) {
+        logger.error({ err: auditErr, fileId }, 'retryFailedLayers: audit log failed (non-fatal)')
+      }
+
       throw new NonRetriableError('AI quota exhausted')
     }
 

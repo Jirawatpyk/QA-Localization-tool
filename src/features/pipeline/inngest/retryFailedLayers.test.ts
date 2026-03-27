@@ -9,55 +9,61 @@ import type { PipelineLayer } from '@/types/pipeline'
 import { asTenantId } from '@/types/tenant'
 
 // ── Hoisted mocks ──
-const { mockRunL2ForFile, mockRunL3ForFile, mockScoreFile, dbState, dbMockModule } = vi.hoisted(
-  () => {
-    const { dbState, dbMockModule } = createDrizzleMock()
-    return {
-      mockRunL2ForFile: vi.fn((..._args: unknown[]) =>
-        Promise.resolve({
-          findingCount: 2,
-          duration: 200,
-          aiModel: 'gpt-4o-mini',
-          chunksTotal: 1,
-          chunksSucceeded: 1,
-          chunksFailed: 0,
-          partialFailure: false,
-          fallbackUsed: false,
-          totalUsage: { inputTokens: 800, outputTokens: 400, estimatedCostUsd: 0.001 },
-        } as L2Result),
-      ),
-      mockRunL3ForFile: vi.fn((..._args: unknown[]) =>
-        Promise.resolve({
-          findingCount: 1,
-          duration: 500,
-          aiModel: 'claude-sonnet-4-5-20250929',
-          chunksTotal: 1,
-          chunksSucceeded: 1,
-          chunksFailed: 0,
-          partialFailure: false,
-          fallbackUsed: false,
-          totalUsage: { inputTokens: 1500, outputTokens: 600, estimatedCostUsd: 0.01 },
-        } as L3Result),
-      ),
-      mockScoreFile: vi.fn((..._args: unknown[]) =>
-        Promise.resolve({
-          scoreId: faker.string.uuid(),
-          fileId: faker.string.uuid(),
-          mqmScore: 88,
-          npt: 12,
-          totalWords: 800,
-          criticalCount: 0,
-          majorCount: 1,
-          minorCount: 1,
-          status: 'calculated' as ScoreStatus,
-          autoPassRationale: null as string | null,
-        }),
-      ),
-      dbState,
-      dbMockModule,
-    }
-  },
-)
+const {
+  mockRunL2ForFile,
+  mockRunL3ForFile,
+  mockScoreFile,
+  mockWriteAuditLog,
+  dbState,
+  dbMockModule,
+} = vi.hoisted(() => {
+  const { dbState, dbMockModule } = createDrizzleMock()
+  return {
+    mockWriteAuditLog: vi.fn((..._args: unknown[]) => Promise.resolve()),
+    mockRunL2ForFile: vi.fn((..._args: unknown[]) =>
+      Promise.resolve({
+        findingCount: 2,
+        duration: 200,
+        aiModel: 'gpt-4o-mini',
+        chunksTotal: 1,
+        chunksSucceeded: 1,
+        chunksFailed: 0,
+        partialFailure: false,
+        fallbackUsed: false,
+        totalUsage: { inputTokens: 800, outputTokens: 400, estimatedCostUsd: 0.001 },
+      } as L2Result),
+    ),
+    mockRunL3ForFile: vi.fn((..._args: unknown[]) =>
+      Promise.resolve({
+        findingCount: 1,
+        duration: 500,
+        aiModel: 'claude-sonnet-4-5-20250929',
+        chunksTotal: 1,
+        chunksSucceeded: 1,
+        chunksFailed: 0,
+        partialFailure: false,
+        fallbackUsed: false,
+        totalUsage: { inputTokens: 1500, outputTokens: 600, estimatedCostUsd: 0.01 },
+      } as L3Result),
+    ),
+    mockScoreFile: vi.fn((..._args: unknown[]) =>
+      Promise.resolve({
+        scoreId: faker.string.uuid(),
+        fileId: faker.string.uuid(),
+        mqmScore: 88,
+        npt: 12,
+        totalWords: 800,
+        criticalCount: 0,
+        majorCount: 1,
+        minorCount: 1,
+        status: 'calculated' as ScoreStatus,
+        autoPassRationale: null as string | null,
+      }),
+    ),
+    dbState,
+    dbMockModule,
+  }
+})
 
 vi.mock('@/features/pipeline/helpers/runL2ForFile', () => ({
   runL2ForFile: (...args: unknown[]) => mockRunL2ForFile(...args),
@@ -69,6 +75,10 @@ vi.mock('@/features/pipeline/helpers/runL3ForFile', () => ({
 
 vi.mock('@/features/scoring/helpers/scoreFile', () => ({
   scoreFile: (...args: unknown[]) => mockScoreFile(...args),
+}))
+
+vi.mock('@/features/audit/actions/writeAuditLog', () => ({
+  writeAuditLog: (...args: unknown[]) => mockWriteAuditLog(...args),
 }))
 
 vi.mock('@/lib/logger', () => ({
@@ -505,6 +515,21 @@ describe('retryFailedLayers Inngest function (Story 3.4)', () => {
       ).rejects.toThrow(/quota|budget/i)
 
       expect(mockRunL2ForFile).not.toHaveBeenCalled()
+
+      // Audit log must record budget exhaustion (Guardrail #2: error path, non-fatal)
+      expect(mockWriteAuditLog).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId: VALID_TENANT_ID,
+          userId: VALID_USER_ID,
+          entityType: 'file',
+          entityId: VALID_FILE_ID,
+          action: 'retry.budget_exhausted',
+          newValue: expect.objectContaining({
+            projectId: VALID_PROJECT_ID,
+            remainingBudgetUsd: 0,
+          }),
+        }),
+      )
     })
   })
 
