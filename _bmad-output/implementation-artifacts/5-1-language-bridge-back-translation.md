@@ -1,6 +1,6 @@
 # Story 5.1: Language Bridge — Back-translation & Contextual Explanation
 
-Status: review
+Status: done
 
 ## Story
 
