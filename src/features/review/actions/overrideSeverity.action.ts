@@ -105,19 +105,21 @@ export async function overrideSeverity(
   const isReset = finding.originalSeverity !== null && newSeverity === finding.originalSeverity
   const serverUpdatedAt = new Date()
 
-  // Story 5.2a: Determine non-native for review_actions metadata (before transaction for audit log access)
-  let overrideTargetLang = 'unknown'
+  // Story 5.2a CR-R1: Unified segment lookup for non-native detection + feedback_events (was 2 queries)
+  let segmentSourceLang = 'unknown'
+  let segmentTargetLang = 'unknown'
   if (finding.segmentId) {
     const overrideSegRows = await db
-      .select({ targetLang: segments.targetLang })
+      .select({ sourceLang: segments.sourceLang, targetLang: segments.targetLang })
       .from(segments)
       .where(and(eq(segments.id, finding.segmentId), withTenant(segments.tenantId, tenantId)))
       .limit(1)
     if (overrideSegRows.length > 0) {
-      overrideTargetLang = overrideSegRows[0]!.targetLang
+      segmentSourceLang = overrideSegRows[0]!.sourceLang
+      segmentTargetLang = overrideSegRows[0]!.targetLang
     }
   }
-  const isNonNative = determineNonNative(user.nativeLanguages, overrideTargetLang)
+  const isNonNative = determineNonNative(user.nativeLanguages, segmentTargetLang)
 
   // Transaction: UPDATE finding + INSERT review_actions (Guardrail #6)
   await db.transaction(async (tx) => {
@@ -203,21 +205,7 @@ export async function overrideSeverity(
 
   // Insert feedback_events for AI training (FR79 — best-effort)
   try {
-    // Segment lookup for language pair
-    let sourceLang = 'unknown'
-    let targetLang = 'unknown'
-    if (finding.segmentId) {
-      const segRows = await db
-        .select({ sourceLang: segments.sourceLang, targetLang: segments.targetLang })
-        .from(segments)
-        .where(and(eq(segments.id, finding.segmentId), withTenant(segments.tenantId, tenantId)))
-        .limit(1)
-      if (segRows.length > 0) {
-        sourceLang = segRows[0]!.sourceLang
-        targetLang = segRows[0]!.targetLang
-      }
-    }
-
+    // CR-R1 M1 fix: reuse segment lookup from above (was duplicated query)
     await db.insert(feedbackEvents).values({
       tenantId,
       fileId,
@@ -229,11 +217,11 @@ export async function overrideSeverity(
       originalSeverity: currentSeverity,
       newSeverity,
       isFalsePositive: false,
-      reviewerIsNative: !determineNonNative(user.nativeLanguages, targetLang),
+      reviewerIsNative: !isNonNative,
       layer: finding.detectedByLayer,
       detectedByLayer: finding.detectedByLayer,
-      sourceLang,
-      targetLang,
+      sourceLang: segmentSourceLang,
+      targetLang: segmentTargetLang,
       sourceText: finding.sourceTextExcerpt ?? '',
       originalTarget: finding.targetTextExcerpt ?? '',
     })

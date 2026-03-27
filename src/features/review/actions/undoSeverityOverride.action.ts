@@ -143,7 +143,11 @@ export async function undoSeverityOverride(
       entityId: findingId,
       action: 'finding.undo_severity_override',
       oldValue: { severity: currentSeverity },
-      newValue: { severity: previousSeverity, originalSeverity: previousOriginalSeverity },
+      newValue: {
+        severity: previousSeverity,
+        originalSeverity: previousOriginalSeverity,
+        non_native: isNonNative,
+      },
     })
   } catch (auditErr) {
     logger.error({ err: auditErr, findingId }, 'Audit log write failed for undo severity override')

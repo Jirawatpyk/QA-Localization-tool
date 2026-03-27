@@ -272,7 +272,7 @@ export function useReviewActions({
         setActiveAction(null)
       }
     },
-    [fileId, projectId, autoAdvance, sourceLang, targetLang],
+    [fileId, projectId, autoAdvance, sourceLang, targetLang, isNonNative],
   )
 
   const handleAccept = useCallback(

@@ -146,7 +146,7 @@ export async function undoDeleteFinding(
       entityId: snapshot.id,
       action: 'finding.undo_delete',
       oldValue: {},
-      newValue: { status: snapshot.status, severity: snapshot.severity },
+      newValue: { status: snapshot.status, severity: snapshot.severity, non_native: isNonNative },
     })
   } catch (auditErr) {
     logger.error(

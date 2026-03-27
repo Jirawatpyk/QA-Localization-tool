@@ -62,7 +62,7 @@ export async function undoBulkAction(
 
   // Fetch all findings in batch (Guardrail #1)
   const rows = await db
-    .select({ id: findings.id, status: findings.status })
+    .select({ id: findings.id, status: findings.status, segmentId: findings.segmentId })
     .from(findings)
     .where(
       and(
@@ -100,22 +100,12 @@ export async function undoBulkAction(
     })
   }
 
-  // Story 5.2a: Determine non-native ONCE for entire bulk undo (AC2 pattern)
+  // Story 5.2a CR-R1 L1: Determine non-native ONCE for entire bulk undo (AC2 pattern)
+  // Uses segmentId from initial SELECT (was a separate query before CR-R1)
   let undoBulkTargetLang = 'unknown'
   const firstUndoSegmentId =
     canRevert.length > 0
-      ? ((
-          await db
-            .select({ segmentId: findings.segmentId })
-            .from(findings)
-            .where(
-              and(
-                eq(findings.id, canRevert[0]!.findingId),
-                withTenant(findings.tenantId, tenantId),
-              ),
-            )
-            .limit(1)
-        )[0]?.segmentId ?? null)
+      ? (rows.find((r) => r.id === canRevert[0]!.findingId)?.segmentId ?? null)
       : null
   if (firstUndoSegmentId) {
     const segRows = await db
@@ -239,7 +229,11 @@ export async function undoBulkAction(
       entityId: fileId,
       action: 'finding.bulk_undo',
       oldValue: { findingIds: reverted },
-      newValue: { reverted: reverted.length, conflicted: conflicted.length },
+      newValue: {
+        reverted: reverted.length,
+        conflicted: conflicted.length,
+        non_native: isNonNative,
+      },
     })
   } catch (auditErr) {
     logger.error({ err: auditErr }, 'Audit log write failed for bulk undo')

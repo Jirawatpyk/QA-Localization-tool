@@ -90,6 +90,9 @@ export async function addFinding(input: AddFindingInput): Promise<ActionResult<A
   const sourceExcerpt = segment.sourceText.slice(0, 500)
   const targetExcerpt = segment.targetText.slice(0, 500)
 
+  // Story 5.2a CR-R1: hoist non-native detection for reuse in audit log (AC6)
+  const isNonNative = determineNonNative(user.nativeLanguages, segment.targetLang)
+
   // Transaction: INSERT finding + INSERT review_actions (Guardrail #6)
   const insertedRows = await db.transaction(async (tx) => {
     const rows = await tx
@@ -134,7 +137,7 @@ export async function addFinding(input: AddFindingInput): Promise<ActionResult<A
       batchId: null,
       metadata: {
         isManual: true,
-        non_native: determineNonNative(user.nativeLanguages, segment.targetLang),
+        non_native: isNonNative,
       },
     })
 
@@ -158,7 +161,7 @@ export async function addFinding(input: AddFindingInput): Promise<ActionResult<A
       entityId: findingId,
       action: 'finding.add',
       oldValue: {},
-      newValue: { status: 'manual', severity, category },
+      newValue: { status: 'manual', severity, category, non_native: isNonNative },
     })
   } catch (auditErr) {
     logger.error({ err: auditErr, findingId }, 'Audit log write failed for addFinding')

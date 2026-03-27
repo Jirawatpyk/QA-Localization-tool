@@ -2,6 +2,8 @@
 
 import { Eye } from 'lucide-react'
 
+import { cn } from '@/lib/utils'
+
 export type NonNativeBadgeProps = {
   className?: string | undefined
   /** Compact variant: shorter text for FindingCardCompact */
@@ -21,7 +23,10 @@ export function NonNativeBadge({ className, compact = false }: NonNativeBadgePro
   return (
     <span
       data-testid="non-native-badge"
-      className={`inline-flex items-center gap-1 text-xs italic text-muted-foreground shrink-0 ${className ?? ''}`}
+      className={cn(
+        'inline-flex items-center gap-1 text-xs italic text-muted-foreground shrink-0',
+        className,
+      )}
     >
       <Eye className="h-4 w-4" aria-hidden="true" />
       {compact ? 'Non-native' : 'Subject to native audit'}

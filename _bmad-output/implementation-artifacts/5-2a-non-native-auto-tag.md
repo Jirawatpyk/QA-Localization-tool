@@ -363,6 +363,7 @@ Claude Opus 4.6 (1M context)
 - Task 8: Updated audit log `newValue` in `executeReviewAction`, `executeUndoRedo`, and `bulkAction` to include `non_native`.
 - Task 9: Updated 12 existing test files with `nativeLanguages: []` mock + extra segment return values. Unskipped + fixed all 22 ATDD tests. Fixed Zod v4 UUID validation issue.
 - Pre-CR: 4 sub-agents launched (anti-pattern, tenant-isolation, code-quality, cross-file reviewer).
+- CR R1: Fixed 2H + 2M findings (H1: stale isNonNative closure in useCallback deps, H2: AC6 audit log gap in 5 files, M1: duplicated segment query in overrideSeverity, M2: FindingList.tsx missing from File List).
 
 ### File List
 
@@ -388,6 +389,7 @@ Claude Opus 4.6 (1M context)
 - src/features/review/components/FindingCard.tsx
 - src/features/review/components/FindingCardCompact.tsx
 - src/features/review/components/OverrideHistoryPanel.tsx
+- src/features/review/components/FindingList.tsx
 - src/features/review/hooks/use-review-actions.ts
 - src/features/review/components/ReviewPageClient.tsx
 - src/types/finding.ts
