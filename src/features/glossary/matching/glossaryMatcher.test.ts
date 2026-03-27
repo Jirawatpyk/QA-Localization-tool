@@ -2,6 +2,8 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { asTenantId } from '@/types/tenant'
+
 // 1. Mock server-only FIRST (required before any server-only imports)
 vi.mock('server-only', () => ({}))
 
@@ -22,7 +24,7 @@ const mockLogger = { warn: vi.fn(), info: vi.fn(), error: vi.fn() }
 vi.mock('@/lib/logger', () => ({ logger: mockLogger }))
 
 // 5. Test context
-const testCtx = { segmentId: SEGMENT_ID, projectId: PROJECT_ID, tenantId: TENANT_ID }
+const testCtx = { segmentId: SEGMENT_ID, projectId: PROJECT_ID, tenantId: asTenantId(TENANT_ID) }
 
 // 7. Test data factory
 function buildTerm(
@@ -880,7 +882,11 @@ describe('TA — P1 High: checkGlossaryCompliance edge cases', () => {
   it('TA-UNIT-005: checkGlossaryCompliance — ctx without userId → audit log called without userId', async () => {
     // buildTerm with a substring that yields low confidence → triggers audit log
     const term = buildTerm({ targetTerm: 'บาล' })
-    const ctxNoUser = { segmentId: SEGMENT_ID, projectId: PROJECT_ID, tenantId: TENANT_ID }
+    const ctxNoUser = {
+      segmentId: SEGMENT_ID,
+      projectId: PROJECT_ID,
+      tenantId: asTenantId(TENANT_ID),
+    }
 
     const { checkGlossaryCompliance } = await import('./glossaryMatcher')
     await checkGlossaryCompliance('โรงพยาบาล', [term], 'th', ctxNoUser)

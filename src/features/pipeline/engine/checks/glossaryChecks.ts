@@ -3,6 +3,7 @@ import type {
   SegmentContext,
 } from '@/features/glossary/matching/matchingTypes'
 import { normalizeForComparison } from '@/features/glossary/utils/normalizeForComparison'
+import type { TenantId } from '@/types/tenant'
 
 import type {
   GlossaryTermRecord,
@@ -50,7 +51,7 @@ export async function checkGlossaryComplianceRule(
   const segmentContext: SegmentContext = {
     segmentId: segment.id,
     projectId: segment.projectId,
-    tenantId: segment.tenantId,
+    tenantId: segment.tenantId as TenantId,
   }
 
   const result = await checkFn(segment.targetText, filtered, ctx.targetLang, segmentContext)

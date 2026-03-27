@@ -44,10 +44,21 @@ const mockSelectWhere = vi.fn()
 const mockSelectFrom = vi.fn().mockReturnValue({ where: mockSelectWhere })
 const mockSelect = vi.fn().mockReturnValue({ from: mockSelectFrom })
 
+// Transaction mock: executes callback with tx that has same insert as db
+const mockTransaction = vi
+  .fn()
+  .mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => {
+    const tx = {
+      insert: (...args: unknown[]) => mockInsert(...args),
+    }
+    return cb(tx)
+  })
+
 vi.mock('@/db/client', () => ({
   db: {
     insert: (...args: unknown[]) => mockInsert(...args),
     select: (...args: unknown[]) => mockSelect(...args),
+    transaction: (...args: unknown[]) => mockTransaction(...args),
   },
 }))
 

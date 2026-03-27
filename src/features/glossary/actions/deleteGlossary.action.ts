@@ -38,7 +38,11 @@ export async function deleteGlossary(glossaryId: string): Promise<ActionResult<{
   }
 
   // Cascade deletes all glossary_terms automatically (FK onDelete: cascade)
-  await db.delete(glossaries).where(eq(glossaries.id, glossaryId))
+  await db
+    .delete(glossaries)
+    .where(
+      and(eq(glossaries.id, glossaryId), withTenant(glossaries.tenantId, currentUser.tenantId)),
+    )
 
   await writeAuditLog({
     tenantId: currentUser.tenantId,

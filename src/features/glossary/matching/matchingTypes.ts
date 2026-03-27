@@ -1,3 +1,5 @@
+import type { TenantId } from '@/types/tenant'
+
 /**
  * Confidence level for a glossary term match.
  * 'high' = Intl.Segmenter confirmed both start and end align with word boundaries.
@@ -33,6 +35,6 @@ export type GlossaryCheckResult = {
 export type SegmentContext = {
   segmentId: string
   projectId: string
-  tenantId: string
+  tenantId: TenantId
   userId?: string // optional — who triggered the check
 }

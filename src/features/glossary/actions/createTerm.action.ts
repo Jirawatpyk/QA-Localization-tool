@@ -70,16 +70,27 @@ export async function createTerm(input: unknown): Promise<ActionResult<TermResul
     return { success: false, code: 'DUPLICATE_ENTRY', error: 'Term already exists' }
   }
 
-  const [term] = await db
-    .insert(glossaryTerms)
-    .values({
-      glossaryId: parsed.data.glossaryId,
-      tenantId: currentUser.tenantId,
-      sourceTerm: normalizedSource,
-      targetTerm: parsed.data.targetTerm.trim().normalize('NFKC'),
-      caseSensitive: parsed.data.caseSensitive,
-    })
-    .returning()
+  let term
+  try {
+    const [inserted] = await db
+      .insert(glossaryTerms)
+      .values({
+        glossaryId: parsed.data.glossaryId,
+        tenantId: currentUser.tenantId,
+        sourceTerm: normalizedSource,
+        targetTerm: parsed.data.targetTerm.trim().normalize('NFKC'),
+        caseSensitive: parsed.data.caseSensitive,
+      })
+      .returning()
+
+    term = inserted
+  } catch (err) {
+    // Defense-in-depth: handle race condition where dedup SELECT passed but concurrent INSERT won
+    if ((err as { code?: string }).code === '23505') {
+      return { success: false, code: 'DUPLICATE_ENTRY', error: 'Term already exists' }
+    }
+    throw err
+  }
 
   if (!term) {
     return { success: false, code: 'CREATE_FAILED', error: 'Failed to create term' }

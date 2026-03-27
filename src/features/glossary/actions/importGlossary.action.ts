@@ -21,6 +21,11 @@ import { requireRole } from '@/lib/auth/requireRole'
 import type { ActionResult } from '@/types/actionResult'
 
 const BATCH_SIZE = 500
+const MAX_GLOSSARY_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
+
+function sanitizeFormula(text: string): string {
+  return text.replace(/^[=+\-@\t\r]+/, '')
+}
 
 export async function importGlossary(formData: FormData): Promise<ActionResult<ImportResult>> {
   let currentUser
@@ -83,6 +88,10 @@ export async function importGlossary(formData: FormData): Promise<ActionResult<I
     }
   }
 
+  if (file.size > MAX_GLOSSARY_FILE_SIZE) {
+    return { success: false, code: 'VALIDATION_ERROR', error: 'File too large (max 10MB)' }
+  }
+
   const buffer = await file.arrayBuffer()
 
   // Parse file using appropriate parser
@@ -107,31 +116,39 @@ export async function importGlossary(formData: FormData): Promise<ActionResult<I
     return true
   })
 
-  // Create glossary record
-  const [glossary] = await db
-    .insert(glossaries)
-    .values({
-      tenantId: currentUser.tenantId,
-      projectId: parsed.data.projectId,
-      name: parsed.data.name,
-      sourceLang: project.sourceLang,
-      targetLang,
-    })
-    .returning()
+  // Create glossary + insert terms in a single transaction (Guardrail #6)
+  const glossary = await db.transaction(async (tx) => {
+    const [created] = await tx
+      .insert(glossaries)
+      .values({
+        tenantId: currentUser.tenantId,
+        projectId: parsed.data.projectId,
+        name: parsed.data.name,
+        sourceLang: project.sourceLang,
+        targetLang,
+      })
+      .returning()
+
+    if (!created) {
+      throw new Error('Failed to create glossary')
+    }
+
+    // Batch insert terms with formula sanitization
+    for (let i = 0; i < uniqueTerms.length; i += BATCH_SIZE) {
+      const batch = uniqueTerms.slice(i, i + BATCH_SIZE).map((term) => ({
+        glossaryId: created.id,
+        tenantId: currentUser.tenantId,
+        sourceTerm: sanitizeFormula(term.sourceTerm),
+        targetTerm: sanitizeFormula(term.targetTerm),
+      }))
+      await tx.insert(glossaryTerms).values(batch)
+    }
+
+    return created
+  })
 
   if (!glossary) {
     return { success: false, code: 'CREATE_FAILED', error: 'Failed to create glossary' }
-  }
-
-  // Batch insert terms
-  for (let i = 0; i < uniqueTerms.length; i += BATCH_SIZE) {
-    const batch = uniqueTerms.slice(i, i + BATCH_SIZE).map((term) => ({
-      glossaryId: glossary.id,
-      tenantId: currentUser.tenantId,
-      sourceTerm: term.sourceTerm,
-      targetTerm: term.targetTerm,
-    }))
-    await db.insert(glossaryTerms).values(batch)
   }
 
   // Audit log
