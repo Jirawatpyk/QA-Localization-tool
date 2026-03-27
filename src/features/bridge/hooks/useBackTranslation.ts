@@ -25,7 +25,10 @@ const DEBOUNCE_MS = 300 // Guardrail #53
  * Client hook for fetching back-translation with debounce and abort.
  *
  * Guardrail #53: 300ms debounce on segmentId change
- * Guardrail #75: AbortController cancels in-flight on segment change
+ * Guardrail #75: AbortController + stale guard on segment change.
+ * Note: Next.js Server Actions don't accept AbortSignal — abort only prevents
+ * client-side state updates. Server-side AI call runs to completion.
+ * Budget drain mitigated by 300ms debounce (Guardrail #53) + per-call budget check.
  * Guard: discard result if segmentId !== currentSegmentId (stale guard)
  */
 export function useBackTranslation({

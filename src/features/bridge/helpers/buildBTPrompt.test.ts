@@ -29,6 +29,8 @@ describe('buildBTPrompt', () => {
     // Core principle must NOT instruct to correct/improve the translation
     expect(prompt.system).toContain('Never fix')
     expect(prompt.system).toContain('translate it exactly as it appears')
+    // L2: Empty contextSegments should NOT include "Surrounding Context"
+    expect(prompt.user).not.toContain('Surrounding Context')
   })
 
   // ── AC3 / Scenario 3.1 [P0]: Thai-specific instructions ───────────────

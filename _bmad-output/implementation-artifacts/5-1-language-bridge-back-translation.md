@@ -357,6 +357,33 @@ Claude Opus 4.6 (1M context)
 - Task 9: Integrated LanguageBridgePanel into FindingDetailContent (after segment context, before override history), added isNonNative + btConfidenceThreshold to FileReviewData, passed through ReviewPageClient + FindingDetailSheet
 - Task 10: 42 unit tests passing (buildBTPrompt 10, thaiAnalysis 9, btCache 8, action 15). Panel + hook ATDD stubs skipped (23). Full regression suite 4044 tests GREEN
 
+### CR Round 1 Fixes (27 findings: 1C, 9H, 10M, 7L)
+- **C1 FIXED**: `getCachedBackTranslation()` now requires `targetTextHash` param — Guardrail #57 restored
+- **H1-H3 FIXED**: Created `supabase/migrations/00025_story_5_1_back_translation_cache_rls.sql` with correct `auth.jwt()` pattern, DELETE policy, service_role cleanup policy
+- **H4 FIXED**: Removed duplicate `LanguageNote` type from `backTranslationCache.ts` → imports from `@/features/bridge/types`
+- **H5 FIXED**: Added `eq(segments.projectId, projectId)` defense-in-depth to segment query
+- **H6 FIXED**: Added NOT_FOUND error path test
+- **H7 FIXED**: Added AI_NO_OUTPUT error path test
+- **H8 FIXED**: Created `cleanBTCache.test.ts` (5 tests: handler, onFailure, fnConfig)
+- **H9 FIXED**: Replaced vacuous `.resolves.not.toThrow()` with `valuesCaptures` assertions
+- **M1 FIXED**: Added 4 missing test files to File List + 3 new CR R1 files
+- **M2 FIXED**: Removed dead `targetLang` prop from LanguageBridgePanel
+- **M3 FIXED**: Added 5 `findThaiParticles` tests
+- **M4 FIXED**: Added 6 ConfidenceIndicator boundary tier tests (0.80/0.79/0.60/0.59/0.40/0.39)
+- **M5 FIXED**: Added fallback-lower-confidence-than-primary test
+- **M6 FIXED**: Replaced vacuous `toBeDefined()` with `toBeTruthy()` + length check
+- **M7 FIXED**: Added `mockWithTenant` assertion in glossary invalidation test
+- **M8 FIXED**: Added `event` param to onFailureFn signature
+- **M9 DOCUMENTED**: Added clarifying comment for isNonNative conservative fallback + budget check note
+- **M10 DOCUMENTED**: Added comment explaining Server Action AbortController limitation + mitigations
+- **L1 FIXED**: Added language notes rendering test with non-empty array
+- **L2 FIXED**: Added "Surrounding Context" negative assertion for empty contextSegments
+- **L3 FIXED**: Replaced loose rate 0-1 assertion with exact rate 1.0 + totalMarkers/referencedMarkers
+- **L4 FIXED**: Changed `>= 0` to `> 0` for Thai languageNotes assertion
+- **L5 DOCUMENTED**: Added seed data dependency comment for BT responsive test
+- **L6 FIXED**: Added fnConfig to Object.assign in cleanBTCache.ts
+- **L7 FIXED**: Created `back-translation-cache.rls.test.ts` (4 cross-tenant isolation tests)
+
 ### File List
 
 **New files:**
@@ -391,10 +418,14 @@ Claude Opus 4.6 (1M context)
 
 **Modified test files (ATDD unskip + mock updates):**
 - src/features/bridge/helpers/buildBTPrompt.test.ts (unskipped, 10 tests)
-- src/features/bridge/helpers/thaiAnalysis.test.ts (unskipped, 9 tests)
-- src/features/bridge/helpers/btCache.test.ts (unskipped, 8 tests)
-- src/features/bridge/actions/getBackTranslation.action.test.ts (unskipped, 15 tests)
-- src/__tests__/ai-integration/bt-pipeline.integration.test.ts (lint fix)
+- src/features/bridge/helpers/thaiAnalysis.test.ts (unskipped, 14 tests — CR R1: +5 findThaiParticles tests, exact rate assertion)
+- src/features/bridge/helpers/btCache.test.ts (unskipped, 8 tests — CR R1: values assertion, withTenant assertion, targetTextHash param)
+- src/features/bridge/actions/getBackTranslation.action.test.ts (unskipped, 18 tests — CR R1: +3 NOT_FOUND/AI_NO_OUTPUT/fallback-lower)
+- src/features/bridge/components/LanguageBridgePanel.test.tsx (23 tests — CR R1: +7 boundary tiers, language notes)
+- src/features/bridge/hooks/useBackTranslation.test.ts (6 tests)
+- src/__tests__/ai-integration/bt-pipeline.integration.test.ts (CR R1: languageNotes assertion >0)
+- e2e/review-detail-panel.spec.ts (Task 10.8 — unskipped E1-E7, added BT1-BT5)
+- e2e/review-responsive.spec.ts (Task 10.9 — BT-R1/R2/R3 responsive tests)
 - src/features/review/components/ReviewPageClient.test.tsx (+ isNonNative, btConfidenceThreshold)
 - src/features/review/components/ReviewPageClient.story40.test.tsx (same)
 - src/features/review/components/ReviewPageClient.nullScore.test.tsx (same)
@@ -403,3 +434,10 @@ Claude Opus 4.6 (1M context)
 - src/features/review/components/ReviewPageClient.story33.test.tsx (same)
 - src/features/review/components/ReviewPageClient.story34.test.tsx (same)
 - src/features/review/components/ReviewPageClient.story35.test.tsx (same)
+
+**New test files (CR R1):**
+- src/features/bridge/inngest/cleanBTCache.test.ts (5 tests — handler, onFailure, fnConfig)
+- src/db/__tests__/rls/back-translation-cache.rls.test.ts (4 tests — cross-tenant isolation)
+
+**New files (CR R1):**
+- supabase/migrations/00025_story_5_1_back_translation_cache_rls.sql (correct auth.jwt() RLS policies)

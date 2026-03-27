@@ -26,8 +26,8 @@ const handlerFn = async ({
 }
 
 // onFailure is terminal — log only, never throw (Inngest has no retry loop at this point)
-const onFailureFn = async ({ error }: { error: Error }) => {
-  logger.error({ err: error }, 'BT cache cleanup cron failed — all retries exhausted')
+const onFailureFn = async ({ event, error }: { event: Record<string, unknown>; error: Error }) => {
+  logger.error({ err: error, event }, 'BT cache cleanup cron failed — all retries exhausted')
 }
 
 export const cleanBTCache = Object.assign(
@@ -41,5 +41,9 @@ export const cleanBTCache = Object.assign(
     { cron: '0 3 * * *' }, // Daily at 03:00 UTC
     handlerFn,
   ),
-  { handler: handlerFn, onFailure: onFailureFn }, // Guardrail #10: expose for tests
+  {
+    handler: handlerFn,
+    onFailure: onFailureFn,
+    fnConfig: { id: 'clean-bt-cache', retries: 3, cron: '0 3 * * *' },
+  }, // Guardrail #10: expose for tests
 )

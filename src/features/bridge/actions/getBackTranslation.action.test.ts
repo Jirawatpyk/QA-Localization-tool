@@ -345,4 +345,66 @@ describe('getBackTranslation', () => {
 
     expect(result.success).toBe(false)
   })
+
+  // ── H6: Segment NOT_FOUND error path ──────────────────────────────────
+  it('should return NOT_FOUND when segment does not exist', async () => {
+    dbState.returnValues = [
+      [], // Segment query returns empty
+      [{ btConfidenceThreshold: 0.6 }],
+    ]
+
+    const { getBackTranslation } = await import('./getBackTranslation.action')
+    const result = await getBackTranslation({
+      segmentId: '11111111-1111-4111-a111-111111111111',
+      projectId: '22222222-2222-4222-a222-222222222222',
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('NOT_FOUND')
+      expect(result.error).toContain('Segment not found')
+    }
+    expect(mockGenerateText).not.toHaveBeenCalled()
+  })
+
+  // ── H7: AI null output (AI_NO_OUTPUT) error path ─────────────────────
+  it('should return AI_NO_OUTPUT when generateText returns null output', async () => {
+    mockGenerateText.mockResolvedValue({ output: null, usage: MOCK_USAGE })
+
+    const { getBackTranslation } = await import('./getBackTranslation.action')
+    const result = await getBackTranslation({
+      segmentId: '11111111-1111-4111-a111-111111111111',
+      projectId: '22222222-2222-4222-a222-222222222222',
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('AI_NO_OUTPUT')
+      expect(result.error).toContain('no structured output')
+    }
+  })
+
+  // ── M5: Fallback returns LOWER confidence than primary → use primary ──
+  it('should use primary result when fallback confidence is lower', async () => {
+    mockGenerateText
+      .mockResolvedValueOnce({ output: { ...MOCK_BT_RESULT, confidence: 0.4 }, usage: MOCK_USAGE })
+      .mockResolvedValueOnce({ output: { ...MOCK_BT_RESULT, confidence: 0.3 }, usage: MOCK_USAGE })
+    mockCheckProjectBudget.mockResolvedValue({ hasQuota: true, remainingBudgetUsd: 100 })
+
+    const { getBackTranslation } = await import('./getBackTranslation.action')
+    const result = await getBackTranslation({
+      segmentId: '11111111-1111-4111-a111-111111111111',
+      projectId: '22222222-2222-4222-a222-222222222222',
+    })
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      // Primary result used (0.4), not fallback (0.3)
+      expect(result.data.confidence).toBe(0.4)
+    }
+    // Primary is cached (not fallback)
+    expect(mockCacheBT).toHaveBeenCalledWith(
+      expect.objectContaining({ modelVersion: 'gpt-4o-mini-bt-v1' }),
+    )
+  })
 })

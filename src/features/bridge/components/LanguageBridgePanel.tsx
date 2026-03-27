@@ -13,7 +13,6 @@ import type { BridgePanelState } from '@/features/bridge/types'
 type LanguageBridgePanelProps = {
   segmentId: string | null
   sourceLang: string
-  targetLang: string
   projectId: string
   isNonNative: boolean
   confidenceThreshold?: number | undefined
@@ -30,7 +29,6 @@ type LanguageBridgePanelProps = {
 export function LanguageBridgePanel({
   segmentId,
   sourceLang,
-  targetLang,
   projectId,
   isNonNative,
   confidenceThreshold = 0.6,

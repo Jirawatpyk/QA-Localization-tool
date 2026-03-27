@@ -207,7 +207,6 @@ export function FindingDetailContent({
             <LanguageBridgePanel
               segmentId={finding.segmentId}
               sourceLang={sourceLang}
-              targetLang={targetLang}
               projectId={projectId}
               isNonNative={isNonNative}
               confidenceThreshold={btConfidenceThreshold}

@@ -62,7 +62,7 @@ export async function getBackTranslation(
     }
     const { segmentId, projectId, skipCache } = parsed.data
 
-    // Load segment (Guardrail #1: withTenant)
+    // Load segment (Guardrail #1: withTenant, #14: projectId defense-in-depth)
     const [segment] = await db
       .select({
         id: segments.id,
@@ -72,7 +72,13 @@ export async function getBackTranslation(
         targetLang: segments.targetLang,
       })
       .from(segments)
-      .where(and(eq(segments.id, segmentId), withTenant(segments.tenantId, tenantId)))
+      .where(
+        and(
+          eq(segments.id, segmentId),
+          eq(segments.projectId, projectId),
+          withTenant(segments.tenantId, tenantId),
+        ),
+      )
 
     if (!segment) {
       return { success: false, error: 'Segment not found', code: 'NOT_FOUND' }
@@ -90,6 +96,7 @@ export async function getBackTranslation(
         languagePair,
         BT_MODEL_VERSION,
         tenantId,
+        targetTextHash, // Guardrail #57: match exact target text version
       )
       if (cached) {
         return {

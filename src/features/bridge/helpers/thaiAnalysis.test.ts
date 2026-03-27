@@ -13,6 +13,7 @@ import {
   countThaiToneMarkers,
   verifyToneMarkerPreservation,
   verifyCompoundWordRecognition,
+  findThaiParticles,
 } from './thaiAnalysis'
 
 describe('thaiAnalysis', () => {
@@ -63,8 +64,10 @@ describe('thaiAnalysis', () => {
         },
       ])
 
-      expect(result.rate).toBeGreaterThanOrEqual(0)
-      expect(result.rate).toBeLessThanOrEqual(1)
+      // 3 tone markers in text (้ ้ ่), 3 notes referencing them → rate = 1.0
+      expect(result.rate).toBe(1.0)
+      expect(result.totalMarkers).toBe(3)
+      expect(result.referencedMarkers).toBe(3)
     })
 
     // ── Boundary value tests: >= 98% threshold ──────────────────────────
@@ -164,6 +167,35 @@ describe('thaiAnalysis', () => {
 
       const result = verifyCompoundWordRecognition(text, notes)
       expect(result.rate).toBeLessThan(0.9)
+    })
+  })
+
+  // ── AC3 / M3: Thai politeness particle detection ─────────────────────
+  describe('findThaiParticles', () => {
+    it('should find single particles in text', () => {
+      const found = findThaiParticles('สวัสดีครับ วันนี้อากาศดีนะ')
+      expect(found).toContain('ครับ')
+      expect(found).toContain('นะ')
+    })
+
+    it('should find multi-token particles (นะคะ, นะครับ)', () => {
+      const found = findThaiParticles('ไปด้วยกันนะคะ')
+      expect(found).toContain('นะคะ')
+    })
+
+    it('should return empty array for text without particles', () => {
+      const found = findThaiParticles('โรงพยาบาล')
+      expect(found).toHaveLength(0)
+    })
+
+    it('should return empty array for empty string', () => {
+      const found = findThaiParticles('')
+      expect(found).toHaveLength(0)
+    })
+
+    it('should find feminine particle ค่ะ', () => {
+      const found = findThaiParticles('ขอบคุณค่ะ')
+      expect(found).toContain('ค่ะ')
     })
   })
 })

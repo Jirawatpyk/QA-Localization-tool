@@ -35,6 +35,7 @@ export async function getCachedBackTranslation(
   languagePair: string,
   modelVersion: string,
   tenantId: TenantId,
+  targetTextHash: string, // Guardrail #57: include hash to prevent stale cache on re-upload
 ): Promise<(BackTranslationResult & { cached: true }) | null> {
   const ttlCutoff = new Date(Date.now() - TTL_MS)
 
@@ -46,6 +47,7 @@ export async function getCachedBackTranslation(
         eq(backTranslationCache.segmentId, segmentId),
         eq(backTranslationCache.languagePair, languagePair),
         eq(backTranslationCache.modelVersion, modelVersion),
+        eq(backTranslationCache.targetTextHash, targetTextHash),
         withTenant(backTranslationCache.tenantId, tenantId),
         gte(backTranslationCache.createdAt, ttlCutoff),
       ),

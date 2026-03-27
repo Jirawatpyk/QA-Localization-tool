@@ -1074,7 +1074,8 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
 
     // Check BT section visible and no overflow
     const btPanel = page.getByTestId('language-bridge-panel')
-    // BT panel may or may not render (depends on isNonNative) — check if visible
+    // BT panel renders only when isNonNative=true (seed data uses non-native reviewer + Thai target).
+    // If seed changes, this guard silently skips BT overflow check — verify seed includes non-native pair.
     const btVisible = await btPanel.isVisible().catch(() => false)
     if (btVisible) {
       const btOverflow = await btPanel.evaluate((el) => el.scrollWidth > el.clientWidth)

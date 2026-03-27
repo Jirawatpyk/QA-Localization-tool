@@ -20,15 +20,22 @@ const { dbState, dbMockModule } = vi.hoisted(() =>
   (
     globalThis as unknown as {
       createDrizzleMock: () => {
-        dbState: { callIndex: number; returnValues: unknown[] }
+        dbState: {
+          callIndex: number
+          returnValues: unknown[]
+          valuesCaptures: unknown[]
+          setCaptures: unknown[]
+        }
         dbMockModule: Record<string, unknown>
       }
     }
   ).createDrizzleMock(),
 )
 vi.mock('@/db/client', () => dbMockModule)
+
+const mockWithTenant = vi.fn((_col: unknown, _id: unknown) => ({ type: 'withTenant' }))
 vi.mock('@/db/helpers/withTenant', () => ({
-  withTenant: vi.fn((_col: unknown, _id: unknown) => ({ type: 'withTenant' })),
+  withTenant: (_col: unknown, _id: unknown) => mockWithTenant(_col, _id),
 }))
 
 describe('btCache', () => {
@@ -80,6 +87,7 @@ describe('btCache', () => {
         'en-US→th-TH',
         'gpt-4o-mini-bt-v1',
         'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f' as import('@/types/tenant').TenantId,
+        'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
       )
 
       expect(result).not.toBeNull()
@@ -98,6 +106,7 @@ describe('btCache', () => {
         'en-US→th-TH',
         'gpt-4o-mini-bt-v1',
         'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f' as import('@/types/tenant').TenantId,
+        'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
       )
 
       expect(result).toBeNull()
@@ -106,48 +115,61 @@ describe('btCache', () => {
 
   // ── AC2 / Scenario 2.7 [P1]: onConflictDoUpdate ──────────────────────
   describe('cacheBackTranslation', () => {
-    it('should insert cache entry (onConflictDoUpdate handles concurrent writes)', async () => {
+    it('should insert cache entry with correct values (onConflictDoUpdate)', async () => {
       const { cacheBackTranslation } = await import('./btCache')
 
-      // Mock insert chain — proxy auto-resolves
       dbState.returnValues = [undefined]
 
-      await expect(
-        cacheBackTranslation({
-          segmentId: '11111111-1111-1111-1111-111111111111',
-          tenantId: 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f' as import('@/types/tenant').TenantId,
-          languagePair: 'en-US→th-TH',
-          modelVersion: 'gpt-4o-mini-bt-v1',
-          targetTextHash: 'abc123def456',
-          result: {
-            backTranslation: 'Hello',
-            contextualExplanation: 'A greeting',
-            confidence: 0.95,
-            languageNotes: [],
-            translationApproach: null,
-          },
-          inputTokens: 100,
-          outputTokens: 50,
-          estimatedCostUsd: 0.0001,
-        }),
-      ).resolves.not.toThrow()
+      const params = {
+        segmentId: '11111111-1111-1111-1111-111111111111',
+        tenantId: 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f' as import('@/types/tenant').TenantId,
+        languagePair: 'en-US→th-TH',
+        modelVersion: 'gpt-4o-mini-bt-v1',
+        targetTextHash: 'abc123def456',
+        result: {
+          backTranslation: 'Hello',
+          contextualExplanation: 'A greeting',
+          confidence: 0.95,
+          languageNotes: [],
+          translationApproach: null,
+        },
+        inputTokens: 100,
+        outputTokens: 50,
+        estimatedCostUsd: 0.0001,
+      }
+
+      await cacheBackTranslation(params)
+
+      // Verify values were passed to insert via .values() chainable
+      expect(dbState.valuesCaptures.length).toBeGreaterThan(0)
+      const inserted = dbState.valuesCaptures[0] as Record<string, unknown>
+      expect(inserted.segmentId).toBe(params.segmentId)
+      expect(inserted.tenantId).toBe(params.tenantId)
+      expect(inserted.targetTextHash).toBe(params.targetTextHash)
+      expect(inserted.backTranslation).toBe('Hello')
+      expect(inserted.confidence).toBe(0.95)
+      expect(inserted.inputTokens).toBe(100)
+      expect(inserted.outputTokens).toBe(50)
     })
   })
 
   // ── Glossary invalidation (Guardrail #60) ─────────────────────────────
   describe('invalidateBTCacheForGlossary', () => {
-    it('should DELETE cache entries for project+languagePair on glossary update', async () => {
+    it('should DELETE cache entries for project+languagePair with withTenant (Guardrail #58)', async () => {
       const { invalidateBTCacheForGlossary } = await import('./btCache')
 
+      const tenantId = 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f' as import('@/types/tenant').TenantId
       dbState.returnValues = [[{ id: 'deleted-1' }, { id: 'deleted-2' }]]
 
       const count = await invalidateBTCacheForGlossary(
         '22222222-2222-2222-2222-222222222222',
         'en-US→th-TH',
-        'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f' as import('@/types/tenant').TenantId,
+        tenantId,
       )
 
       expect(count).toBe(2)
+      // Verify withTenant was called with the correct tenantId
+      expect(mockWithTenant).toHaveBeenCalledWith(expect.anything(), tenantId)
     })
   })
 

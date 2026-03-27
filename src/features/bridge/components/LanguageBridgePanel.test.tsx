@@ -43,7 +43,6 @@ const MOCK_BT_DATA = {
 const DEFAULT_PROPS = {
   segmentId: 'seg-1',
   sourceLang: 'en-US',
-  targetLang: 'th-TH',
   projectId: 'proj-1',
   isNonNative: true,
   confidenceThreshold: 0.6,
@@ -296,5 +295,72 @@ describe('LanguageBridgePanel', () => {
     // Must have icon (aria-hidden)
     const icon = indicator.querySelector('[aria-hidden="true"]')
     expect(icon).not.toBeNull()
+  })
+
+  // ── M4: ConfidenceIndicator 4-tier boundary values ─────────────────────
+  describe('ConfidenceIndicator boundary tiers', () => {
+    const renderWithConfidence = (confidence: number) => {
+      mockUseBackTranslation.mockReturnValue({
+        data: { ...MOCK_BT_DATA, confidence },
+        loading: false,
+        error: null,
+        cached: false,
+        refresh: vi.fn(),
+      })
+      render(<LanguageBridgePanel {...DEFAULT_PROPS} />)
+      return screen.getByTestId('confidence-indicator')
+    }
+
+    it('should show "High" at confidence 0.80 (boundary)', () => {
+      const el = renderWithConfidence(0.8)
+      expect(el.textContent).toMatch(/High/i)
+    })
+
+    it('should show "Moderate" at confidence 0.79 (below High)', () => {
+      const el = renderWithConfidence(0.79)
+      expect(el.textContent).toMatch(/Moderate/i)
+    })
+
+    it('should show "Moderate" at confidence 0.60 (boundary)', () => {
+      const el = renderWithConfidence(0.6)
+      expect(el.textContent).toMatch(/Moderate/i)
+    })
+
+    it('should show "Low" at confidence 0.59 (below Moderate)', () => {
+      const el = renderWithConfidence(0.59)
+      expect(el.textContent).toMatch(/Low/i)
+    })
+
+    it('should show "Low" at confidence 0.40 (boundary)', () => {
+      const el = renderWithConfidence(0.4)
+      expect(el.textContent).toMatch(/Low/i)
+    })
+
+    it('should show "Very Low" at confidence 0.39 (below Low)', () => {
+      const el = renderWithConfidence(0.39)
+      expect(el.textContent).toMatch(/Very Low/i)
+    })
+  })
+
+  // ── L1: Language notes rendering with non-empty array ──────────────────
+  it('should render language notes list when notes are present', () => {
+    mockUseBackTranslation.mockReturnValue({
+      data: {
+        ...MOCK_BT_DATA,
+        languageNotes: [
+          { noteType: 'tone_marker', originalText: 'ต้น', explanation: 'Low tone' },
+          { noteType: 'politeness_particle', originalText: 'ครับ', explanation: 'Male polite' },
+        ],
+      },
+      loading: false,
+      error: null,
+      cached: false,
+      refresh: vi.fn(),
+    })
+
+    render(<LanguageBridgePanel {...DEFAULT_PROPS} />)
+    const notesList = screen.getByTestId('language-notes-list')
+    expect(notesList).toBeDefined()
+    expect(notesList.querySelectorAll('li').length).toBe(2)
   })
 })

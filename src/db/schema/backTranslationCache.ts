@@ -11,22 +11,10 @@ import {
   index,
 } from 'drizzle-orm/pg-core'
 
+import type { LanguageNote } from '@/features/bridge/types'
+
 import { segments } from './segments'
 import { tenants } from './tenants'
-
-// Language note categories for back-translation contextual analysis
-type LanguageNote = {
-  noteType:
-    | 'tone_marker'
-    | 'politeness_particle'
-    | 'compound_word'
-    | 'cultural_adaptation'
-    | 'register'
-    | 'idiom'
-    | 'ambiguity'
-  originalText: string
-  explanation: string
-}
 
 export const backTranslationCache = pgTable(
   'back_translation_cache',

@@ -145,8 +145,8 @@ describe('Back-Translation AI Integration', () => {
     )
     expect(targetMarkerCount).toBeGreaterThan(0)
 
-    // AI should produce language notes
-    expect(result.output.languageNotes.length).toBeGreaterThanOrEqual(0)
+    // AI should produce language notes for Thai text with tone markers + compound words
+    expect(result.output.languageNotes.length).toBeGreaterThan(0)
 
     // If tone markers noted, they should be categorized correctly
     const toneNotes = result.output.languageNotes.filter((n) => n.noteType === 'tone_marker')
