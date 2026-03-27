@@ -67,6 +67,10 @@ vi.mock('next/cache', () => ({
   revalidateTag: (...args: unknown[]) => mockRevalidateTag(...args),
 }))
 
+vi.mock('@/lib/logger', () => ({
+  logger: { error: vi.fn(), warn: vi.fn() },
+}))
+
 vi.mock('@/lib/validation/uuid', () => ({
   isUuid: (v: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v),
 }))
@@ -151,5 +155,26 @@ describe('updateMapping', () => {
     if (!result.success) {
       expect(result.code).toBe('VALIDATION_ERROR')
     }
+  })
+
+  it('should return UPDATE_FAILED when .returning() returns empty array', async () => {
+    mockUpdateReturning.mockResolvedValue([])
+
+    const { updateMapping } = await import('./updateMapping.action')
+    const result = await updateMapping(MAPPING_ID, { category: 'Fluency' })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('UPDATE_FAILED')
+    }
+  })
+
+  it('should succeed even when writeAuditLog throws (Guardrail #2)', async () => {
+    mockWriteAuditLog.mockRejectedValueOnce(new Error('audit failure'))
+
+    const { updateMapping } = await import('./updateMapping.action')
+    const result = await updateMapping(MAPPING_ID, { category: 'Fluency' })
+
+    expect(result.success).toBe(true)
   })
 })

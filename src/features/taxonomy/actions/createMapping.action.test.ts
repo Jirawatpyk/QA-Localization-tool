@@ -69,6 +69,10 @@ vi.mock('next/cache', () => ({
   revalidateTag: (...args: unknown[]) => mockRevalidateTag(...args),
 }))
 
+vi.mock('@/lib/logger', () => ({
+  logger: { error: vi.fn(), warn: vi.fn() },
+}))
+
 describe('createMapping', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -174,5 +178,14 @@ describe('createMapping', () => {
     await createMapping(validInput)
 
     expect(mockValues).toHaveBeenCalledWith(expect.objectContaining({ displayOrder: 0 }))
+  })
+
+  it('should succeed even when writeAuditLog throws (Guardrail #2)', async () => {
+    mockWriteAuditLog.mockRejectedValueOnce(new Error('audit failure'))
+
+    const { createMapping } = await import('./createMapping.action')
+    const result = await createMapping(validInput)
+
+    expect(result.success).toBe(true)
   })
 })

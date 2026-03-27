@@ -150,4 +150,15 @@ describe('reorderMappingsSchema', () => {
     const result = reorderMappingsSchema.safeParse([{ id: UUID_A, displayOrder: 0 }])
     expect(result.success).toBe(true)
   })
+
+  it('should accept duplicate displayOrder values — action assigns sequential orders', () => {
+    // Intentional: schema does NOT reject duplicate displayOrder values.
+    // The reorderMappings action assigns sequential orders (0, 1, 2, ...)
+    // based on array position, so duplicate displayOrder in input is harmless.
+    const result = reorderMappingsSchema.safeParse([
+      { id: UUID_A, displayOrder: 0 },
+      { id: UUID_B, displayOrder: 0 },
+    ])
+    expect(result.success).toBe(true)
+  })
 })

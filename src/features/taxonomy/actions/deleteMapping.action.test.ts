@@ -62,6 +62,10 @@ vi.mock('next/cache', () => ({
   revalidateTag: (...args: unknown[]) => mockRevalidateTag(...args),
 }))
 
+vi.mock('@/lib/logger', () => ({
+  logger: { error: vi.fn(), warn: vi.fn() },
+}))
+
 vi.mock('@/lib/validation/uuid', () => ({
   isUuid: (v: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v),
 }))
@@ -150,5 +154,14 @@ describe('deleteMapping', () => {
     await deleteMapping(MAPPING_ID)
 
     expect(mockRevalidateTag).toHaveBeenCalledWith('taxonomy', 'minutes')
+  })
+
+  it('should succeed even when writeAuditLog throws (Guardrail #2)', async () => {
+    mockWriteAuditLog.mockRejectedValueOnce(new Error('audit failure'))
+
+    const { deleteMapping } = await import('./deleteMapping.action')
+    const result = await deleteMapping(MAPPING_ID)
+
+    expect(result.success).toBe(true)
   })
 })

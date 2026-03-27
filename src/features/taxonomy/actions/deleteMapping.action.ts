@@ -9,6 +9,7 @@ import { db } from '@/db/client'
 import { taxonomyDefinitions } from '@/db/schema/taxonomyDefinitions'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { requireRole } from '@/lib/auth/requireRole'
+import { logger } from '@/lib/logger'
 import { isUuid } from '@/lib/validation/uuid'
 import type { ActionResult } from '@/types/actionResult'
 
@@ -44,21 +45,30 @@ export async function deleteMapping(mappingId: string): Promise<ActionResult<{ i
     .set({ isActive: false, updatedAt: new Date() })
     .where(eq(taxonomyDefinitions.id, mappingId))
 
-  await writeAuditLog({
-    tenantId: currentUser.tenantId,
-    userId: currentUser.id,
-    entityType: 'taxonomy_definition',
-    entityId: mappingId,
-    action: 'taxonomy_definition.deleted',
-    oldValue: {
-      category: existing.category,
-      internalName: existing.internalName,
-      isActive: true,
-    },
-    newValue: { isActive: false },
-  })
+  // Guardrail #2: audit + cache non-fatal on happy path
+  try {
+    await writeAuditLog({
+      tenantId: currentUser.tenantId,
+      userId: currentUser.id,
+      entityType: 'taxonomy_definition',
+      entityId: mappingId,
+      action: 'taxonomy_definition.deleted',
+      oldValue: {
+        category: existing.category,
+        internalName: existing.internalName,
+        isActive: true,
+      },
+      newValue: { isActive: false },
+    })
+  } catch (auditErr) {
+    logger.error({ err: auditErr }, 'Audit log failed after taxonomy delete')
+  }
 
-  revalidateTag('taxonomy', 'minutes')
+  try {
+    revalidateTag('taxonomy', 'minutes')
+  } catch (cacheErr) {
+    logger.warn({ err: cacheErr }, 'revalidateTag failed after taxonomy delete')
+  }
 
   return { success: true, data: { id: mappingId } }
 }
