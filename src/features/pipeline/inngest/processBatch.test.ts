@@ -34,7 +34,7 @@ function buildPipelineBatchEvent(
     batchId: faker.string.uuid(),
     fileIds: [faker.string.uuid(), faker.string.uuid()],
     projectId: faker.string.uuid(),
-    tenantId: faker.string.uuid(),
+    tenantId: asTenantId(faker.string.uuid()),
     userId: faker.string.uuid(),
     mode: 'economy' as const,
     uploadBatchId: faker.string.uuid() as UploadBatchId,

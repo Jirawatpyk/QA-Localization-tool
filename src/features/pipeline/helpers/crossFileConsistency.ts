@@ -56,13 +56,17 @@ export async function crossFileConsistency(
     return { findingCount: 0 }
   }
 
-  // 2. Fetch glossary terms for this tenant (for exclusion)
+  // 2. Fetch glossary terms for this project (for exclusion)
   const glossary = await db
     .select({ sourceTerm: glossaryTerms.sourceTerm, targetTerm: glossaryTerms.targetTerm })
     .from(glossaryTerms)
     .innerJoin(glossaries, eq(glossaryTerms.glossaryId, glossaries.id))
     .where(
-      and(withTenant(glossaries.tenantId, tenantId), withTenant(glossaryTerms.tenantId, tenantId)),
+      and(
+        withTenant(glossaries.tenantId, tenantId),
+        withTenant(glossaryTerms.tenantId, tenantId),
+        eq(glossaries.projectId, projectId),
+      ),
     )
 
   // Build glossary lookup: both source and target terms for exclusion (M3: spec requires both sides)

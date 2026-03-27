@@ -18,6 +18,7 @@ import {
   type DbFileStatus,
   type PipelineLayer,
 } from '@/types/pipeline'
+import { validateTenantId } from '@/types/tenant'
 
 import type { PipelineFileEventData } from './types'
 
@@ -202,7 +203,9 @@ const onFailureFn = async ({
   event: { data: { event: { data: PipelineFileEventData } } }
   error: Error
 }) => {
-  const { fileId, tenantId } = event.data.event.data
+  const { fileId, tenantId: rawTenantId } = event.data.event.data
+  // Defense-in-depth: validate tenantId in onFailure (separate invocation context)
+  const tenantId = validateTenantId(rawTenantId)
 
   logger.error({ err: error, fileId }, 'processFilePipeline: function failed')
 

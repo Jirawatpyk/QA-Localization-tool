@@ -18,7 +18,7 @@ import {
   type PipelineLayer,
   type ProcessingMode,
 } from '@/types/pipeline'
-import type { TenantId } from '@/types/tenant'
+import { validateTenantId, type TenantId } from '@/types/tenant'
 
 // ── Config ──
 
@@ -198,7 +198,9 @@ const handlerFn = async ({ event, step }: { event: RetryEvent; step: StepApi }) 
 
 const onFailureFn = async ({ event }: { event: OnFailureEvent; step: StepApi }) => {
   // Inngest v3 nested structure: event.data.event.data = original event data
-  const { fileId, tenantId } = event.data.event.data
+  const { fileId, tenantId: rawTenantId } = event.data.event.data
+  // Defense-in-depth: validate tenantId in onFailure (separate invocation context)
+  const tenantId = validateTenantId(rawTenantId)
 
   logger.error(
     { fileId, error: event.data.error.message },

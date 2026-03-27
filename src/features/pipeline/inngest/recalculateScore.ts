@@ -59,6 +59,8 @@ const onFailureFn = async ({
   error: Error
 }) => {
   const eventData = event.data.event.data
+  // Defense-in-depth: validate tenantId in onFailure (separate invocation context)
+  const tenantId = validateTenantId(eventData.tenantId)
 
   logger.error(
     { err: error, fileId: eventData.fileId, projectId: eventData.projectId },
@@ -67,7 +69,7 @@ const onFailureFn = async ({
 
   try {
     await writeAuditLog({
-      tenantId: eventData.tenantId,
+      tenantId,
       userId: eventData.triggeredBy,
       entityType: 'score',
       entityId: eventData.fileId,
