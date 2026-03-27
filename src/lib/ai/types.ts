@@ -4,7 +4,7 @@ import type { LanguageModelUsage } from 'ai'
 
 // ── Model Configuration ──
 
-export type AILayer = 'L2' | 'L3'
+export type AILayer = 'L2' | 'L3' | 'BT'
 
 export type ModelId =
   | 'gpt-4o-mini' // L2: fast screening
@@ -51,7 +51,8 @@ export function getConfigForModel(modelId: string, layer: AILayer) {
   const exact = MODEL_CONFIG[modelId as ModelId]
   if (exact) return exact
 
-  const defaultModelId = layer === 'L2' ? 'gpt-4o-mini' : 'claude-sonnet-4-5-20250929'
+  const defaultModelId =
+    layer === 'L2' || layer === 'BT' ? 'gpt-4o-mini' : 'claude-sonnet-4-5-20250929'
   return MODEL_CONFIG[defaultModelId]
 }
 

@@ -1,6 +1,6 @@
 {
-  "id": "1898c254-4bbb-46b2-a620-dbb091fd3c83",
-  "prevId": "00600de4-ac58-41c3-bbba-c2cf9a33d3bc",
+  "id": "072fae6f-ac1d-4e22-90bd-02ff2f65f538",
+  "prevId": "1898c254-4bbb-46b2-a620-dbb091fd3c83",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -379,6 +379,179 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.back_translation_cache": {
+      "name": "back_translation_cache",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "segment_id": {
+          "name": "segment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "language_pair": {
+          "name": "language_pair",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "model_version": {
+          "name": "model_version",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_text_hash": {
+          "name": "target_text_hash",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "back_translation": {
+          "name": "back_translation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "contextual_explanation": {
+          "name": "contextual_explanation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "confidence": {
+          "name": "confidence",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "language_notes": {
+          "name": "language_notes",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "translation_approach": {
+          "name": "translation_approach",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "input_tokens": {
+          "name": "input_tokens",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "output_tokens": {
+          "name": "output_tokens",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estimated_cost_usd": {
+          "name": "estimated_cost_usd",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_bt_cache_lookup": {
+          "name": "idx_bt_cache_lookup",
+          "columns": [
+            {
+              "expression": "segment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "language_pair",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "model_version",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_bt_cache_ttl_cleanup": {
+          "name": "idx_bt_cache_ttl_cleanup",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "back_translation_cache_segment_id_segments_id_fk": {
+          "name": "back_translation_cache_segment_id_segments_id_fk",
+          "tableFrom": "back_translation_cache",
+          "tableTo": "segments",
+          "columnsFrom": ["segment_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "back_translation_cache_tenant_id_tenants_id_fk": {
+          "name": "back_translation_cache_tenant_id_tenants_id_fk",
+          "tableFrom": "back_translation_cache",
+          "tableTo": "tenants",
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "uq_bt_cache_segment_lang_model_hash": {
+          "name": "uq_bt_cache_segment_lang_model_hash",
+          "nullsNotDistinct": false,
+          "columns": ["segment_id", "language_pair", "model_version", "target_text_hash"]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -1980,6 +2153,13 @@
           "type": "varchar(100)",
           "primaryKey": false,
           "notNull": false
+        },
+        "bt_confidence_threshold": {
+          "name": "bt_confidence_threshold",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0.6
         },
         "created_at": {
           "name": "created_at",

@@ -4,6 +4,7 @@ import { BookMarked, Check, Flag, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { LanguageBridgePanel } from '@/features/bridge/components/LanguageBridgePanel'
 import { AddToGlossaryDialog } from '@/features/review/components/AddToGlossaryDialog'
 import { ConfidenceBadge } from '@/features/review/components/ConfidenceBadge'
 import { LayerBadge } from '@/features/review/components/LayerBadge'
@@ -44,6 +45,10 @@ type FindingDetailContentProps = {
         error?: string
       }>)
     | undefined
+  /** Story 5.1: Whether current user is non-native for file's target language */
+  isNonNative?: boolean | undefined
+  /** Story 5.1: Project-level BT confidence threshold */
+  btConfidenceThreshold?: number | undefined
 }
 
 /**
@@ -66,6 +71,8 @@ export function FindingDetailContent({
   isActionInFlight = false,
   projectId,
   fetchOverrideHistory,
+  isNonNative = false,
+  btConfidenceThreshold,
 }: FindingDetailContentProps) {
   const [contextRange, setContextRange] = useState(contextRangeProp ?? 2)
 
@@ -194,6 +201,18 @@ export function FindingDetailContent({
               />
             ) : null}
           </section>
+
+          {/* ── Story 5.1: Language Bridge Panel ── */}
+          {projectId && finding.segmentId && (
+            <LanguageBridgePanel
+              segmentId={finding.segmentId}
+              sourceLang={sourceLang}
+              targetLang={targetLang}
+              projectId={projectId}
+              isNonNative={isNonNative}
+              confidenceThreshold={btConfidenceThreshold}
+            />
+          )}
 
           {/* ── Story 4.4a: Override History Panel ── */}
           {overrideCount > 0 && projectId && (

@@ -135,7 +135,7 @@ development_status:
   # Epic 5: Language Intelligence & Non-Native Support (MVP)
   # ============================================================
   epic-5: in-progress
-  5-1-language-bridge-back-translation: ready-for-dev
+  5-1-language-bridge-back-translation: review
   5-2a-non-native-auto-tag: backlog
   5-2b-schema-rls-scoped-access: backlog
   5-2c-native-reviewer-workflow: backlog

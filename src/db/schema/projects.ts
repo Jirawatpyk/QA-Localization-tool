@@ -5,6 +5,7 @@ import {
   text,
   integer,
   numeric,
+  real,
   jsonb,
   timestamp,
 } from 'drizzle-orm/pg-core'
@@ -27,6 +28,7 @@ export const projects = pgTable('projects', {
   budgetAlertThresholdPct: integer('budget_alert_threshold_pct').notNull().default(80), // AC7: warn at N%
   l2PinnedModel: varchar('l2_pinned_model', { length: 100 }), // NULL = system default (AC3)
   l3PinnedModel: varchar('l3_pinned_model', { length: 100 }), // NULL = system default (AC3)
+  btConfidenceThreshold: real('bt_confidence_threshold').notNull().default(0.6), // AC4 state 3 + AC2 fallback trigger
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })

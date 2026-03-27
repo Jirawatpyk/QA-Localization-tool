@@ -30,6 +30,7 @@ export type ProviderHealthResult = {
 export const LAYER_DEFAULTS: Record<AILayer, { systemDefault: string; fallbacks: string[] }> = {
   L2: { systemDefault: 'gpt-4o-mini', fallbacks: ['gemini-2.0-flash'] },
   L3: { systemDefault: 'claude-sonnet-4-5-20250929', fallbacks: ['gpt-4o'] },
+  BT: { systemDefault: 'gpt-4o-mini', fallbacks: ['claude-sonnet-4-5-20250929'] },
 }
 
 // ── Pure Logic ──

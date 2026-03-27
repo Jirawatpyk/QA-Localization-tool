@@ -1,5 +1,6 @@
 import { serve } from 'inngest/next'
 
+import { cleanBTCache } from '@/features/bridge/inngest/cleanBTCache'
 import { batchComplete } from '@/features/pipeline/inngest/batchComplete'
 import { processBatch } from '@/features/pipeline/inngest/processBatch'
 import { processFilePipeline } from '@/features/pipeline/inngest/processFile'
@@ -13,6 +14,7 @@ export const functions = [
   batchComplete,
   recalculateScore,
   retryFailedLayers,
+  cleanBTCache,
 ]
 
 export const { GET, POST, PUT } = serve({

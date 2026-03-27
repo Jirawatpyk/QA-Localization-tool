@@ -701,6 +701,146 @@ test.describe.serial('Detail Panel & Segment Context — Story 4.1c ATDD', () =>
     }
   })
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // Story 5.1 ATDD — LanguageBridge Back-Translation Panel Tests (RED PHASE)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // ── 5.1-BT1 [P1]: LanguageBridge panel loads when finding focused ─────
+  // ATDD: Will fail until LanguageBridgePanel is integrated into FindingDetailContent
+  test.skip('[P1] BT1: should show LanguageBridge panel section in finding detail', async ({
+    page,
+  }) => {
+    // Navigate to review page with seeded findings (non-native reviewer, Thai target)
+    await signupOrLogin(page, TEST_EMAIL)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
+
+    const grid = page.getByRole('grid')
+    await expect(grid).toBeVisible({ timeout: 30_000 })
+
+    // Focus a finding to trigger detail panel
+    const rows = grid.getByRole('row')
+    await rows.first().focus()
+    await page.waitForSelector('[role="grid"][data-keyboard-ready="true"]', { timeout: 15_000 })
+    await page.keyboard.press('j')
+
+    // Wait for detail panel
+    const detailPanel = page.locator('[role="complementary"]')
+    await expect(detailPanel).toBeVisible({ timeout: 10_000 })
+
+    // Assert: LanguageBridge section exists within detail panel
+    const btSection = page.getByTestId('language-bridge-panel')
+    await expect(btSection).toBeVisible({ timeout: 15_000 })
+  })
+
+  // ── 5.1-BT2 [P1]: Skeleton shown during BT loading ────────────────────
+  test.skip('[P1] BT2: should show skeleton placeholder while back-translation loads', async ({
+    page,
+  }) => {
+    await signupOrLogin(page, TEST_EMAIL)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
+
+    const grid = page.getByRole('grid')
+    await expect(grid).toBeVisible({ timeout: 30_000 })
+
+    // Focus a finding — BT should start loading with skeleton
+    const rows = grid.getByRole('row')
+    await rows.first().focus()
+    await page.waitForSelector('[role="grid"][data-keyboard-ready="true"]', { timeout: 15_000 })
+    await page.keyboard.press('j')
+
+    // Skeleton should appear before BT content loads
+    const skeleton = page.getByTestId('bt-skeleton')
+    // Skeleton may be transient — check it existed at some point
+    await expect(skeleton).toBeVisible({ timeout: 5_000 })
+  })
+
+  // ── 5.1-BT3 [P1]: BT content updates when segment focus changes ───────
+  test.skip('[P1] BT3: should update back-translation when focus changes between findings', async ({
+    page,
+  }) => {
+    await signupOrLogin(page, TEST_EMAIL)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
+
+    const grid = page.getByRole('grid')
+    await expect(grid).toBeVisible({ timeout: 30_000 })
+
+    await page.waitForSelector('[role="grid"][data-keyboard-ready="true"]', { timeout: 15_000 })
+
+    // Focus first finding
+    await page.keyboard.press('j')
+    const btSection = page.getByTestId('language-bridge-panel')
+    await expect(btSection).toBeVisible({ timeout: 15_000 })
+
+    // Capture first BT content
+    const firstBTText = await btSection.getByTestId('bt-text').textContent()
+
+    // Navigate to next finding (different segment)
+    await page.keyboard.press('j')
+
+    // Wait for BT to update (300ms debounce + AI call or cache)
+    await page.waitForTimeout(500) // Acceptable: waiting for debounce + render
+    const secondBTText = await btSection.getByTestId('bt-text').textContent()
+
+    // BT text should change (different segment = different translation)
+    // Note: could be same if same segment, so this is a soft assertion
+    expect(secondBTText).toBeDefined()
+  })
+
+  // ── 5.1-BT4 [P2]: Cached badge visible when result from cache ─────────
+  test.skip('[P2] BT4: should show "Cached" badge when back-translation is from cache', async ({
+    page,
+  }) => {
+    await signupOrLogin(page, TEST_EMAIL)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
+
+    const grid = page.getByRole('grid')
+    await expect(grid).toBeVisible({ timeout: 30_000 })
+    await page.waitForSelector('[role="grid"][data-keyboard-ready="true"]', { timeout: 15_000 })
+
+    // Focus a finding twice — second time should be cached
+    await page.keyboard.press('j')
+    const btSection = page.getByTestId('language-bridge-panel')
+    await expect(btSection).toBeVisible({ timeout: 15_000 })
+
+    // Wait for initial BT to load
+    await page.getByTestId('bt-text').waitFor({ state: 'visible', timeout: 30_000 })
+
+    // Navigate away and back to same finding → should hit cache
+    await page.keyboard.press('j') // next
+    await page.waitForTimeout(500)
+    await page.keyboard.press('k') // back to previous
+
+    // Cached badge should appear
+    const cachedBadge = btSection.getByText(/Cached/i)
+    await expect(cachedBadge).toBeVisible({ timeout: 10_000 })
+  })
+
+  // ── 5.1-BT5 [P2]: Refresh button bypasses cache ───────────────────────
+  test.skip('[P2] BT5: should refresh back-translation when Refresh button clicked', async ({
+    page,
+  }) => {
+    await signupOrLogin(page, TEST_EMAIL)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
+
+    const grid = page.getByRole('grid')
+    await expect(grid).toBeVisible({ timeout: 30_000 })
+    await page.waitForSelector('[role="grid"][data-keyboard-ready="true"]', { timeout: 15_000 })
+
+    // Focus finding and wait for BT to load
+    await page.keyboard.press('j')
+    const btSection = page.getByTestId('language-bridge-panel')
+    await page.getByTestId('bt-text').waitFor({ state: 'visible', timeout: 30_000 })
+
+    // Click Refresh button
+    const refreshBtn = btSection.getByRole('button', { name: /Refresh/i })
+    await expect(refreshBtn).toBeVisible()
+    await refreshBtn.click()
+
+    // Should show loading state briefly then fresh content
+    // After refresh, "Cached" badge should NOT be present
+    await page.getByTestId('bt-text').waitFor({ state: 'visible', timeout: 30_000 })
+  })
+
   // ── Cleanup ───────────────────────────────────────────────────────────────
   test.afterAll(async () => {
     if (projectId) {

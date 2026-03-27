@@ -25,6 +25,7 @@ export const qaProvider = customProvider({
   languageModels: {
     'l2-screening': openai('gpt-4o-mini'),
     'l3-analysis': anthropic('claude-sonnet-4-5-20250929'),
+    'back-translation': openai('gpt-4o-mini'), // Guardrail #51: distinct alias for independent model swapping
   },
   // No fallbackProvider — explicit model selection only.
   // Cross-provider fallback handled at Inngest step level (Guardrail #18).

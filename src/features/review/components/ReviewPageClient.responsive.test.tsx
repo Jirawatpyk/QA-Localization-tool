@@ -142,6 +142,8 @@ function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
     categories: [],
     overrideCounts: {},
     siblingFiles: [],
+    isNonNative: false,
+    btConfidenceThreshold: 0.6,
     ...overrides,
   }
 }

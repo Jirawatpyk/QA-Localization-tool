@@ -31,6 +31,7 @@ export { fixSuggestions } from './fixSuggestions'
 export { selfHealingConfig } from './selfHealingConfig'
 export { parityReports } from './parityReports'
 export { missingCheckReports } from './missingCheckReports'
+export { backTranslationCache } from './backTranslationCache'
 
 // Relations
 export {
@@ -63,4 +64,5 @@ export {
   selfHealingConfigRelations,
   parityReportsRelations,
   missingCheckReportsRelations,
+  backTranslationCacheRelations,
 } from './relations'

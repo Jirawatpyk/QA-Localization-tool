@@ -14,6 +14,7 @@ import { reviewActions } from '@/db/schema/reviewActions'
 import { scores } from '@/db/schema/scores'
 import { segments } from '@/db/schema/segments'
 import { taxonomyDefinitions } from '@/db/schema/taxonomyDefinitions'
+import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
@@ -72,6 +73,10 @@ export type FileReviewData = {
   overrideCounts: Record<string, number>
   /** Story 4.5: Sibling files in same project for file navigation + command palette */
   siblingFiles: Array<{ fileId: string; fileName: string }>
+  /** Story 5.1: Whether the current user is non-native for the file's target language */
+  isNonNative: boolean
+  /** Story 5.1: Project-level BT confidence threshold for LanguageBridge panel */
+  btConfidenceThreshold: number
 }
 
 const SEVERITY_PRIORITY: Record<string, number> = {
@@ -209,6 +214,7 @@ export async function getFileReviewData(
         l2ConfidenceMin: languagePairConfigs.l2ConfidenceMin,
         l3ConfidenceMin: languagePairConfigs.l3ConfidenceMin,
         targetLang: languagePairConfigs.targetLang,
+        btConfidenceThreshold: projects.btConfidenceThreshold, // Story 5.1
       })
       .from(projects)
       .leftJoin(
@@ -226,6 +232,12 @@ export async function getFileReviewData(
     const targetLang = config?.targetLang ?? null
     const l2ConfidenceMin = config?.l2ConfidenceMin ?? null
     const l3ConfidenceMin = config?.l3ConfidenceMin ?? null
+    const btConfidenceThreshold = config?.btConfidenceThreshold ?? 0.6
+
+    // Story 5.1: Compute isNonNative for LanguageBridge panel visibility
+    const isNonNative = targetLang
+      ? determineNonNative(currentUser.nativeLanguages, targetLang)
+      : true // Conservative: show panel if targetLang unknown
 
     // Sort findings: severity priority (critical→major→minor), then aiConfidence DESC NULLS LAST
     const sortedFindings = sortFindings(findingRows as FileReviewData['findings'])
@@ -333,6 +345,8 @@ export async function getFileReviewData(
         categories: categoryRows,
         overrideCounts,
         siblingFiles: siblingFileRows,
+        isNonNative,
+        btConfidenceThreshold,
       },
     }
   } catch (err) {

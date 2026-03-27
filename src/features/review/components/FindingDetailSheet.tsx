@@ -37,6 +37,8 @@ type FindingDetailSheetProps = {
         error?: string
       }>)
     | undefined
+  isNonNative?: boolean | undefined
+  btConfidenceThreshold?: number | undefined
 }
 
 /**
@@ -62,6 +64,8 @@ export function FindingDetailSheet({
   isActionInFlight = false,
   projectId,
   fetchOverrideHistory,
+  isNonNative,
+  btConfidenceThreshold,
 }: FindingDetailSheetProps) {
   const reducedMotion = useReducedMotion()
   const isLaptop = useIsLaptop()
@@ -120,6 +124,8 @@ export function FindingDetailSheet({
             isActionInFlight={isActionInFlight}
             projectId={projectId}
             fetchOverrideHistory={fetchOverrideHistory}
+            isNonNative={isNonNative}
+            btConfidenceThreshold={btConfidenceThreshold}
           />
         ) : null}
       </SheetContent>

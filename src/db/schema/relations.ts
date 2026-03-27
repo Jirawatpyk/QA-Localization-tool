@@ -4,6 +4,7 @@ import { aiMetricsTimeseries } from './aiMetricsTimeseries'
 import { aiUsageLogs } from './aiUsageLogs'
 import { auditLogs } from './auditLogs'
 import { auditResults } from './auditResults'
+import { backTranslationCache } from './backTranslationCache'
 import { exportedReports } from './exportedReports'
 import { feedbackEvents } from './feedbackEvents'
 import { fileAssignments } from './fileAssignments'
@@ -96,6 +97,7 @@ export const segmentsRelations = relations(segments, ({ one, many }) => ({
   project: one(projects, { fields: [segments.projectId], references: [projects.id] }),
   tenant: one(tenants, { fields: [segments.tenantId], references: [tenants.id] }),
   findings: many(findings),
+  backTranslationCache: many(backTranslationCache),
 }))
 
 // --- Findings ---
@@ -402,5 +404,17 @@ export const missingCheckReportsRelations = relations(missingCheckReports, ({ on
     fields: [missingCheckReports.resolvedBy],
     references: [users.id],
     relationName: 'resolvedBy',
+  }),
+}))
+
+// --- Back Translation Cache ---
+export const backTranslationCacheRelations = relations(backTranslationCache, ({ one }) => ({
+  segment: one(segments, {
+    fields: [backTranslationCache.segmentId],
+    references: [segments.id],
+  }),
+  tenant: one(tenants, {
+    fields: [backTranslationCache.tenantId],
+    references: [tenants.id],
   }),
 }))

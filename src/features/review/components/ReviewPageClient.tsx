@@ -1639,6 +1639,8 @@ export function ReviewPageClient({
               onDelete={handleDeleteFinding}
               fetchOverrideHistory={getOverrideHistory}
               isActionInFlight={isActionInFlight}
+              isNonNative={initialData.isNonNative}
+              btConfidenceThreshold={initialData.btConfidenceThreshold}
             />
           </aside>
         ) : (
@@ -1657,6 +1659,8 @@ export function ReviewPageClient({
             isActionInFlight={isActionInFlight}
             projectId={projectId}
             fetchOverrideHistory={getOverrideHistory}
+            isNonNative={initialData.isNonNative}
+            btConfidenceThreshold={initialData.btConfidenceThreshold}
           />
         )}
 
