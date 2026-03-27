@@ -9,7 +9,7 @@ export const l3FindingSchema = z.object({
   segmentId: z.string(),
   category: z.string(),
   severity: z.enum(['critical', 'major', 'minor']),
-  confidence: z.number().min(0).max(100),
+  confidence: z.number(), // No .min/.max — Anthropic rejects minimum/maximum in structured output
   description: z.string(),
   suggestedFix: z.string().nullable(),
   rationale: z.string(),
