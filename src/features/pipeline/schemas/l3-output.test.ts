@@ -43,12 +43,13 @@ describe('l3FindingSchema', () => {
     expect(atMax.success).toBe(true)
   })
 
-  it('[P1] U23: should reject confidence -1 and 101 (out of bounds)', () => {
+  it('[P1] U23: should accept any number for confidence (clamped in app code, not schema — Anthropic rejects min/max)', () => {
+    // Schema accepts any number; runL3ForFile.ts clamps to 0-100 via Math.min/max
     const belowMin = l3FindingSchema.safeParse({ ...VALID_L3_FINDING, confidence: -1 })
-    expect(belowMin.success).toBe(false)
+    expect(belowMin.success).toBe(true)
 
     const aboveMax = l3FindingSchema.safeParse({ ...VALID_L3_FINDING, confidence: 101 })
-    expect(aboveMax.success).toBe(false)
+    expect(aboveMax.success).toBe(true)
   })
 
   it('[P1] U24: should accept suggestedFix as null or string', () => {
