@@ -120,6 +120,8 @@ export type RetryFailedLayersEventData = {
   userId: string
   layersToRetry: PipelineLayer[]
   mode: ProcessingMode
+  /** CR-C1: L2 failed chunk segment IDs from original run — forwarded to L3 as "unscreened" */
+  l2FailedChunkSegmentIds?: string[]
 }
 
 export type PipelineStatus = 'queued' | 'processing' | 'completed' | 'failed'

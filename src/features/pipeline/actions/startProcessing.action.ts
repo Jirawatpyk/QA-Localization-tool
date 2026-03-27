@@ -103,6 +103,21 @@ export async function startProcessing(
     // Generate batch ID for this pipeline run
     const batchId = randomUUID()
 
+    // P1-1 fix: Set batchId on selected files so processFile.ts batch completion check
+    // can find them via `eq(files.batchId, uploadBatchId)`. Without this, individually-uploaded
+    // files have NULL batchId and the batch-complete event never fires.
+    // Guardrail #5: fileIds.length > 0 guaranteed by validation above (foundFiles.length check)
+    await db
+      .update(files)
+      .set({ batchId, updatedAt: new Date() })
+      .where(
+        and(
+          withTenant(files.tenantId, tenantId),
+          eq(files.projectId, projectId),
+          inArray(files.id, fileIds),
+        ),
+      )
+
     // Dispatch batch event to Inngest (fan-out handled by processBatch function)
     // NOTE: uploadBatchId reuses batchId (pipeline batch) as a proxy for upload batch tracking.
     // Files can originate from multiple upload batches; deriving a single uploadBatchId from

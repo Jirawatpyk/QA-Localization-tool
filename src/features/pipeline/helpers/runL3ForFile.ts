@@ -618,8 +618,6 @@ export async function runL3ForFile({
     // TD-PIPE-002 fix: confirm/contradict L2 was previously a SEPARATE transaction — if crash
     // between the two, file is l3_completed but L2 findings never updated. CAS guard blocks retry
     // → permanent data inconsistency. Now everything is in one transaction.
-    const l2Findings = priorFindings.filter((f) => f.detectedByLayer === 'L2')
-
     // Pre-compute contradict set outside transaction (pure logic, no DB)
     const contradictedSegmentIds = new Set(
       allFindings.filter((f) => f.category === 'false_positive_review').map((f) => f.segmentId),
@@ -656,11 +654,35 @@ export async function runL3ForFile({
         .where(and(withTenant(files.tenantId, tenantId), eq(files.id, fileId)))
 
       // 4. L3 confirm/contradict L2 post-processing (AC4)
+      // CR-C2 fix: Re-query L2 findings INSIDE transaction to prevent stale data.
+      // The original `priorFindings` (read at Step 4) is used for AI prompt building only.
+      // Between prompt build and this transaction, findings may have changed (concurrent retry,
+      // manual review action). Using stale data causes double-append of [L3 Confirmed] markers.
+      const freshL2Findings = (await tx
+        .select({
+          id: findings.id,
+          segmentId: findings.segmentId,
+          category: findings.category,
+          severity: findings.severity,
+          description: findings.description,
+          detectedByLayer: findings.detectedByLayer,
+          aiConfidence: findings.aiConfidence,
+        })
+        .from(findings)
+        .where(
+          and(
+            withTenant(findings.tenantId, tenantId),
+            eq(findings.fileId, fileId),
+            eq(findings.projectId, projectId),
+            eq(findings.detectedByLayer, 'L2'),
+          ),
+        )) as PriorFindingContext[]
+
       // Contradict takes priority: if L3 issues both a regular finding AND false_positive_review
       // for the same segment, skip confirm to prevent inconsistent state.
       // CR-C1 fix: confirmedL2Ids prevents double-boost when allFindings has duplicate (segmentId, category)
       // CR-M4 fix: l3DuplicateIds declared inside transaction to prevent stale data on retry
-      if (l2Findings.length > 0 && allFindings.length > 0) {
+      if (freshL2Findings.length > 0 && allFindings.length > 0) {
         const l3BySegCat = new Map(
           insertedL3Rows.map((f) => [`${f.segmentId}:${f.category.toLowerCase()}`, f.id]),
         )
@@ -670,7 +692,7 @@ export async function runL3ForFile({
         for (const l3Finding of allFindings) {
           if (l3Finding.category === 'false_positive_review') {
             // Contradict: L3's false_positive_review targets L2 findings on same segment
-            const matchedL2s = l2Findings.filter((l2) => l2.segmentId === l3Finding.segmentId)
+            const matchedL2s = freshL2Findings.filter((l2) => l2.segmentId === l3Finding.segmentId)
             for (const matchedL2 of matchedL2s) {
               if (!matchedL2.description.includes('[L3 Disagrees]')) {
                 await tx
@@ -689,7 +711,7 @@ export async function runL3ForFile({
             if (contradictedSegmentIds.has(l3Finding.segmentId)) continue
 
             // Case-insensitive category match (L2 may use "Accuracy", L3 "accuracy")
-            const matchedL2 = l2Findings.find(
+            const matchedL2 = freshL2Findings.find(
               (l2) =>
                 l2.segmentId === l3Finding.segmentId &&
                 l2.category.toLowerCase() === l3Finding.category.toLowerCase(),

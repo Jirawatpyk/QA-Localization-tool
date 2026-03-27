@@ -180,13 +180,6 @@ export async function retryAiAnalysis(input: unknown): Promise<ActionResult<Retr
   // ── Derive layers to retry ──
   const layersToRetry = deriveLayersToRetry(layerCompleted, mode)
 
-  // ── CR-C1: Derive l2FailedChunkSegmentIds for L3-only retry ──
-  // TD-AI-006: l2FailedChunkSegmentIds cannot be recovered from DB for L3-only retry.
-  // Actual failed chunk info is only available at L2 runtime (processFile.ts:69).
-  // Sending [] is safe: L3 will still include all L2-flagged segments.
-  // Sending "segments without L2 findings" would include genuinely clean segments,
-  // expanding L3 scope unnecessarily and increasing false positives.
-
   // ── Send Inngest event (only if there are layers to retry) ──
   if (layersToRetry.length > 0) {
     await inngest.send({
@@ -198,6 +191,10 @@ export async function retryAiAnalysis(input: unknown): Promise<ActionResult<Retr
         userId,
         layersToRetry,
         mode,
+        // TODO(TD-AI-006): l2FailedChunkSegmentIds cannot be recovered from DB for L3-only retry.
+        // Actual failed chunk info is only available at L2 runtime (processFile.ts:69).
+        // Sending [] is safe: L3 will still include all L2-flagged segments.
+        l2FailedChunkSegmentIds: [],
       },
     })
   }
