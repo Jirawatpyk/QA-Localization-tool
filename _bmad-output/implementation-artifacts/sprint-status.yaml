@@ -136,7 +136,7 @@ development_status:
   # ============================================================
   epic-5: in-progress
   5-1-language-bridge-back-translation: done
-  5-2a-non-native-auto-tag: review
+  5-2a-non-native-auto-tag: done
   5-2b-schema-rls-scoped-access: backlog
   5-2c-native-reviewer-workflow: backlog
   5-3-verification-integration: backlog

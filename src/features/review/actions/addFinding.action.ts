@@ -198,7 +198,7 @@ export async function addFinding(input: AddFindingInput): Promise<ActionResult<A
       findingCategory: category,
       originalSeverity: severity,
       isFalsePositive: false,
-      reviewerIsNative: !determineNonNative(user.nativeLanguages, segment.targetLang),
+      reviewerIsNative: !isNonNative,
       layer: 'Manual',
       detectedByLayer: 'Manual',
       sourceLang: segment.sourceLang,

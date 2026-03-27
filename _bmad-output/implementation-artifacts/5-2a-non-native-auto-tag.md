@@ -1,6 +1,6 @@
 # Story 5.2a: Non-Native Auto-Tag
 
-Status: review
+Status: done
 
 ## Story
 
