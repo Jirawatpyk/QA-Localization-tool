@@ -1,13 +1,17 @@
+import { faker } from '@faker-js/faker'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // 1. Mock server-only FIRST
 vi.mock('server-only', () => ({}))
 
+import { withTenant } from '@/db/helpers/withTenant'
+import { asTenantId } from '@/types/tenant'
+
 // Test UUIDs
-const TENANT_ID = '00000000-0000-4000-8000-000000000001'
-const USER_ID = '00000000-0000-4000-8000-000000000002'
-const GLOSSARY_ID = '00000000-0000-4000-8000-000000000003'
-const TERM_ID = '00000000-0000-4000-8000-000000000004'
+const TENANT_ID = asTenantId(faker.string.uuid())
+const USER_ID = faker.string.uuid()
+const GLOSSARY_ID = faker.string.uuid()
+const TERM_ID = faker.string.uuid()
 
 // 2. Mock data
 const mockCurrentUser = {
@@ -99,6 +103,7 @@ describe('getGlossaryTerms', () => {
       expect(result.data[0]?.sourceTerm).toBe('cloud computing')
       expect(result.data[0]?.targetTerm).toBe('คลาวด์คอมพิวติ้ง')
     }
+    expect(withTenant).toHaveBeenCalled()
   })
 
   it('should return UNAUTHORIZED when not authenticated', async () => {

@@ -1,14 +1,18 @@
+import { faker } from '@faker-js/faker'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // 1. Mock server-only FIRST
 vi.mock('server-only', () => ({}))
 
+import { withTenant } from '@/db/helpers/withTenant'
+import { asTenantId } from '@/types/tenant'
+
 // Test UUIDs
-const TENANT_ID = '00000000-0000-4000-8000-000000000001'
-const USER_ID = '00000000-0000-4000-8000-000000000002'
-const TERM_ID = '00000000-0000-4000-8000-000000000003'
-const GLOSSARY_ID = '00000000-0000-4000-8000-000000000004'
-const PROJECT_ID = '00000000-0000-4000-8000-000000000005'
+const TENANT_ID = asTenantId(faker.string.uuid())
+const USER_ID = faker.string.uuid()
+const TERM_ID = faker.string.uuid()
+const GLOSSARY_ID = faker.string.uuid()
+const PROJECT_ID = faker.string.uuid()
 
 // 2. Mock data
 const mockCurrentUser = {
@@ -92,6 +96,7 @@ describe('deleteTerm', () => {
       expect(result.data.id).toBe(TERM_ID)
     }
     expect(mockDelete).toHaveBeenCalled()
+    expect(withTenant).toHaveBeenCalled()
   })
 
   it('should return VALIDATION_ERROR for invalid termId', async () => {

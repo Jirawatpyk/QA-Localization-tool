@@ -1,14 +1,18 @@
+import { faker } from '@faker-js/faker'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // 1. Mock server-only FIRST
 vi.mock('server-only', () => ({}))
 
+import { withTenant } from '@/db/helpers/withTenant'
+import { asTenantId } from '@/types/tenant'
+
 // Test UUIDs
-const TENANT_ID = '00000000-0000-4000-8000-000000000001'
-const USER_ID = '00000000-0000-4000-8000-000000000002'
-const GLOSSARY_ID = '00000000-0000-4000-8000-000000000003'
-const TERM_ID = '00000000-0000-4000-8000-000000000004'
-const PROJECT_ID = '00000000-0000-4000-8000-000000000005'
+const TENANT_ID = asTenantId(faker.string.uuid())
+const USER_ID = faker.string.uuid()
+const GLOSSARY_ID = faker.string.uuid()
+const TERM_ID = faker.string.uuid()
+const PROJECT_ID = faker.string.uuid()
 
 // 2. Mock data
 const mockCurrentUser = {
@@ -116,6 +120,7 @@ describe('createTerm', () => {
       expect(result.data.sourceTerm).toBe('cloud computing')
       expect(result.data.targetTerm).toBe('คลาวด์คอมพิวติ้ง')
     }
+    expect(withTenant).toHaveBeenCalled()
   })
 
   it('should return DUPLICATE_ENTRY for duplicate source term', async () => {
@@ -155,6 +160,20 @@ describe('createTerm', () => {
     if (!result.success) {
       expect(result.code).toBe('FORBIDDEN')
     }
+  })
+
+  it('should propagate error when DB insert throws non-duplicate error', async () => {
+    mockReturning.mockRejectedValue(new Error('DB error'))
+
+    const { createTerm } = await import('./createTerm.action')
+    await expect(
+      createTerm({
+        glossaryId: GLOSSARY_ID,
+        sourceTerm: 'new term',
+        targetTerm: 'คำใหม่',
+        caseSensitive: false,
+      }),
+    ).rejects.toThrow('DB error')
   })
 
   it('should write audit log', async () => {

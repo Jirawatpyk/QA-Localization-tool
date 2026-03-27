@@ -1,13 +1,17 @@
+import { faker } from '@faker-js/faker'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // 1. Mock server-only FIRST
 vi.mock('server-only', () => ({}))
 
+import { withTenant } from '@/db/helpers/withTenant'
+import { asTenantId } from '@/types/tenant'
+
 // Test UUIDs
-const TENANT_ID = '00000000-0000-4000-8000-000000000001'
-const USER_ID = '00000000-0000-4000-8000-000000000002'
-const PROJECT_ID = '00000000-0000-4000-8000-000000000003'
-const GLOSSARY_ID = '00000000-0000-4000-8000-000000000004'
+const TENANT_ID = asTenantId(faker.string.uuid())
+const USER_ID = faker.string.uuid()
+const PROJECT_ID = faker.string.uuid()
+const GLOSSARY_ID = faker.string.uuid()
 
 // 2. Mock data
 const mockCurrentUser = {
@@ -132,6 +136,12 @@ describe('importGlossary', () => {
     vi.clearAllMocks()
     mockRequireRole.mockResolvedValue(mockCurrentUser)
     mockReturning.mockResolvedValue([mockGlossary])
+    mockTransaction.mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        insert: (...args: unknown[]) => mockInsert(...args),
+      }
+      return cb(tx)
+    })
     // Project lookup (cross-DB dedup removed — glossary is always new)
     mockSelectWhere.mockResolvedValueOnce([mockProject])
     mockParseGlossaryFile.mockResolvedValue({
@@ -154,6 +164,7 @@ describe('importGlossary', () => {
       expect(result.data.duplicates).toBe(0)
       expect(result.data.errors).toHaveLength(0)
     }
+    expect(withTenant).toHaveBeenCalled()
   })
 
   it('should return FORBIDDEN for non-admin', async () => {
@@ -213,6 +224,32 @@ describe('importGlossary', () => {
     expect(result.success).toBe(false)
     if (!result.success) {
       expect(result.code).toBe('VALIDATION_ERROR')
+    }
+  })
+
+  it('should propagate error when batch insert fails in transaction', async () => {
+    mockTransaction.mockRejectedValue(new Error('Transaction failed'))
+
+    const { importGlossary } = await import('./importGlossary.action')
+    await expect(importGlossary(makeFormData())).rejects.toThrow('Transaction failed')
+  })
+
+  it('should include parser errors in result', async () => {
+    mockParseGlossaryFile.mockResolvedValue({
+      terms: [],
+      errors: [{ code: 'EMPTY_SOURCE', line: 2, reason: 'test' }],
+    })
+
+    const { importGlossary } = await import('./importGlossary.action')
+    const result = await importGlossary(makeFormData())
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.imported).toBe(0)
+      expect(result.data.errors).toHaveLength(1)
+      expect(result.data.errors[0]).toEqual(
+        expect.objectContaining({ code: 'EMPTY_SOURCE', line: 2 }),
+      )
     }
   })
 })

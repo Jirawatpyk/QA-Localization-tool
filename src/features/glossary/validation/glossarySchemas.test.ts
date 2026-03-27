@@ -117,6 +117,70 @@ describe('glossarySchemas', () => {
     })
   })
 
+  describe('importGlossarySchema boundary values', () => {
+    const validBase = {
+      projectId: '550e8400-e29b-41d4-a716-446655440000',
+      format: 'csv' as const,
+    }
+
+    it('should accept name at exactly 255 chars', () => {
+      const result = importGlossarySchema.safeParse({
+        ...validBase,
+        name: 'a'.repeat(255),
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('should reject name at 256 chars', () => {
+      const result = importGlossarySchema.safeParse({
+        ...validBase,
+        name: 'a'.repeat(256),
+      })
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('createTermSchema boundary values', () => {
+    const validBase = {
+      glossaryId: '550e8400-e29b-41d4-a716-446655440000',
+      targetTerm: 'ระบบ',
+    }
+
+    it('should accept sourceTerm at exactly 500 chars', () => {
+      const result = createTermSchema.safeParse({
+        ...validBase,
+        sourceTerm: 'a'.repeat(500),
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('should reject sourceTerm at 501 chars', () => {
+      const result = createTermSchema.safeParse({
+        ...validBase,
+        sourceTerm: 'a'.repeat(501),
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('should accept targetTerm at exactly 500 chars', () => {
+      const result = createTermSchema.safeParse({
+        ...validBase,
+        sourceTerm: 'test',
+        targetTerm: 'ก'.repeat(500),
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('should reject targetTerm at 501 chars', () => {
+      const result = createTermSchema.safeParse({
+        ...validBase,
+        sourceTerm: 'test',
+        targetTerm: 'ก'.repeat(501),
+      })
+      expect(result.success).toBe(false)
+    })
+  })
+
   describe('columnMappingSchema', () => {
     it('should accept valid mapping', () => {
       const input = {
