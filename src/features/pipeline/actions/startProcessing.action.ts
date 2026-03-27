@@ -18,6 +18,7 @@ import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
 import { aiPipelineLimiter } from '@/lib/ratelimit'
 import type { ActionResult } from '@/types/actionResult'
+import type { UploadBatchId } from '@/types/pipeline'
 
 type StartProcessingResult = {
   batchId: string
@@ -115,7 +116,7 @@ export async function startProcessing(
         tenantId,
         userId,
         mode,
-        uploadBatchId: batchId,
+        uploadBatchId: batchId as UploadBatchId,
       },
     })
 

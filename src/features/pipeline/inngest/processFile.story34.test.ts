@@ -5,7 +5,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { L2Result } from '@/features/pipeline/helpers/runL2ForFile'
 import type { L3Result } from '@/features/pipeline/helpers/runL3ForFile'
 import type { ScoreStatus } from '@/types/finding'
-import type { DbFileStatus, ProcessingMode } from '@/types/pipeline'
+import type {
+  DbFileStatus,
+  PipelineFileEventData,
+  ProcessingMode,
+  UploadBatchId,
+} from '@/types/pipeline'
 import { asTenantId } from '@/types/tenant'
 import type { TenantId } from '@/types/tenant'
 
@@ -155,7 +160,7 @@ function buildPipelineEvent(
     tenantId: asTenantId(faker.string.uuid()),
     userId: faker.string.uuid(),
     mode: 'economy' as ProcessingMode,
-    uploadBatchId: '',
+    uploadBatchId: '' as UploadBatchId,
     ...overrides,
   }
 }
@@ -700,7 +705,7 @@ describe('processFilePipeline — partial results (Story 3.4)', () => {
               projectId: VALID_PROJECT_ID,
               tenantId: VALID_TENANT_ID,
               userId: VALID_USER_ID,
-            }),
+            }) as PipelineFileEventData,
           },
           error: { message: 'Original failure' },
         },

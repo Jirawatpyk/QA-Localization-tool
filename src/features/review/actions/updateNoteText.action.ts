@@ -76,6 +76,7 @@ export async function updateNoteText(
   }
 
   // Find latest review_actions with actionType='note' for this finding (Guardrail #1)
+  // TD-AUTH-001: userId in WHERE = DB-level ownership guard (prevents TOCTOU race)
   const actionRows = await db
     .select({ id: reviewActions.id, metadata: reviewActions.metadata })
     .from(reviewActions)
@@ -83,6 +84,7 @@ export async function updateNoteText(
       and(
         eq(reviewActions.findingId, findingId),
         eq(reviewActions.actionType, 'note'),
+        eq(reviewActions.userId, userId),
         withTenant(reviewActions.tenantId, tenantId),
       ),
     )
@@ -90,7 +92,11 @@ export async function updateNoteText(
     .limit(1)
 
   if (actionRows.length === 0) {
-    return { success: false, error: 'Note action not found', code: 'NOT_FOUND' }
+    return {
+      success: false,
+      error: 'Note not found or not owned by current user',
+      code: 'FORBIDDEN',
+    }
   }
 
   const actionRow = actionRows[0]!

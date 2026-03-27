@@ -21,6 +21,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { updateLanguagePairConfig } from '@/features/project/actions/updateLanguagePairConfig.action'
+import { DEFAULT_AUTO_PASS_THRESHOLD } from '@/features/scoring/constants'
 
 type LanguagePairConfig = {
   id: string
@@ -54,7 +55,7 @@ const CJK_THAI_CODES = ['th', 'ja', 'ko', 'zh', 'zh-Hant']
 
 function getDefaultRow(): RowState {
   return {
-    autoPassThreshold: 95,
+    autoPassThreshold: DEFAULT_AUTO_PASS_THRESHOLD,
     l2ConfidenceMin: 70,
     l3ConfidenceMin: 70,
     wordSegmenter: 'intl',

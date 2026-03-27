@@ -1,7 +1,7 @@
 /// <reference types="vitest/globals" />
 import { faker } from '@faker-js/faker'
 
-import type { ProcessingMode } from '@/types/pipeline'
+import type { ProcessingMode, UploadBatchId } from '@/types/pipeline'
 import { asTenantId } from '@/types/tenant'
 
 // ── Hoisted mocks ──
@@ -115,7 +115,7 @@ const VALID_FILE_ID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
 const VALID_PROJECT_ID = 'b1c2d3e4-f5a6-4b2c-9d3e-4f5a6b7c8d9e'
 const VALID_TENANT_ID = asTenantId('c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f')
 const VALID_USER_ID = 'd1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5a'
-const VALID_UPLOAD_BATCH_ID = 'e2f3a4b5-c6d7-4e8f-9a0b-1c2d3e4f5a6b'
+const VALID_UPLOAD_BATCH_ID = 'e2f3a4b5-c6d7-4e8f-9a0b-1c2d3e4f5a6b' as UploadBatchId
 
 // Build pipeline event data
 function buildPipelineEvent(
@@ -125,7 +125,7 @@ function buildPipelineEvent(
     tenantId: string
     userId: string
     mode: ProcessingMode
-    uploadBatchId: string
+    uploadBatchId: UploadBatchId
   }>,
 ) {
   return {
@@ -232,7 +232,7 @@ describe('processFile - batch completion step', () => {
   it('[P0] should skip batch completion entirely when uploadBatchId is undefined', async () => {
     const mockStep = createMockStep()
     // Non-batch upload: uploadBatchId undefined
-    const eventData = buildPipelineEvent({ uploadBatchId: undefined as unknown as string })
+    const eventData = buildPipelineEvent({ uploadBatchId: undefined as unknown as UploadBatchId })
     // Remove uploadBatchId to simulate non-batch (factory sets it by default)
     delete (eventData as Record<string, unknown>).uploadBatchId
 

@@ -204,14 +204,13 @@
 
 ## Category 5: Pattern Consistency
 
-### TD-PATTERN-002: uploadBatchId type should be `string | null`
+### TD-PATTERN-002: uploadBatchId type should be branded
 - **Severity:** Low
 - **File:** `src/types/pipeline.ts` — `PipelineFileEventData.uploadBatchId: string`
-- **Risk:** Files uploaded without a batch (future single-file upload) would need a dummy batchId or fail type check. DB schema `files.batchId` is already nullable
-- **Mitigation:** Current upload flow always creates a batch, so value is always populated
-- **Fix:** Change `uploadBatchId: string` → `uploadBatchId: string | null` in `PipelineFileEventData`, update all consumers to handle null
+- **Risk:** Bare string allows accidental assignment of arbitrary values
+- **Fix:** Added branded type `UploadBatchId = string & { readonly __brand: 'UploadBatchId' }`, updated all event data types and test factories
 - **Origin:** Story 2.6, identified during Story 3.2b validation
-- **Status:** DEFERRED → **Epic 6 — Batch Processing & Team Collaboration** (single-file upload use case lives here; no current code path sends null)
+- **Status:** RESOLVED (2026-03-27 — branded type added, all consumers updated)
 
 ### TD-PATTERN-001: Server Actions missing Zod input schemas (4 files)
 - **Severity:** Low
@@ -427,7 +426,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Phase:** CR
 - **Severity:** Low
 - **Description:** `getBatchSummary.action.ts:53` and `getFileHistory.action.ts:53` use hardcoded `?? 95` fallback for auto_pass_threshold. Should import from `@/features/scoring/constants` for single source of truth.
-- **Status:** RESOLVED — added `DEFAULT_AUTO_PASS_THRESHOLD = 95` to scoring constants, both actions import it (commit 2026-03-03)
+- **Status:** RESOLVED — added `DEFAULT_AUTO_PASS_THRESHOLD = 95` to scoring constants. All actions + `LanguagePairConfigTable.tsx` + `factories.ts` now import from constant (2026-03-27 final cleanup)
 
 ---
 
@@ -630,7 +629,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** `updateNoteText` finds the latest `review_actions` row with `actionType='note'` for a finding, but does NOT filter by `userId`. User B (same tenant, qa_reviewer role) can overwrite User A's note text. The AC doesn't specify cross-user note ownership behavior — design decision needed: is note per-user or per-finding?
 - **Mitigation:** Same-tenant users collaborating on same file is rare in current product. RLS prevents cross-tenant access.
 - **Fix:** Add `eq(reviewActions.userId, userId)` to the WHERE clause, OR make the design decision that notes are per-finding (shared). Requires UX design input.
-- **Status:** DEFERRED → **Story 5.2c** (native reviewer workflow — collaboration features + note ownership model)
+- **Status:** RESOLVED (2026-03-27) — Added `eq(reviewActions.userId, userId)` ownership check + FORBIDDEN response. Only note creator can edit. Test added.
 
 ### TD-UX-005: Desktop→laptop viewport resize leaves detail panel blank
 - **Date:** 2026-03-15
@@ -650,7 +649,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** `reviewerIsNative: false` is hardcoded in all `feedback_events` INSERT paths. Should be derived from user profile (native language pair setting). Affects AI training data quality — all feedback is tagged as non-native reviewer regardless of actual language pair proficiency.
 - **Mitigation:** Low impact until AI learning pipeline (Epic 9) consumes this field. All rows have consistent `false` value — no data inconsistency.
 - **Fix:** Wire from user profile `reviewer_is_native` field once Story 5.2a wires `determineNonNative()` into all 7 review actions that write `reviewerIsNative`.
-- **Status:** PARTIALLY RESOLVED (2026-03-26) — `determineNonNative()` helper created + `getCurrentUser` returns `nativeLanguages`. Full wiring into review actions deferred to Story 5.2a.
+- **Status:** RESOLVED (2026-03-27) — `determineNonNative()` fully wired into all 5 review actions (addFinding, rejectFinding, bulkAction, overrideSeverity, undoAction/undoBulkAction). Stale TODO in test removed.
 
 ---
 

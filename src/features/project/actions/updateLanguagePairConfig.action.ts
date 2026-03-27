@@ -10,6 +10,7 @@ import { withTenant } from '@/db/helpers/withTenant'
 import { languagePairConfigs } from '@/db/schema/languagePairConfigs'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { updateLanguagePairConfigSchema } from '@/features/project/validation/projectSchemas'
+import { DEFAULT_AUTO_PASS_THRESHOLD } from '@/features/scoring/constants'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
@@ -81,7 +82,7 @@ export async function updateLanguagePairConfig(
         tenantId: currentUser.tenantId,
         sourceLang,
         targetLang,
-        autoPassThreshold: configFields.autoPassThreshold ?? 95,
+        autoPassThreshold: configFields.autoPassThreshold ?? DEFAULT_AUTO_PASS_THRESHOLD,
         l2ConfidenceMin: configFields.l2ConfidenceMin ?? 70,
         l3ConfidenceMin: configFields.l3ConfidenceMin ?? 70,
         mutedCategories: configFields.mutedCategories,

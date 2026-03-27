@@ -3,6 +3,9 @@ import { z } from 'zod'
 import type { FindingStatus } from '@/types/finding'
 import type { TenantId } from '@/types/tenant'
 
+/** Branded type for upload batch IDs — prevents accidental assignment of arbitrary strings */
+export type UploadBatchId = string & { readonly __brand: 'UploadBatchId' }
+
 // Pipeline types — populated in Epic 2-3
 export const PROCESSING_MODES = ['economy', 'thorough'] as const
 export type ProcessingMode = (typeof PROCESSING_MODES)[number]
@@ -44,7 +47,7 @@ export type PipelineFileEventData = {
   projectId: string
   tenantId: TenantId
   mode: ProcessingMode
-  uploadBatchId: string
+  uploadBatchId: UploadBatchId
   userId: string
 }
 
@@ -54,7 +57,7 @@ export type PipelineBatchEventData = {
   tenantId: TenantId
   fileIds: string[]
   mode: ProcessingMode
-  uploadBatchId: string
+  uploadBatchId: UploadBatchId
   userId: string
 }
 /** Batch completion event — emitted when all files in batch reach terminal layer (L2 for economy, L3 for thorough). */

@@ -100,7 +100,6 @@ export async function generateParityReport(
         fileId: f.fileId ?? null,
         segmentId: f.segmentId ?? null,
       })),
-      fileId,
     )
 
     // Upload Xbench report to Supabase Storage for audit trail

@@ -2,7 +2,7 @@ import { faker } from '@faker-js/faker'
 import { NonRetriableError } from 'inngest'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
-import type { ProcessingMode } from '@/types/pipeline'
+import type { ProcessingMode, UploadBatchId } from '@/types/pipeline'
 import { asTenantId } from '@/types/tenant'
 
 // ── Hoisted mocks ──
@@ -37,7 +37,7 @@ function buildPipelineBatchEvent(
     tenantId: faker.string.uuid(),
     userId: faker.string.uuid(),
     mode: 'economy' as const,
-    uploadBatchId: faker.string.uuid(),
+    uploadBatchId: faker.string.uuid() as UploadBatchId,
     ...overrides,
   }
 }
@@ -264,7 +264,7 @@ describe('processBatch', () => {
                 tenantId: VALID_TENANT_ID,
                 userId: VALID_USER_ID,
                 mode: 'economy',
-                uploadBatchId: faker.string.uuid(),
+                uploadBatchId: faker.string.uuid() as UploadBatchId,
               },
             },
           },

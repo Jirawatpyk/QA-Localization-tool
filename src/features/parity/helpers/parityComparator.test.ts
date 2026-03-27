@@ -70,7 +70,7 @@ describe('parityComparator', () => {
     const toolFindings = [buildToolFinding({ category: 'accuracy', severity: 'minor' })]
 
     const { compareFindings } = await import('./parityComparator')
-    const result = compareFindings(xbenchFindings, toolFindings, 'test-file-id')
+    const result = compareFindings(xbenchFindings, toolFindings)
 
     // Should have 1 matched finding (within +-1 severity tolerance)
     expect(result.matched).toHaveLength(1)
@@ -96,7 +96,7 @@ describe('parityComparator', () => {
     ]
 
     const { compareFindings } = await import('./parityComparator')
-    const result = compareFindings(xbenchFindings, toolFindings, 'test-file-id')
+    const result = compareFindings(xbenchFindings, toolFindings)
 
     expect(result.matched).toHaveLength(1)
   })
@@ -111,12 +111,12 @@ describe('parityComparator', () => {
     const toolMajor = [buildToolFinding({ category: 'accuracy', severity: 'major' })]
 
     const { compareFindings } = await import('./parityComparator')
-    const result1 = compareFindings(xbenchCritical, toolMajor, 'test-file-id')
+    const result1 = compareFindings(xbenchCritical, toolMajor)
     expect(result1.matched).toHaveLength(1)
 
     // critical → minor = +-2 → should NOT match
     const toolMinor = [buildToolFinding({ category: 'accuracy', severity: 'minor' })]
-    const result2 = compareFindings(xbenchCritical, toolMinor, 'test-file-id')
+    const result2 = compareFindings(xbenchCritical, toolMinor)
     expect(result2.matched).toHaveLength(0)
     expect(result2.xbenchOnly).toHaveLength(1)
     expect(result2.toolOnly).toHaveLength(1)
@@ -130,35 +130,17 @@ describe('parityComparator', () => {
     const toolTrivial = [buildToolFinding({ category: 'accuracy', severity: 'trivial' })]
 
     const { compareFindings } = await import('./parityComparator')
-    const result1 = compareFindings(xbenchMinor, toolTrivial, 'test-file-id')
+    const result1 = compareFindings(xbenchMinor, toolTrivial)
     expect(result1.matched).toHaveLength(1)
 
     // major → trivial = +-2 → should NOT match
     const xbenchMajor = [
       buildXbenchFinding({ category: 'accuracy', severity: 'major', segmentNumber: 1 }),
     ]
-    const result2 = compareFindings(xbenchMajor, toolTrivial, 'test-file-id')
+    const result2 = compareFindings(xbenchMajor, toolTrivial)
     expect(result2.matched).toHaveLength(0)
     expect(result2.xbenchOnly).toHaveLength(1)
     expect(result2.toolOnly).toHaveLength(1)
-  })
-
-  it('[P1] should compare findings for specific fileId only not entire project', async () => {
-    const targetFileId = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
-    const otherFileId = 'b2c3d4e5-f6a7-4b2c-8d3e-4f5a6b7c8d9e'
-
-    const xbenchFindings = [buildXbenchFinding({ category: 'accuracy', severity: 'major' })]
-    const toolFindings = [
-      buildToolFinding({ category: 'accuracy', severity: 'major', fileId: targetFileId }),
-      buildToolFinding({ category: 'completeness', severity: 'critical', fileId: otherFileId }),
-    ]
-
-    const { compareFindings } = await import('./parityComparator')
-    const result = compareFindings(xbenchFindings, toolFindings, targetFileId)
-
-    // Only the finding from targetFileId should be considered; otherFileId findings ignored
-    expect(result.matched).toHaveLength(1)
-    expect(result.toolOnly).toHaveLength(0)
   })
 
   // ── M5: Substring containment match ──
@@ -183,7 +165,7 @@ describe('parityComparator', () => {
     ]
 
     const { compareFindings } = await import('./parityComparator')
-    const result = compareFindings(xbenchFindings, toolFindings, testFileId)
+    const result = compareFindings(xbenchFindings, toolFindings)
 
     // Substring containment: "brown fox" is in "The quick brown fox jumps over" → match
     expect(result.matched).toHaveLength(1)
@@ -210,7 +192,7 @@ describe('parityComparator', () => {
     ]
 
     const { compareFindings } = await import('./parityComparator')
-    const result = compareFindings(xbenchFindings, toolFindings, testFileId)
+    const result = compareFindings(xbenchFindings, toolFindings)
 
     expect(result.matched).toHaveLength(1)
   })
@@ -225,7 +207,7 @@ describe('parityComparator', () => {
     const toolFindings: ToolFinding[] = []
 
     const { compareFindings } = await import('./parityComparator')
-    const result = compareFindings(xbenchFindings, toolFindings, 'test-file-id')
+    const result = compareFindings(xbenchFindings, toolFindings)
 
     expect(result.matched).toHaveLength(0)
     expect(result.xbenchOnly).toHaveLength(2)
@@ -240,7 +222,7 @@ describe('parityComparator', () => {
     ]
 
     const { compareFindings } = await import('./parityComparator')
-    const result = compareFindings(xbenchFindings, toolFindings, 'test-file-id')
+    const result = compareFindings(xbenchFindings, toolFindings)
 
     expect(result.matched).toHaveLength(0)
     expect(result.xbenchOnly).toHaveLength(0)
@@ -269,7 +251,7 @@ describe('parityComparator', () => {
     ]
 
     const { compareFindings } = await import('./parityComparator')
-    const result = compareFindings(xbenchFindings, toolFindings, testFileId)
+    const result = compareFindings(xbenchFindings, toolFindings)
 
     expect(result.matched).toHaveLength(1)
     expect(result.xbenchOnly).toHaveLength(0)
@@ -297,7 +279,7 @@ describe('parityComparator', () => {
     ]
 
     const { compareFindings } = await import('./parityComparator')
-    const result = compareFindings(xbenchFindings, toolFindings, testFileId)
+    const result = compareFindings(xbenchFindings, toolFindings)
 
     // Different source text → no match
     expect(result.matched).toHaveLength(0)
@@ -331,7 +313,7 @@ describe('parityComparator', () => {
     ]
 
     const { compareFindings } = await import('./parityComparator')
-    const result = compareFindings(xbenchFindings, toolFindings, testFileId)
+    const result = compareFindings(xbenchFindings, toolFindings)
 
     // 1 xbench matches 1 tool finding (first), second tool finding is unmatched
     expect(result.matched).toHaveLength(1)
@@ -360,7 +342,7 @@ describe('parityComparator', () => {
 
     const { compareFindings } = await import('./parityComparator')
     // Should not throw
-    const result = compareFindings(xbenchFindings, toolFindings, testFileId)
+    const result = compareFindings(xbenchFindings, toolFindings)
 
     // null excerpt → normalize('') → empty string, "some source text" doesn't match "" → no match
     expect(result.matched).toHaveLength(0)
@@ -386,7 +368,7 @@ describe('parityComparator', () => {
     ]
 
     const { compareFindings } = await import('./parityComparator')
-    const result = compareFindings(xbenchFindings, toolFindings, testFileId)
+    const result = compareFindings(xbenchFindings, toolFindings)
 
     // Empty-source findings DO match same-category (behavioral doc)
     expect(result.matched).toHaveLength(1)
@@ -401,7 +383,7 @@ describe('parityComparator', () => {
     ]
 
     const { compareFindings } = await import('./parityComparator')
-    const result = compareFindings(xbenchFindings, toolFindings, testFileId)
+    const result = compareFindings(xbenchFindings, toolFindings)
 
     expect(result.matched).toHaveLength(0)
     expect(result.xbenchOnly).toHaveLength(1)
@@ -425,7 +407,7 @@ describe('parityComparator', () => {
     ]
 
     const { compareFindings } = await import('./parityComparator')
-    const result = compareFindings(xbenchFindings, toolFindings, testFileId)
+    const result = compareFindings(xbenchFindings, toolFindings)
 
     expect(result.matched).toHaveLength(0)
     expect(result.xbenchOnly).toHaveLength(1)
@@ -459,7 +441,7 @@ describe('parityComparator', () => {
     ]
 
     const { compareFindings } = await import('./parityComparator')
-    const result = compareFindings(xbenchFindings, toolFindings, testFileId)
+    const result = compareFindings(xbenchFindings, toolFindings)
 
     expect(result.matched).toHaveLength(1)
     expect(result.xbenchOnly).toHaveLength(1)

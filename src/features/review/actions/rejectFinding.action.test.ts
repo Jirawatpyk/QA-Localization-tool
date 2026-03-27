@@ -253,7 +253,7 @@ describe('rejectFinding.action', () => {
     })
 
     // TQA-M3: assert values not just property existence
-    expect(feedbackValues!.reviewerIsNative).toBe(false) // TODO(story-5.2): will change when wired from profile
+    expect(feedbackValues!.reviewerIsNative).toBe(false)
     expect(feedbackValues!.sourceLang).toBe('en')
     expect(feedbackValues!.targetLang).toBe('th')
   })

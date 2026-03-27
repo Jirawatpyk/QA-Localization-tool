@@ -4,7 +4,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 import type { L2Result } from '@/features/pipeline/helpers/runL2ForFile'
 import type { L3Result } from '@/features/pipeline/helpers/runL3ForFile'
-import type { ProcessingMode } from '@/types/pipeline'
+import type { ProcessingMode, UploadBatchId } from '@/types/pipeline'
 import { asTenantId } from '@/types/tenant'
 
 // ── Hoisted mocks ──
@@ -139,7 +139,7 @@ function buildPipelineEvent(
     tenantId: faker.string.uuid(),
     userId: faker.string.uuid(),
     mode: 'economy' as ProcessingMode,
-    uploadBatchId: '',
+    uploadBatchId: '' as UploadBatchId,
     ...overrides,
   }
 }
@@ -890,7 +890,7 @@ describe('processFilePipeline', () => {
       tenantId: VALID_TENANT_ID,
       userId: VALID_USER_ID,
       mode: 'economy',
-      uploadBatchId: '',
+      uploadBatchId: '' as UploadBatchId,
     })
 
     const { processFilePipeline } = await import('./processFile')

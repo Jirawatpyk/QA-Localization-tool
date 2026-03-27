@@ -17,10 +17,16 @@ import type { ExcelPreview } from '@/features/parser/actions/previewExcelColumns
 import type { ParsedSegment } from '@/features/parser/types'
 import type { ExcelColumnMapping } from '@/features/parser/validation/excelMappingSchema'
 import type { FindingForDisplay } from '@/features/review/types'
+import { DEFAULT_AUTO_PASS_THRESHOLD } from '@/features/scoring/constants'
 import type { ContributingFinding } from '@/features/scoring/types'
 import type { BatchRecord, UploadFileResult } from '@/features/upload/types'
 import type { DetectedByLayer, Finding, FindingSeverity, FindingStatus } from '@/types/finding'
-import type { FindingChangedEventData, ProcessingMode, PipelineRun } from '@/types/pipeline'
+import type {
+  FindingChangedEventData,
+  ProcessingMode,
+  PipelineRun,
+  UploadBatchId,
+} from '@/types/pipeline'
 import type { ReviewSession } from '@/types/review'
 import { asTenantId } from '@/types/tenant'
 
@@ -370,7 +376,7 @@ export function buildLanguagePairConfigRecord(
     tenantId: faker.string.uuid(),
     sourceLang: 'en-US',
     targetLang: 'th-TH',
-    autoPassThreshold: 95,
+    autoPassThreshold: DEFAULT_AUTO_PASS_THRESHOLD,
     l2ConfidenceMin: 70,
     l3ConfidenceMin: 80,
     mutedCategories: null,
@@ -404,7 +410,7 @@ export function buildPipelineEvent(
     tenantId: string
     userId: string
     mode: ProcessingMode
-    uploadBatchId: string
+    uploadBatchId: UploadBatchId
   }>,
 ) {
   return {
@@ -413,7 +419,7 @@ export function buildPipelineEvent(
     tenantId: faker.string.uuid(),
     userId: faker.string.uuid(),
     mode: 'economy' as const,
-    uploadBatchId: faker.string.uuid(),
+    uploadBatchId: faker.string.uuid() as UploadBatchId,
     ...overrides,
   }
 }
@@ -429,7 +435,7 @@ export function buildPipelineBatchEvent(
     tenantId: string
     userId: string
     mode: ProcessingMode
-    uploadBatchId: string
+    uploadBatchId: UploadBatchId
   }>,
 ) {
   return {
@@ -439,7 +445,7 @@ export function buildPipelineBatchEvent(
     tenantId: faker.string.uuid(),
     userId: faker.string.uuid(),
     mode: 'economy' as const,
-    uploadBatchId: faker.string.uuid(),
+    uploadBatchId: faker.string.uuid() as UploadBatchId,
     ...overrides,
   }
 }

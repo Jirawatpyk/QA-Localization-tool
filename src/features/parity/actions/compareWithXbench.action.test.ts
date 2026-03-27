@@ -217,7 +217,7 @@ describe('compareWithXbench', () => {
 
   // ── L1: fileId propagation ──
 
-  it('[P1] should pass fileId through to compareFindings when provided', async () => {
+  it('[P1] should pass fileId-filtered findings to compareFindings when provided', async () => {
     const fileId = faker.string.uuid()
 
     dbState.returnValues = [
@@ -231,7 +231,7 @@ describe('compareWithXbench', () => {
           fileId,
           segmentId: faker.string.uuid(),
         },
-      ], // tool findings
+      ], // tool findings (already filtered by DB query)
     ]
 
     const { compareWithXbench } = await import('./compareWithXbench.action')
@@ -241,8 +241,8 @@ describe('compareWithXbench', () => {
       xbenchReportBuffer: new Uint8Array([1, 2, 3]),
     })
 
-    // compareFindings should receive the fileId as third argument
-    expect(mockCompareFindings).toHaveBeenCalledWith(expect.any(Array), expect.any(Array), fileId)
+    // compareFindings receives 2 args (fileId filtering done at DB level)
+    expect(mockCompareFindings).toHaveBeenCalledWith(expect.any(Array), expect.any(Array))
   })
 
   // ── P2: Error handling ──

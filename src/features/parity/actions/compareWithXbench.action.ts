@@ -87,7 +87,6 @@ export async function compareWithXbench(input: unknown): Promise<ActionResult<Co
         fileId: f.fileId ?? null,
         segmentId: f.segmentId ?? null,
       })),
-      fileId,
     )
 
     // H1: MatchedFinding has xbenchCategory+toolCategory; XbenchFinding/ToolFinding have category

@@ -164,7 +164,7 @@ describe.skipIf(!hasGoldenCorpus())('Parity Helpers — Real Data', () => {
         segmentId: f.segmentId,
       }))
 
-      comparisonResult = compareFindings(mappedXbench, toolFindings, fileId)
+      comparisonResult = compareFindings(mappedXbench, toolFindings)
     }, 60_000)
 
     it('should return valid ComparisonResult structure', () => {
@@ -253,7 +253,7 @@ describe.skipIf(!hasGoldenCorpus())('Parity Helpers — Real Data', () => {
           segmentId: f.segmentId,
         }))
 
-        const result = compareFindings(mappedXbench, toolFindings, fileId)
+        const result = compareFindings(mappedXbench, toolFindings)
         totalMatched += result.matched.length
         totalXbenchOnly += result.xbenchOnly.length
         totalToolOnly += result.toolOnly.length

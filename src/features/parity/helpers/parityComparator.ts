@@ -59,13 +59,7 @@ function normalize(text: string | null): string {
 export function compareFindings(
   xbenchFindings: XbenchFinding[],
   toolFindings: ToolFinding[],
-  fileId?: string,
 ): ComparisonResult {
-  // C2: When fileId is provided and non-empty, filter to that file; otherwise use all findings
-  const relevantToolFindings = fileId
-    ? toolFindings.filter((f) => f.fileId === fileId)
-    : toolFindings
-
   const matched: MatchedFinding[] = []
   const matchedXbenchIndices = new Set<number>()
   const matchedToolIndices = new Set<number>()
@@ -77,10 +71,10 @@ export function compareFindings(
     const xToolCategory = mapXbenchToToolCategory(xf.category)
     const xSource = normalize(xf.sourceText)
 
-    for (let ti = 0; ti < relevantToolFindings.length; ti++) {
+    for (let ti = 0; ti < toolFindings.length; ti++) {
       if (matchedToolIndices.has(ti)) continue
 
-      const tf = relevantToolFindings[ti]!
+      const tf = toolFindings[ti]!
       const tCategory = tf.category.toLowerCase()
       const tSource = normalize(tf.sourceTextExcerpt)
 
@@ -107,7 +101,7 @@ export function compareFindings(
   }
 
   const xbenchOnly = xbenchFindings.filter((_, i) => !matchedXbenchIndices.has(i))
-  const toolOnly = relevantToolFindings.filter((_, i) => !matchedToolIndices.has(i))
+  const toolOnly = toolFindings.filter((_, i) => !matchedToolIndices.has(i))
 
   logger.info(
     `Parity comparison: ${matched.length} matched, ${xbenchOnly.length} xbench-only, ${toolOnly.length} tool-only`,

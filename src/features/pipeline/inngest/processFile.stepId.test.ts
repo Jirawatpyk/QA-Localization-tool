@@ -2,7 +2,7 @@ import { faker } from '@faker-js/faker'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 import type { L2Result } from '@/features/pipeline/helpers/runL2ForFile'
-import type { ProcessingMode } from '@/types/pipeline'
+import type { ProcessingMode, UploadBatchId } from '@/types/pipeline'
 
 // ── Hoisted mocks ──
 const { mockRunL1ForFile, mockScoreFile, mockRunL2ForFile, dbState, dbMockModule } = vi.hoisted(
@@ -118,7 +118,7 @@ function buildPipelineFileEvent(
     tenantId: string
     userId: string
     mode: ProcessingMode
-    uploadBatchId: string | null
+    uploadBatchId: UploadBatchId | null
   }>,
 ) {
   return {
@@ -127,7 +127,7 @@ function buildPipelineFileEvent(
     tenantId: faker.string.uuid(),
     userId: faker.string.uuid(),
     mode: 'economy' as const,
-    uploadBatchId: null as string | null,
+    uploadBatchId: null as UploadBatchId | null,
     ...overrides,
   }
 }

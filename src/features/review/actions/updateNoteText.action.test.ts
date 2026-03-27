@@ -43,6 +43,7 @@ vi.mock('@/db/schema/reviewActions', () => ({
     actionType: 'action_type',
     metadata: 'metadata',
     createdAt: 'created_at',
+    userId: 'user_id',
   },
 }))
 vi.mock('@/lib/logger', () => ({
@@ -100,6 +101,25 @@ describe('updateNoteText.action', () => {
     expect(mockWriteAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'finding.note_text_update' }),
     )
+  })
+
+  it('[P1] TD-AUTH-001: should return FORBIDDEN when non-owner tries to edit note', async () => {
+    // DB-level guard: WHERE includes eq(userId, currentUser) → returns empty for non-owner
+    dbState.returnValues = [
+      [{ id: VALID_IDS.findingId, status: 'noted' }],
+      [], // no rows returned because userId doesn't match in WHERE
+    ]
+
+    const result = await updateNoteText({
+      ...VALID_IDS,
+      noteText: 'Tampered note',
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('FORBIDDEN')
+      expect(result.error).toContain('not found or not owned')
+    }
   })
 
   it('[P1] U-NT2: should reject when finding is not in noted state', async () => {
