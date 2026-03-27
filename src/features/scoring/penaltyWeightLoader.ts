@@ -2,6 +2,7 @@ import { isNull, or, eq } from 'drizzle-orm'
 
 import { db } from '@/db/client'
 import { severityConfigs } from '@/db/schema/severityConfigs'
+import type { TenantId } from '@/types/tenant'
 
 import { DEFAULT_PENALTY_WEIGHTS } from './constants'
 import type { PenaltyWeights } from './types'
@@ -17,7 +18,7 @@ type SeverityKey = keyof PenaltyWeights
  * Drizzle ORM bypasses RLS — the app-level filter IS the security boundary here.
  * severity_configs SELECT policy is USING (true) so system defaults are accessible.
  */
-export async function loadPenaltyWeights(tenantId: string): Promise<PenaltyWeights> {
+export async function loadPenaltyWeights(tenantId: TenantId): Promise<PenaltyWeights> {
   const rows = await db
     .select({
       tenantId: severityConfigs.tenantId,

@@ -1105,6 +1105,8 @@ describe('scoreFile', () => {
     expect(result.status).toBe('na')
     // autoPassRationale must be null when status is not 'auto_passed'
     expect(result.autoPassRationale).toBeNull()
+    // checkAutoPass must NOT be called when status='na' (S5 fix: skip auto-pass for totalWords=0)
+    expect(mockCheckAutoPass).not.toHaveBeenCalled()
     // Verify INSERT values
     expect(dbState.valuesCaptures).toContainEqual(
       expect.objectContaining({ status: 'na', autoPassRationale: null }),

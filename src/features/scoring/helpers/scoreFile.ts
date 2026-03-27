@@ -15,7 +15,7 @@ import { calculateMqmScore } from '@/features/scoring/mqmCalculator'
 import { loadPenaltyWeights } from '@/features/scoring/penaltyWeightLoader'
 import type { ContributingFinding, FindingsSummary, FindingStatus } from '@/features/scoring/types'
 import { logger } from '@/lib/logger'
-import type { DetectedByLayer, LayerCompleted } from '@/types/finding'
+import type { DetectedByLayer, FindingSeverity, LayerCompleted } from '@/types/finding'
 import type { TenantId } from '@/types/tenant'
 
 type ScoreFileInput = {
@@ -115,7 +115,9 @@ export async function scoreFile({
   const penaltyWeights = await loadPenaltyWeights(tenantId)
 
   // Calculate MQM score (pure function)
-  // SAFETY: Drizzle returns varchar → string but DB CHECK constraints guarantee valid Severity/FindingStatus values
+  // SAFETY: Drizzle returns varchar → string for severity/status columns, but DB CHECK
+  // constraints guarantee valid Severity ('critical'|'major'|'minor') and FindingStatus values.
+  // The cast is safe because invalid values cannot exist in the DB.
   const scoreResult = calculateMqmScore(
     findingRows as ContributingFinding[],
     totalWords,
@@ -346,7 +348,7 @@ async function createGraduationNotification(params: {
 }
 
 // Severity priority for riskiest finding selection
-const SEVERITY_PRIORITY: Record<string, number> = { critical: 3, major: 2, minor: 1 }
+const SEVERITY_PRIORITY: Record<FindingSeverity, number> = { critical: 3, major: 2, minor: 1 }
 
 /**
  * Build findings summary for structured auto-pass rationale (Story 3.5).
@@ -388,7 +390,7 @@ function buildFindingsSummary(
   for (const f of contributing) {
     if (f.aiConfidence === null) continue // Skip L1 findings (FM-3.2)
 
-    const priority = SEVERITY_PRIORITY[f.severity] ?? 0
+    const priority = SEVERITY_PRIORITY[f.severity as FindingSeverity] ?? 0
     if (
       priority > riskiestPriority ||
       (priority === riskiestPriority && f.aiConfidence > riskiestConfidence)

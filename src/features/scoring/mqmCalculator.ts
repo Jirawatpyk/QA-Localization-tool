@@ -61,7 +61,7 @@ export function calculateMqmScore(
   const npt = Math.round(rawNpt * 100) / 100
   // Round score to 2dp as well — npt is already rounded, but 100-npt can still
   // produce floating-point artifacts (e.g. 100 - 30.01 = 69.99000000000001)
-  const mqmScore = Math.round(Math.max(0, 100 - npt) * 100) / 100
+  const mqmScore = Math.round(Math.min(100, Math.max(0, 100 - npt)) * 100) / 100
 
   return {
     mqmScore,

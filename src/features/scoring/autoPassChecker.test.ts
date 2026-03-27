@@ -70,6 +70,11 @@ describe('checkAutoPass', () => {
     const result = await checkAutoPass({ ...BASE_INPUT, mqmScore: 96 })
     expect(result.eligible).toBe(true)
     expect(result.isNewPair).toBe(false)
+
+    // Verify withTenant is applied to all queries (Guardrail #1)
+    const { withTenant } = await import('@/db/helpers/withTenant')
+    expect(withTenant).toHaveBeenCalled()
+    expect(vi.mocked(withTenant).mock.calls.length).toBeGreaterThanOrEqual(2)
   })
 
   it('should return not eligible when score below configured threshold', async () => {

@@ -15,10 +15,12 @@ vi.mock('drizzle-orm', () => ({
   isNull: vi.fn((...args: unknown[]) => args),
 }))
 
+import { asTenantId } from '@/types/tenant'
+
 import { DEFAULT_PENALTY_WEIGHTS } from './constants'
 import { loadPenaltyWeights } from './penaltyWeightLoader'
 
-const TENANT_ID = 'tenant-abc'
+const TENANT_ID = asTenantId('tenant-abc')
 
 // Helper to build DB row
 function mkRow(
@@ -46,6 +48,12 @@ describe('loadPenaltyWeights', () => {
     ]
     const result = await loadPenaltyWeights(TENANT_ID)
     expect(result).toEqual({ critical: 30, major: 8, minor: 2 })
+
+    // Verify tenant filter uses or(eq(tenantId), isNull(tenantId)) pattern
+    // (severity_configs has nullable tenant_id — withTenant() not used per Guardrail #1 exception)
+    const { or, eq } = await import('drizzle-orm')
+    expect(or).toHaveBeenCalled()
+    expect(eq).toHaveBeenCalledWith('tenant_id', TENANT_ID)
   })
 
   it('should fall back to system defaults when no tenant-specific rows', async () => {

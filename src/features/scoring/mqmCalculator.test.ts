@@ -293,13 +293,13 @@ describe('calculateMqmScore', () => {
 
   // -- TA: Coverage Gap Tests (Story 2.5) --
 
-  // T5 [P1] INV-1: Score bounded — negative totalWords causes score > 100
+  // T5 [P1] INV-1: Score bounded — negative totalWords clamped to 100
   // totalWords=-100 bypasses the `=== 0` guard; NPT = (1/-100)*1000 = -10
-  // score = max(0, 100 - (-10)) = 110 — documents absence of upper clamp
-  it('should return score greater than 100 when totalWords is negative (no upper clamp)', () => {
+  // score = min(100, max(0, 100 - (-10))) = min(100, 110) = 100 — upper clamp applied
+  it('should clamp score to 100 when totalWords is negative (upper clamp)', () => {
     const result = calculateMqmScore([mkFinding('minor', 'pending')], -100)
     expect(result.npt).toBe(-10)
-    expect(result.mqmScore).toBe(110)
+    expect(result.mqmScore).toBe(100)
     expect(result.status).toBe('calculated')
   })
 
@@ -380,13 +380,13 @@ describe('calculateMqmScore', () => {
     expect(result.mqmScore).toBe(100)
   })
 
-  // T18 [P3] FM-10: Negative penalty weights cause score > 100 (no upper clamp)
-  // weight.critical=-10 → sumPenalties=-10 → npt=-10 → score=max(0, 110)=110
-  it('should return score greater than 100 when penalty weight is negative (no upper clamp)', () => {
+  // T18 [P3] FM-10: Negative penalty weights clamped to 100 (upper clamp applied)
+  // weight.critical=-10 → sumPenalties=-10 → npt=-10 → score=min(100, max(0, 110))=100
+  it('should clamp score to 100 when penalty weight is negative (upper clamp)', () => {
     const negativeWeights = { critical: -10, major: 5, minor: 1 }
     const result = calculateMqmScore([mkFinding('critical', 'pending')], 1000, negativeWeights)
     expect(result.npt).toBe(-10)
-    expect(result.mqmScore).toBeGreaterThan(100)
+    expect(result.mqmScore).toBe(100)
   })
 
   // T19 [P3] INV-4: Contributing counts sum <= total input findings length
