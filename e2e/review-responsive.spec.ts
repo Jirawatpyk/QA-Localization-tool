@@ -1045,6 +1045,113 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     expect(hasTransition).toBe(true)
   })
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // Story 5.1 TD-UX-003: BT Section Responsive Behavior
+  // Verify LanguageBridge panel doesn't cause horizontal scroll at any breakpoint
+  // ══════════════════════════════════════════════════════════════════════════
+
+  test('[P1] BT-R1 — LanguageBridge section no horizontal overflow at desktop 1440px', async ({
+    page,
+  }) => {
+    await signupOrLogin(page, TEST_EMAIL)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await waitForLayoutMode(page, 'desktop')
+
+    // Focus finding to show detail panel
+    const grid = page.getByRole('grid')
+    await expect(grid).toBeVisible({ timeout: 30_000 })
+    await page.waitForSelector('[role="grid"][data-keyboard-ready="true"]', { timeout: 15_000 })
+    await page.keyboard.press('j')
+
+    // Wait for detail aside to show content
+    const aside = page.getByTestId('finding-detail-aside')
+    await expect(aside).toBeVisible({ timeout: 10_000 })
+
+    // Check no horizontal scroll on aside
+    const hasHScroll = await aside.evaluate((el) => el.scrollWidth > el.clientWidth)
+    expect(hasHScroll).toBe(false)
+
+    // Check BT section visible and no overflow
+    const btPanel = page.getByTestId('language-bridge-panel')
+    // BT panel may or may not render (depends on isNonNative) — check if visible
+    const btVisible = await btPanel.isVisible().catch(() => false)
+    if (btVisible) {
+      const btOverflow = await btPanel.evaluate((el) => el.scrollWidth > el.clientWidth)
+      expect(btOverflow).toBe(false)
+    }
+  })
+
+  test('[P1] BT-R2 — LanguageBridge section no horizontal overflow at laptop 1200px', async ({
+    page,
+  }) => {
+    // Start at desktop (1440px) to select finding → aside visible with BT panel
+    // Then resize to 1200px (laptop) → verify Sheet content preserves layout
+    await signupOrLogin(page, TEST_EMAIL)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await waitForLayoutMode(page, 'desktop')
+
+    const grid = page.getByRole('grid')
+    await expect(grid).toBeVisible({ timeout: 30_000 })
+    await page.waitForSelector('[role="grid"][data-keyboard-ready="true"]', { timeout: 15_000 })
+
+    // Select finding at desktop (sets selectedId)
+    await page.keyboard.press('j')
+    const aside = page.getByTestId('finding-detail-aside')
+    await expect(aside).toBeVisible({ timeout: 10_000 })
+
+    // Resize to laptop — Sheet should auto-open with same selectedId
+    await page.setViewportSize({ width: 1200, height: 900 })
+    await waitForLayoutMode(page, 'laptop')
+
+    // Sheet opens because selectedId is already set (WI-5 pattern)
+    const sheet = page.locator('[data-testid="finding-detail-sheet"]')
+    await expect(sheet).toBeVisible({ timeout: 10_000 })
+
+    // Check no horizontal scroll in Sheet content
+    const detailContent = sheet.getByTestId('finding-detail-content')
+    const hasHScroll = await detailContent.evaluate((el) => el.scrollWidth > el.clientWidth)
+    expect(hasHScroll).toBe(false)
+  })
+
+  test('[P1] BT-R3 — LanguageBridge section no horizontal overflow at tablet 768px (Sheet)', async ({
+    page,
+  }) => {
+    // Start at desktop to select finding, then resize to tablet
+    await signupOrLogin(page, TEST_EMAIL)
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await waitForLayoutMode(page, 'desktop')
+
+    const grid = page.getByRole('grid')
+    await expect(grid).toBeVisible({ timeout: 30_000 })
+    await page.waitForSelector('[role="grid"][data-keyboard-ready="true"]', { timeout: 15_000 })
+
+    // Select finding at desktop
+    await page.keyboard.press('j')
+    const aside = page.getByTestId('finding-detail-aside')
+    await expect(aside).toBeVisible({ timeout: 10_000 })
+
+    // Resize to tablet (768px) — mobile toggle should appear with selectedId set
+    await page.setViewportSize({ width: 768, height: 1024 })
+    await waitForLayoutMode(page, 'mobile')
+
+    // Toggle button should be visible (selectedId already set from desktop)
+    const toggleBtn = page.getByTestId('detail-panel-toggle')
+    await expect(toggleBtn).toBeVisible({ timeout: 10_000 })
+    await toggleBtn.click()
+
+    // Wait for Sheet
+    const sheet = page.locator('[data-testid="finding-detail-sheet"]')
+    await expect(sheet).toBeVisible({ timeout: 10_000 })
+
+    // Check no horizontal scroll
+    const detailContent = sheet.getByTestId('finding-detail-content')
+    const hasHScroll = await detailContent.evaluate((el) => el.scrollWidth > el.clientWidth)
+    expect(hasHScroll).toBe(false)
+  })
+
   // ── Cleanup ───────────────────────────────────────────────────────────────
 
   test.afterAll(async () => {
