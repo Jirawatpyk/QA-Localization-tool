@@ -1,17 +1,22 @@
+import { faker } from '@faker-js/faker'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { asTenantId } from '@/types/tenant'
+
 vi.mock('server-only', () => ({}))
+
+const TEST_TENANT_ID = asTenantId(faker.string.uuid())
 
 const mockCurrentUser = {
   id: 'user-1',
   email: 'admin@test.com',
-  tenantId: 'tenant-1',
+  tenantId: TEST_TENANT_ID,
   role: 'admin' as const,
 }
 
 const mockExistingConfig = {
   id: 'config-1',
-  tenantId: 'tenant-1',
+  tenantId: TEST_TENANT_ID,
   sourceLang: 'en',
   targetLang: 'th',
   autoPassThreshold: 93,
@@ -46,11 +51,21 @@ const mockSelectWhere = vi.fn().mockReturnValue({ limit: mockLimit })
 const mockSelectFrom = vi.fn().mockReturnValue({ where: mockSelectWhere })
 const mockSelect = vi.fn().mockReturnValue({ from: mockSelectFrom })
 
+const mockTransaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
+  const tx = {
+    select: (...args: unknown[]) => mockSelect(...args),
+    insert: (...args: unknown[]) => mockInsert(...args),
+    update: (...args: unknown[]) => mockUpdateFn(...args),
+  }
+  return fn(tx)
+})
+
 vi.mock('@/db/client', () => ({
   db: {
     select: (...args: unknown[]) => mockSelect(...args),
     insert: (...args: unknown[]) => mockInsert(...args),
     update: (...args: unknown[]) => mockUpdateFn(...args),
+    transaction: (...args: unknown[]) => mockTransaction(...(args as [never])),
   },
 }))
 
@@ -220,5 +235,41 @@ describe('updateLanguagePairConfig', () => {
         oldValue: expect.objectContaining({ autoPassThreshold: 93 }),
       }),
     )
+  })
+
+  it('should return UPDATE_FAILED when update returning() is empty', async () => {
+    mockUpdateReturning.mockResolvedValue([])
+
+    const { updateLanguagePairConfig } = await import('./updateLanguagePairConfig.action')
+
+    const result = await updateLanguagePairConfig({
+      projectId: '550e8400-e29b-41d4-a716-446655440000',
+      sourceLang: 'en',
+      targetLang: 'th',
+      autoPassThreshold: 90,
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('UPDATE_FAILED')
+    }
+  })
+
+  it('should return CREATE_FAILED when insert returning() is empty', async () => {
+    mockLimit.mockResolvedValue([]) // no existing
+    mockReturning.mockResolvedValue([]) // empty insert returning
+
+    const { updateLanguagePairConfig } = await import('./updateLanguagePairConfig.action')
+
+    const result = await updateLanguagePairConfig({
+      projectId: '550e8400-e29b-41d4-a716-446655440000',
+      sourceLang: 'en',
+      targetLang: 'ja',
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('CREATE_FAILED')
+    }
   })
 })

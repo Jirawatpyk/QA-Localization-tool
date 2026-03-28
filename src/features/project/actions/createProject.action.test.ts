@@ -1,18 +1,23 @@
+import { faker } from '@faker-js/faker'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { asTenantId } from '@/types/tenant'
 
 // Mock server-only
 vi.mock('server-only', () => ({}))
 
+const TEST_TENANT_ID = asTenantId(faker.string.uuid())
+
 const mockCurrentUser = {
   id: 'user-1',
   email: 'admin@test.com',
-  tenantId: 'tenant-1',
+  tenantId: TEST_TENANT_ID,
   role: 'admin' as const,
 }
 
 const mockProject = {
   id: 'project-1',
-  tenantId: 'tenant-1',
+  tenantId: TEST_TENANT_ID,
   name: 'Test Project',
   description: null,
   sourceLang: 'en',
@@ -141,7 +146,7 @@ describe('createProject', () => {
 
     expect(mockWriteAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({
-        tenantId: 'tenant-1',
+        tenantId: TEST_TENANT_ID,
         userId: 'user-1',
         entityType: 'project',
         entityId: 'project-1',
@@ -167,7 +172,7 @@ describe('createProject', () => {
 
     expect(mockValues).toHaveBeenCalledWith(
       expect.objectContaining({
-        tenantId: 'tenant-1',
+        tenantId: TEST_TENANT_ID,
       }),
     )
   })
@@ -183,5 +188,23 @@ describe('createProject', () => {
     })
 
     expect(mockRevalidatePath).toHaveBeenCalledWith('/projects')
+  })
+
+  it('should return CREATE_FAILED when returning() is empty', async () => {
+    mockReturning.mockResolvedValue([])
+
+    const { createProject } = await import('./createProject.action')
+
+    const result = await createProject({
+      name: 'Test',
+      sourceLang: 'en',
+      targetLangs: ['th'],
+      processingMode: 'economy',
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('CREATE_FAILED')
+    }
   })
 })

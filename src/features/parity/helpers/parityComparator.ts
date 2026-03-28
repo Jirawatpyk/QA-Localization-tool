@@ -75,7 +75,7 @@ export function compareFindings(
       if (matchedToolIndices.has(ti)) continue
 
       const tf = toolFindings[ti]!
-      const tCategory = tf.category.toLowerCase()
+      const tCategory = tf.category.toLowerCase().trim()
       const tSource = normalize(tf.sourceTextExcerpt)
 
       // Match criteria: mapped category match + same segment (source text match) + severity within +-1

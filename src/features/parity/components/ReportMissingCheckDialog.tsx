@@ -46,6 +46,7 @@ export function ReportMissingCheckDialog({
     return () => document.removeEventListener('keydown', handler)
   }, [open, handleClose])
 
+  // TODO(TD-UX-008): Pre-fill fileReference with filename instead of UUID — requires DB query or parent prop
   // M1: Reset form state when dialog closes; M2: Pre-fill fileReference from fileId prop
   useEffect(() => {
     if (!open) {
@@ -95,6 +96,7 @@ export function ReportMissingCheckDialog({
     }
   }
 
+  // TODO(TD-UX-007): Add focus trap — Tab/Shift+Tab should cycle within dialog (Guardrail #30). Requires Radix Dialog or custom trap implementation
   return (
     <div
       role="dialog"

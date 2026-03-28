@@ -557,7 +557,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Low
 - **File:** `e2e/review-score.spec.ts` — test TD2
 - **Description:** E2E test for score recalculation after accepting a finding. Review actions are now implemented in Story 4.2. E2E test can be unskipped.
-- **Status:** OPEN → **Story 5.2a** (non-native auto-tag adds review action changes → verify score recalc E2E at same time)
+- **Status:** RESOLVED (2026-03-28) — E2E test TD2 ran GREEN with Inngest dev server (`INNGEST_DEV_URL=http://localhost:8288`). Score recalculates correctly after finding action. All 4 review-score E2E tests pass.
 
 ### ~~TD-REVIEW-002: Realtime auto_passed transition doesn't show rationale~~
 - **Date:** 2026-03-08
@@ -1183,7 +1183,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Medium
 - **File:** `src/features/bridge/actions/getBackTranslation.action.ts:134`
 - **Description:** `buildBTPrompt` accepts `contextSegments` for surrounding segment context but action always passes `[]`. Query adjacent segments by `segmentNumber ± 2` would improve BT quality for ambiguous translations. Prompt builder and schema already support it.
-- **Status:** DEFERRED → Story 5.2+ (context segments feature enhancement)
+- **Status:** DEFERRED → **Story 5.3** (verification — BT quality test จะ benefit จาก context segments; query adjacent segments by `segmentNumber ± 2`)
 
 ### TD-AUTH-002: OAuth callback route has no unit test for redirect validation
 - **Date:** 2026-03-26
@@ -1193,3 +1193,30 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Files:** `src/app/(auth)/callback/route.ts`
 - **Description:** Regex-based redirect validation (reject //, \, #, non-path chars) has no test. Should verify: `//evil.com`, `/\evil.com`, `///evil.com`, `/#fragment`, `/dashboard` (valid). Route handler needs integration-style test or extracted validator function with unit tests.
 - **Status:** RESOLVED (2026-03-26 — extracted validateRedirectPath() + 12 test cases covering open redirect attacks)
+
+### TD-UX-007: ReportMissingCheckDialog missing focus trap
+- **Date:** 2026-03-28
+- **Severity:** Medium
+- **Story:** Parity Adversarial Review P-6
+- **Phase:** CR
+- **Files:** `src/features/parity/components/ReportMissingCheckDialog.tsx`
+- **Description:** Custom dialog lacks focus trap (Tab/Shift+Tab cycle, Guardrail #30). Requires migration to Radix Dialog or custom focus trap implementation. Currently only has Escape key handling.
+- **Status:** DEFERRED → Epic 6 (UX polish — dialog accessibility improvements)
+
+### TD-UX-008: ReportMissingCheckDialog pre-fills fileId UUID instead of filename
+- **Date:** 2026-03-28
+- **Severity:** Low
+- **Story:** Parity Adversarial Review P-5
+- **Phase:** CR
+- **Files:** `src/features/parity/components/ReportMissingCheckDialog.tsx`
+- **Description:** `fileId` prop is a UUID but pre-filled into fileReference text input. Should resolve to human-readable filename via DB query or parent component prop.
+- **Status:** DEFERRED → Epic 6 (UX polish — parity dialog improvements)
+
+### TD-DB-006: Orphan migration `0014_typical_gauntlet.sql` — scores UNIQUE constraint never applied
+- **Date:** 2026-03-28
+- **Story:** Story 5.2b (CS — discovered during create-story codebase verification)
+- **Phase:** CS
+- **Severity:** High
+- **Files:** `src/db/migrations/0014_typical_gauntlet.sql`, `src/db/schema/scores.ts:33`, `src/db/migrations/meta/_journal.json`
+- **Description:** Orphan Drizzle migration file `0014_typical_gauntlet.sql` contains `ALTER TABLE scores ADD CONSTRAINT uq_scores_file_tenant UNIQUE(file_id, tenant_id)` but is NOT registered in `_journal.json` (idx 14 = `0014_solid_maestro` instead). The Drizzle schema (`scores.ts:33`) declares the constraint, and snapshots 0014/0015 include it — so Drizzle believes it exists. But it was never applied to the DB. Production may allow duplicate scores per file. **Fix:** Create a new Supabase migration that adds the constraint: `ALTER TABLE scores ADD CONSTRAINT IF NOT EXISTS uq_scores_file_tenant UNIQUE(file_id, tenant_id);` and delete the orphan file. Quick fix < 30 min.
+- **Status:** OPEN → **รวมใน Story 5.2b Task 5 + Task 7 Section 8** (Guardrail #23: quick fix < 2 ชม.)

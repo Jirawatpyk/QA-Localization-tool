@@ -95,7 +95,12 @@ export function ProjectCreateDialog({ open, onOpenChange }: ProjectCreateDialogP
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (next) setFormResetKey((k) => k + 1)
+        if (next) {
+          setFormResetKey((k) => k + 1)
+          setSourceLang('')
+          setTargetLangs([])
+          setErrors({})
+        }
         onOpenChange(next)
       }}
     >

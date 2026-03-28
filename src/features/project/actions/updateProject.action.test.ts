@@ -1,17 +1,23 @@
+import { faker } from '@faker-js/faker'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { asTenantId } from '@/types/tenant'
+
 vi.mock('server-only', () => ({}))
+
+const TEST_TENANT_ID = asTenantId(faker.string.uuid())
+const TEST_PROJECT_ID = faker.string.uuid()
 
 const mockCurrentUser = {
   id: 'user-1',
   email: 'admin@test.com',
-  tenantId: 'tenant-1',
+  tenantId: TEST_TENANT_ID,
   role: 'admin' as const,
 }
 
 const mockExisting = {
   id: 'project-1',
-  tenantId: 'tenant-1',
+  tenantId: TEST_TENANT_ID,
   name: 'Old Name',
   description: 'Old desc',
   sourceLang: 'en',
@@ -85,7 +91,7 @@ describe('updateProject', () => {
   it('should update project successfully for admin', async () => {
     const { updateProject } = await import('./updateProject.action')
 
-    const result = await updateProject('project-1', { name: 'New Name' })
+    const result = await updateProject(TEST_PROJECT_ID, { name: 'New Name' })
 
     expect(result.success).toBe(true)
     if (result.success) {
@@ -98,7 +104,7 @@ describe('updateProject', () => {
 
     const { updateProject } = await import('./updateProject.action')
 
-    const result = await updateProject('nonexistent', { name: 'Test' })
+    const result = await updateProject('550e8400-e29b-41d4-a716-446655440000', { name: 'Test' })
 
     expect(result.success).toBe(false)
     if (!result.success) {
@@ -115,7 +121,7 @@ describe('updateProject', () => {
 
     const { updateProject } = await import('./updateProject.action')
 
-    const result = await updateProject('project-1', { name: 'Test' })
+    const result = await updateProject(TEST_PROJECT_ID, { name: 'Test' })
 
     expect(result.success).toBe(false)
     if (!result.success) {
@@ -126,7 +132,7 @@ describe('updateProject', () => {
   it('should accept partial update with only name', async () => {
     const { updateProject } = await import('./updateProject.action')
 
-    const result = await updateProject('project-1', { name: 'New Name' })
+    const result = await updateProject(TEST_PROJECT_ID, { name: 'New Name' })
 
     expect(result.success).toBe(true)
     expect(mockSet).toHaveBeenCalledWith(expect.objectContaining({ name: 'New Name' }))
@@ -135,7 +141,7 @@ describe('updateProject', () => {
   it('should write audit log with old and new values', async () => {
     const { updateProject } = await import('./updateProject.action')
 
-    await updateProject('project-1', { name: 'New Name' })
+    await updateProject(TEST_PROJECT_ID, { name: 'New Name' })
 
     expect(mockWriteAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -150,20 +156,45 @@ describe('updateProject', () => {
   it('should call revalidatePath for both /projects and /projects/{id}/settings', async () => {
     const { updateProject } = await import('./updateProject.action')
 
-    await updateProject('project-1', { name: 'Test' })
+    await updateProject(TEST_PROJECT_ID, { name: 'Test' })
 
     expect(mockRevalidatePath).toHaveBeenCalledWith('/projects')
-    expect(mockRevalidatePath).toHaveBeenCalledWith('/projects/project-1/settings')
+    expect(mockRevalidatePath).toHaveBeenCalledWith(`/projects/${TEST_PROJECT_ID}/settings`)
   })
 
   it('should return VALIDATION_ERROR for invalid input', async () => {
     const { updateProject } = await import('./updateProject.action')
 
-    const result = await updateProject('project-1', { autoPassThreshold: 200 })
+    const result = await updateProject(TEST_PROJECT_ID, { autoPassThreshold: 200 })
 
     expect(result.success).toBe(false)
     if (!result.success) {
       expect(result.code).toBe('VALIDATION_ERROR')
+    }
+  })
+
+  it('should return VALIDATION_ERROR for non-UUID projectId', async () => {
+    const { updateProject } = await import('./updateProject.action')
+
+    const result = await updateProject('not-a-uuid', { name: 'Test' })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('VALIDATION_ERROR')
+      expect(result.error).toBe('Invalid project ID')
+    }
+  })
+
+  it('should return UPDATE_FAILED when returning() is empty', async () => {
+    mockReturning.mockResolvedValue([])
+
+    const { updateProject } = await import('./updateProject.action')
+
+    const result = await updateProject('550e8400-e29b-41d4-a716-446655440000', { name: 'Test' })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('UPDATE_FAILED')
     }
   })
 })

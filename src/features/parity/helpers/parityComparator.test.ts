@@ -390,9 +390,8 @@ describe('parityComparator', () => {
     expect(result.toolOnly).toHaveLength(1)
   })
 
-  it('[P2] should not match tool category with trailing whitespace due to asymmetric trim (G21)', async () => {
-    // G21: comparator does .toLowerCase() but NOT .trim() on tool category
-    // mapper does .toLowerCase().trim() on Xbench side → asymmetric
+  it('[P2] should match tool category with trailing whitespace after trim fix (G21)', async () => {
+    // P-3 fix: both sides now .toLowerCase().trim() — trailing whitespace no longer prevents match
     const testFileId = 'a7b8c9d0-e1f2-4a3b-8c4d-5e6f7a8b9c0d'
     const xbenchFindings = [
       buildXbenchFinding({ sourceText: 'Test text', category: 'accuracy', severity: 'major' }),
@@ -409,9 +408,9 @@ describe('parityComparator', () => {
     const { compareFindings } = await import('./parityComparator')
     const result = compareFindings(xbenchFindings, toolFindings)
 
-    expect(result.matched).toHaveLength(0)
-    expect(result.xbenchOnly).toHaveLength(1)
-    expect(result.toolOnly).toHaveLength(1)
+    expect(result.matched).toHaveLength(1)
+    expect(result.xbenchOnly).toHaveLength(0)
+    expect(result.toolOnly).toHaveLength(0)
   })
 
   it('[P2] should leave second Xbench finding unmatched when tool pool consumed by first (G22)', async () => {

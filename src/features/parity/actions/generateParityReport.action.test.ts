@@ -1,6 +1,8 @@
 /// <reference types="vitest/globals" />
 import { faker } from '@faker-js/faker'
 
+import { asTenantId } from '@/types/tenant'
+
 // ── Mock server-only (throws in jsdom) ──
 vi.mock('server-only', () => ({}))
 
@@ -127,7 +129,7 @@ const VALID_PROJECT_ID = 'b1c2d3e4-f5a6-4b2c-9d3e-4f5a6b7c8d9e'
 
 const mockUser = {
   id: faker.string.uuid(),
-  tenantId: faker.string.uuid(),
+  tenantId: asTenantId(faker.string.uuid()),
   role: 'qa_reviewer',
   email: 'reviewer@test.com',
 }
