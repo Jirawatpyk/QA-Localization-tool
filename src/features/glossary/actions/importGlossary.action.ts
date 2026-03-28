@@ -103,10 +103,17 @@ export async function importGlossary(formData: FormData): Promise<ActionResult<I
     targetLang,
   })
 
+  // Sanitize formulas BEFORE dedup so `=term` and `term` correctly deduplicate
+  const sanitizedTerms = parseResult.terms.map((term) => ({
+    ...term,
+    sourceTerm: sanitizeFormula(term.sourceTerm),
+    targetTerm: sanitizeFormula(term.targetTerm),
+  }))
+
   // Intra-file dedup: group by normalized source term (case-insensitive)
   const seen = new Map<string, boolean>()
   let duplicates = 0
-  const uniqueTerms = parseResult.terms.filter((term) => {
+  const uniqueTerms = sanitizedTerms.filter((term) => {
     const key = term.sourceTerm.normalize('NFKC').toLowerCase()
     if (seen.has(key)) {
       duplicates++
@@ -133,13 +140,13 @@ export async function importGlossary(formData: FormData): Promise<ActionResult<I
       throw new Error('Failed to create glossary')
     }
 
-    // Batch insert terms with formula sanitization
+    // Batch insert terms (already sanitized before dedup)
     for (let i = 0; i < uniqueTerms.length; i += BATCH_SIZE) {
       const batch = uniqueTerms.slice(i, i + BATCH_SIZE).map((term) => ({
         glossaryId: created.id,
         tenantId: currentUser.tenantId,
-        sourceTerm: sanitizeFormula(term.sourceTerm),
-        targetTerm: sanitizeFormula(term.targetTerm),
+        sourceTerm: term.sourceTerm,
+        targetTerm: term.targetTerm,
       }))
       await tx.insert(glossaryTerms).values(batch)
     }

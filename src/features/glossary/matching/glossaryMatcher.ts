@@ -239,11 +239,16 @@ export async function checkGlossaryCompliance(
     const first = occurrences[0]!
     // CR1 FIX: extract actual matched text from NFKC-normalized + ZWC-stripped original
     // (for case-insensitive European matches, foundText preserves original case)
+    // CR2 FIX: first.position is index into case-folded searchText (e.g. ß→ss),
+    // which may diverge from normalizedTarget. Re-search in normalizedTarget to find actual position.
     const normalizedTargetTerm = stripZeroWidth(term.targetTerm.normalize('NFKC'))
-    const foundText = normalizedTarget.slice(
-      first.position,
-      first.position + normalizedTargetTerm.length,
-    )
+    const searchInTarget = term.caseSensitive
+      ? normalizedTargetTerm
+      : normalizedTargetTerm.toLowerCase()
+    const targetToSearch = term.caseSensitive ? normalizedTarget : normalizedTarget.toLowerCase()
+    const actualPos = targetToSearch.indexOf(searchInTarget, Math.max(0, first.position - 10))
+    const slicePos = actualPos !== -1 ? actualPos : first.position
+    const foundText = normalizedTarget.slice(slicePos, slicePos + normalizedTargetTerm.length)
     const match: GlossaryTermMatch = {
       termId: term.id,
       sourceTerm: term.sourceTerm,
