@@ -434,6 +434,16 @@ describe('segments — native reviewer scoped access', () => {
     expect(error).toBeTruthy()
   })
 
+  it('should deny native_reviewer UPDATE on segments', async () => {
+    const clientNative = tenantClient(nativeUser.jwt)
+    const { data } = await clientNative
+      .from('segments')
+      .update({ target_text: 'modified' })
+      .eq('id', tenantA.segmentAssignedId)
+      .select('id')
+    expect(data?.length ?? 0).toBe(0)
+  })
+
   it('should deny native_reviewer DELETE on segments', async () => {
     const clientNative = tenantClient(nativeUser.jwt)
     const { data } = await clientNative
@@ -498,24 +508,33 @@ describe('review_actions — native reviewer scoped access', () => {
 
   it('should deny native_reviewer SELECT review_actions on non-assigned finding', async () => {
     // Seed a review_action on the unassigned finding via admin, then verify native can't see it
-    await admin.from('review_actions').insert({
-      finding_id: tenantA.findingUnassignedId,
-      file_id: tenantA.fileId,
-      project_id: tenantA.projectId,
-      tenant_id: tenantA.id,
-      user_id: tenantA.userId,
-      action_type: 'status_change',
-      previous_state: 'pending',
-      new_state: 'noted',
-    })
-
-    const clientNative = tenantClient(nativeUser.jwt)
-    const { data } = await clientNative
+    const { data: seeded } = await admin
       .from('review_actions')
+      .insert({
+        finding_id: tenantA.findingUnassignedId,
+        file_id: tenantA.fileId,
+        project_id: tenantA.projectId,
+        tenant_id: tenantA.id,
+        user_id: tenantA.userId,
+        action_type: 'status_change',
+        previous_state: 'pending',
+        new_state: 'noted',
+      })
       .select('id')
-      .eq('finding_id', tenantA.findingUnassignedId)
+      .single()
 
-    expect(data).toHaveLength(0)
+    try {
+      const clientNative = tenantClient(nativeUser.jwt)
+      const { data } = await clientNative
+        .from('review_actions')
+        .select('id')
+        .eq('finding_id', tenantA.findingUnassignedId)
+
+      expect(data).toHaveLength(0)
+    } finally {
+      // Cleanup seeded data within test body
+      await admin.from('review_actions').delete().eq('id', seeded!.id)
+    }
   })
 })
 

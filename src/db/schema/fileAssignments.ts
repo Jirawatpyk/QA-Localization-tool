@@ -1,5 +1,7 @@
 import { pgTable, uuid, varchar, text, timestamp } from 'drizzle-orm/pg-core'
 
+import type { FileAssignmentStatus } from '@/types/assignment'
+
 import { files } from './files'
 import { projects } from './projects'
 import { tenants } from './tenants'
@@ -25,7 +27,7 @@ export const fileAssignments = pgTable('file_assignments', {
   status: varchar('status', { length: 20 })
     .notNull()
     .default('pending')
-    .$type<'pending' | 'accepted' | 'completed'>(),
+    .$type<FileAssignmentStatus>(),
   priority: varchar('priority', { length: 20 }),
   notes: text('notes'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

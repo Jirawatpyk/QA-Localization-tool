@@ -392,4 +392,17 @@ BEGIN
   END IF;
 END $$;
 
+-- =============================================================================
+-- Section 9: CR R2 fix — empty body guard on finding_comments (defense-in-depth)
+-- App-level Zod validation in Story 5.2c is primary; this is DB-level backup
+-- =============================================================================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_finding_comments_body_not_empty'
+  ) THEN
+    ALTER TABLE finding_comments ADD CONSTRAINT chk_finding_comments_body_not_empty CHECK (char_length(body) > 0);
+  END IF;
+END $$;
+
 COMMIT;

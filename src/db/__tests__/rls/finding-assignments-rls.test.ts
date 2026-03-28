@@ -327,6 +327,7 @@ describe('finding_assignments RLS', () => {
     const { data } = await clientQA.from('finding_assignments').select('id')
 
     expect(data).toHaveLength(1)
+    expect(data?.[0]?.id).toBe(assignmentId)
   })
 
   // --- Native Reviewer: scoped to own assignments ---

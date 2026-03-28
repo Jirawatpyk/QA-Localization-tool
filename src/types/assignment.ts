@@ -6,3 +6,7 @@
 // If adding a new status, review whether native reviewers should be blocked from it.
 export const ASSIGNMENT_STATUSES = ['pending', 'in_review', 'confirmed', 'overridden'] as const
 export type AssignmentStatus = (typeof ASSIGNMENT_STATUSES)[number]
+
+// File-level assignment statuses (separate domain from finding assignments)
+export const FILE_ASSIGNMENT_STATUSES = ['pending', 'accepted', 'completed'] as const
+export type FileAssignmentStatus = (typeof FILE_ASSIGNMENT_STATUSES)[number]
