@@ -102,17 +102,7 @@ export async function updateLanguagePairConfig(
       userId: currentUser.id,
       entityType: 'language_pair_config',
       entityId: resultRow.id,
-      action: existing ? 'language_pair_config.updated' : 'language_pair_config.created',
-      ...(existing
-        ? {
-            oldValue: {
-              autoPassThreshold: existing.autoPassThreshold,
-              l2ConfidenceMin: existing.l2ConfidenceMin,
-              l3ConfidenceMin: existing.l3ConfidenceMin,
-              wordSegmenter: existing.wordSegmenter,
-            },
-          }
-        : {}),
+      action: isUpdate ? 'language_pair_config.updated' : 'language_pair_config.created',
       newValue: {
         sourceLang: resultRow.sourceLang,
         targetLang: resultRow.targetLang,

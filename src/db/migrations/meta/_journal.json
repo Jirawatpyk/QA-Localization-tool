@@ -127,6 +127,13 @@
       "when": 1774680118189,
       "tag": "0017_lying_saracen",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1774687998441,
+      "tag": "0018_known_blindfold",
+      "breakpoints": true
     }
   ]
 }

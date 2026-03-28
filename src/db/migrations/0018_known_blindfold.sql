@@ -1,0 +1,1 @@
+ALTER TABLE "language_pair_configs" ADD CONSTRAINT "uq_language_pair_configs_tenant_langs" UNIQUE("tenant_id","source_lang","target_lang");

@@ -1237,7 +1237,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Medium
 - **Files:** `src/db/schema/languagePairConfigs.ts`, `src/features/project/actions/updateLanguagePairConfig.action.ts`
 - **Description:** No UNIQUE constraint on `(tenant_id, source_lang, target_lang)`. Concurrent requests could create duplicate rows despite transaction-based SELECT+INSERT mitigation. Fix: add unique constraint via migration + `onConflictDoUpdate` in action.
-- **Status:** DEFERRED → Story 5.2b (DB constraint audit)
+- **Status:** ✅ RESOLVED (2026-03-28) — UNIQUE constraint added via migration `0018_known_blindfold.sql`, action refactored to `onConflictDoUpdate`
 
 ### TD-DB-006: Orphan migration `0014_typical_gauntlet.sql` — scores UNIQUE constraint never applied
 - **Date:** 2026-03-28
@@ -1246,4 +1246,4 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** High
 - **Files:** `src/db/migrations/0014_typical_gauntlet.sql`, `src/db/schema/scores.ts:33`, `src/db/migrations/meta/_journal.json`
 - **Description:** Orphan Drizzle migration file `0014_typical_gauntlet.sql` contains `ALTER TABLE scores ADD CONSTRAINT uq_scores_file_tenant UNIQUE(file_id, tenant_id)` but is NOT registered in `_journal.json` (idx 14 = `0014_solid_maestro` instead). The Drizzle schema (`scores.ts:33`) declares the constraint, and snapshots 0014/0015 include it — so Drizzle believes it exists. But it was never applied to the DB. Production may allow duplicate scores per file. **Fix:** Create a new Supabase migration that adds the constraint: `ALTER TABLE scores ADD CONSTRAINT IF NOT EXISTS uq_scores_file_tenant UNIQUE(file_id, tenant_id);` and delete the orphan file. Quick fix < 30 min.
-- **Status:** OPEN → **รวมใน Story 5.2b Task 5 + Task 7 Section 8** (Guardrail #23: quick fix < 2 ชม.)
+- **Status:** ✅ RESOLVED (2026-03-28) — Orphan `0014_typical_gauntlet.sql` deleted, `uq_scores_file_tenant` constraint applied via Supabase migration `00026` Section 8
