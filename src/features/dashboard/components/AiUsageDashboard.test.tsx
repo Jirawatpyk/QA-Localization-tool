@@ -242,6 +242,25 @@ describe('AiUsageDashboard', () => {
     })
   })
 
+  it('should show fallback toast when export result has no error message', async () => {
+    const { toast } = await import('sonner')
+    const { exportAiUsage } = await import('../actions/exportAiUsage.action')
+    vi.mocked(exportAiUsage).mockResolvedValue({
+      success: false,
+      code: 'INTERNAL_ERROR',
+    } as ReturnType<typeof exportAiUsage> extends Promise<infer R> ? R : never)
+
+    const user = userEvent.setup()
+    const { AiUsageDashboard } = await import('./AiUsageDashboard')
+    render(<AiUsageDashboard {...DEFAULT_PROPS} selectedDays={30} />)
+
+    await user.click(screen.getByTestId('export-ai-usage-btn'))
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Export failed')
+    })
+  })
+
   it('should show "Exporting…" text and disable button while exporting', async () => {
     const { exportAiUsage } = await import('../actions/exportAiUsage.action')
     let resolveExport!: (v: unknown) => void

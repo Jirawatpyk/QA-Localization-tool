@@ -147,6 +147,17 @@ beforeEach(() => {
   mockReturningFn.mockReset()
   mockUploadStorage.mockReset()
 
+  // Restore default transaction mock (tests that override this must not leak)
+  mockTransactionFn.mockImplementation(
+    async (fn: (tx: Record<string, unknown>) => Promise<unknown>) => {
+      return fn({
+        select: (...args: unknown[]) => mockSelectFn(...args),
+        insert: (...args: unknown[]) => mockInsertFn(...args),
+        update: (...args: unknown[]) => mockUpdateFn(...args),
+      })
+    },
+  )
+
   mockRequireRole.mockResolvedValue(MOCK_USER)
   mockReturningFn.mockResolvedValue([MOCK_FILE_RECORD])
   mockValuesFn.mockReturnValue({ returning: mockReturningFn })
@@ -435,6 +446,96 @@ describe('POST /api/upload', () => {
     expect(body.error).toContain('Invalid batch ID')
     // DB must NOT be queried for an invalid UUID
     expect(mockSelectFn).not.toHaveBeenCalled()
+  })
+
+  it('should re-run (update) existing file with same hash and return success', async () => {
+    // Simulate: project ownership check passes, then file existence check finds existing completed file
+    mockLimitFn.mockReset()
+    mockLimitFn.mockResolvedValueOnce([{ id: VALID_UUID }]) // project ownership OK
+
+    // Transaction mock: simulate existing file found (completed status) → update path
+    const updatedRecord = { ...MOCK_FILE_RECORD, status: 'uploaded' }
+    mockTransactionFn.mockImplementation(async (fn) => {
+      const txMock = {
+        select: () => ({
+          from: () => ({
+            where: () => ({
+              limit: () => Promise.resolve([{ ...MOCK_FILE_RECORD, status: 'completed' }]),
+            }),
+          }),
+        }),
+        update: () => ({
+          set: () => ({
+            where: () => ({
+              returning: () => Promise.resolve([updatedRecord]),
+            }),
+          }),
+        }),
+      }
+      return fn(txMock as never)
+    })
+
+    const { POST } = await import('./route')
+    const formData = new FormData()
+    formData.append('projectId', VALID_UUID)
+    formData.append('files', makeFile('report.sdlxliff'))
+
+    const response = await POST(makeRequest(formData))
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.success).toBe(true)
+    expect(mockWriteAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'file.rerun' }),
+    )
+  })
+
+  it('should skip file currently being processed and add warning', async () => {
+    mockLimitFn.mockReset()
+    mockLimitFn.mockResolvedValueOnce([{ id: VALID_UUID }]) // project ownership OK
+
+    // Transaction mock: simulate existing file in active processing status → skipped
+    mockTransactionFn.mockImplementation(async (fn) => {
+      const txMock = {
+        select: () => ({
+          from: () => ({
+            where: () => ({
+              limit: () => Promise.resolve([{ ...MOCK_FILE_RECORD, status: 'l2_processing' }]),
+            }),
+          }),
+        }),
+      }
+      return fn(txMock as never)
+    })
+
+    const { POST } = await import('./route')
+    const formData = new FormData()
+    formData.append('projectId', VALID_UUID)
+    formData.append('files', makeFile('report.sdlxliff'))
+
+    const response = await POST(makeRequest(formData))
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.data.files).toHaveLength(0)
+    expect(body.data.warnings).toHaveLength(1)
+    expect(body.data.warnings[0]).toContain('currently being processed')
+  })
+
+  it('should log audit error but not fail the upload when writeAuditLog throws', async () => {
+    mockWriteAuditLog.mockRejectedValue(new Error('Audit DB unreachable'))
+    const { POST } = await import('./route')
+    const formData = new FormData()
+    formData.append('projectId', VALID_UUID)
+    formData.append('files', makeFile('report.sdlxliff'))
+
+    const response = await POST(makeRequest(formData))
+    const body = await response.json()
+
+    // Upload should still succeed despite audit failure (non-fatal)
+    expect(response.status).toBe(200)
+    expect(body.success).toBe(true)
+    expect(body.data.files).toHaveLength(1)
   })
 
   // 2.1-UNIT-003 [P1]: Partial batch failure — file 1 storage OK, file 2 storage fails

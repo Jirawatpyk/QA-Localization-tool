@@ -19,6 +19,7 @@ vi.mock('@/lib/supabase/server', () => ({
 // Mock DB
 const mockSelectLimit = vi.fn()
 const mockTransactionCb = vi.fn()
+const mockInsertValues = vi.fn().mockResolvedValue(undefined)
 vi.mock('@/db/client', () => ({
   db: {
     select: () => ({
@@ -27,6 +28,9 @@ vi.mock('@/db/client', () => ({
           limit: () => mockSelectLimit(),
         }),
       }),
+    }),
+    insert: () => ({
+      values: (...args: unknown[]) => mockInsertValues(...args),
     }),
     transaction: (cb: (tx: unknown) => Promise<unknown>) => mockTransactionCb(cb),
   },
@@ -111,6 +115,50 @@ describe('setupNewUser', () => {
     expect(mockTransactionCb).toHaveBeenCalled()
   })
 
+  it('should repair missing user_roles row when user exists but has no role', async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: 'user-orphan', email: 'orphan@test.com', user_metadata: {} } },
+      error: null,
+    })
+    // First call: existingUser found
+    mockSelectLimit.mockResolvedValueOnce([{ id: 'user-orphan' }])
+    // Second call: role lookup returns empty (missing role)
+    mockSelectLimit.mockResolvedValueOnce([])
+    // Third call: user row lookup to get tenantId
+    mockSelectLimit.mockResolvedValueOnce([{ tenantId: 'tenant-orphan' }])
+
+    const { setupNewUser } = await import('./setupNewUser.action')
+    const result = await setupNewUser()
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.tenantId).toBe('tenant-orphan')
+      expect(result.data.role).toBe('admin')
+    }
+  })
+
+  it('should return INTERNAL_ERROR when user exists but user record is incomplete', async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: 'user-broken', email: 'broken@test.com', user_metadata: {} } },
+      error: null,
+    })
+    // First call: existingUser found
+    mockSelectLimit.mockResolvedValueOnce([{ id: 'user-broken' }])
+    // Second call: role lookup returns empty
+    mockSelectLimit.mockResolvedValueOnce([])
+    // Third call: user row lookup also returns empty (incomplete record)
+    mockSelectLimit.mockResolvedValueOnce([])
+
+    const { setupNewUser } = await import('./setupNewUser.action')
+    const result = await setupNewUser()
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('INTERNAL_ERROR')
+      expect(result.error).toBe('User record is incomplete')
+    }
+  })
+
   it('should handle unique constraint race condition gracefully', async () => {
     mockGetUser.mockResolvedValue({
       data: { user: { id: 'user-race', email: 'race@test.com', user_metadata: {} } },
@@ -131,6 +179,30 @@ describe('setupNewUser', () => {
     expect(result.success).toBe(true)
     if (result.success) {
       expect(result.data.tenantId).toBe('tenant-race')
+    }
+  })
+
+  it('should return INTERNAL_ERROR when unique constraint race fails to find role', async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: 'user-race2', email: 'race2@test.com', user_metadata: {} } },
+      error: null,
+    })
+    // No existing user
+    mockSelectLimit.mockResolvedValueOnce([])
+
+    // Transaction throws unique constraint
+    mockTransactionCb.mockRejectedValue(new Error('unique constraint violation'))
+
+    // Race condition recovery: lookup still returns empty (very rare edge case)
+    mockSelectLimit.mockResolvedValueOnce([])
+
+    const { setupNewUser } = await import('./setupNewUser.action')
+    const result = await setupNewUser()
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('INTERNAL_ERROR')
+      expect(result.error).toBe('Failed to setup user account')
     }
   })
 

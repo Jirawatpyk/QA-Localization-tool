@@ -418,6 +418,43 @@ describe('ProcessingModeDialog', () => {
     })
   })
 
+  it('should show generic error toast when startProcessing throws an exception', async () => {
+    mockStartProcessing.mockRejectedValue(new Error('Network failure'))
+    const user = userEvent.setup()
+    render(<ProcessingModeDialog {...defaultProps} />)
+
+    await user.click(screen.getByRole('button', { name: 'Start Processing' }))
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Failed to start processing')
+    })
+  })
+
+  it('should re-enable buttons after startProcessing throws', async () => {
+    mockStartProcessing.mockRejectedValue(new Error('Network failure'))
+    const user = userEvent.setup()
+    render(<ProcessingModeDialog {...defaultProps} />)
+
+    await user.click(screen.getByRole('button', { name: 'Start Processing' }))
+
+    await waitFor(() => {
+      const startBtn = screen.getByRole('button', { name: 'Start Processing' })
+      expect(startBtn).not.toBeDisabled()
+    })
+  })
+
+  it('should silently handle getFilesWordCount rejection without crashing', async () => {
+    mockGetFilesWordCount.mockRejectedValue(new Error('Server error'))
+
+    render(<ProcessingModeDialog {...defaultProps} />)
+
+    // Should fall back gracefully — cost shows dash
+    await waitFor(() => {
+      const costSection = screen.getByTestId('cost-estimate')
+      expect(costSection.textContent).toContain('—')
+    })
+  })
+
   it('[P3] should display $0.00 for word count of 1 (minimum non-zero precision) (G18)', async () => {
     // (1 / 100000) × 0.40 = 0.000004 → toFixed(2) → "0.00"
     mockGetFilesWordCount.mockResolvedValue({ success: true, data: { totalWords: 1 } })

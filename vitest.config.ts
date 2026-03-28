@@ -18,6 +18,9 @@ export default defineConfig({
         'src/db/schema/**', // Declarative schema + relations — not business logic
         'src/test/**', // Test utilities, factories, mocks, fixtures
         'src/components/ui/**', // shadcn/ui generated components
+        'src/db/client.ts', // DB connection setup — needs real DB, not unit-testable
+        'src/features/pipeline/__tests__/pipeline-integration.helpers.ts', // Integration test helper — only used by env-gated tests
+        'src/lib/env.ts', // Zod env validation at startup — runs once at boot
       ],
       thresholds: {
         lines: 90,

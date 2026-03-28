@@ -370,6 +370,61 @@ describe('getBackTranslation', () => {
     expect(mockGenerateText).not.toHaveBeenCalled()
   })
 
+  // ── Fallback cache hit (BT_FALLBACK_MODEL_VERSION) ───────────────
+  it('should return fallback cached result when primary cache misses but fallback cache hits', async () => {
+    // Primary cache miss, fallback cache hit
+    mockGetCachedBT
+      .mockResolvedValueOnce(null) // primary cache miss
+      .mockResolvedValueOnce({ ...MOCK_BT_RESULT, confidence: 0.92 }) // fallback cache hit
+
+    const { getBackTranslation } = await import('./getBackTranslation.action')
+    const result = await getBackTranslation({
+      segmentId: '11111111-1111-4111-a111-111111111111',
+      projectId: '22222222-2222-4222-a222-222222222222',
+    })
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.cached).toBe(true)
+      expect(result.data.confidence).toBe(0.92)
+    }
+    // No AI call should be made
+    expect(mockGenerateText).not.toHaveBeenCalled()
+    // getCachedBT called twice: primary model + fallback model
+    expect(mockGetCachedBT).toHaveBeenCalledTimes(2)
+  })
+
+  // ── Fallback AI returns null output → warn + use primary ────────
+  it('should warn and use primary result when fallback AI returns null output', async () => {
+    const { logger } = await import('@/lib/logger')
+
+    // Primary has low confidence, fallback returns null output
+    mockGenerateText
+      .mockResolvedValueOnce({ output: { ...MOCK_BT_RESULT, confidence: 0.4 }, usage: MOCK_USAGE })
+      .mockResolvedValueOnce({ output: null, usage: MOCK_USAGE })
+    mockCheckProjectBudget.mockResolvedValue({ hasQuota: true, remainingBudgetUsd: 100 })
+
+    const { getBackTranslation } = await import('./getBackTranslation.action')
+    const result = await getBackTranslation({
+      segmentId: '11111111-1111-4111-a111-111111111111',
+      projectId: '22222222-2222-4222-a222-222222222222',
+    })
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      // Should use primary result since fallback output was null
+      expect(result.data.confidence).toBe(0.4)
+    }
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ segmentId: '11111111-1111-4111-a111-111111111111' }),
+      expect.stringContaining('no output'),
+    )
+    // Primary result should still be cached
+    expect(mockCacheBT).toHaveBeenCalledWith(
+      expect.objectContaining({ modelVersion: 'gpt-4o-mini-bt-v1' }),
+    )
+  })
+
   // ── H7: AI null output (AI_NO_OUTPUT) error path ─────────────────────
   it('should return AI_NO_OUTPUT when generateText returns null output', async () => {
     mockGenerateText.mockResolvedValue({ output: null, usage: MOCK_USAGE })
