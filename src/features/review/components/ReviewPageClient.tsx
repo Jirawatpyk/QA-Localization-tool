@@ -527,7 +527,8 @@ export function ReviewPageClient({
         sessionId: '', // CQ-M3: legacy field — review sessions not yet wired (Story 4.4a)
         status: f.status,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        // CF-P0-1: Use real DB updatedAt for Realtime merge guard (was new Date() → all updates dropped)
+        updatedAt: f.updatedAt ?? new Date().toISOString(),
         fileId,
         reviewSessionId: null,
         relatedFileIds: null,

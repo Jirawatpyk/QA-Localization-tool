@@ -144,13 +144,15 @@ export function useFocusManagement(): UseFocusManagementReturn {
       for (const id of searchOrder) {
         const status = statusMap.get(id)
         if (status === 'pending') {
-          // Use requestAnimationFrame (Guardrail #32)
+          // CF-P1-1: Double rAF to defer focus after React commit + accordion expansion
           const targetId = id
           requestAnimationFrame(() => {
-            const element = document.querySelector(
-              `[data-finding-id="${CSS.escape(targetId)}"]`,
-            ) as HTMLElement | null
-            element?.focus()
+            requestAnimationFrame(() => {
+              const element = document.querySelector(
+                `[data-finding-id="${CSS.escape(targetId)}"]`,
+              ) as HTMLElement | null
+              element?.focus()
+            })
           })
           return targetId
         }

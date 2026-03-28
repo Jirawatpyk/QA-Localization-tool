@@ -50,6 +50,7 @@ export type FileReviewData = {
     targetTextExcerpt: string | null
     segmentCount: number
     scope: 'per-file' | 'cross-file'
+    updatedAt: string
     /** Story 5.2a: Whether this finding has any review_action with non_native=true */
     hasNonNativeAction: boolean
   }>
@@ -161,6 +162,7 @@ export async function getFileReviewData(
         targetTextExcerpt: findings.targetTextExcerpt,
         segmentCount: findings.segmentCount,
         scope: findings.scope,
+        updatedAt: findings.updatedAt,
       })
       .from(findings)
       .where(
@@ -249,7 +251,7 @@ export async function getFileReviewData(
     // Budget is checked per-call in getBackTranslation action (Guardrail #22).
 
     // Sort findings: severity priority (critical→major→minor), then aiConfidence DESC NULLS LAST
-    const sortedFindings = sortFindings(findingRows as FileReviewData['findings'])
+    const sortedFindings = sortFindings(findingRows as unknown as FileReviewData['findings'])
 
     // Q5: Get segments for AddFindingDialog (Story 4.3 AC4) — non-fatal
     let segmentRows: Array<{ id: string; segmentNumber: number; sourceText: string }> = []
@@ -371,6 +373,11 @@ export async function getFileReviewData(
         file: file as FileReviewData['file'],
         findings: sortedFindings.map((f) => ({
           ...f,
+          // CF-P0-1: Expose real updatedAt for Realtime merge guard (was missing → fallback to new Date())
+          updatedAt:
+            (f as unknown as { updatedAt: Date }).updatedAt instanceof Date
+              ? (f as unknown as { updatedAt: Date }).updatedAt.toISOString()
+              : String(f.updatedAt),
           hasNonNativeAction: nonNativeSet.has(f.id),
         })),
         score: score as FileReviewData['score'],

@@ -123,7 +123,8 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
           status: snap.status,
           description: snap.description,
           createdAt: snap.createdAt,
-          updatedAt: new Date().toISOString(),
+          // CF-P0-2: Use server timestamp for merge guard (was new Date() → stale Realtime updates)
+          updatedAt: result.data.serverUpdatedAt,
           fileId: snap.fileId,
           detectedByLayer: snap.detectedByLayer,
           aiModel: snap.aiModel,
@@ -185,12 +186,14 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
           return
         }
 
+        // CF-P1-2: Re-read store after await (captured `store` ref may be stale)
+        const freshStore = useReviewStore.getState()
         // Optimistic update store for reverted findings
         for (const fId of result.data.reverted) {
-          const finding = store.findingsMap.get(fId)
+          const finding = freshStore.findingsMap.get(fId)
           const prevState = entry.previousStates.get(fId)
           if (finding && prevState) {
-            store.setFinding(fId, { ...finding, status: prevState })
+            freshStore.setFinding(fId, { ...finding, status: prevState })
           }
         }
 
@@ -199,7 +202,7 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
           // CR-H3: Don't push empty redo entry when ALL findings conflicted
           if (result.data.reverted.length > 0) {
             const revertedSet = new Set(result.data.reverted)
-            store.pushRedo({
+            freshStore.pushRedo({
               ...entry,
               previousStates: new Map(
                 [...entry.previousStates].filter(([k]) => revertedSet.has(k)),
@@ -214,7 +217,7 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
               : `All ${total} findings were modified — undo cancelled`,
           )
         } else {
-          store.pushRedo(entry)
+          freshStore.pushRedo(entry)
           toast.success(`Undone: ${entry.description}`)
         }
         announce(`Undone: ${entry.description}`)

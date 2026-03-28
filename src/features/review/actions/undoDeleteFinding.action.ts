@@ -22,6 +22,7 @@ import type { ActionResult } from '@/types/actionResult'
 type UndoDeleteResult = {
   findingId: string
   restored: true
+  serverUpdatedAt: string
 }
 
 export async function undoDeleteFinding(
@@ -95,6 +96,7 @@ export async function undoDeleteFinding(
   const isNonNative = determineNonNative(user.nativeLanguages, undoTargetLang)
 
   // Transaction: INSERT finding FIRST → then INSERT review_actions (FK order)
+  const serverUpdatedAt = new Date()
   await db.transaction(async (tx) => {
     // Re-insert finding with explicit id (overrides defaultRandom())
     await tx.insert(findings).values({
@@ -119,7 +121,7 @@ export async function undoDeleteFinding(
       relatedFileIds: snapshot.relatedFileIds,
       segmentCount: snapshot.segmentCount,
       createdAt: new Date(snapshot.createdAt),
-      updatedAt: new Date(),
+      updatedAt: serverUpdatedAt,
     })
 
     // Insert review_actions
@@ -179,6 +181,10 @@ export async function undoDeleteFinding(
 
   return {
     success: true,
-    data: { findingId: snapshot.id, restored: true },
+    data: {
+      findingId: snapshot.id,
+      restored: true,
+      serverUpdatedAt: serverUpdatedAt.toISOString(),
+    },
   }
 }

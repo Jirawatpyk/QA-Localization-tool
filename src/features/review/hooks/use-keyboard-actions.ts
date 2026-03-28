@@ -293,6 +293,9 @@ export function useKeyboardActions(): UseKeyboardActionsReturn {
             bindingsRegistry.set(parsed.raw, filtered)
           }
         }
+        // CF-P1-3: Remove self from cleanupFns to prevent unbounded growth
+        const idx = cleanupFns.current.indexOf(cleanup)
+        if (idx >= 0) cleanupFns.current.splice(idx, 1)
       }
 
       cleanupFns.current.push(cleanup)
