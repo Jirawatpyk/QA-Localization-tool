@@ -308,13 +308,13 @@ test.describe('Non-Native Auto-Tag (Story 5.2a)', () => {
     const detailAside = page.getByTestId('finding-detail-aside')
     await expect(detailAside).toBeVisible({ timeout: 10_000 })
 
-    // The override badge/button "Show decision history (1 override)" should be visible.
-    // Q7 seeded overrideCount=1 at page load → overrideCount > 0 in store → button rendered.
-    const historyButton = detailAside.getByRole('button', { name: /show decision history/i })
-    await expect(historyButton).toBeVisible({ timeout: 10_000 })
+    // The override badge is in the compact row, not the detail aside.
+    // Q7 seeded overrideCount=1 at page load → overrideCount > 0 → OverrideBadge rendered.
+    const overrideBadgeBtn = page.getByTestId('decision-override-badge').first()
+    await expect(overrideBadgeBtn).toBeVisible({ timeout: 10_000 })
 
     // Click to open OverrideHistoryPanel
-    await historyButton.click()
+    await overrideBadgeBtn.click()
 
     // Wait for Decision History panel to appear and entries to load
     const historyHeading = detailAside.getByRole('heading', { name: /Decision History/i })
