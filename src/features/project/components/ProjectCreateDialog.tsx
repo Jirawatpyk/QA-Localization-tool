@@ -53,6 +53,8 @@ export function ProjectCreateDialog({ open, onOpenChange }: ProjectCreateDialogP
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
 
+    // processingMode intentionally omitted — new projects default to 'economy' (schema default)
+    // User changes processing mode in Project Settings after creation
     const input = {
       name: formData.get('name') as string,
       description: (formData.get('description') as string) || undefined,
@@ -97,6 +99,12 @@ export function ProjectCreateDialog({ open, onOpenChange }: ProjectCreateDialogP
       onOpenChange={(next) => {
         if (next) {
           setFormResetKey((k) => k + 1)
+          setSourceLang('')
+          setTargetLangs([])
+          setErrors({})
+        }
+        // I3: Reset form state on cancel/close (Guardrail #11)
+        if (!next) {
           setSourceLang('')
           setTargetLangs([])
           setErrors({})

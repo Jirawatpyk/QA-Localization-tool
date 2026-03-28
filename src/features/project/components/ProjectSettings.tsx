@@ -75,6 +75,16 @@ export function ProjectSettings({
   const [processingMode, setProcessingMode] = useState(project.processingMode)
   const [autoPassThreshold, setAutoPassThreshold] = useState(project.autoPassThreshold)
 
+  // I2: Sync local state when project prop changes (React 19 render-time adjustment)
+  const [prevProject, setPrevProject] = useState(project)
+  if (prevProject !== project) {
+    setPrevProject(project)
+    setName(project.name)
+    setDescription(project.description ?? '')
+    setProcessingMode(project.processingMode)
+    setAutoPassThreshold(project.autoPassThreshold)
+  }
+
   function handleGeneralSave(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
 

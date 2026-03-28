@@ -1230,6 +1230,15 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** `fileId` prop is a UUID but pre-filled into fileReference text input. Should resolve to human-readable filename via DB query or parent component prop.
 - **Status:** DEFERRED → Epic 6 (UX polish — parity dialog improvements)
 
+### TD-DB-007: Missing UNIQUE(tenant_id, source_lang, target_lang) on language_pair_configs
+- **Date:** 2026-03-28
+- **Story:** Cross-file bug fix (I4)
+- **Phase:** CR
+- **Severity:** Medium
+- **Files:** `src/db/schema/languagePairConfigs.ts`, `src/features/project/actions/updateLanguagePairConfig.action.ts`
+- **Description:** No UNIQUE constraint on `(tenant_id, source_lang, target_lang)`. Concurrent requests could create duplicate rows despite transaction-based SELECT+INSERT mitigation. Fix: add unique constraint via migration + `onConflictDoUpdate` in action.
+- **Status:** DEFERRED → Story 5.2b (DB constraint audit)
+
 ### TD-DB-006: Orphan migration `0014_typical_gauntlet.sql` — scores UNIQUE constraint never applied
 - **Date:** 2026-03-28
 - **Story:** Story 5.2b (CS — discovered during create-story codebase verification)

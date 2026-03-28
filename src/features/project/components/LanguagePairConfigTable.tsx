@@ -76,29 +76,34 @@ export function LanguagePairConfigTable({
   })
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Language Pair</TableHead>
-          <TableHead>Auto-Pass</TableHead>
-          <TableHead>L2 Min Confidence</TableHead>
-          <TableHead>L3 Min Confidence</TableHead>
-          <TableHead>Word Segmenter</TableHead>
-          <TableHead className="w-20" />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map(({ targetLang, existing }) => (
-          <ConfigRow
-            key={targetLang}
-            projectId={projectId}
-            sourceLang={projectSourceLang}
-            targetLang={targetLang}
-            existing={existing}
-          />
-        ))}
-      </TableBody>
-    </Table>
+    <div>
+      <p className="mb-2 text-xs text-muted-foreground">
+        Changes apply to all projects with this language pair
+      </p>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Language Pair</TableHead>
+            <TableHead>Auto-Pass</TableHead>
+            <TableHead>L2 Min Confidence</TableHead>
+            <TableHead>L3 Min Confidence</TableHead>
+            <TableHead>Word Segmenter</TableHead>
+            <TableHead className="w-20" />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map(({ targetLang, existing }) => (
+            <ConfigRow
+              key={targetLang}
+              projectId={projectId}
+              sourceLang={projectSourceLang}
+              targetLang={targetLang}
+              existing={existing}
+            />
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   )
 }
 
@@ -118,6 +123,18 @@ function ConfigRow({ projectId, sourceLang, targetLang, existing }: ConfigRowPro
     l3ConfidenceMin: existing?.l3ConfidenceMin ?? defaults.l3ConfidenceMin,
     wordSegmenter: existing?.wordSegmenter ?? defaults.wordSegmenter,
   })
+
+  // I1: Sync local state when `existing` prop changes (React 19 render-time adjustment)
+  const [prevExisting, setPrevExisting] = useState(existing)
+  if (existing && prevExisting !== existing) {
+    setPrevExisting(existing)
+    setState({
+      autoPassThreshold: existing.autoPassThreshold,
+      l2ConfidenceMin: existing.l2ConfidenceMin,
+      l3ConfidenceMin: existing.l3ConfidenceMin,
+      wordSegmenter: existing.wordSegmenter,
+    })
+  }
 
   const isCjkThai = CJK_THAI_CODES.includes(targetLang)
 

@@ -45,72 +45,54 @@ export async function updateLanguagePairConfig(
   // NOTE: language_pair_configs is tenant-wide (no projectId column by design).
   // Updating config for e.g. en→th applies to ALL projects under the same tenant.
   // projectId is used only for revalidatePath(), not for query filtering.
-  // Wrapped in transaction to prevent SELECT+INSERT race condition (Guardrail #6)
+  // UNIQUE(tenant_id, source_lang, target_lang) prevents race-condition duplicates (TD-DB-007 RESOLVED).
+  // onConflictDoUpdate = atomic upsert — no transaction needed.
   let resultRow: typeof languagePairConfigs.$inferSelect
-  let existing: typeof languagePairConfigs.$inferSelect | undefined
+  let isUpdate = false
 
   try {
-    const txResult = await db.transaction(async (tx) => {
-      const [found] = await tx
-        .select()
-        .from(languagePairConfigs)
-        .where(
-          and(
-            withTenant(languagePairConfigs.tenantId, currentUser.tenantId),
-            eq(languagePairConfigs.sourceLang, sourceLang),
-            eq(languagePairConfigs.targetLang, targetLang),
-          ),
-        )
-        .limit(1)
+    // Check existing row first (for audit log old values)
+    const [existing] = await db
+      .select()
+      .from(languagePairConfigs)
+      .where(
+        and(
+          withTenant(languagePairConfigs.tenantId, currentUser.tenantId),
+          eq(languagePairConfigs.sourceLang, sourceLang),
+          eq(languagePairConfigs.targetLang, targetLang),
+        ),
+      )
+      .limit(1)
 
-      if (found) {
-        const [updated] = await tx
-          .update(languagePairConfigs)
-          .set({ ...configFields, updatedAt: new Date() })
-          .where(
-            and(
-              eq(languagePairConfigs.id, found.id),
-              withTenant(languagePairConfigs.tenantId, currentUser.tenantId),
-            ),
-          )
-          .returning()
+    isUpdate = !!existing
 
-        if (!updated) {
-          throw new Error('UPDATE_FAILED')
-        }
-        return { row: updated, existed: found }
-      }
+    const [row] = await db
+      .insert(languagePairConfigs)
+      .values({
+        tenantId: currentUser.tenantId,
+        sourceLang,
+        targetLang,
+        autoPassThreshold: configFields.autoPassThreshold ?? DEFAULT_AUTO_PASS_THRESHOLD,
+        l2ConfidenceMin: configFields.l2ConfidenceMin ?? 70,
+        l3ConfidenceMin: configFields.l3ConfidenceMin ?? 70,
+        mutedCategories: configFields.mutedCategories,
+        wordSegmenter: configFields.wordSegmenter ?? 'intl',
+      })
+      .onConflictDoUpdate({
+        target: [
+          languagePairConfigs.tenantId,
+          languagePairConfigs.sourceLang,
+          languagePairConfigs.targetLang,
+        ],
+        set: { ...configFields, updatedAt: new Date() },
+      })
+      .returning()
 
-      const [inserted] = await tx
-        .insert(languagePairConfigs)
-        .values({
-          tenantId: currentUser.tenantId,
-          sourceLang,
-          targetLang,
-          autoPassThreshold: configFields.autoPassThreshold ?? DEFAULT_AUTO_PASS_THRESHOLD,
-          l2ConfidenceMin: configFields.l2ConfidenceMin ?? 70,
-          l3ConfidenceMin: configFields.l3ConfidenceMin ?? 70,
-          mutedCategories: configFields.mutedCategories,
-          wordSegmenter: configFields.wordSegmenter ?? 'intl',
-        })
-        .returning()
-
-      if (!inserted) {
-        throw new Error('CREATE_FAILED')
-      }
-      return { row: inserted, existed: undefined }
-    })
-
-    resultRow = txResult.row
-    existing = txResult.existed
+    if (!row) {
+      return { success: false, code: 'UPSERT_FAILED', error: 'Failed to upsert config' }
+    }
+    resultRow = row
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    if (message === 'UPDATE_FAILED') {
-      return { success: false, code: 'UPDATE_FAILED', error: 'Failed to update config' }
-    }
-    if (message === 'CREATE_FAILED') {
-      return { success: false, code: 'CREATE_FAILED', error: 'Failed to create config' }
-    }
     throw err
   }
 
