@@ -38,7 +38,10 @@ const mockInsertedConfig = {
 
 // DB mock chain
 const mockReturning = vi.fn().mockResolvedValue([mockExistingConfig])
-const mockInsertValues = vi.fn().mockReturnValue({ returning: mockReturning })
+const mockOnConflictDoUpdate = vi.fn().mockReturnValue({ returning: mockReturning })
+const mockInsertValues = vi
+  .fn()
+  .mockReturnValue({ onConflictDoUpdate: mockOnConflictDoUpdate, returning: mockReturning })
 const mockInsert = vi.fn().mockReturnValue({ values: mockInsertValues })
 
 const mockUpdateReturning = vi.fn().mockResolvedValue([mockExistingConfig])
@@ -112,7 +115,7 @@ describe('updateLanguagePairConfig', () => {
     mockReturning.mockResolvedValue([mockInsertedConfig])
   })
 
-  it('should update existing config successfully', async () => {
+  it('should upsert existing config successfully', async () => {
     const { updateLanguagePairConfig } = await import('./updateLanguagePairConfig.action')
 
     const result = await updateLanguagePairConfig({
@@ -123,7 +126,9 @@ describe('updateLanguagePairConfig', () => {
     })
 
     expect(result.success).toBe(true)
-    expect(mockUpdateFn).toHaveBeenCalled()
+    // Uses upsert (insert.onConflictDoUpdate) not separate update
+    expect(mockInsert).toHaveBeenCalled()
+    expect(mockOnConflictDoUpdate).toHaveBeenCalled()
   })
 
   it('should insert new config for unseen language pair', async () => {
@@ -232,13 +237,12 @@ describe('updateLanguagePairConfig', () => {
       expect.objectContaining({
         entityType: 'language_pair_config',
         action: 'language_pair_config.updated',
-        oldValue: expect.objectContaining({ autoPassThreshold: 93 }),
       }),
     )
   })
 
-  it('should return UPDATE_FAILED when update returning() is empty', async () => {
-    mockUpdateReturning.mockResolvedValue([])
+  it('should return UPSERT_FAILED when returning() is empty', async () => {
+    mockReturning.mockResolvedValue([]) // empty upsert returning
 
     const { updateLanguagePairConfig } = await import('./updateLanguagePairConfig.action')
 
@@ -251,25 +255,7 @@ describe('updateLanguagePairConfig', () => {
 
     expect(result.success).toBe(false)
     if (!result.success) {
-      expect(result.code).toBe('UPDATE_FAILED')
-    }
-  })
-
-  it('should return CREATE_FAILED when insert returning() is empty', async () => {
-    mockLimit.mockResolvedValue([]) // no existing
-    mockReturning.mockResolvedValue([]) // empty insert returning
-
-    const { updateLanguagePairConfig } = await import('./updateLanguagePairConfig.action')
-
-    const result = await updateLanguagePairConfig({
-      projectId: '550e8400-e29b-41d4-a716-446655440000',
-      sourceLang: 'en',
-      targetLang: 'ja',
-    })
-
-    expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.code).toBe('CREATE_FAILED')
+      expect(result.code).toBe('UPSERT_FAILED')
     }
   })
 })

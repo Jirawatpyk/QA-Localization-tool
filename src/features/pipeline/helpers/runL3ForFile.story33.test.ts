@@ -541,12 +541,12 @@ describe('runL3ForFile — Story 3.3: Selective Filtering & Context', () => {
     )
 
     // CAS, segments, priorFindings, l2Stats, langConfig, glossary, taxonomy, project,
-    // txDelete L3, txInsert L3, txUpdate confirm, statusUpdate
+    // txDelete L3, txInsert L3 returning, txUpdate status, txSelect freshL2Findings, txUpdate confirm
     dbState.returnValues = buildDbReturns({
       segments: [seg],
       priorFindings: [l2Finding],
       l2Stats: [{ segmentId: segId, maxConfidence: 80, findingCount: 1 }],
-      rest: [[], [], [], []],
+      rest: [[], [], [], [l2Finding], []],
     })
 
     const { runL3ForFile } = await import('./runL3ForFile')
@@ -591,7 +591,7 @@ describe('runL3ForFile — Story 3.3: Selective Filtering & Context', () => {
       segments: [seg],
       priorFindings: [l2Finding],
       l2Stats: [{ segmentId: segId, maxConfidence: 85, findingCount: 1 }],
-      rest: [[], [], [], []],
+      rest: [[], [], [], [l2Finding], []],
     })
 
     const { runL3ForFile } = await import('./runL3ForFile')
@@ -695,7 +695,7 @@ describe('runL3ForFile — Story 3.3: Selective Filtering & Context', () => {
       segments: [seg],
       priorFindings: [l2Finding],
       l2Stats: [{ segmentId: segId, maxConfidence: 95, findingCount: 1 }],
-      rest: [[], [], [], []],
+      rest: [[], [], [], [l2Finding], []],
     })
 
     const { runL3ForFile } = await import('./runL3ForFile')
@@ -741,7 +741,7 @@ describe('runL3ForFile — Story 3.3: Selective Filtering & Context', () => {
       segments: [seg],
       priorFindings: [l2Finding],
       l2Stats: [{ segmentId: segId, maxConfidence: 88, findingCount: 1 }],
-      rest: [[], [], [], []],
+      rest: [[], [], [], [l2Finding], []],
     })
 
     const { runL3ForFile } = await import('./runL3ForFile')
@@ -810,7 +810,7 @@ describe('runL3ForFile — Story 3.3: Selective Filtering & Context', () => {
       segments: [seg],
       priorFindings: [l2Finding1, l2Finding2],
       l2Stats: [{ segmentId: segId, maxConfidence: 70, findingCount: 2 }],
-      rest: [[], [], [], [], []],
+      rest: [[], [], [], [l2Finding1, l2Finding2], [], []],
     })
 
     const { runL3ForFile } = await import('./runL3ForFile')
@@ -1128,7 +1128,7 @@ describe('runL3ForFile — Story 3.3: Selective Filtering & Context', () => {
       segments: [seg],
       priorFindings: [l2Finding],
       l2Stats: [{ segmentId: segId, maxConfidence: 80, findingCount: 1 }],
-      rest: [[], [], [], [], []],
+      rest: [[], [], [], [l2Finding], [], []],
     })
 
     const { runL3ForFile } = await import('./runL3ForFile')
@@ -1250,7 +1250,7 @@ describe('runL3ForFile — Story 3.3: Selective Filtering & Context', () => {
       segments: [seg],
       priorFindings: [l2Finding],
       l2Stats: [{ segmentId: segId, maxConfidence: null, findingCount: 1 }],
-      rest: [[], [], [], []],
+      rest: [[], [], [], [l2Finding], []],
     })
 
     const { runL3ForFile } = await import('./runL3ForFile')
@@ -1296,7 +1296,7 @@ describe('runL3ForFile — Story 3.3: Selective Filtering & Context', () => {
       segments: [seg],
       priorFindings: [l2Finding],
       l2Stats: [{ segmentId: segId, maxConfidence: 80, findingCount: 1 }],
-      rest: [[], [], [], []],
+      rest: [[], [], [], [l2Finding], []],
     })
 
     const { runL3ForFile } = await import('./runL3ForFile')
@@ -1379,7 +1379,7 @@ describe('runL3ForFile — Story 3.3: Selective Filtering & Context', () => {
       segments: [seg],
       priorFindings: [l2Finding1, l2Finding2],
       l2Stats: [{ segmentId: segId, maxConfidence: 70, findingCount: 2 }],
-      rest: [[], [], [], []],
+      rest: [[], [], [], [l2Finding1, l2Finding2], []],
     })
 
     const { runL3ForFile } = await import('./runL3ForFile')
@@ -1466,7 +1466,7 @@ describe('runL3ForFile — Story 3.3: Selective Filtering & Context', () => {
       segments: [seg],
       priorFindings: [l2Finding90, l2Finding91],
       l2Stats: [{ segmentId: segId, maxConfidence: 91, findingCount: 2 }],
-      rest: [[], [], [], [], []],
+      rest: [[], [], [], [l2Finding90, l2Finding91], [], []],
     })
 
     const { runL3ForFile } = await import('./runL3ForFile')
