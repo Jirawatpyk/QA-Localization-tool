@@ -2,11 +2,17 @@
 
 import 'server-only'
 
+import { and, eq } from 'drizzle-orm'
+
+import { db } from '@/db/client'
+import { withTenant } from '@/db/helpers/withTenant'
+import { files } from '@/db/schema/files'
 import { scoreFile } from '@/features/scoring/helpers/scoreFile'
 import { calculateScoreSchema } from '@/features/scoring/validation/scoreSchema'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
+import type { DbFileStatus } from '@/types/pipeline'
 
 type ScoreResult = {
   scoreId: string
@@ -49,6 +55,38 @@ export async function calculateScore(input: {
   const { tenantId, id: userId } = currentUser
 
   try {
+    // P-1 fix: Guard against race with active Inngest pipeline.
+    // Reject manual rescore if file is still being processed — prevents stale/partial scores.
+    const ACTIVE_PIPELINE_STATUSES: ReadonlySet<DbFileStatus> = new Set<DbFileStatus>([
+      'parsing',
+      'l1_processing',
+      'l2_processing',
+      'l3_processing',
+    ])
+
+    const [file] = await db
+      .select({ status: files.status })
+      .from(files)
+      .where(
+        and(
+          eq(files.id, fileId),
+          eq(files.projectId, projectId),
+          withTenant(files.tenantId, tenantId),
+        ),
+      )
+
+    if (!file) {
+      return { success: false, code: 'NOT_FOUND', error: 'File not found' }
+    }
+
+    if (ACTIVE_PIPELINE_STATUSES.has(file.status as DbFileStatus)) {
+      return {
+        success: false,
+        code: 'CONFLICT',
+        error: `Cannot rescore while pipeline is active (status: ${file.status})`,
+      }
+    }
+
     const result = await scoreFile({ fileId, projectId, tenantId, userId })
     return { success: true, data: result }
   } catch (err) {

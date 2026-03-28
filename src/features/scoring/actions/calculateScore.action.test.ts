@@ -4,10 +4,11 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 vi.mock('server-only', () => ({}))
 
 // ── Hoisted mocks ──
-const { mockRequireRole, mockScoreFile } = vi.hoisted(() => {
+const { mockRequireRole, mockScoreFile, mockDbSelect } = vi.hoisted(() => {
   return {
     mockRequireRole: vi.fn(),
     mockScoreFile: vi.fn(),
+    mockDbSelect: vi.fn(),
   }
 })
 
@@ -21,6 +22,35 @@ vi.mock('@/features/scoring/helpers/scoreFile', () => ({
 
 vi.mock('@/lib/logger', () => ({
   logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}))
+
+// Mock db for file status guard (P-1 fix)
+vi.mock('@/db/client', () => {
+  const chain = {
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockImplementation(() => {
+      // Return value set by mockDbSelect
+      return Promise.resolve(mockDbSelect())
+    }),
+  }
+  return {
+    db: {
+      select: vi.fn().mockReturnValue(chain),
+    },
+  }
+})
+
+vi.mock('@/db/helpers/withTenant', () => ({
+  withTenant: vi.fn(),
+}))
+
+vi.mock('@/db/schema/files', () => ({
+  files: {
+    id: 'id',
+    projectId: 'project_id',
+    tenantId: 'tenant_id',
+    status: 'status',
+  },
 }))
 
 import { calculateScore } from './calculateScore.action'
@@ -53,6 +83,8 @@ describe('calculateScore', () => {
     vi.clearAllMocks()
     mockRequireRole.mockResolvedValue(mockUser)
     mockScoreFile.mockResolvedValue(mockScoreResult)
+    // Default: file exists with terminal status (allows scoring)
+    mockDbSelect.mockReturnValue([{ status: 'l1_completed' }])
   })
 
   // ── Input validation ──
@@ -125,6 +157,39 @@ describe('calculateScore', () => {
     if (!result.success) return
     expect(result.data.status).toBe('auto_passed')
     expect(result.data.autoPassRationale).toBe('Score 96 >= threshold')
+  })
+
+  // ── File status guard (P-1 fix) ──
+  it('should return NOT_FOUND when file does not exist', async () => {
+    mockDbSelect.mockReturnValue([])
+    const result = await calculateScore({ fileId: VALID_FILE_ID, projectId: VALID_PROJECT_ID })
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('NOT_FOUND')
+  })
+
+  it('should return CONFLICT when file is in active pipeline status', async () => {
+    for (const activeStatus of ['parsing', 'l1_processing', 'l2_processing', 'l3_processing']) {
+      mockDbSelect.mockReturnValue([{ status: activeStatus }])
+      const result = await calculateScore({ fileId: VALID_FILE_ID, projectId: VALID_PROJECT_ID })
+      expect(result.success).toBe(false)
+      if (result.success) return
+      expect(result.code).toBe('CONFLICT')
+    }
+  })
+
+  it('should allow scoring when file is in terminal status', async () => {
+    for (const terminalStatus of [
+      'l1_completed',
+      'l2_completed',
+      'l3_completed',
+      'ai_partial',
+      'parsed',
+    ]) {
+      mockDbSelect.mockReturnValue([{ status: terminalStatus }])
+      const result = await calculateScore({ fileId: VALID_FILE_ID, projectId: VALID_PROJECT_ID })
+      expect(result.success).toBe(true)
+    }
   })
 
   // ── Error handling ──

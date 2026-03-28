@@ -57,6 +57,7 @@ export async function checkAutoPass(input: AutoPassInput): Promise<AutoPassResul
       .where(
         and(
           eq(scores.projectId, projectId),
+          eq(segments.projectId, projectId), // C-2 fix: filter segments by projectId (defense-in-depth)
           eq(segments.sourceLang, sourceLang),
           eq(segments.targetLang, targetLang),
           withTenant(scores.tenantId, tenantId),
@@ -73,7 +74,9 @@ export async function checkAutoPass(input: AutoPassInput): Promise<AutoPassResul
   const [countResult] = countRows
 
   const fileCount = Number(countResult?.count ?? 0)
-  const isNewPair = !langConfig
+  // P-3 fix: "new pair" means no calibrated config OR no scored files yet in this project.
+  // Even if tenant has a config, a fresh project with 0 files should use new-pair protocol.
+  const isNewPair = !langConfig || fileCount === 0
 
   if (isNewPair) {
     // New language pair: mandatory manual review for first 50 files (AC #6)

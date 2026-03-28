@@ -15,6 +15,7 @@ import { calculateMqmScore } from '@/features/scoring/mqmCalculator'
 import { loadPenaltyWeights } from '@/features/scoring/penaltyWeightLoader'
 import type { ContributingFinding, FindingsSummary, FindingStatus } from '@/features/scoring/types'
 import { logger } from '@/lib/logger'
+import { FINDING_SEVERITIES } from '@/types/finding'
 import type { DetectedByLayer, FindingSeverity, LayerCompleted } from '@/types/finding'
 import type { TenantId } from '@/types/tenant'
 
@@ -114,15 +115,22 @@ export async function scoreFile({
   // Load penalty weights (tenant override chain)
   const penaltyWeights = await loadPenaltyWeights(tenantId)
 
-  // Calculate MQM score (pure function)
-  // SAFETY: Drizzle returns varchar → string for severity/status columns, but DB CHECK
-  // constraints guarantee valid Severity ('critical'|'major'|'minor') and FindingStatus values.
-  // The cast is safe because invalid values cannot exist in the DB.
-  const scoreResult = calculateMqmScore(
-    findingRows as ContributingFinding[],
-    totalWords,
-    penaltyWeights,
-  )
+  // C-1 fix: Runtime filter for known severities instead of unsafe cast.
+  // DB CHECK constraints should guarantee valid values, but defense-in-depth
+  // prevents score corruption if an unknown severity slips through.
+  const KNOWN_SEVERITIES: ReadonlySet<string> = new Set(FINDING_SEVERITIES)
+  const unknownSeverityRows = findingRows.filter((r) => !KNOWN_SEVERITIES.has(r.severity))
+  if (unknownSeverityRows.length > 0) {
+    logger.warn(
+      { fileId, unknownSeverities: unknownSeverityRows.map((r) => r.severity) },
+      'Findings with unknown severity excluded from score calculation (Guardrail #47)',
+    )
+  }
+  const contributing = findingRows.filter((r) =>
+    KNOWN_SEVERITIES.has(r.severity),
+  ) as ContributingFinding[]
+
+  const scoreResult = calculateMqmScore(contributing, totalWords, penaltyWeights)
 
   // S3 fix: derive layerCompleted from findings already loaded (no extra DB query)
   // Reachable only on first score via Server Action (no pipeline run yet).
