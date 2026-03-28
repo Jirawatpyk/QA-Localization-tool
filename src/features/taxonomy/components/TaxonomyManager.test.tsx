@@ -22,6 +22,9 @@ vi.mock('@/features/taxonomy/actions/reorderMappings.action', () => ({
 vi.mock('sonner', () => ({
   toast: { promise: vi.fn(), success: vi.fn(), error: vi.fn() },
 }))
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }),
+}))
 
 // CR R1 M2 fix: file-level shared MOCK_MAPPINGS (dedup from describe-scoped copy)
 // NOTE: inline objects intentional — factory import pulls @faker-js/faker (~6MB),

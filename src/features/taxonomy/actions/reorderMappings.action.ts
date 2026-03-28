@@ -2,7 +2,7 @@
 
 import 'server-only'
 
-import { eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import { revalidateTag } from 'next/cache'
 
 import { db } from '@/db/client'
@@ -31,6 +31,26 @@ export async function reorderMappings(input: unknown): Promise<ActionResult<{ up
   const firstItem = parsed.data[0]
   if (!firstItem) {
     return { success: false, code: 'VALIDATION_ERROR', error: 'Empty reorder list' }
+  }
+
+  // Pre-transaction validation: verify all IDs exist and are active (Guardrail #4 defense-in-depth)
+  // Prevents silent 0-row UPDATEs when stale client sends deleted/inactive IDs
+  const existingIds = await db
+    .select({ id: taxonomyDefinitions.id })
+    .from(taxonomyDefinitions)
+    .where(
+      and(
+        inArray(
+          taxonomyDefinitions.id,
+          parsed.data.map((i) => i.id),
+        ),
+        eq(taxonomyDefinitions.isActive, true),
+      ),
+    )
+  const existingSet = new Set(existingIds.map((r) => r.id))
+  const missingIds = parsed.data.filter((i) => !existingSet.has(i.id))
+  if (missingIds.length > 0) {
+    return { success: false, code: 'NOT_FOUND', error: 'Some mappings not found or inactive' }
   }
 
   // Atomic batch update — all display_order changes in a single transaction (Guardrail #6)

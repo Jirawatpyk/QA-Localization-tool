@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
@@ -19,6 +20,7 @@ type Props = {
 }
 
 export function TaxonomyManager({ initialMappings, isAdmin }: Props) {
+  const router = useRouter()
   const [mappings, setMappings] = useState<TaxonomyMapping[]>(initialMappings)
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [, startTransition] = useTransition()
@@ -113,6 +115,8 @@ export function TaxonomyManager({ initialMappings, isAdmin }: Props) {
             // CR R1 M3 fix: don't revert here — throwing triggers `error` callback which reverts
             throw new Error(result.error)
           }
+          // Reconcile optimistic state with server-canonical order via RSC re-fetch
+          router.refresh()
           return 'Mappings reordered'
         },
         error: (err: unknown) => {

@@ -28,9 +28,16 @@ const mockUpdateWhere = vi.fn().mockResolvedValue([])
 const mockSet = vi.fn().mockReturnValue({ where: mockUpdateWhere })
 const mockUpdate = vi.fn().mockReturnValue({ set: mockSet })
 
+// Pre-validation SELECT mock chain: db.select().from().where()
+// Returns matching IDs by default (all exist); override mockSelectWhere per test for NOT_FOUND
+const mockSelectWhere = vi.fn().mockResolvedValue([{ id: UUID_A }, { id: UUID_B }])
+const mockSelectFrom = vi.fn().mockReturnValue({ where: mockSelectWhere })
+const mockSelect = vi.fn().mockReturnValue({ from: mockSelectFrom })
+
 vi.mock('@/db/client', () => ({
   db: {
     update: (...args: unknown[]) => mockUpdate(...args),
+    select: (...args: unknown[]) => mockSelect(...args),
     transaction: (...args: unknown[]) =>
       mockTransaction(...(args as [(tx: unknown) => Promise<unknown>])),
   },
@@ -71,6 +78,8 @@ describe('reorderMappings', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockRequireRole.mockResolvedValue(mockCurrentUser)
+    // Default: all requested IDs exist and are active
+    mockSelectWhere.mockResolvedValue([{ id: UUID_A }, { id: UUID_B }])
   })
 
   it('should reorder mappings and return updated count', async () => {
@@ -261,32 +270,43 @@ describe('reorderMappings', () => {
     expect(Object.keys(secondSetArg)).toHaveLength(2)
   })
 
-  // TA expansion — U9 documents input-length count behavior
-  it('[P1] should return updated count based on input length, not actual affected rows', async () => {
-    // Documents current behavior: action returns parsed.data.length,
-    // NOT the number of rows actually modified in the database.
-    // mockTxUpdateWhere returns [] (0 affected rows) by default.
+  // Finding 5 fix: pre-validation SELECT catches non-existent/inactive IDs
+  it('[P1] should return NOT_FOUND when some IDs do not exist or are inactive', async () => {
+    // Given — only UUID_A exists, UUID_B is missing/inactive
+    mockSelectWhere.mockResolvedValueOnce([{ id: UUID_A }])
 
-    // Given — 2 items with non-existent IDs (mock returns empty arrays)
     const { reorderMappings } = await import('./reorderMappings.action')
 
-    // When — reorder with IDs that match no DB rows
+    // When — reorder with one valid + one invalid ID
     const result = await reorderMappings([
       { id: UUID_A, displayOrder: 0 },
       { id: UUID_B, displayOrder: 1 },
     ])
 
-    // Then — success:true with updated:2 even though 0 rows were modified
+    // Then — fails with NOT_FOUND before reaching transaction
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('NOT_FOUND')
+      expect(result.error).toContain('not found or inactive')
+    }
+    expect(mockTransaction).not.toHaveBeenCalled()
+    expect(mockWriteAuditLog).not.toHaveBeenCalled()
+  })
+
+  // U9 updated: with pre-validation, updated count matches input length (all verified to exist)
+  it('[P1] should return updated count matching input length when all IDs exist', async () => {
+    const { reorderMappings } = await import('./reorderMappings.action')
+
+    const result = await reorderMappings([
+      { id: UUID_A, displayOrder: 0 },
+      { id: UUID_B, displayOrder: 1 },
+    ])
+
     expect(result.success).toBe(true)
     if (result.success) {
       expect(result.data.updated).toBe(2)
     }
-    // Confirm the transaction executed (it didn't throw)
     expect(mockTransaction).toHaveBeenCalledTimes(1)
-    // Confirm the DB returned empty arrays (0 affected rows)
-    expect(mockTxUpdateWhere).toHaveReturnedWith(expect.any(Promise))
-    const dbResult = await mockTxUpdateWhere.mock.results[0]!.value
-    expect(dbResult).toEqual([])
   })
 
   // TA expansion — U5 non-Error rejection fallback message
