@@ -89,5 +89,5 @@ export type Finding = {
   assignmentStatus?: AssignmentStatus | undefined
   assignedToName?: string | undefined
   assignedByName?: string | undefined
-  flaggerComment?: string | undefined
+  flaggerComment?: string | null | undefined
 }
