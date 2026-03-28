@@ -1,0 +1,48 @@
+name: Parity Integration
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/features/parity/**'
+      - 'e2e/fixtures/**'
+      - 'docs/test-data/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  parity-tests:
+    name: Integration Tests (Parity)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      GOLDEN_CORPUS_PATH: docs/test-data/Golden-Test-Mona
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: true
+          lfs: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
+      - name: Cache npm
+        uses: actions/cache@v5
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: ${{ runner.os }}-npm-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Integration tests
+        run: npm run test:parity

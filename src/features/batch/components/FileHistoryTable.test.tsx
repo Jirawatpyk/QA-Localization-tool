@@ -177,4 +177,156 @@ describe('FileHistoryTable', () => {
     // Table should NOT render when no files
     expect(screen.queryByRole('table')).toBeNull()
   })
+
+  // ── Coverage: ScoreBadge rendering ──
+
+  it('[P2] should render ScoreBadge with score value for scored files', () => {
+    render(<FileHistoryTable {...defaultProps} />)
+
+    const badges = screen.getAllByTestId('mock-score-badge')
+    // First file: 97.5, Second: 78.3, Third: null → 'N/A'
+    expect(badges[0]!.textContent).toBe('97.5')
+    expect(badges[1]!.textContent).toBe('78.3')
+    expect(badges[2]!.textContent).toBe('N/A')
+  })
+
+  it('[P2] should display reviewer name or dash for null reviewer', () => {
+    render(<FileHistoryTable {...defaultProps} />)
+
+    const table = screen.getByRole('table')
+    const rows = within(table).getAllByRole('row')
+
+    // First row: reviewerName null → '—'
+    expect(within(rows[1]!).getByText('—')).toBeTruthy()
+    // Second row: reviewerName 'Alice'
+    expect(within(rows[2]!).getByText('Alice')).toBeTruthy()
+    // Third row: reviewerName null → '—'
+    expect(within(rows[3]!).getByText('—')).toBeTruthy()
+  })
+
+  // ── Coverage: Pagination onPageChange callback ──
+
+  it('[P2] should call onPageChange when a page button is clicked', async () => {
+    const user = userEvent.setup()
+    const onPageChange = vi.fn()
+    const pageOfFiles = Array.from({ length: 50 }, (_, i) =>
+      buildFileHistoryRow({
+        fileId: `a1b2c3d4-e5f6-4a1b-8c2d-${String(i).padStart(12, '0')}`,
+        fileName: `file-${i}.sdlxliff`,
+      }),
+    )
+    render(
+      <FileHistoryTable
+        {...defaultProps}
+        files={pageOfFiles}
+        totalCount={120}
+        currentPage={1}
+        onPageChange={onPageChange}
+      />,
+    )
+
+    const nav = screen.getByRole('navigation', { name: /pagination/i })
+    // Click page 2 button
+    await user.click(within(nav).getByText('2'))
+
+    expect(onPageChange).toHaveBeenCalledWith(2)
+  })
+
+  // ── Coverage: Pagination ellipsis logic (lines 41-51) ──
+
+  it('[P2] should render ellipsis for large page counts when current page is in the middle', () => {
+    // totalCount = 500, pageSize = 50 → 10 pages, currentPage = 5
+    const pageOfFiles = Array.from({ length: 50 }, (_, i) =>
+      buildFileHistoryRow({
+        fileId: `a1b2c3d4-e5f6-4a1b-8c2d-${String(i).padStart(12, '0')}`,
+        fileName: `file-${i}.sdlxliff`,
+      }),
+    )
+    render(
+      <FileHistoryTable {...defaultProps} files={pageOfFiles} totalCount={500} currentPage={5} />,
+    )
+
+    const nav = screen.getByRole('navigation', { name: /pagination/i })
+    // Should show: 1 ... 4 5 6 ... 10
+    expect(within(nav).getByText('1')).toBeTruthy()
+    expect(within(nav).getByText('4')).toBeTruthy()
+    expect(within(nav).getByText('5')).toBeTruthy()
+    expect(within(nav).getByText('6')).toBeTruthy()
+    expect(within(nav).getByText('10')).toBeTruthy()
+    // Should have ellipsis markers
+    const ellipses = within(nav).getAllByText('...')
+    expect(ellipses.length).toBe(2)
+  })
+
+  it('[P2] should not render ellipsis when total pages <= 7', () => {
+    // totalCount = 250, pageSize = 50 → 5 pages
+    const pageOfFiles = Array.from({ length: 50 }, (_, i) =>
+      buildFileHistoryRow({
+        fileId: `a1b2c3d4-e5f6-4a1b-8c2d-${String(i).padStart(12, '0')}`,
+        fileName: `file-${i}.sdlxliff`,
+      }),
+    )
+    render(
+      <FileHistoryTable {...defaultProps} files={pageOfFiles} totalCount={250} currentPage={3} />,
+    )
+
+    const nav = screen.getByRole('navigation', { name: /pagination/i })
+    // All 5 pages should render without ellipsis
+    for (let i = 1; i <= 5; i++) {
+      expect(within(nav).getByText(String(i))).toBeTruthy()
+    }
+    expect(within(nav).queryByText('...')).toBeNull()
+  })
+
+  it('[P2] should show trailing ellipsis only when current page is near the start', () => {
+    // 10 pages, currentPage = 2 → 1 2 3 ... 10 (no leading ellipsis)
+    const pageOfFiles = Array.from({ length: 50 }, (_, i) =>
+      buildFileHistoryRow({
+        fileId: `a1b2c3d4-e5f6-4a1b-8c2d-${String(i).padStart(12, '0')}`,
+        fileName: `file-${i}.sdlxliff`,
+      }),
+    )
+    render(
+      <FileHistoryTable {...defaultProps} files={pageOfFiles} totalCount={500} currentPage={2} />,
+    )
+
+    const nav = screen.getByRole('navigation', { name: /pagination/i })
+    expect(within(nav).getByText('1')).toBeTruthy()
+    expect(within(nav).getByText('2')).toBeTruthy()
+    expect(within(nav).getByText('3')).toBeTruthy()
+    expect(within(nav).getByText('10')).toBeTruthy()
+    // Only 1 ellipsis (trailing)
+    const ellipses = within(nav).getAllByText('...')
+    expect(ellipses.length).toBe(1)
+  })
+
+  it('[P2] should show leading ellipsis only when current page is near the end', () => {
+    // 10 pages, currentPage = 9 → 1 ... 8 9 10 (no trailing ellipsis)
+    const pageOfFiles = Array.from({ length: 50 }, (_, i) =>
+      buildFileHistoryRow({
+        fileId: `a1b2c3d4-e5f6-4a1b-8c2d-${String(i).padStart(12, '0')}`,
+        fileName: `file-${i}.sdlxliff`,
+      }),
+    )
+    render(
+      <FileHistoryTable {...defaultProps} files={pageOfFiles} totalCount={500} currentPage={9} />,
+    )
+
+    const nav = screen.getByRole('navigation', { name: /pagination/i })
+    expect(within(nav).getByText('1')).toBeTruthy()
+    expect(within(nav).getByText('8')).toBeTruthy()
+    expect(within(nav).getByText('9')).toBeTruthy()
+    expect(within(nav).getByText('10')).toBeTruthy()
+    // Only 1 ellipsis (leading)
+    const ellipses = within(nav).getAllByText('...')
+    expect(ellipses.length).toBe(1)
+  })
+
+  // ── Coverage: No pagination for single page ──
+
+  it('[P3] should not render pagination when totalCount fits in one page', () => {
+    render(<FileHistoryTable {...defaultProps} files={sampleRows} totalCount={3} />)
+
+    expect(screen.queryByRole('navigation', { name: /pagination/i })).toBeNull()
+  })
 })

@@ -9,7 +9,9 @@ vi.mock('recharts', () => ({
       {children}
     </div>
   ),
-  Line: () => null,
+  Line: ({ dataKey, name }: { dataKey?: string; name?: string }) => (
+    <span data-testid={`line-${dataKey}`} data-name={name} />
+  ),
   XAxis: () => null,
   YAxis: () => null,
   CartesianGrid: () => null,
@@ -55,10 +57,8 @@ describe('AiSpendTrendChart', () => {
     const { AiSpendTrendChart } = await import('./AiSpendTrendChart')
     render(<AiSpendTrendChart data={TREND_DATA_7D} />)
 
-    // Container exists
     const chartContainer = screen.getByTestId('ai-trend-chart-container')
     expect(chartContainer).toBeTruthy()
-    // All 7 data points must be passed to the chart (no sparse filtering)
     const lineChart = screen.getByTestId('recharts-line-chart')
     expect(lineChart.getAttribute('data-count')).toBe('7')
   })
@@ -71,9 +71,7 @@ describe('AiSpendTrendChart', () => {
     const l2l3Toggle = screen.getByTestId('ai-trend-l2l3-toggle')
     expect(l2l3Toggle).toBeTruthy()
 
-    // Clicking toggle should change the view (no error thrown)
     await user.click(l2l3Toggle)
-    // Component still renders after toggle
     expect(screen.getByTestId('recharts-line-chart')).toBeTruthy()
   })
 
@@ -83,9 +81,16 @@ describe('AiSpendTrendChart', () => {
     const { AiSpendTrendChart } = await import('./AiSpendTrendChart')
     render(<AiSpendTrendChart data={ZERO_TREND_DATA} />)
 
-    // Action guarantees 7 points even when all $0 — chart still renders
     expect(screen.getByTestId('recharts-line-chart')).toBeTruthy()
     expect(screen.queryByTestId('ai-trend-chart-empty')).toBeNull()
+  })
+
+  it('should render chart with empty array (0 data points)', async () => {
+    const { AiSpendTrendChart } = await import('./AiSpendTrendChart')
+    render(<AiSpendTrendChart data={[]} />)
+
+    const lineChart = screen.getByTestId('recharts-line-chart')
+    expect(lineChart.getAttribute('data-count')).toBe('0')
   })
 
   // ── Story 3.1b — AC4: aria-pressed on L2/L3 toggle ──
@@ -114,8 +119,8 @@ describe('AiSpendTrendChart', () => {
     render(<AiSpendTrendChart data={TREND_DATA_7D} />)
 
     const toggle = screen.getByTestId('ai-trend-l2l3-toggle')
-    await user.click(toggle) // → breakdown (true)
-    await user.click(toggle) // → total (false)
+    await user.click(toggle) // breakdown (true)
+    await user.click(toggle) // total (false)
     expect(toggle.getAttribute('aria-pressed')).toBe('false')
   })
 
@@ -131,5 +136,42 @@ describe('AiSpendTrendChart', () => {
 
     await user.click(toggle)
     expect(toggle.textContent).toBe('Show Total')
+  })
+
+  // ── Line dataKey verification ──
+
+  it('should render totalCostUsd line in default (total) view', async () => {
+    const { AiSpendTrendChart } = await import('./AiSpendTrendChart')
+    render(<AiSpendTrendChart data={TREND_DATA_7D} />)
+
+    expect(screen.getByTestId('line-totalCostUsd')).toBeTruthy()
+    expect(screen.queryByTestId('line-l2CostUsd')).toBeNull()
+    expect(screen.queryByTestId('line-l3CostUsd')).toBeNull()
+  })
+
+  it('should render l2CostUsd and l3CostUsd lines in breakdown view', async () => {
+    const user = userEvent.setup()
+    const { AiSpendTrendChart } = await import('./AiSpendTrendChart')
+    render(<AiSpendTrendChart data={TREND_DATA_7D} />)
+
+    await user.click(screen.getByTestId('ai-trend-l2l3-toggle'))
+
+    expect(screen.queryByTestId('line-totalCostUsd')).toBeNull()
+    expect(screen.getByTestId('line-l2CostUsd')).toBeTruthy()
+    expect(screen.getByTestId('line-l3CostUsd')).toBeTruthy()
+  })
+
+  it('should use correct line names for legend labels', async () => {
+    const user = userEvent.setup()
+    const { AiSpendTrendChart } = await import('./AiSpendTrendChart')
+    render(<AiSpendTrendChart data={TREND_DATA_7D} />)
+
+    expect(screen.getByTestId('line-totalCostUsd').getAttribute('data-name')).toBe('Total Cost')
+
+    await user.click(screen.getByTestId('ai-trend-l2l3-toggle'))
+    expect(screen.getByTestId('line-l2CostUsd').getAttribute('data-name')).toBe('L2 (Screening)')
+    expect(screen.getByTestId('line-l3CostUsd').getAttribute('data-name')).toBe(
+      'L3 (Deep Analysis)',
+    )
   })
 })

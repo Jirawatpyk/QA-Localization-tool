@@ -40,6 +40,16 @@ const MODEL_SPEND_DATA = [
   },
 ]
 
+const SINGLE_MODEL_DATA = [
+  {
+    provider: 'openai',
+    model: 'gpt-4o-mini',
+    totalCostUsd: 3.14,
+    inputTokens: 42_000,
+    outputTokens: 8_000,
+  },
+]
+
 describe('AiSpendByModelChart', () => {
   // ── P0: Core rendering ──
 
@@ -55,6 +65,15 @@ describe('AiSpendByModelChart', () => {
     render(<AiSpendByModelChart data={[]} />)
 
     expect(screen.getByTestId('ai-model-chart-empty')).toBeTruthy()
+    expect(screen.getByText('No model spend data for this period.')).toBeTruthy()
+  })
+
+  it('should render chart container (not empty state) when data has entries', async () => {
+    const { AiSpendByModelChart } = await import('./AiSpendByModelChart')
+    render(<AiSpendByModelChart data={MODEL_SPEND_DATA} />)
+
+    expect(screen.getByTestId('ai-model-chart-container')).toBeTruthy()
+    expect(screen.queryByTestId('ai-model-chart-empty')).toBeNull()
   })
 
   // ── P1: Legend / model labels ──
@@ -63,12 +82,15 @@ describe('AiSpendByModelChart', () => {
     const { AiSpendByModelChart } = await import('./AiSpendByModelChart')
     render(<AiSpendByModelChart data={MODEL_SPEND_DATA} />)
 
-    // Chart container must be present, empty-state must NOT be rendered
-    expect(screen.getByTestId('ai-model-chart-container')).toBeTruthy()
-    expect(screen.queryByTestId('ai-model-chart-empty')).toBeNull()
-    // Provider/model label strings must appear in chart data (ATDD P1)
     expect(screen.getByText('openai/gpt-4o-mini')).toBeTruthy()
     expect(screen.getByText('anthropic/claude-sonnet-4-5-20250929')).toBeTruthy()
+  })
+
+  it('should format chart data as provider/model label', async () => {
+    const { AiSpendByModelChart } = await import('./AiSpendByModelChart')
+    render(<AiSpendByModelChart data={SINGLE_MODEL_DATA} />)
+
+    expect(screen.getByText('openai/gpt-4o-mini')).toBeTruthy()
   })
 
   // ── Story 3.1b — AC3: Per-Model Breakdown Table ──
@@ -100,11 +122,14 @@ describe('AiSpendByModelChart', () => {
     const row1 = screen.getByTestId('ai-model-breakdown-row-1')
     expect(row0.textContent).toContain('gpt-4o-mini')
     expect(row0.textContent).toContain('openai')
-    expect(row0.textContent).toContain('$5.0000') // totalCostUsd.toFixed(4)
-    expect(row0.textContent).toContain('100,000') // inputTokens.toLocaleString()
-    expect(row0.textContent).toContain('20,000') // outputTokens.toLocaleString()
+    expect(row0.textContent).toContain('$5.0000')
+    expect(row0.textContent).toContain('100,000')
+    expect(row0.textContent).toContain('20,000')
     expect(row1.textContent).toContain('claude-sonnet-4-5-20250929')
     expect(row1.textContent).toContain('anthropic')
+    expect(row1.textContent).toContain('$12.5000')
+    expect(row1.textContent).toContain('50,000')
+    expect(row1.textContent).toContain('15,000')
   })
 
   it('should NOT render breakdown table when data is empty (empty state shown instead)', async () => {
@@ -121,7 +146,22 @@ describe('AiSpendByModelChart', () => {
     const { AiSpendByModelChart } = await import('./AiSpendByModelChart')
     render(<AiSpendByModelChart data={MODEL_SPEND_DATA} />)
 
-    // Bar mock renders name prop as testid span — verifies name="Cost (USD)" in source
     expect(screen.getByTestId('bar-name-prop').textContent).toBe('Cost (USD)')
+  })
+
+  // ── Boundary: single model entry ──
+
+  it('should render single row when only one model entry exists', async () => {
+    const { AiSpendByModelChart } = await import('./AiSpendByModelChart')
+    render(<AiSpendByModelChart data={SINGLE_MODEL_DATA} />)
+
+    expect(screen.getByTestId('ai-model-breakdown-row-0')).toBeTruthy()
+    expect(screen.queryByTestId('ai-model-breakdown-row-1')).toBeNull()
+
+    const row = screen.getByTestId('ai-model-breakdown-row-0')
+    expect(row.textContent).toContain('gpt-4o-mini')
+    expect(row.textContent).toContain('$3.1400')
+    expect(row.textContent).toContain('42,000')
+    expect(row.textContent).toContain('8,000')
   })
 })
