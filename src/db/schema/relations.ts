@@ -9,6 +9,8 @@ import { exportedReports } from './exportedReports'
 import { feedbackEvents } from './feedbackEvents'
 import { fileAssignments } from './fileAssignments'
 import { files } from './files'
+import { findingAssignments } from './findingAssignments'
+import { findingComments } from './findingComments'
 import { findings } from './findings'
 import { fixSuggestions } from './fixSuggestions'
 import { glossaries } from './glossaries'
@@ -42,6 +44,8 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   auditLogs: many(auditLogs),
   notifications: many(notifications),
   selfHealingConfig: many(selfHealingConfig),
+  findingAssignments: many(findingAssignments),
+  findingComments: many(findingComments),
 }))
 
 // --- Users ---
@@ -53,6 +57,9 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   notifications: many(notifications),
   parityReports: many(parityReports),
   reportedMissingChecks: many(missingCheckReports, { relationName: 'reportedBy' }),
+  assignedFindings: many(findingAssignments, { relationName: 'assignedTo' }),
+  createdAssignments: many(findingAssignments, { relationName: 'assignedBy' }),
+  findingComments: many(findingComments),
 }))
 
 // --- User Roles ---
@@ -74,6 +81,7 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   aiMetricsTimeseries: many(aiMetricsTimeseries),
   parityReports: many(parityReports),
   missingCheckReports: many(missingCheckReports),
+  findingAssignments: many(findingAssignments),
 }))
 
 // --- Files ---
@@ -86,6 +94,7 @@ export const filesRelations = relations(files, ({ one, many }) => ({
   scores: many(scores),
   findings: many(findings),
   fileAssignments: many(fileAssignments),
+  findingAssignments: many(findingAssignments),
   aiUsageLogs: many(aiUsageLogs),
   runMetadata: many(runMetadata),
   parityReports: many(parityReports),
@@ -113,6 +122,8 @@ export const findingsRelations = relations(findings, ({ one, many }) => ({
   reviewActions: many(reviewActions),
   feedbackEvents: many(feedbackEvents),
   fixSuggestions: many(fixSuggestions),
+  findingAssignments: many(findingAssignments),
+  findingComments: many(findingComments),
 }))
 
 // --- Scores ---
@@ -281,6 +292,51 @@ export const fileAssignmentsRelations = relations(fileAssignments, ({ one }) => 
     fields: [fileAssignments.assignedBy],
     references: [users.id],
     relationName: 'assignedBy',
+  }),
+}))
+
+// --- Finding Assignments ---
+export const findingAssignmentsRelations = relations(findingAssignments, ({ one, many }) => ({
+  finding: one(findings, { fields: [findingAssignments.findingId], references: [findings.id] }),
+  file: one(files, { fields: [findingAssignments.fileId], references: [files.id] }),
+  project: one(projects, {
+    fields: [findingAssignments.projectId],
+    references: [projects.id],
+  }),
+  tenant: one(tenants, {
+    fields: [findingAssignments.tenantId],
+    references: [tenants.id],
+  }),
+  assignedToUser: one(users, {
+    fields: [findingAssignments.assignedTo],
+    references: [users.id],
+    relationName: 'assignedTo',
+  }),
+  assignedByUser: one(users, {
+    fields: [findingAssignments.assignedBy],
+    references: [users.id],
+    relationName: 'assignedBy',
+  }),
+  findingComments: many(findingComments),
+}))
+
+// --- Finding Comments ---
+export const findingCommentsRelations = relations(findingComments, ({ one }) => ({
+  finding: one(findings, {
+    fields: [findingComments.findingId],
+    references: [findings.id],
+  }),
+  findingAssignment: one(findingAssignments, {
+    fields: [findingComments.findingAssignmentId],
+    references: [findingAssignments.id],
+  }),
+  tenant: one(tenants, {
+    fields: [findingComments.tenantId],
+    references: [tenants.id],
+  }),
+  authorUser: one(users, {
+    fields: [findingComments.authorId],
+    references: [users.id],
   }),
 }))
 

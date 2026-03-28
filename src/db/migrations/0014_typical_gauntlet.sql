@@ -1,1 +1,0 @@
-ALTER TABLE "scores" ADD CONSTRAINT "uq_scores_file_tenant" UNIQUE("file_id","tenant_id");
