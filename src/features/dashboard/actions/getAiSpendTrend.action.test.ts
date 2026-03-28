@@ -181,4 +181,29 @@ describe('getAiSpendTrend', () => {
     // Must be capped to 90, not 365
     expect(result.data).toHaveLength(90)
   })
+
+  // ── Branch coverage: invalid input guard ──
+
+  it('should return INVALID_INPUT when days is not a positive integer', async () => {
+    const { getAiSpendTrend } = await import('./getAiSpendTrend.action')
+    // @ts-expect-error — testing runtime guard for invalid input
+    const result = await getAiSpendTrend({ days: -5 })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INVALID_INPUT')
+  })
+
+  // ── Branch coverage: DB error catch ──
+
+  it('should return INTERNAL_ERROR when DB query throws', async () => {
+    dbState.throwAtCallIndex = 0
+
+    const { getAiSpendTrend } = await import('./getAiSpendTrend.action')
+    const result = await getAiSpendTrend({ days: 7 })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INTERNAL_ERROR')
+  })
 })

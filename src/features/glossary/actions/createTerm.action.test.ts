@@ -194,4 +194,80 @@ describe('createTerm', () => {
       }),
     )
   })
+
+  // ── Branch coverage: VALIDATION_ERROR ──
+
+  it('should return VALIDATION_ERROR for invalid input (missing glossaryId)', async () => {
+    const { createTerm } = await import('./createTerm.action')
+    const result = await createTerm({
+      sourceTerm: 'hello',
+      targetTerm: 'สวัสดี',
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('VALIDATION_ERROR')
+    }
+  })
+
+  // ── Branch coverage: NOT_FOUND (glossary not in tenant) ──
+
+  it('should return NOT_FOUND when glossary does not exist for current tenant', async () => {
+    mockSelectWhere.mockReset()
+    mockLimit.mockReset()
+    mockSelectFrom.mockReturnValue({ where: mockSelectWhere })
+    mockSelectWhere.mockResolvedValueOnce([]) // glossary lookup returns empty
+
+    const { createTerm } = await import('./createTerm.action')
+    const result = await createTerm({
+      glossaryId: GLOSSARY_ID,
+      sourceTerm: 'test',
+      targetTerm: 'ทดสอบ',
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('NOT_FOUND')
+    }
+  })
+
+  // ── Branch coverage: DB 23505 race condition (concurrent insert) ──
+
+  it('should return DUPLICATE_ENTRY when DB insert throws 23505 (race condition)', async () => {
+    const dbError = new Error('unique_violation') as Error & { code: string }
+    dbError.code = '23505'
+    mockReturning.mockRejectedValueOnce(dbError)
+
+    const { createTerm } = await import('./createTerm.action')
+    const result = await createTerm({
+      glossaryId: GLOSSARY_ID,
+      sourceTerm: 'unique term',
+      targetTerm: 'คำเฉพาะ',
+      caseSensitive: false,
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('DUPLICATE_ENTRY')
+    }
+  })
+
+  // ── Branch coverage: CREATE_FAILED (insert returns empty) ──
+
+  it('should return CREATE_FAILED when insert returns no rows', async () => {
+    mockReturning.mockResolvedValueOnce([]) // empty returning
+
+    const { createTerm } = await import('./createTerm.action')
+    const result = await createTerm({
+      glossaryId: GLOSSARY_ID,
+      sourceTerm: 'another term',
+      targetTerm: 'อีกคำ',
+      caseSensitive: false,
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('CREATE_FAILED')
+    }
+  })
 })

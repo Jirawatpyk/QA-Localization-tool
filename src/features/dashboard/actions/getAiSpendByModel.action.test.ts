@@ -177,4 +177,42 @@ describe('getAiSpendByModel', () => {
     const { withTenant } = await import('@/db/helpers/withTenant')
     expect(withTenant).toHaveBeenCalledWith(expect.anything(), MOCK_ADMIN.tenantId)
   })
+
+  // ── Branch coverage: invalid input guard ──
+
+  it('should return INVALID_INPUT when days is not a positive integer', async () => {
+    const { getAiSpendByModel } = await import('./getAiSpendByModel.action')
+    // @ts-expect-error — testing runtime guard for invalid input
+    const result = await getAiSpendByModel({ days: -1 })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('INVALID_INPUT')
+    }
+  })
+
+  it('should return INVALID_INPUT when days is zero', async () => {
+    const { getAiSpendByModel } = await import('./getAiSpendByModel.action')
+    // @ts-expect-error — testing runtime guard for zero
+    const result = await getAiSpendByModel({ days: 0 })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('INVALID_INPUT')
+    }
+  })
+
+  // ── Branch coverage: DB error catch ──
+
+  it('should return INTERNAL_ERROR when DB query throws', async () => {
+    dbState.throwAtCallIndex = 0
+
+    const { getAiSpendByModel } = await import('./getAiSpendByModel.action')
+    const result = await getAiSpendByModel({ days: 30 })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('INTERNAL_ERROR')
+    }
+  })
 })

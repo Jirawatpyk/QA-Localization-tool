@@ -133,4 +133,72 @@ describe('useRoleSync', () => {
 
     expect(mockRemoveChannel).toHaveBeenCalledWith(mockChannel)
   })
+
+  it('should call onSessionRefreshed when role change provides access_token', async () => {
+    const onSessionRefreshed = vi.fn()
+    mockRefreshSession.mockResolvedValueOnce({
+      data: { session: { access_token: 'new-token-123' } },
+      error: null,
+    })
+
+    const { useRoleSync } = await import('./useRoleSync')
+    renderHook(() => useRoleSync('user-123', 'tenant-abc', onSessionRefreshed))
+
+    await act(async () => {
+      realtimeCallback?.({ new: { role: 'admin', tenant_id: 'tenant-abc' } })
+    })
+
+    expect(onSessionRefreshed).toHaveBeenCalledWith('new-token-123')
+  })
+
+  it('should not call onSessionRefreshed when session has no access_token', async () => {
+    const onSessionRefreshed = vi.fn()
+    mockRefreshSession.mockResolvedValueOnce({
+      data: { session: null },
+      error: null,
+    })
+
+    const { useRoleSync } = await import('./useRoleSync')
+    renderHook(() => useRoleSync('user-123', 'tenant-abc', onSessionRefreshed))
+
+    await act(async () => {
+      realtimeCallback?.({ new: { role: 'admin', tenant_id: 'tenant-abc' } })
+    })
+
+    expect(onSessionRefreshed).not.toHaveBeenCalled()
+  })
+
+  it('should call onSessionRefreshed during poll interval when session available', async () => {
+    const onSessionRefreshed = vi.fn()
+    mockRefreshSession.mockResolvedValue({
+      data: { session: { access_token: 'poll-token' } },
+      error: null,
+    })
+
+    const { useRoleSync } = await import('./useRoleSync')
+    renderHook(() => useRoleSync('user-123', 'tenant-abc', onSessionRefreshed))
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5 * 60 * 1000)
+    })
+
+    expect(onSessionRefreshed).toHaveBeenCalledWith('poll-token')
+  })
+
+  it('should not call onSessionRefreshed during poll when no session', async () => {
+    const onSessionRefreshed = vi.fn()
+    mockRefreshSession.mockResolvedValue({
+      data: { session: null },
+      error: null,
+    })
+
+    const { useRoleSync } = await import('./useRoleSync')
+    renderHook(() => useRoleSync('user-123', 'tenant-abc', onSessionRefreshed))
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5 * 60 * 1000)
+    })
+
+    expect(onSessionRefreshed).not.toHaveBeenCalled()
+  })
 })

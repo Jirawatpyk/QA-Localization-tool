@@ -220,4 +220,32 @@ describe('getDashboardData', () => {
       expect(result.data.recentFiles[0]?.findingsCount).toBe(5)
     }
   })
+
+  // ── Branch coverage: DB error catch ──
+
+  it('should return INTERNAL_ERROR when DB query throws', async () => {
+    // Push a thenable that rejects to trigger the catch branch
+    const errorProxy = new Proxy(
+      {},
+      {
+        get(_target, prop) {
+          if (prop === 'then') {
+            return (_resolve: unknown, reject: (err: unknown) => void) => {
+              reject(new Error('DB connection failed'))
+            }
+          }
+          return () => errorProxy
+        },
+      },
+    )
+    // Override queryResults so first query rejects
+    queryResults.push(errorProxy)
+
+    const result = await getDashboardData()
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('INTERNAL_ERROR')
+    }
+  })
 })

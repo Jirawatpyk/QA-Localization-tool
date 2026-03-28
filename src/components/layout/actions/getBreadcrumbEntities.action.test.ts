@@ -100,4 +100,78 @@ describe('getBreadcrumbEntities — TD-TODO-001', () => {
     // Verify withTenant was used
     expect(mockWithTenant).toHaveBeenCalledTimes(2)
   })
+
+  // ── Branch coverage: INVALID_INPUT ──
+
+  it('should return INVALID_INPUT when input fails validation', async () => {
+    const result = await getBreadcrumbEntities({
+      projectId: 'not-a-uuid',
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('INVALID_INPUT')
+    }
+  })
+
+  // ── Branch coverage: UNAUTHORIZED ──
+
+  it('should return UNAUTHORIZED when user is not authenticated', async () => {
+    const { getCurrentUser } = await import('@/lib/auth/getCurrentUser')
+    vi.mocked(getCurrentUser).mockResolvedValueOnce(null)
+
+    const result = await getBreadcrumbEntities({
+      projectId: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('UNAUTHORIZED')
+    }
+  })
+
+  // ── Branch coverage: only projectId provided (no sessionId) ──
+
+  it('should return only projectName when sessionId is not provided', async () => {
+    dbState.returnValues = [[{ name: 'Solo Project' }]]
+
+    const result = await getBreadcrumbEntities({
+      projectId: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
+    })
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.projectName).toBe('Solo Project')
+      expect(result.data.sessionName).toBeUndefined()
+    }
+  })
+
+  // ── Branch coverage: neither projectId nor sessionId ──
+
+  it('should return empty entities when neither projectId nor sessionId provided', async () => {
+    const result = await getBreadcrumbEntities({})
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.projectName).toBeUndefined()
+      expect(result.data.sessionName).toBeUndefined()
+    }
+  })
+
+  // ── Branch coverage: DB returns empty for project ──
+
+  it('should omit projectName when project not found in DB', async () => {
+    dbState.returnValues = [[], [{ fileName: 'found.xlf' }]] // empty project result
+
+    const result = await getBreadcrumbEntities({
+      projectId: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d',
+      sessionId: 'b2c3d4e5-f6a7-4b2c-9d3e-4f5a6b7c8d9e',
+    })
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.projectName).toBeUndefined()
+      expect(result.data.sessionName).toBe('found.xlf')
+    }
+  })
 })

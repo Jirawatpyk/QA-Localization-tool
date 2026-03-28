@@ -207,4 +207,165 @@ describe('useBackTranslation', () => {
     expect(result.current.loading).toBe(false)
     expect(result.current.data).toBeNull()
   })
+
+  // ── Branch: error state from server action (result.success=false) ──────
+  it('should set error state when server action returns failure', async () => {
+    mockGetBackTranslation.mockResolvedValue({
+      success: false as const,
+      error: 'Budget exhausted',
+    })
+
+    const { result } = renderHook(() =>
+      useBackTranslation({ segmentId: 'seg-err', projectId: 'p1' }),
+    )
+
+    await act(async () => {
+      vi.advanceTimersByTime(300)
+    })
+    // Wait for promise to resolve
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    expect(result.current.error).toBe('Budget exhausted')
+    expect(result.current.data).toBeNull()
+    expect(result.current.cached).toBe(false)
+    expect(result.current.loading).toBe(false)
+  })
+
+  // ── Branch: thrown error in fetchBT (catch block, lines 82-89) ─────────
+  it('should set error state when server action throws', async () => {
+    mockGetBackTranslation.mockRejectedValue(new Error('Network timeout'))
+
+    const { result } = renderHook(() =>
+      useBackTranslation({ segmentId: 'seg-throw', projectId: 'p1' }),
+    )
+
+    await act(async () => {
+      vi.advanceTimersByTime(300)
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    expect(result.current.error).toBe('Network timeout')
+    expect(result.current.data).toBeNull()
+    expect(result.current.cached).toBe(false)
+    expect(result.current.loading).toBe(false)
+  })
+
+  // ── Branch: thrown non-Error (unknown error fallback) ──────────────────
+  it('should show "Unknown error" when thrown value is not an Error', async () => {
+    mockGetBackTranslation.mockRejectedValue('string-error')
+
+    const { result } = renderHook(() =>
+      useBackTranslation({ segmentId: 'seg-unknown', projectId: 'p1' }),
+    )
+
+    await act(async () => {
+      vi.advanceTimersByTime(300)
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    expect(result.current.error).toBe('Unknown error')
+  })
+
+  // ── Branch: abort guard in catch — stale segment during error ──────────
+  it('should not set error state when segment changed before error resolves', async () => {
+    let rejectSeg1: ((err: Error) => void) | undefined
+    mockGetBackTranslation.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          rejectSeg1 = reject
+        }),
+    )
+
+    const { result, rerender } = renderHook(
+      ({ segmentId }) => useBackTranslation({ segmentId, projectId: 'p1' }),
+      { initialProps: { segmentId: 'seg-a' as string | null } },
+    )
+
+    // Fire debounce for seg-a
+    await act(async () => {
+      vi.advanceTimersByTime(300)
+    })
+
+    // Change to seg-b — aborts seg-a
+    rerender({ segmentId: 'seg-b' })
+
+    // seg-a rejects after segment changed
+    await act(async () => {
+      rejectSeg1?.(new Error('Aborted'))
+    })
+
+    // Error should NOT be set (stale guard in catch)
+    expect(result.current.error).toBeNull()
+  })
+
+  // ── Branch: segmentId changes to null (clears all state) ──────────────
+  it('should clear all state when segmentId changes to null', async () => {
+    const { result, rerender } = renderHook(
+      ({ segmentId }) => useBackTranslation({ segmentId, projectId: 'p1' }),
+      { initialProps: { segmentId: 'seg-1' as string | null } },
+    )
+
+    // Fire debounce and get data
+    await act(async () => {
+      vi.advanceTimersByTime(300)
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    // Now set segmentId to null
+    rerender({ segmentId: null })
+
+    expect(result.current.data).toBeNull()
+    expect(result.current.loading).toBe(false)
+    expect(result.current.error).toBeNull()
+    expect(result.current.cached).toBe(false)
+  })
+
+  // ── Branch: refresh does nothing when segmentId is null ────────────────
+  it('should not call fetchBT when refresh is called with null segmentId', async () => {
+    const { result } = renderHook(() => useBackTranslation({ segmentId: null, projectId: 'p1' }))
+
+    await act(async () => {
+      vi.advanceTimersByTime(500)
+    })
+
+    mockGetBackTranslation.mockClear()
+    act(() => {
+      result.current.refresh()
+    })
+
+    await act(async () => {
+      vi.advanceTimersByTime(500)
+    })
+
+    expect(mockGetBackTranslation).not.toHaveBeenCalled()
+  })
+
+  // ── Branch: cached=true from server ────────────────────────────────────
+  it('should set cached=true when server returns cached result', async () => {
+    mockGetBackTranslation.mockResolvedValue({
+      success: true as const,
+      data: { ...MOCK_SUCCESS.data, cached: true },
+    })
+
+    const { result } = renderHook(() =>
+      useBackTranslation({ segmentId: 'seg-cached', projectId: 'p1' }),
+    )
+
+    await act(async () => {
+      vi.advanceTimersByTime(300)
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    expect(result.current.cached).toBe(true)
+  })
 })

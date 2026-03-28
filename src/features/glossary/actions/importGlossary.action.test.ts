@@ -252,4 +252,75 @@ describe('importGlossary', () => {
       )
     }
   })
+
+  // ── Branch coverage: NOT_FOUND (project not in tenant) ──
+
+  it('should return NOT_FOUND when project does not exist for current tenant', async () => {
+    mockSelectWhere.mockReset()
+    mockSelectWhere.mockResolvedValueOnce([]) // project lookup returns empty
+
+    const { importGlossary } = await import('./importGlossary.action')
+    const result = await importGlossary(makeFormData())
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('NOT_FOUND')
+    }
+  })
+
+  // ── Branch coverage: no target languages configured ──
+
+  it('should return VALIDATION_ERROR when project has no target languages', async () => {
+    mockSelectWhere.mockReset()
+    mockSelectWhere.mockResolvedValueOnce([{ ...mockProject, targetLangs: [] }])
+
+    const { importGlossary } = await import('./importGlossary.action')
+    const result = await importGlossary(makeFormData())
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('VALIDATION_ERROR')
+      expect(result.error).toContain('no target languages')
+    }
+  })
+
+  // ── Branch coverage: file too large ──
+
+  it('should return VALIDATION_ERROR when file exceeds 10MB', async () => {
+    const fd = makeFormData()
+    // Create a file > 10MB
+    const largeContent = 'x'.repeat(11 * 1024 * 1024)
+    fd.set('file', new File([largeContent], 'huge.csv', { type: 'text/csv' }))
+
+    const { importGlossary } = await import('./importGlossary.action')
+    const result = await importGlossary(fd)
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('VALIDATION_ERROR')
+      expect(result.error).toContain('too large')
+    }
+  })
+
+  // ── Branch coverage: intra-file dedup ──
+
+  it('should deduplicate terms with same source (case-insensitive)', async () => {
+    mockParseGlossaryFile.mockResolvedValue({
+      terms: [
+        { sourceTerm: 'System', targetTerm: 'ระบบ', lineNumber: 2 },
+        { sourceTerm: 'system', targetTerm: 'ระบบ2', lineNumber: 3 }, // dup
+        { sourceTerm: 'Database', targetTerm: 'ฐานข้อมูล', lineNumber: 4 },
+      ],
+      errors: [],
+    })
+
+    const { importGlossary } = await import('./importGlossary.action')
+    const result = await importGlossary(makeFormData())
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.imported).toBe(2)
+      expect(result.data.duplicates).toBe(1)
+    }
+  })
 })

@@ -149,4 +149,23 @@ describe('markNotificationRead', () => {
       }),
     )
   })
+
+  // ── Branch coverage: audit log failure (non-fatal) ──
+
+  it('should succeed even when audit log write fails (non-fatal)', async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      id: 'usr-1',
+      email: 'test@test.com',
+      tenantId: asTenantId('ten-1'),
+      role: 'qa_reviewer',
+      displayName: 'Test',
+      metadata: null,
+      nativeLanguages: [],
+    })
+    mockWriteAuditLog.mockRejectedValueOnce(new Error('Audit write failed'))
+
+    const result = await markNotificationRead('a1b2c3d4-e5f6-4789-abcd-ef0123456789')
+
+    expect(result.success).toBe(true)
+  })
 })

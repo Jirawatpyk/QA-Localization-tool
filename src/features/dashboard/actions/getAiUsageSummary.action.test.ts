@@ -182,4 +182,32 @@ describe('getAiUsageSummary', () => {
     expect(result.data.projectedMonthCostUsd).not.toBeNull()
     expect(result.data.projectedMonthCostUsd).toBeGreaterThan(0)
   })
+
+  // ── Branch coverage: DB error catch ──
+
+  it('should return INTERNAL_ERROR when DB query throws', async () => {
+    dbState.throwAtCallIndex = 0
+
+    const { getAiUsageSummary } = await import('./getAiUsageSummary.action')
+    const result = await getAiUsageSummary()
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INTERNAL_ERROR')
+  })
+
+  // ── Branch coverage: summary nullish coalescing ──
+
+  it('should handle null/undefined summary row gracefully', async () => {
+    // Drizzle aggregate returns [undefined] in edge cases
+    dbState.returnValues = [[undefined]]
+
+    const { getAiUsageSummary } = await import('./getAiUsageSummary.action')
+    const result = await getAiUsageSummary()
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.totalCostUsd).toBe(0)
+    expect(result.data.filesProcessed).toBe(0)
+  })
 })
