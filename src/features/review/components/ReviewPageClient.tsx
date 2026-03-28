@@ -26,9 +26,11 @@ import { CommandPalette } from '@/features/review/components/CommandPalette'
 import { ConflictDialog } from '@/features/review/components/ConflictDialog'
 import { FileNavigationDropdown } from '@/features/review/components/FileNavigationDropdown'
 import { FilterBar } from '@/features/review/components/FilterBar'
+import { FindingCommentThread } from '@/features/review/components/FindingCommentThread'
 import { FindingDetailContent } from '@/features/review/components/FindingDetailContent'
 import { FindingDetailSheet } from '@/features/review/components/FindingDetailSheet'
 import { FindingList } from '@/features/review/components/FindingList'
+import { FlagForNativeDialog } from '@/features/review/components/FlagForNativeDialog'
 import { KeyboardCheatSheet } from '@/features/review/components/KeyboardCheatSheet'
 import { NoteInput } from '@/features/review/components/NoteInput'
 import { ReviewActionBar } from '@/features/review/components/ReviewActionBar'
@@ -49,6 +51,7 @@ import { useUndoRedo } from '@/features/review/hooks/use-undo-redo'
 import {
   useReviewStore,
   useFileState,
+  getStoreFileState,
   ReviewFileIdContext,
 } from '@/features/review/stores/review.store'
 import type { UndoEntry } from '@/features/review/stores/review.store'
@@ -181,6 +184,11 @@ export function ReviewPageClient({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [])
 
+  // Story 5.2c: Native reviewer state
+  const isNativeReviewer = initialData.userRole === 'native_reviewer'
+  const [flagDialogOpen, setFlagDialogOpen] = useState(false)
+  const [flagDialogFindingId, setFlagDialogFindingId] = useState<string | null>(null)
+
   // Story 4.4a: Bulk confirm dialog state
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false)
   const [bulkConfirmAction, setBulkConfirmAction] = useState<'accept' | 'reject'>('accept')
@@ -190,10 +198,10 @@ export function ReviewPageClient({
   const executeBulk = useCallback(
     async (action: 'accept' | 'reject') => {
       const store = useReviewStore.getState()
-      // CR-H2: read from fileStates Map (not flat fields) to guarantee correct file's data
-      const fs = store.fileStates.get(fileId)
-      const currentSelectedIds = fs?.selectedIds ?? store.selectedIds
-      const currentFindingsMap = fs?.findingsMap ?? store.findingsMap
+      // TD-ARCH-002: read from fileStates Map only (flat fields removed)
+      const fs = getStoreFileState(store, fileId)
+      const currentSelectedIds = fs.selectedIds
+      const currentFindingsMap = fs.findingsMap
       const ids = [...currentSelectedIds]
       if (ids.length === 0) return
 
@@ -229,7 +237,9 @@ export function ReviewPageClient({
         if (result.success) {
           // Sync server timestamps (H2 fix pattern)
           for (const pf of result.data.processedFindings) {
-            const current = useReviewStore.getState().findingsMap.get(pf.findingId)
+            const current = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
+              pf.findingId,
+            )
             if (current) {
               // CR-R2 C2 fix: preserve hasNonNativeAction in success sync
               useReviewStore.getState().setFinding(pf.findingId, {
@@ -241,7 +251,10 @@ export function ReviewPageClient({
             // Increment override count (matches Q7 semantic: overrideCount = actionCount - 1)
             // Only for re-decisions (previousState !== 'pending' = finding was already acted on)
             if (pf.previousState !== 'pending') {
-              const currentCount = useReviewStore.getState().overrideCounts.get(pf.findingId)
+              const currentCount = getStoreFileState(
+                useReviewStore.getState(),
+                fileId,
+              ).overrideCounts.get(pf.findingId)
               if (currentCount !== undefined) {
                 useReviewStore.getState().incrementOverrideCount(pf.findingId)
               } else {
@@ -253,7 +266,9 @@ export function ReviewPageClient({
           for (const skippedId of result.data.skippedIds) {
             const snap = snapshots.get(skippedId)
             if (snap) {
-              const current = useReviewStore.getState().findingsMap.get(skippedId)
+              const current = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
+                skippedId,
+              )
               // Only rollback if store still has our optimistic value (Realtime hasn't overwritten)
               const optimisticStatus = getNewState(action, snap.status)
               if (current && optimisticStatus && current.status === optimisticStatus) {
@@ -296,7 +311,7 @@ export function ReviewPageClient({
         } else {
           // Rollback optimistic updates
           for (const [id, snap] of snapshots) {
-            const current = useReviewStore.getState().findingsMap.get(id)
+            const current = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(id)
             if (current) {
               useReviewStore.getState().setFinding(id, snap)
             }
@@ -969,7 +984,9 @@ export function ReviewPageClient({
         .then((result) => {
           if (result.success) {
             // C1 fix: Capture snapshot from store RIGHT BEFORE removal (freshest state)
-            const finding = useReviewStore.getState().findingsMap.get(findingId)
+            const finding = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
+              findingId,
+            )
             useReviewStore.getState().removeFinding(findingId)
             setSelectedFinding(null)
             toast.success('Finding deleted')
@@ -1097,6 +1114,17 @@ export function ReviewPageClient({
               siblingFiles={initialData.siblingFiles}
             />
           </div>
+
+          {/* Story 5.2c: Native reviewer scoped view banner (AC2) */}
+          {isNativeReviewer && initialData.assignedFindingCount > 0 && (
+            <div
+              className="mb-4 rounded-md border border-info/20 bg-info/10 p-3 text-sm text-info"
+              role="status"
+            >
+              You have access to {initialData.assignedFindingCount} flagged segment
+              {initialData.assignedFindingCount !== 1 ? 's' : ''} in this file
+            </div>
+          )}
 
           {/* Header: file name + score badge + approve button */}
           <div className="flex items-center justify-between mb-6">
@@ -1258,6 +1286,17 @@ export function ReviewPageClient({
                 ? findingsMap.get(activeFindingState)?.detectedByLayer === 'Manual'
                 : false
             }
+            isNativeReviewer={isNativeReviewer}
+            onConfirmNative={() => {
+              if (!activeFindingState) return
+              // TODO(story-5.2c): wire confirmNativeReview server action call
+              toast.info('Confirm native — wiring in progress')
+            }}
+            onOverrideNative={() => {
+              if (!activeFindingState) return
+              // TODO(story-5.2c): wire overrideNativeReview server action call with status picker
+              toast.info('Override native — wiring in progress')
+            }}
           />
 
           {/* Story 4.4a: Bulk selection aria-live announcer (persistent in DOM per Guardrail #33) */}
@@ -1383,7 +1422,7 @@ export function ReviewPageClient({
                 if (!activeFindingState || overrideInFlightRef.current) return
                 // Optimistic store update
                 const store = useReviewStore.getState()
-                const f = store.findingsMap.get(activeFindingState)
+                const f = getStoreFileState(store, fileId).findingsMap.get(activeFindingState)
                 if (f) {
                   store.setFinding(activeFindingState, {
                     ...f,
@@ -1402,7 +1441,10 @@ export function ReviewPageClient({
                   .then((result) => {
                     if (result.success) {
                       // CR-R1-H4: sync server timestamp to prevent Realtime merge guard rejection
-                      const curr = useReviewStore.getState().findingsMap.get(activeFindingState)
+                      const curr = getStoreFileState(
+                        useReviewStore.getState(),
+                        fileId,
+                      ).findingsMap.get(activeFindingState)
                       if (curr) {
                         useReviewStore.getState().setFinding(activeFindingState, {
                           ...curr,
@@ -1433,7 +1475,10 @@ export function ReviewPageClient({
                     } else {
                       // Rollback optimistic update
                       if (f) {
-                        const curr = useReviewStore.getState().findingsMap.get(activeFindingState)
+                        const curr = getStoreFileState(
+                          useReviewStore.getState(),
+                          fileId,
+                        ).findingsMap.get(activeFindingState)
                         if (curr)
                           useReviewStore.getState().setFinding(activeFindingState, {
                             ...curr,
@@ -1456,7 +1501,7 @@ export function ReviewPageClient({
                 if (!orig) return
                 // Optimistic store update for reset
                 const store = useReviewStore.getState()
-                const f = store.findingsMap.get(activeFindingState)
+                const f = getStoreFileState(store, fileId).findingsMap.get(activeFindingState)
                 if (f) {
                   store.setFinding(activeFindingState, {
                     ...f,
@@ -1475,7 +1520,10 @@ export function ReviewPageClient({
                   .then((result) => {
                     if (result.success) {
                       // CR-R1-H4: sync server timestamp
-                      const curr = useReviewStore.getState().findingsMap.get(activeFindingState)
+                      const curr = getStoreFileState(
+                        useReviewStore.getState(),
+                        fileId,
+                      ).findingsMap.get(activeFindingState)
                       if (curr) {
                         useReviewStore.getState().setFinding(activeFindingState, {
                           ...curr,
@@ -1506,7 +1554,10 @@ export function ReviewPageClient({
                     } else {
                       // Rollback
                       if (f) {
-                        const curr = useReviewStore.getState().findingsMap.get(activeFindingState)
+                        const curr = getStoreFileState(
+                          useReviewStore.getState(),
+                          fileId,
+                        ).findingsMap.get(activeFindingState)
                         if (curr)
                           useReviewStore.getState().setFinding(activeFindingState, {
                             ...curr,
@@ -1699,6 +1750,29 @@ export function ReviewPageClient({
           onConfirm={handleSuppressConfirm}
           onCancel={handleSuppressCancel}
         />
+
+        {/* Story 5.2c: Flag for Native Dialog (QA reviewers only) */}
+        {!isNativeReviewer && flagDialogFindingId && (
+          <FlagForNativeDialog
+            open={flagDialogOpen}
+            onOpenChange={setFlagDialogOpen}
+            findingId={flagDialogFindingId}
+            fileId={fileId}
+            projectId={projectId}
+            onSuccess={() => {
+              if (flagDialogFindingId) {
+                const store = useReviewStore.getState()
+                const f = getStoreFileState(store, fileId).findingsMap.get(flagDialogFindingId)
+                if (f)
+                  store.setFinding(flagDialogFindingId, {
+                    ...f,
+                    status: 'flagged',
+                    updatedAt: new Date().toISOString(),
+                  })
+              }
+            }}
+          />
+        )}
       </div>
     </ReviewFileIdContext.Provider>
   )

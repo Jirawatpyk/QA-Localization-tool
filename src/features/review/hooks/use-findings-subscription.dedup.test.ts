@@ -37,7 +37,7 @@ vi.mock('@/features/review/utils/announce', () => ({
 }))
 
 import { useFindingsSubscription } from '@/features/review/hooks/use-findings-subscription'
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, getStoreFileState } from '@/features/review/stores/review.store'
 
 describe('useFindingsSubscription — dedup (P2-08)', () => {
   beforeEach(() => {
@@ -103,7 +103,7 @@ describe('useFindingsSubscription — dedup (P2-08)', () => {
     await vi.advanceTimersByTimeAsync(0) // flush poll
 
     // Assert: findingsMap has exactly 1 entry (dedup by id)
-    const map = useReviewStore.getState().findingsMap
+    const map = getStoreFileState().findingsMap
     expect(map.size).toBe(1)
     expect(map.has('finding-A')).toBe(true)
   })
@@ -180,7 +180,7 @@ describe('useFindingsSubscription — dedup (P2-08)', () => {
     })
 
     // Assert: findingsMap should have exactly 3 entries
-    const map = useReviewStore.getState().findingsMap
+    const map = getStoreFileState().findingsMap
     expect(map.has('finding-A')).toBe(true)
     expect(map.has('finding-B')).toBe(true)
     expect(map.has('finding-C')).toBe(true)

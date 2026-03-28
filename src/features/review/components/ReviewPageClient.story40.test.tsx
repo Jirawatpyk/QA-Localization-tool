@@ -129,6 +129,8 @@ function buildInitialData(overrides?: BuildOverrides): FileReviewData {
     siblingFiles: [],
     isNonNative: false,
     btConfidenceThreshold: 0.6,
+    userRole: 'qa_reviewer',
+    assignedFindingCount: 0,
     ...overrides,
   }
   // Ensure findings have hasNonNativeAction (Story 5.2a) — buildFinding returns Finding

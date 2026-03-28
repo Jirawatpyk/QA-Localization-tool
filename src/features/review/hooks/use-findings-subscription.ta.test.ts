@@ -40,7 +40,7 @@ vi.mock('@/features/review/utils/announce', () => ({
 }))
 
 import { useFindingsSubscription } from '@/features/review/hooks/use-findings-subscription'
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, getStoreFileState } from '@/features/review/stores/review.store'
 import type { Finding } from '@/types/finding'
 
 // ── Helper: build a full Finding for store pre-population ──
@@ -136,7 +136,7 @@ describe('useFindingsSubscription — TA expansion', () => {
     expect(setFindingSpy).not.toHaveBeenCalled()
 
     // Store should retain optimistic state
-    const finding = useReviewStore.getState().findingsMap.get('finding-1')
+    const finding = getStoreFileState().findingsMap.get('finding-1')
     expect(finding?.status).toBe('accepted')
     expect(finding?.updatedAt).toBe(optimisticTime)
 
@@ -179,7 +179,7 @@ describe('useFindingsSubscription — TA expansion', () => {
     })
 
     // Realtime has newer timestamp → entire finding is replaced (including severity)
-    const finding = useReviewStore.getState().findingsMap.get('finding-merge')
+    const finding = getStoreFileState().findingsMap.get('finding-merge')
     expect(finding?.severity).toBe('critical')
     expect(finding?.status).toBe('accepted')
     expect(finding?.updatedAt).toBe(newerTime)

@@ -1,3 +1,4 @@
+import type { AssignmentStatus } from '@/types/assignment'
 import type { DetectedByLayer, FindingSeverity, FindingStatus } from '@/types/finding'
 
 /** UI display shape for findings — used by FindingCard, FindingCardCompact, FindingList, FindingDetailSheet */
@@ -17,7 +18,23 @@ export type FindingForDisplay = {
   aiModel: string | null
   /** Story 5.2a: Whether this finding has any review_action with non_native=true (not yet native_verified) */
   hasNonNativeAction: boolean
+  /** Story 5.2c: Assignment fields (populated for flagged findings with assignments) */
+  assignmentId?: string | undefined
+  assignmentStatus?: AssignmentStatus | undefined
+  assignedToName?: string | undefined
+  assignedByName?: string | undefined
+  flaggerComment?: string | undefined
 }
+
+// ── Native Reviewer Notification Types (Story 5.2c, Guardrail #3) ──
+
+export const NATIVE_NOTIFICATION_TYPES = [
+  'finding_flagged_for_native',
+  'native_comment_added',
+  'native_review_completed',
+] as const
+
+export type NativeNotificationType = (typeof NATIVE_NOTIFICATION_TYPES)[number]
 
 // ── Suppression Types (Story 4.6) ──
 

@@ -100,6 +100,8 @@ function buildInitialData(overrides?: Partial<FileReviewData>): FileReviewData {
     siblingFiles: [],
     isNonNative: false,
     btConfidenceThreshold: 0.6,
+    userRole: 'qa_reviewer',
+    assignedFindingCount: 0,
     ...overrides,
   }
 }

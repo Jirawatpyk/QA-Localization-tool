@@ -7,7 +7,7 @@ import { noteFinding } from '@/features/review/actions/noteFinding.action'
 import { rejectFinding } from '@/features/review/actions/rejectFinding.action'
 import { sourceIssueFinding } from '@/features/review/actions/sourceIssueFinding.action'
 import { useFocusManagement } from '@/features/review/hooks/use-focus-management'
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, getStoreFileState } from '@/features/review/stores/review.store'
 import type { UndoEntryAction } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import { announce } from '@/features/review/utils/announce'
@@ -19,12 +19,14 @@ import { FINDING_STATUSES } from '@/types/finding'
 import type { FindingStatus } from '@/types/finding'
 
 // Map ReviewAction → UndoEntryAction (source → accept is 'source_issue' in undo context)
+// confirm_native uses a separate flow (Task 10) but needs an entry for type completeness
 const REVIEW_TO_UNDO_ACTION: Record<ReviewAction, UndoEntryAction> = {
   accept: 'accept',
   reject: 'reject',
   flag: 'flag',
   note: 'note',
   source: 'source_issue',
+  confirm_native: 'accept', // native confirm resolves to accepted/re_accepted
 }
 
 type UseReviewActionsOptions = {
@@ -58,6 +60,7 @@ const ACTION_LABELS: Record<ReviewAction, { past: string; toast: ToastFn }> = {
   flag: { past: 'flagged for review', toast: toast.warning },
   note: { past: 'noted', toast: toast.info },
   source: { past: 'marked as source issue', toast: toast },
+  confirm_native: { past: 'confirmed by native reviewer', toast: toast.success },
 }
 
 export function useReviewActions({
@@ -81,7 +84,8 @@ export function useReviewActions({
       if (inFlightRef.current) return
 
       const state = useReviewStore.getState()
-      const finding = state.findingsMap.get(findingId)
+      const fs = getStoreFileState(state, fileId)
+      const finding = fs.findingsMap.get(findingId)
       if (!finding) return
 
       // Runtime verify: store value → validated FindingStatus (Guardrail #3)
@@ -111,7 +115,9 @@ export function useReviewActions({
       setIsInFlight(true)
       setActiveAction(action)
       try {
-        const actionFn = ACTION_FN_MAP[action]
+        // confirm_native uses separate flow (Task 10) — skip executeReviewAction pattern
+        if (!(action in ACTION_FN_MAP)) return
+        const actionFn = ACTION_FN_MAP[action as StateTransitionAction]
         const result = await (actionFn({ findingId, fileId, projectId }) as Promise<{
           success: boolean
           error?: string
@@ -126,7 +132,7 @@ export function useReviewActions({
         if (!result.success) {
           // M4 fix: get fresh state before rollback to avoid overwriting Realtime updates
           const currentState = useReviewStore.getState()
-          const currentFinding = currentState.findingsMap.get(findingId)
+          const currentFinding = getStoreFileState(currentState, fileId).findingsMap.get(findingId)
           // Only rollback if the current status is still our optimistic value
           if (currentFinding && currentFinding.status === newState) {
             // CR-R2 C1 fix: restore hasNonNativeAction alongside status
@@ -143,7 +149,7 @@ export function useReviewActions({
         // H2 fix: replace optimistic updatedAt with server timestamp
         // Prevents client clock skew from permanently blocking future Realtime/poll updates
         const successState = useReviewStore.getState()
-        const successFinding = successState.findingsMap.get(findingId)
+        const successFinding = getStoreFileState(successState, fileId).findingsMap.get(findingId)
         if (successFinding && result.data && 'serverUpdatedAt' in result.data) {
           successState.setFinding(findingId, {
             ...successFinding,
@@ -159,7 +165,7 @@ export function useReviewActions({
         // Only increment if finding already had prior actions (matches Q7 semantic)
         const isNoOp = result.data && 'noOp' in result.data && result.data.noOp === true
         if (!isNoOp && currentStatus !== 'pending') {
-          const currentCount = successState.overrideCounts.get(findingId)
+          const currentCount = getStoreFileState(successState, fileId).overrideCounts.get(findingId)
           if (currentCount !== undefined) {
             successState.incrementOverrideCount(findingId)
           } else {
@@ -243,19 +249,17 @@ export function useReviewActions({
 
         // Screen reader announcement (Task 6.3 — Guardrail #33: polite)
         const updatedState = useReviewStore.getState()
+        const updatedFs = getStoreFileState(updatedState, fileId)
         const statusMap = new Map<string, string>()
         let reviewed = 0
-        for (const [id, f] of updatedState.findingsMap) {
+        for (const [id, f] of updatedFs.findingsMap) {
           statusMap.set(id, f.status)
           if (f.status !== 'pending') reviewed++
         }
-        announce(`Finding ${label.past}. ${reviewed} of ${updatedState.findingsMap.size} reviewed`)
+        announce(`Finding ${label.past}. ${reviewed} of ${updatedFs.findingsMap.size} reviewed`)
 
         // C1+H3 fix: use sortedFindingIds from store (visual order, includes minor)
-        // instead of Map insertion order. FindingList syncs this from its severity-sorted groups.
-        // autoAdvance handles rAF DOM focus. setSelectedFinding triggers FindingList's
-        // storeSelectedId effect which handles minor accordion expansion (C1 fix).
-        const sortedIds = updatedState.sortedFindingIds
+        const sortedIds = updatedFs.sortedFindingIds
         const nextPendingId = autoAdvance(sortedIds, statusMap, findingId)
 
         if (nextPendingId) {
@@ -268,9 +272,8 @@ export function useReviewActions({
       } catch {
         // M4 fix: fresh state for rollback on unexpected error
         const currentState = useReviewStore.getState()
-        const currentFinding = currentState.findingsMap.get(findingId)
+        const currentFinding = getStoreFileState(currentState, fileId).findingsMap.get(findingId)
         if (currentFinding && currentFinding.status === newState) {
-          // CR-R2 C1 fix: restore hasNonNativeAction alongside status
           currentState.setFinding(findingId, {
             ...currentFinding,
             status: currentStatus,
@@ -308,7 +311,7 @@ export function useReviewActions({
   const handleNote = useCallback(
     (findingId: string): 'open-note-input' | void => {
       const state = useReviewStore.getState()
-      const finding = state.findingsMap.get(findingId)
+      const finding = getStoreFileState(state, fileId).findingsMap.get(findingId)
       if (!finding) return
 
       // Path 2: already noted → open NoteInput (no advance, no state change)

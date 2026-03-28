@@ -37,7 +37,7 @@ vi.mock('@/features/review/utils/announce', () => ({
 }))
 
 import { useFindingsSubscription } from '@/features/review/hooks/use-findings-subscription'
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, getStoreFileState } from '@/features/review/stores/review.store'
 import { buildDbFinding } from '@/test/factories'
 
 describe('useFindingsSubscription', () => {
@@ -102,7 +102,7 @@ describe('useFindingsSubscription', () => {
       })
     })
 
-    expect(useReviewStore.getState().findingsMap.has('finding-1')).toBe(true)
+    expect(getStoreFileState().findingsMap.has('finding-1')).toBe(true)
   })
 
   // ── P0: UPDATE syncs finding in store (accept/reject status change) ──
@@ -160,7 +160,7 @@ describe('useFindingsSubscription', () => {
       })
     })
 
-    const updated = useReviewStore.getState().findingsMap.get('finding-update-1')
+    const updated = getStoreFileState().findingsMap.get('finding-update-1')
     expect(updated).toBeDefined()
     expect(updated!.status).toBe('accepted')
   })
@@ -208,7 +208,7 @@ describe('useFindingsSubscription', () => {
       onDeleteHandler({ old: { id: 'finding-1' } })
     })
 
-    expect(useReviewStore.getState().findingsMap.has('finding-1')).toBe(false)
+    expect(getStoreFileState().findingsMap.has('finding-1')).toBe(false)
   })
 
   // ── P0: Burst INSERT batching via queueMicrotask ──
@@ -248,7 +248,7 @@ describe('useFindingsSubscription', () => {
     expect(setFindingSpy).not.toHaveBeenCalled()
 
     // All 5 findings should be in the store
-    const map = useReviewStore.getState().findingsMap
+    const map = getStoreFileState().findingsMap
     expect(map.size).toBeGreaterThanOrEqual(5)
     expect(map.has('finding-0')).toBe(true)
     expect(map.has('finding-4')).toBe(true)
@@ -286,13 +286,13 @@ describe('useFindingsSubscription', () => {
     await act(async () => {
       onInsertHandler({ new: findingPayload })
     })
-    expect(useReviewStore.getState().findingsMap.has('finding-reprocess')).toBe(true)
+    expect(getStoreFileState().findingsMap.has('finding-reprocess')).toBe(true)
 
     // Step 2: DELETE (re-process clears findings) — DELETE is synchronous, no batch buffer
     act(() => {
       onDeleteHandler({ old: { id: 'finding-reprocess' } })
     })
-    expect(useReviewStore.getState().findingsMap.has('finding-reprocess')).toBe(false)
+    expect(getStoreFileState().findingsMap.has('finding-reprocess')).toBe(false)
 
     // Step 3: INSERT again (re-process creates new findings)
     await act(async () => {
@@ -301,7 +301,7 @@ describe('useFindingsSubscription', () => {
       })
     })
 
-    const reprocessed = useReviewStore.getState().findingsMap.get('finding-reprocess')
+    const reprocessed = getStoreFileState().findingsMap.get('finding-reprocess')
     expect(reprocessed).toBeDefined()
     expect(reprocessed!.description).toBe('Re-processed finding')
     expect(reprocessed!.aiConfidence).toBe(90)
@@ -372,7 +372,7 @@ describe('useFindingsSubscription', () => {
       onInsertHandler({ new: { id: 'bad-finding', severity: 'invalid_severity' } })
     })
 
-    expect(useReviewStore.getState().findingsMap.has('bad-finding')).toBe(false)
+    expect(getStoreFileState().findingsMap.has('bad-finding')).toBe(false)
   })
 
   // ── P1: INSERT with missing id is ignored ──
@@ -385,12 +385,12 @@ describe('useFindingsSubscription', () => {
     )
     const onInsertHandler = insertCall![2] as (payload: { new: Record<string, unknown> }) => void
 
-    const sizeBefore = useReviewStore.getState().findingsMap.size
+    const sizeBefore = getStoreFileState().findingsMap.size
     await act(async () => {
       onInsertHandler({ new: { severity: 'major' } })
     })
 
-    expect(useReviewStore.getState().findingsMap.size).toBe(sizeBefore)
+    expect(getStoreFileState().findingsMap.size).toBe(sizeBefore)
   })
 
   // ── P1: DELETE with missing id is ignored ──
@@ -433,7 +433,7 @@ describe('useFindingsSubscription', () => {
       onDeleteHandler({ old: { id: 123 } }) // non-string id
     })
 
-    expect(useReviewStore.getState().findingsMap.has('finding-keep')).toBe(true)
+    expect(getStoreFileState().findingsMap.has('finding-keep')).toBe(true)
   })
 
   // ── P1: UPDATE with invalid data is ignored ──
@@ -484,7 +484,7 @@ describe('useFindingsSubscription', () => {
       })
     })
 
-    const finding = useReviewStore.getState().findingsMap.get('finding-defaults')
+    const finding = getStoreFileState().findingsMap.get('finding-defaults')
     expect(finding).toBeDefined()
     expect(finding!.category).toBe('')
     expect(finding!.description).toBe('')

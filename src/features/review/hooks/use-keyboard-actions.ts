@@ -461,6 +461,9 @@ export const REVIEW_HOTKEYS = [
   { key: 's', description: 'Source issue', category: 'Review Actions' },
   { key: '-', description: 'Severity override', category: 'Review Actions' },
   { key: '+', description: 'Add finding', category: 'Review Actions' },
+  // Story 5.2c: Native reviewer hotkeys (AC8)
+  { key: 'c', description: 'Confirm (native)', category: 'Native Review' },
+  { key: 'o', description: 'Override (native)', category: 'Native Review' },
 ] as const
 
 type ReviewHotkeyHandlers = {
@@ -471,6 +474,9 @@ type ReviewHotkeyHandlers = {
   source?: (findingId: string) => void
   override?: () => void
   add?: () => void
+  // Story 5.2c: Native reviewer handlers (AC8)
+  confirmNative?: (findingId: string) => void
+  overrideNative?: () => void
 }
 
 // Map hotkey key to handler name
@@ -482,6 +488,8 @@ const HOTKEY_ACTION_MAP: Record<string, keyof ReviewHotkeyHandlers> = {
   s: 'source',
   '-': 'override',
   '+': 'add',
+  c: 'confirmNative',
+  o: 'overrideNative',
 }
 
 /** Register 7 review hotkeys — A/R/F/N/S/-/+ all wired (Story 4.3) */
@@ -507,8 +515,12 @@ export function useReviewHotkeys(
           if (!actionName) return
           const handler = handlersRef.current[actionName]
           if (!handler) return
-          // '+' (add) and '-' (override) don't need a selected finding passed — they open UI
-          if (actionName === 'add' || actionName === 'override') {
+          // '+' (add), '-' (override), 'o' (overrideNative) don't need a selected finding passed — they open UI
+          if (
+            actionName === 'add' ||
+            actionName === 'override' ||
+            actionName === 'overrideNative'
+          ) {
             ;(handler as () => void)()
             return
           }

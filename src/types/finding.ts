@@ -1,3 +1,5 @@
+import type { AssignmentStatus } from '@/types/assignment'
+
 // Finding types — canonical source of truth (DB-aligned)
 // Const array for runtime validation (Guardrail #3), type derived from it
 export const FINDING_SEVERITIES = ['critical', 'major', 'minor'] as const
@@ -82,4 +84,10 @@ export type Finding = {
   relatedFileIds: string[] | null
   /** Story 5.2a: Whether this finding has any non-native review action */
   hasNonNativeAction?: boolean | undefined
+  /** Story 5.2c: Assignment fields (populated for flagged findings with assignments) */
+  assignmentId?: string | undefined
+  assignmentStatus?: AssignmentStatus | undefined
+  assignedToName?: string | undefined
+  assignedByName?: string | undefined
+  flaggerComment?: string | undefined
 }

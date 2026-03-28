@@ -78,19 +78,38 @@ import type {
   ScoreStatus,
 } from '@/types/finding'
 
+/**
+ * TD-ARCH-002: Get the active file's FileState from the Map.
+ * All store-internal reads MUST use this instead of flat fields.
+ */
+function getActiveFs(s: ReviewState): FileState {
+  return s.fileStates.get(s.currentFileId ?? '') ?? DEFAULT_FILE_STATE
+}
+
+/**
+ * TD-ARCH-002: Update the active file's FileState in the Map.
+ * Returns a partial ReviewState with only `fileStates` (no flat field dual-write).
+ */
+function updateActiveFs(
+  s: ReviewState,
+  patch: Partial<FileState>,
+): { fileStates: Map<string, FileState> } {
+  const fileId = s.currentFileId
+  if (!fileId) return { fileStates: s.fileStates }
+  const newMap = new Map(s.fileStates)
+  const existing = newMap.get(fileId) ?? createFreshFileState()
+  newMap.set(fileId, { ...existing, ...patch })
+  return { fileStates: newMap }
+}
+
 /** Compute selection adjustments after any filter/search/AI-toggle change */
-function computeSelectionAfterFilterChange(state: ReviewState): Partial<ReviewState> {
+function computeSelectionAfterFilterChange(fs: FileState): Partial<FileState> {
   const visibleIds = new Set<string>()
-  for (const id of state.sortedFindingIds) {
-    const finding = state.findingsMap.get(id)
+  for (const id of fs.sortedFindingIds) {
+    const finding = fs.findingsMap.get(id)
     if (
       finding &&
-      findingMatchesFilters(
-        finding,
-        state.filterState,
-        state.searchQuery,
-        state.aiSuggestionsEnabled,
-      )
+      findingMatchesFilters(finding, fs.filterState, fs.searchQuery, fs.aiSuggestionsEnabled)
     ) {
       visibleIds.add(id)
     }
@@ -98,18 +117,18 @@ function computeSelectionAfterFilterChange(state: ReviewState): Partial<ReviewSt
 
   // Intersect selectedIds with visible
   const newSelectedIds = new Set<string>()
-  for (const id of state.selectedIds) {
+  for (const id of fs.selectedIds) {
     if (visibleIds.has(id)) newSelectedIds.add(id)
   }
 
   // Exit bulk mode if selection became empty
   const newSelectionMode: 'single' | 'bulk' =
-    newSelectedIds.size === 0 && state.selectionMode === 'bulk' ? 'single' : state.selectionMode
+    newSelectedIds.size === 0 && fs.selectionMode === 'bulk' ? 'single' : fs.selectionMode
 
   // Reset selectedId if not visible
-  let newSelectedId = state.selectedId
+  let newSelectedId = fs.selectedId
   if (newSelectedId !== null && !visibleIds.has(newSelectedId)) {
-    newSelectedId = state.sortedFindingIds.find((id) => visibleIds.has(id)) ?? null
+    newSelectedId = fs.sortedFindingIds.find((id) => visibleIds.has(id)) ?? null
   }
 
   return {
@@ -121,11 +140,11 @@ function computeSelectionAfterFilterChange(state: ReviewState): Partial<ReviewSt
 
 // ── Findings Slice (Story 4.5: + searchQuery, aiSuggestionsEnabled, per-key setFilter) ──
 
+// TD-ARCH-002: State fields live in FileState only. Slice types declare actions + initial values.
 type FindingsSlice = {
   findingsMap: Map<string, Finding>
   selectedId: string | null
   filterState: FilterState
-  /** Visual sort order of finding IDs (synced from FindingList flattenedIds) */
   sortedFindingIds: string[]
   searchQuery: string
   aiSuggestionsEnabled: boolean
@@ -137,13 +156,13 @@ type FindingsSlice = {
   setSortedFindingIds: (ids: string[]) => void
   setSearchQuery: (query: string) => void
   setAiSuggestionsEnabled: (enabled: boolean) => void
-  /** Batch reset all filters + search to defaults (single state update) */
   resetFilters: () => void
 }
 
 const createFindingsSlice = (
   set: (fn: Partial<ReviewState> | ((s: ReviewState) => Partial<ReviewState>)) => void,
 ): FindingsSlice => ({
+  // TD-ARCH-002: flat fields kept for backward compat (type system) but writes go to fileStates Map
   findingsMap: new Map(),
   selectedId: null,
   filterState: { ...DEFAULT_FILTER_STATE },
@@ -152,57 +171,62 @@ const createFindingsSlice = (
   aiSuggestionsEnabled: true,
   setFinding: (id, finding) =>
     set((s) => {
-      const newMap = new Map(s.findingsMap)
+      const fs = getActiveFs(s)
+      const newMap = new Map(fs.findingsMap)
       newMap.set(id, finding)
-      return { findingsMap: newMap }
+      return updateActiveFs(s, { findingsMap: newMap })
     }),
-  setFindings: (findings) => set({ findingsMap: findings }),
+  setFindings: (findings) => set((s) => updateActiveFs(s, { findingsMap: findings })),
   removeFinding: (id) =>
     set((s) => {
-      const newMap = new Map(s.findingsMap)
+      const fs = getActiveFs(s)
+      const newMap = new Map(fs.findingsMap)
       newMap.delete(id)
-      return { findingsMap: newMap }
+      return updateActiveFs(s, { findingsMap: newMap })
     }),
   setFilter: (key, value) =>
     set((s) => {
-      const newFilterState = { ...s.filterState, [key]: value }
-      const hypothetical: ReviewState = { ...s, filterState: newFilterState } as ReviewState
-      return {
+      const fs = getActiveFs(s)
+      const newFilterState = { ...fs.filterState, [key]: value }
+      const hypothetical: FileState = { ...fs, filterState: newFilterState }
+      return updateActiveFs(s, {
         filterState: newFilterState,
         ...computeSelectionAfterFilterChange(hypothetical),
-      }
+      })
     }),
-  setSelectedFinding: (id) => set({ selectedId: id }),
-  setSortedFindingIds: (ids) => set({ sortedFindingIds: ids }),
+  setSelectedFinding: (id) => set((s) => updateActiveFs(s, { selectedId: id })),
+  setSortedFindingIds: (ids) => set((s) => updateActiveFs(s, { sortedFindingIds: ids })),
   setSearchQuery: (query) =>
     set((s) => {
-      const hypothetical: ReviewState = { ...s, searchQuery: query } as ReviewState
-      return {
+      const fs = getActiveFs(s)
+      const hypothetical: FileState = { ...fs, searchQuery: query }
+      return updateActiveFs(s, {
         searchQuery: query,
         ...computeSelectionAfterFilterChange(hypothetical),
-      }
+      })
     }),
   setAiSuggestionsEnabled: (enabled) =>
     set((s) => {
-      const hypothetical: ReviewState = { ...s, aiSuggestionsEnabled: enabled } as ReviewState
-      return {
+      const fs = getActiveFs(s)
+      const hypothetical: FileState = { ...fs, aiSuggestionsEnabled: enabled }
+      return updateActiveFs(s, {
         aiSuggestionsEnabled: enabled,
         ...computeSelectionAfterFilterChange(hypothetical),
-      }
+      })
     }),
-  // DG-2 fix: resetFilters clears filters + search ONLY — AI toggle is separate (AC8 "separate from Layer filter")
   resetFilters: () =>
     set((s) => {
-      const hypothetical: ReviewState = {
-        ...s,
+      const fs = getActiveFs(s)
+      const hypothetical: FileState = {
+        ...fs,
         filterState: { ...DEFAULT_FILTER_STATE },
         searchQuery: '',
-      } as ReviewState
-      return {
+      }
+      return updateActiveFs(s, {
         filterState: { ...DEFAULT_FILTER_STATE },
         searchQuery: '',
         ...computeSelectionAfterFilterChange(hypothetical),
-      }
+      })
     }),
 })
 
@@ -232,14 +256,17 @@ const createScoreSlice = (
   autoPassRationale: null,
   isRecalculating: false,
   updateScore: (score, status, layerCompleted, autoPassRationale) =>
-    set({
-      currentScore: score,
-      scoreStatus: status,
-      isRecalculating: false,
-      ...(layerCompleted !== undefined ? { layerCompleted } : {}),
-      ...(autoPassRationale !== undefined ? { autoPassRationale } : {}),
-    }),
-  setRecalculating: () => set({ isRecalculating: true, scoreStatus: 'calculating' }),
+    set((s) =>
+      updateActiveFs(s, {
+        currentScore: score,
+        scoreStatus: status,
+        isRecalculating: false,
+        ...(layerCompleted !== undefined ? { layerCompleted } : {}),
+        ...(autoPassRationale !== undefined ? { autoPassRationale } : {}),
+      }),
+    ),
+  setRecalculating: () =>
+    set((s) => updateActiveFs(s, { isRecalculating: true, scoreStatus: 'calculating' })),
 })
 
 // ── Threshold Slice ──
@@ -256,10 +283,12 @@ const createThresholdSlice = (
   l2ConfidenceMin: null,
   l3ConfidenceMin: null,
   updateThresholds: (thresholds) =>
-    set({
-      l2ConfidenceMin: thresholds.l2ConfidenceMin,
-      l3ConfidenceMin: thresholds.l3ConfidenceMin,
-    }),
+    set((s) =>
+      updateActiveFs(s, {
+        l2ConfidenceMin: thresholds.l2ConfidenceMin,
+        l3ConfidenceMin: thresholds.l3ConfidenceMin,
+      }),
+    ),
 })
 
 // ── Selection Slice ──
@@ -289,43 +318,47 @@ const createSelectionSlice = (
   overrideCounts: new Map(),
   toggleSelection: (id) =>
     set((s) => {
-      const newSet = new Set(s.selectedIds)
+      const fs = getActiveFs(s)
+      const newSet = new Set(fs.selectedIds)
       if (newSet.has(id)) {
         newSet.delete(id)
       } else {
         newSet.add(id)
       }
-      return { selectedIds: newSet }
+      return updateActiveFs(s, { selectedIds: newSet })
     }),
   addToSelection: (id) =>
     set((s) => {
-      const newSet = new Set(s.selectedIds)
+      const fs = getActiveFs(s)
+      const newSet = new Set(fs.selectedIds)
       newSet.add(id)
-      return { selectedIds: newSet }
+      return updateActiveFs(s, { selectedIds: newSet })
     }),
-  setSelections: (ids) => set({ selectedIds: ids }),
-  clearSelection: () => set({ selectedIds: new Set() }),
+  setSelections: (ids) => set((s) => updateActiveFs(s, { selectedIds: ids })),
+  clearSelection: () => set((s) => updateActiveFs(s, { selectedIds: new Set() })),
   setSelectionMode: (mode) =>
     set((s) => {
-      // Clear selectedIds when switching from bulk to single
-      if (s.selectionMode === 'bulk' && mode === 'single') {
-        return { selectionMode: mode, selectedIds: new Set() }
+      const fs = getActiveFs(s)
+      if (fs.selectionMode === 'bulk' && mode === 'single') {
+        return updateActiveFs(s, { selectionMode: mode, selectedIds: new Set() })
       }
-      return { selectionMode: mode }
+      return updateActiveFs(s, { selectionMode: mode })
     }),
-  setBulkInFlight: (v) => set({ isBulkInFlight: v }),
-  setOverrideCounts: (counts) => set({ overrideCounts: counts }),
+  setBulkInFlight: (v) => set((s) => updateActiveFs(s, { isBulkInFlight: v })),
+  setOverrideCounts: (counts) => set((s) => updateActiveFs(s, { overrideCounts: counts })),
   setOverrideCount: (findingId, count) =>
     set((s) => {
-      const newMap = new Map(s.overrideCounts)
+      const fs = getActiveFs(s)
+      const newMap = new Map(fs.overrideCounts)
       newMap.set(findingId, count)
-      return { overrideCounts: newMap }
+      return updateActiveFs(s, { overrideCounts: newMap })
     }),
   incrementOverrideCount: (findingId) =>
     set((s) => {
-      const newMap = new Map(s.overrideCounts)
+      const fs = getActiveFs(s)
+      const newMap = new Map(fs.overrideCounts)
       newMap.set(findingId, (newMap.get(findingId) ?? 0) + 1)
-      return { overrideCounts: newMap }
+      return updateActiveFs(s, { overrideCounts: newMap })
     }),
 })
 
@@ -380,53 +413,65 @@ const createUndoRedoSlice = (
   undoFindingIndex: new Map(),
   pushUndo: (entry) =>
     set((s) => {
-      const newStack = [...s.undoStack, entry].slice(-UNDO_STACK_MAX)
-      return {
+      const fs = getActiveFs(s)
+      const newStack = [...fs.undoStack, entry].slice(-UNDO_STACK_MAX)
+      return updateActiveFs(s, {
         undoStack: newStack,
-        redoStack: [], // Clear redo on new action (AC6)
+        redoStack: [],
         undoFindingIndex: rebuildIndex(newStack),
-      }
+      })
     }),
   reinsertUndo: (entry) =>
     set((s) => {
-      const newStack = [...s.undoStack, entry].slice(-UNDO_STACK_MAX)
-      return {
+      const fs = getActiveFs(s)
+      const newStack = [...fs.undoStack, entry].slice(-UNDO_STACK_MAX)
+      return updateActiveFs(s, {
         undoStack: newStack,
-        // Key difference from pushUndo: does NOT clear redoStack
         undoFindingIndex: rebuildIndex(newStack),
-      }
+      })
     }),
   popUndo: () => {
-    const state = get()
-    if (state.undoStack.length === 0) return undefined
-    const entry = state.undoStack[state.undoStack.length - 1]!
-    const newStack = state.undoStack.slice(0, -1)
-    set({
-      undoStack: newStack,
-      undoFindingIndex: rebuildIndex(newStack),
+    // P1-1 fix: read + write inside set() to avoid TOCTOU
+    let popped: UndoEntry | undefined
+    set((s) => {
+      const fs = getActiveFs(s)
+      if (fs.undoStack.length === 0) return {}
+      popped = fs.undoStack[fs.undoStack.length - 1]!
+      const newStack = fs.undoStack.slice(0, -1)
+      return updateActiveFs(s, {
+        undoStack: newStack,
+        undoFindingIndex: rebuildIndex(newStack),
+      })
     })
-    return entry
+    return popped
   },
   pushRedo: (entry) =>
-    set((s) => ({
-      redoStack: [...s.redoStack, entry],
-    })),
+    set((s) => {
+      const fs = getActiveFs(s)
+      return updateActiveFs(s, { redoStack: [...fs.redoStack, entry] })
+    }),
   popRedo: () => {
-    const state = get()
-    if (state.redoStack.length === 0) return undefined
-    const entry = state.redoStack[state.redoStack.length - 1]!
-    set({ redoStack: state.redoStack.slice(0, -1) })
-    return entry
+    // P1-1 fix: read + write inside set() to avoid TOCTOU
+    let popped: UndoEntry | undefined
+    set((s) => {
+      const fs = getActiveFs(s)
+      if (fs.redoStack.length === 0) return {}
+      popped = fs.redoStack[fs.redoStack.length - 1]!
+      return updateActiveFs(s, { redoStack: fs.redoStack.slice(0, -1) })
+    })
+    return popped
   },
   clearUndoRedo: () =>
-    set({
-      undoStack: [],
-      redoStack: [],
-      undoFindingIndex: new Map(),
-    }),
+    set((s) =>
+      updateActiveFs(s, {
+        undoStack: [],
+        redoStack: [],
+        undoFindingIndex: new Map(),
+      }),
+    ),
   markEntryStale: (findingId) =>
     set((s) => {
-      // C2 fix: mark stale in BOTH undo and redo stacks
+      const fs = getActiveFs(s)
       const markStaleInStack = (stack: UndoEntry[]): UndoEntry[] =>
         stack.map((entry) => {
           const fIds = getEntryFindingIds(entry)
@@ -435,32 +480,29 @@ const createUndoRedoSlice = (
           newStale.add(findingId)
           return { ...entry, staleFindings: newStale }
         })
-      return {
-        undoStack: markStaleInStack(s.undoStack),
-        redoStack: markStaleInStack(s.redoStack),
-      }
+      return updateActiveFs(s, {
+        undoStack: markStaleInStack(fs.undoStack),
+        redoStack: markStaleInStack(fs.redoStack),
+      })
     }),
   removeEntriesForFinding: (findingId) =>
     set((s) => {
-      // For single entries: remove entirely if they reference this finding
-      // For bulk entries: remove the finding from the entry (keep entry if other findings remain)
+      const fs = getActiveFs(s)
       const filterStack = (stack: UndoEntry[]): UndoEntry[] => {
         const result: UndoEntry[] = []
         for (const entry of stack) {
           if (entry.type === 'single' && entry.findingId === findingId) {
-            continue // Remove entirely
+            continue
           }
           if (entry.type === 'bulk') {
             const hasFinding = entry.previousStates.has(findingId) || entry.newStates.has(findingId)
             if (hasFinding) {
-              // Remove this finding from the bulk entry
               const newPrev = new Map(entry.previousStates)
               const newNew = new Map(entry.newStates)
               const newStale = new Set(entry.staleFindings)
               newPrev.delete(findingId)
               newNew.delete(findingId)
               newStale.delete(findingId)
-              // If no findings left, drop the entire entry
               if (newPrev.size === 0) continue
               result.push({
                 ...entry,
@@ -475,13 +517,13 @@ const createUndoRedoSlice = (
         }
         return result
       }
-      const newUndo = filterStack(s.undoStack)
-      const newRedo = filterStack(s.redoStack)
-      return {
+      const newUndo = filterStack(fs.undoStack)
+      const newRedo = filterStack(fs.redoStack)
+      return updateActiveFs(s, {
         undoStack: newUndo,
         redoStack: newRedo,
         undoFindingIndex: rebuildIndex(newUndo),
-      }
+      })
     }),
 })
 
@@ -505,18 +547,24 @@ const createSuppressionSlice = (
   rejectionTracker: new Map(),
   detectedPattern: null,
   activeSuppressions: [],
-  setDetectedPattern: (pattern) => setState({ detectedPattern: pattern }),
-  clearDetectedPattern: () => setState({ detectedPattern: null }),
+  setDetectedPattern: (pattern) => setState((s) => updateActiveFs(s, { detectedPattern: pattern })),
+  clearDetectedPattern: () => setState((s) => updateActiveFs(s, { detectedPattern: null })),
   addSuppression: (rule) =>
-    setState((s) => ({
-      activeSuppressions: [...s.activeSuppressions, rule],
-    })),
+    setState((s) => {
+      const fs = getActiveFs(s)
+      return updateActiveFs(s, { activeSuppressions: [...fs.activeSuppressions, rule] })
+    }),
   removeSuppression: (ruleId) =>
-    setState((s) => ({
-      activeSuppressions: s.activeSuppressions.filter((r) => r.id !== ruleId),
-    })),
-  setActiveSuppressions: (rules) => setState({ activeSuppressions: rules }),
-  setRejectionTracker: (tracker) => setState({ rejectionTracker: tracker }),
+    setState((s) => {
+      const fs = getActiveFs(s)
+      return updateActiveFs(s, {
+        activeSuppressions: fs.activeSuppressions.filter((r) => r.id !== ruleId),
+      })
+    }),
+  setActiveSuppressions: (rules) =>
+    setState((s) => updateActiveFs(s, { activeSuppressions: rules })),
+  setRejectionTracker: (tracker) =>
+    setState((s) => updateActiveFs(s, { rejectionTracker: tracker })),
 })
 
 // ── File-Scoped State (TD-ARCH-001 refactor) ──
@@ -629,84 +677,33 @@ function createFileState(fileId: string): FileState {
   return fs
 }
 
-// ── File-scoped field keys for auto-sync (TD-ARCH-001) ──
-// Note: 'initialized' is intentionally EXCLUDED — it is managed directly via
-// useReviewStore.setState({ fileStates }) in ReviewPageClient, not through slice actions.
-// Including it would create a phantom property on the root ReviewState type.
-
-const FILE_STATE_KEYS: ReadonlySet<string> = new Set<keyof FileState>([
-  'findingsMap',
-  'selectedId',
-  'filterState',
-  'sortedFindingIds',
-  'searchQuery',
-  'aiSuggestionsEnabled',
-  'currentScore',
-  'scoreStatus',
-  'layerCompleted',
-  'autoPassRationale',
-  'isRecalculating',
-  'l2ConfidenceMin',
-  'l3ConfidenceMin',
-  'selectedIds',
-  'selectionMode',
-  'isBulkInFlight',
-  'overrideCounts',
-  'undoStack',
-  'redoStack',
-  'undoFindingIndex',
-  'rejectionTracker',
-  'detectedPattern',
-  'activeSuppressions',
-])
-
-/**
- * Wrap Zustand's `set` to auto-sync flat file-scoped fields → fileStates Map.
- * Skip if the update already includes `fileStates` (e.g. resetForFile manages it directly).
- */
-function createSyncingSet(
-  rawSet: (fn: Partial<ReviewState> | ((s: ReviewState) => Partial<ReviewState>)) => void,
-): (fn: Partial<ReviewState> | ((s: ReviewState) => Partial<ReviewState>)) => void {
-  return (fnOrPartial) => {
-    rawSet((s) => {
-      const update = typeof fnOrPartial === 'function' ? fnOrPartial(s) : fnOrPartial
-
-      // If resetForFile already manages fileStates, skip auto-sync
-      if ('fileStates' in update) return update
-
-      const fileId = s.currentFileId
-      if (!fileId) return update
-
-      // Check if update contains any file-scoped fields
-      const updateKeys = Object.keys(update)
-      if (updateKeys.length === 0) return update // L6: early exit for empty partial
-      const hasFileFields = updateKeys.some((k) => FILE_STATE_KEYS.has(k))
-      if (!hasFileFields) return update
-
-      // Sync flat field changes into the active file's FileState entry
-      const newFileStates = new Map(s.fileStates)
-      const existing = newFileStates.get(fileId)
-      if (!existing) return update // No FileState yet (pre-resetForFile)
-
-      const syncedFs = { ...existing }
-      for (const key of updateKeys) {
-        if (FILE_STATE_KEYS.has(key)) {
-          ;(syncedFs as Record<string, unknown>)[key] = (update as Record<string, unknown>)[key]
-        }
-      }
-      newFileStates.set(fileId, syncedFs)
-
-      return { ...update, fileStates: newFileStates }
-    })
-  }
-}
+// TD-ARCH-002: createSyncingSet + FILE_STATE_KEYS removed.
+// All slice setters now write directly to fileStates Map via updateActiveFs().
 
 // ── Selector Functions (Story 4.4b AC6 — NEVER select full stack array) ──
-// TODO(TD-ARCH-002): After flat field removal, read from fileStates Map:
-//   (s) => (s.fileStates.get(s.currentFileId ?? '')?.undoStack.length ?? 0) > 0
+// TD-ARCH-002: Read from fileStates Map (no more flat fields)
 
-export const selectCanUndo = (s: ReviewState): boolean => s.undoStack.length > 0
-export const selectCanRedo = (s: ReviewState): boolean => s.redoStack.length > 0
+/**
+ * TD-ARCH-002: Get file's FileState from store snapshot.
+ * @param storeOrFileId — pass store snapshot, or omit to use getState()
+ * @param fileId — explicit fileId (hooks MUST pass this). Falls back to currentFileId if omitted.
+ */
+export function getStoreFileState(
+  storeOrFileId?: ReturnType<typeof useReviewStore.getState> | string,
+  fileId?: string,
+): FileState {
+  if (typeof storeOrFileId === 'string') {
+    // Called as getStoreFileState(fileId)
+    const s = useReviewStore.getState()
+    return s.fileStates.get(storeOrFileId) ?? DEFAULT_FILE_STATE
+  }
+  const s = storeOrFileId ?? useReviewStore.getState()
+  const resolvedFileId = fileId ?? s.currentFileId ?? ''
+  return s.fileStates.get(resolvedFileId) ?? DEFAULT_FILE_STATE
+}
+
+export const selectCanUndo = (s: ReviewState): boolean => getActiveFs(s).undoStack.length > 0
+export const selectCanRedo = (s: ReviewState): boolean => getActiveFs(s).redoStack.length > 0
 
 // ── Composed Store ──
 
@@ -727,8 +724,8 @@ export const useReviewStore = create<ReviewState>()((set, get) => {
   const rawSet = set as (
     fn: Partial<ReviewState> | ((s: ReviewState) => Partial<ReviewState>),
   ) => void
-  // TD-ARCH-001: auto-sync flat fields → fileStates Map on every set() call
-  const setState = createSyncingSet(rawSet)
+  // TD-ARCH-002: slices write directly to fileStates Map via updateActiveFs()
+  const setState = rawSet
 
   return {
     ...createFindingsSlice(setState),
@@ -739,89 +736,61 @@ export const useReviewStore = create<ReviewState>()((set, get) => {
     ...createSuppressionSlice(setState),
     currentFileId: null,
     fileStates: new Map<string, FileState>(),
-    // TD-ARCH-001: resetForFile switches activeFileId, creates fresh FileState.
-    // Always creates fresh entry (Guardrail #35: undo/redo cleared on file switch).
-    // Filter restored from sessionStorage L2 fallback only (createFileState handles this).
-    // L1 Map cache is read by useFileState() — NOT by resetForFile. This separation ensures
-    // that resetForFile always gives a clean slate (important for test isolation), while
-    // useFileState provides the preserved state for components after Phase 3 migration.
+    // TD-ARCH-002: resetForFile creates fresh FileState in Map. No more flat field dual-write.
     resetForFile: (fileId: string) =>
       set((s) => {
-        if (!fileId) return {} // L2: guard invalid empty string fileId
-        if (s.currentFileId === fileId) return {} // idempotent — same file, no reset needed
+        if (!fileId) return {}
+        if (s.currentFileId === fileId) return {}
 
         const newFileStates = new Map(s.fileStates)
-        // Always create fresh entry — sessionStorage L2 fallback for filter restore
         const freshFs = createFileState(fileId)
         newFileStates.set(fileId, freshFs)
-        const fs = freshFs
 
         return {
           currentFileId: fileId,
           fileStates: newFileStates,
-          // Dual-write: flat fields mirror active file's FileState (backward compat during migration)
-          findingsMap: fs.findingsMap,
-          selectedId: fs.selectedId,
-          sortedFindingIds: fs.sortedFindingIds,
-          filterState: fs.filterState,
-          searchQuery: fs.searchQuery,
-          aiSuggestionsEnabled: fs.aiSuggestionsEnabled,
-          currentScore: fs.currentScore,
-          scoreStatus: fs.scoreStatus,
-          layerCompleted: fs.layerCompleted,
-          autoPassRationale: fs.autoPassRationale,
-          isRecalculating: fs.isRecalculating,
-          l2ConfidenceMin: fs.l2ConfidenceMin,
-          l3ConfidenceMin: fs.l3ConfidenceMin,
-          selectedIds: fs.selectedIds,
-          selectionMode: fs.selectionMode,
-          isBulkInFlight: fs.isBulkInFlight,
-          overrideCounts: fs.overrideCounts,
-          undoStack: fs.undoStack,
-          redoStack: fs.redoStack,
-          undoFindingIndex: fs.undoFindingIndex,
-          rejectionTracker: fs.rejectionTracker,
-          detectedPattern: fs.detectedPattern,
-          activeSuppressions: fs.activeSuppressions,
         }
       }),
-    // Task 4.4: selectRange — needs get() for sortedFindingIds
+    // TD-ARCH-002: selectRange reads from fileStates Map
     selectRange: (fromId: string, toId: string) => {
-      const state = get()
-      const ids = state.sortedFindingIds
+      const fs = getActiveFs(get())
+      const ids = fs.sortedFindingIds
       const fromIdx = ids.indexOf(fromId)
       const toIdx = ids.indexOf(toId)
       if (fromIdx === -1) {
-        // Anchor filtered away — fallback to single select
-        setState({ selectedIds: new Set([toId]), selectionMode: 'bulk' })
+        setState((s) => updateActiveFs(s, { selectedIds: new Set([toId]), selectionMode: 'bulk' }))
         return
       }
       if (toIdx === -1) return
       const start = Math.min(fromIdx, toIdx)
       const end = Math.max(fromIdx, toIdx)
       const rangeIds = ids.slice(start, end + 1)
-      const newSet = new Set(state.selectedIds)
+      const newSet = new Set(fs.selectedIds)
       for (const id of rangeIds) {
         newSet.add(id)
       }
-      setState({ selectedIds: newSet, selectionMode: 'bulk' })
+      setState((s) => updateActiveFs(s, { selectedIds: newSet, selectionMode: 'bulk' }))
     },
-    // Story 4.5: selectAllFiltered — extended with category, confidence, searchQuery, aiSuggestionsEnabled
+    // TD-ARCH-002: selectAllFiltered reads from fileStates Map
     selectAllFiltered: () => {
-      const state = get()
-      const { filterState, findingsMap, sortedFindingIds, searchQuery, aiSuggestionsEnabled } =
-        state
-      const filtered = sortedFindingIds.filter((id) => {
-        const finding = findingsMap.get(id)
+      const fs = getActiveFs(get())
+      const filtered = fs.sortedFindingIds.filter((id) => {
+        const finding = fs.findingsMap.get(id)
         if (!finding) return false
-        return findingMatchesFilters(finding, filterState, searchQuery, aiSuggestionsEnabled)
+        return findingMatchesFilters(
+          finding,
+          fs.filterState,
+          fs.searchQuery,
+          fs.aiSuggestionsEnabled,
+        )
       })
-      // CR-M2+L-R2-1: 0 match → clear selection + exit bulk mode (not silent no-op)
       if (filtered.length === 0) {
-        setState({ selectedIds: new Set<string>(), selectionMode: 'single' })
+        setState((s) =>
+          updateActiveFs(s, { selectedIds: new Set<string>(), selectionMode: 'single' }),
+        )
         return
       }
-      setState({ selectedIds: new Set(filtered), selectionMode: 'bulk' })
+      setState((s) => updateActiveFs(s, { selectedIds: new Set(filtered), selectionMode: 'bulk' }))
     },
   }
 })

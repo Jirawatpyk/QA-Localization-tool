@@ -38,7 +38,7 @@ vi.mock('@/lib/supabase/client', () => ({
 }))
 
 import { useScoreSubscription } from '@/features/review/hooks/use-score-subscription'
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, getStoreFileState } from '@/features/review/stores/review.store'
 
 describe('useScoreSubscription', () => {
   beforeEach(() => {
@@ -103,7 +103,7 @@ describe('useScoreSubscription', () => {
       })
     })
 
-    expect(useReviewStore.getState().currentScore).toBe(92)
+    expect(getStoreFileState().currentScore).toBe(92)
   })
 
   it('should update store scoreStatus on score change event', () => {
@@ -118,7 +118,7 @@ describe('useScoreSubscription', () => {
       })
     })
 
-    expect(useReviewStore.getState().scoreStatus).toBe('calculated')
+    expect(getStoreFileState().scoreStatus).toBe('calculated')
   })
 
   // ── P0: Cleanup ──
@@ -154,7 +154,7 @@ describe('useScoreSubscription', () => {
 
     // Verify store updated from poll data
     await vi.advanceTimersByTimeAsync(5000)
-    expect(useReviewStore.getState().currentScore).toBe(85)
+    expect(getStoreFileState().currentScore).toBe(85)
   })
 
   it('should resubscribe after channel recovery and stop polling', async () => {
@@ -170,7 +170,7 @@ describe('useScoreSubscription', () => {
     await vi.advanceTimersByTimeAsync(5000)
     const callsBeforeRecovery = mockFrom.mock.calls.length
     expect(callsBeforeRecovery).toBeGreaterThanOrEqual(1)
-    expect(useReviewStore.getState().currentScore).toBe(85)
+    expect(getStoreFileState().currentScore).toBe(85)
 
     // Recovery — should stop polling
     act(() => {
@@ -308,11 +308,11 @@ describe('useScoreSubscription', () => {
       })
     })
 
-    const state = useReviewStore.getState()
-    expect(state.currentScore).toBe(88.5)
-    expect(state.scoreStatus).toBe('calculated')
+    const fs = getStoreFileState()
+    expect(fs.currentScore).toBe(88.5)
+    expect(fs.scoreStatus).toBe('calculated')
     // layerCompleted should be updated via the extended updateScore signature
-    expect(state.layerCompleted).toBe('L1L2')
+    expect(fs.layerCompleted).toBe('L1L2')
   })
 
   it('[P0] should include layer_completed in polling fallback select', async () => {
@@ -343,8 +343,8 @@ describe('useScoreSubscription', () => {
       })
     })
 
-    expect(useReviewStore.getState().currentScore).toBe(0)
-    expect(useReviewStore.getState().scoreStatus).toBe('calculated')
+    expect(getStoreFileState().currentScore).toBe(0)
+    expect(getStoreFileState().scoreStatus).toBe('calculated')
   })
 
   // B6 [P2]: polling interval resets to 5s after recovery then re-error
@@ -394,7 +394,7 @@ describe('useScoreSubscription', () => {
       })
     })
 
-    expect(useReviewStore.getState().currentScore).toBeNull()
+    expect(getStoreFileState().currentScore).toBeNull()
   })
 
   // F7 [P1]: handleScoreChange ignores invalid status string
@@ -410,7 +410,7 @@ describe('useScoreSubscription', () => {
       })
     })
 
-    expect(useReviewStore.getState().currentScore).toBeNull()
+    expect(getStoreFileState().currentScore).toBeNull()
   })
 
   // F8 [P2]: non-string layer_completed passes null to store
@@ -426,8 +426,8 @@ describe('useScoreSubscription', () => {
       })
     })
 
-    expect(useReviewStore.getState().currentScore).toBe(92)
-    expect(useReviewStore.getState().layerCompleted).toBeNull()
+    expect(getStoreFileState().currentScore).toBe(92)
+    expect(getStoreFileState().layerCompleted).toBeNull()
   })
 
   it('[P2] should not update store when polling .single() returns no data', async () => {
@@ -446,8 +446,8 @@ describe('useScoreSubscription', () => {
     await vi.advanceTimersByTimeAsync(0)
 
     // Store should remain at default values (no update from empty poll)
-    expect(useReviewStore.getState().currentScore).toBeNull()
-    expect(useReviewStore.getState().scoreStatus).toBe('na')
+    expect(getStoreFileState().currentScore).toBeNull()
+    expect(getStoreFileState().scoreStatus).toBe('na')
   })
 
   // ── TD-TENANT-003: tenantId filter (Story 4.1a) ──
@@ -487,9 +487,9 @@ describe('useScoreSubscription', () => {
       })
     })
 
-    expect(useReviewStore.getState().currentScore).toBe(98.5)
-    expect(useReviewStore.getState().scoreStatus).toBe('auto_passed')
-    expect(useReviewStore.getState().autoPassRationale).toBe(
+    expect(getStoreFileState().currentScore).toBe(98.5)
+    expect(getStoreFileState().scoreStatus).toBe('auto_passed')
+    expect(getStoreFileState().autoPassRationale).toBe(
       'Score 98.5 exceeds threshold 95.0 with 0 critical findings',
     )
   })

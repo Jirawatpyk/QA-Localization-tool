@@ -48,6 +48,13 @@ const SHORTCUT_CATEGORIES: ShortcutCategory[] = [
     ],
   },
   {
+    name: 'Native Review',
+    shortcuts: [
+      { keys: ['C'], description: 'Confirm (native reviewer)' },
+      { keys: ['O'], description: 'Override (native reviewer)' },
+    ],
+  },
+  {
     name: 'Bulk Operations',
     shortcuts: [
       { keys: ['Shift+Click'], description: 'Range select' },

@@ -21,6 +21,7 @@ const EXPECTED_TRANSITIONS: Record<FindingStatus, Record<ReviewAction, FindingSt
     flag: 'flagged',
     note: 'noted',
     source: 'source_issue',
+    confirm_native: null,
   },
   accepted: {
     accept: null,
@@ -28,6 +29,7 @@ const EXPECTED_TRANSITIONS: Record<FindingStatus, Record<ReviewAction, FindingSt
     flag: 'flagged',
     note: 'noted',
     source: 'source_issue',
+    confirm_native: null,
   },
   re_accepted: {
     accept: null,
@@ -35,6 +37,7 @@ const EXPECTED_TRANSITIONS: Record<FindingStatus, Record<ReviewAction, FindingSt
     flag: 'flagged',
     note: 'noted',
     source: 'source_issue',
+    confirm_native: null,
   },
   rejected: {
     accept: 're_accepted',
@@ -42,6 +45,7 @@ const EXPECTED_TRANSITIONS: Record<FindingStatus, Record<ReviewAction, FindingSt
     flag: 'flagged',
     note: 'noted',
     source: 'source_issue',
+    confirm_native: null,
   },
   flagged: {
     accept: 'accepted',
@@ -49,6 +53,7 @@ const EXPECTED_TRANSITIONS: Record<FindingStatus, Record<ReviewAction, FindingSt
     flag: null,
     note: 'noted',
     source: 'source_issue',
+    confirm_native: 'accepted',
   },
   noted: {
     accept: 'accepted',
@@ -56,6 +61,7 @@ const EXPECTED_TRANSITIONS: Record<FindingStatus, Record<ReviewAction, FindingSt
     flag: 'flagged',
     note: null,
     source: 'source_issue',
+    confirm_native: null,
   },
   source_issue: {
     accept: 'accepted',
@@ -63,8 +69,16 @@ const EXPECTED_TRANSITIONS: Record<FindingStatus, Record<ReviewAction, FindingSt
     flag: 'flagged',
     note: 'noted',
     source: null,
+    confirm_native: null,
   },
-  manual: { accept: null, reject: null, flag: null, note: null, source: null },
+  manual: {
+    accept: null,
+    reject: null,
+    flag: null,
+    note: null,
+    source: null,
+    confirm_native: null,
+  },
 }
 
 // ── SCORE_IMPACT_MAP expected values ──
@@ -114,8 +128,15 @@ describe('state-transitions', () => {
 
     // ── P0: Full 40-transition matrix (8 states × 5 actions) ──
 
-    it('[P0] U-T8: should produce correct output for ALL 40 state-action combinations', () => {
-      const actions: ReviewAction[] = ['accept', 'reject', 'flag', 'note', 'source']
+    it('[P0] U-T8: should produce correct output for ALL 48 state-action combinations', () => {
+      const actions: ReviewAction[] = [
+        'accept',
+        'reject',
+        'flag',
+        'note',
+        'source',
+        'confirm_native',
+      ]
 
       for (const status of FINDING_STATUSES) {
         for (const action of actions) {

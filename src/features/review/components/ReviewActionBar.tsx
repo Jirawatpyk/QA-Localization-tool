@@ -109,6 +109,10 @@ type ReviewActionBarProps = {
   findingNumber?: number | undefined
   /** Manual findings can't be noted/sourced/etc — disable action buttons except override */
   isManualFinding?: boolean | undefined
+  /** Story 5.2c: Native reviewer confirm/override props */
+  isNativeReviewer?: boolean | undefined
+  onConfirmNative?: (() => void) | undefined
+  onOverrideNative?: (() => void) | undefined
 }
 
 type HandlerKeys =
@@ -147,6 +151,9 @@ export function ReviewActionBar({
   activeAction = null,
   findingNumber,
   isManualFinding = false,
+  isNativeReviewer = false,
+  onConfirmNative,
+  onOverrideNative,
 }: ReviewActionBarProps) {
   const reducedMotion = useReducedMotion()
   const handlers: ReviewActionBarProps = {
@@ -168,6 +175,49 @@ export function ReviewActionBar({
         tabIndex={0}
         data-testid="review-action-bar"
       >
+        {/* Story 5.2c: Native reviewer actions */}
+        {isNativeReviewer && (
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  disabled={isDisabled || isInFlight}
+                  onClick={onConfirmNative}
+                  data-testid="action-confirm-native"
+                  aria-keyshortcuts="c"
+                  aria-label="Confirm finding, press C"
+                  className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 hover:brightness-110 border-success/20 bg-success/10 text-success"
+                >
+                  [C] Confirm
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Press C — Confirm as native reviewer</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  disabled={isDisabled || isInFlight}
+                  onClick={onOverrideNative}
+                  data-testid="action-override-native"
+                  aria-keyshortcuts="o"
+                  aria-label="Override finding, press O"
+                  className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 hover:brightness-110 border-warning/20 bg-warning/10 text-warning"
+                >
+                  [O] Override
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Press O — Override with new status</p>
+              </TooltipContent>
+            </Tooltip>
+          </>
+        )}
+
+        {/* Standard QA reviewer actions */}
         {ACTION_BUTTONS.map((btn) => {
           const Icon = btn.icon
           const isEnabled = ENABLED_ACTIONS.has(btn.key)

@@ -39,7 +39,7 @@ vi.mock('@/features/review/utils/announce', () => ({
 }))
 
 import { useFindingsSubscription } from '@/features/review/hooks/use-findings-subscription'
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, getStoreFileState } from '@/features/review/stores/review.store'
 
 describe('useFindingsSubscription — reconnect (P1-11)', () => {
   beforeEach(() => {
@@ -192,7 +192,7 @@ describe('useFindingsSubscription — reconnect (P1-11)', () => {
     await vi.advanceTimersByTimeAsync(0)
 
     // Findings map should have exactly 2 entries — no duplicates
-    const map = useReviewStore.getState().findingsMap
+    const map = getStoreFileState().findingsMap
     expect(map.size).toBe(2)
     expect(map.has('existing-finding')).toBe(true)
     expect(map.has('new-finding-from-poll')).toBe(true)

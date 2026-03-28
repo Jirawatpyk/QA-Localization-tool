@@ -20,6 +20,7 @@ import type { FindingForDisplay } from '@/features/review/types'
 import { DEFAULT_AUTO_PASS_THRESHOLD } from '@/features/scoring/constants'
 import type { ContributingFinding } from '@/features/scoring/types'
 import type { BatchRecord, UploadFileResult } from '@/features/upload/types'
+import type { AssignmentStatus } from '@/types/assignment'
 import type { DetectedByLayer, Finding, FindingSeverity, FindingStatus } from '@/types/finding'
 import type {
   FindingChangedEventData,
@@ -627,5 +628,61 @@ export function buildFindingForUI(overrides?: Record<string, unknown>): FindingF
     suggestedFix: dbFinding.suggestedFix ?? null,
     aiModel: (overrides?.['aiModel'] as string) ?? null,
     hasNonNativeAction: (overrides?.['hasNonNativeAction'] as boolean) ?? false,
+  }
+}
+
+// ── Story 5.2c: Native Reviewer Factories ──
+
+type FindingAssignment = {
+  id: string
+  findingId: string
+  fileId: string
+  projectId: string
+  tenantId: string
+  assignedTo: string
+  assignedBy: string
+  status: AssignmentStatus
+  flaggerComment: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export function buildFindingAssignment(overrides?: Partial<FindingAssignment>): FindingAssignment {
+  return {
+    id: faker.string.uuid(),
+    findingId: faker.string.uuid(),
+    fileId: faker.string.uuid(),
+    projectId: faker.string.uuid(),
+    tenantId: faker.string.uuid(),
+    assignedTo: faker.string.uuid(),
+    assignedBy: faker.string.uuid(),
+    status: 'pending',
+    flaggerComment: 'Needs native review for idiomatic expression',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    ...overrides,
+  }
+}
+
+type FindingComment = {
+  id: string
+  findingId: string
+  findingAssignmentId: string
+  tenantId: string
+  authorId: string
+  body: string
+  createdAt: string
+}
+
+export function buildFindingComment(overrides?: Partial<FindingComment>): FindingComment {
+  return {
+    id: faker.string.uuid(),
+    findingId: faker.string.uuid(),
+    findingAssignmentId: faker.string.uuid(),
+    tenantId: faker.string.uuid(),
+    authorId: faker.string.uuid(),
+    body: faker.lorem.sentence(),
+    createdAt: new Date().toISOString(),
+    ...overrides,
   }
 }

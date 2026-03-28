@@ -55,6 +55,39 @@ export const bulkActionSchema = z.object({
   projectId: z.string().uuid(),
 })
 
+// Story 5.2c: Native Reviewer Workflow schemas
+
+// Flag for native review (AC1): QA reviewer flags a finding for native review
+export const flagForNativeSchema = z.object({
+  findingId: z.string().uuid(),
+  fileId: z.string().uuid(),
+  projectId: z.string().uuid(),
+  assignedTo: z.string().uuid(),
+  flaggerComment: z.string().min(10).max(500),
+})
+
+// Confirm native review (AC3): Native reviewer confirms finding
+export const confirmNativeSchema = z.object({
+  findingId: z.string().uuid(),
+  fileId: z.string().uuid(),
+  projectId: z.string().uuid(),
+})
+
+// Override native review (AC3): Native reviewer overrides with new status
+export const overrideNativeSchema = z.object({
+  findingId: z.string().uuid(),
+  fileId: z.string().uuid(),
+  projectId: z.string().uuid(),
+  newStatus: z.enum(['accepted', 'rejected']),
+})
+
+// Add finding comment (AC4): Comment on a finding assignment
+export const addFindingCommentSchema = z.object({
+  findingId: z.string().uuid(),
+  findingAssignmentId: z.string().uuid(),
+  body: z.string().min(1).max(1000),
+})
+
 // Inferred input types
 export type AcceptFindingInput = z.infer<typeof acceptFindingSchema>
 export type RejectFindingInput = z.infer<typeof rejectFindingSchema>
@@ -66,3 +99,7 @@ export type OverrideSeverityInput = z.infer<typeof overrideSeveritySchema>
 export type AddFindingInput = z.infer<typeof addFindingSchema>
 export type DeleteFindingInput = z.infer<typeof deleteFindingSchema>
 export type BulkActionInput = z.infer<typeof bulkActionSchema>
+export type FlagForNativeInput = z.infer<typeof flagForNativeSchema>
+export type ConfirmNativeInput = z.infer<typeof confirmNativeSchema>
+export type OverrideNativeInput = z.infer<typeof overrideNativeSchema>
+export type AddFindingCommentInput = z.infer<typeof addFindingCommentSchema>

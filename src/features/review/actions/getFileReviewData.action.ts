@@ -7,6 +7,7 @@ import { and, asc, count, eq, gt, inArray, ne, sql } from 'drizzle-orm'
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { files } from '@/db/schema/files'
+import { findingAssignments } from '@/db/schema/findingAssignments'
 import { findings } from '@/db/schema/findings'
 import { languagePairConfigs } from '@/db/schema/languagePairConfigs'
 import { projects } from '@/db/schema/projects'
@@ -14,6 +15,7 @@ import { reviewActions } from '@/db/schema/reviewActions'
 import { scores } from '@/db/schema/scores'
 import { segments } from '@/db/schema/segments'
 import { taxonomyDefinitions } from '@/db/schema/taxonomyDefinitions'
+import { users } from '@/db/schema/users'
 import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
@@ -80,6 +82,10 @@ export type FileReviewData = {
   isNonNative: boolean
   /** Story 5.1: Project-level BT confidence threshold for LanguageBridge panel */
   btConfidenceThreshold: number
+  /** Story 5.2c: Current user's role for role-based UI rendering */
+  userRole: string
+  /** Story 5.2c: Count of findings assigned to current native reviewer */
+  assignedFindingCount: number
 }
 
 const SEVERITY_PRIORITY: Record<string, number> = {
@@ -119,7 +125,8 @@ export async function getFileReviewData(
   }
 
   try {
-    const currentUser = await requireRole('qa_reviewer')
+    // Story 5.2c: native_reviewer needs access to review page (scoped view)
+    const currentUser = await requireRole('native_reviewer')
     const tenantId = currentUser.tenantId
 
     // Q1: Get file metadata
@@ -353,6 +360,82 @@ export async function getFileReviewData(
       )
     }
 
+    // Q9: Story 5.2c — Get assignments for current user's findings (non-fatal)
+    // Maps findingId → assignment data for native reviewer scoped view
+    const assignmentMap = new Map<
+      string,
+      {
+        assignmentId: string
+        assignmentStatus: string
+        assignedToName: string
+        assignedByName: string
+        flaggerComment: string | null
+      }
+    >()
+    let assignedFindingCount = 0
+    try {
+      if (currentFindingIds.length > 0) {
+        // CF-3 fix: for native_reviewer, filter by their own userId to avoid multi-assignment overwrite
+        const assignmentFilter =
+          currentUser.role === 'native_reviewer'
+            ? and(
+                inArray(findingAssignments.findingId, currentFindingIds),
+                eq(findingAssignments.assignedTo, currentUser.id),
+                withTenant(findingAssignments.tenantId, tenantId),
+              )
+            : and(
+                inArray(findingAssignments.findingId, currentFindingIds),
+                withTenant(findingAssignments.tenantId, tenantId),
+              )
+
+        const assignmentRows = await db
+          .select({
+            findingId: findingAssignments.findingId,
+            assignmentId: findingAssignments.id,
+            assignmentStatus: findingAssignments.status,
+            assignedToName: users.displayName,
+            flaggerComment: findingAssignments.flaggerComment,
+          })
+          .from(findingAssignments)
+          .innerJoin(
+            users,
+            and(eq(users.id, findingAssignments.assignedTo), withTenant(users.tenantId, tenantId)),
+          )
+          .where(assignmentFilter)
+
+        for (const row of assignmentRows) {
+          // For non-native roles with multiple assignments, last write wins (latest assignment)
+          assignmentMap.set(row.findingId, {
+            assignmentId: row.assignmentId,
+            assignmentStatus: row.assignmentStatus,
+            assignedToName: row.assignedToName,
+            assignedByName: '',
+            flaggerComment: row.flaggerComment,
+          })
+        }
+
+        // Count assignments for current user (native reviewer scoped view)
+        if (currentUser.role === 'native_reviewer') {
+          const myAssignments = await db
+            .select({ value: count() })
+            .from(findingAssignments)
+            .where(
+              and(
+                eq(findingAssignments.fileId, fileId),
+                eq(findingAssignments.assignedTo, currentUser.id),
+                withTenant(findingAssignments.tenantId, tenantId),
+              ),
+            )
+          assignedFindingCount = myAssignments[0]?.value ?? 0
+        }
+      }
+    } catch (assignErr) {
+      logger.error(
+        { err: assignErr, fileId },
+        'Q9 assignment query failed — assignment badges will not show',
+      )
+    }
+
     // Story 4.5: Query sibling files (same project, exclude current file)
     const siblingFileRows = await db
       .select({ fileId: files.id, fileName: files.fileName })
@@ -371,15 +454,28 @@ export async function getFileReviewData(
       data: {
         tenantId,
         file: file as FileReviewData['file'],
-        findings: sortedFindings.map((f) => ({
-          ...f,
-          // CF-P0-1: Expose real updatedAt for Realtime merge guard (was missing → fallback to new Date())
-          updatedAt:
-            (f as unknown as { updatedAt: Date }).updatedAt instanceof Date
-              ? (f as unknown as { updatedAt: Date }).updatedAt.toISOString()
-              : String(f.updatedAt),
-          hasNonNativeAction: nonNativeSet.has(f.id),
-        })),
+        findings: sortedFindings.map((f) => {
+          const assignment = assignmentMap.get(f.id)
+          return {
+            ...f,
+            // CF-P0-1: Expose real updatedAt for Realtime merge guard (was missing → fallback to new Date())
+            updatedAt:
+              (f as unknown as { updatedAt: Date }).updatedAt instanceof Date
+                ? (f as unknown as { updatedAt: Date }).updatedAt.toISOString()
+                : String(f.updatedAt),
+            hasNonNativeAction: nonNativeSet.has(f.id),
+            // Story 5.2c: assignment fields for flagged findings
+            ...(assignment
+              ? {
+                  assignmentId: assignment.assignmentId,
+                  assignmentStatus: assignment.assignmentStatus,
+                  assignedToName: assignment.assignedToName,
+                  assignedByName: assignment.assignedByName,
+                  flaggerComment: assignment.flaggerComment,
+                }
+              : {}),
+          }
+        }),
         score: score as FileReviewData['score'],
         processingMode,
         l2ConfidenceMin,
@@ -393,6 +489,8 @@ export async function getFileReviewData(
         siblingFiles: siblingFileRows,
         isNonNative,
         btConfidenceThreshold,
+        userRole: currentUser.role,
+        assignedFindingCount,
       },
     }
   } catch (err) {

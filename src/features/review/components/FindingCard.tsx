@@ -35,6 +35,9 @@ export type FindingCardProps = {
   onOverrideBadgeClick?: ((findingId: string) => void) | undefined
   /** Story 5.2a: Whether this finding has any non-native review action */
   hasNonNativeAction?: boolean | undefined
+  /** Story 5.2c: Assignment info for flagged findings */
+  assignmentStatus?: string | undefined
+  assignedToName?: string | undefined
 }
 
 export function FindingCard({
@@ -51,6 +54,8 @@ export function FindingCard({
   isActionInFlight = false,
   onOverrideBadgeClick,
   hasNonNativeAction = false,
+  assignmentStatus,
+  assignedToName,
 }: FindingCardProps) {
   const reducedMotion = useReducedMotion()
   const overrideCount = useFileState((fs) => fs.overrideCounts.get(finding.id) ?? 0)
@@ -184,6 +189,17 @@ export function FindingCard({
 
         {/* Story 5.2a: Non-native badge (AC4) */}
         {hasNonNativeAction && <NonNativeBadge />}
+
+        {/* Story 5.2c: Assignment status badge */}
+        {assignmentStatus && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-info/10 px-2 py-0.5 text-xs font-medium text-info border border-info/20">
+            {assignmentStatus === 'pending' &&
+              `Flagged for Native — awaiting ${assignedToName ?? 'reviewer'}`}
+            {assignmentStatus === 'in_review' && 'In Native Review'}
+            {assignmentStatus === 'confirmed' && 'Native Confirmed'}
+            {assignmentStatus === 'overridden' && 'Native Overridden'}
+          </span>
+        )}
 
         <span className="ml-auto text-xs text-muted-foreground">
           #{findingIndex + 1}/{totalFindings}

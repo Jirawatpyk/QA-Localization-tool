@@ -1,6 +1,6 @@
 import type { FindingStatus } from '@/types/finding'
 
-export type ReviewAction = 'accept' | 'reject' | 'flag' | 'note' | 'source'
+export type ReviewAction = 'accept' | 'reject' | 'flag' | 'note' | 'source' | 'confirm_native'
 
 export type ScoreImpact = { countsPenalty: boolean }
 
@@ -14,6 +14,9 @@ export type ScoreImpact = { countsPenalty: boolean }
  * - `note` from any state → `noted` (except already noted or manual)
  * - `source` from any state → `source_issue` (except already source_issue or manual)
  * - Idempotent: action on already-target state → null (no-op)
+ * - `confirm_native`: only flagged → accepted in matrix. NOTE: actual target may be
+ *   `re_accepted` if pre-flagged state was `rejected` — determined in action code,
+ *   NOT the matrix. Do NOT use matrix for confirm_native optimistic updates. (Story 5.2c CF-2)
  */
 const TRANSITION_MATRIX: Record<FindingStatus, Record<ReviewAction, FindingStatus | null>> = {
   pending: {
@@ -22,6 +25,7 @@ const TRANSITION_MATRIX: Record<FindingStatus, Record<ReviewAction, FindingStatu
     flag: 'flagged',
     note: 'noted',
     source: 'source_issue',
+    confirm_native: null,
   },
   accepted: {
     accept: null,
@@ -29,6 +33,7 @@ const TRANSITION_MATRIX: Record<FindingStatus, Record<ReviewAction, FindingStatu
     flag: 'flagged',
     note: 'noted',
     source: 'source_issue',
+    confirm_native: null,
   },
   re_accepted: {
     accept: null,
@@ -36,6 +41,7 @@ const TRANSITION_MATRIX: Record<FindingStatus, Record<ReviewAction, FindingStatu
     flag: 'flagged',
     note: 'noted',
     source: 'source_issue',
+    confirm_native: null,
   },
   rejected: {
     accept: 're_accepted',
@@ -43,6 +49,7 @@ const TRANSITION_MATRIX: Record<FindingStatus, Record<ReviewAction, FindingStatu
     flag: 'flagged',
     note: 'noted',
     source: 'source_issue',
+    confirm_native: null,
   },
   flagged: {
     accept: 'accepted',
@@ -50,6 +57,7 @@ const TRANSITION_MATRIX: Record<FindingStatus, Record<ReviewAction, FindingStatu
     flag: null,
     note: 'noted',
     source: 'source_issue',
+    confirm_native: 'accepted',
   },
   noted: {
     accept: 'accepted',
@@ -57,6 +65,7 @@ const TRANSITION_MATRIX: Record<FindingStatus, Record<ReviewAction, FindingStatu
     flag: 'flagged',
     note: null,
     source: 'source_issue',
+    confirm_native: null,
   },
   source_issue: {
     accept: 'accepted',
@@ -64,8 +73,16 @@ const TRANSITION_MATRIX: Record<FindingStatus, Record<ReviewAction, FindingStatu
     flag: 'flagged',
     note: 'noted',
     source: null,
+    confirm_native: null,
   },
-  manual: { accept: null, reject: null, flag: null, note: null, source: null },
+  manual: {
+    accept: null,
+    reject: null,
+    flag: null,
+    note: null,
+    source: null,
+    confirm_native: null,
+  },
 }
 
 export function getNewState(

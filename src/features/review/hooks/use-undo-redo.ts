@@ -11,7 +11,7 @@ import { undoAddFinding } from '@/features/review/actions/undoAddFinding.action'
 import { undoBulkAction } from '@/features/review/actions/undoBulkAction.action'
 import { undoDeleteFinding } from '@/features/review/actions/undoDeleteFinding.action'
 import { undoSeverityOverride } from '@/features/review/actions/undoSeverityOverride.action'
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, getStoreFileState } from '@/features/review/stores/review.store'
 import type { UndoEntry } from '@/features/review/stores/review.store'
 import { announce } from '@/features/review/utils/announce'
 
@@ -34,7 +34,7 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
     try {
       // Branch by action type
       if (entry.action === 'severity_override' && entry.findingId && entry.previousSeverity) {
-        const finding = store.findingsMap.get(entry.findingId)
+        const finding = getStoreFileState(store, fileId).findingsMap.get(entry.findingId)
         const currentSeverity = finding?.severity
 
         const result = await undoSeverityOverride({
@@ -58,9 +58,13 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
         }
 
         // CR-R2-C1: Update store with restored severity (don't wait for Realtime)
-        const updatedFinding = store.findingsMap.get(entry.findingId)
+        // P1-2 fix: re-read fresh state after await (stale snapshot prevention)
+        const freshSeverityStore = useReviewStore.getState()
+        const updatedFinding = getStoreFileState(freshSeverityStore, fileId).findingsMap.get(
+          entry.findingId,
+        )
         if (updatedFinding && entry.previousSeverity) {
-          store.setFinding(entry.findingId, {
+          freshSeverityStore.setFinding(entry.findingId, {
             ...updatedFinding,
             severity: entry.previousSeverity.severity,
             originalSeverity: entry.previousSeverity.originalSeverity,
@@ -232,7 +236,7 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
 
       // Check if stale
       if (entry.staleFindings.has(entry.findingId)) {
-        const finding = store.findingsMap.get(entry.findingId)
+        const finding = getStoreFileState(store, fileId).findingsMap.get(entry.findingId)
         onConflict(entry, entry.findingId, finding?.status ?? 'unknown')
         // Don't push back to undo — conflict handler decides
         return
@@ -246,7 +250,7 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
       }
 
       // Optimistic revert
-      const finding = store.findingsMap.get(entry.findingId)
+      const finding = getStoreFileState(store, fileId).findingsMap.get(entry.findingId)
       if (finding) {
         store.setFinding(entry.findingId, {
           ...finding,
@@ -278,18 +282,21 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
         return
       }
 
-      // Sync server timestamp
+      // Sync server timestamp — P1-2 fix: fresh state after await
       if (result.data.serverUpdatedAt) {
-        const currentFinding = store.findingsMap.get(entry.findingId)
+        const freshTsStore = useReviewStore.getState()
+        const currentFinding = getStoreFileState(freshTsStore, fileId).findingsMap.get(
+          entry.findingId,
+        )
         if (currentFinding) {
-          store.setFinding(entry.findingId, {
+          freshTsStore.setFinding(entry.findingId, {
             ...currentFinding,
             updatedAt: result.data.serverUpdatedAt,
           })
         }
       }
 
-      store.pushRedo(entry)
+      useReviewStore.getState().pushRedo(entry)
       toast.success(`Undone: ${entry.description}`)
       announce(`Undone: ${entry.description}`)
     } catch {
@@ -323,7 +330,7 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
           return
         }
         // CR-R2-C1: Update store with re-applied severity (don't wait for Realtime)
-        const updatedFinding = store.findingsMap.get(entry.findingId)
+        const updatedFinding = getStoreFileState(store, fileId).findingsMap.get(entry.findingId)
         if (updatedFinding) {
           store.setFinding(entry.findingId, {
             ...updatedFinding,
@@ -431,11 +438,12 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
           return
         }
 
+        const freshRedoStore = useReviewStore.getState()
         for (const fId of result.data.reverted) {
-          const f = store.findingsMap.get(fId)
+          const f = getStoreFileState(freshRedoStore, fileId).findingsMap.get(fId)
           const targetState = entry.newStates.get(fId)
           if (f && targetState) {
-            store.setFinding(fId, { ...f, status: targetState })
+            freshRedoStore.setFinding(fId, { ...f, status: targetState })
           }
         }
 
@@ -494,7 +502,7 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
       }
 
       // Update store
-      const finding = store.findingsMap.get(entry.findingId)
+      const finding = getStoreFileState(store, fileId).findingsMap.get(entry.findingId)
       if (finding) {
         store.setFinding(entry.findingId, {
           ...finding,
@@ -533,7 +541,7 @@ export function useUndoRedo({ fileId, projectId, onConflict }: UseUndoRedoOption
 
       if (result.success) {
         const store = useReviewStore.getState()
-        const finding = store.findingsMap.get(entry.findingId)
+        const finding = getStoreFileState(store, fileId).findingsMap.get(entry.findingId)
         if (finding) {
           store.setFinding(entry.findingId, {
             ...finding,

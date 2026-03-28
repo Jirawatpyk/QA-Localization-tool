@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, getStoreFileState } from '@/features/review/stores/review.store'
 import { announce } from '@/features/review/utils/announce'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { DETECTED_BY_LAYERS, FINDING_SEVERITIES, FINDING_STATUSES } from '@/types/finding'
@@ -121,7 +121,7 @@ export function useFindingsSubscription(fileId: string, tenantId?: string | unde
             // CR-H1: skip write if this subscription's fileId no longer matches active file
             // (prevents stale subscription from corrupting another file's state during <Link> transition)
             if (store.currentFileId !== fileId) return
-            const mergedMap = new Map<string, Finding>(store.findingsMap)
+            const mergedMap = new Map<string, Finding>(getStoreFileState(store, fileId).findingsMap)
             let changed = false
             for (const row of data) {
               const polled = mapRowToFinding(row as Record<string, unknown>)
@@ -176,7 +176,7 @@ export function useFindingsSubscription(fileId: string, tenantId?: string | unde
       const store = useReviewStore.getState()
       // CR-H1: skip write if fileId no longer active (prevents cross-file corruption during transition)
       if (store.currentFileId !== fileId) return
-      const newMap = new Map(store.findingsMap)
+      const newMap = new Map(getStoreFileState(store, fileId).findingsMap)
       for (const f of batch) {
         newMap.set(f.id, f)
       }
@@ -206,7 +206,7 @@ export function useFindingsSubscription(fileId: string, tenantId?: string | unde
       const store = useReviewStore.getState()
       // CR-H1: skip write if fileId no longer active
       if (store.currentFileId !== fileId) return
-      const existing = store.findingsMap.get(finding.id)
+      const existing = getStoreFileState(store, fileId).findingsMap.get(finding.id)
       if (existing && finding.updatedAt <= existing.updatedAt) {
         // Store has same or newer data (e.g. optimistic update) — skip
         return

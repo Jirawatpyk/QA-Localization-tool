@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { LanguageBridgePanel } from '@/features/bridge/components/LanguageBridgePanel'
 import { AddToGlossaryDialog } from '@/features/review/components/AddToGlossaryDialog'
 import { ConfidenceBadge } from '@/features/review/components/ConfidenceBadge'
+import { FindingCommentThread } from '@/features/review/components/FindingCommentThread'
 import { LayerBadge } from '@/features/review/components/LayerBadge'
 import type { OverrideHistoryEntry } from '@/features/review/components/OverrideHistoryPanel'
 import { OverrideHistoryPanel } from '@/features/review/components/OverrideHistoryPanel'
@@ -49,6 +50,9 @@ type FindingDetailContentProps = {
   isNonNative?: boolean | undefined
   /** Story 5.1: Project-level BT confidence threshold */
   btConfidenceThreshold?: number | undefined
+  /** Story 5.2c: Assignment info for flagged findings */
+  assignmentId?: string | undefined
+  flaggerComment?: string | undefined
 }
 
 /**
@@ -73,6 +77,8 @@ export function FindingDetailContent({
   fetchOverrideHistory,
   isNonNative = false,
   btConfidenceThreshold,
+  assignmentId,
+  flaggerComment,
 }: FindingDetailContentProps) {
   const [contextRange, setContextRange] = useState(contextRangeProp ?? 2)
 
@@ -308,6 +314,17 @@ export function FindingDetailContent({
               targetLang={targetLang}
               projectId={projectId}
             />
+          )}
+
+          {/* Story 5.2c: Finding comment thread for flagged findings with assignments */}
+          {finding && assignmentId && (
+            <div className="mt-4 border-t pt-4">
+              <FindingCommentThread
+                findingId={finding.id}
+                findingAssignmentId={assignmentId}
+                flaggerComment={flaggerComment}
+              />
+            </div>
           )}
         </>
       ) : (
