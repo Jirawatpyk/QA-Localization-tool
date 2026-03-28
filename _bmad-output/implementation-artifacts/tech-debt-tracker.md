@@ -1247,3 +1247,13 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Files:** `src/db/migrations/0014_typical_gauntlet.sql`, `src/db/schema/scores.ts:33`, `src/db/migrations/meta/_journal.json`
 - **Description:** Orphan Drizzle migration file `0014_typical_gauntlet.sql` contains `ALTER TABLE scores ADD CONSTRAINT uq_scores_file_tenant UNIQUE(file_id, tenant_id)` but is NOT registered in `_journal.json` (idx 14 = `0014_solid_maestro` instead). The Drizzle schema (`scores.ts:33`) declares the constraint, and snapshots 0014/0015 include it — so Drizzle believes it exists. But it was never applied to the DB. Production may allow duplicate scores per file. **Fix:** Create a new Supabase migration that adds the constraint: `ALTER TABLE scores ADD CONSTRAINT IF NOT EXISTS uq_scores_file_tenant UNIQUE(file_id, tenant_id);` and delete the orphan file. Quick fix < 30 min.
 - **Status:** ✅ RESOLVED (2026-03-28) — Orphan `0014_typical_gauntlet.sql` deleted, `uq_scores_file_tenant` constraint applied via Supabase migration `00026` Section 8
+
+### TD-RLS-001: findings INSERT/DELETE policies still tenant-only (not role-scoped)
+- **Date:** 2026-03-28
+- **Story:** Story 5.2b (CR R1 — manual review finding M5)
+- **Phase:** CR
+- **Severity:** Medium
+- **Files:** `supabase/migrations/00001_rls_policies.sql:149,158`
+- **Description:** Story 5.2b tightened segments + review_actions INSERT/DELETE to role-scoped (admin-only DELETE, admin+qa INSERT). But findings INSERT/DELETE were intentionally kept as tenant-only per AC5 ("preserve existing"). This means any native_reviewer can DELETE any tenant finding by ID at the RLS level — inconsistent with the hardened approach on other tables. App-level `requireRole()` is the primary defense, but defense-in-depth requires RLS to match.
+- **Fix:** Create a follow-up migration that: (1) DROP "Tenant isolation: INSERT" ON findings → CREATE `findings_insert_admin_qa` (admin+qa only — pipeline uses service_role). (2) DROP "Tenant isolation: DELETE" ON findings → CREATE `findings_delete_admin` (admin only). Add corresponding RLS tests.
+- **Status:** DEFERRED → Story 5.2c (natural next story — already modifying findings access patterns)

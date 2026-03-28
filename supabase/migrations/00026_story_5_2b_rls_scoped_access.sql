@@ -200,6 +200,7 @@ CREATE POLICY "review_actions_insert_native" ON review_actions
     )
   );
 
+-- NOTE: No native UPDATE on review_actions — append-only audit trail for native reviewer
 -- Admin + QA: UPDATE review_actions (audit trail corrections)
 CREATE POLICY "review_actions_update_admin_qa" ON review_actions
   FOR UPDATE TO authenticated
@@ -242,7 +243,7 @@ CREATE POLICY "finding_assignments_select_native" ON finding_assignments
   );
 
 -- Admin + QA: INSERT (they create assignments)
-CREATE POLICY "finding_assignments_insert" ON finding_assignments
+CREATE POLICY "finding_assignments_insert_admin_qa" ON finding_assignments
   FOR INSERT TO authenticated
   WITH CHECK (
     tenant_id = ((SELECT auth.jwt()) ->> 'tenant_id')::uuid
@@ -261,7 +262,8 @@ CREATE POLICY "finding_assignments_update_admin_qa" ON finding_assignments
     AND ((SELECT auth.jwt()) ->> 'user_role') IN ('admin', 'qa_reviewer')
   );
 
--- Native reviewer: UPDATE own assignments (WITH CHECK prevents reassignment)
+-- Native reviewer: UPDATE own assignments (WITH CHECK prevents reassignment + status escalation)
+-- CR R1 H5: restrict writable status values — native cannot self-assign 'overridden' (QA-only)
 CREATE POLICY "finding_assignments_update_native" ON finding_assignments
   FOR UPDATE TO authenticated
   USING (
@@ -273,10 +275,11 @@ CREATE POLICY "finding_assignments_update_native" ON finding_assignments
     tenant_id = ((SELECT auth.jwt()) ->> 'tenant_id')::uuid
     AND ((SELECT auth.jwt()) ->> 'user_role') = 'native_reviewer'
     AND assigned_to = ((SELECT auth.jwt()) ->> 'sub')::uuid
+    AND status IN ('pending', 'in_review', 'confirmed')
   );
 
 -- Admin only: DELETE
-CREATE POLICY "finding_assignments_delete" ON finding_assignments
+CREATE POLICY "finding_assignments_delete_admin" ON finding_assignments
   FOR DELETE TO authenticated
   USING (
     tenant_id = ((SELECT auth.jwt()) ->> 'tenant_id')::uuid

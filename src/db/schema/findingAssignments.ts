@@ -15,6 +15,8 @@ export const findingAssignments = pgTable(
     findingId: uuid('finding_id')
       .notNull()
       .references(() => findings.id, { onDelete: 'cascade' }),
+    // NOT NULL intentional: assignments only for per-file findings (findings.file_id can be nullable for cross-file findings)
+    // TODO(story-5.2c): Server Action must guard — reject assignment if finding.fileId is null
     fileId: uuid('file_id')
       .notNull()
       .references(() => files.id, { onDelete: 'cascade' }),
@@ -38,6 +40,7 @@ export const findingAssignments = pgTable(
       .$type<AssignmentStatus>(),
     flaggerComment: text('flagger_comment'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    // TODO(story-5.2c): defaultNow() only at INSERT — add DB trigger or app-level set on UPDATE
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique('uq_finding_assignments_finding_user').on(table.findingId, table.assignedTo)],

@@ -33,4 +33,7 @@ ALTER TABLE "finding_comments" ADD CONSTRAINT "finding_comments_finding_id_findi
 ALTER TABLE "finding_comments" ADD CONSTRAINT "finding_comments_finding_assignment_id_finding_assignments_id_fk" FOREIGN KEY ("finding_assignment_id") REFERENCES "public"."finding_assignments"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "finding_comments" ADD CONSTRAINT "finding_comments_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "finding_comments" ADD CONSTRAINT "finding_comments_author_id_users_id_fk" FOREIGN KEY ("author_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "finding_assignments" ADD CONSTRAINT "chk_finding_assignments_status" CHECK (status IN ('pending', 'in_review', 'confirmed', 'overridden'));
+ALTER TABLE "finding_assignments" ADD CONSTRAINT "chk_finding_assignments_status" CHECK (status IN ('pending', 'in_review', 'confirmed', 'overridden'));--> statement-breakpoint
+-- L2: Defense-in-depth — also enabled in Supabase migration 00026 with policies
+ALTER TABLE "finding_assignments" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "finding_comments" ENABLE ROW LEVEL SECURITY;

@@ -29,6 +29,8 @@ let tenantB: TestTenant
 let qaUser: { id: string; jwt: string }
 let nativeUser: { id: string; jwt: string }
 let assignmentId: string
+let unassignedFindingId: string // H1: finding with no assignment — for INSERT denial test
+let commentId: string // M3: seeded in beforeAll for test isolation
 
 beforeAll(async () => {
   // --- Tenant A (admin) ---
@@ -91,6 +93,22 @@ beforeAll(async () => {
       severity: 'major',
       category: 'Accuracy',
       description: 'FA RLS test finding',
+      detected_by_layer: 'L1',
+    })
+    .select('id')
+    .single()
+
+  // H1: second finding with NO assignment to nativeUser — for INSERT denial test
+  const { data: findingForInsert } = await admin
+    .from('findings')
+    .insert({
+      segment_id: segment!.id,
+      project_id: project!.id,
+      tenant_id: a.id,
+      status: 'pending',
+      severity: 'minor',
+      category: 'Style',
+      description: 'Unassigned finding for INSERT denial test',
       detected_by_layer: 'L1',
     })
     .select('id')
@@ -160,6 +178,19 @@ beforeAll(async () => {
     .select('id')
     .single()
 
+  // M3: Seed comment in beforeAll for test isolation (not in sibling `it`)
+  const { data: seededComment } = await admin
+    .from('finding_comments')
+    .insert({
+      finding_id: finding!.id,
+      finding_assignment_id: assignment!.id,
+      tenant_id: a.id,
+      author_id: nativeAuth!.user!.id,
+      body: 'This translation looks incorrect in Thai context',
+    })
+    .select('id')
+    .single()
+
   // Store references
   tenantA = {
     ...a,
@@ -172,6 +203,8 @@ beforeAll(async () => {
   qaUser = { id: qaAuth!.user!.id, jwt: qaSession!.session!.access_token }
   nativeUser = { id: nativeAuth!.user!.id, jwt: nativeSession!.session!.access_token }
   assignmentId = assignment!.id
+  unassignedFindingId = findingForInsert!.id
+  commentId = seededComment!.id
 }, 60_000)
 
 afterAll(async () => {
@@ -308,9 +341,10 @@ describe('finding_assignments RLS', () => {
 
   it('should deny native_reviewer INSERT on finding_assignments', async () => {
     // AC6: INSERT admin+qa only — native cannot create assignments
+    // H1 fix: use unassignedFindingId to avoid UNIQUE constraint masking RLS denial
     const clientNative = tenantClient(nativeUser.jwt)
     const { error } = await clientNative.from('finding_assignments').insert({
-      finding_id: tenantA.findingId,
+      finding_id: unassignedFindingId,
       file_id: tenantA.fileId,
       project_id: tenantA.projectId,
       tenant_id: tenantA.id,
@@ -322,9 +356,9 @@ describe('finding_assignments RLS', () => {
     expect(error).toBeTruthy()
   })
 
-  it('should deny native_reviewer UPDATE to reassign (WITH CHECK assigned_to = jwt.sub)', async () => {
+  it('should deny native_reviewer UPDATE when reassigning to different user', async () => {
     // AC6/AC7: native UPDATE own assignment but cannot change assigned_to
-    // WITH CHECK prevents self-reassignment — PostgREST returns error when WITH CHECK fails
+    // WITH CHECK violation: PostgREST returns error (data=null) or empty array depending on version
     const clientNative = tenantClient(nativeUser.jwt)
     const { data, error } = await clientNative
       .from('finding_assignments')
@@ -332,9 +366,56 @@ describe('finding_assignments RLS', () => {
       .eq('id', assignmentId)
       .select('id')
 
-    // WITH CHECK failure: either returns error OR 0 rows depending on PostgREST behavior
-    const denied = error !== null || (data !== null && data.length === 0)
-    expect(denied).toBe(true)
+    expect(data?.length ?? 0).toBe(0)
+  })
+
+  it('should allow native_reviewer to UPDATE own assignment status', async () => {
+    // H4: positive case — native CAN update status (core workflow for Story 5.2c)
+    const clientNative = tenantClient(nativeUser.jwt)
+    const { data, error } = await clientNative
+      .from('finding_assignments')
+      .update({ status: 'in_review' })
+      .eq('id', assignmentId)
+      .select('id, status')
+
+    expect(error).toBeNull()
+    expect(data).toHaveLength(1)
+    expect(data?.[0]?.status).toBe('in_review')
+
+    // Restore status for subsequent tests
+    await admin.from('finding_assignments').update({ status: 'pending' }).eq('id', assignmentId)
+  })
+
+  it('should deny native_reviewer UPDATE status to overridden (QA-only)', async () => {
+    // H5: native cannot self-assign 'overridden' — WITH CHECK restricts to pending/in_review/confirmed
+    // WITH CHECK violation: PostgREST returns error (data=null) or empty array depending on version
+    const clientNative = tenantClient(nativeUser.jwt)
+    const { data } = await clientNative
+      .from('finding_assignments')
+      .update({ status: 'overridden' })
+      .eq('id', assignmentId)
+      .select('id')
+
+    expect(data?.length ?? 0).toBe(0)
+  })
+
+  // --- QA Reviewer: INSERT (L5) ---
+  it('should allow qa_reviewer to INSERT assignments', async () => {
+    // L5: policy allows admin+qa INSERT — verify qa_reviewer separately
+    const clientQA = tenantClient(qaUser.jwt)
+    const { error } = await clientQA.from('finding_assignments').insert({
+      finding_id: unassignedFindingId,
+      file_id: tenantA.fileId,
+      project_id: tenantA.projectId,
+      tenant_id: tenantA.id,
+      assigned_to: nativeUser.id,
+      assigned_by: qaUser.id,
+      status: 'pending',
+    })
+    expect(error).toBeNull()
+
+    // Cleanup
+    await admin.from('finding_assignments').delete().eq('finding_id', unassignedFindingId)
   })
 
   // --- Cross-tenant isolation ---
@@ -360,31 +441,33 @@ describe('finding_comments RLS', () => {
       finding_assignment_id: assignmentId,
       tenant_id: tenantA.id,
       author_id: nativeUser.id,
-      body: 'This translation looks incorrect in Thai context',
+      body: 'Additional comment from native reviewer',
     })
 
     expect(error).toBeNull()
+
+    // Cleanup: remove the extra comment (seeded comment remains)
+    await admin.from('finding_comments').delete().neq('id', commentId).eq('tenant_id', tenantA.id)
   })
 
-  // --- Native Reviewer: SELECT only on own assignments ---
+  // --- Native Reviewer: SELECT only on own assignments (M3: uses seeded comment from beforeAll) ---
   it('should allow native_reviewer to SELECT comments on own assignments', async () => {
     // AC6: native = only on their assignments (EXISTS on finding_assignments)
     const clientNative = tenantClient(nativeUser.jwt)
-    const { data } = await clientNative.from('finding_comments').select('body')
+    const { data } = await clientNative.from('finding_comments').select('id, body')
 
-    // Previous test inserted a comment — native reviewer should see it via assignment ownership
-    expect(data).toHaveLength(1)
-    expect(data?.[0]?.body).toBe('This translation looks incorrect in Thai context')
+    expect(data!.length).toBeGreaterThanOrEqual(1)
+    expect(data!.some((c) => c.id === commentId)).toBe(true)
   })
 
-  // --- Native Reviewer: DELETE denied (admin-only) ---
+  // --- Native Reviewer: DELETE denied (admin-only) — L3: target specific comment by ID ---
   it('should deny native_reviewer DELETE on finding_comments', async () => {
     // AC7: native DELETE finding_comment → denied (admin-only)
     const clientNative = tenantClient(nativeUser.jwt)
     const { data } = await clientNative
       .from('finding_comments')
       .delete()
-      .eq('tenant_id', tenantA.id)
+      .eq('id', commentId)
       .select('id')
 
     expect(data).toHaveLength(0)

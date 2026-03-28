@@ -277,7 +277,7 @@ So that Story 5.2c can build the native reviewer workflow on a secure, tenant-is
 - review_actions: `"Tenant isolation: SELECT"` (DROP + re-CREATE as role-scoped)
 
 **Existing policies to KEEP (DO NOT DROP):**
-- findings: `"Tenant isolation: INSERT"` (pipeline uses), `"Tenant isolation: DELETE"` (admin-only)
+- findings: `"Tenant isolation: INSERT"` (pipeline uses service_role), `"Tenant isolation: DELETE"` (tenant-only — NOT role-scoped, see TD-RLS-001)
 
 **Existing policies REPLACED with role-scoped (post-CR agent security hardening):**
 - segments: INSERT/UPDATE → admin+qa only, DELETE → admin only (native reviewers read-only)
@@ -429,21 +429,44 @@ Claude Opus 4.6 (1M context)
   - Verified: 64/64 RLS tests GREEN (11 test files, 0 regression)
 - **DB pushed:** Cloud ✅ + Local Supabase ✅ (Drizzle migration + RLS migration both applied)
 
+### CR R1 Fixes (2026-03-28)
+**17 findings fixed (5 HIGH, 6 MEDIUM, 6 LOW) from 4 agents + manual review:**
+- **H1:** Native INSERT denial test used UNIQUE-masked finding → now uses separate unassigned finding
+- **H2:** "0 findings" boundary test was vacuous (Tenant B had no findings) → seeded finding in Tenant B
+- **H3:** `review_actions_select_native` policy had 0 test coverage → added 2 SELECT tests (positive + negative)
+- **H4:** Missing positive native UPDATE status test → added `pending→in_review` test
+- **H5:** Native could SET `status='overridden'` via RLS → added `AND status IN ('pending','in_review','confirmed')` to WITH CHECK
+- **M1:** `findingAssignments.fileId` NOT NULL vs nullable `findings.file_id` → documented constraint + TODO(5.2c)
+- **M2:** WITH CHECK reassignment test used vacuous error-or-empty guard → simplified to `expect(data).toHaveLength(0)`
+- **M3:** Comment SELECT test depended on sibling INSERT → seeded in beforeAll
+- **M4:** `updatedAt` lacks auto-update trigger → added TODO(5.2c)
+- **M5:** findings INSERT/DELETE still tenant-only → created TD-RLS-001, fixed Dev Notes "(admin-only)" label
+- **M6:** Policy names inconsistent → `finding_assignments_insert` → `_insert_admin_qa`, `_delete` → `_delete_admin`
+- **L1:** `fileAssignments.status` bare string → added `$type<'pending'|'accepted'|'completed'>()`
+- **L2:** Drizzle migration lacked ENABLE RLS → added defense-in-depth statements
+- **L3:** DELETE denial test used broad tenant filter → now targets specific commentId
+- **L4:** Misleading test comment ("wrong assignment") → clarified as "mismatched finding_id vs assignment"
+- **L5:** QA reviewer INSERT test missing → added
+- **L6:** Native write denial tests on segments missing → added INSERT + DELETE denial tests
+- **RLS reviewer doc fix:** Added intent comment for no native UPDATE on review_actions
+- **Conditional scans ran:** rls-policy-reviewer (schema changed). inngest-function-validator skipped (no Inngest files).
+
 ### File List
 **New files:**
 - `src/types/assignment.ts` — AssignmentStatus union type
 - `src/db/schema/findingAssignments.ts` — Drizzle schema
 - `src/db/schema/findingComments.ts` — Drizzle schema (immutable)
-- `src/db/migrations/0017_lying_saracen.sql` — Drizzle migration (CREATE TABLE + CHECK)
+- `src/db/migrations/0017_lying_saracen.sql` — Drizzle migration (CREATE TABLE + CHECK + ENABLE RLS)
 - `supabase/migrations/00026_story_5_2b_rls_scoped_access.sql` — Supabase RLS migration (8 sections)
 
 **Modified files:**
 - `src/db/schema/relations.ts` — 2 new relation blocks + 5 updated
 - `src/db/schema/index.ts` — 2 new table exports + 2 new relation exports
+- `src/db/schema/fileAssignments.ts` — L1 fix: `$type<>()` on status column
 
 **Deleted files:**
 - `src/db/migrations/0014_typical_gauntlet.sql` — orphan (TD-DB-006)
 
-**ATDD test files (unskipped + fixed):**
-- `src/db/__tests__/rls/finding-assignments-rls.test.ts` — 12 tests
-- `src/db/__tests__/rls/native-reviewer-scoped-access-rls.test.ts` — 12 tests (column name fixes)
+**ATDD test files (unskipped + fixed + CR R1 expanded):**
+- `src/db/__tests__/rls/finding-assignments-rls.test.ts` — 16 tests (+4 from CR R1: H4 status update, H5 overridden denial, L5 qa INSERT, M3/L3 comment isolation)
+- `src/db/__tests__/rls/native-reviewer-scoped-access-rls.test.ts` — 16 tests (+4 from CR R1: H2 seeded Tenant B, H3 review_actions SELECT ×2, L6 segments write denial ×2)

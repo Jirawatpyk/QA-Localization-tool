@@ -22,7 +22,10 @@ export const fileAssignments = pgTable('file_assignments', {
   assignedBy: uuid('assigned_by')
     .notNull()
     .references(() => users.id, { onDelete: 'restrict' }),
-  status: varchar('status', { length: 20 }).notNull().default('pending'), // 'pending' | 'accepted' | 'completed'
+  status: varchar('status', { length: 20 })
+    .notNull()
+    .default('pending')
+    .$type<'pending' | 'accepted' | 'completed'>(),
   priority: varchar('priority', { length: 20 }),
   notes: text('notes'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

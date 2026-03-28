@@ -45,6 +45,58 @@ beforeAll(async () => {
   // --- Tenant B (admin + native — for cross-tenant test) ---
   const b = await setupTestTenant('rls-scoped-admin-b@test.local')
 
+  // H2: Seed finding in Tenant B (without assignment) so "0 findings" test exercises EXISTS policy
+  const { data: projectB } = await admin
+    .from('projects')
+    .insert({
+      tenant_id: b.id,
+      name: 'Tenant B Project',
+      source_lang: 'en',
+      target_langs: ['th'],
+      processing_mode: 'economy',
+      status: 'draft',
+    })
+    .select('id')
+    .single()
+  const { data: fileB } = await admin
+    .from('files')
+    .insert({
+      project_id: projectB!.id,
+      tenant_id: b.id,
+      file_name: 'tenant-b-test.xliff',
+      file_type: 'xliff',
+      file_size_bytes: 512,
+      storage_path: '/tenant-b-test.xliff',
+      status: 'parsed',
+    })
+    .select('id')
+    .single()
+  const { data: segmentB } = await admin
+    .from('segments')
+    .insert({
+      file_id: fileB!.id,
+      project_id: projectB!.id,
+      tenant_id: b.id,
+      segment_number: 1,
+      source_text: 'Tenant B test',
+      target_text: 'ทดสอบ Tenant B',
+      source_lang: 'en',
+      target_lang: 'th',
+      word_count: 3,
+    })
+    .select('id')
+    .single()
+  await admin.from('findings').insert({
+    segment_id: segmentB!.id,
+    project_id: projectB!.id,
+    tenant_id: b.id,
+    status: 'pending',
+    severity: 'major',
+    category: 'Accuracy',
+    description: 'Tenant B finding — no assignment to native reviewer',
+    detected_by_layer: 'L1',
+  })
+
   // --- Tenant A: project → file → 2 segments → 2 findings ---
   const { data: project } = await admin
     .from('projects')
@@ -268,6 +320,12 @@ afterAll(async () => {
     await admin.auth.admin.deleteUser(uid)
   }
 
+  // Cleanup Tenant B data (H2: seeded finding/segment/file/project)
+  await admin.from('findings').delete().eq('tenant_id', tenantB.id)
+  await admin.from('segments').delete().eq('tenant_id', tenantB.id)
+  await admin.from('files').delete().eq('tenant_id', tenantB.id)
+  await admin.from('projects').delete().eq('tenant_id', tenantB.id)
+
   // Cleanup Tenant B native user
   if (tenantB?.nativeUserId) {
     await admin.from('user_roles').delete().eq('user_id', tenantB.nativeUserId)
@@ -340,6 +398,33 @@ describe('segments — native reviewer scoped access', () => {
     expect(data).toHaveLength(1)
     expect(data?.[0]?.id).toBe(tenantA.segmentAssignedId)
   })
+
+  // L6: native reviewer write denial on segments (role-scoped policies)
+  it('should deny native_reviewer INSERT on segments', async () => {
+    const clientNative = tenantClient(nativeUser.jwt)
+    const { error } = await clientNative.from('segments').insert({
+      file_id: tenantA.fileId,
+      project_id: tenantA.projectId,
+      tenant_id: tenantA.id,
+      segment_number: 99,
+      source_text: 'Native insert',
+      target_text: 'ทดสอบ',
+      source_lang: 'en',
+      target_lang: 'th',
+      word_count: 1,
+    })
+    expect(error).toBeTruthy()
+  })
+
+  it('should deny native_reviewer DELETE on segments', async () => {
+    const clientNative = tenantClient(nativeUser.jwt)
+    const { data } = await clientNative
+      .from('segments')
+      .delete()
+      .eq('id', tenantA.segmentAssignedId)
+      .select('id')
+    expect(data).toHaveLength(0)
+  })
 })
 
 // =============================================================================
@@ -379,6 +464,41 @@ describe('review_actions — native reviewer scoped access', () => {
 
     expect(error).toBeTruthy()
   })
+
+  // H3: review_actions SELECT native — policy coverage
+  it('should allow native_reviewer to SELECT review_actions on assigned finding', async () => {
+    // review_actions_select_native policy: EXISTS on finding_assignments
+    // Previous test inserted a review_action on assigned finding — should be visible
+    const clientNative = tenantClient(nativeUser.jwt)
+    const { data } = await clientNative
+      .from('review_actions')
+      .select('id, finding_id')
+      .eq('finding_id', tenantA.findingAssignedId)
+
+    expect(data!.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('should deny native_reviewer SELECT review_actions on non-assigned finding', async () => {
+    // Seed a review_action on the unassigned finding via admin, then verify native can't see it
+    await admin.from('review_actions').insert({
+      finding_id: tenantA.findingUnassignedId,
+      file_id: tenantA.fileId,
+      project_id: tenantA.projectId,
+      tenant_id: tenantA.id,
+      user_id: tenantA.userId,
+      action_type: 'status_change',
+      previous_state: 'pending',
+      new_state: 'noted',
+    })
+
+    const clientNative = tenantClient(nativeUser.jwt)
+    const { data } = await clientNative
+      .from('review_actions')
+      .select('id')
+      .eq('finding_id', tenantA.findingUnassignedId)
+
+    expect(data).toHaveLength(0)
+  })
 })
 
 // =============================================================================
@@ -405,7 +525,7 @@ describe('finding_comments — native reviewer scoped access', () => {
     // This should fail because the native reviewer has no assignment for this finding
     const { error } = await clientNative.from('finding_comments').insert({
       finding_id: tenantA.findingUnassignedId,
-      finding_assignment_id: assignmentId, // wrong assignment
+      finding_assignment_id: assignmentId, // valid assignment but mismatched finding_id — EXISTS checks fa.finding_id = comment.finding_id
       tenant_id: tenantA.id,
       author_id: nativeUser.id,
       body: 'Should be denied',
