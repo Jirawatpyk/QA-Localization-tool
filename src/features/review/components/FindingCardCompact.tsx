@@ -9,7 +9,11 @@ import { LayerBadge } from '@/features/review/components/LayerBadge'
 import { NonNativeBadge } from '@/features/review/components/NonNativeBadge'
 import { OverrideBadge } from '@/features/review/components/OverrideBadge'
 import { SeverityIndicator } from '@/features/review/components/SeverityIndicator'
-import { useReviewStore, useFileState } from '@/features/review/stores/review.store'
+import {
+  useReviewStore,
+  useFileState,
+  getStoreFileState,
+} from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import {
   L3_CONFIRMED_MARKER,
@@ -131,7 +135,7 @@ function FindingCardCompactInner({
     if (e.shiftKey) {
       e.preventDefault()
       const store = useReviewStore.getState()
-      const anchorId = store.selectedId
+      const anchorId = getStoreFileState(store, store.currentFileId ?? '').selectedId
       if (selectionMode !== 'bulk') {
         setSelectionMode('bulk')
       }

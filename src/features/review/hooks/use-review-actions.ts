@@ -327,6 +327,7 @@ export function useReviewActions({
         /* handled by executeAction's own catch */
       })
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fileId read via getState(), stable per mount
     [executeAction],
   )
 

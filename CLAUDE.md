@@ -44,7 +44,17 @@ npx vitest run src/features/scoring/mqmCalculator.test.ts
 npx vitest --project unit
 ```
 
-**Local dev setup:** `npm install` → `npx supabase start` → `npm run db:migrate` → `npm run dev`
+**Local dev setup:**
+
+```bash
+npm install
+npx supabase start                    # Start local Supabase (requires Docker)
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres npx drizzle-kit migrate  # Drizzle → local DB
+npx supabase db push --local           # Supabase migrations (RLS, indexes) → local DB
+npm run dev
+```
+
+**Order matters:** Drizzle creates tables → Supabase migrations add RLS policies that reference those tables. Reversing causes `relation does not exist` errors.
 
 ## Architecture
 

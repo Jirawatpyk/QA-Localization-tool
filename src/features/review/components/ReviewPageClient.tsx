@@ -538,7 +538,8 @@ export function ReviewPageClient({
         'escape',
         () => {
           const state = useReviewStore.getState()
-          if (state.selectionMode === 'bulk' && state.selectedIds.size > 0) {
+          const fs = getStoreFileState(state, fileId)
+          if (fs.selectionMode === 'bulk' && fs.selectedIds.size > 0) {
             state.clearSelection()
             state.setSelectionMode('single')
           }
@@ -819,6 +820,7 @@ export function ReviewPageClient({
       },
     )
     clearDetectedPattern()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fileId stable while dialog open
   }, [detectedPattern, clearDetectedPattern])
 
   const handleSuppressConfirm = useCallback(
