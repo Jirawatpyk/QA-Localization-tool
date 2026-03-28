@@ -111,6 +111,21 @@ vi.mock('@/features/review/stores/review.store', () => ({
   ),
   selectCanUndo: vi.fn(() => false),
   selectCanRedo: vi.fn(() => false),
+  getStoreFileState: vi.fn((..._args: unknown[]) => ({
+    findingsMap: mockFindingsMap,
+    selectedId: null,
+    selectedIds: new Set<string>(),
+    sortedFindingIds: [...mockFindingsMap.keys()],
+    overrideCounts: new Map(),
+    currentScore: null,
+    scoreStatus: 'na',
+    undoStack: [],
+    redoStack: [],
+    selectionMode: 'single' as const,
+    filterState: {},
+    searchQuery: '',
+    aiSuggestionsEnabled: true,
+  })),
 }))
 
 // ── Mock focus management ──

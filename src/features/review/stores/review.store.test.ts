@@ -45,9 +45,9 @@ describe('useReviewStore', () => {
   // ── P0: Findings Slice ──
 
   it('should initialize with empty findingsMap', () => {
-    const state = useReviewStore.getState()
-    expect(state.findingsMap).toBeInstanceOf(Map)
-    expect(state.findingsMap.size).toBe(0)
+    const fs = getStoreFileState()
+    expect(fs.findingsMap).toBeInstanceOf(Map)
+    expect(fs.findingsMap.size).toBe(0)
   })
 
   it('should add finding to findingsMap via setFinding', () => {
@@ -73,17 +73,17 @@ describe('useReviewStore', () => {
 
   it('should update score and status via updateScore', () => {
     useReviewStore.getState().updateScore(85, 'calculated')
-    const state = useReviewStore.getState()
-    expect(state.currentScore).toBe(85)
-    expect(state.scoreStatus).toBe('calculated')
-    expect(state.isRecalculating).toBe(false)
+    const fs = getStoreFileState()
+    expect(fs.currentScore).toBe(85)
+    expect(fs.scoreStatus).toBe('calculated')
+    expect(fs.isRecalculating).toBe(false)
   })
 
   it('should set isRecalculating=true and scoreStatus=calculating via setRecalculating', () => {
     useReviewStore.getState().setRecalculating()
-    const state = useReviewStore.getState()
-    expect(state.isRecalculating).toBe(true)
-    expect(state.scoreStatus).toBe('calculating')
+    const fs = getStoreFileState()
+    expect(fs.isRecalculating).toBe(true)
+    expect(fs.scoreStatus).toBe('calculating')
   })
 
   // ── P0: Selection Slice ──
@@ -110,15 +110,15 @@ describe('useReviewStore', () => {
 
     useReviewStore.getState().resetForFile('new-file-id')
 
-    const state = useReviewStore.getState()
-    expect(state.findingsMap.size).toBe(0)
-    expect(state.currentScore).toBeNull()
-    expect(state.scoreStatus).toBe('na')
-    expect(state.isRecalculating).toBe(false)
-    expect(state.selectedIds.size).toBe(0)
-    expect(state.selectedId).toBeNull()
-    expect(state.selectionMode).toBe('single')
-    expect(state.currentFileId).toBe('new-file-id')
+    const fs = getStoreFileState()
+    expect(fs.findingsMap.size).toBe(0)
+    expect(fs.currentScore).toBeNull()
+    expect(fs.scoreStatus).toBe('na')
+    expect(fs.isRecalculating).toBe(false)
+    expect(fs.selectedIds.size).toBe(0)
+    expect(fs.selectedId).toBeNull()
+    expect(fs.selectionMode).toBe('single')
+    expect(useReviewStore.getState().currentFileId).toBe('new-file-id')
   })
 
   // ── P1: Extended State ──
@@ -177,11 +177,11 @@ describe('useReviewStore', () => {
     batchMap.set('f3', buildFinding({ id: 'f3' }))
     useReviewStore.getState().setFindings(batchMap)
 
-    const state = useReviewStore.getState()
-    expect(state.findingsMap.size).toBe(2)
-    expect(state.findingsMap.has('f1')).toBe(false)
-    expect(state.findingsMap.has('f2')).toBe(true)
-    expect(state.findingsMap.has('f3')).toBe(true)
+    const fs = getStoreFileState()
+    expect(fs.findingsMap.size).toBe(2)
+    expect(fs.findingsMap.has('f1')).toBe(false)
+    expect(fs.findingsMap.has('f2')).toBe(true)
+    expect(fs.findingsMap.has('f3')).toBe(true)
   })
 
   it('should replace entire selectedIds via setSelections (batch)', () => {
@@ -190,10 +190,10 @@ describe('useReviewStore', () => {
     const batchSet = new Set(['f2', 'f3', 'f4'])
     useReviewStore.getState().setSelections(batchSet)
 
-    const state = useReviewStore.getState()
-    expect(state.selectedIds.size).toBe(3)
-    expect(state.selectedIds.has('f1')).toBe(false)
-    expect(state.selectedIds.has('f2')).toBe(true)
+    const fs = getStoreFileState()
+    expect(fs.selectedIds.size).toBe(3)
+    expect(fs.selectedIds.has('f1')).toBe(false)
+    expect(fs.selectedIds.has('f2')).toBe(true)
   })
 
   // ── P1: currentFileId ──
@@ -288,15 +288,14 @@ describe('useReviewStore', () => {
 
   it('[P0] should update layerCompleted field via updateScore(score, status, layerCompleted)', () => {
     useReviewStore.getState().updateScore(85, 'calculated', 'L1L2')
-    const state = useReviewStore.getState()
-    expect(state.currentScore).toBe(85)
-    expect(state.scoreStatus).toBe('calculated')
-    expect(state.layerCompleted).toBe('L1L2')
+    const fs = getStoreFileState()
+    expect(fs.currentScore).toBe(85)
+    expect(fs.scoreStatus).toBe('calculated')
+    expect(fs.layerCompleted).toBe('L1L2')
   })
 
   it('[P0] should have layerCompleted field that defaults to null', () => {
-    const state = useReviewStore.getState()
-    expect(state.layerCompleted).toBeNull()
+    expect(getStoreFileState().layerCompleted).toBeNull()
   })
 
   it('[P1] should reset layerCompleted to null via resetForFile()', () => {

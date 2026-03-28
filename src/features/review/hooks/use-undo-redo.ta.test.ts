@@ -54,14 +54,31 @@ vi.mock('@/features/review/stores/review.store', () => ({
       undoStack: store.undoStack,
       redoStack: store.redoStack,
       findingsMap: store.findingsMap,
+      currentFileId: 'test-file',
+      fileStates: new Map([
+        [
+          'test-file',
+          {
+            findingsMap: store.findingsMap,
+            undoStack: store.undoStack,
+            redoStack: store.redoStack,
+          },
+        ],
+      ]),
       popUndo: () => store.undoStack.pop() ?? undefined,
       popRedo: () => store.redoStack.pop() ?? undefined,
       pushUndo: (e: unknown) => store.undoStack.push(e),
       pushRedo: (e: unknown) => store.redoStack.push(e),
+      reinsertUndo: (e: unknown) => store.undoStack.push(e),
       setFinding: (id: string, f: unknown) => store.findingsMap.set(id, f),
       removeFinding: (id: string) => store.findingsMap.delete(id),
     }),
   },
+  getStoreFileState: () => ({
+    findingsMap: store.findingsMap,
+    undoStack: store.undoStack,
+    redoStack: store.redoStack,
+  }),
 }))
 vi.mock('@/features/review/actions/undoAction.action', () => ({
   undoAction: (...a: unknown[]) => mockUndoAction(...a),

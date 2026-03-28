@@ -38,9 +38,9 @@ describe('useReviewStore — Keyboard Bulk Operations (Story 4.4a)', () => {
 
     useReviewStore.getState().selectAllFiltered()
 
-    const { selectedIds, selectionMode } = useReviewStore.getState()
-    expect(selectedIds.size).toBe(3)
-    expect(selectionMode).toBe('bulk')
+    const fs = getStoreFileState()
+    expect(fs.selectedIds.size).toBe(3)
+    expect(fs.selectionMode).toBe('bulk')
   })
 
   it('[P0] Ctrl+A should select only filtered findings when status filter active', () => {
@@ -49,11 +49,11 @@ describe('useReviewStore — Keyboard Bulk Operations (Story 4.4a)', () => {
 
     useReviewStore.getState().selectAllFiltered()
 
-    const { selectedIds } = useReviewStore.getState()
-    expect(selectedIds.size).toBe(2)
-    expect(selectedIds.has('kbd-0')).toBe(true)
-    expect(selectedIds.has('kbd-2')).toBe(true)
-    expect(selectedIds.has('kbd-1')).toBe(false) // accepted
+    const fs = getStoreFileState()
+    expect(fs.selectedIds.size).toBe(2)
+    expect(fs.selectedIds.has('kbd-0')).toBe(true)
+    expect(fs.selectedIds.has('kbd-2')).toBe(true)
+    expect(fs.selectedIds.has('kbd-1')).toBe(false) // accepted
   })
 
   // ── Escape: clear selection ──
