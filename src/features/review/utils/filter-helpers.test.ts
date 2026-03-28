@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest'
 
 import type { FilterableFinding, FilterState } from './filter-helpers'
-import { DEFAULT_FILTER_STATE, findingMatchesFilters, getConfidenceBucket } from './filter-helpers'
+import { findingMatchesFilters, getConfidenceBucket } from './filter-helpers'
 
 // ── Factory ──
 

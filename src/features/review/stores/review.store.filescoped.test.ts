@@ -11,7 +11,7 @@ import {
   selectCanRedo,
   DEFAULT_FILE_STATE,
 } from '@/features/review/stores/review.store'
-import type { FileState, UndoEntry } from '@/features/review/stores/review.store'
+import type { UndoEntry } from '@/features/review/stores/review.store'
 import { createMockFileState } from '@/features/review/stores/test-helpers'
 import { buildFinding } from '@/test/factories'
 

@@ -171,7 +171,12 @@ describe('confirmNativeReview', () => {
       (c: Record<string, unknown>) => c.actionType === 'confirm_native',
     ) as Record<string, unknown> | undefined
     expect(reviewActionInsert).toBeDefined()
-    expect((reviewActionInsert?.metadata as Record<string, unknown>)?.native_verified).toBe(true)
+    const meta = reviewActionInsert?.metadata as Record<string, unknown>
+    expect(meta?.native_verified).toBe(true)
+    // CR-L4: assert native_verified_by and native_verified_at metadata
+    expect(meta?.native_verified_by).toBe('44444444-4444-4444-8444-444444444444')
+    expect(meta?.native_verified_at).toBeDefined()
+    expect(typeof meta?.native_verified_at).toBe('string')
   })
 
   it('should reject when finding is not assigned to current user', async () => {

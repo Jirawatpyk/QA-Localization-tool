@@ -128,3 +128,41 @@ describe('addFindingCommentSchema', () => {
     expect(addFindingCommentSchema.safeParse(input).success).toBe(false)
   })
 })
+
+// CR-M8/L3: Boundary value tests (mandatory per CLAUDE.md)
+describe('Boundary values', () => {
+  it('flaggerComment: 9 chars (below min 10) → reject', () => {
+    const input = { ...validFlagBase, flaggerComment: 'a'.repeat(9) }
+    expect(flagForNativeSchema.safeParse(input).success).toBe(false)
+  })
+
+  it('flaggerComment: 10 chars (at min) → accept', () => {
+    const input = { ...validFlagBase, flaggerComment: 'a'.repeat(10) }
+    expect(flagForNativeSchema.safeParse(input).success).toBe(true)
+  })
+
+  it('flaggerComment: 500 chars (at max) → accept', () => {
+    const input = { ...validFlagBase, flaggerComment: 'a'.repeat(500) }
+    expect(flagForNativeSchema.safeParse(input).success).toBe(true)
+  })
+
+  it('flaggerComment: 501 chars (above max) → reject', () => {
+    const input = { ...validFlagBase, flaggerComment: 'a'.repeat(501) }
+    expect(flagForNativeSchema.safeParse(input).success).toBe(false)
+  })
+
+  it('comment body: 0 chars (below min 1) → reject', () => {
+    const input = { findingId: VALID_UUID, findingAssignmentId: VALID_UUID, body: '' }
+    expect(addFindingCommentSchema.safeParse(input).success).toBe(false)
+  })
+
+  it('comment body: 1 char (at min) → accept', () => {
+    const input = { findingId: VALID_UUID, findingAssignmentId: VALID_UUID, body: 'x' }
+    expect(addFindingCommentSchema.safeParse(input).success).toBe(true)
+  })
+
+  it('comment body: 1000 chars (at max) → accept', () => {
+    const input = { findingId: VALID_UUID, findingAssignmentId: VALID_UUID, body: 'a'.repeat(1000) }
+    expect(addFindingCommentSchema.safeParse(input).success).toBe(true)
+  })
+})

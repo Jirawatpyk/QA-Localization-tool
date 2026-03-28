@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('server-only', () => ({}))
 
 // ── Hoisted mocks ──
-const { dbState, dbMockModule } = vi.hoisted(() => createDrizzleMock())
+const { dbState: _dbState, dbMockModule } = vi.hoisted(() => createDrizzleMock())
 
 const mockGenerateText = vi.fn()
 

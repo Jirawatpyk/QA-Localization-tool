@@ -39,7 +39,11 @@ type FlagForNativeDialogProps = {
   findingId: string
   fileId: string
   projectId: string
-  onSuccess?: () => void
+  onSuccess?: (data: {
+    assignmentId: string
+    assignedToName: string
+    flaggerComment: string
+  }) => void
 }
 
 export function FlagForNativeDialog({
@@ -109,7 +113,13 @@ export function FlagForNativeDialog({
     if (result.success) {
       toast.success('Finding flagged for native review')
       onOpenChange(false)
-      onSuccess?.()
+      // CR-M4: pass assignment data back for store merge
+      const reviewerName = reviewers.find((r) => r.id === selectedReviewer)?.displayName ?? ''
+      onSuccess?.({
+        assignmentId: result.data.findingId, // server returns findingId; real assignmentId from Realtime
+        assignedToName: reviewerName,
+        flaggerComment: comment,
+      })
     } else {
       setError(result.error)
     }
@@ -123,6 +133,7 @@ export function FlagForNativeDialog({
     comment,
     onOpenChange,
     onSuccess,
+    reviewers,
   ])
 
   return (

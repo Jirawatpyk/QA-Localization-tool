@@ -1936,7 +1936,7 @@ export function ReviewPageClient({
             findingId={flagDialogFindingId}
             fileId={fileId}
             projectId={projectId}
-            onSuccess={() => {
+            onSuccess={(data) => {
               if (flagDialogFindingId) {
                 const store = useReviewStore.getState()
                 const f = getStoreFileState(store, fileId).findingsMap.get(flagDialogFindingId)
@@ -1945,6 +1945,10 @@ export function ReviewPageClient({
                     ...f,
                     status: 'flagged',
                     updatedAt: new Date().toISOString(),
+                    // CR-M4: merge assignment data from dialog callback
+                    assignmentStatus: 'pending',
+                    assignedToName: data.assignedToName,
+                    flaggerComment: data.flaggerComment,
                   })
               }
             }}

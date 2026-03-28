@@ -16,6 +16,9 @@ BEGIN;
 -- =============================================================================
 DROP POLICY IF EXISTS "Tenant isolation: INSERT" ON findings;
 
+-- NOTE: native_reviewer intentionally excluded from INSERT — findings are created
+-- by pipeline (service_role) or QA reviewers (manual add). Native reviewers only
+-- confirm/override existing findings via finding_assignments workflow.
 CREATE POLICY "findings_insert_admin_qa" ON findings
   FOR INSERT TO authenticated
   WITH CHECK (

@@ -147,7 +147,7 @@ describe.skipIf(!HAS_PREREQUISITES)('L2 Semantic Detection Quality', () => {
 
       // Report each test case
       let detected = 0
-      let missed = 0
+      let _missed = 0
       let falsePositive = 0
 
       // eslint-disable-next-line no-console
@@ -164,7 +164,7 @@ describe.skipIf(!HAS_PREREQUISITES)('L2 Semantic Detection Quality', () => {
             `  Seg ${tc.segmentNumber} [${tc.errorType}]: ✅ DETECTED — ${l2Findings[0]!.category}`,
           )
         } else if (hasError && l2Findings.length === 0) {
-          missed++
+          _missed++
           // eslint-disable-next-line no-console
           console.log(`  Seg ${tc.segmentNumber} [${tc.errorType}]: ❌ MISSED — ${tc.errorDetail}`)
         } else if (!hasError && l2Findings.length > 0) {

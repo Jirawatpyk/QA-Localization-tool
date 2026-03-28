@@ -16,8 +16,8 @@ const { dbState, dbMockModule, mockRequireRole, mockWriteAuditLog } = vi.hoisted
       Promise.resolve({
         id: '44444444-4444-4444-8444-444444444444',
         tenantId: asTenantId('c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f'),
-        role: 'native_reviewer' as const,
-        nativeLanguages: ['th'],
+        role: 'native_reviewer' as string,
+        nativeLanguages: ['th'] as string[],
       }),
     ),
     mockWriteAuditLog: vi.fn((..._args: unknown[]) => Promise.resolve()),
@@ -194,7 +194,7 @@ describe('addFindingComment', () => {
       tenantId: asTenantId(TENANT_ID),
       role: 'admin',
       nativeLanguages: [],
-    } as Awaited<ReturnType<typeof import('@/lib/auth/requireRole').requireRole>>)
+    })
     const createdAt = new Date()
     dbState.returnValues = [
       // Assignment exists but admin is NOT assignedTo or assignedBy

@@ -361,7 +361,7 @@ describe('finding_assignments RLS', () => {
     // AC6/AC7: native UPDATE own assignment but cannot change assigned_to
     // WITH CHECK violation: PostgREST returns error (data=null) or empty array depending on version
     const clientNative = tenantClient(nativeUser.jwt)
-    const { data, error } = await clientNative
+    const { data, error: _error } = await clientNative
       .from('finding_assignments')
       .update({ assigned_to: tenantA.userId }) // try to reassign to admin
       .eq('id', assignmentId)

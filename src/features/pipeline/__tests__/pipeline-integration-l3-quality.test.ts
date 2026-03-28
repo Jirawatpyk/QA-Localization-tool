@@ -132,7 +132,7 @@ describe.skipIf(!HAS_PREREQUISITES)('L3 Deep Analysis Quality', () => {
       let l2Detected = 0
       let l3Detected = 0
       let missed = 0
-      let fp = 0
+      let _fp = 0
       const errorCount = L3_TEST_CASES.filter((t) => t.errorType !== null).length
 
       // eslint-disable-next-line no-console
@@ -165,7 +165,7 @@ describe.skipIf(!HAS_PREREQUISITES)('L3 Deep Analysis Quality', () => {
           }
         } else {
           const anyFinding = segFindings.length > 0
-          if (anyFinding) fp++
+          if (anyFinding) _fp++
           // eslint-disable-next-line no-console
           console.log(`  Seg ${tc.segmentNumber} [clean]: ${anyFinding ? '⚠️ FP' : '✅ CORRECT'}`)
         }

@@ -549,6 +549,46 @@ Claude Opus 4.6 (1M context)
 - Fixed React Compiler lint errors (setState in useEffect → useTransition pattern).
 - Pre-existing type errors in use-review-actions.ts and state-transitions.test.ts fixed for confirm_native.
 
+### CR R1 Fixes (2026-03-29)
+
+**Reviewers:** 4 agents (code-quality, cross-file, testing-qa, rls-policy) + manual review
+**Findings:** 5 CRITICAL, 9 HIGH, 10 MEDIUM, 5 LOW → ALL FIXED
+
+**CRITICAL fixes:**
+- C1: Wired `confirmNativeReview` + `overrideNativeReview` server actions in ReviewPageClient (were TODO stubs showing toast only)
+- C2: Added assignment fields (`assignmentId`, `assignmentStatus`, `assignedToName`, `assignedByName`, `flaggerComment`) to `findingsForDisplay` memo mapping — all downstream consumers (FindingCard badge, FindingDetailContent comment thread) now receive data
+- C3: Wired `FlagForNativeDialog` opening — F key + Flag button now opens dialog for QA reviewers (previously `setFlagDialogOpen` was never called)
+- C4: Fixed `getStoreFileState` mock in `use-review-actions.test.ts` missing `activeSuppressions`/`rejectionTracker` fields after TD-ARCH-002 refactor
+- C5: Rewrote `use-keyboard-actions.native.test.ts` — 8 tests were vacuous (asserting local vars), now test real `REVIEW_HOTKEYS` export
+
+**HIGH fixes:**
+- H1: Hide standard QA buttons for native reviewer in ReviewActionBar (`!isNativeReviewer &&` guard) — AC3 says "replace", not "add"
+- H2: Pass `assignmentId`/`flaggerComment` props to `FindingDetailContent` from `selectedFinding` — enables comment thread rendering
+- H3: Wire `confirmNative`/`overrideNative` handlers to `useReviewHotkeys` — C/O keyboard shortcuts now functional
+- H4: Pass `assignmentStatus`/`assignedToName` through `FindingList` → `FindingCard` props
+- H5: Add `.limit(100)` + UUID validation to `getFindingComments` (DoS prevention + input validation consistency)
+- H6: Fix `determineNonNative(user.nativeLanguages, 'unknown')` → use actual `targetLang` from segment query
+- H7: Fix `getFindingComments` leftJoin `userRoles` duplicate — added subquery dedup for users with multiple roles
+- H8: Add `eq(findingAssignments.fileId, fileId)` to confirm/override assignment queries (Guardrail #14 — symmetric filter)
+- H9: Added 8 new test cases: segment lookup branch, in_review assignment path, NOT_FOUND paths, admin bypass, audit log assertions, INVALID_STATE for completed assignments
+
+**MEDIUM fixes:**
+- M1: Added assignment fields to `FileReviewData.findings` type definition (type safety)
+- M2: Resolved `assignedByName` via SQL subquery in Q9 (was hardcoded `''`)
+- M3: Added Realtime subscription for `finding_assignments` table UPDATE events — assignment status changes now live-update in UI
+- M4: Updated `FlagForNativeDialog.onSuccess` to pass assignment data back → store merge with `assignmentStatus: 'pending'`, `assignedToName`, `flaggerComment`
+- M6: Created migration `00028_file_assignments_role_scoped.sql` — role-scoped INSERT/UPDATE/DELETE policies
+- M7: Added audit log assertions for `overrideNativeReview` tests
+- M8: Added 7 boundary value tests (9/10/500/501 chars for flaggerComment, 0/1/1000 chars for comment body)
+- M9: Added defensive comment for null flag action guard in `confirmNativeReview`
+- M10/L2-RLS: Added explanatory comment in migration 00027 for native_reviewer INSERT exclusion
+
+**LOW fixes:**
+- L3: Boundary value test at 9 chars (exactly below 10-char min) added
+- L4: Assert `native_verified_by` and `native_verified_at` metadata fields in confirmNativeReview test
+
+**Verification:** type-check ✅ | lint ✅ | 139/139 test files, 1290/1290 tests GREEN
+
 ### File List
 **New files (10):**
 - src/features/review/actions/flagForNative.action.ts
@@ -561,26 +601,39 @@ Claude Opus 4.6 (1M context)
 - src/features/review/components/FlagForNativeDialog.tsx
 - src/features/review/components/FindingCommentThread.tsx
 
+**New files (CR R1):**
+- supabase/migrations/00028_file_assignments_role_scoped.sql (M6: RLS role-scoped policies)
+
 **Modified files (20+):**
 - src/features/review/utils/state-transitions.ts (confirm_native)
 - src/features/review/utils/state-transitions.test.ts (updated expected matrix)
 - src/features/review/utils/state-transitions.native.test.ts (activated 7 tests)
 - src/features/review/validation/reviewAction.schema.ts (4 new schemas)
-- src/features/review/validation/reviewAction.schema.native.test.ts (activated 18 tests)
-- src/features/review/types.ts (assignment fields, notification types)
-- src/types/finding.ts (assignment fields on Finding)
+- src/features/review/validation/reviewAction.schema.native.test.ts (activated 18+7 BV tests)
+- src/features/review/types.ts (assignment fields, notification types, flaggerComment nullable)
+- src/types/finding.ts (assignment fields on Finding, flaggerComment nullable)
 - src/features/review/hooks/use-review-actions.ts (confirm_native in maps)
-- src/features/review/hooks/use-keyboard-actions.native.test.ts (activated 8 tests)
-- src/features/review/actions/getFileReviewData.action.ts (Q9 assignments, userRole)
+- src/features/review/hooks/use-review-actions.test.ts (CR-C4: getStoreFileState mock fix)
+- src/features/review/hooks/use-keyboard-actions.native.test.ts (CR-C5: rewritten with real assertions)
+- src/features/review/hooks/use-findings-subscription.ts (CR-M3: finding_assignments Realtime subscription)
+- src/features/review/actions/getFileReviewData.action.ts (Q9 assignments, userRole, CR-M1 type, CR-M2 assignedByName)
+- src/features/review/actions/flagForNative.action.ts (CR-H6: real targetLang in determineNonNative)
+- src/features/review/actions/confirmNativeReview.action.ts (CR-H8: fileId filter, CR-M9: null guard comment)
+- src/features/review/actions/overrideNativeReview.action.ts (CR-H8: fileId filter)
+- src/features/review/actions/getFindingComments.action.ts (CR-H5: limit+UUID, CR-H7: leftJoin dedup)
 - src/features/review/components/FindingCard.tsx (assignment badge)
-- src/features/review/components/ReviewActionBar.tsx (C/O native buttons)
+- src/features/review/components/ReviewActionBar.tsx (CR-H1: hide standard buttons for native, C/O native buttons)
 - src/features/review/components/FindingDetailContent.tsx (comment thread)
-- src/features/review/actions/flagForNative.action.test.ts (activated 10 tests)
-- src/features/review/actions/confirmNativeReview.action.test.ts (activated 8 tests)
-- src/features/review/actions/overrideNativeReview.action.test.ts (activated 6 tests)
-- src/features/review/actions/addFindingComment.action.test.ts (activated 6 tests)
-- src/features/review/actions/getFindingComments.action.test.ts (activated 4 tests)
+- src/features/review/components/FindingList.tsx (CR-H4: pass assignmentStatus/assignedToName)
+- src/features/review/components/ReviewPageClient.tsx (CR-C1: wire actions, CR-C2: assignment fields in memo, CR-C3: flag dialog, CR-H2: detail props, CR-H3: hotkey handlers, CR-M4: flag dialog store merge)
+- src/features/review/components/FlagForNativeDialog.tsx (CR-M4: onSuccess passes assignment data)
+- src/features/review/actions/flagForNative.action.test.ts (activated 12 tests, +2 CR-H9)
+- src/features/review/actions/confirmNativeReview.action.test.ts (activated 10 tests, +2 CR-H9, CR-L4)
+- src/features/review/actions/overrideNativeReview.action.test.ts (activated 9 tests, +3 CR-H9)
+- src/features/review/actions/addFindingComment.action.test.ts (activated 7 tests, +1 CR-M6)
+- src/features/review/actions/getFindingComments.action.test.ts (activated 4 tests, fixed sql mock)
 - src/features/review/actions/getNativeReviewers.action.test.ts (activated 4 tests)
-- src/features/review/actions/startNativeReview.action.test.ts (activated 4 tests)
+- src/features/review/actions/startNativeReview.action.test.ts (activated 5 tests, +1 CR-H9)
 - src/test/factories.ts (buildFindingAssignment, buildFindingComment)
 - src/features/review/components/ReviewPageClient.test.tsx (+ 7 sibling test files: new fields)
+- supabase/migrations/00027_story_5_2c_findings_rls_hardening.sql (CR-L2-RLS: added exclusion comment)

@@ -282,9 +282,45 @@ export function useFindingsSubscription(fileId: string, tenantId?: string | unde
         }
       })
 
+    // CR-M3: Subscribe to finding_assignments for live assignment status updates
+    const assignmentFilter = tenantId
+      ? `file_id=eq.${fileId}&tenant_id=eq.${tenantId}`
+      : `file_id=eq.${fileId}`
+
+    const assignmentChannel = supabase
+      .channel(`assignments:${fileId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'finding_assignments',
+          filter: assignmentFilter,
+        },
+        (payload) => {
+          const row = payload.new as Record<string, unknown>
+          const findingId = row.finding_id as string | undefined
+          const newStatus = row.status as string | undefined
+          if (!findingId || !newStatus) return
+
+          const store = useReviewStore.getState()
+          if (store.currentFileId !== fileId) return
+          const fs = getStoreFileState(store, fileId)
+          const existing = fs.findingsMap.get(findingId)
+          if (existing) {
+            store.setFinding(findingId, {
+              ...existing,
+              assignmentStatus: newStatus as Finding['assignmentStatus'],
+            })
+          }
+        },
+      )
+      .subscribe()
+
     return () => {
       stopPolling()
       supabase.removeChannel(channel)
+      supabase.removeChannel(assignmentChannel)
     }
   }, [fileId, tenantId, startPolling, stopPolling])
 }

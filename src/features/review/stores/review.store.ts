@@ -406,7 +406,7 @@ function rebuildIndex(stack: UndoEntry[]): Map<string, Set<string>> {
 
 const createUndoRedoSlice = (
   set: (fn: Partial<ReviewState> | ((s: ReviewState) => Partial<ReviewState>)) => void,
-  get: () => ReviewState,
+  _get: () => ReviewState,
 ): UndoRedoSlice => ({
   undoStack: [],
   redoStack: [],

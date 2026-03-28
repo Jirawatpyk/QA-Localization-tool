@@ -6,8 +6,6 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-import { asTenantId } from '@/types/tenant'
-
 // ── Hoisted mocks ──
 const {
   dbState,
