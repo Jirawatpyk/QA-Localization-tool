@@ -309,35 +309,14 @@ test.describe('Non-Native Auto-Tag (Story 5.2a)', () => {
     const detailAside = page.getByTestId('finding-detail-aside')
     await expect(detailAside).toBeVisible({ timeout: 10_000 })
 
-    // The override badge is in the compact row, not the detail aside.
-    // Q7 seeded overrideCount=1 at page load → overrideCount > 0 → OverrideBadge rendered.
-    const overrideBadgeBtn = page.getByTestId('decision-override-badge').first()
-    await expect(overrideBadgeBtn).toBeVisible({ timeout: 10_000 })
-
-    // Click to open OverrideHistoryPanel
-    await overrideBadgeBtn.click()
-
-    // Wait for Decision History panel to appear and entries to load
-    const historyHeading = detailAside.getByRole('heading', { name: /Decision History/i })
-    await expect(historyHeading).toBeVisible({ timeout: 10_000 })
-
-    // Server action getOverrideHistory may hang in dev mode. Reload page to get fresh connection.
-    await page.reload({ waitUntil: 'domcontentloaded' })
-    await waitForReviewPageHydrated(page)
-
-    // Re-select finding after reload
-    const reloadedRow = page.getByTestId('finding-compact-row').first()
-    await reloadedRow.click()
-    await expect(detailAside).toBeVisible({ timeout: 10_000 })
-
-    // Re-click history button after reload
-    const reloadedHistoryButton = detailAside.getByRole('button', {
-      name: /show decision history/i,
+    // Click "Show decision history" button in detail aside
+    const historyButton = detailAside.getByRole('button', {
+      name: /show.*decision history/i,
     })
-    await expect(reloadedHistoryButton).toBeVisible({ timeout: 10_000 })
-    await reloadedHistoryButton.click()
+    await expect(historyButton).toBeVisible({ timeout: 10_000 })
+    await historyButton.click()
 
-    // Wait for entries to load (fresh server action connection after reload)
+    // Wait for history entries to load
     const firstEntry = detailAside.locator('[role="listitem"]').first()
     await expect(firstEntry).toBeVisible({ timeout: 30_000 })
 

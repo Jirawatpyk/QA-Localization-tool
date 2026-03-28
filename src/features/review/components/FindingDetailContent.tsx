@@ -19,7 +19,7 @@ import {
 } from '@/features/review/components/SegmentContextList'
 import { SeverityIndicator } from '@/features/review/components/SeverityIndicator'
 import { useSegmentContext } from '@/features/review/hooks/use-segment-context'
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useFileState } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import type { FindingStatus } from '@/types/finding'
 
@@ -91,8 +91,8 @@ export function FindingDetailContent({
 
   // Story 4.4a: Override history visibility
   const [showHistory, setShowHistory] = useState(false)
-  const overrideCount = useReviewStore((s) =>
-    finding ? (s.overrideCounts.get(finding.id) ?? 0) : 0,
+  const overrideCount = useFileState((fs) =>
+    finding ? (fs.overrideCounts.get(finding.id) ?? 0) : 0,
   )
 
   // Story 4.7: Add to Glossary dialog state (declared before ref check so setter is available)
