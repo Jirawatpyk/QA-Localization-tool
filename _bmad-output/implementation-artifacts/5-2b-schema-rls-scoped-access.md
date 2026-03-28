@@ -1,6 +1,6 @@
 # Story 5.2b: Schema + RLS Scoped Access
 
-Status: review
+Status: done
 
 ## Story
 
@@ -418,7 +418,7 @@ Claude Opus 4.6 (1M context)
 - AC4: 4 performance indexes created (IF NOT EXISTS) ✅
 - AC5: Role-scoped RLS on findings (4 policies), segments (2), review_actions (4 — including INSERT replacement) ✅
 - AC6: Role-scoped RLS on finding_assignments (6 policies), finding_comments (5 policies) ✅
-- AC7: 24/24 RLS integration tests GREEN ✅
+- AC7: 31/31 RLS integration tests GREEN (expanded from 24 in CR R1/R2) ✅
 - AC8: Drizzle relations (2 new + 5 updated) + schema exports ✅
 - TD-DB-006: Orphan migration deleted + `uq_scores_file_tenant` constraint applied ✅
 - **Design improvement:** review_actions INSERT policy replaced (old was role-agnostic → new is admin+qa scoped)
@@ -467,6 +467,13 @@ Claude Opus 4.6 (1M context)
 **Deleted files:**
 - `src/db/migrations/0014_typical_gauntlet.sql` — orphan (TD-DB-006)
 
-**ATDD test files (unskipped + fixed + CR R1 expanded):**
-- `src/db/__tests__/rls/finding-assignments-rls.test.ts` — 16 tests (+4 from CR R1: H4 status update, H5 overridden denial, L5 qa INSERT, M3/L3 comment isolation)
+**ATDD test files (unskipped + fixed + CR R1/R2 expanded):**
+- `src/db/__tests__/rls/finding-assignments-rls.test.ts` — 15 tests (+3 from CR R1: H4 status update, H5 overridden denial, L5 qa INSERT)
 - `src/db/__tests__/rls/native-reviewer-scoped-access-rls.test.ts` — 16 tests (+4 from CR R1: H2 seeded Tenant B, H3 review_actions SELECT ×2, L6 segments write denial ×2)
+
+### CR R2 Fixes (2026-03-28)
+**3 findings fixed (0 HIGH, 3 MEDIUM) from 3 agents (code-quality, testing-qa, cross-file):**
+- **M1:** [XFR-P1] RLS WITH CHECK status subset had no cross-reference → added comments in both `assignment.ts` and `00026` migration linking ASSIGNMENT_STATUSES to the RLS whitelist
+- **M2:** [TQA] `review_actions SELECT` test depended on prior INSERT test ��� seeded review_action in `beforeAll`, added specific `seededReviewActionId` assertion
+- **M3:** [TQA] `native UPDATE status` test didn't protect restore → wrapped in `try/finally` to guarantee status reset on assertion failure
+- **CR R2 result:** 0 Critical, 0 High — code quality clean. 31/31 RLS tests GREEN.
