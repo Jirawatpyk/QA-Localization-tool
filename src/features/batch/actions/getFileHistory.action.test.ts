@@ -184,28 +184,28 @@ describe('getFileHistory', () => {
     expect(result.data.files[1]!.fileId).toBe(oldFile.fileId)
   })
 
-  it('[P1] should filter passed: auto_passed OR (score >= threshold AND 0 critical)', async () => {
-    const autoPassedFile = buildFileHistoryRow({
+  it('[P1] should filter passed: score >= threshold AND 0 critical', async () => {
+    const passFile = buildFileHistoryRow({
       fileId: 'a1a1a1a1-b2b2-4c3c-8d4d-e5e5e5e5e5e5',
       mqmScore: 97,
       criticalCount: 0,
-      status: 'auto_passed',
+      status: 'l1_completed',
     })
-    const manualPassFile = buildFileHistoryRow({
+    const belowThresholdFile = buildFileHistoryRow({
       fileId: 'b2b2b2b2-c3c3-4d4d-8e5e-f6f6f6f6f6f6',
-      mqmScore: 96,
+      mqmScore: 80,
       criticalCount: 0,
       status: 'l1_completed',
     })
-    const failedFile = buildFileHistoryRow({
+    const criticalFile = buildFileHistoryRow({
       fileId: 'c3c3c3c3-d4d4-4e5e-8f6f-a7a7a7a7a7a7',
-      mqmScore: 70,
+      mqmScore: 98,
       criticalCount: 2,
       status: 'l1_completed',
     })
     dbState.returnValues = [
       [{ autoPassThreshold: 95 }],
-      [autoPassedFile, manualPassFile], // DB returns only matching rows
+      [passFile, belowThresholdFile, criticalFile],
       [], // reviewActions query
     ]
 
@@ -217,12 +217,12 @@ describe('getFileHistory', () => {
 
     expect(result.success).toBe(true)
     if (!result.success) return
-    // Should only include auto_passed and score>=threshold+0critical files
-    expect(result.data.files).toHaveLength(2)
+    // Only score>=threshold + 0 critical files pass
+    expect(result.data.files).toHaveLength(1)
     const fileIds = result.data.files.map((f: { fileId: string }) => f.fileId)
-    expect(fileIds).toContain(autoPassedFile.fileId)
-    expect(fileIds).toContain(manualPassFile.fileId)
-    expect(fileIds).not.toContain(failedFile.fileId)
+    expect(fileIds).toContain(passFile.fileId)
+    expect(fileIds).not.toContain(belowThresholdFile.fileId)
+    expect(fileIds).not.toContain(criticalFile.fileId)
   })
 
   it('[P1] should filter needs_review: NOT passed AND NOT failed', async () => {
@@ -417,6 +417,20 @@ describe('getFileHistory', () => {
     expect(result.success).toBe(true)
     if (!result.success) return
     expect(result.data.files).toHaveLength(5)
+  })
+
+  it('[P0] should return INTERNAL_ERROR when requireRole throws', async () => {
+    mockRequireRole.mockRejectedValue(new Error('Unauthorized'))
+
+    const { getFileHistory } = await import('./getFileHistory.action')
+    const result = await getFileHistory({
+      projectId: VALID_PROJECT_ID,
+      filter: 'all',
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INTERNAL_ERROR')
   })
 
   // TA: Coverage Gap Tests — Story 2.7

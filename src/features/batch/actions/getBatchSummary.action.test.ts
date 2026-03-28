@@ -540,6 +540,20 @@ describe('getBatchSummary', () => {
     expect(dbState.callIndex).toBe(2)
   })
 
+  it('[P0] should return INTERNAL_ERROR when requireRole throws', async () => {
+    mockRequireRole.mockRejectedValue(new Error('Unauthorized'))
+
+    const { getBatchSummary } = await import('./getBatchSummary.action')
+    const result = await getBatchSummary({
+      batchId: VALID_BATCH_ID,
+      projectId: VALID_PROJECT_ID,
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.code).toBe('INTERNAL_ERROR')
+  })
+
   // TA: Coverage Gap Tests — Story 2.7
 
   it('[P1] should filter scores to L1 only via LEFT JOIN condition (U4)', async () => {

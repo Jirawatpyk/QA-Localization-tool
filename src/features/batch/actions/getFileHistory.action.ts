@@ -83,8 +83,7 @@ export async function getFileHistory(input: unknown): Promise<ActionResult<FileH
       if (filter === 'all') return true
 
       const isPassed =
-        f.status === 'auto_passed' ||
-        (f.mqmScore !== null && f.mqmScore >= threshold && (f.criticalCount ?? 0) === 0)
+        f.mqmScore !== null && f.mqmScore >= threshold && (f.criticalCount ?? 0) === 0
       const isFailed = f.status === 'failed'
 
       if (filter === 'passed') return isPassed
