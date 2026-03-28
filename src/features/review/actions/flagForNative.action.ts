@@ -42,7 +42,7 @@ export async function flagForNative(
     }
   }
 
-  const { findingId, fileId, projectId, assignedTo, flaggerComment } = parsed.data
+  const { findingId, fileId: _fileId, projectId, assignedTo, flaggerComment } = parsed.data
 
   // Auth: qa_reviewer or admin (hierarchy)
   let user: Awaited<ReturnType<typeof requireRole>>
@@ -169,7 +169,8 @@ export async function flagForNative(
   }
 
   // Determine non-native status for metadata (Guardrail #66)
-  const isNonNative = determineNonNative(user.nativeLanguages, 'unknown')
+  // CR-H6 fix: use actual targetLang from segment, not 'unknown'
+  const isNonNative = determineNonNative(user.nativeLanguages, targetLang)
 
   // Step 4: Atomic transaction (Guardrail #67)
   const now = new Date()

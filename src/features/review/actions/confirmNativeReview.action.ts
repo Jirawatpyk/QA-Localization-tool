@@ -59,6 +59,7 @@ export async function confirmNativeReview(
     .where(
       and(
         eq(findingAssignments.findingId, findingId),
+        eq(findingAssignments.fileId, fileId), // CR-H8 fix: Guardrail #14 — symmetric filter
         eq(findingAssignments.assignedTo, userId),
         withTenant(findingAssignments.tenantId, tenantId),
       ),
@@ -109,6 +110,7 @@ export async function confirmNativeReview(
     )
     .limit(1)
 
+  // CR-M9: If no flag action found (defensive), default to 'accepted' (not undefined crash)
   const preFlaggedState = flagActionRows[0]?.previousState as FindingStatus | undefined
   const newFindingStatus: FindingStatus =
     preFlaggedState === 'rejected' ? 're_accepted' : 'accepted'

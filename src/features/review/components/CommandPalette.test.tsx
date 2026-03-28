@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, it, expect, beforeEach, beforeAll, vi } from 'vitest'
 
 import { CommandPalette } from '@/features/review/components/CommandPalette'
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, getStoreFileState } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import { buildFindingForUI } from '@/test/factories'
 
@@ -169,7 +169,7 @@ describe('CommandPalette', () => {
       await user.click(sourceItems[0]!)
 
       // Should have set finding and closed dialog
-      expect(useReviewStore.getState().selectedId).not.toBeNull()
+      expect(getStoreFileState().selectedId).not.toBeNull()
       expect(defaultProps.onOpenChange).toHaveBeenCalledWith(false)
     })
   })

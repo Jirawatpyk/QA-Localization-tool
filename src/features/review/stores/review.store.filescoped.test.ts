@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 
 import {
   useReviewStore,
+  getStoreFileState,
   selectCanUndo,
   selectCanRedo,
   DEFAULT_FILE_STATE,
@@ -70,7 +71,7 @@ describe('File-Scoped Store (TD-ARCH-001)', () => {
       useReviewStore.getState().setFinding('f1', buildFinding({ id: 'f1' }))
 
       // Flat field and Map entry should match
-      expect(useReviewStore.getState().findingsMap.size).toBe(1)
+      expect(getStoreFileState().findingsMap.size).toBe(1)
       const fs = useReviewStore.getState().fileStates.get('file-a')
       expect(fs?.findingsMap.size).toBe(1)
     })
@@ -137,8 +138,8 @@ describe('File-Scoped Store (TD-ARCH-001)', () => {
 
       // selectAllFiltered should only select file-b's finding
       useReviewStore.getState().selectAllFiltered()
-      expect(useReviewStore.getState().selectedIds.size).toBe(1)
-      expect(useReviewStore.getState().selectedIds.has('f3')).toBe(true)
+      expect(getStoreFileState().selectedIds.size).toBe(1)
+      expect(getStoreFileState().selectedIds.has('f3')).toBe(true)
     })
   })
 
@@ -201,7 +202,7 @@ describe('File-Scoped Store (TD-ARCH-001)', () => {
       useReviewStore.getState().updateScore(72, 'calculated', 'L1L2')
 
       // file-b flat fields
-      expect(useReviewStore.getState().currentScore).toBe(72)
+      expect(getStoreFileState().currentScore).toBe(72)
 
       // file-a preserved in Map
       const fsA = useReviewStore.getState().fileStates.get('file-a')
@@ -210,11 +211,11 @@ describe('File-Scoped Store (TD-ARCH-001)', () => {
 
     it('should maintain separate selection states per file', () => {
       useReviewStore.getState().toggleSelection('f1')
-      expect(useReviewStore.getState().selectedIds.has('f1')).toBe(true)
+      expect(getStoreFileState().selectedIds.has('f1')).toBe(true)
 
       // Switch to file-b
       useReviewStore.getState().resetForFile('file-b')
-      expect(useReviewStore.getState().selectedIds.size).toBe(0)
+      expect(getStoreFileState().selectedIds.size).toBe(0)
 
       // file-a selection preserved in Map
       const fsA = useReviewStore.getState().fileStates.get('file-a')
@@ -276,7 +277,7 @@ describe('File-Scoped Store (TD-ARCH-001)', () => {
 
       // Calling resetForFile for the same file should be a no-op
       useReviewStore.getState().resetForFile('file-a')
-      expect(useReviewStore.getState().findingsMap.size).toBe(1) // preserved
+      expect(getStoreFileState().findingsMap.size).toBe(1) // preserved
     })
 
     it('should not create Map entry for empty string fileId (L2)', () => {

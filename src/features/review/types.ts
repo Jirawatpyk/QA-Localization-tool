@@ -23,7 +23,7 @@ export type FindingForDisplay = {
   assignmentStatus?: AssignmentStatus | undefined
   assignedToName?: string | undefined
   assignedByName?: string | undefined
-  flaggerComment?: string | undefined
+  flaggerComment?: string | null | undefined
 }
 
 // ── Native Reviewer Notification Types (Story 5.2c, Guardrail #3) ──

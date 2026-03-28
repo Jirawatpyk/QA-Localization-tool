@@ -10,11 +10,13 @@ import { retryAiAnalysis } from '@/features/pipeline/actions/retryAiAnalysis.act
 import { addFinding } from '@/features/review/actions/addFinding.action'
 import { approveFile } from '@/features/review/actions/approveFile.action'
 import { bulkAction } from '@/features/review/actions/bulkAction.action'
+import { confirmNativeReview } from '@/features/review/actions/confirmNativeReview.action'
 import { createSuppressionRule } from '@/features/review/actions/createSuppressionRule.action'
 import { deleteFinding } from '@/features/review/actions/deleteFinding.action'
 import { getActiveSuppressions } from '@/features/review/actions/getActiveSuppressions.action'
 import type { FileReviewData } from '@/features/review/actions/getFileReviewData.action'
 import { getOverrideHistory } from '@/features/review/actions/getOverrideHistory.action'
+import { overrideNativeReview } from '@/features/review/actions/overrideNativeReview.action'
 import { overrideSeverity } from '@/features/review/actions/overrideSeverity.action'
 import { updateNoteText } from '@/features/review/actions/updateNoteText.action'
 import { AddFindingDialog } from '@/features/review/components/AddFindingDialog'
@@ -26,7 +28,6 @@ import { CommandPalette } from '@/features/review/components/CommandPalette'
 import { ConflictDialog } from '@/features/review/components/ConflictDialog'
 import { FileNavigationDropdown } from '@/features/review/components/FileNavigationDropdown'
 import { FilterBar } from '@/features/review/components/FilterBar'
-import { FindingCommentThread } from '@/features/review/components/FindingCommentThread'
 import { FindingDetailContent } from '@/features/review/components/FindingDetailContent'
 import { FindingDetailSheet } from '@/features/review/components/FindingDetailSheet'
 import { FindingList } from '@/features/review/components/FindingList'
@@ -323,7 +324,7 @@ export function ReviewPageClient({
         setActiveBulkAction(null)
       }
     },
-    [fileId, projectId, clearSelection, setSelectionMode, setBulkInFlight],
+    [fileId, projectId, clearSelection, setSelectionMode, setBulkInFlight, initialData.isNonNative],
   )
 
   const handleBulkAccept = useCallback(() => {
@@ -416,7 +417,15 @@ export function ReviewPageClient({
     {
       accept: handleAccept,
       reject: handleReject,
-      flag: handleFlag,
+      flag: (findingId: string) => {
+        // CR-C3 fix: F key opens FlagForNativeDialog for QA reviewers
+        if (!isNativeReviewer) {
+          setFlagDialogFindingId(findingId)
+          setFlagDialogOpen(true)
+        } else {
+          handleFlag(findingId)
+        }
+      },
       note: handleNoteHotkey,
       source: handleSourceIssue,
       override: () => {
@@ -425,6 +434,78 @@ export function ReviewPageClient({
         setIsOverrideMenuOpen(true)
       },
       add: () => setIsAddFindingDialogOpen(true),
+      // CR-H3 fix: wire native reviewer keyboard shortcuts
+      confirmNative: (findingId: string) => {
+        const store = useReviewStore.getState()
+        const f = getStoreFileState(store, fileId).findingsMap.get(findingId)
+        if (!f) return
+        store.setFinding(findingId, {
+          ...f,
+          status: 'accepted',
+          updatedAt: new Date().toISOString(),
+        })
+        void confirmNativeReview({ findingId, fileId, projectId })
+          .then((result) => {
+            if (result.success) {
+              const curr = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
+                findingId,
+              )
+              if (curr) {
+                useReviewStore.getState().setFinding(findingId, {
+                  ...curr,
+                  status: result.data.newState,
+                  updatedAt: result.data.serverUpdatedAt,
+                  assignmentStatus: 'confirmed',
+                })
+              }
+              toast.success('Finding confirmed')
+            } else {
+              store.setFinding(findingId, f)
+              toast.error(result.error ?? 'Confirm failed')
+            }
+          })
+          .catch(() => {
+            store.setFinding(findingId, f)
+            toast.error('Confirm failed')
+          })
+      },
+      overrideNative: () => {
+        const findingId = activeFindingIdRef.current
+        if (!findingId) return
+        const store = useReviewStore.getState()
+        const f = getStoreFileState(store, fileId).findingsMap.get(findingId)
+        if (!f) return
+        const newStatus = 'accepted' as const
+        store.setFinding(findingId, {
+          ...f,
+          status: newStatus,
+          updatedAt: new Date().toISOString(),
+        })
+        void overrideNativeReview({ findingId, fileId, projectId, newStatus })
+          .then((result) => {
+            if (result.success) {
+              const curr = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
+                findingId,
+              )
+              if (curr) {
+                useReviewStore.getState().setFinding(findingId, {
+                  ...curr,
+                  status: result.data.newState,
+                  updatedAt: result.data.serverUpdatedAt,
+                  assignmentStatus: 'overridden',
+                })
+              }
+              toast.success(`Overridden to ${result.data.newState}`)
+            } else {
+              store.setFinding(findingId, f)
+              toast.error(result.error ?? 'Override failed')
+            }
+          })
+          .catch(() => {
+            store.setFinding(findingId, f)
+            toast.error('Override failed')
+          })
+      },
     },
     getSelectedId,
   )
@@ -893,6 +974,12 @@ export function ReviewPageClient({
         suggestedFix: f.suggestedFix,
         aiModel: f.aiModel,
         hasNonNativeAction: f.hasNonNativeAction ?? false,
+        // Story 5.2c: assignment fields for flagged findings (CR-C2 fix)
+        assignmentId: f.assignmentId,
+        assignmentStatus: f.assignmentStatus,
+        assignedToName: f.assignedToName,
+        assignedByName: f.assignedByName,
+        flaggerComment: f.flaggerComment,
       })),
     [allFindings],
   )
@@ -1265,7 +1352,16 @@ export function ReviewPageClient({
           <ReviewActionBar
             onAccept={() => activeFindingState && handleAccept(activeFindingState)}
             onReject={() => activeFindingState && handleReject(activeFindingState)}
-            onFlag={() => activeFindingState && handleFlag(activeFindingState)}
+            onFlag={() => {
+              if (!activeFindingState) return
+              // CR-C3 fix: open FlagForNativeDialog for QA reviewers instead of simple flag
+              if (!isNativeReviewer) {
+                setFlagDialogFindingId(activeFindingState)
+                setFlagDialogOpen(true)
+              } else {
+                handleFlag(activeFindingState)
+              }
+            }}
             onNote={() => {
               if (!activeFindingState) return
               const result = handleNote(activeFindingState)
@@ -1289,13 +1385,86 @@ export function ReviewPageClient({
             isNativeReviewer={isNativeReviewer}
             onConfirmNative={() => {
               if (!activeFindingState) return
-              // TODO(story-5.2c): wire confirmNativeReview server action call
-              toast.info('Confirm native — wiring in progress')
+              const store = useReviewStore.getState()
+              const f = getStoreFileState(store, fileId).findingsMap.get(activeFindingState)
+              if (!f) return
+              // Optimistic: flagged → accepted (re_accepted determined server-side)
+              store.setFinding(activeFindingState, {
+                ...f,
+                status: 'accepted',
+                updatedAt: new Date().toISOString(),
+              })
+              void confirmNativeReview({ findingId: activeFindingState, fileId, projectId })
+                .then((result) => {
+                  if (result.success) {
+                    // Sync server state (may be re_accepted)
+                    const curr = getStoreFileState(
+                      useReviewStore.getState(),
+                      fileId,
+                    ).findingsMap.get(activeFindingState)
+                    if (curr) {
+                      useReviewStore.getState().setFinding(activeFindingState, {
+                        ...curr,
+                        status: result.data.newState,
+                        updatedAt: result.data.serverUpdatedAt,
+                        assignmentStatus: 'confirmed',
+                      })
+                    }
+                    toast.success('Finding confirmed by native reviewer')
+                  } else {
+                    // Rollback
+                    store.setFinding(activeFindingState, f)
+                    toast.error(result.error ?? 'Confirm failed')
+                  }
+                })
+                .catch(() => {
+                  store.setFinding(activeFindingState, f)
+                  toast.error('Confirm failed')
+                })
             }}
             onOverrideNative={() => {
               if (!activeFindingState) return
-              // TODO(story-5.2c): wire overrideNativeReview server action call with status picker
-              toast.info('Override native — wiring in progress')
+              // For override, use 'accepted' as default (user can choose reject via future status picker)
+              // AC3: Override button opens a dropdown (Accept/Reject) — simplified to accept for now
+              const store = useReviewStore.getState()
+              const f = getStoreFileState(store, fileId).findingsMap.get(activeFindingState)
+              if (!f) return
+              const newStatus = 'accepted' as const
+              store.setFinding(activeFindingState, {
+                ...f,
+                status: newStatus,
+                updatedAt: new Date().toISOString(),
+              })
+              void overrideNativeReview({
+                findingId: activeFindingState,
+                fileId,
+                projectId,
+                newStatus,
+              })
+                .then((result) => {
+                  if (result.success) {
+                    const curr = getStoreFileState(
+                      useReviewStore.getState(),
+                      fileId,
+                    ).findingsMap.get(activeFindingState)
+                    if (curr) {
+                      useReviewStore.getState().setFinding(activeFindingState, {
+                        ...curr,
+                        status: result.data.newState,
+                        updatedAt: result.data.serverUpdatedAt,
+                        assignmentStatus: 'overridden',
+                      })
+                    }
+                    toast.success(`Finding overridden to ${result.data.newState}`)
+                  } else {
+                    store.setFinding(activeFindingState, f)
+                    toast.error(result.error ?? 'Override failed')
+                  }
+                })
+                .catch(() => {
+                  store.setFinding(activeFindingState, f)
+                  toast.error('Override failed')
+                })
             }}
           />
 
@@ -1703,6 +1872,8 @@ export function ReviewPageClient({
               isActionInFlight={isActionInFlight}
               isNonNative={initialData.isNonNative}
               btConfidenceThreshold={initialData.btConfidenceThreshold}
+              assignmentId={selectedFinding?.assignmentId}
+              flaggerComment={selectedFinding?.flaggerComment ?? undefined}
             />
           </aside>
         ) : (

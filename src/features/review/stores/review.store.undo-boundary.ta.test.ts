@@ -5,7 +5,11 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 
-import { useReviewStore, selectCanUndo } from '@/features/review/stores/review.store'
+import {
+  useReviewStore,
+  getStoreFileState,
+  selectCanUndo,
+} from '@/features/review/stores/review.store'
 import type { UndoEntry } from '@/features/review/stores/review.store'
 
 function buildUndoEntry(overrides?: Partial<UndoEntry>): UndoEntry {
@@ -42,7 +46,7 @@ describe('UndoRedoSlice — Boundary Value Tests (AC6: max 20)', () => {
       useReviewStore.getState().pushUndo(buildUndoEntry({ id: `e-${i}` }))
     }
 
-    const stack = useReviewStore.getState().undoStack
+    const stack = getStoreFileState().undoStack
     expect(stack).toHaveLength(20)
     // First pushed is still there (no drop)
     expect(stack[0]!.id).toBe('e-0')
@@ -57,11 +61,11 @@ describe('UndoRedoSlice — Boundary Value Tests (AC6: max 20)', () => {
     for (let i = 0; i < 19; i++) {
       useReviewStore.getState().pushUndo(buildUndoEntry({ id: `e-${i}` }))
     }
-    expect(useReviewStore.getState().undoStack).toHaveLength(19)
+    expect(getStoreFileState().undoStack).toHaveLength(19)
 
     // Push the 20th entry
     useReviewStore.getState().pushUndo(buildUndoEntry({ id: 'e-19' }))
-    const stack = useReviewStore.getState().undoStack
+    const stack = getStoreFileState().undoStack
     expect(stack).toHaveLength(20)
     // e-0 still present (not dropped)
     expect(stack[0]!.id).toBe('e-0')
@@ -74,11 +78,11 @@ describe('UndoRedoSlice — Boundary Value Tests (AC6: max 20)', () => {
     for (let i = 0; i < 20; i++) {
       useReviewStore.getState().pushUndo(buildUndoEntry({ id: `e-${i}` }))
     }
-    expect(useReviewStore.getState().undoStack).toHaveLength(20)
+    expect(getStoreFileState().undoStack).toHaveLength(20)
 
     // Push 21st
     useReviewStore.getState().pushUndo(buildUndoEntry({ id: 'e-20' }))
-    const stack = useReviewStore.getState().undoStack
+    const stack = getStoreFileState().undoStack
     expect(stack).toHaveLength(20)
     // e-0 dropped, e-1 is now oldest
     expect(stack[0]!.id).toBe('e-1')
@@ -95,7 +99,7 @@ describe('UndoRedoSlice — Boundary Value Tests (AC6: max 20)', () => {
     expect(popped).toBeDefined()
     expect(popped?.id).toBe('only')
     expect(selectCanUndo(useReviewStore.getState())).toBe(false)
-    expect(useReviewStore.getState().undoStack).toHaveLength(0)
+    expect(getStoreFileState().undoStack).toHaveLength(0)
   })
 
   // ── Boundary: undoFindingIndex consistency at max capacity ──
@@ -109,15 +113,15 @@ describe('UndoRedoSlice — Boundary Value Tests (AC6: max 20)', () => {
     for (let i = 1; i < 20; i++) {
       useReviewStore.getState().pushUndo(buildUndoEntry({ id: `e-${i}` }))
     }
-    expect(useReviewStore.getState().undoStack).toHaveLength(20)
+    expect(getStoreFileState().undoStack).toHaveLength(20)
 
     // Push 21st — e-0 (with droppedFindingId) should be evicted
     useReviewStore.getState().pushUndo(buildUndoEntry({ id: 'e-20' }))
 
-    const stack = useReviewStore.getState().undoStack
+    const stack = getStoreFileState().undoStack
     expect(stack).toHaveLength(20)
     // Verify dropped entry's findingId is no longer in the index
-    const index = useReviewStore.getState().undoFindingIndex
+    const index = getStoreFileState().undoFindingIndex
     const entryIdsForDropped = index.get(droppedFindingId)
     // Should either not exist or be empty (no entry references this findingId)
     expect(entryIdsForDropped === undefined || entryIdsForDropped.size === 0).toBe(true)

@@ -9,7 +9,7 @@ import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 import { SearchInput } from '@/features/review/components/SearchInput'
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, getStoreFileState } from '@/features/review/stores/review.store'
 
 describe('SearchInput', () => {
   beforeEach(() => {
@@ -35,14 +35,14 @@ describe('SearchInput', () => {
     fireEvent.change(input, { target: { value: 'test' } })
 
     // Store should NOT be updated yet (within 300ms debounce)
-    expect(useReviewStore.getState().searchQuery).toBe('')
+    expect(getStoreFileState().searchQuery).toBe('')
 
     // Advance timers by 300ms
     act(() => {
       vi.advanceTimersByTime(300)
     })
 
-    expect(useReviewStore.getState().searchQuery).toBe('test')
+    expect(getStoreFileState().searchQuery).toBe('test')
   })
 
   it('should call setSearchQuery on store after debounce', () => {
@@ -54,7 +54,7 @@ describe('SearchInput', () => {
       vi.advanceTimersByTime(300)
     })
 
-    expect(useReviewStore.getState().searchQuery).toBe('query')
+    expect(getStoreFileState().searchQuery).toBe('query')
   })
 
   it('should clear query immediately when clear button clicked', () => {
@@ -66,13 +66,13 @@ describe('SearchInput', () => {
     act(() => {
       vi.advanceTimersByTime(300)
     })
-    expect(useReviewStore.getState().searchQuery).toBe('hello')
+    expect(getStoreFileState().searchQuery).toBe('hello')
 
     // Click clear — should clear immediately, no debounce wait
     const clearBtn = screen.getByTestId('search-clear')
     fireEvent.click(clearBtn)
 
-    expect(useReviewStore.getState().searchQuery).toBe('')
+    expect(getStoreFileState().searchQuery).toBe('')
     expect(screen.getByTestId('search-input')).toHaveValue('')
   })
 
@@ -84,11 +84,11 @@ describe('SearchInput', () => {
     act(() => {
       vi.advanceTimersByTime(300)
     })
-    expect(useReviewStore.getState().searchQuery).toBe('escape-me')
+    expect(getStoreFileState().searchQuery).toBe('escape-me')
 
     fireEvent.keyDown(input, { key: 'Escape' })
 
-    expect(useReviewStore.getState().searchQuery).toBe('')
+    expect(getStoreFileState().searchQuery).toBe('')
     expect(input).toHaveValue('')
   })
 
@@ -144,7 +144,7 @@ describe('SearchInput', () => {
     })
 
     // Store should still be empty (timer was cleaned up)
-    expect(useReviewStore.getState().searchQuery).toBe('')
+    expect(getStoreFileState().searchQuery).toBe('')
   })
 
   it('should suppress single-key hotkeys when focused (Guardrail #28)', () => {

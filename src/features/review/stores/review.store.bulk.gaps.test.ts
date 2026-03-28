@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, getStoreFileState } from '@/features/review/stores/review.store'
 import { buildFinding } from '@/test/factories'
 
 // ── Helpers ──
@@ -39,7 +39,7 @@ describe('useReviewStore — Bulk Operations Coverage Gaps (Story 4.4a)', () => 
     // Select range from f005 (index 4) to f002 (index 1) — reversed
     useReviewStore.getState().selectRange(ids[4]!, ids[1]!)
 
-    const selected = useReviewStore.getState().selectedIds
+    const selected = getStoreFileState().selectedIds
     // Should select f002, f003, f004, f005 (Math.min/Math.max normalizes order)
     expect(selected.size).toBe(4)
     expect(selected.has('f002')).toBe(true)
@@ -61,9 +61,9 @@ describe('useReviewStore — Bulk Operations Coverage Gaps (Story 4.4a)', () => 
     // Anchor not in sortedFindingIds → fallback to single-select of toId
     useReviewStore.getState().selectRange('nonexistent-id', ids[1]!)
 
-    const selectedAfter = useReviewStore.getState().selectedIds
+    const selectedAfter = getStoreFileState().selectedIds
     expect(selectedAfter).toEqual(new Set([ids[1]!]))
-    expect(useReviewStore.getState().selectionMode).toBe('bulk')
+    expect(getStoreFileState().selectionMode).toBe('bulk')
   })
 
   // ── P1: selectAllFiltered with 0 matches ──
@@ -77,8 +77,8 @@ describe('useReviewStore — Bulk Operations Coverage Gaps (Story 4.4a)', () => 
     // Pre-select and set bulk mode
     useReviewStore.getState().setSelectionMode('bulk')
     useReviewStore.getState().addToSelection('f1')
-    expect(useReviewStore.getState().selectedIds.size).toBe(1)
-    expect(useReviewStore.getState().selectionMode).toBe('bulk')
+    expect(getStoreFileState().selectedIds.size).toBe(1)
+    expect(getStoreFileState().selectionMode).toBe('bulk')
 
     // Filter to 'pending' — no matches among accepted findings
     useReviewStore.getState().setFilter('status', 'pending')
@@ -86,25 +86,25 @@ describe('useReviewStore — Bulk Operations Coverage Gaps (Story 4.4a)', () => 
     // selectAllFiltered with 0 matches → clear selection + exit bulk
     useReviewStore.getState().selectAllFiltered()
 
-    const state = useReviewStore.getState()
-    expect(state.selectedIds.size).toBe(0)
-    expect(state.selectionMode).toBe('single')
+    const fs = getStoreFileState()
+    expect(fs.selectedIds.size).toBe(0)
+    expect(fs.selectionMode).toBe('single')
   })
 
   // ── P1: incrementOverrideCount on nonexistent finding ──
 
   it('[P1] incrementOverrideCount on nonexistent finding should start at 1', () => {
     // No override counts set yet
-    expect(useReviewStore.getState().overrideCounts.size).toBe(0)
+    expect(getStoreFileState().overrideCounts.size).toBe(0)
 
     // Increment a finding that has no existing count
     useReviewStore.getState().incrementOverrideCount('nonexistent-finding-id')
 
-    const counts = useReviewStore.getState().overrideCounts
+    const counts = getStoreFileState().overrideCounts
     expect(counts.get('nonexistent-finding-id')).toBe(1)
 
     // Increment again — should be 2
     useReviewStore.getState().incrementOverrideCount('nonexistent-finding-id')
-    expect(useReviewStore.getState().overrideCounts.get('nonexistent-finding-id')).toBe(2)
+    expect(getStoreFileState().overrideCounts.get('nonexistent-finding-id')).toBe(2)
   })
 })

@@ -44,9 +44,9 @@ function parseKeyForTest(raw: string): ParsedKey {
 
 describe('Keyboard Actions Conflict Detection', () => {
   describe('TA-02: All hotkeys conflict-free in review scope (AC1, P0)', () => {
-    it('should have exactly 7 review action hotkeys from production config', () => {
+    it('should have exactly 9 review action hotkeys from production config', () => {
       // Import from production — if hotkeys change, this test updates automatically
-      expect(REVIEW_HOTKEYS).toHaveLength(7)
+      expect(REVIEW_HOTKEYS).toHaveLength(9)
       const keys = REVIEW_HOTKEYS.map((h) => h.key)
       expect(keys).toContain('a')
       expect(keys).toContain('r')
@@ -55,9 +55,12 @@ describe('Keyboard Actions Conflict Detection', () => {
       expect(keys).toContain('s')
       expect(keys).toContain('+')
       expect(keys).toContain('-')
+      // Story 5.2c: Native reviewer hotkeys (AC8)
+      expect(keys).toContain('c')
+      expect(keys).toContain('o')
     })
 
-    it('should register all single-key hotkeys without collision (A/R/F/N/S/+/-/J/K)', () => {
+    it('should register all single-key hotkeys without collision (A/R/F/N/S/+/-/C/O/J/K)', () => {
       const actionKeys = REVIEW_HOTKEYS.map((h) => h.key)
       const allSingleKeys = [...actionKeys, ...NAVIGATION_HOTKEYS]
       const parsed = allSingleKeys.map((k) => parseKeyForTest(k))
@@ -66,7 +69,7 @@ describe('Keyboard Actions Conflict Detection', () => {
       // All keys should be unique (no duplicates)
       const unique = new Set(keys)
       expect(unique.size).toBe(allSingleKeys.length)
-      expect(unique.size).toBe(9) // 7 action + 2 navigation
+      expect(unique.size).toBe(11) // 9 action + 2 navigation
     })
 
     it('should register all modified hotkeys without collision', () => {

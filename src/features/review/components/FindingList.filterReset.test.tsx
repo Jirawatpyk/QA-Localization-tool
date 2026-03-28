@@ -9,7 +9,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { FindingList } from '@/features/review/components/FindingList'
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, getStoreFileState } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import { saveFilterCache } from '@/features/review/utils/filter-cache'
 import { buildFindingForUI } from '@/test/factories'
@@ -82,31 +82,31 @@ describe('FindingList — filter persistence (P1-09, Story 4.5 AC3)', () => {
   it('[P1] should persist filter state when switching files and returning', () => {
     // Arrange: Set a severity filter on file-A
     useReviewStore.getState().setFilter('severity', 'critical')
-    expect(useReviewStore.getState().filterState.severity).toBe('critical')
+    expect(getStoreFileState().filterState.severity).toBe('critical')
 
     // Act: Simulate component cleanup (saves cache) + switch to file-B, then return
     // Save A's filter to cache (mirrors ReviewPageClient cleanup effect)
-    const storeA = useReviewStore.getState()
+    const fsA = getStoreFileState()
     saveFilterCache('test-file-id', {
-      filterState: { ...storeA.filterState },
-      searchQuery: storeA.searchQuery,
-      aiSuggestionsEnabled: storeA.aiSuggestionsEnabled,
+      filterState: { ...fsA.filterState },
+      searchQuery: fsA.searchQuery,
+      aiSuggestionsEnabled: fsA.aiSuggestionsEnabled,
     })
 
     useReviewStore.getState().resetForFile('file-b')
 
     // Save B's filter, then return to A
-    const storeB = useReviewStore.getState()
+    const fsB = getStoreFileState()
     saveFilterCache('file-b', {
-      filterState: { ...storeB.filterState },
-      searchQuery: storeB.searchQuery,
-      aiSuggestionsEnabled: storeB.aiSuggestionsEnabled,
+      filterState: { ...fsB.filterState },
+      searchQuery: fsB.searchQuery,
+      aiSuggestionsEnabled: fsB.aiSuggestionsEnabled,
     })
 
     useReviewStore.getState().resetForFile('test-file-id')
 
     // Assert: Filter state is restored from cache
-    expect(useReviewStore.getState().filterState.severity).toBe('critical')
+    expect(getStoreFileState().filterState.severity).toBe('critical')
   })
 
   it('[P1] should set default status=pending for never-visited file', () => {
@@ -114,7 +114,7 @@ describe('FindingList — filter persistence (P1-09, Story 4.5 AC3)', () => {
     useReviewStore.getState().resetForFile('brand-new-file')
 
     // Assert: Default filter has status=pending (AC1 default)
-    const { filterState } = useReviewStore.getState()
+    const { filterState } = getStoreFileState()
     expect(filterState.status).toBe('pending')
     expect(filterState.severity).toBeNull()
     expect(filterState.layer).toBeNull()

@@ -8,18 +8,19 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, getStoreFileState } from '@/features/review/stores/review.store'
 import { saveFilterCache } from '@/features/review/utils/filter-cache'
 import { buildFinding } from '@/test/factories'
 
 /** Simulate component cleanup: save current filter state to cache (mirrors ReviewPageClient useEffect cleanup) */
 function saveFilterToCache() {
   const store = useReviewStore.getState()
+  const fs = getStoreFileState()
   if (store.currentFileId) {
     saveFilterCache(store.currentFileId, {
-      filterState: { ...store.filterState },
-      searchQuery: store.searchQuery,
-      aiSuggestionsEnabled: store.aiSuggestionsEnabled,
+      filterState: { ...fs.filterState },
+      searchQuery: fs.searchQuery,
+      aiSuggestionsEnabled: fs.aiSuggestionsEnabled,
     })
   }
 }
@@ -36,25 +37,25 @@ describe('FilterState Extensions (Story 4.5)', () => {
 
   describe('Extended FilterState type', () => {
     it('should initialize with category null, confidence null, searchQuery empty string', () => {
-      const state = useReviewStore.getState()
-      expect(state.filterState.category).toBeNull()
-      expect(state.filterState.confidence).toBeNull()
-      expect(state.searchQuery).toBe('')
+      const fs = getStoreFileState()
+      expect(fs.filterState.category).toBeNull()
+      expect(fs.filterState.confidence).toBeNull()
+      expect(fs.searchQuery).toBe('')
     })
 
     it('should set category filter via setFilter', () => {
       useReviewStore.getState().setFilter('category', 'accuracy')
-      expect(useReviewStore.getState().filterState.category).toBe('accuracy')
+      expect(getStoreFileState().filterState.category).toBe('accuracy')
     })
 
     it('should set confidence filter via setFilter', () => {
       useReviewStore.getState().setFilter('confidence', 'high')
-      expect(useReviewStore.getState().filterState.confidence).toBe('high')
+      expect(getStoreFileState().filterState.confidence).toBe('high')
     })
 
     it('should set searchQuery via setSearchQuery', () => {
       useReviewStore.getState().setSearchQuery('test query')
-      expect(useReviewStore.getState().searchQuery).toBe('test query')
+      expect(getStoreFileState().searchQuery).toBe('test query')
     })
   })
 
@@ -62,30 +63,30 @@ describe('FilterState Extensions (Story 4.5)', () => {
 
   describe('AI Suggestions Toggle', () => {
     it('should initialize aiSuggestionsEnabled as true', () => {
-      expect(useReviewStore.getState().aiSuggestionsEnabled).toBe(true)
+      expect(getStoreFileState().aiSuggestionsEnabled).toBe(true)
     })
 
     it('should toggle aiSuggestionsEnabled via setAiSuggestionsEnabled', () => {
       useReviewStore.getState().setAiSuggestionsEnabled(false)
-      expect(useReviewStore.getState().aiSuggestionsEnabled).toBe(false)
+      expect(getStoreFileState().aiSuggestionsEnabled).toBe(false)
 
       useReviewStore.getState().setAiSuggestionsEnabled(true)
-      expect(useReviewStore.getState().aiSuggestionsEnabled).toBe(true)
+      expect(getStoreFileState().aiSuggestionsEnabled).toBe(true)
     })
 
     it('should NOT reset aiSuggestionsEnabled when resetFilters called (DG-2 fix: AC8 separate)', () => {
       // User intentionally turns off AI suggestions
       useReviewStore.getState().setAiSuggestionsEnabled(false)
-      expect(useReviewStore.getState().aiSuggestionsEnabled).toBe(false)
+      expect(getStoreFileState().aiSuggestionsEnabled).toBe(false)
 
       // User clicks "Clear all filters" — should clear filters + search, NOT AI toggle
       useReviewStore.getState().resetFilters()
 
       // AI toggle should remain OFF
-      expect(useReviewStore.getState().aiSuggestionsEnabled).toBe(false)
+      expect(getStoreFileState().aiSuggestionsEnabled).toBe(false)
       // But filters + search should be reset to defaults
-      expect(useReviewStore.getState().filterState.status).toBe('pending')
-      expect(useReviewStore.getState().searchQuery).toBe('')
+      expect(getStoreFileState().filterState.status).toBe('pending')
+      expect(getStoreFileState().searchQuery).toBe('')
     })
   })
 
@@ -116,12 +117,12 @@ describe('FilterState Extensions (Story 4.5)', () => {
       // Switch back to file-A → cleanup saves B, reset restores A
       saveFilterToCache()
       useReviewStore.getState().resetForFile('test-file-id')
-      expect(useReviewStore.getState().filterState.severity).toBe('critical')
+      expect(getStoreFileState().filterState.severity).toBe('critical')
     })
 
     it('should set default filter (status=pending) for never-visited file', () => {
       useReviewStore.getState().resetForFile('never-visited-file')
-      expect(useReviewStore.getState().filterState.status).toBe('pending')
+      expect(getStoreFileState().filterState.status).toBe('pending')
     })
 
     it('should save aiSuggestionsEnabled in per-file cache', () => {
@@ -133,7 +134,7 @@ describe('FilterState Extensions (Story 4.5)', () => {
       saveFilterToCache()
       useReviewStore.getState().resetForFile('test-file-id')
 
-      expect(useReviewStore.getState().aiSuggestionsEnabled).toBe(false)
+      expect(getStoreFileState().aiSuggestionsEnabled).toBe(false)
     })
 
     it('should NOT save undo/redo stacks in cache (Guardrail #35)', () => {
@@ -142,14 +143,14 @@ describe('FilterState Extensions (Story 4.5)', () => {
       useReviewStore.getState().resetForFile('file-b')
       useReviewStore.getState().resetForFile('test-file-id')
 
-      expect(useReviewStore.getState().undoStack).toHaveLength(0)
-      expect(useReviewStore.getState().redoStack).toHaveLength(0)
+      expect(getStoreFileState().undoStack).toHaveLength(0)
+      expect(getStoreFileState().redoStack).toHaveLength(0)
     })
 
     it('should always clear undo/redo stacks on file switch regardless of cache', () => {
       useReviewStore.getState().resetForFile('any-file')
-      expect(useReviewStore.getState().undoStack).toHaveLength(0)
-      expect(useReviewStore.getState().redoStack).toHaveLength(0)
+      expect(getStoreFileState().undoStack).toHaveLength(0)
+      expect(getStoreFileState().redoStack).toHaveLength(0)
     })
   })
 
@@ -167,7 +168,7 @@ describe('FilterState Extensions (Story 4.5)', () => {
       useReviewStore.getState().setFilter('status', null) // Clear default pending filter
 
       useReviewStore.getState().selectAllFiltered()
-      const selected = useReviewStore.getState().selectedIds
+      const selected = getStoreFileState().selectedIds
       expect(selected.size).toBe(1)
       expect(selected.has('f1')).toBe(true)
     })
@@ -182,7 +183,7 @@ describe('FilterState Extensions (Story 4.5)', () => {
       useReviewStore.getState().setFilter('confidence', 'high')
 
       useReviewStore.getState().selectAllFiltered()
-      const selected = useReviewStore.getState().selectedIds
+      const selected = getStoreFileState().selectedIds
       expect(selected.size).toBe(1)
       expect(selected.has('f1')).toBe(true)
     })
@@ -197,7 +198,7 @@ describe('FilterState Extensions (Story 4.5)', () => {
       useReviewStore.getState().setFilter('confidence', 'medium')
 
       useReviewStore.getState().selectAllFiltered()
-      const selected = useReviewStore.getState().selectedIds
+      const selected = getStoreFileState().selectedIds
       expect(selected.size).toBe(1)
       expect(selected.has('f1')).toBe(true)
     })
@@ -212,7 +213,7 @@ describe('FilterState Extensions (Story 4.5)', () => {
       useReviewStore.getState().setFilter('confidence', 'low')
 
       useReviewStore.getState().selectAllFiltered()
-      const selected = useReviewStore.getState().selectedIds
+      const selected = getStoreFileState().selectedIds
       expect(selected.size).toBe(1)
       expect(selected.has('f1')).toBe(true)
     })
@@ -225,7 +226,7 @@ describe('FilterState Extensions (Story 4.5)', () => {
       useReviewStore.getState().setFilter('confidence', 'high')
 
       useReviewStore.getState().selectAllFiltered()
-      expect(useReviewStore.getState().selectedIds.size).toBe(0)
+      expect(getStoreFileState().selectedIds.size).toBe(0)
     })
 
     it('should filter by searchQuery matching description', () => {
@@ -238,7 +239,7 @@ describe('FilterState Extensions (Story 4.5)', () => {
       useReviewStore.getState().setSearchQuery('missing')
 
       useReviewStore.getState().selectAllFiltered()
-      const selected = useReviewStore.getState().selectedIds
+      const selected = getStoreFileState().selectedIds
       expect(selected.size).toBe(1)
       expect(selected.has('f1')).toBe(true)
     })
@@ -255,7 +256,7 @@ describe('FilterState Extensions (Story 4.5)', () => {
       useReviewStore.getState().setAiSuggestionsEnabled(false)
 
       useReviewStore.getState().selectAllFiltered()
-      const selected = useReviewStore.getState().selectedIds
+      const selected = getStoreFileState().selectedIds
       expect(selected.size).toBe(1)
       expect(selected.has('f1')).toBe(true)
     })
@@ -290,7 +291,7 @@ describe('FilterState Extensions (Story 4.5)', () => {
       useReviewStore.getState().setSearchQuery('Match')
 
       useReviewStore.getState().selectAllFiltered()
-      const selected = useReviewStore.getState().selectedIds
+      const selected = getStoreFileState().selectedIds
       expect(selected.size).toBe(1)
       expect(selected.has('f1')).toBe(true)
     })
@@ -311,11 +312,11 @@ describe('FilterState Extensions (Story 4.5)', () => {
 
       useReviewStore.getState().setFilter('confidence', 'high')
       useReviewStore.getState().selectAllFiltered()
-      expect(useReviewStore.getState().selectedIds.size).toBe(0)
+      expect(getStoreFileState().selectedIds.size).toBe(0)
 
       useReviewStore.getState().setFilter('confidence', 'medium')
       useReviewStore.getState().selectAllFiltered()
-      expect(useReviewStore.getState().selectedIds.size).toBe(1)
+      expect(getStoreFileState().selectedIds.size).toBe(1)
     })
 
     it('should classify aiConfidence=85.01 as high', () => {
@@ -325,7 +326,7 @@ describe('FilterState Extensions (Story 4.5)', () => {
 
       useReviewStore.getState().setFilter('confidence', 'high')
       useReviewStore.getState().selectAllFiltered()
-      expect(useReviewStore.getState().selectedIds.size).toBe(1)
+      expect(getStoreFileState().selectedIds.size).toBe(1)
     })
 
     it('should classify aiConfidence=70 as medium (not low)', () => {
@@ -335,11 +336,11 @@ describe('FilterState Extensions (Story 4.5)', () => {
 
       useReviewStore.getState().setFilter('confidence', 'low')
       useReviewStore.getState().selectAllFiltered()
-      expect(useReviewStore.getState().selectedIds.size).toBe(0)
+      expect(getStoreFileState().selectedIds.size).toBe(0)
 
       useReviewStore.getState().setFilter('confidence', 'medium')
       useReviewStore.getState().selectAllFiltered()
-      expect(useReviewStore.getState().selectedIds.size).toBe(1)
+      expect(getStoreFileState().selectedIds.size).toBe(1)
     })
 
     it('should classify aiConfidence=69.99 as low', () => {
@@ -349,7 +350,7 @@ describe('FilterState Extensions (Story 4.5)', () => {
 
       useReviewStore.getState().setFilter('confidence', 'low')
       useReviewStore.getState().selectAllFiltered()
-      expect(useReviewStore.getState().selectedIds.size).toBe(1)
+      expect(getStoreFileState().selectedIds.size).toBe(1)
     })
 
     it('should classify aiConfidence=0 as low', () => {
@@ -359,7 +360,7 @@ describe('FilterState Extensions (Story 4.5)', () => {
 
       useReviewStore.getState().setFilter('confidence', 'low')
       useReviewStore.getState().selectAllFiltered()
-      expect(useReviewStore.getState().selectedIds.size).toBe(1)
+      expect(getStoreFileState().selectedIds.size).toBe(1)
     })
 
     it('should classify aiConfidence=100 as high', () => {
@@ -369,7 +370,7 @@ describe('FilterState Extensions (Story 4.5)', () => {
 
       useReviewStore.getState().setFilter('confidence', 'high')
       useReviewStore.getState().selectAllFiltered()
-      expect(useReviewStore.getState().selectedIds.size).toBe(1)
+      expect(getStoreFileState().selectedIds.size).toBe(1)
     })
 
     it('should treat aiConfidence=null as excluded from confidence filter', () => {
@@ -379,15 +380,15 @@ describe('FilterState Extensions (Story 4.5)', () => {
 
       useReviewStore.getState().setFilter('confidence', 'high')
       useReviewStore.getState().selectAllFiltered()
-      expect(useReviewStore.getState().selectedIds.size).toBe(0)
+      expect(getStoreFileState().selectedIds.size).toBe(0)
 
       useReviewStore.getState().setFilter('confidence', 'medium')
       useReviewStore.getState().selectAllFiltered()
-      expect(useReviewStore.getState().selectedIds.size).toBe(0)
+      expect(getStoreFileState().selectedIds.size).toBe(0)
 
       useReviewStore.getState().setFilter('confidence', 'low')
       useReviewStore.getState().selectAllFiltered()
-      expect(useReviewStore.getState().selectedIds.size).toBe(0)
+      expect(getStoreFileState().selectedIds.size).toBe(0)
     })
   })
 
@@ -411,7 +412,7 @@ describe('FilterState Extensions (Story 4.5)', () => {
 
       useReviewStore.getState().setFilter('severity', 'critical')
 
-      const selected = useReviewStore.getState().selectedIds
+      const selected = getStoreFileState().selectedIds
       expect(selected.has('f1')).toBe(true)
       expect(selected.has('f2')).toBe(false)
     })
@@ -426,8 +427,8 @@ describe('FilterState Extensions (Story 4.5)', () => {
       // Filter to critical only -> f1 (major) disappears
       useReviewStore.getState().setFilter('severity', 'critical')
 
-      expect(useReviewStore.getState().selectedIds.size).toBe(0)
-      expect(useReviewStore.getState().selectionMode).toBe('single')
+      expect(getStoreFileState().selectedIds.size).toBe(0)
+      expect(getStoreFileState().selectionMode).toBe('single')
     })
 
     it('should keep visible selected findings after filter change', () => {
@@ -438,7 +439,7 @@ describe('FilterState Extensions (Story 4.5)', () => {
 
       useReviewStore.getState().setFilter('severity', 'critical')
 
-      expect(useReviewStore.getState().selectedIds.has('f1')).toBe(true)
+      expect(getStoreFileState().selectedIds.has('f1')).toBe(true)
     })
 
     it('should reset selectedId to first filtered finding when active finding filtered out', () => {
@@ -453,7 +454,7 @@ describe('FilterState Extensions (Story 4.5)', () => {
       // Filter to critical only -> f2 (major) disappears
       useReviewStore.getState().setFilter('severity', 'critical')
 
-      expect(useReviewStore.getState().selectedId).toBe('f1')
+      expect(getStoreFileState().selectedId).toBe('f1')
     })
 
     it('should set selectedId to null when filter produces zero results', () => {
@@ -465,7 +466,7 @@ describe('FilterState Extensions (Story 4.5)', () => {
       // Filter to critical -> no matches
       useReviewStore.getState().setFilter('severity', 'critical')
 
-      expect(useReviewStore.getState().selectedId).toBeNull()
+      expect(getStoreFileState().selectedId).toBeNull()
     })
   })
 
@@ -479,7 +480,7 @@ describe('FilterState Extensions (Story 4.5)', () => {
 
       useReviewStore.getState().setSearchQuery('คำแปล')
       useReviewStore.getState().selectAllFiltered()
-      expect(useReviewStore.getState().selectedIds.size).toBe(1)
+      expect(getStoreFileState().selectedIds.size).toBe(1)
     })
 
     it('should match CJK text', () => {
@@ -489,7 +490,7 @@ describe('FilterState Extensions (Story 4.5)', () => {
 
       useReviewStore.getState().setSearchQuery('翻訳')
       useReviewStore.getState().selectAllFiltered()
-      expect(useReviewStore.getState().selectedIds.size).toBe(1)
+      expect(getStoreFileState().selectedIds.size).toBe(1)
     })
 
     it('should treat whitespace-only query as empty (show all)', () => {
@@ -499,7 +500,7 @@ describe('FilterState Extensions (Story 4.5)', () => {
 
       useReviewStore.getState().setSearchQuery('   ')
       useReviewStore.getState().selectAllFiltered()
-      expect(useReviewStore.getState().selectedIds.size).toBe(1)
+      expect(getStoreFileState().selectedIds.size).toBe(1)
     })
 
     it('should match against sourceTextExcerpt, targetTextExcerpt, description, suggestedFix', () => {
@@ -518,7 +519,7 @@ describe('FilterState Extensions (Story 4.5)', () => {
 
       useReviewStore.getState().setSearchQuery('keyword')
       useReviewStore.getState().selectAllFiltered()
-      expect(useReviewStore.getState().selectedIds.size).toBe(4)
+      expect(getStoreFileState().selectedIds.size).toBe(4)
     })
 
     it('should handle null text fields without error', () => {
@@ -535,7 +536,7 @@ describe('FilterState Extensions (Story 4.5)', () => {
 
       useReviewStore.getState().setSearchQuery('some')
       useReviewStore.getState().selectAllFiltered()
-      expect(useReviewStore.getState().selectedIds.size).toBe(1)
+      expect(getStoreFileState().selectedIds.size).toBe(1)
     })
   })
 
@@ -555,9 +556,9 @@ describe('FilterState Extensions (Story 4.5)', () => {
       useReviewStore.getState().setSortedFindingIds(['f1', 'f2'])
 
       // findingsMap has 2 entries, but selectAllFiltered should only select L1
-      expect(useReviewStore.getState().findingsMap.size).toBe(2)
+      expect(getStoreFileState().findingsMap.size).toBe(2)
       useReviewStore.getState().selectAllFiltered()
-      const selected = useReviewStore.getState().selectedIds
+      const selected = getStoreFileState().selectedIds
       expect(selected.size).toBe(1)
       expect(selected.has('f1')).toBe(true)
       expect(selected.has('f2')).toBe(false)
@@ -575,8 +576,8 @@ describe('FilterState Extensions (Story 4.5)', () => {
       useReviewStore.getState().setSortedFindingIds(['f1', 'f3'])
 
       useReviewStore.getState().selectAllFiltered()
-      expect(useReviewStore.getState().selectedIds.size).toBe(1)
-      expect(useReviewStore.getState().selectedIds.has('f1')).toBe(true)
+      expect(getStoreFileState().selectedIds.size).toBe(1)
+      expect(getStoreFileState().selectedIds.has('f1')).toBe(true)
     })
 
     it('should include newly added L2 finding when AI toggle is re-enabled', () => {
@@ -594,7 +595,7 @@ describe('FilterState Extensions (Story 4.5)', () => {
       useReviewStore.getState().setAiSuggestionsEnabled(true)
 
       useReviewStore.getState().selectAllFiltered()
-      expect(useReviewStore.getState().selectedIds.size).toBe(2)
+      expect(getStoreFileState().selectedIds.size).toBe(2)
     })
   })
 })

@@ -90,9 +90,20 @@ vi.mock('@/features/review/stores/review.store', () => ({
         overrideCounts: new Map(),
         incrementOverrideCount: vi.fn(),
         setOverrideCount: vi.fn(),
+        fileStates: new Map(),
       })),
     },
   ),
+  getStoreFileState: (_storeRef: unknown, _fileId?: string) => ({
+    findingsMap: mockFindingsMap,
+    setFinding: mockSetFinding,
+    setSelectedFinding: mockSetSelectedFinding,
+    setSortedFindingIds: vi.fn(),
+    pushUndo: mockPushUndo,
+    overrideCounts: new Map(),
+    incrementOverrideCount: vi.fn(),
+    setOverrideCount: vi.fn(),
+  }),
   useFileState: vi.fn((selector?: (state: Record<string, unknown>) => unknown) =>
     selector
       ? selector({

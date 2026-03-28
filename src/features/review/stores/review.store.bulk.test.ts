@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, getStoreFileState } from '@/features/review/stores/review.store'
 import { buildFinding } from '@/test/factories'
 
 // ── Helpers ──
@@ -40,7 +40,7 @@ describe('useReviewStore — Bulk Operations (Story 4.4a AC1)', () => {
     // Select range from f002 to f005 → should select f002, f003, f004, f005
     useReviewStore.getState().selectRange(ids[1]!, ids[4]!)
 
-    const selected = useReviewStore.getState().selectedIds
+    const selected = getStoreFileState().selectedIds
     expect(selected.size).toBe(4)
     expect(selected.has('f002')).toBe(true)
     expect(selected.has('f003')).toBe(true)
@@ -67,7 +67,7 @@ describe('useReviewStore — Bulk Operations (Story 4.4a AC1)', () => {
     // Select all filtered — should select only pending findings
     useReviewStore.getState().selectAllFiltered()
 
-    const selected = useReviewStore.getState().selectedIds
+    const selected = getStoreFileState().selectedIds
     expect(selected.size).toBe(2)
     expect(selected.has('f1')).toBe(true)
     expect(selected.has('f3')).toBe(true)
@@ -79,15 +79,15 @@ describe('useReviewStore — Bulk Operations (Story 4.4a AC1)', () => {
 
   it('[P1] should track isBulkInFlight state', () => {
     // Initially false
-    expect(useReviewStore.getState().isBulkInFlight).toBe(false)
+    expect(getStoreFileState().isBulkInFlight).toBe(false)
 
     // Set to true when bulk operation starts
     useReviewStore.getState().setBulkInFlight(true)
-    expect(useReviewStore.getState().isBulkInFlight).toBe(true)
+    expect(getStoreFileState().isBulkInFlight).toBe(true)
 
     // Set back to false when operation completes
     useReviewStore.getState().setBulkInFlight(false)
-    expect(useReviewStore.getState().isBulkInFlight).toBe(false)
+    expect(getStoreFileState().isBulkInFlight).toBe(false)
   })
 
   // ── P1: Override Counts ──
@@ -96,13 +96,13 @@ describe('useReviewStore — Bulk Operations (Story 4.4a AC1)', () => {
     seedFindings(2)
 
     // Initially no override counts
-    expect(useReviewStore.getState().overrideCounts.size).toBe(0)
+    expect(getStoreFileState().overrideCounts.size).toBe(0)
 
     // Set override count for a finding
     useReviewStore.getState().setOverrideCount('f001', 2)
     useReviewStore.getState().setOverrideCount('f002', 1)
 
-    const counts = useReviewStore.getState().overrideCounts
+    const counts = getStoreFileState().overrideCounts
     expect(counts.get('f001')).toBe(2)
     expect(counts.get('f002')).toBe(1)
   })
@@ -122,11 +122,11 @@ describe('useReviewStore — Bulk Operations (Story 4.4a AC1)', () => {
     // Reset for new file
     useReviewStore.getState().resetForFile('new-file-id')
 
-    const state = useReviewStore.getState()
-    expect(state.selectedIds.size).toBe(0)
-    expect(state.selectionMode).toBe('single')
-    expect(state.isBulkInFlight).toBe(false)
-    expect(state.overrideCounts.size).toBe(0)
-    expect(state.currentFileId).toBe('new-file-id')
+    const fs = getStoreFileState()
+    expect(fs.selectedIds.size).toBe(0)
+    expect(fs.selectionMode).toBe('single')
+    expect(fs.isBulkInFlight).toBe(false)
+    expect(fs.overrideCounts.size).toBe(0)
+    expect(useReviewStore.getState().currentFileId).toBe('new-file-id')
   })
 })

@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, it, expect, beforeEach } from 'vitest'
 
 import { FilterBar } from '@/features/review/components/FilterBar'
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, getStoreFileState } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import { buildFindingForUI } from '@/test/factories'
 
@@ -264,7 +264,7 @@ describe('FilterBar', () => {
       const criticalBtn = screen.getByTestId('filter-severity-critical')
       criticalBtn.focus()
       await user.keyboard('{Enter}')
-      expect(useReviewStore.getState().filterState.severity).toBe('critical')
+      expect(getStoreFileState().filterState.severity).toBe('critical')
     })
 
     it('should have accessible badge chip remove button with aria-label', async () => {

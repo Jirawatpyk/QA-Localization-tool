@@ -429,6 +429,8 @@ export function FindingList({
             isActionInFlight={isActionInFlight}
             onOverrideBadgeClick={onOverrideBadgeClick}
             hasNonNativeAction={finding.hasNonNativeAction}
+            assignmentStatus={finding.assignmentStatus}
+            assignedToName={finding.assignedToName}
           />
         )}
       </div>

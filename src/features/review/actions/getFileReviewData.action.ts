@@ -55,6 +55,12 @@ export type FileReviewData = {
     updatedAt: string
     /** Story 5.2a: Whether this finding has any review_action with non_native=true */
     hasNonNativeAction: boolean
+    /** Story 5.2c: Assignment fields (populated for flagged findings with assignments) */
+    assignmentId?: string | undefined
+    assignmentStatus?: 'pending' | 'in_review' | 'confirmed' | 'overridden' | undefined
+    assignedToName?: string | undefined
+    assignedByName?: string | undefined
+    flaggerComment?: string | null | undefined
   }>
   score: {
     mqmScore: number | null
@@ -366,7 +372,7 @@ export async function getFileReviewData(
       string,
       {
         assignmentId: string
-        assignmentStatus: string
+        assignmentStatus: 'pending' | 'in_review' | 'confirmed' | 'overridden'
         assignedToName: string
         assignedByName: string
         flaggerComment: string | null
@@ -394,6 +400,11 @@ export async function getFileReviewData(
             assignmentId: findingAssignments.id,
             assignmentStatus: findingAssignments.status,
             assignedToName: users.displayName,
+            // CR-M2 fix: resolve assignedByName via subquery (avoid alias complexity)
+            assignedByName:
+              sql<string>`(SELECT u2.display_name FROM users u2 WHERE u2.id = ${findingAssignments.assignedBy} AND u2.tenant_id = ${findingAssignments.tenantId} LIMIT 1)`.as(
+                'assigned_by_name',
+              ),
             flaggerComment: findingAssignments.flaggerComment,
           })
           .from(findingAssignments)
@@ -407,9 +418,13 @@ export async function getFileReviewData(
           // For non-native roles with multiple assignments, last write wins (latest assignment)
           assignmentMap.set(row.findingId, {
             assignmentId: row.assignmentId,
-            assignmentStatus: row.assignmentStatus,
+            assignmentStatus: row.assignmentStatus as
+              | 'pending'
+              | 'in_review'
+              | 'confirmed'
+              | 'overridden',
             assignedToName: row.assignedToName,
-            assignedByName: '',
+            assignedByName: (row.assignedByName ?? '') as string,
             flaggerComment: row.flaggerComment,
           })
         }

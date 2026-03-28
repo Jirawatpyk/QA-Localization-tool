@@ -59,6 +59,7 @@ export async function overrideNativeReview(
     .where(
       and(
         eq(findingAssignments.findingId, findingId),
+        eq(findingAssignments.fileId, fileId), // CR-H8 fix: Guardrail #14 — symmetric filter
         eq(findingAssignments.assignedTo, userId),
         withTenant(findingAssignments.tenantId, tenantId),
       ),

@@ -217,51 +217,52 @@ export function ReviewActionBar({
           </>
         )}
 
-        {/* Standard QA reviewer actions */}
-        {ACTION_BUTTONS.map((btn) => {
-          const Icon = btn.icon
-          const isEnabled = ENABLED_ACTIONS.has(btn.key)
-          const handlerKey = ACTION_HANDLER_MAP[btn.key]
-          const handler = handlerKey ? handlers[handlerKey] : undefined
-          // Manual findings: only override and add are active (AC5 — no accept/reject/flag/note/source)
-          const manualDisabled = isManualFinding && !['override', 'add'].includes(btn.key)
-          const btnDisabled = !isEnabled || isDisabled || manualDisabled
-          // CR-R2-H2: spinner only on the specific button being actioned
-          const showSpinner = isInFlight && activeAction === btn.key && !btnDisabled
+        {/* Standard QA reviewer actions — hidden for native reviewer (CR-H1: AC3 says "replace") */}
+        {!isNativeReviewer &&
+          ACTION_BUTTONS.map((btn) => {
+            const Icon = btn.icon
+            const isEnabled = ENABLED_ACTIONS.has(btn.key)
+            const handlerKey = ACTION_HANDLER_MAP[btn.key]
+            const handler = handlerKey ? handlers[handlerKey] : undefined
+            // Manual findings: only override and add are active (AC5 — no accept/reject/flag/note/source)
+            const manualDisabled = isManualFinding && !['override', 'add'].includes(btn.key)
+            const btnDisabled = !isEnabled || isDisabled || manualDisabled
+            // CR-R2-H2: spinner only on the specific button being actioned
+            const showSpinner = isInFlight && activeAction === btn.key && !btnDisabled
 
-          return (
-            <Tooltip key={btn.key}>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  disabled={btnDisabled || isInFlight}
-                  onClick={handler}
-                  data-testid={`action-${btn.key}`}
-                  aria-keyshortcuts={btn.ariaKeyshortcuts}
-                  aria-label={`${btn.label}${findingNumber !== undefined ? ` finding ${findingNumber}` : ' finding'}, press ${btn.hotkey}`}
-                  className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 hover:brightness-110 ${btn.colorClass}`}
-                >
-                  {showSpinner ? (
-                    <Loader2
-                      className={`h-4 w-4 ${reducedMotion ? '' : 'animate-spin'}`}
-                      aria-hidden="true"
-                    />
-                  ) : (
-                    <Icon className="h-4 w-4" aria-hidden="true" />
-                  )}
-                  <span>
-                    [{btn.hotkey}] {btn.label}
-                  </span>
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>
-                  Press {btn.hotkey} — {btn.label}
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          )
-        })}
+            return (
+              <Tooltip key={btn.key}>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    disabled={btnDisabled || isInFlight}
+                    onClick={handler}
+                    data-testid={`action-${btn.key}`}
+                    aria-keyshortcuts={btn.ariaKeyshortcuts}
+                    aria-label={`${btn.label}${findingNumber !== undefined ? ` finding ${findingNumber}` : ' finding'}, press ${btn.hotkey}`}
+                    className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 hover:brightness-110 ${btn.colorClass}`}
+                  >
+                    {showSpinner ? (
+                      <Loader2
+                        className={`h-4 w-4 ${reducedMotion ? '' : 'animate-spin'}`}
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <Icon className="h-4 w-4" aria-hidden="true" />
+                    )}
+                    <span>
+                      [{btn.hotkey}] {btn.label}
+                    </span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    Press {btn.hotkey} — {btn.label}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            )
+          })}
       </div>
     </TooltipProvider>
   )

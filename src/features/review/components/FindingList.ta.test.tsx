@@ -9,7 +9,7 @@ import { render, screen, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 import { FindingList } from '@/features/review/components/FindingList'
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, getStoreFileState } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
 import { buildFindingForUI } from '@/test/factories'
 
@@ -102,7 +102,7 @@ describe('FindingList — TA expansion', () => {
     render(<FindingList {...defaultProps()} />)
 
     // FindingList syncs allSortedIds to store (includes ALL findings, even collapsed minor)
-    const sortedIds = useReviewStore.getState().sortedFindingIds
+    const sortedIds = getStoreFileState().sortedFindingIds
 
     // All 5 findings should be in sortedFindingIds (not just visible ones)
     expect(sortedIds).toHaveLength(5)

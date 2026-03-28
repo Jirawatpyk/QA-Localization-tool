@@ -2,7 +2,7 @@
 
 import 'server-only'
 
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, eq, sql } from 'drizzle-orm'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
@@ -28,6 +28,12 @@ type FindingComment = {
 export async function getFindingComments(
   findingAssignmentId: string,
 ): Promise<ActionResult<FindingComment[]>> {
+  // CR-H5 fix: UUID validation (consistent with other actions)
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!UUID_RE.test(findingAssignmentId)) {
+    return { success: false, error: 'Invalid assignment ID', code: 'VALIDATION' }
+  }
+
   let user: Awaited<ReturnType<typeof requireRole>>
   try {
     user = await requireRole('native_reviewer')
@@ -51,9 +57,17 @@ export async function getFindingComments(
       users,
       and(eq(users.id, findingComments.authorId), withTenant(users.tenantId, tenantId)),
     )
+    // CR-H7 fix: leftJoin with LIMIT-like behavior — pick first role only.
+    // Users with multiple roles would produce duplicate comments.
+    // Using sql subquery to get highest-priority role per user.
     .leftJoin(
       userRoles,
-      and(eq(userRoles.userId, findingComments.authorId), withTenant(userRoles.tenantId, tenantId)),
+      and(
+        eq(userRoles.userId, findingComments.authorId),
+        withTenant(userRoles.tenantId, tenantId),
+        // Prefer admin > qa_reviewer > native_reviewer to avoid duplicates
+        sql`${userRoles.id} = (SELECT ur.id FROM user_roles ur WHERE ur.user_id = ${findingComments.authorId} AND ur.tenant_id = ${findingComments.tenantId} ORDER BY CASE ur.role WHEN 'admin' THEN 1 WHEN 'qa_reviewer' THEN 2 ELSE 3 END LIMIT 1)`,
+      ),
     )
     .where(
       and(
@@ -62,6 +76,7 @@ export async function getFindingComments(
       ),
     )
     .orderBy(asc(findingComments.createdAt))
+    .limit(100) // CR-H5 fix: prevent unbounded query
 
   return {
     success: true,
