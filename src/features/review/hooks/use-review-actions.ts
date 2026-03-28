@@ -98,6 +98,8 @@ export function useReviewActions({
 
       // Optimistic update — set updatedAt to NOW so polling merge won't overwrite with stale data
       // Story 5.2a: also set hasNonNativeAction optimistically (we know client-side if user is non-native)
+      // CR-R2 C1 fix: snapshot pre-action value for rollback
+      const prevHasNonNativeAction = finding.hasNonNativeAction ?? false
       state.setFinding(findingId, {
         ...finding,
         status: newState,
@@ -127,7 +129,12 @@ export function useReviewActions({
           const currentFinding = currentState.findingsMap.get(findingId)
           // Only rollback if the current status is still our optimistic value
           if (currentFinding && currentFinding.status === newState) {
-            currentState.setFinding(findingId, { ...currentFinding, status: currentStatus })
+            // CR-R2 C1 fix: restore hasNonNativeAction alongside status
+            currentState.setFinding(findingId, {
+              ...currentFinding,
+              status: currentStatus,
+              hasNonNativeAction: prevHasNonNativeAction,
+            })
           }
           toast.error(`Action failed: ${result.error}`)
           return
@@ -263,7 +270,12 @@ export function useReviewActions({
         const currentState = useReviewStore.getState()
         const currentFinding = currentState.findingsMap.get(findingId)
         if (currentFinding && currentFinding.status === newState) {
-          currentState.setFinding(findingId, { ...currentFinding, status: currentStatus })
+          // CR-R2 C1 fix: restore hasNonNativeAction alongside status
+          currentState.setFinding(findingId, {
+            ...currentFinding,
+            status: currentStatus,
+            hasNonNativeAction: prevHasNonNativeAction,
+          })
         }
         toast.error('Action failed unexpectedly')
       } finally {

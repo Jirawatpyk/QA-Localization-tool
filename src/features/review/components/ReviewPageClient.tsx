@@ -213,7 +213,13 @@ export function ReviewPageClient({
         if (!f) continue
         const newState = getNewState(action, f.status)
         if (newState) {
-          store.setFinding(id, { ...f, status: newState, updatedAt: new Date().toISOString() })
+          // CR-R2 C2 fix: merge hasNonNativeAction for bulk optimistic (same as single-action path)
+          store.setFinding(id, {
+            ...f,
+            status: newState,
+            updatedAt: new Date().toISOString(),
+            hasNonNativeAction: f.hasNonNativeAction || initialData.isNonNative,
+          })
         }
       }
 
@@ -225,9 +231,11 @@ export function ReviewPageClient({
           for (const pf of result.data.processedFindings) {
             const current = useReviewStore.getState().findingsMap.get(pf.findingId)
             if (current) {
+              // CR-R2 C2 fix: preserve hasNonNativeAction in success sync
               useReviewStore.getState().setFinding(pf.findingId, {
                 ...current,
                 updatedAt: pf.serverUpdatedAt,
+                hasNonNativeAction: current.hasNonNativeAction || initialData.isNonNative,
               })
             }
             // Increment override count (matches Q7 semantic: overrideCount = actionCount - 1)

@@ -133,7 +133,8 @@ export function useFindingsSubscription(fileId: string, tenantId?: string | unde
                 changed = true
               } else if (polled.updatedAt > existing.updatedAt) {
                 // Poll has newer data — authoritative update
-                mergedMap.set(polled.id, polled)
+                // CR-R2 I1 fix: merge to preserve derived fields (hasNonNativeAction)
+                mergedMap.set(polled.id, { ...existing, ...polled })
                 changed = true
               }
               // else: store has same or newer data (optimistic) — keep it
@@ -210,7 +211,13 @@ export function useFindingsSubscription(fileId: string, tenantId?: string | unde
         // Store has same or newer data (e.g. optimistic update) — skip
         return
       }
-      store.setFinding(finding.id, finding)
+      // CR-R2 I1 fix: merge over existing to preserve derived fields (hasNonNativeAction)
+      // that aren't in the findings DB row. Without this, Realtime UPDATE silently clears the badge.
+      if (existing) {
+        store.setFinding(finding.id, { ...existing, ...finding })
+      } else {
+        store.setFinding(finding.id, finding)
+      }
 
       // Story 4.4b AC7: Mark undo entries stale when finding modified by another user
       store.markEntryStale(finding.id)
