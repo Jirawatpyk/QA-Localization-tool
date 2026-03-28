@@ -580,7 +580,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Medium
 - **File:** `e2e/review-detail-panel.spec.ts` — 7 tests (`E1` through `E7`)
 - **Description:** All 7 assertion E2E tests use `test.skip()`. Action buttons are now wired (Story 4.2). Tests can be unskipped.
-- **Status:** OPEN → **Story 5.1** (Language Bridge adds back-translation sidebar to detail panel → implement E2E for both panel + new feature together)
+- **Status:** RESOLVED (2026-03-28) — All 7 E2E tests (E1-E7) already unskipped and fully implemented with real assertions. Story 5.1 (Language Bridge) is DONE; BT1-BT5 tests also added.
 
 ### TD-E2E-017: Responsive Layout E2E tests skipped — 30 `test.skip` without TD ref
 - **Date:** 2026-03-13
