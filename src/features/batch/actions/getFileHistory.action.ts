@@ -66,14 +66,7 @@ export async function getFileHistory(input: unknown): Promise<ActionResult<FileH
         createdAt: files.createdAt,
       })
       .from(files)
-      .leftJoin(
-        scores,
-        and(
-          eq(scores.fileId, files.id),
-          eq(scores.layerCompleted, 'L1'),
-          withTenant(scores.tenantId, tenantId),
-        ),
-      )
+      .leftJoin(scores, and(eq(scores.fileId, files.id), withTenant(scores.tenantId, tenantId)))
       .where(and(withTenant(files.tenantId, tenantId), eq(files.projectId, projectId)))
       .orderBy(desc(files.createdAt))
       .limit(QUERY_HARD_CAP)

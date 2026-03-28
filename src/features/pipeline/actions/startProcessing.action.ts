@@ -4,7 +4,7 @@ import 'server-only'
 
 import { randomUUID } from 'crypto'
 
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, isNull } from 'drizzle-orm'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
@@ -106,6 +106,7 @@ export async function startProcessing(
     // P1-1 fix: Set batchId on selected files so processFile.ts batch completion check
     // can find them via `eq(files.batchId, uploadBatchId)`. Without this, individually-uploaded
     // files have NULL batchId and the batch-complete event never fires.
+    // Only set batchId where NULL — preserve original upload batch FK for Batches list page.
     // Guardrail #5: fileIds.length > 0 guaranteed by validation above (foundFiles.length check)
     await db
       .update(files)
@@ -115,6 +116,7 @@ export async function startProcessing(
           withTenant(files.tenantId, tenantId),
           eq(files.projectId, projectId),
           inArray(files.id, fileIds),
+          isNull(files.batchId),
         ),
       )
 

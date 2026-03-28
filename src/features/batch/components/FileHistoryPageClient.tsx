@@ -21,19 +21,26 @@ type FileRow = {
 type FileHistoryPageClientProps = {
   projectId: string
   initialFiles: FileRow[]
+  initialTotalCount: number
 }
 
-export function FileHistoryPageClient({ projectId, initialFiles }: FileHistoryPageClientProps) {
+export function FileHistoryPageClient({
+  projectId,
+  initialFiles,
+  initialTotalCount,
+}: FileHistoryPageClientProps) {
   const [filter, setFilter] = useState<FileHistoryFilter>('all')
+  const [page, setPage] = useState(1)
   const [files, setFiles] = useState<FileRow[]>(initialFiles)
+  const [totalCount, setTotalCount] = useState(initialTotalCount)
   const [isPending, startTransition] = useTransition()
 
-  const handleFilterChange = (newFilter: FileHistoryFilter) => {
-    setFilter(newFilter)
+  const fetchFiles = (newFilter: FileHistoryFilter, newPage: number) => {
     startTransition(async () => {
       const result = await getFileHistory({
         projectId,
         filter: newFilter,
+        page: newPage,
       })
       if (result.success) {
         setFiles(
@@ -46,16 +53,31 @@ export function FileHistoryPageClient({ projectId, initialFiles }: FileHistoryPa
             reviewerName: f.lastReviewerName,
           })),
         )
+        setTotalCount(result.data.totalCount)
       }
     })
+  }
+
+  const handleFilterChange = (newFilter: FileHistoryFilter) => {
+    setFilter(newFilter)
+    setPage(1)
+    fetchFiles(newFilter, 1)
+  }
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage)
+    fetchFiles(filter, newPage)
   }
 
   return (
     <div className={isPending ? 'opacity-50' : ''}>
       <FileHistoryTable
         files={files}
+        totalCount={totalCount}
+        currentPage={page}
         activeFilter={filter}
         onFilterChange={handleFilterChange}
+        onPageChange={handlePageChange}
         projectId={projectId}
       />
     </div>

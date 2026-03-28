@@ -1,7 +1,5 @@
 'use client'
 
-import { useState } from 'react'
-
 import { FILE_HISTORY_PAGE_SIZE } from '@/features/batch/types'
 import type { DbFileStatus } from '@/types/pipeline'
 
@@ -22,8 +20,11 @@ type FileHistoryFilter = 'all' | 'passed' | 'needs_review' | 'failed'
 
 type FileHistoryTableProps = {
   files: FileHistoryRow[]
+  totalCount: number
+  currentPage: number
   activeFilter: FileHistoryFilter
   onFilterChange: (filter: FileHistoryFilter) => void
+  onPageChange: (page: number) => void
   projectId: string
 }
 
@@ -50,10 +51,16 @@ function getPaginationPages(current: number, total: number): (number | '...')[] 
   return pages
 }
 
-export function FileHistoryTable({ files, activeFilter, onFilterChange }: FileHistoryTableProps) {
-  const [page, setPage] = useState(1)
-  const totalPages = Math.ceil(files.length / FILE_HISTORY_PAGE_SIZE)
-  const pagedFiles = files.slice((page - 1) * FILE_HISTORY_PAGE_SIZE, page * FILE_HISTORY_PAGE_SIZE)
+export function FileHistoryTable({
+  files,
+  totalCount,
+  currentPage,
+  activeFilter,
+  onFilterChange,
+  onPageChange,
+}: FileHistoryTableProps) {
+  // Server already paginates — use totalCount for page calculation
+  const totalPages = Math.ceil(totalCount / FILE_HISTORY_PAGE_SIZE)
 
   return (
     <div className="space-y-4">
@@ -70,7 +77,6 @@ export function FileHistoryTable({ files, activeFilter, onFilterChange }: FileHi
             }`}
             onClick={() => {
               onFilterChange(filter)
-              setPage(1)
             }}
           >
             {FILTER_LABELS[filter]}
@@ -106,7 +112,7 @@ export function FileHistoryTable({ files, activeFilter, onFilterChange }: FileHi
             </tr>
           </thead>
           <tbody>
-            {pagedFiles.map((file) => (
+            {files.map((file) => (
               <tr key={file.fileId} className="border-b">
                 <td className="px-4 py-2 text-sm">{file.fileName}</td>
                 <td className="px-4 py-2 text-sm text-muted-foreground">
@@ -132,7 +138,7 @@ export function FileHistoryTable({ files, activeFilter, onFilterChange }: FileHi
       {/* Pagination with ellipsis */}
       {totalPages > 1 && (
         <nav aria-label="pagination" className="flex items-center justify-center gap-1">
-          {getPaginationPages(page, totalPages).map((p, idx) =>
+          {getPaginationPages(currentPage, totalPages).map((p, idx) =>
             p === '...' ? (
               <span key={`ellipsis-${idx}`} className="px-2 text-sm text-muted-foreground">
                 ...
@@ -142,9 +148,9 @@ export function FileHistoryTable({ files, activeFilter, onFilterChange }: FileHi
                 key={p}
                 type="button"
                 className={`rounded px-3 py-1 text-sm ${
-                  page === p ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                  currentPage === p ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}
-                onClick={() => setPage(p as number)}
+                onClick={() => onPageChange(p as number)}
               >
                 {p}
               </button>

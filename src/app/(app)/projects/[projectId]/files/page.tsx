@@ -8,7 +8,7 @@ export default async function FileHistoryPage({
 }) {
   const { projectId } = await params
 
-  const result = await getFileHistory({ projectId, filter: 'all' })
+  const result = await getFileHistory({ projectId, filter: 'all', page: 1 })
 
   const initialFiles = result.success
     ? result.data.files.map((f) => ({
@@ -21,10 +21,16 @@ export default async function FileHistoryPage({
       }))
     : []
 
+  const initialTotalCount = result.success ? result.data.totalCount : 0
+
   return (
     <div className="p-6">
       <h1 className="mb-4 text-2xl font-bold">File History</h1>
-      <FileHistoryPageClient projectId={projectId} initialFiles={initialFiles} />
+      <FileHistoryPageClient
+        projectId={projectId}
+        initialFiles={initialFiles}
+        initialTotalCount={initialTotalCount}
+      />
     </div>
   )
 }

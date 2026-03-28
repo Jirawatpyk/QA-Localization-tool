@@ -50,7 +50,7 @@ export async function getBatchSummary(input: unknown): Promise<ActionResult<Batc
 
     const threshold = project?.autoPassThreshold ?? DEFAULT_AUTO_PASS_THRESHOLD
 
-    // Query 2: Files in batch with scores (filter L1 scores only)
+    // Query 2: Files in batch with scores (1 score row per file — UNIQUE constraint)
     const filesWithScores = await db
       .select({
         fileId: files.id,
@@ -65,14 +65,7 @@ export async function getBatchSummary(input: unknown): Promise<ActionResult<Batc
         minorCount: scores.minorCount,
       })
       .from(files)
-      .leftJoin(
-        scores,
-        and(
-          eq(scores.fileId, files.id),
-          eq(scores.layerCompleted, 'L1'),
-          withTenant(scores.tenantId, tenantId),
-        ),
-      )
+      .leftJoin(scores, and(eq(scores.fileId, files.id), withTenant(scores.tenantId, tenantId)))
       .where(
         and(
           withTenant(files.tenantId, tenantId),

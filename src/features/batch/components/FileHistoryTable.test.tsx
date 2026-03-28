@@ -68,8 +68,11 @@ const sampleRows: FileHistoryRow[] = [
 describe('FileHistoryTable', () => {
   const defaultProps = {
     files: sampleRows,
+    totalCount: sampleRows.length,
+    currentPage: 1,
     activeFilter: 'all' as FileHistoryFilter,
     onFilterChange: vi.fn(),
+    onPageChange: vi.fn(),
     projectId: 'd4e5f6a1-b2c3-4d4e-bf5a-6b7c8d9e0f1a',
   }
 
@@ -134,22 +137,23 @@ describe('FileHistoryTable', () => {
 
   it('[P3] should display empty state message when no files match filter', () => {
     // EXPECTED: When files array is empty, show a friendly empty state message
-    render(<FileHistoryTable {...defaultProps} files={[]} />)
+    render(<FileHistoryTable {...defaultProps} files={[]} totalCount={0} />)
 
     expect(screen.getByText(/No files/i)).toBeTruthy()
     // Should NOT render table rows (only a message)
     expect(screen.queryByRole('table')).toBeNull()
   })
 
-  it('[P3] should render pagination controls when files exceed FILE_HISTORY_PAGE_SIZE', () => {
-    // EXPECTED: When file count exceeds FILE_HISTORY_PAGE_SIZE (50), pagination appears
-    const manyFiles = Array.from({ length: 55 }, (_, i) =>
+  it('[P3] should render pagination controls when totalCount exceeds FILE_HISTORY_PAGE_SIZE', () => {
+    // EXPECTED: When totalCount exceeds FILE_HISTORY_PAGE_SIZE (50), pagination appears
+    // Server already paginates — component receives only 1 page of files + totalCount
+    const pageOfFiles = Array.from({ length: 50 }, (_, i) =>
       buildFileHistoryRow({
         fileId: `a1b2c3d4-e5f6-4a1b-8c2d-${String(i).padStart(12, '0')}`,
         fileName: `file-${i}.sdlxliff`,
       }),
     )
-    render(<FileHistoryTable {...defaultProps} files={manyFiles} />)
+    render(<FileHistoryTable {...defaultProps} files={pageOfFiles} totalCount={55} />)
 
     // Pagination controls should be visible
     const nav = screen.getByRole('navigation', { name: /pagination/i })
@@ -165,7 +169,9 @@ describe('FileHistoryTable', () => {
   it('[P2] should display empty state message when files array is empty with active filter', () => {
     // EXPECTED: When files is empty and a non-"all" filter is active,
     // show empty state "No files found" — no table rendered
-    render(<FileHistoryTable {...defaultProps} files={[]} activeFilter="needs_review" />)
+    render(
+      <FileHistoryTable {...defaultProps} files={[]} totalCount={0} activeFilter="needs_review" />,
+    )
 
     expect(screen.getByText(/No files/i)).toBeTruthy()
     // Table should NOT render when no files
