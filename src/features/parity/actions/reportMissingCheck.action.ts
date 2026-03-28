@@ -9,6 +9,7 @@ import { withTenant } from '@/db/helpers/withTenant'
 import { missingCheckReports } from '@/db/schema/missingCheckReports'
 import { projects } from '@/db/schema/projects'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
+import type { MissingCheckStatus } from '@/features/parity/types'
 import { reportMissingCheckSchema } from '@/features/parity/validation/paritySchemas'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
@@ -65,7 +66,7 @@ export async function reportMissingCheck(
         segmentNumber,
         expectedDescription,
         xbenchCheckType,
-        status: 'open',
+        status: 'open' as MissingCheckStatus,
         trackingReference,
         reportedBy: user.id,
       })

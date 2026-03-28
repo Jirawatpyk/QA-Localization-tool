@@ -29,22 +29,22 @@ describe('toParitySeverity', () => {
     expect(toParitySeverity(input)).toBe(expected)
   })
 
-  it('should return "minor" for null', () => {
-    expect(toParitySeverity(null)).toBe('minor')
+  it('should return "major" for null (matches parser default)', () => {
+    expect(toParitySeverity(null)).toBe('major')
   })
 
-  it('should return "minor" for undefined', () => {
-    expect(toParitySeverity(undefined)).toBe('minor')
+  it('should return "major" for undefined (matches parser default)', () => {
+    expect(toParitySeverity(undefined)).toBe('major')
   })
 
-  it('should return "minor" for empty string', () => {
-    expect(toParitySeverity('')).toBe('minor')
+  it('should return "major" for empty string (matches parser default)', () => {
+    expect(toParitySeverity('')).toBe('major')
   })
 
-  it('should return "minor" for invalid severity string', () => {
-    expect(toParitySeverity('invalid')).toBe('minor')
-    expect(toParitySeverity('HIGH')).toBe('minor')
-    expect(toParitySeverity('error')).toBe('minor')
-    expect(toParitySeverity('warning')).toBe('minor')
+  it('should return "major" for invalid severity string (matches parser default)', () => {
+    expect(toParitySeverity('invalid')).toBe('major')
+    expect(toParitySeverity('HIGH')).toBe('major')
+    expect(toParitySeverity('error')).toBe('major')
+    expect(toParitySeverity('warning')).toBe('major')
   })
 })

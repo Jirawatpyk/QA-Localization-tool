@@ -3,12 +3,12 @@ export type ParitySeverity = 'critical' | 'major' | 'minor' | 'trivial'
 
 const VALID_PARITY_SEVERITIES = new Set<ParitySeverity>(['critical', 'major', 'minor', 'trivial'])
 
-/** Coerce raw string (e.g. from Excel parser) to ParitySeverity, defaulting to 'minor'. */
+/** Coerce raw string (e.g. from Excel parser) to ParitySeverity, defaulting to 'major' (matches parser default). */
 export function toParitySeverity(value: string | undefined | null): ParitySeverity {
   const normalized = value?.toLowerCase().trim()
   return VALID_PARITY_SEVERITIES.has(normalized as ParitySeverity)
     ? (normalized as ParitySeverity)
-    : 'minor'
+    : 'major'
 }
 
 /** Raw Xbench finding from Excel — severity is raw string, coerce via toParitySeverity() before use */
@@ -36,6 +36,8 @@ export type ParityMatch = {
   xbenchFinding: XbenchFinding
   matchType: 'exact' | 'fuzzy'
 }
+
+export type MissingCheckStatus = 'open' | 'investigating' | 'resolved' | 'wont_fix'
 
 export type ParityComparisonResult = {
   toolOnly: ParityFinding[]

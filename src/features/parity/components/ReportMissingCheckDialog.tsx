@@ -47,9 +47,9 @@ export function ReportMissingCheckDialog({
   }, [open, handleClose])
 
   // TODO(TD-UX-008): Pre-fill fileReference with filename instead of UUID — requires DB query or parent prop
-  // M1: Reset form state when dialog closes; M2: Pre-fill fileReference from fileId prop
+  // M1: Reset form state when dialog opens (Guardrail #11); M2: Pre-fill fileReference from fileId prop
   useEffect(() => {
-    if (!open) {
+    if (open) {
       setFileReference(fileId ?? '')
       setSegmentNumber('')
       setDescription('')

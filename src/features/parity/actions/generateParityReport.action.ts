@@ -34,6 +34,8 @@ type ParityReportResult = {
     targetText: string
     category: string
     severity: ParitySeverity
+    fileName: string
+    segmentNumber: number
   }>
   toolFindingCount: number
   xbenchFindingCount: number
@@ -104,6 +106,7 @@ export async function generateParityReport(
 
     // Upload Xbench report to Supabase Storage for audit trail
     const storagePath = `${user.tenantId}/${projectId}/parity/report-${Date.now()}.xlsx`
+    let uploadSucceeded = false
     try {
       const supabase = createAdminClient()
       const { error: uploadError } = await supabase.storage
@@ -117,6 +120,8 @@ export async function generateParityReport(
           { err: uploadError, storagePath },
           'Non-fatal: failed to upload Xbench report to storage',
         )
+      } else {
+        uploadSucceeded = true
       }
     } catch (storageErr) {
       logger.error({ err: storageErr, storagePath }, 'Non-fatal: storage upload exception')
@@ -133,7 +138,7 @@ export async function generateParityReport(
         tenantId: user.tenantId,
         fileId: fileId ?? null,
         comparisonData: comparisonResult,
-        xbenchReportStoragePath: storagePath,
+        xbenchReportStoragePath: uploadSucceeded ? storagePath : 'upload-failed',
         toolFindingCount: relevantToolFindingCount,
         xbenchFindingCount: xbenchResult.findings.length,
         bothFoundCount: comparisonResult.matched.length,
