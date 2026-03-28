@@ -56,7 +56,7 @@ vi.mock('@/features/pipeline/actions/retryAiAnalysis.action', () => ({
 
 import type { FileReviewData } from '@/features/review/actions/getFileReviewData.action'
 import { ReviewPageClient } from '@/features/review/components/ReviewPageClient'
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, getStoreFileState } from '@/features/review/stores/review.store'
 
 // Setup matchMedia for useReducedMotion (ScoreBadge dependency)
 beforeEach(() => {
@@ -209,7 +209,7 @@ describe('ReviewPageClient — file navigation init (Story 4.5 AC3)', () => {
     )
 
     // fileA findings should be populated
-    expect(useReviewStore.getState().findingsMap.size).toBe(1)
+    expect(getStoreFileState().findingsMap.size).toBe(1)
 
     // Simulate: Link navigation to fileB — new fileId + new initialData
     const dataB = buildInitialData({
@@ -259,9 +259,9 @@ describe('ReviewPageClient — file navigation init (Story 4.5 AC3)', () => {
     rerender(<ReviewPageClient fileId="fileB" projectId="p1" tenantId="t1" initialData={dataB} />)
 
     // fileB findings MUST be populated — this is the bug regression test
-    expect(useReviewStore.getState().findingsMap.size).toBe(2)
-    expect(useReviewStore.getState().findingsMap.has('fb1')).toBe(true)
-    expect(useReviewStore.getState().findingsMap.has('fb2')).toBe(true)
+    expect(getStoreFileState().findingsMap.size).toBe(2)
+    expect(getStoreFileState().findingsMap.has('fb1')).toBe(true)
+    expect(getStoreFileState().findingsMap.has('fb2')).toBe(true)
     expect(useReviewStore.getState().currentFileId).toBe('fileB')
   })
 
@@ -295,7 +295,7 @@ describe('ReviewPageClient — file navigation init (Story 4.5 AC3)', () => {
     const { rerender } = render(
       <ReviewPageClient fileId="fileA" projectId="p1" tenantId="t1" initialData={dataA} />,
     )
-    expect(useReviewStore.getState().findingsMap.size).toBe(1)
+    expect(getStoreFileState().findingsMap.size).toBe(1)
 
     // Phase 1: RSC streaming — fileId changes but initialData is EMPTY (stale/streaming)
     const dataBEmpty = buildInitialData({
@@ -338,8 +338,8 @@ describe('ReviewPageClient — file navigation init (Story 4.5 AC3)', () => {
     )
 
     // Findings MUST be populated from the real data — not blocked by guard
-    expect(useReviewStore.getState().findingsMap.size).toBe(1)
-    expect(useReviewStore.getState().findingsMap.has('fb1')).toBe(true)
+    expect(getStoreFileState().findingsMap.size).toBe(1)
+    expect(getStoreFileState().findingsMap.has('fb1')).toBe(true)
   })
 
   it('[P1] should NOT re-init when initialData ref changes but fileId stays same (optimistic protection)', () => {
@@ -373,7 +373,7 @@ describe('ReviewPageClient — file navigation init (Story 4.5 AC3)', () => {
     )
 
     // Simulate optimistic update
-    const f = useReviewStore.getState().findingsMap.get('fa1')!
+    const f = getStoreFileState().findingsMap.get('fa1')!
     useReviewStore.getState().setFinding('fa1', { ...f, status: 'accepted' })
 
     // Simulate RSC revalidation: same fileId, new initialData reference
@@ -405,6 +405,6 @@ describe('ReviewPageClient — file navigation init (Story 4.5 AC3)', () => {
     rerender(<ReviewPageClient fileId="fileA" projectId="p1" tenantId="t1" initialData={dataA2} />)
 
     // Optimistic state MUST be preserved
-    expect(useReviewStore.getState().findingsMap.get('fa1')?.status).toBe('accepted')
+    expect(getStoreFileState().findingsMap.get('fa1')?.status).toBe('accepted')
   })
 })

@@ -7,7 +7,7 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, getStoreFileState } from '@/features/review/stores/review.store'
 import { buildFinding } from '@/test/factories'
 
 describe('useReviewStore — TA expansion', () => {
@@ -29,7 +29,7 @@ describe('useReviewStore — TA expansion', () => {
     useReviewStore.getState().setFinding('critical-1', critical)
 
     // Map insertion order is: minor → major → critical
-    const mapKeys = [...useReviewStore.getState().findingsMap.keys()]
+    const mapKeys = [...getStoreFileState().findingsMap.keys()]
     expect(mapKeys).toEqual(['minor-1', 'major-1', 'critical-1'])
 
     // setSortedFindingIds (called by FindingList) sets severity order
@@ -37,7 +37,7 @@ describe('useReviewStore — TA expansion', () => {
     useReviewStore.getState().setSortedFindingIds(severityOrder)
 
     // Store must preserve the severity order, not Map insertion order
-    expect(useReviewStore.getState().sortedFindingIds).toEqual(severityOrder)
+    expect(getStoreFileState().sortedFindingIds).toEqual(severityOrder)
   })
 
   // TA-U15: When a Realtime INSERT adds a new finding, sortedFindingIds must be
@@ -52,18 +52,18 @@ describe('useReviewStore — TA expansion', () => {
     useReviewStore.getState().setSortedFindingIds(['existing-1', 'existing-2'])
 
     // Simulate Realtime INSERT adding a new finding via setFindings (batch)
-    const newMap = new Map(useReviewStore.getState().findingsMap)
+    const newMap = new Map(getStoreFileState().findingsMap)
     const f3 = buildFinding({ id: 'new-realtime', severity: 'critical' })
     newMap.set('new-realtime', f3)
     useReviewStore.getState().setFindings(newMap)
 
     // findingsMap has 3 entries, but sortedFindingIds is stale (2 entries)
-    expect(useReviewStore.getState().findingsMap.size).toBe(3)
-    expect(useReviewStore.getState().sortedFindingIds).toEqual(['existing-1', 'existing-2'])
+    expect(getStoreFileState().findingsMap.size).toBe(3)
+    expect(getStoreFileState().sortedFindingIds).toEqual(['existing-1', 'existing-2'])
 
     // After FindingList re-renders and calls setSortedFindingIds with new order
     useReviewStore.getState().setSortedFindingIds(['new-realtime', 'existing-1', 'existing-2'])
-    expect(useReviewStore.getState().sortedFindingIds).toEqual([
+    expect(getStoreFileState().sortedFindingIds).toEqual([
       'new-realtime',
       'existing-1',
       'existing-2',
@@ -81,7 +81,7 @@ describe('useReviewStore — TA expansion', () => {
 
     useReviewStore.getState().selectRange('m1', 'n1')
 
-    const selected = useReviewStore.getState().selectedIds
+    const selected = getStoreFileState().selectedIds
     expect(selected.has('m1')).toBe(true)
     expect(selected.has('m2')).toBe(true)
     expect(selected.has('n1')).toBe(true)

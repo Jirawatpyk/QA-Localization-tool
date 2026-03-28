@@ -4,7 +4,7 @@
  */
 import { describe, expect, it, beforeEach } from 'vitest'
 
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, getStoreFileState } from '@/features/review/stores/review.store'
 import { buildFinding } from '@/test/factories'
 
 function seedFindings(statuses: string[]) {
@@ -64,7 +64,7 @@ describe('useReviewStore — Keyboard Bulk Operations (Story 4.4a)', () => {
     useReviewStore.getState().setSelectionMode('bulk')
     useReviewStore.getState().addToSelection('kbd-0')
     useReviewStore.getState().addToSelection('kbd-1')
-    expect(useReviewStore.getState().selectedIds.size).toBe(2)
+    expect(getStoreFileState().selectedIds.size).toBe(2)
 
     // Simulate Escape handler
     const state = useReviewStore.getState()
@@ -87,7 +87,7 @@ describe('useReviewStore — Keyboard Bulk Operations (Story 4.4a)', () => {
     state.clearSelection()
     state.setSelectionMode('single')
 
-    expect(useReviewStore.getState().selectionMode).toBe('single')
-    expect(useReviewStore.getState().selectedIds.size).toBe(0)
+    expect(getStoreFileState().selectionMode).toBe('single')
+    expect(getStoreFileState().selectedIds.size).toBe(0)
   })
 })

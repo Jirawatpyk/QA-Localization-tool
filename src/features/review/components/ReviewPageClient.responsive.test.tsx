@@ -95,7 +95,7 @@ vi.mock('@/hooks/useReducedMotion', () => ({
 
 import type { FileReviewData } from '@/features/review/actions/getFileReviewData.action'
 import { ReviewPageClient } from '@/features/review/components/ReviewPageClient'
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, getStoreFileState } from '@/features/review/stores/review.store'
 import { buildFinding } from '@/test/factories'
 import type { DbFileStatus } from '@/types/pipeline'
 
@@ -844,7 +844,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     })
 
     // selectedFinding should be cleared
-    expect(useReviewStore.getState().selectedId).toBeNull()
+    expect(getStoreFileState().selectedId).toBeNull()
     // Sheet should now be closed (open=false because selectedId=null)
     expect(screen.queryByTestId('mock-finding-detail-sheet')).not.toBeInTheDocument()
   })
@@ -885,7 +885,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     })
 
     // selectedFinding AND mobileDrawerOpen should be cleared
-    expect(useReviewStore.getState().selectedId).toBeNull()
+    expect(getStoreFileState().selectedId).toBeNull()
     // Sheet closed
     expect(screen.queryByTestId('mock-finding-detail-sheet')).not.toBeInTheDocument()
     // Toggle button also hidden (selectedId is null)
@@ -924,7 +924,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     })
 
     // selectedFinding should remain
-    expect(useReviewStore.getState().selectedId).toBe('find1')
+    expect(getStoreFileState().selectedId).toBe('find1')
     // Sheet still open
     expect(screen.getByTestId('mock-finding-detail-sheet')).toBeInTheDocument()
   })
@@ -954,7 +954,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
 
     // Verify aside is showing the content
     expect(screen.getByRole('complementary')).toBeInTheDocument()
-    expect(useReviewStore.getState().selectedId).toBe('find1')
+    expect(getStoreFileState().selectedId).toBe('find1')
 
     // Switch to laptop
     mockUseIsDesktop.mockReturnValue(false)
@@ -967,7 +967,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     )
 
     // selectedId should persist in store
-    expect(useReviewStore.getState().selectedId).toBe('find1')
+    expect(getStoreFileState().selectedId).toBe('find1')
 
     // Sheet should auto-open with the selected finding (laptop: sheetOpen = selectedId !== null)
     const lastCall = findingDetailSheetProps.mock.calls.at(-1)?.[0]

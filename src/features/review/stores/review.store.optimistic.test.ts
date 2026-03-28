@@ -3,7 +3,7 @@
  */
 import { describe, expect, it, beforeEach } from 'vitest'
 
-import { useReviewStore } from '@/features/review/stores/review.store'
+import { useReviewStore, getStoreFileState } from '@/features/review/stores/review.store'
 import { buildFinding } from '@/test/factories'
 
 describe('useReviewStore — Bulk Optimistic Updates (Story 4.4a)', () => {
@@ -20,7 +20,7 @@ describe('useReviewStore — Bulk Optimistic Updates (Story 4.4a)', () => {
 
     // Simulate optimistic bulk accept
     for (const id of ids) {
-      const f = useReviewStore.getState().findingsMap.get(id)
+      const f = getStoreFileState().findingsMap.get(id)
       if (f) {
         useReviewStore
           .getState()
@@ -30,7 +30,7 @@ describe('useReviewStore — Bulk Optimistic Updates (Story 4.4a)', () => {
 
     // Verify all updated
     for (const id of ids) {
-      expect(useReviewStore.getState().findingsMap.get(id)?.status).toBe('accepted')
+      expect(getStoreFileState().findingsMap.get(id)?.status).toBe('accepted')
     }
   })
 
@@ -46,14 +46,14 @@ describe('useReviewStore — Bulk Optimistic Updates (Story 4.4a)', () => {
 
     // Optimistic update
     for (const id of ids) {
-      const f = useReviewStore.getState().findingsMap.get(id)
+      const f = getStoreFileState().findingsMap.get(id)
       if (f) {
         useReviewStore.getState().setFinding(id, { ...f, status: 'accepted' })
       }
     }
 
     // Verify optimistic state
-    expect(useReviewStore.getState().findingsMap.get('rb-1')?.status).toBe('accepted')
+    expect(getStoreFileState().findingsMap.get('rb-1')?.status).toBe('accepted')
 
     // Rollback from snapshots
     for (const [id, snap] of snapshots) {
@@ -62,7 +62,7 @@ describe('useReviewStore — Bulk Optimistic Updates (Story 4.4a)', () => {
 
     // Verify rollback
     for (const id of ids) {
-      expect(useReviewStore.getState().findingsMap.get(id)?.status).toBe('pending')
+      expect(getStoreFileState().findingsMap.get(id)?.status).toBe('pending')
     }
   })
 
@@ -74,15 +74,15 @@ describe('useReviewStore — Bulk Optimistic Updates (Story 4.4a)', () => {
 
     // Optimistic update with client timestamp
     const clientTime = new Date().toISOString()
-    const f = useReviewStore.getState().findingsMap.get(id)!
+    const f = getStoreFileState().findingsMap.get(id)!
     useReviewStore.getState().setFinding(id, { ...f, status: 'accepted', updatedAt: clientTime })
 
     // Server responds with its own timestamp
     const serverTime = '2026-03-15T12:00:00.000Z'
-    const current = useReviewStore.getState().findingsMap.get(id)!
+    const current = getStoreFileState().findingsMap.get(id)!
     useReviewStore.getState().setFinding(id, { ...current, updatedAt: serverTime })
 
-    expect(useReviewStore.getState().findingsMap.get(id)?.updatedAt).toBe(serverTime)
+    expect(getStoreFileState().findingsMap.get(id)?.updatedAt).toBe(serverTime)
   })
 
   it('[P1] should clear selection after successful bulk operation', () => {
@@ -90,14 +90,14 @@ describe('useReviewStore — Bulk Optimistic Updates (Story 4.4a)', () => {
     useReviewStore.getState().setSelectionMode('bulk')
     useReviewStore.getState().addToSelection('sel-1')
     useReviewStore.getState().addToSelection('sel-2')
-    expect(useReviewStore.getState().selectedIds.size).toBe(2)
+    expect(getStoreFileState().selectedIds.size).toBe(2)
 
     // Simulate successful bulk — clear selection
     useReviewStore.getState().clearSelection()
     useReviewStore.getState().setSelectionMode('single')
 
-    expect(useReviewStore.getState().selectedIds.size).toBe(0)
-    expect(useReviewStore.getState().selectionMode).toBe('single')
+    expect(getStoreFileState().selectedIds.size).toBe(0)
+    expect(getStoreFileState().selectionMode).toBe('single')
   })
 
   it('[P1] should keep selection intact on bulk failure for retry', () => {
@@ -108,8 +108,8 @@ describe('useReviewStore — Bulk Optimistic Updates (Story 4.4a)', () => {
 
     // Simulate failure — do NOT clear selection
     // (test verifies selection survives)
-    expect(useReviewStore.getState().selectedIds.size).toBe(2)
-    expect(useReviewStore.getState().selectedIds.has('keep-1')).toBe(true)
-    expect(useReviewStore.getState().selectedIds.has('keep-2')).toBe(true)
+    expect(getStoreFileState().selectedIds.size).toBe(2)
+    expect(getStoreFileState().selectedIds.has('keep-1')).toBe(true)
+    expect(getStoreFileState().selectedIds.has('keep-2')).toBe(true)
   })
 })

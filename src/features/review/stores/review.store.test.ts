@@ -5,7 +5,12 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 
-import { useReviewStore, selectCanUndo, selectCanRedo } from '@/features/review/stores/review.store'
+import {
+  useReviewStore,
+  selectCanUndo,
+  selectCanRedo,
+  getStoreFileState,
+} from '@/features/review/stores/review.store'
 import type { UndoEntry } from '@/features/review/stores/review.store'
 import { buildFinding } from '@/test/factories'
 
@@ -48,20 +53,20 @@ describe('useReviewStore', () => {
   it('should add finding to findingsMap via setFinding', () => {
     const finding = buildFinding({ id: 'f1' })
     useReviewStore.getState().setFinding('f1', finding)
-    expect(useReviewStore.getState().findingsMap.get('f1')).toEqual(finding)
+    expect(getStoreFileState().findingsMap.get('f1')).toEqual(finding)
   })
 
   it('should remove finding from findingsMap via removeFinding', () => {
     useReviewStore.getState().setFinding('f1', buildFinding({ id: 'f1' }))
     useReviewStore.getState().removeFinding('f1')
-    expect(useReviewStore.getState().findingsMap.has('f1')).toBe(false)
+    expect(getStoreFileState().findingsMap.has('f1')).toBe(false)
   })
 
   it('should update filterState via setFilter', () => {
     useReviewStore.getState().setFilter('severity', 'major')
     useReviewStore.getState().setFilter('layer', 'L1')
-    expect(useReviewStore.getState().filterState.severity).toBe('major')
-    expect(useReviewStore.getState().filterState.layer).toBe('L1')
+    expect(getStoreFileState().filterState.severity).toBe('major')
+    expect(getStoreFileState().filterState.layer).toBe('L1')
   })
 
   // ── P0: Score Slice ──
@@ -85,13 +90,13 @@ describe('useReviewStore', () => {
 
   it('should add id to selectedIds via toggleSelection', () => {
     useReviewStore.getState().toggleSelection('f1')
-    expect(useReviewStore.getState().selectedIds.has('f1')).toBe(true)
+    expect(getStoreFileState().selectedIds.has('f1')).toBe(true)
   })
 
   it('should remove id from selectedIds when already selected', () => {
     useReviewStore.getState().toggleSelection('f1')
     useReviewStore.getState().toggleSelection('f1')
-    expect(useReviewStore.getState().selectedIds.has('f1')).toBe(false)
+    expect(getStoreFileState().selectedIds.has('f1')).toBe(false)
   })
 
   // ── P0: File Reset ──
@@ -120,13 +125,13 @@ describe('useReviewStore', () => {
 
   it('should update selectedId via setSelectedFinding', () => {
     useReviewStore.getState().setSelectedFinding('f1')
-    expect(useReviewStore.getState().selectedId).toBe('f1')
+    expect(getStoreFileState().selectedId).toBe('f1')
   })
 
   it('should toggle selectionMode between single and bulk', () => {
-    expect(useReviewStore.getState().selectionMode).toBe('single')
+    expect(getStoreFileState().selectionMode).toBe('single')
     useReviewStore.getState().setSelectionMode('bulk')
-    expect(useReviewStore.getState().selectionMode).toBe('bulk')
+    expect(getStoreFileState().selectionMode).toBe('bulk')
   })
 
   it('should clear selectedIds when switching from bulk to single mode', () => {
@@ -134,30 +139,30 @@ describe('useReviewStore', () => {
     useReviewStore.getState().toggleSelection('f1')
     useReviewStore.getState().toggleSelection('f2')
     useReviewStore.getState().setSelectionMode('single')
-    expect(useReviewStore.getState().selectedIds.size).toBe(0)
+    expect(getStoreFileState().selectedIds.size).toBe(0)
   })
 
   // ── P1-BV: Boundary Values ──
 
   it('should reset findingsMap with exactly 1 finding to empty', () => {
     useReviewStore.getState().setFinding('f1', buildFinding({ id: 'f1' }))
-    expect(useReviewStore.getState().findingsMap.size).toBe(1)
+    expect(getStoreFileState().findingsMap.size).toBe(1)
 
     useReviewStore.getState().resetForFile('new-file')
-    expect(useReviewStore.getState().findingsMap.size).toBe(0)
+    expect(getStoreFileState().findingsMap.size).toBe(0)
   })
 
   it('should reset non-null score back to null', () => {
     useReviewStore.getState().updateScore(92, 'calculated')
-    expect(useReviewStore.getState().currentScore).toBe(92)
+    expect(getStoreFileState().currentScore).toBe(92)
 
     useReviewStore.getState().resetForFile('new-file')
-    expect(useReviewStore.getState().currentScore).toBeNull()
+    expect(getStoreFileState().currentScore).toBeNull()
   })
 
   it('should handle updateScore with score=100 (0 contributing findings)', () => {
     useReviewStore.getState().updateScore(100, 'calculated')
-    expect(useReviewStore.getState().currentScore).toBe(100)
+    expect(getStoreFileState().currentScore).toBe(100)
   })
 
   // ── P1: Batch Setters ──
@@ -214,10 +219,10 @@ describe('useReviewStore', () => {
   // F4 [P1]: explicit null clears layerCompleted (vs undefined which preserves)
   it('[P1] should clear layerCompleted when updateScore called with explicit null', () => {
     useReviewStore.getState().updateScore(85, 'calculated', 'L1L2')
-    expect(useReviewStore.getState().layerCompleted).toBe('L1L2')
+    expect(getStoreFileState().layerCompleted).toBe('L1L2')
 
     useReviewStore.getState().updateScore(90, 'calculated', null)
-    expect(useReviewStore.getState().layerCompleted).toBeNull()
+    expect(getStoreFileState().layerCompleted).toBeNull()
   })
 
   // F1 [P2]: setFinding overwrites existing finding with same key
@@ -227,8 +232,8 @@ describe('useReviewStore', () => {
     useReviewStore.getState().setFinding('f1', original)
     useReviewStore.getState().setFinding('f1', updated)
 
-    expect(useReviewStore.getState().findingsMap.size).toBe(1)
-    expect(useReviewStore.getState().findingsMap.get('f1')).toEqual(updated)
+    expect(getStoreFileState().findingsMap.size).toBe(1)
+    expect(getStoreFileState().findingsMap.get('f1')).toEqual(updated)
   })
 
   // F2 [P2]: removeFinding on non-existent ID is safe no-op
@@ -236,18 +241,18 @@ describe('useReviewStore', () => {
     useReviewStore.getState().setFinding('f1', buildFinding({ id: 'f1' }))
     useReviewStore.getState().removeFinding('non-existent')
 
-    expect(useReviewStore.getState().findingsMap.size).toBe(1)
-    expect(useReviewStore.getState().findingsMap.has('f1')).toBe(true)
+    expect(getStoreFileState().findingsMap.size).toBe(1)
+    expect(getStoreFileState().findingsMap.has('f1')).toBe(true)
   })
 
   // F3 [P2]: clearSelection empties selectedIds
   it('[P2] should empty selectedIds via clearSelection', () => {
     useReviewStore.getState().toggleSelection('f1')
     useReviewStore.getState().toggleSelection('f2')
-    expect(useReviewStore.getState().selectedIds.size).toBe(2)
+    expect(getStoreFileState().selectedIds.size).toBe(2)
 
     useReviewStore.getState().clearSelection()
-    expect(useReviewStore.getState().selectedIds.size).toBe(0)
+    expect(getStoreFileState().selectedIds.size).toBe(0)
   })
 
   // F5 [P2]: single→single doesn't clear selectedIds
@@ -255,28 +260,28 @@ describe('useReviewStore', () => {
     useReviewStore.getState().toggleSelection('f1')
     useReviewStore.getState().setSelectionMode('single')
 
-    expect(useReviewStore.getState().selectedIds.has('f1')).toBe(true)
+    expect(getStoreFileState().selectedIds.has('f1')).toBe(true)
   })
 
   it('[P2] should preserve existing layerCompleted when updateScore called without layerCompleted arg', () => {
     // Set layerCompleted via 3-arg call
     useReviewStore.getState().updateScore(85, 'calculated', 'L1L2')
-    expect(useReviewStore.getState().layerCompleted).toBe('L1L2')
+    expect(getStoreFileState().layerCompleted).toBe('L1L2')
 
     // Update score without layerCompleted (2-arg call) — should NOT clear existing
     useReviewStore.getState().updateScore(90, 'calculated')
-    expect(useReviewStore.getState().currentScore).toBe(90)
-    expect(useReviewStore.getState().layerCompleted).toBe('L1L2')
+    expect(getStoreFileState().currentScore).toBe(90)
+    expect(getStoreFileState().layerCompleted).toBe('L1L2')
   })
 
   // B10 [P2]: setFindings with empty Map clears all findings
   it('[P2] should clear all findings when setFindings called with empty Map', () => {
     useReviewStore.getState().setFinding('f1', buildFinding({ id: 'f1' }))
     useReviewStore.getState().setFinding('f2', buildFinding({ id: 'f2' }))
-    expect(useReviewStore.getState().findingsMap.size).toBe(2)
+    expect(getStoreFileState().findingsMap.size).toBe(2)
 
     useReviewStore.getState().setFindings(new Map())
-    expect(useReviewStore.getState().findingsMap.size).toBe(0)
+    expect(getStoreFileState().findingsMap.size).toBe(0)
   })
 
   // ── Story 3.2c AC6: layerCompleted tracking ──
@@ -297,11 +302,11 @@ describe('useReviewStore', () => {
   it('[P1] should reset layerCompleted to null via resetForFile()', () => {
     // Set layerCompleted first
     useReviewStore.getState().updateScore(90, 'calculated', 'L1L2L3')
-    expect(useReviewStore.getState().layerCompleted).toBe('L1L2L3')
+    expect(getStoreFileState().layerCompleted).toBe('L1L2L3')
 
     // Reset should clear it
     useReviewStore.getState().resetForFile('new-file')
-    expect(useReviewStore.getState().layerCompleted).toBeNull()
+    expect(getStoreFileState().layerCompleted).toBeNull()
   })
 
   // ══════════════════════════════════════════════════════════════
@@ -317,7 +322,7 @@ describe('useReviewStore', () => {
     useReviewStore.getState().pushUndo(e1)
     useReviewStore.getState().pushUndo(e2)
     useReviewStore.getState().pushUndo(e3)
-    expect(useReviewStore.getState().undoStack).toHaveLength(3)
+    expect(getStoreFileState().undoStack).toHaveLength(3)
     const popped = useReviewStore.getState().popUndo()
     expect(popped?.id).toBe('e3')
     const popped2 = useReviewStore.getState().popUndo()
@@ -330,7 +335,7 @@ describe('useReviewStore', () => {
     for (let i = 0; i < 21; i++) {
       useReviewStore.getState().pushUndo(buildUndoEntry({ id: `e-${i}` }))
     }
-    const stack = useReviewStore.getState().undoStack
+    const stack = getStoreFileState().undoStack
     expect(stack).toHaveLength(20)
     // Oldest (e-0) should be dropped
     expect(stack[0]!.id).toBe('e-1')
@@ -351,7 +356,7 @@ describe('useReviewStore', () => {
     useReviewStore.getState().pushUndo(entry)
     const popped = useReviewStore.getState().popUndo()
     expect(popped?.id).toBe('only')
-    expect(useReviewStore.getState().undoStack).toHaveLength(0)
+    expect(getStoreFileState().undoStack).toHaveLength(0)
     expect(selectCanUndo(useReviewStore.getState())).toBe(false)
   })
 
@@ -360,12 +365,12 @@ describe('useReviewStore', () => {
   it('should clear undo and redo stacks on resetForFile (U-05)', () => {
     useReviewStore.getState().pushUndo(buildUndoEntry())
     useReviewStore.getState().pushRedo(buildUndoEntry())
-    expect(useReviewStore.getState().undoStack).toHaveLength(1)
-    expect(useReviewStore.getState().redoStack).toHaveLength(1)
+    expect(getStoreFileState().undoStack).toHaveLength(1)
+    expect(getStoreFileState().redoStack).toHaveLength(1)
     useReviewStore.getState().resetForFile('new-file')
-    expect(useReviewStore.getState().undoStack).toHaveLength(0)
-    expect(useReviewStore.getState().redoStack).toHaveLength(0)
-    expect(useReviewStore.getState().undoFindingIndex.size).toBe(0)
+    expect(getStoreFileState().undoStack).toHaveLength(0)
+    expect(getStoreFileState().redoStack).toHaveLength(0)
+    expect(getStoreFileState().undoFindingIndex.size).toBe(0)
   })
 
   // ── P0: AC6 — Redo clears on new action (U-06) ──
@@ -373,9 +378,9 @@ describe('useReviewStore', () => {
   it('should clear redo stack when pushUndo is called (U-06)', () => {
     useReviewStore.getState().pushRedo(buildUndoEntry())
     useReviewStore.getState().pushRedo(buildUndoEntry())
-    expect(useReviewStore.getState().redoStack).toHaveLength(2)
+    expect(getStoreFileState().redoStack).toHaveLength(2)
     useReviewStore.getState().pushUndo(buildUndoEntry())
-    expect(useReviewStore.getState().redoStack).toHaveLength(0)
+    expect(getStoreFileState().redoStack).toHaveLength(0)
   })
 
   // ── P0: AC7 — Mark stale single (U-07) ──
@@ -385,7 +390,7 @@ describe('useReviewStore', () => {
     const entry = buildUndoEntry({ findingId: fId })
     useReviewStore.getState().pushUndo(entry)
     useReviewStore.getState().markEntryStale(fId)
-    const stack = useReviewStore.getState().undoStack
+    const stack = getStoreFileState().undoStack
     expect(stack[0]!.staleFindings.has(fId)).toBe(true)
   })
 
@@ -412,7 +417,7 @@ describe('useReviewStore', () => {
     })
     useReviewStore.getState().pushUndo(entry)
     useReviewStore.getState().markEntryStale(f2)
-    const stack = useReviewStore.getState().undoStack
+    const stack = getStoreFileState().undoStack
     expect(stack[0]!.staleFindings.has(f2)).toBe(true)
     expect(stack[0]!.staleFindings.has(f1)).toBe(false)
     expect(stack[0]!.staleFindings.has(f3)).toBe(false)
@@ -433,10 +438,10 @@ describe('useReviewStore', () => {
 
     useReviewStore.getState().removeEntriesForFinding(targetId)
 
-    expect(useReviewStore.getState().undoStack).toHaveLength(1)
-    expect(useReviewStore.getState().undoStack[0]!.id).toBe('e2')
-    expect(useReviewStore.getState().redoStack).toHaveLength(1)
-    expect(useReviewStore.getState().redoStack[0]!.id).toBe('r2')
+    expect(getStoreFileState().undoStack).toHaveLength(1)
+    expect(getStoreFileState().undoStack[0]!.id).toBe('e2')
+    expect(getStoreFileState().redoStack).toHaveLength(1)
+    expect(getStoreFileState().redoStack[0]!.id).toBe('r2')
   })
 
   // ── P1: AC6 — Selectors (U-10) ──
