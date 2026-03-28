@@ -1194,6 +1194,24 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** Regex-based redirect validation (reject //, \, #, non-path chars) has no test. Should verify: `//evil.com`, `/\evil.com`, `///evil.com`, `/#fragment`, `/dashboard` (valid). Route handler needs integration-style test or extracted validator function with unit tests.
 - **Status:** RESOLVED (2026-03-26 — extracted validateRedirectPath() + 12 test cases covering open redirect attacks)
 
+### TD-AUTH-003: process.env used directly in proxy.ts
+- **Date:** 2026-03-28
+- **Severity:** Low
+- **Story:** Auth cross-file review
+- **Phase:** CR
+- **Files:** `src/proxy.ts`
+- **Description:** `process.env.NEXT_PUBLIC_SUPABASE_URL` and `process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY` used directly instead of via `@/lib/env`. Proxy runs before app init so env.ts Proxy may not be ready. Needs investigation whether env.ts can be initialized earlier or if proxy must stay with raw process.env.
+- **Status:** ACCEPTED — proxy runs before env.ts init; raw process.env required at this layer
+
+### TD-AUTH-004: AuthListener tenantId may be stale after role change
+- **Date:** 2026-03-28
+- **Severity:** Medium
+- **Story:** Auth cross-file review
+- **Phase:** CR
+- **Files:** `src/features/admin/components/AuthListener.tsx`, `src/features/admin/hooks/useRoleSync.ts`
+- **Description:** `tenantId` extracted from JWT in AuthListener is passed to `useRoleSync()` but may become stale after role/tenant changes. Requires refactoring useRoleSync callback flow to re-extract tenantId from refreshed session token.
+- **Status:** DEFERRED → Epic 6 (requires useRoleSync callback refactor)
+
 ### TD-UX-007: ReportMissingCheckDialog missing focus trap
 - **Date:** 2026-03-28
 - **Severity:** Medium

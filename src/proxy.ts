@@ -61,7 +61,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Create Supabase server client with cookie handling
-  // NOTE: process.env used directly — proxy runs before app init; env.ts Proxy may not be ready.
+  // TODO(TD-AUTH-003): process.env used directly — proxy runs before env.ts init
   const supabase = _createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

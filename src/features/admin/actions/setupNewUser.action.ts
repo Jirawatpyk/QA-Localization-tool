@@ -160,9 +160,12 @@ export async function setupNewUser(): Promise<ActionResult<SetupResult>> {
         .from(userRoles)
         .where(eq(userRoles.userId, user.id))
         .limit(1)
+      if (!role) {
+        return { success: false, code: 'INTERNAL_ERROR', error: 'Failed to setup user account' }
+      }
       return {
         success: true,
-        data: { tenantId: role?.tenantId ?? '', role: role?.role ?? 'admin' },
+        data: { tenantId: role.tenantId, role: role.role },
       }
     }
     // Log the real error server-side, return generic message to client (avoid leaking DB details)

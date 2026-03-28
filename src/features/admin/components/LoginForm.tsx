@@ -50,7 +50,11 @@ export function LoginForm() {
       // Ensure app data exists — handles edge case where a previous signup
       // created the auth user but setupNewUser() failed (DB error / migration).
       // Idempotent: returns early if user already has proper data.
-      await setupNewUser()
+      const result = await setupNewUser()
+      if (!result.success) {
+        toast.error(result.error ?? 'Account setup failed')
+        return
+      }
       // Refresh session to get updated JWT claims (tenant_id + role from hook)
       await supabase.auth.refreshSession()
 
