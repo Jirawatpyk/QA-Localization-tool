@@ -141,7 +141,7 @@ describe('createMapping', () => {
     )
   })
 
-  it('should call revalidateTag("taxonomy")', async () => {
+  it('should call revalidateTag("taxonomy", "minutes")', async () => {
     const { createMapping } = await import('./createMapping.action')
     await createMapping(validInput)
 

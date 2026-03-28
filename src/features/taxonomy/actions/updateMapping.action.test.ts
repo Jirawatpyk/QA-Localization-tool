@@ -140,7 +140,7 @@ describe('updateMapping', () => {
     )
   })
 
-  it('should call revalidateTag("taxonomy")', async () => {
+  it('should call revalidateTag("taxonomy", "minutes")', async () => {
     const { updateMapping } = await import('./updateMapping.action')
     await updateMapping(MAPPING_ID, { category: 'Fluency' })
 

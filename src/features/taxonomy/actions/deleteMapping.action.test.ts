@@ -149,7 +149,7 @@ describe('deleteMapping', () => {
     )
   })
 
-  it('should call revalidateTag("taxonomy")', async () => {
+  it('should call revalidateTag("taxonomy", "minutes")', async () => {
     const { deleteMapping } = await import('./deleteMapping.action')
     await deleteMapping(MAPPING_ID)
 
