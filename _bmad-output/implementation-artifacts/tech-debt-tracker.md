@@ -1210,7 +1210,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Phase:** CR
 - **Files:** `src/features/admin/components/AuthListener.tsx`, `src/features/admin/hooks/useRoleSync.ts`
 - **Description:** `tenantId` extracted from JWT in AuthListener is passed to `useRoleSync()` but may become stale after role/tenant changes. Requires refactoring useRoleSync callback flow to re-extract tenantId from refreshed session token.
-- **Status:** DEFERRED → Epic 6 (requires useRoleSync callback refactor)
+- **Status:** RESOLVED (2026-03-28) — Added `onSessionRefreshed` callback to useRoleSync; AuthListener passes `updateTenantFromSession` to re-extract tenantId from refreshed JWT immediately after role change
 
 ### TD-UX-007: ReportMissingCheckDialog missing focus trap
 - **Date:** 2026-03-28

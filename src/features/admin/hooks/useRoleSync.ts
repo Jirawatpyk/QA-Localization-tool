@@ -13,7 +13,11 @@ const POLL_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes fallback
  * On role change: refreshes session to get new JWT claims.
  * Fallback: polls every 5 minutes.
  */
-export function useRoleSync(userId: string | undefined, tenantId: string | undefined) {
+export function useRoleSync(
+  userId: string | undefined,
+  tenantId: string | undefined,
+  onSessionRefreshed?: (accessToken: string) => void,
+) {
   const router = useRouter()
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -43,8 +47,11 @@ export function useRoleSync(userId: string | undefined, tenantId: string | undef
           const newRole = (payload.new as { role?: string }).role
           toast.info(`Your role has been updated to ${newRole}`)
 
-          // Refresh session to get new JWT claims
-          await supabase.auth.refreshSession()
+          // Refresh session to get new JWT claims + notify parent to re-extract tenantId
+          const { data } = await supabase.auth.refreshSession()
+          if (data.session?.access_token && onSessionRefreshed) {
+            onSessionRefreshed(data.session.access_token)
+          }
           router.refresh()
         },
       )
@@ -52,12 +59,15 @@ export function useRoleSync(userId: string | undefined, tenantId: string | undef
 
     // Fallback: poll every 5 minutes
     pollRef.current = setInterval(async () => {
-      await supabase.auth.refreshSession()
+      const { data } = await supabase.auth.refreshSession()
+      if (data.session?.access_token && onSessionRefreshed) {
+        onSessionRefreshed(data.session.access_token)
+      }
     }, POLL_INTERVAL_MS)
 
     return () => {
       supabase.removeChannel(channel)
       if (pollRef.current) clearInterval(pollRef.current)
     }
-  }, [userId, tenantId, router])
+  }, [userId, tenantId, router, onSessionRefreshed])
 }

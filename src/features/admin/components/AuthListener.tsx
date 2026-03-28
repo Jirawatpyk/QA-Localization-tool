@@ -81,9 +81,9 @@ export function AuthListener() {
     return () => subscription.unsubscribe()
   }, [router, updateTenantFromSession])
 
-  // Role sync via Realtime + fallback polling (tenantId for defense-in-depth filtering)
-  // TODO(TD-AUTH-004): tenantId from JWT may be stale after role change — needs useRoleSync callback refactor to re-extract from refreshed session
-  useRoleSync(userId, tenantId)
+  // Role sync via Realtime + fallback polling
+  // TD-AUTH-004 RESOLVED: onSessionRefreshed callback re-extracts tenantId from refreshed JWT
+  useRoleSync(userId, tenantId, updateTenantFromSession)
 
   // Idle timeout (30 minutes)
   useIdleTimeout()
