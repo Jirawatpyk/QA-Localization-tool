@@ -125,6 +125,10 @@ vi.mock('@/features/review/stores/review.store', () => ({
     filterState: {},
     searchQuery: '',
     aiSuggestionsEnabled: true,
+    // CR-C4 fix: TD-ARCH-002 reads from FileState Map, must include suppression fields
+    activeSuppressions: [],
+    rejectionTracker: new Map(),
+    detectedPattern: null,
   })),
 }))
 

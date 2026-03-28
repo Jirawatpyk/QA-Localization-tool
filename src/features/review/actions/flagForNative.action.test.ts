@@ -316,4 +316,36 @@ describe('flagForNative', () => {
     const longResult = await flagForNative({ ...validInput, flaggerComment: 'a'.repeat(501) })
     expect(longResult.success).toBe(false)
   })
+
+  // ── CR-H9: segment lookup branch (Step 3a) ──
+
+  it('should resolve targetLang from segment when finding has segmentId', async () => {
+    dbState.returnValues = [
+      [{ status: 'pending', fileId: FILE_ID, segmentId: 'seg-1' }], // 0: SELECT finding (with segmentId)
+      [{ value: 0 }], // 1: COUNT assignments
+      [{ targetLang: 'th' }], // 2: SELECT segment targetLang (Step 3a)
+      [{ id: NATIVE_REVIEWER_ID, displayName: 'Native', nativeLanguages: ['th'] }], // 3: SELECT reviewer
+      [], // 4: UPDATE finding (tx)
+      [{ id: 'new-assignment-id' }], // 5: INSERT assignment (tx)
+      [], // 6: INSERT review_action (tx)
+    ]
+
+    const result = await flagForNative(validInput)
+
+    // Action succeeds — segment query resolved targetLang correctly
+    expect(result.success).toBe(true)
+  })
+
+  it('should return NOT_FOUND when finding does not exist', async () => {
+    dbState.returnValues = [
+      [], // 0: SELECT finding — empty
+    ]
+
+    const result = await flagForNative(validInput)
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('NOT_FOUND')
+    }
+  })
 })

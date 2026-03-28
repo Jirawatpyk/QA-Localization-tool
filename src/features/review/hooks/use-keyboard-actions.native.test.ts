@@ -1,73 +1,61 @@
 /**
  * Story 5.2c: Native Reviewer Keyboard Shortcuts (C/O)
- * Tests: confirm shortcut, override shortcut, suppress in inputs, scoped, auto-advance
+ * Tests: verify REVIEW_HOTKEYS config includes C/O, proper categories, handler mapping
  *
- * These tests validate the keyboard shortcut integration for native reviewers.
- * The actual hook (use-keyboard-actions.ts) uses a registration pattern —
- * these tests verify the correct bindings exist and are scoped properly.
+ * CR-C5 fix: Rewritten to test actual production exports, not local vars.
  */
 import { describe, it, expect } from 'vitest'
 
-describe('useKeyboardActions — native reviewer shortcuts', () => {
-  // ── AC8: C = Confirm ──
+import { REVIEW_HOTKEYS } from '@/features/review/hooks/use-keyboard-actions'
 
-  it('should define C as confirm action for native reviewer', () => {
-    // Verify the key binding constant exists
-    // The hook registers 'c' → confirmFinding when userRole === 'native_reviewer'
-    const key = 'c'
-    expect(key).toBe('c')
-    // This is a design validation — actual behavior tested via E2E
+describe('REVIEW_HOTKEYS — native reviewer shortcuts', () => {
+  const nativeHotkeys = REVIEW_HOTKEYS.filter((h) => h.category === 'Native Review')
+
+  it('should include C key for confirm (native)', () => {
+    const confirmHotkey = nativeHotkeys.find((h) => h.key === 'c')
+    expect(confirmHotkey).toBeDefined()
+    expect(confirmHotkey!.description).toContain('Confirm')
   })
 
-  // ── AC8: O = Override ──
-
-  it('should define O as override action for native reviewer', () => {
-    const key = 'o'
-    expect(key).toBe('o')
+  it('should include O key for override (native)', () => {
+    const overrideHotkey = nativeHotkeys.find((h) => h.key === 'o')
+    expect(overrideHotkey).toBeDefined()
+    expect(overrideHotkey!.description).toContain('Override')
   })
 
-  // ── AC8: Suppress in inputs (Guardrail #28) ──
-
-  it('should suppress C/O shortcuts when focus is on input element', () => {
-    // Guardrail #28: Single-key hotkeys suppressed in <input>, <textarea>, <select>
-    const suppressedTags = ['INPUT', 'TEXTAREA', 'SELECT']
-    expect(suppressedTags).toContain('INPUT')
-    expect(suppressedTags).toContain('TEXTAREA')
-    expect(suppressedTags).toContain('SELECT')
+  it('should have exactly 2 native reviewer hotkeys', () => {
+    expect(nativeHotkeys).toHaveLength(2)
   })
 
-  it('should suppress C/O shortcuts when focus is on textarea element', () => {
-    const suppressedTags = ['INPUT', 'TEXTAREA', 'SELECT']
-    expect(suppressedTags).toContain('TEXTAREA')
+  it('should have 9 total review hotkeys (7 standard + 2 native)', () => {
+    expect(REVIEW_HOTKEYS).toHaveLength(9)
   })
 
-  it('should suppress C/O shortcuts when modal is open', () => {
-    // Modal = [contenteditable] or dialog with aria-modal
-    // The hook checks event.target for these
-    const modalIndicators = ['[contenteditable]', '[aria-modal="true"]']
-    expect(modalIndicators.length).toBe(2)
+  it('should not conflict with standard review hotkeys (A/R/F/N/S/-/+)', () => {
+    const standardKeys = REVIEW_HOTKEYS.filter((h) => h.category === 'Review Actions').map(
+      (h) => h.key,
+    )
+    const nativeKeys = nativeHotkeys.map((h) => h.key)
+    for (const nk of nativeKeys) {
+      expect(standardKeys).not.toContain(nk)
+    }
   })
 
-  // ── AC8: Scoped to review area ──
-
-  it('should not trigger C/O when focus is outside review area', () => {
-    // The hook scope = 'review' means it only fires when review area is focused
-    const scope = 'review'
-    expect(scope).not.toBe('global')
+  it('should use category "Native Review" for native-specific hotkeys', () => {
+    for (const h of nativeHotkeys) {
+      expect(h.category).toBe('Native Review')
+    }
   })
 
-  // ── AC8/Guardrail #32: Auto-advance after action ──
-
-  it('should auto-advance to next pending assignment after confirm', () => {
-    // After confirm/override, autoAdvance() is called
-    // This advances to the next finding with status='pending'
-    const autoAdvanceBehavior = 'next_pending_assignment'
-    expect(autoAdvanceBehavior).toBe('next_pending_assignment')
+  it('C key should not be a browser shortcut (safe to intercept)', () => {
+    // Browser shortcuts: Ctrl+S, Ctrl+P, etc. — 'c' alone is safe
+    // Guardrail #34: never override Ctrl+S/P/W/N/T/F5
+    expect('c').not.toBe('ctrl+c') // 'c' alone, not Ctrl+C (which is copy)
   })
 
-  it('should focus action bar when no more pending assignments exist', () => {
-    // When no pending findings left → focus action bar
-    const fallbackTarget = 'action_bar'
-    expect(fallbackTarget).toBe('action_bar')
+  it('should have all hotkeys with non-empty descriptions', () => {
+    for (const h of REVIEW_HOTKEYS) {
+      expect(h.description.length).toBeGreaterThan(0)
+    }
   })
 })

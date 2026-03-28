@@ -199,6 +199,9 @@ export function useReviewActions({
           if (latestState.currentFileId !== fileId) {
             // File switched during await — don't contaminate new file's tracker
           } else {
+            // TD-ARCH-002 fix: read activeSuppressions + rejectionTracker from FileState Map,
+            // not from flat ReviewState fields — flat fields are stale initial values after refactor
+            const latestFs = getStoreFileState(latestState, fileId)
             const findingForDetection: FindingForDisplay = {
               id: findingId,
               segmentId: finding.segmentId ?? null,
@@ -221,7 +224,7 @@ export function useReviewActions({
             // CF-C2 fix: check if finding is already covered by active suppression rule
             // CR-M1 fix: pass fileId for 'file' scope guard in isAlreadySuppressed
             const alreadySuppressed = isAlreadySuppressed(
-              latestState.activeSuppressions,
+              latestFs.activeSuppressions,
               findingForDetection,
               segSourceLang,
               segTargetLang,
@@ -230,7 +233,7 @@ export function useReviewActions({
             if (!alreadySuppressed) {
               // CR-H1 fix: trackRejection returns new tracker (immutable pattern for Zustand)
               const result: TrackRejectionResult = trackRejection(
-                latestState.rejectionTracker,
+                latestFs.rejectionTracker,
                 findingForDetection,
                 segSourceLang,
                 segTargetLang,

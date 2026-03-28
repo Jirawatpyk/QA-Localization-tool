@@ -119,4 +119,16 @@ describe('startNativeReview', () => {
       }),
     )
   })
+
+  // CR-M7b: NOT_FOUND path
+  it('should return NOT_FOUND when assignment does not exist', async () => {
+    dbState.returnValues = [[]] // empty result
+
+    const result = await startNativeReview(ASSIGNMENT_ID)
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('NOT_FOUND')
+    }
+  })
 })

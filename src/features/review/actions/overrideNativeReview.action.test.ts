@@ -90,6 +90,7 @@ const FILE_ID = '22222222-2222-4222-8222-222222222222'
 const PROJECT_ID = '33333333-3333-4333-8333-333333333333'
 const ASSIGNMENT_ID = '55555555-5555-4555-8555-555555555555'
 const FLAGGER_USER_ID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
+const QA_USER_ID = 'b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e'
 
 const validInput = {
   findingId: FINDING_ID,
@@ -197,5 +198,66 @@ describe('overrideNativeReview', () => {
     expect(meta?.native_verified).toBe(true)
     expect(meta?.native_override).toBe(true)
     expect(meta?.native_override_to).toBe('rejected')
+  })
+
+  // CR-M7: audit log assertion
+  it('should write audit log with assignment_overridden action', async () => {
+    setupSuccessState()
+
+    await overrideNativeReview(validInput)
+
+    expect(mockWriteAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityType: 'finding_assignment',
+        action: 'assignment_overridden',
+      }),
+    )
+  })
+
+  // CR-M4: INVALID_STATE for already-completed assignments
+  it('should reject when assignment status is confirmed', async () => {
+    dbState.returnValues = [
+      [{ id: ASSIGNMENT_ID, status: 'confirmed', fileId: FILE_ID, assignedBy: QA_USER_ID }], // 0
+      [
+        {
+          segmentId: null,
+          severity: 'major',
+          category: 'Accuracy',
+          detectedByLayer: 'L2',
+          sourceTextExcerpt: null,
+          targetTextExcerpt: null,
+        },
+      ], // 1
+    ]
+
+    const result = await overrideNativeReview(validInput)
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('INVALID_STATE')
+    }
+  })
+
+  it('should reject when assignment status is overridden', async () => {
+    dbState.returnValues = [
+      [{ id: ASSIGNMENT_ID, status: 'overridden', fileId: FILE_ID, assignedBy: QA_USER_ID }], // 0
+      [
+        {
+          segmentId: null,
+          severity: 'major',
+          category: 'Accuracy',
+          detectedByLayer: 'L2',
+          sourceTextExcerpt: null,
+          targetTextExcerpt: null,
+        },
+      ], // 1
+    ]
+
+    const result = await overrideNativeReview(validInput)
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('INVALID_STATE')
+    }
   })
 })

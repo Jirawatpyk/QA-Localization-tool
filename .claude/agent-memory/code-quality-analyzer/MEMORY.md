@@ -26,7 +26,12 @@
 - `story-3-3-findings.md` — Story 3.3 AI Layer 3 Deep Contextual Analysis CR R1 (0C/3H/5M/5L)
 - `story-3-4-findings.md` — Story 3.4 AI Resilience Fallback & Retry CR R1-R2 (R2: 0C/1H/3M/5L)
 - `story-3-5-findings.md` — Story 3.5 Score Lifecycle & Confidence Display CR R1 (0C/3H/7M/5L)
+- `story-5-2c-findings.md` — Story 5.2c Native Reviewer Workflow CR R1-R2 (R2: 0C/4H/5M/5L)
+- `story-5-2c-findings.md` — Story 5.2c Native Reviewer Workflow CR R1 (1C/5H/7M/5L)
+- `story-5-2b-findings.md` — Story 5.2b Schema + RLS Scoped Access CR R1 (0C/3H/5M/4L)
+- `story-epic5-prep-cr-r2-findings.md` — Epic 5 Prep Full CR R2: Review/Parser/Upload (0C/5H/8M)
 - `story-4-8-findings.md` — Story 4.8 Accessibility Integration & Verification CR R1 (0C/3H/5M/5L)
+- `story-5-2a-findings.md` — Story 5.2a Non-Native Auto-Tag CR R1 (0C/4H/5S)
 - `epic3-test-design-findings.md` — Epic 3 Test Design CR (0C/3H/5M/7L)
 - `story-4-2-findings.md` — Story 4.2 Core Review Actions CR R1-R2 (R2: 0C/3H/5M/5L)
 - `story-4-1d-findings.md` — Story 4.1d Responsive Layout CR R1-R2 (R2: 0C/3H/5M/5L)
@@ -42,6 +47,10 @@
 - `story-4-5-findings.md` — Story 4.5 Search, Filter & AI Layer Toggle CR R1-R2 (R2: 0C/3H/5M/5L)
 - `story-td-arch-001-findings.md` — TD-ARCH-001 File-Scoped Store Refactor CR R1 (0C/4H/5M/8L)
 - `story-4-6-findings.md` — Story 4.6 Suppress False Positive Patterns CR R1 (1C/4H/5M/5L)
+- `pipeline-atomicity-sprint-findings.md` — Pipeline Atomicity Sprint CR (0C/2H/3M/4S) 2026-03-26
+- `scoring-system-r2-findings.md` — Scoring System CR R2 (1C/4H/0M/4S) 2026-03-26
+- `epic5-adversarial-cr-findings.md` — Epic 5 Adversarial Fix Areas CR (0C/5H/8M) 2026-03-26
+- `story-5-1-findings.md` — Story 5.1 Language Bridge Back-Translation CR R1 (0C/4H/6M/0L)
 
 ## Recurring Anti-Patterns (check EVERY review)
 
@@ -244,6 +253,22 @@
 - Fix: add filter to `.on()` config, AND/OR filter in handler callback
 - **Check during review:** Every Supabase Realtime `.on()` should have row-level `filter` unless intentionally table-wide
 
+### 43. Fail-Open Detection: String Match on Self-Thrown Error (Pipeline Sprint)
+
+- `rateLimitErr.message.includes('queue full')` matches the Error we throw ourselves — accidentally works but fragile
+- If Redis throws an error containing matching string, it would be re-thrown instead of fail-open
+- Fix: use sentinel class `class RateLimitExceededError extends Error {}` and `instanceof` check
+- Affected: runL2ForFile.ts:140-145, runL3ForFile.ts:136-141
+- **Check during review:** String matching on error.message to classify self-thrown vs external errors → replace with instanceof sentinel class
+
+### 44. Mutable Array Outside Transaction Callback (Pipeline Sprint)
+
+- `const l3DuplicateIds: string[] = []` declared BEFORE `db.transaction(async (tx) => {}`
+- Array mutated with `.push()` inside transaction callback
+- If transaction retries, array contains stale IDs from previous attempt
+- Fix: move `const arr: string[] = []` INSIDE the transaction callback (scoped to single attempt)
+- **Check during review:** Any `const arr = []` or `const map = new Map()` declared outside db.transaction() but populated inside = stale state on retry
+
 ### 39. Missing onDragCancel in @dnd-kit DndContext (Story 3.2b7)
 
 > NOTE: Anti-patterns 38+ near end of file may be truncated from system prompt (200-line limit).
@@ -277,6 +302,14 @@
 - Flush re-adds deleted finding from stale buffer
 - Fix: track `deletedIds: Set<string>` in buffer; filter before flush
 - **Check during review:** Any deferred batch (queueMicrotask/setTimeout/requestAnimationFrame) that coexists with sync handlers on same data must coordinate deletions
+
+### 45. Drizzle Schema unique() ≠ DB Constraint Until Migration Applied (Scoring CR R2)
+
+- Adding `unique('name').on(col1, col2)` to Drizzle schema does NOT create DB constraint automatically
+- `onConflictDoUpdate({ target: [col1, col2] })` fails silently at runtime — PG has no constraint to match
+- ALSO: `db:generate` must be run AFTER schema change to produce migration SQL
+- Fix flow: schema change → `npm run db:generate` → verify generated SQL has `ADD CONSTRAINT` → `npm run db:migrate`
+- **Check during review:** When schema adds unique/index → verify matching migration file exists in src/db/migrations/
 
 ### 42. Post-Commit Side Effects Without try-catch (Story 4.2 R2)
 
@@ -316,11 +349,11 @@
 - STILL OPEN after R4: getFileHistory fetch-all (tech debt, 10K cap mitigated)
 - → All security findings (Issues 1-7) verified RESOLVED on 2026-02-25
 
-## Missing DB Constraints (accumulated — last verified 2026-02-26)
+## Missing DB Constraints (accumulated — last verified 2026-03-26)
 
 - ✅ RESOLVED: UNIQUE on segments(file_id, segment_number) — added to Drizzle schema + migration 0007 applied
 - ✅ RESOLVED: Composite index `idx_files_tenant_project(tenant_id, project_id)` added in TD Sprint — note: column order (tenant, project) may not be optimal for project-first queries
-- ℹ️ BY DESIGN: scores.fileId is nullable (project-level aggregates) — UNIQUE not appropriate
+- ⚠️ OPEN (Scoring CR R2 C1): uq_scores_file_tenant — added to Drizzle schema but NO migration SQL generated/applied. onConflictDoUpdate is dead code until migration runs. `npm run db:generate` + `npm run db:migrate` required.
 - ✅ RESOLVED: idx_findings_file_layer — added to Drizzle schema + migration 0007 applied
 - ⚠️ OPEN: segmentId NOT persisted to DB (Stories 2.2-2.3, design decision needed)
 - → Tracked in: `_bmad-output/implementation-artifacts/tech-debt-tracker.md`

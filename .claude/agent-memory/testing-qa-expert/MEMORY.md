@@ -70,7 +70,17 @@ after keyboard simulation is VACUOUS. DnD logic must be extracted to pure functi
 unit-testable (e.g., `computeNewOrder(mappings, activeId, overId)`). Optimistic revert CAN be
 tested without DnD: call the `onReorder` prop callback directly with test data, bypassing DnD.
 
+### TD-ARCH-002 Store Refactor — Test Impact Pattern (2026-03-29)
+
+After TD-ARCH-002 refactor, `useReviewStore` stores all file-scoped state in `fileStates: Map<string, FileState>`.
+Tests that read `useReviewStore.getState().currentScore` / `.scoreStatus` / `.isRecalculating` / `.findingsMap` / `.selectedIds` / `.layerCompleted` DIRECTLY from the top-level store object will FAIL — those flat fields no longer receive writes.
+Correct pattern: use `getStoreFileState().currentScore` etc. (reads from the active fileState).
+Story 5.2c introduced changes to `review.store.ts` that broke 8 existing tests in `review.store.test.ts`.
+Watch for this whenever `review.store.ts` is modified.
+
 ### Story CR Review History (most recent first)
+
+- **5.2c R1** → (inline in MEMORY) — 1C · 3H · 7M · 5L (75 Story 5.2c tests GREEN; 8 regression tests FAILING in review.store.test.ts; C1: flat field reads broken by TD-ARCH-002 store refactor; H1: segment lookup branch (Step 3a) never exercised — segmentId always null/undefined in mocks; H2: use-keyboard-actions.native.test.ts has 8 vacuous constant assertions, never imports production hook; H3: in_review assignment confirm path untested; M1-M7: flagForNative NOT_FOUND, tx rollback, null preFlaggedState, override INVALID_STATE, override audit log never asserted, addFindingComment admin bypass, startNativeReview NOT_FOUND; L1-L5: redundant matrix coverage, ordering on mock, BV 9-char missing, metadata fields partial, hardcoded UUIDs)
 
 - **4.3 R1** → `story-4-3-cr-round1.md` — 0C · 2H · 6M · 5L (106 unit+component tests green, 11 E2E skip-guarded, 0 skipped; H1: BV1 test title says "null accepted" but body never tests null — `updateNoteTextSchema` has `min(1)` so null IS rejected, test name misleading + missing assertion; H2: U-AF1 never asserts `result.data.findingId` — production returns inserted row's ID but test doesn't verify propagation; M1: U-D1 claims "in transaction" but no transaction call assertion; M2: U-O3 reset+same-severity edge case boundary untested; M3: U-AF3 validation error message not verified, only code; M4: handleNote hook test checks announce but not that noteFinding action was called; M5: `toBeDefined()` on `getAttribute('data-disabled')` is vacuous — null passes toBeDefined; M6: E2E focus ring test uses class name string match + programmatic focus doesn't trigger :focus-visible; L1: findCapturedValues helper duplicated across action tests; L2: AddFindingDialog cannot test full submit in jsdom (Radix Select); L3: U-O6 duplicates U-O1 setup; L4: signupOrLogin called in every serial E2E test; L5: U-D4 Inngest event newState:'manual' for deleted finding — semantically confusing)
 

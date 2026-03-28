@@ -76,6 +76,7 @@ vi.mock('@/lib/logger', () => ({
 
 import { addFindingComment } from '@/features/review/actions/addFindingComment.action'
 
+const TENANT_ID = 'c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f'
 const NATIVE_USER_ID = '44444444-4444-4444-8444-444444444444'
 const FLAGGER_USER_ID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
 const FINDING_ID = '11111111-1111-4111-8111-111111111111'
@@ -179,6 +180,27 @@ describe('addFindingComment', () => {
       [{ id: 'cid', createdAt }],
     ]
     dbState.throwAtCallIndex = 2 // notification insert fails
+
+    const result = await addFindingComment(validInput)
+
+    expect(result.success).toBe(true)
+  })
+
+  // CR-M6: admin role bypasses ownership check
+  it('should allow admin to comment regardless of assignment ownership', async () => {
+    const adminUserId = '99999999-9999-4999-8999-999999999999'
+    mockRequireRole.mockResolvedValueOnce({
+      id: adminUserId,
+      tenantId: asTenantId(TENANT_ID),
+      role: 'admin',
+      nativeLanguages: [],
+    } as Awaited<ReturnType<typeof import('@/lib/auth/requireRole').requireRole>>)
+    const createdAt = new Date()
+    dbState.returnValues = [
+      // Assignment exists but admin is NOT assignedTo or assignedBy
+      [{ id: ASSIGNMENT_ID, assignedTo: NATIVE_USER_ID, assignedBy: FLAGGER_USER_ID }],
+      [{ id: 'cid-admin', createdAt }],
+    ]
 
     const result = await addFindingComment(validInput)
 

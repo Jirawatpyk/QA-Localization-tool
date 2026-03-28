@@ -187,7 +187,16 @@
       "Bash(sed 's/.*it\\(//')",
       "Bash(sed \"s/['''',].*$//\")",
       "Bash(jq:*)",
-      "Bash(grep -rn \"^[[:space:]]*//[[:space:]]*TODO[^\\(]\" src/ --include=\"*.ts\" --include=\"*.tsx\")"
+      "Bash(grep -rn \"^[[:space:]]*//[[:space:]]*TODO[^\\(]\" src/ --include=\"*.ts\" --include=\"*.tsx\")",
+      "Bash(find /c/Users/Jiraw/OneDrive/Documents/qa-localization-tool/src -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))",
+      "Bash(node -e \"const fs=require\\(''fs''\\);fs.writeFileSync\\(''/tmp/check-cloud.js'',\"\"const p=require\\(''postgres''\\);const s=p\\(process.env.DATABASE_URL\\);s\\\\\\\\`SELECT constraint_name FROM information_schema.table_constraints WHERE table_name=''scores'' AND constraint_type=''UNIQUE''\\\\\\\\`.then\\(r=>{console.log\\(''Cloud:'',JSON.stringify\\(r\\)\\);return s.end\\(\\)}\\)\"\"\\)\")",
+      "Bash(mkdir -p \"C:/Users/Jiraw/OneDrive/Documents/qa-localization-tool/src/features/bridge/helpers\")",
+      "Bash(mkdir -p \"C:/Users/Jiraw/OneDrive/Documents/qa-localization-tool/src/features/bridge/actions\")",
+      "Bash(mkdir -p \"C:/Users/Jiraw/OneDrive/Documents/qa-localization-tool/src/features/bridge/components\")",
+      "Bash(mkdir -p \"C:/Users/Jiraw/OneDrive/Documents/qa-localization-tool/src/features/bridge/hooks\")",
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@127.0.0.1:54322/postgres\" node scripts/apply-migration.mjs)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@127.0.0.1:54322/postgres\" npx drizzle-kit migrate)",
+      "Bash(do sed:*)"
     ]
   },
   "enabledPlugins": {

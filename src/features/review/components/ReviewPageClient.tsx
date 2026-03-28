@@ -805,9 +805,15 @@ export function ReviewPageClient({
             const groupKey = `${patternRef.category}::${patternRef.sourceLang}::${patternRef.targetLang}`
             // CF-C1 fix: read live tracker from store, not stale closure ref
             // CR-H1 fix: resetPatternCounter returns new Map (immutable pattern for Zustand)
-            const liveTracker = useReviewStore.getState().rejectionTracker
-            const newTracker = resetPatternCounter(liveTracker, groupKey, patternRef.patternName)
-            useReviewStore.getState().setRejectionTracker(newTracker)
+            // TD-ARCH-002 fix: read rejectionTracker from FileState Map (flat field is stale)
+            const liveState = useReviewStore.getState()
+            const liveFs = getStoreFileState(liveState, fileId)
+            const newTracker = resetPatternCounter(
+              liveFs.rejectionTracker,
+              groupKey,
+              patternRef.patternName,
+            )
+            liveState.setRejectionTracker(newTracker)
           },
         },
       },

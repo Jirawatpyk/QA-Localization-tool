@@ -262,6 +262,7 @@ test.describe('Non-Native Auto-Tag (Story 5.2a)', () => {
   test('[P1][AC5] Override history shows "(non-native)" label for non-native action', async ({
     page,
   }) => {
+    // TD-UX-009 resolved: OverrideHistoryPanel wired in FindingDetailContent
     test.setTimeout(90_000)
     // Zone 3 static aside requires desktop viewport (>= 1440px per useIsDesktop hook)
     await page.setViewportSize({ width: 1440, height: 900 })

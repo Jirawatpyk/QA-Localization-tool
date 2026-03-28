@@ -1,4 +1,7 @@
 {
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
   "hooks": {
     "PostToolUse": [
       {
@@ -27,7 +30,6 @@
     "code-review@claude-plugins-official": true,
     "claude-md-management@claude-plugins-official": true,
     "plugin-dev@claude-plugins-official": true,
-    "atomic-agents@claude-plugins-official": true,
-    "brightdata-plugin@claude-plugins-official": true
+    "atomic-agents@claude-plugins-official": true
   }
 }

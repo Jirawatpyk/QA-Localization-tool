@@ -1,6 +1,6 @@
 # Inngest Function Validator — Memory
 
-## Codebase State (as of Story 3.4, 2026-03-07)
+## Codebase State (as of 2026-03-26 — post-Epic 4 helper changes)
 
 ### Inngest Infrastructure
 
@@ -11,15 +11,23 @@
 
 ### Registered Functions (Stories 2.6–3.4)
 
-| Export Name           | Function ID              | Trigger Event                  | Concurrency                                   |
-| --------------------- | ------------------------ | ------------------------------ | --------------------------------------------- |
-| `processFilePipeline` | `process-file-pipeline`  | `pipeline.process-file`        | `[{ key: 'event.data.projectId', limit: 1 }]` |
-| `processBatch`        | `process-batch-pipeline` | `pipeline.batch-started`       | none (fan-out only)                           |
-| `batchComplete`       | `batch-complete`         | `pipeline.batch-completed`     | none (retries: 3, onFailure: onFailureFn)     |
-| `recalculateScore`    | `recalculate-score`      | `finding.changed`              | `[{ key: 'event.data.projectId', limit: 1 }]` |
-| `retryFailedLayers`   | `retry-failed-layers`    | `pipeline.retry-failed-layers` | `[{ key: 'event.data.projectId', limit: 1 }]` |
+| Export Name           | Function ID               | Trigger Event                  | Concurrency                                                                        |
+| --------------------- | ------------------------- | ------------------------------ | ---------------------------------------------------------------------------------- |
+| `processFilePipeline` | `process-file-pipeline`   | `pipeline.process-file`        | `[{ key: 'event.data.projectId', limit: 1 }]`                                      |
+| `processBatch`        | `process-batch-pipeline`  | `pipeline.batch-started`       | none (fan-out only)                                                                |
+| `batchComplete`       | `batch-complete-analysis` | `pipeline.batch-completed`     | `[{ key: 'event.data.projectId', limit: 1 }]` (retries: 3, onFailure: onFailureFn) |
+| `recalculateScore`    | `recalculate-score`       | `finding.changed`              | `[{ key: 'event.data.projectId', limit: 1 }]`                                      |
+| `retryFailedLayers`   | `retry-failed-layers`     | `pipeline.retry-failed-layers` | `[{ key: 'event.data.projectId', limit: 1 }]`                                      |
 
 All registered in `src/app/api/inngest/route.ts`.
+
+**Epic 5 addition (Story 5.1 — 2026-03-27):**
+
+| Export Name    | Function ID      | Trigger           | Concurrency               |
+| -------------- | ---------------- | ----------------- | ------------------------- |
+| `cleanBTCache` | `clean-bt-cache` | `cron: 0 3 * * *` | none (cron, no projectId) |
+
+`cleanBTCache` is a cron-triggered function — no concurrency key needed (no projectId in trigger).
 
 ### Event Names (confirmed dot-notation)
 
@@ -151,5 +159,62 @@ event: {
 ### Server Actions (NOT callable from Inngest)
 
 - `src/features/pipeline/actions/startProcessing.action.ts` — 'use server' + 'server-only', sends `pipeline.batch-started`
+
+### Changes in 2026-03-26 Helper Scan
+
+**L1 runL1ForFile.ts — status UPDATE moved into transaction:**
+
+- DELETE + INSERT + status UPDATE now in single Drizzle `db.transaction()` call
+- Fixes TD-AI-005: crash between findings INSERT and status UPDATE no longer possible
+- CAS guard unchanged (at top, outside transaction)
+
+**L2 runL2ForFile.ts — rate limiter fail-open added:**
+
+- `aiL2ProjectLimiter.limit(projectId)` added as Step 2a before budget guard
+- Fail-open pattern: Redis infra error → log.warn + continue. Queue full → rethrow (retriable).
+- Detection uses string matching `includes('queue full')` on self-thrown Error — fragile but functional
+- classifyAIError returns 'unknown' for this plain Error (no .status=429) → but 'unknown' is still retriable in handleAIError so Inngest retry works correctly
+- Rate-limit error from this block bubbles to outer catch → rethrow → Inngest retry (correct)
+- HIGH finding logged: recommend custom error class instead of string matching
+
+**L3 runL3ForFile.ts — 2 transactions merged into 1:**
+
+- DELETE + INSERT + status UPDATE + confirm/contradict L2 now in single transaction
+- Fixes TD-PIPE-002: crash between old tx1 (findings+status) and tx2 (confirm/contradict) caused permanent inconsistency
+- Early-return path (filteredSegments.length===0) still has bare db.update() outside step.run context
+- MEDIUM finding: if step fails after this bare db.update, CAS retry gets NonRetriableError
+
+**batchComplete.ts — step IDs confirmed:**
+
+- Step IDs `'resolve-batch-files'` and `'cross-file-consistency'` are static (no batchId suffix)
+- MEDIUM finding: inconsistent with project convention. Low risk due to projectId concurrency.
+
+**Known open findings (2026-03-26):**
+
+- 🟠 HIGH: Rate limiter error detection by string match — use custom error class
+- 🟡 MEDIUM: L3 early-return bare db.update — make idempotent with l3_completed check
+- 🟡 MEDIUM: batchComplete static step IDs — add batchId suffix
+- 🟡 MEDIUM: retryFailedLayers merged reset+AI step (justified, Rule 7 letter)
+- 🔵 INFO: ratelimit.ts uses Redis.fromEnv() (process.env) not @/lib/env
+
+**Known open findings (2026-03-27 — cleanBTCache scan, VERIFIED against actual code):**
+
+- 🟠 HIGH: onFailureFn signature `{ error: Error }` — Inngest v3 onFailure actual payload is `{ event: FailureEventPayload; error: Error }`. `event` param is missing; should add for type correctness and future use (runId, etc.)
+- 🟠 HIGH: `Object.assign` does NOT expose `fnConfig` — other functions (recalculateScore.ts) expose `fnConfig` for unit test config verification. cleanBTCache only exposes `handler` + `onFailure`, missing `fnConfig`.
+- 🟡 MEDIUM: No zero-result log path — `deletedCount === 0` and `deletedCount > 0` both use same log statement; should distinguish for operational observability.
+- 🔵 INFO: btCache.ts uses `server-only` — safe in Inngest (Node.js), worth documenting in cleanBTCache.ts.
+- 🔵 INFO: deleteExpiredBTCache has no withTenant() — by design (global TTL cleanup, documented in btCache.ts lines 161-168). Add inline comment inside function body for future reviewer clarity.
+
+**cleanBTCache onFailure pattern — CONFIRMED CORRECT (memory corrected 2026-03-27):**
+
+- PREVIOUS MEMORY WAS WRONG: actual code (line 29-31) is log-only, no throw. onFailureFn correctly does `logger.error(...)` only — no NonRetriableError thrown. Memory from pre-implementation scan was anticipatory, not verified against actual code.
+- Contrast with step.run() where NonRetriableError IS correct (stops retries for that step).
+
+**Cron function design notes:**
+
+- Cron functions have no `event.data` → no concurrency key needed (omitting concurrency is CORRECT)
+- handlerFn type annotation inlines `{ step: { run: ... } }` instead of using `InngestFunction` type — acceptable for simple cron functions
+- btCache helper uses `server-only` import — safe because Inngest runs in Node.js, not Edge
+- cleanBTCache registered as 6th function in route.ts functions array (after retryFailedLayers)
 
 See `patterns.md` for detailed Inngest pipeline orchestration notes.
