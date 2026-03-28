@@ -71,7 +71,6 @@ vi.mock('drizzle-orm', () => ({
   and: vi.fn((...args: unknown[]) => args),
   eq: vi.fn((...args: unknown[]) => args),
   inArray: vi.fn((...args: unknown[]) => args),
-  isNull: vi.fn((...args: unknown[]) => args),
 }))
 
 vi.mock('@/db/schema/files', () => ({
@@ -134,7 +133,7 @@ describe('startProcessing', () => {
         status: 'parsed',
       },
     ]
-    dbState.returnValues = [validFiles, [], []]
+    dbState.returnValues = [validFiles, [], [], []]
 
     const { startProcessing } = await import('./startProcessing.action')
     await startProcessing({
@@ -165,7 +164,7 @@ describe('startProcessing', () => {
         status: 'parsed',
       },
     ]
-    dbState.returnValues = [validFiles, [], []]
+    dbState.returnValues = [validFiles, [], [], []]
 
     const { startProcessing } = await import('./startProcessing.action')
     const result = await startProcessing({
@@ -189,7 +188,7 @@ describe('startProcessing', () => {
         status: 'parsed',
       },
     ]
-    dbState.returnValues = [validFiles, [], []]
+    dbState.returnValues = [validFiles, [], [], []]
 
     const { startProcessing } = await import('./startProcessing.action')
     await startProcessing({
@@ -275,7 +274,7 @@ describe('startProcessing', () => {
         status: 'parsed',
       },
     ]
-    dbState.returnValues = [validFiles, [], []]
+    dbState.returnValues = [validFiles, [], [], []]
 
     const { startProcessing } = await import('./startProcessing.action')
     const result = await startProcessing({
@@ -323,7 +322,7 @@ describe('startProcessing', () => {
         status: 'parsed',
       },
     ]
-    dbState.returnValues = [validFiles, [], []]
+    dbState.returnValues = [validFiles, [], [], []]
 
     const { startProcessing } = await import('./startProcessing.action')
     await startProcessing({
@@ -333,10 +332,11 @@ describe('startProcessing', () => {
     })
 
     // DB should be updated with processing_mode:
-    //   slot 0 — file validation SELECT (.then terminal)
-    //   slot 1 — projects UPDATE for processingMode (.then terminal)
-    //   slot 2 — files UPDATE for batchId (.then terminal)
-    expect(dbState.callIndex).toBe(3)
+    //   slot 0 — file validation SELECT
+    //   slot 1 — projects UPDATE for processingMode
+    //   slot 2 — INSERT uploadBatches
+    //   slot 3 — files UPDATE for batchId
+    expect(dbState.callIndex).toBe(4)
     // L3: Verify .set() was called with the correct processingMode value (not hardcoded)
     expect(dbState.setCaptures).toContainEqual({ processingMode: 'thorough' })
   })
@@ -404,7 +404,7 @@ describe('startProcessing', () => {
         status: 'parsed',
       },
     ]
-    dbState.returnValues = [validFiles, [], []]
+    dbState.returnValues = [validFiles, [], [], []]
     mockInngestSend.mockRejectedValue(new Error('Inngest service unavailable'))
 
     const { startProcessing } = await import('./startProcessing.action')
@@ -428,7 +428,7 @@ describe('startProcessing', () => {
         status: 'parsed',
       },
     ]
-    dbState.returnValues = [validFiles, [], []]
+    dbState.returnValues = [validFiles, [], [], []]
 
     const { startProcessing } = await import('./startProcessing.action')
     await startProcessing({
@@ -461,7 +461,7 @@ describe('startProcessing', () => {
         status: 'parsed',
       },
     ]
-    dbState.returnValues = [validFiles, [], []]
+    dbState.returnValues = [validFiles, [], [], []]
 
     const { startProcessing } = await import('./startProcessing.action')
     await startProcessing({
@@ -508,7 +508,7 @@ describe('startProcessing', () => {
         status: 'parsed',
       },
     ]
-    dbState.returnValues = [validFiles, [], []]
+    dbState.returnValues = [validFiles, [], [], []]
 
     const { startProcessing } = await import('./startProcessing.action')
     const result = await startProcessing({
@@ -570,7 +570,7 @@ describe('startProcessing', () => {
         status: 'parsed',
       },
     ]
-    dbState.returnValues = [validFiles, [], []]
+    dbState.returnValues = [validFiles, [], [], []]
 
     const { startProcessing } = await import('./startProcessing.action')
     const result = await startProcessing({
@@ -612,7 +612,7 @@ describe('startProcessing', () => {
         status: 'parsed',
       },
     ]
-    dbState.returnValues = [validFiles, [], []]
+    dbState.returnValues = [validFiles, [], [], []]
 
     const { startProcessing } = await import('./startProcessing.action')
     await startProcessing({
@@ -636,7 +636,7 @@ describe('startProcessing', () => {
         status: 'parsed',
       },
     ]
-    dbState.returnValues = [validFiles, [], []]
+    dbState.returnValues = [validFiles, [], [], []]
 
     const { startProcessing } = await import('./startProcessing.action')
     const result = await startProcessing({
@@ -687,7 +687,7 @@ describe('startProcessing', () => {
         status: 'parsed',
       },
     ]
-    dbState.returnValues = [validFiles, [], []]
+    dbState.returnValues = [validFiles, [], [], []]
 
     const { startProcessing } = await import('./startProcessing.action')
     const result = await startProcessing({
@@ -735,7 +735,7 @@ describe('startProcessing', () => {
       return `a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c${hex}`
     })
     const validFiles = hundredIds.map((id) => ({ id, status: 'parsed' }))
-    dbState.returnValues = [validFiles, [], []]
+    dbState.returnValues = [validFiles, [], [], []]
 
     const { startProcessing } = await import('./startProcessing.action')
     const result = await startProcessing({
@@ -781,7 +781,7 @@ describe('startProcessing', () => {
         status: 'parsed',
       },
     ]
-    dbState.returnValues = [validFiles, [], []]
+    dbState.returnValues = [validFiles, [], [], []]
 
     const { startProcessing } = await import('./startProcessing.action')
     const result = await startProcessing({
