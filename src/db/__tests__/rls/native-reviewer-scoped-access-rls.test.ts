@@ -37,6 +37,7 @@ let tenantB: TestTenant & {
 let qaUser: { id: string; jwt: string }
 let nativeUser: { id: string; jwt: string }
 let assignmentId: string
+let seededReviewActionId: string // M2: seeded in beforeAll for SELECT test independence
 
 beforeAll(async () => {
   // --- Tenant A (admin) ---
@@ -280,6 +281,22 @@ beforeAll(async () => {
     .select('id')
     .single()
 
+  // M2: Seed review_action in beforeAll for SELECT test independence (no cross-test dependency)
+  const { data: seededRA } = await admin
+    .from('review_actions')
+    .insert({
+      finding_id: findingAssigned!.id,
+      file_id: file!.id,
+      project_id: project!.id,
+      tenant_id: a.id,
+      user_id: nativeAuth!.user!.id,
+      action_type: 'status_change',
+      previous_state: 'pending',
+      new_state: 'noted',
+    })
+    .select('id')
+    .single()
+
   // Store references
   tenantA = {
     ...a,
@@ -299,6 +316,7 @@ beforeAll(async () => {
   qaUser = { id: qaAuth!.user!.id, jwt: qaSession!.session!.access_token }
   nativeUser = { id: nativeAuth!.user!.id, jwt: nativeSession!.session!.access_token }
   assignmentId = assignment!.id
+  seededReviewActionId = seededRA!.id
 }, 90_000)
 
 afterAll(async () => {
@@ -465,10 +483,9 @@ describe('review_actions — native reviewer scoped access', () => {
     expect(error).toBeTruthy()
   })
 
-  // H3: review_actions SELECT native — policy coverage
+  // H3: review_actions SELECT native — policy coverage (M2: uses seeded data from beforeAll)
   it('should allow native_reviewer to SELECT review_actions on assigned finding', async () => {
     // review_actions_select_native policy: EXISTS on finding_assignments
-    // Previous test inserted a review_action on assigned finding — should be visible
     const clientNative = tenantClient(nativeUser.jwt)
     const { data } = await clientNative
       .from('review_actions')
@@ -476,6 +493,7 @@ describe('review_actions — native reviewer scoped access', () => {
       .eq('finding_id', tenantA.findingAssignedId)
 
     expect(data!.length).toBeGreaterThanOrEqual(1)
+    expect(data!.some((r) => r.id === seededReviewActionId)).toBe(true)
   })
 
   it('should deny native_reviewer SELECT review_actions on non-assigned finding', async () => {

@@ -263,7 +263,8 @@ CREATE POLICY "finding_assignments_update_admin_qa" ON finding_assignments
   );
 
 -- Native reviewer: UPDATE own assignments (WITH CHECK prevents reassignment + status escalation)
--- CR R1 H5: restrict writable status values — native cannot self-assign 'overridden' (QA-only)
+-- CR R1 H5: whitelist non-destructive transitions only — 'overridden' is QA-only
+-- Source of truth: ASSIGNMENT_STATUSES in src/types/assignment.ts — if adding new status, update this list
 CREATE POLICY "finding_assignments_update_native" ON finding_assignments
   FOR UPDATE TO authenticated
   USING (

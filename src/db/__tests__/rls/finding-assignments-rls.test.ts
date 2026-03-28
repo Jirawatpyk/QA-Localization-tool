@@ -371,19 +371,22 @@ describe('finding_assignments RLS', () => {
 
   it('should allow native_reviewer to UPDATE own assignment status', async () => {
     // H4: positive case — native CAN update status (core workflow for Story 5.2c)
+    // M3: try/finally ensures status restore even on assertion failure
     const clientNative = tenantClient(nativeUser.jwt)
-    const { data, error } = await clientNative
-      .from('finding_assignments')
-      .update({ status: 'in_review' })
-      .eq('id', assignmentId)
-      .select('id, status')
+    try {
+      const { data, error } = await clientNative
+        .from('finding_assignments')
+        .update({ status: 'in_review' })
+        .eq('id', assignmentId)
+        .select('id, status')
 
-    expect(error).toBeNull()
-    expect(data).toHaveLength(1)
-    expect(data?.[0]?.status).toBe('in_review')
-
-    // Restore status for subsequent tests
-    await admin.from('finding_assignments').update({ status: 'pending' }).eq('id', assignmentId)
+      expect(error).toBeNull()
+      expect(data).toHaveLength(1)
+      expect(data?.[0]?.status).toBe('in_review')
+    } finally {
+      // Restore status for subsequent tests
+      await admin.from('finding_assignments').update({ status: 'pending' }).eq('id', assignmentId)
+    }
   })
 
   it('should deny native_reviewer UPDATE status to overridden (QA-only)', async () => {
