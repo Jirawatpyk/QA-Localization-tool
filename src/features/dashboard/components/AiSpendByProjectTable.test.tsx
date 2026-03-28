@@ -74,14 +74,16 @@ describe('AiSpendByProjectTable', () => {
 
   it('should render empty state when projects array is empty', async () => {
     const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
-    render(<AiSpendByProjectTable projects={[]} />)
+    render(<AiSpendByProjectTable selectedDays={30} projects={[]} />)
 
     expect(screen.getByTestId('ai-project-table-empty')).toBeTruthy()
   })
 
   it('should render a row for each project in the data', async () => {
     const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
-    render(<AiSpendByProjectTable projects={[ZERO_SPEND_PROJECT, ACTIVE_PROJECT]} />)
+    render(
+      <AiSpendByProjectTable selectedDays={30} projects={[ZERO_SPEND_PROJECT, ACTIVE_PROJECT]} />,
+    )
 
     expect(screen.getByText('Zero Spend Project')).toBeTruthy()
     expect(screen.getByText('Active Project')).toBeTruthy()
@@ -89,7 +91,7 @@ describe('AiSpendByProjectTable', () => {
 
   it('should show $0.00 for zero-spend projects and not exclude them', async () => {
     const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
-    render(<AiSpendByProjectTable projects={[ZERO_SPEND_PROJECT]} />)
+    render(<AiSpendByProjectTable selectedDays={30} projects={[ZERO_SPEND_PROJECT]} />)
 
     const row = screen.getByTestId(`ai-project-row-${ZERO_SPEND_PROJECT.projectId}`)
     expect(row.textContent).toContain('0.00')
@@ -97,7 +99,7 @@ describe('AiSpendByProjectTable', () => {
 
   it('should display formatted totalCostUsd for active project', async () => {
     const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
-    render(<AiSpendByProjectTable projects={[ACTIVE_PROJECT]} />)
+    render(<AiSpendByProjectTable selectedDays={30} projects={[ACTIVE_PROJECT]} />)
 
     const row = screen.getByTestId(`ai-project-row-${ACTIVE_PROJECT.projectId}`)
     expect(row.textContent).toContain('75.50')
@@ -107,7 +109,7 @@ describe('AiSpendByProjectTable', () => {
 
   it('should show green budget indicator when spend is below alert threshold', async () => {
     const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
-    render(<AiSpendByProjectTable projects={[ACTIVE_PROJECT]} />)
+    render(<AiSpendByProjectTable selectedDays={30} projects={[ACTIVE_PROJECT]} />)
 
     // 75.5% — below 80% threshold → ok (green)
     const indicator = screen.getByTestId(`ai-budget-indicator-${ACTIVE_PROJECT.projectId}`)
@@ -116,7 +118,7 @@ describe('AiSpendByProjectTable', () => {
 
   it('should show yellow budget indicator when spend is at or above alert threshold', async () => {
     const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
-    render(<AiSpendByProjectTable projects={[WARNING_PROJECT]} />)
+    render(<AiSpendByProjectTable selectedDays={30} projects={[WARNING_PROJECT]} />)
 
     // 85% — above 80% threshold → warning (yellow)
     const indicator = screen.getByTestId(`ai-budget-indicator-${WARNING_PROJECT.projectId}`)
@@ -127,7 +129,7 @@ describe('AiSpendByProjectTable', () => {
 
   it('should show red budget indicator when spend is at or above 100% (exceeded)', async () => {
     const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
-    render(<AiSpendByProjectTable projects={[EXCEEDED_PROJECT]} />)
+    render(<AiSpendByProjectTable selectedDays={30} projects={[EXCEEDED_PROJECT]} />)
 
     // 105% — over 100% → exceeded (red)
     const indicator = screen.getByTestId(`ai-budget-indicator-${EXCEEDED_PROJECT.projectId}`)
@@ -138,7 +140,7 @@ describe('AiSpendByProjectTable', () => {
 
   it('should show warning indicator at exactly 80% budget (BV: >= threshold, < 100%)', async () => {
     const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
-    render(<AiSpendByProjectTable projects={[AT_THRESHOLD_PROJECT]} />)
+    render(<AiSpendByProjectTable selectedDays={30} projects={[AT_THRESHOLD_PROJECT]} />)
 
     // 80/100 = 80.0% — exactly at alertThresholdPct=80 → warning (not ok)
     const indicator = screen.getByTestId(`ai-budget-indicator-${AT_THRESHOLD_PROJECT.projectId}`)
@@ -149,7 +151,7 @@ describe('AiSpendByProjectTable', () => {
 
   it('should show exceeded indicator at exactly 100% budget (BV: >= 100 → exceeded)', async () => {
     const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
-    render(<AiSpendByProjectTable projects={[AT_EXCEEDED_PROJECT]} />)
+    render(<AiSpendByProjectTable selectedDays={30} projects={[AT_EXCEEDED_PROJECT]} />)
 
     // 100/100 = 100.0% — exactly at 100% boundary → exceeded (not warning)
     const indicator = screen.getByTestId(`ai-budget-indicator-${AT_EXCEEDED_PROJECT.projectId}`)
@@ -160,7 +162,9 @@ describe('AiSpendByProjectTable', () => {
 
   it('should default to Cost (Month) descending sort order (highest first)', async () => {
     const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
-    render(<AiSpendByProjectTable projects={[ZERO_SPEND_PROJECT, ACTIVE_PROJECT]} />)
+    render(
+      <AiSpendByProjectTable selectedDays={30} projects={[ZERO_SPEND_PROJECT, ACTIVE_PROJECT]} />,
+    )
 
     // ACTIVE_PROJECT ($75.50) must appear before ZERO_SPEND_PROJECT ($0.00)
     const rows = screen.getAllByTestId(/^ai-project-row-/)
@@ -171,7 +175,9 @@ describe('AiSpendByProjectTable', () => {
   it('should sort Cost ascending on first Cost column header click', async () => {
     const user = userEvent.setup()
     const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
-    render(<AiSpendByProjectTable projects={[ZERO_SPEND_PROJECT, ACTIVE_PROJECT]} />)
+    render(
+      <AiSpendByProjectTable selectedDays={30} projects={[ZERO_SPEND_PROJECT, ACTIVE_PROJECT]} />,
+    )
 
     const costHeader = screen.getByTestId('ai-project-sort-cost')
     await user.click(costHeader)
@@ -185,7 +191,9 @@ describe('AiSpendByProjectTable', () => {
   it('should sort Cost descending on second Cost column header click', async () => {
     const user = userEvent.setup()
     const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
-    render(<AiSpendByProjectTable projects={[ZERO_SPEND_PROJECT, ACTIVE_PROJECT]} />)
+    render(
+      <AiSpendByProjectTable selectedDays={30} projects={[ZERO_SPEND_PROJECT, ACTIVE_PROJECT]} />,
+    )
 
     const costHeader = screen.getByTestId('ai-project-sort-cost')
     await user.click(costHeader) // 1st click → ascending
@@ -200,7 +208,9 @@ describe('AiSpendByProjectTable', () => {
     const user = userEvent.setup()
     const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
     // EXCEEDED (105%) vs ZERO_SPEND (0%) — ascending: zero first
-    render(<AiSpendByProjectTable projects={[EXCEEDED_PROJECT, ZERO_SPEND_PROJECT]} />)
+    render(
+      <AiSpendByProjectTable selectedDays={30} projects={[EXCEEDED_PROJECT, ZERO_SPEND_PROJECT]} />,
+    )
 
     const budgetHeader = screen.getByTestId('ai-project-sort-budget')
     await user.click(budgetHeader)
@@ -213,7 +223,7 @@ describe('AiSpendByProjectTable', () => {
   it('should show ↓ indicator on Cost header by default (descending); ↑ after first click', async () => {
     const user = userEvent.setup()
     const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
-    render(<AiSpendByProjectTable projects={[ACTIVE_PROJECT]} />)
+    render(<AiSpendByProjectTable selectedDays={30} projects={[ACTIVE_PROJECT]} />)
 
     const costHeader = screen.getByTestId('ai-project-sort-cost')
     expect(costHeader.textContent).toContain('↓')
@@ -224,7 +234,7 @@ describe('AiSpendByProjectTable', () => {
 
   it('should have aria-sort="descending" on Cost header by default', async () => {
     const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
-    render(<AiSpendByProjectTable projects={[ACTIVE_PROJECT]} />)
+    render(<AiSpendByProjectTable selectedDays={30} projects={[ACTIVE_PROJECT]} />)
 
     const costHeader = screen.getByTestId('ai-project-sort-cost')
     expect(costHeader.getAttribute('aria-sort')).toBe('descending')
@@ -232,7 +242,7 @@ describe('AiSpendByProjectTable', () => {
 
   it('should have aria-sort="none" on Budget % header by default (not the active sort)', async () => {
     const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
-    render(<AiSpendByProjectTable projects={[ACTIVE_PROJECT]} />)
+    render(<AiSpendByProjectTable selectedDays={30} projects={[ACTIVE_PROJECT]} />)
 
     const budgetHeader = screen.getByTestId('ai-project-sort-budget')
     expect(budgetHeader.getAttribute('aria-sort')).toBe('none')
@@ -242,7 +252,7 @@ describe('AiSpendByProjectTable', () => {
 
   it('should show "Unlimited" text and data-status="ok" for projects with null monthlyBudgetUsd', async () => {
     const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
-    render(<AiSpendByProjectTable projects={[UNLIMITED_PROJECT]} />)
+    render(<AiSpendByProjectTable selectedDays={30} projects={[UNLIMITED_PROJECT]} />)
 
     const row = screen.getByTestId(`ai-project-row-${UNLIMITED_PROJECT.projectId}`)
     expect(row.textContent).toContain('Unlimited')
@@ -253,7 +263,9 @@ describe('AiSpendByProjectTable', () => {
 
   it('should include unlimited budget projects in cost sort (cost desc: higher cost first)', async () => {
     const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
-    render(<AiSpendByProjectTable projects={[UNLIMITED_PROJECT, EXCEEDED_PROJECT]} />)
+    render(
+      <AiSpendByProjectTable selectedDays={30} projects={[UNLIMITED_PROJECT, EXCEEDED_PROJECT]} />,
+    )
 
     // default: cost desc — EXCEEDED($105) first, UNLIMITED($50) second
     const rows = screen.getAllByTestId(/^ai-project-row-/)
@@ -266,7 +278,7 @@ describe('AiSpendByProjectTable', () => {
   it('should set aria-sort="ascending" on Budget header and "none" on Cost after clicking Budget', async () => {
     const user = userEvent.setup()
     const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
-    render(<AiSpendByProjectTable projects={[ACTIVE_PROJECT]} />)
+    render(<AiSpendByProjectTable selectedDays={30} projects={[ACTIVE_PROJECT]} />)
 
     await user.click(screen.getByTestId('ai-project-sort-budget'))
 
@@ -276,17 +288,21 @@ describe('AiSpendByProjectTable', () => {
 
   // ── Story 3.1b CR R1 — M3: Guardrail #12 sort reset on projects prop change ──
 
-  it('should reset sort to default (cost desc) when projects prop changes', async () => {
+  it('should reset sort to default (cost desc) when selectedDays prop changes', async () => {
     const user = userEvent.setup()
     const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
-    const { rerender } = render(<AiSpendByProjectTable projects={[ACTIVE_PROJECT]} />)
+    const { rerender } = render(
+      <AiSpendByProjectTable selectedDays={30} projects={[ZERO_SPEND_PROJECT, ACTIVE_PROJECT]} />,
+    )
 
     // Change sort to ascending
     await user.click(screen.getByTestId('ai-project-sort-cost'))
     expect(screen.getByTestId('ai-project-sort-cost').getAttribute('aria-sort')).toBe('ascending')
 
-    // Simulate period/filter change — new projects array reference resets sort
-    rerender(<AiSpendByProjectTable projects={[ZERO_SPEND_PROJECT, ACTIVE_PROJECT]} />)
+    // Simulate period change — selectedDays value change resets sort
+    rerender(
+      <AiSpendByProjectTable selectedDays={7} projects={[ZERO_SPEND_PROJECT, ACTIVE_PROJECT]} />,
+    )
 
     // Sort must reset to default: cost descending
     expect(screen.getByTestId('ai-project-sort-cost').getAttribute('aria-sort')).toBe('descending')
@@ -301,7 +317,9 @@ describe('AiSpendByProjectTable', () => {
   it('should sort Budget % descending on second Budget % column header click', async () => {
     const user = userEvent.setup()
     const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
-    render(<AiSpendByProjectTable projects={[EXCEEDED_PROJECT, ZERO_SPEND_PROJECT]} />)
+    render(
+      <AiSpendByProjectTable selectedDays={30} projects={[EXCEEDED_PROJECT, ZERO_SPEND_PROJECT]} />,
+    )
 
     const budgetHeader = screen.getByTestId('ai-project-sort-budget')
     await user.click(budgetHeader) // 1st click → ascending (zero first)
@@ -316,7 +334,9 @@ describe('AiSpendByProjectTable', () => {
   it('should treat unlimited budget (null) as 0% in Budget % ascending sort (unlimited appears first)', async () => {
     const user = userEvent.setup()
     const { AiSpendByProjectTable } = await import('./AiSpendByProjectTable')
-    render(<AiSpendByProjectTable projects={[EXCEEDED_PROJECT, UNLIMITED_PROJECT]} />)
+    render(
+      <AiSpendByProjectTable selectedDays={30} projects={[EXCEEDED_PROJECT, UNLIMITED_PROJECT]} />,
+    )
 
     await user.click(screen.getByTestId('ai-project-sort-budget'))
 

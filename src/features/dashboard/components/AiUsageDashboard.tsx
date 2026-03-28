@@ -122,7 +122,7 @@ export function AiUsageDashboard({
       {/* By project table */}
       <div className="rounded-lg border bg-card p-4 shadow-sm">
         <h3 className="mb-3 text-sm font-medium">Spend by Project</h3>
-        <AiSpendByProjectTable projects={projects} />
+        <AiSpendByProjectTable projects={projects} selectedDays={activePeriod} />
       </div>
 
       {/* By model chart */}

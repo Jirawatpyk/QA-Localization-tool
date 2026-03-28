@@ -46,7 +46,9 @@ export async function getAiUsageSummary(): Promise<ActionResult<AiUsageSummary>>
     // Projected spend: (spend/daysElapsed) * daysInMonth — only when ≥ 5 days elapsed
     const now = new Date()
     const daysElapsed = now.getUTCDate() - 1 // days since month start (0-indexed)
-    const daysInMonth = new Date(now.getUTCFullYear(), now.getUTCMonth() + 1, 0).getUTCDate()
+    const daysInMonth = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0),
+    ).getUTCDate()
     const projectedMonthCostUsd =
       daysElapsed >= 5 && daysElapsed > 0 ? (totalCostUsd / daysElapsed) * daysInMonth : null
 

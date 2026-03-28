@@ -33,7 +33,7 @@ describe('AiSpendByProjectTable Accessibility', () => {
         buildProject({ projectId: 'warn', totalCostUsd: 85 }),
         buildProject({ projectId: 'exceeded', totalCostUsd: 120 }),
       ]
-      render(<AiSpendByProjectTable projects={projects} />)
+      render(<AiSpendByProjectTable selectedDays={30} projects={projects} />)
 
       // Each indicator should have visible status text label (Guardrail #25/#36)
       const okIndicator = screen.getByTestId('ai-budget-indicator-ok')
@@ -52,7 +52,7 @@ describe('AiSpendByProjectTable Accessibility', () => {
         buildProject({ projectId: 'warn', totalCostUsd: 85 }),
         buildProject({ projectId: 'exceeded', totalCostUsd: 120 }),
       ]
-      render(<AiSpendByProjectTable projects={projects} />)
+      render(<AiSpendByProjectTable selectedDays={30} projects={projects} />)
 
       // Each indicator should contain an SVG icon (lucide renders as SVG)
       const okIndicator = screen.getByTestId('ai-budget-indicator-ok')
@@ -74,7 +74,7 @@ describe('AiSpendByProjectTable Accessibility', () => {
         buildProject({ projectId: 'a', totalCostUsd: 50 }),
         buildProject({ projectId: 'b', totalCostUsd: 30 }),
       ]
-      render(<AiSpendByProjectTable projects={projects} />)
+      render(<AiSpendByProjectTable selectedDays={30} projects={projects} />)
 
       const costHeader = screen.getByTestId('ai-project-sort-cost')
       expect(costHeader).toHaveAttribute('tabindex', '0')

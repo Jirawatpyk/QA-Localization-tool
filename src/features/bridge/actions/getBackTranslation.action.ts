@@ -109,6 +109,25 @@ export async function getBackTranslation(
           },
         }
       }
+
+      // Fallback cache check — reuse prior claude-sonnet results (Guardrail #56)
+      const fallbackCached = await getCachedBackTranslation(
+        segmentId,
+        languagePair,
+        BT_FALLBACK_MODEL_VERSION,
+        tenantId,
+        targetTextHash,
+      )
+      if (fallbackCached) {
+        return {
+          success: true,
+          data: {
+            ...fallbackCached,
+            cached: true,
+            latencyMs: Date.now() - startTime,
+          },
+        }
+      }
     }
 
     // Budget check (Guardrail #22)

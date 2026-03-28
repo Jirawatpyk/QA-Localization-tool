@@ -66,7 +66,7 @@ export function useNotifications(userId: string, tenantId: string) {
           event: 'INSERT',
           schema: 'public',
           table: 'notifications',
-          filter: `user_id=eq.${userId}&tenant_id=eq.${tenantId}`,
+          filter: `user_id=eq.${userId}`,
         },
         (payload) => {
           const parsed = rawNotificationSchema.safeParse(payload.new)

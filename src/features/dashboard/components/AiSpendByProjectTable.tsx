@@ -7,6 +7,7 @@ import type { AiProjectSpend } from '@/features/dashboard/types'
 
 type AiSpendByProjectTableProps = {
   projects: AiProjectSpend[]
+  selectedDays: number
 }
 
 type SortCol = 'cost' | 'budget'
@@ -42,15 +43,15 @@ function getBudgetPct(p: AiProjectSpend): number {
     : 0
 }
 
-export function AiSpendByProjectTable({ projects }: AiSpendByProjectTableProps) {
-  const [prevProjects, setPrevProjects] = useState<AiProjectSpend[]>(projects)
+export function AiSpendByProjectTable({ projects, selectedDays }: AiSpendByProjectTableProps) {
+  const [prevDays, setPrevDays] = useState(selectedDays)
   const [sortCol, setSortCol] = useState<SortCol>('cost')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
 
-  // Guardrail #12: reset sort to default when projects prop changes (period/filter change)
-  // Pattern: store-prev-compare (React docs recommended over useEffect for derived state)
-  if (prevProjects !== projects) {
-    setPrevProjects(projects)
+  // H3 fix: reset sort when period changes — use selectedDays (value equality)
+  // instead of projects reference (breaks on every RSC re-render)
+  if (prevDays !== selectedDays) {
+    setPrevDays(selectedDays)
     setSortCol('cost')
     setSortDir('desc')
   }

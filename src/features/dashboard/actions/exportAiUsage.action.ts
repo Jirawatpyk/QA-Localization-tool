@@ -75,27 +75,25 @@ export async function exportAiUsage(): Promise<ActionResult<{ csv: string; filen
     const header =
       'date,project_name,file_id,layer,model,provider,input_tokens,output_tokens,cost_usd,latency_ms,status'
 
-    // M4: CSV formula injection guard — prefix with ' if value starts with a formula trigger char
-    function sanitizeCsvString(value: string): string {
-      return /^[=+\-@\t\r]/.test(value) ? `'${value}` : value
+    // H2: CSV formula injection guard + proper quoting for ALL string fields
+    function csvEscape(value: string): string {
+      const sanitized = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value
+      return `"${sanitized.replace(/"/g, '""')}"`
     }
 
     const csvRows = records.map((r) => {
-      const projectName = r.projectName ?? ''
-      // Escape double quotes: " → "" and wrap in quotes; then sanitize formula chars
-      const escapedName = `"${sanitizeCsvString(projectName).replace(/"/g, '""')}"`
       return [
         r.createdAt.toISOString().split('T')[0],
-        escapedName,
-        r.fileId,
-        r.layer,
-        r.model,
-        r.provider,
+        csvEscape(r.projectName ?? ''),
+        csvEscape(r.fileId),
+        csvEscape(r.layer),
+        csvEscape(r.model),
+        csvEscape(r.provider),
         r.inputTokens,
         r.outputTokens,
         Number(r.estimatedCost).toFixed(6),
         r.latencyMs,
-        r.status,
+        csvEscape(r.status),
       ].join(',')
     })
 
