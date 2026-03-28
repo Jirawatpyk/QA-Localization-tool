@@ -35,6 +35,7 @@ vi.mock('drizzle-orm', () => ({
   and: vi.fn((...args: unknown[]) => args),
   eq: vi.fn((...args: unknown[]) => args),
   asc: vi.fn((...args: unknown[]) => args),
+  sql: vi.fn(() => 'sql-expr'),
 }))
 vi.mock('@/db/schema/findingComments', () => ({
   findingComments: {
