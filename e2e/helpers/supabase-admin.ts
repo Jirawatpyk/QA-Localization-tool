@@ -143,6 +143,20 @@ export async function moveUserToTenant(userId: string, targetTenantId: string): 
     const text = await roleRes.text()
     throw new Error(`Failed to move user role to tenant: ${roleRes.status} ${text}`)
   }
+
+  // Update auth.users app_metadata so JWT has correct tenant_id
+  // Without this, requireRole() reads stale JWT → queries wrong tenant
+  const authRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${userId}`, {
+    method: 'PUT',
+    headers: { ...adminHeaders() },
+    body: JSON.stringify({
+      app_metadata: { tenant_id: targetTenantId },
+    }),
+  })
+  if (!authRes.ok) {
+    const text = await authRes.text()
+    throw new Error(`Failed to update auth metadata for tenant move: ${authRes.status} ${text}`)
+  }
 }
 
 /**
@@ -158,6 +172,19 @@ export async function setUserRole(userId: string, role: string): Promise<void> {
   if (!res.ok) {
     const text = await res.text()
     throw new Error(`Failed to set user role: ${res.status} ${text}`)
+  }
+
+  // Update auth.users app_metadata so JWT has correct user_role
+  const authRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${userId}`, {
+    method: 'PUT',
+    headers: { ...adminHeaders() },
+    body: JSON.stringify({
+      app_metadata: { user_role: role },
+    }),
+  })
+  if (!authRes.ok) {
+    const text = await authRes.text()
+    throw new Error(`Failed to update auth metadata for role: ${authRes.status} ${text}`)
   }
 }
 

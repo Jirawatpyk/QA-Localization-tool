@@ -252,17 +252,43 @@ test('[P0] Step 4: Non-native reviewer accepts finding → non_native:true tag a
     await page.waitForTimeout(500)
   }
 
-  // Press 'a' to accept
-  await page.keyboard.press('a')
+  // Re-wait for review action hotkeys after accordion expand + click (React re-render may drop attribute)
+  await page.waitForSelector('[data-testid="review-3-zone"][data-review-actions-ready="true"]', {
+    timeout: 5_000,
+  })
 
-  // Wait for toast confirmation (not filter button text "Accepted")
-  // Toast shows "Finding accepted" from use-review-actions.ts
-  await expect(page.locator('[data-sonner-toast]').first()).toBeVisible({ timeout: 15_000 })
+  // Accept finding via Server Action (triggered by clicking action bar Accept button)
+  // Ensure action bar is enabled: re-click row + wait for hotkey readiness
+  await page.waitForSelector('[data-review-actions-ready="true"]', { timeout: 5_000 })
+
+  // Capture console errors for debugging server action failures
+  const consoleErrors: string[] = []
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') consoleErrors.push(msg.text())
+  })
+
+  // Use action bar accept button (specific testid)
+  const acceptBtn = page.getByTestId('action-accept')
+  await expect(acceptBtn).toBeEnabled({ timeout: 10_000 })
+  await acceptBtn.click()
+
+  // Wait for status change — if it doesn't change, log console errors
+  try {
+    await expect(pendingRow).not.toHaveAttribute('data-status', 'pending', { timeout: 15_000 })
+  } catch {
+    // Log console errors for debugging
+    if (consoleErrors.length > 0) {
+      throw new Error(`Accept action failed. Console errors:\n${consoleErrors.join('\n')}`)
+    }
+    throw new Error(
+      'Accept action failed — finding status remained pending after 15s. No console errors captured.',
+    )
+  }
 
   // Wait extra for server action DB write to complete
   await page.waitForTimeout(3_000)
 
-  // Verify non_native metadata via PostgREST
+  // Verify non_native metadata via PostgREST — poll with patience for async DB write
   let reviewActions: Array<{ metadata: Record<string, unknown> }> = []
   for (let attempt = 0; attempt < 15; attempt++) {
     reviewActions = await fetch(
@@ -349,6 +375,9 @@ test('[P0] Step 5: Non-native flags finding for native review → assignment cre
     await page.waitForTimeout(500)
   }
 
+  // Wait for hotkey readiness before pressing Shift+F
+  await page.waitForSelector('[data-review-actions-ready="true"]', { timeout: 5_000 })
+
   // Press Shift+F to flag for native review
   await page.keyboard.press('Shift+f')
 
@@ -356,13 +385,17 @@ test('[P0] Step 5: Non-native flags finding for native review → assignment cre
   const flagDialog = page.getByRole('dialog')
   await expect(flagDialog).toBeVisible({ timeout: 5_000 })
 
+  // Wait for reviewer list to load (getNativeReviewers API call)
+  // Dialog shows "Loading..." while fetching — wait for it to disappear
+  await expect(flagDialog.getByText('Loading...')).not.toBeVisible({ timeout: 15_000 })
+
   // Select native reviewer from shadcn Select (renders as button role="combobox")
   const selectTrigger = flagDialog.getByRole('combobox')
   await expect(selectTrigger).toBeVisible({ timeout: 5_000 })
   await selectTrigger.click()
-  // Wait for dropdown to open then click first option
+  // Wait for dropdown options to appear (Radix Select portal)
   const option = page.getByRole('option').first()
-  await expect(option).toBeVisible({ timeout: 5_000 })
+  await expect(option).toBeVisible({ timeout: 10_000 })
   await option.click()
 
   // Fill required comment (min 10 chars — dialog validation requires it)
@@ -404,12 +437,25 @@ test('[P0] Step 6: Native reviewer sees only assigned findings (RLS enforced)', 
     await gotoReviewPageWithRetry(nativePage, projectId, seededFileId)
     await waitForReviewPageHydrated(nativePage)
 
+    // Wait for desktop layout — useIsDesktop() hydration gap
+    await nativePage.waitForSelector('[data-layout-mode="desktop"]', { timeout: 10_000 })
+
     // Native reviewer should see scoped view banner (Story 5.2c AC2)
     // Banner text: "You have access to N flagged segment(s) in this file"
     await expect(nativePage.getByText(/flagged segment/i)).toBeVisible({ timeout: 10_000 })
 
-    // Finding rows should be visible (native reviewer sees findings in the file)
+    // Force accordion expanded (same robust pattern as Step 3)
     const grid = nativePage.getByRole('grid')
+    const accordionTrigger = grid.locator('[data-state]').first()
+    for (let i = 0; i < 3; i++) {
+      const state = await accordionTrigger.getAttribute('data-state').catch(() => null)
+      if (state === 'open') break
+      await accordionTrigger.click()
+      await nativePage.waitForTimeout(500)
+    }
+    await grid.locator('[role="row"]').first().waitFor({ timeout: 10_000 })
+
+    // Finding rows should be visible (native reviewer sees findings in the file)
     const visibleRows = await grid.locator('[role="row"]').count()
     expect(visibleRows).toBeGreaterThan(0)
 
@@ -432,6 +478,7 @@ test('[P0] Step 7: Native reviewer confirms finding → status updated, notifica
   browser,
 }) => {
   test.skip(!HAS_INFRA, SKIP_REASON)
+  test.setTimeout(60_000)
 
   const nativePage = await browser.newPage()
   try {
@@ -441,9 +488,34 @@ test('[P0] Step 7: Native reviewer confirms finding → status updated, notifica
     await gotoReviewPageWithRetry(nativePage, projectId, seededFileId)
     await waitForReviewPageHydrated(nativePage)
 
-    // Click assigned finding
+    // Wait for desktop layout — useIsDesktop() hydration gap
+    await nativePage.waitForSelector('[data-layout-mode="desktop"]', { timeout: 10_000 })
+
+    // Force accordion expanded (same robust pattern as Step 3)
     const grid = nativePage.getByRole('grid')
-    await grid.locator('[role="row"]').first().click()
+    const accordionTrigger = grid.locator('[data-state]').first()
+    for (let i = 0; i < 3; i++) {
+      const state = await accordionTrigger.getAttribute('data-state').catch(() => null)
+      if (state === 'open') break
+      await accordionTrigger.click()
+      await nativePage.waitForTimeout(500)
+    }
+    await grid.locator('[role="row"]').first().waitFor({ timeout: 10_000 })
+
+    // Click assigned finding — retry until active (tabindex="0")
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await grid.locator('[role="row"]').first().click()
+      const tab = await grid
+        .locator('[role="row"]')
+        .first()
+        .getAttribute('tabindex')
+        .catch(() => null)
+      if (tab === '0') break
+      await nativePage.waitForTimeout(500)
+    }
+
+    // Wait for hotkey readiness before pressing 'c'
+    await nativePage.waitForSelector('[data-review-actions-ready="true"]', { timeout: 5_000 })
 
     // Press 'c' to confirm
     await nativePage.keyboard.press('c')
