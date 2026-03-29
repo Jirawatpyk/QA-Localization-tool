@@ -8,6 +8,7 @@ description: 'Perform adversarial code review finding specific issues. Use when 
 **Goal:** Perform adversarial code review finding specific issues.
 
 **Your Role:** Adversarial Code Reviewer.
+
 - YOU ARE AN ADVERSARIAL CODE REVIEWER - Find what's wrong or missing!
 - Communicate all responses in {communication_language} and language MUST be tailored to {user_skill_level}
 - Generate all documents in {document_output_language}
@@ -41,11 +42,11 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
 ### Input Files
 
-| Input | Description | Path Pattern(s) | Load Strategy |
-|-------|-------------|------------------|---------------|
-| architecture | System architecture for review context | whole: `{planning_artifacts}/*architecture*.md`, sharded: `{planning_artifacts}/*architecture*/*.md` | FULL_LOAD |
-| ux_design | UX design specification (if UI review) | whole: `{planning_artifacts}/*ux*.md`, sharded: `{planning_artifacts}/*ux*/*.md` | FULL_LOAD |
-| epics | Epic containing story being reviewed | whole: `{planning_artifacts}/*epic*.md`, sharded_index: `{planning_artifacts}/*epic*/index.md`, sharded_single: `{planning_artifacts}/*epic*/epic-{{epic_num}}.md` | SELECTIVE_LOAD |
+| Input        | Description                            | Path Pattern(s)                                                                                                                                                    | Load Strategy  |
+| ------------ | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------- |
+| architecture | System architecture for review context | whole: `{planning_artifacts}/*architecture*.md`, sharded: `{planning_artifacts}/*architecture*/*.md`                                                               | FULL_LOAD      |
+| ux_design    | UX design specification (if UI review) | whole: `{planning_artifacts}/*ux*.md`, sharded: `{planning_artifacts}/*ux*/*.md`                                                                                   | FULL_LOAD      |
+| epics        | Epic containing story being reviewed   | whole: `{planning_artifacts}/*epic*.md`, sharded_index: `{planning_artifacts}/*epic*/index.md`, sharded_single: `{planning_artifacts}/*epic*/epic-{{epic_num}}.md` | SELECTIVE_LOAD |
 
 ### Context
 
@@ -65,24 +66,23 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
   <action>Parse sections: Story, Acceptance Criteria, Tasks/Subtasks, Dev Agent Record → File List, Change Log</action>
 
   <!-- Discover actual changes via git -->
-  <action>Check if git repository detected in current directory</action>
-  <check if="git repository exists">
-    <action>Run `git status --porcelain` to find uncommitted changes</action>
-    <action>Run `git diff --name-only` to see modified files</action>
-    <action>Run `git diff --cached --name-only` to see staged files</action>
-    <action>Compile list of actually changed files from git output</action>
-  </check>
+
+<action>Check if git repository detected in current directory</action>
+<check if="git repository exists">
+<action>Run `git status --porcelain` to find uncommitted changes</action>
+<action>Run `git diff --name-only` to see modified files</action>
+<action>Run `git diff --cached --name-only` to see staged files</action>
+<action>Compile list of actually changed files from git output</action>
+</check>
 
   <!-- Cross-reference story File List vs git reality -->
-  <action>Compare story's Dev Agent Record → File List with actual git changes</action>
-  <action>Note discrepancies:
-    - Files in git but not in story File List
-    - Files in story File List but no git changes
-    - Missing documentation of what was actually changed
-  </action>
 
-  <action>Read fully and follow `{installed_path}/discover-inputs.md` to load all input files</action>
-  <action>Load {project_context} for coding standards (if exists)</action>
+<action>Compare story's Dev Agent Record → File List with actual git changes</action>
+<action>Note discrepancies: - Files in git but not in story File List - Files in story File List but no git changes - Missing documentation of what was actually changed
+</action>
+
+<action>Read fully and follow `{installed_path}/discover-inputs.md` to load all input files</action>
+<action>Load {project_context} for coding standards (if exists)</action>
 </step>
 
 <step n="2" goal="Build review attack plan">
@@ -90,12 +90,8 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
   <action>Extract ALL Tasks/Subtasks with completion status ([x] vs [ ])</action>
   <action>From Dev Agent Record → File List, compile list of claimed changes</action>
 
-  <action>Create review plan:
-    1. **AC Validation**: Verify each AC is actually implemented
-    2. **Task Audit**: Verify each [x] task is really done
-    3. **Code Quality**: Security, performance, maintainability
-    4. **Test Quality**: Real tests vs placeholder bullshit
-  </action>
+<action>Create review plan: 1. **AC Validation**: Verify each AC is actually implemented 2. **Task Audit**: Verify each [x] task is really done 3. **Code Quality**: Security, performance, maintainability 4. **Test Quality**: Real tests vs placeholder bullshit
+</action>
 </step>
 
 <step n="3" goal="Execute adversarial review">
@@ -103,59 +99,47 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
   <critical>R2+ ROUNDS: You MUST re-execute this ENTIRE Step 3 (sub-agents + manual review + AC validation) on EVERY round — NOT just verify R1 fixes. Fixes may introduce regressions in untouched code, and fresh review catches issues R1 missed. "Verify fixes only" is a forbidden shortcut.</critical>
 
   <!-- Automated Sub-agent Scans — run FIRST to enrich manual review -->
-  <action>Launch TWO sub-agents IN PARALLEL on all files in comprehensive review list:
-    1. code-quality-analyzer — code quality, patterns, maintainability (single-file)
-    2. feature-dev:code-reviewer (subagent_type="feature-dev:code-reviewer") — CROSS-FILE Data Flow Reviewer (Guardrail #44).
-       Scope: ONLY state/data that crosses file boundaries (single-file = agent #1).
-       Phase 1 — DISCOVERY (mandatory): List ALL cross-file pairs as [Producer] → [Consumer]: [what flows].
-         If 0 pairs found → state "No cross-file data flows detected" and terminate. Do NOT skip to findings.
-       Phase 2 — VERIFICATION per pair:
-         (a) Contract match — data shape/type/order correct across boundary?
-         (b) Lifecycle completeness — created, consumed, AND cleaned up across both files?
-         (c) Staleness — consumer can read outdated data from producer?
-         (d) Timing/race — producer write and consumer read can race?
-         (e) Error/edge states — producer in non-happy-path state?
-       RISK FILTER: P0 (data corruption, wrong output, silent data loss) + P1 (race, stale state, unhandled error propagation). Skip P2+.
-       OUTPUT: 1) Cross-file pair list 2) Findings per pair with severity + evidence (file:line).
-       DO NOT report single-file issues (= agent #1's job)
-    NOTE: testing-qa-expert removed — test coverage checks don't catch behavioral bugs. E2E + cross-file review are more effective.
-  </action>
-  <action>Collect findings from both sub-agents and incorporate into review below.</action>
+
+<action>Launch TWO sub-agents IN PARALLEL on all files in comprehensive review list: 1. code-quality-analyzer — code quality, patterns, maintainability (single-file) 2. feature-dev:code-reviewer (subagent_type="feature-dev:code-reviewer") — CROSS-FILE Data Flow Reviewer (Guardrail #44).
+Scope: ONLY state/data that crosses file boundaries (single-file = agent #1).
+Phase 1 — DISCOVERY (mandatory): List ALL cross-file pairs as [Producer] → [Consumer]: [what flows].
+If 0 pairs found → state "No cross-file data flows detected" and terminate. Do NOT skip to findings.
+Phase 2 — VERIFICATION per pair:
+(a) Contract match — data shape/type/order correct across boundary?
+(b) Lifecycle completeness — created, consumed, AND cleaned up across both files?
+(c) Staleness — consumer can read outdated data from producer?
+(d) Timing/race — producer write and consumer read can race?
+(e) Error/edge states — producer in non-happy-path state?
+RISK FILTER: P0 (data corruption, wrong output, silent data loss) + P1 (race, stale state, unhandled error propagation). Skip P2+.
+OUTPUT: 1) Cross-file pair list 2) Findings per pair with severity + evidence (file:line).
+DO NOT report single-file issues (= agent #1's job)
+NOTE: testing-qa-expert removed — test coverage checks don't catch behavioral bugs. E2E + cross-file review are more effective.
+</action>
+<action>Collect findings from both sub-agents and incorporate into review below.</action>
 
   <!-- Git vs Story Discrepancies -->
-  <action>Review git vs story File List discrepancies:
-    1. **Files changed but not in story File List** → MEDIUM finding (incomplete documentation)
-    2. **Story lists files but no git changes** → HIGH finding (false claims)
-    3. **Uncommitted changes not documented** → MEDIUM finding (transparency issue)
-  </action>
+
+<action>Review git vs story File List discrepancies: 1. **Files changed but not in story File List** → MEDIUM finding (incomplete documentation) 2. **Story lists files but no git changes** → HIGH finding (false claims) 3. **Uncommitted changes not documented** → MEDIUM finding (transparency issue)
+</action>
 
   <!-- Use combined file list: story File List + git discovered files -->
-  <action>Create comprehensive review file list from story File List and git changes</action>
+
+<action>Create comprehensive review file list from story File List and git changes</action>
 
   <!-- AC Validation -->
-  <action>For EACH Acceptance Criterion:
-    1. Read the AC requirement
-    2. Search implementation files for evidence
-    3. Determine: IMPLEMENTED, PARTIAL, or MISSING
-    4. If MISSING/PARTIAL → HIGH SEVERITY finding
-  </action>
+
+<action>For EACH Acceptance Criterion: 1. Read the AC requirement 2. Search implementation files for evidence 3. Determine: IMPLEMENTED, PARTIAL, or MISSING 4. If MISSING/PARTIAL → HIGH SEVERITY finding
+</action>
 
   <!-- Task Completion Audit -->
-  <action>For EACH task marked [x]:
-    1. Read the task description
-    2. Search files for evidence it was actually done
-    3. **CRITICAL**: If marked [x] but NOT DONE → CRITICAL finding
-    4. Record specific proof (file:line)
-  </action>
+
+<action>For EACH task marked [x]: 1. Read the task description 2. Search files for evidence it was actually done 3. **CRITICAL**: If marked [x] but NOT DONE → CRITICAL finding 4. Record specific proof (file:line)
+</action>
 
   <!-- Code Quality Deep Dive -->
-  <action>For EACH file in comprehensive review list:
-    1. **Security**: Look for injection risks, missing validation, auth issues
-    2. **Performance**: N+1 queries, inefficient loops, missing caching
-    3. **Error Handling**: Missing try/catch, poor error messages
-    4. **Code Quality**: Complex functions, magic numbers, poor naming
-    5. **Test Quality**: Are tests real assertions or placeholders?
-  </action>
+
+<action>For EACH file in comprehensive review list: 1. **Security**: Look for injection risks, missing validation, auth issues 2. **Performance**: N+1 queries, inefficient loops, missing caching 3. **Error Handling**: Missing try/catch, poor error messages 4. **Code Quality**: Complex functions, magic numbers, poor naming 5. **Test Quality**: Are tests real assertions or placeholders?
+</action>
 
   <check if="total_issues_found == 0">
     <action>Double-check by re-examining code for:
@@ -173,7 +157,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
   <action>Set {{fixed_count}} = 0</action>
   <action>Set {{action_count}} = 0</action>
 
-  <output>**🔥 CODE REVIEW FINDINGS, {user_name}!**
+<output>**🔥 CODE REVIEW FINDINGS, {user_name}!**
 
     **Story:** {{story_file}}
     **Git vs Story Discrepancies:** {{git_discrepancy_count}} found
@@ -196,9 +180,10 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
     - Code style improvements
     - Documentation gaps
     - Git commit message quality
+
   </output>
 
-  <ask>What should I do with these issues?
+<ask>What should I do with these issues?
 
     1. **Fix them automatically** - I'll update the code and tests
     2. **Create action items** - Add to story Tasks/Subtasks for later
@@ -270,19 +255,21 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
     <check if="story key not found in sprint status">
       <output>⚠️ Story file updated, but sprint-status sync failed: {{story_key}} not found in sprint-status.yaml</output>
     </check>
+
   </check>
 
   <check if="{{current_sprint_status}} == 'no-sprint-tracking'">
     <output>ℹ️ Story status updated (no sprint tracking configured)</output>
   </check>
 
-  <output>**✅ Review Complete!**
+<output>**✅ Review Complete!**
 
     **Story Status:** {{new_status}}
     **Issues Fixed:** {{fixed_count}}
     **Action Items Created:** {{action_count}}
 
     {{#if new_status == "done"}}Code review complete!{{else}}Address the action items and continue development.{{/if}}
+
   </output>
 </step>
 
