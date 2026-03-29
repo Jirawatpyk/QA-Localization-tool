@@ -150,8 +150,12 @@ describe('getBackTranslation — AC2: Context Segments (TD-BT-001)', () => {
       projectId: '22222222-2222-4222-a222-222222222222',
     })
 
-    // withTenant called for: segment query, adjacent query, project query = 3 times
+    // withTenant called for: 1) segment query, 2) project query, 3) adjacent segments = 3 times
     expect(mockWithTenant).toHaveBeenCalledTimes(3)
+    // M4 fix: verify the 3rd call (adjacent query) has the expected column name
+    // Real Drizzle columns are PgUUID objects — check .name property
+    const thirdCallCol = mockWithTenant.mock.calls[2]![0] as { name?: string }
+    expect(thirdCallCol.name).toBe('tenant_id')
   })
 
   // ── AC2 / Boundary [P1]: First segment → only following segments ──────

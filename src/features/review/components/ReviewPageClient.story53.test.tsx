@@ -62,6 +62,8 @@ describe('AC4: Sheet Focus Lifecycle — autoAdvance returns null → close Shee
     result.current.autoAdvance(findingIds, statusMap, 'f1')
 
     // Wait for double rAF to fire
+    // L1 note: jsdom rAF fires synchronously — this verifies the focus target is correct
+    // but doesn't truly test async scheduling. Real browser behavior verified by E2E.
     await new Promise((resolve) => requestAnimationFrame(resolve))
     await new Promise((resolve) => requestAnimationFrame(resolve))
 
@@ -77,11 +79,17 @@ describe('AC4: Sheet Focus Lifecycle — autoAdvance returns null → close Shee
  * then calls store.selectRange(currentId, adjacentId).
  *
  * Since ReviewPageClient is a large component, we test the logic pattern directly.
+ *
+ * NOTE (CR R2 H2): This is a CONTRACT test — it tests the index arithmetic + input guard
+ * logic but NOT the DOM-skip behavior (production uses document.querySelector to skip
+ * hidden accordion findings). DOM-skip is covered by E2E review-responsive.spec.ts tests
+ * which render the real component with accordion state.
  */
 describe('AC5: Shift+J/K Bulk Selection', () => {
   /**
    * Simulates the Shift+J/K handler logic as implemented in handleReviewZoneKeyDown.
-   * This matches the actual implementation pattern — extracting the testable part.
+   * Covers: input guard (Guardrail #28), index arithmetic, boundary conditions.
+   * Does NOT cover: DOM visibility skip (document.querySelector) — see E2E.
    */
   function simulateShiftJKHandler(
     key: string,

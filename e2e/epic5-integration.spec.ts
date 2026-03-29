@@ -599,7 +599,13 @@ test('[P0] Step 7: Native reviewer confirms finding → status updated, notifica
     await nativePage.keyboard.press('c')
 
     // Verify confirm succeeded — toast "Finding confirmed" or status change in UI
-    await expect(nativePage.getByText(/confirmed/i).first()).toBeVisible({ timeout: 15_000 })
+    // L2 fix: scope to sonner toast (not status badge which may already show "confirmed")
+    await expect(
+      nativePage
+        .locator('[data-sonner-toast]')
+        .getByText(/confirmed/i)
+        .first(),
+    ).toBeVisible({ timeout: 15_000 })
 
     // Verify assignment status via PostgREST — scoped to THIS finding (C2 fix)
     const assignments = await fetch(

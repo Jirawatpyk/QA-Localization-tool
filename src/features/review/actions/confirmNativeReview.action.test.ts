@@ -67,7 +67,13 @@ vi.mock('@/db/schema/reviewActions', () => ({
     newState: 'new_state',
     userId: 'user_id',
     metadata: 'metadata',
+    createdAt: 'created_at', // M2 fix: C5 orderBy(desc(createdAt)) needs this
   },
+}))
+// H1 fix: mock inngest (every other action test mocks this — 22 files)
+const mockInngestSend = vi.fn((..._args: unknown[]) => Promise.resolve())
+vi.mock('@/lib/inngest/client', () => ({
+  inngest: { send: (...args: unknown[]) => mockInngestSend(...args) },
 }))
 vi.mock('@/db/schema/notifications', () => ({
   notifications: {
@@ -137,6 +143,13 @@ describe('confirmNativeReview', () => {
     }
     expect(mockWriteAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({ entityType: 'finding_assignment', action: 'assignment_confirmed' }),
+    )
+    // H1 fix: verify Inngest event sent for score recalculation
+    expect(mockInngestSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'finding.changed',
+        data: expect.objectContaining({ findingId: FINDING_ID, projectId: PROJECT_ID }),
+      }),
     )
   })
 

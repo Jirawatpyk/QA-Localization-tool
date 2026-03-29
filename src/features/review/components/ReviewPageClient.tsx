@@ -5,6 +5,15 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { ScoreBadge } from '@/features/batch/components/ScoreBadge'
 import { retryAiAnalysis } from '@/features/pipeline/actions/retryAiAnalysis.action'
 import { addFinding } from '@/features/review/actions/addFinding.action'
@@ -76,6 +85,55 @@ import type {
   ScoreBadgeState,
   ScoreStatus,
 } from '@/types/finding'
+
+/** M3 fix: Native override picker with proper focus trap + Escape (Guardrail #30) */
+function NativeOverrideDialog({
+  open,
+  onOpenChange,
+  onOverride,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onOverride: (status: 'accepted' | 'rejected') => void
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-xs">
+        <DialogHeader>
+          <DialogTitle>Override Finding</DialogTitle>
+          <DialogDescription>Choose the new status for this finding.</DialogDescription>
+        </DialogHeader>
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            className="flex-1 bg-success/10 text-success border-success/20 hover:bg-success/20"
+            onClick={() => {
+              onOpenChange(false)
+              onOverride('accepted')
+            }}
+          >
+            Accept
+          </Button>
+          <Button
+            variant="outline"
+            className="flex-1 bg-error/10 text-error border-error/20 hover:bg-error/20"
+            onClick={() => {
+              onOpenChange(false)
+              onOverride('rejected')
+            }}
+          >
+            Reject
+          </Button>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" className="w-full" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
 
 type ReviewPageClientProps = {
   fileId: string
@@ -711,8 +769,9 @@ export function ReviewPageClient({
       return
     }
     // CF-1 fix: track whether this is first init (not F5 re-init) for filter override
-    // I2 fix: also check if store already has this file (return navigation → no-op resetForFile)
-    const storeAlreadyHasFile = useReviewStore.getState().currentFileId === fileId
+    // I2 fix: check if store already has this file's state (A→B→A navigation guard)
+    // Uses fileStates.has() not currentFileId — currentFileId may point to file B
+    const storeAlreadyHasFile = useReviewStore.getState().fileStates.has(fileId)
     const isFirstInit = processedFileIdRef.current !== fileId && !storeAlreadyHasFile
     processedFileIdRef.current = fileId
 
@@ -2047,53 +2106,16 @@ export function ReviewPageClient({
           />
         )}
 
-        {/* CR-R2 P0-2: Native override status picker (Accept/Reject) */}
-        {nativeOverridePickerOpen && activeFindingState && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-            onClick={() => setNativeOverridePickerOpen(false)}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Choose override status"
-          >
-            <div
-              className="bg-background rounded-lg border shadow-lg p-6 space-y-4 min-w-[280px]"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 className="font-semibold text-lg">Override Finding</h3>
-              <p className="text-sm text-muted-foreground">Choose the new status:</p>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  className="flex-1 rounded-md border px-4 py-2 text-sm font-medium bg-success/10 text-success border-success/20 hover:bg-success/20 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
-                  onClick={() => {
-                    setNativeOverridePickerOpen(false)
-                    executeNativeOverride(activeFindingState, 'accepted')
-                  }}
-                >
-                  Accept
-                </button>
-                <button
-                  type="button"
-                  className="flex-1 rounded-md border px-4 py-2 text-sm font-medium bg-error/10 text-error border-error/20 hover:bg-error/20 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
-                  onClick={() => {
-                    setNativeOverridePickerOpen(false)
-                    executeNativeOverride(activeFindingState, 'rejected')
-                  }}
-                >
-                  Reject
-                </button>
-              </div>
-              <button
-                type="button"
-                className="w-full rounded-md border px-4 py-1.5 text-sm text-muted-foreground hover:bg-muted"
-                onClick={() => setNativeOverridePickerOpen(false)}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
+        {/* M3 fix: Native override picker uses shadcn Dialog (focus trap + Escape per Guardrail #30) */}
+        <NativeOverrideDialog
+          open={nativeOverridePickerOpen}
+          onOpenChange={setNativeOverridePickerOpen}
+          onOverride={(status) => {
+            if (activeFindingState) {
+              executeNativeOverride(activeFindingState, status)
+            }
+          }}
+        />
       </div>
     </ReviewFileIdContext.Provider>
   )

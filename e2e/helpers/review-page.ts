@@ -152,3 +152,26 @@ export async function waitForFindingsVisible(page: Page): Promise<Locator> {
 
   return findingRows
 }
+
+/**
+ * L3: Expand accordion if collapsed — retry up to 3 times.
+ * Extracted from repeated pattern in E2E specs (Steps 3-7).
+ */
+export async function expandAccordionIfCollapsed(
+  grid: Locator,
+  labelFilter?: RegExp,
+): Promise<void> {
+  const trigger = labelFilter
+    ? grid.locator('[data-state]').filter({ hasText: labelFilter }).first()
+    : grid.locator('[data-state]').first()
+
+  const count = await trigger.count().catch(() => 0)
+  if (count === 0) return
+
+  for (let i = 0; i < 3; i++) {
+    const state = await trigger.getAttribute('data-state').catch(() => null)
+    if (state === 'open') return
+    await trigger.click()
+    await trigger.page().waitForTimeout(500)
+  }
+}
