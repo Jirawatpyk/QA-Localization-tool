@@ -896,18 +896,13 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     const sheetContent = page.getByTestId('finding-detail-sheet')
     await expect(sheetContent).toBeVisible({ timeout: 10_000 })
 
-    // Tab multiple times — focus should stay within Sheet
+    // Tab multiple times — focus should stay within Sheet (single source of truth)
     for (let i = 0; i < 15; i++) {
       await page.keyboard.press('Tab')
       const isTrapped = await page.evaluate(() => {
         const el = document.activeElement
-        const sheet = document.querySelector('[role="complementary"]')
-        if (sheet && el && sheet.contains(el)) return true
-        // Also check inside Radix portal (Sheet content may be in portal)
-        const portal = el?.closest(
-          '[data-testid="finding-detail-sheet"], [role="dialog"], [role="complementary"]',
-        )
-        return portal !== null
+        const sheet = document.querySelector('[data-testid="finding-detail-sheet"]')
+        return sheet !== null && el !== null && sheet.contains(el)
       })
       expect(isTrapped).toBe(true)
     }
