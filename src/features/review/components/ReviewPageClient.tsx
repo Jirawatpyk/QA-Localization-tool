@@ -512,15 +512,7 @@ export function ReviewPageClient({
     {
       accept: handleAccept,
       reject: handleReject,
-      flag: (findingId: string) => {
-        // CR-C3 fix: F key opens FlagForNativeDialog for QA reviewers
-        if (!isNativeReviewer) {
-          setFlagDialogFindingId(findingId)
-          setFlagDialogOpen(true)
-        } else {
-          handleFlag(findingId)
-        }
-      },
+      flag: handleFlag,
       note: handleNoteHotkey,
       source: handleSourceIssue,
       override: () => {
