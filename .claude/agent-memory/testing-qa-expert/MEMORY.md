@@ -18,6 +18,32 @@ the transform-time error. Fix: create a stub `.ts` file at the path with minimal
 Stub approach is preferred over workaround mocks — establishes API contract early.
 Example: `src/lib/ai/providers.ts` stub created during Story 3.1 ATDD phase.
 
+### Story 5.2c CR R2 Summary (2026-03-29)
+
+0C · 3H · 6M · 4L (10 test files reviewed, all tests passing).
+
+**HIGH:**
+
+- H1: `startNativeReview.action.test.ts` — INVALID_STATE path (`status=confirmed|overridden` passed to startNativeReview) has zero coverage. Source line 57-58 is an untested branch — any assignment in a terminal state silently appears as "NOT_FOUND" in tests but INVALID_STATE in production.
+- H2: `use-findings-subscription.ts` lines 285-318 — `assignmentChannel` (finding_assignments Realtime subscription) has ZERO test coverage across all 5 subscription test files. `assignmentStatus` field update path is completely untested. A bug here would silently fail in production.
+- H3: `ReviewPageClient.tsx` — `onConfirmNative` and `onOverrideNative` wiring (lines 1394-1499) has NO unit test coverage in any ReviewPageClient test file. The optimistic update + rollback + re_accepted sync path for both buttons is entirely untested at component level. `branches.test.tsx` only tests banner display.
+
+**MEDIUM:**
+
+- M1: `confirmNativeReview.action.test.ts` line 195 — only tests `confirmed` status as INVALID_STATE trigger; `overridden` status (also guarded by same `!== 'pending' && !== 'in_review'` check at line 96) is not tested. Makes the guard look one-sided.
+- M2: `getFindingComments.action.test.ts` — invalid UUID input path (`VALIDATION` code, source line 33-34) has no test. The `getFindingComments` action added UUID validation in CR-H5; that branch is completely untested.
+- M3: `addFindingComment.action.test.ts` — `NOT_FOUND` path (assignment not found, source line 65-67) not tested. `INTERNAL` path (comment insert returns empty, source line 92-94) not tested.
+- M4: `addFindingComment.action.test.ts` — notification routing logic (`notifyUserId = userId === assignedTo ? assignedBy : assignedTo`, source line 107-108) never verified. Test at line 176 only checks non-blocking behavior, not WHICH user receives the notification.
+- M5: `flagForNative.action.test.ts` — runtime INVALID_STATE path (source lines 95-100: `!FINDING_STATUSES.includes(finding.status)`) has no test. This guard exists to protect against DB corruption; it is a distinct code branch.
+- M6: `use-keyboard-actions.native.test.ts` line 50-54 — `C key should not be a browser shortcut` test is vacuous: `expect('c').not.toBe('ctrl+c')` is comparing two string literals, not testing any production code. It passes unconditionally regardless of what `BROWSER_SHORTCUTS` contains.
+
+**LOW:**
+
+- L1: `reviewAction.schema.native.test.ts` — duplicate boundary coverage: `flagForNativeSchema` BV tests appear BOTH in `describe('flagForNativeSchema')` (lines 36-59) and in `describe('Boundary values')` (lines 134-151). The at-10, at-500 and above-500 cases run twice with identical assertions. No harm, but wastes test count.
+- L2: `state-transitions.native.test.ts` line 55-66 — `allActions` array is a local constant, NOT imported from production. If `ReviewAction` type is extended (e.g., `source_override` added), this test still passes with no change. Compare-by-value check doesn't enforce type exhaustiveness.
+- L3: `overrideNativeReview.action.test.ts` — `notification non-blocking` path is not tested (cf. flagForNative and confirmNativeReview which both have it). Source lines 147-159 have a try-catch for notification failure; no test covers `throwAtCallIndex=5`.
+- L4: `confirmNativeReview.action.test.ts` line 243 — the `null flag action` test (CR-M3 fix) omits the notification insert row (call index 6) from `returnValues`. If production code reaches notification insert, the mock will return `undefined` (no entry at index 6), potentially causing a false positive (action succeeds with undefined notification).
+
 ### Story 3.5 ATDD RED Phase Summary (2026-03-08)
 
 8 test files, 64 skipped tests total. All parse cleanly with 0 errors.
@@ -77,6 +103,18 @@ Tests that read `useReviewStore.getState().currentScore` / `.scoreStatus` / `.is
 Correct pattern: use `getStoreFileState().currentScore` etc. (reads from the active fileState).
 Story 5.2c introduced changes to `review.store.ts` that broke 8 existing tests in `review.store.test.ts`.
 Watch for this whenever `review.store.ts` is modified.
+
+### Story 5.3 CR R2 Summary (2026-03-29)
+
+2 HIGH · 3 MEDIUM · 2 LOW across 7 test files. See story-5-3-cr-round2.md.
+
+- **H1:** `confirmNativeReview.action.test.ts` — missing `vi.mock('@/lib/inngest/client', ...)`. Production calls `inngest.send(...)`. Without mock, tests either hit real Inngest OR throw import error. Every other action test file in the codebase has this mock.
+- **H2:** `ReviewPageClient.story53.test.tsx` AC5 — `simulateShiftJKHandler` is a reimplementation of the production algorithm WITHOUT the DOM visibility check (`document.querySelector`). Production skips hidden minor findings (collapsed accordion). Test always picks `idx+1` regardless of DOM visibility — diverged simulation misses the core DOM-skip logic.
+- **M1:** `FindingList.accordion.test.tsx` — file existence check (`existsSync`) is tautological. It is always true in a working checkout and never fails after the file is deleted from a different checkout.
+- **M2:** `getBackTranslation.context.test.ts` — `mockWithTenant.toHaveBeenCalledTimes(3)` does not verify WHICH queries got `withTenant`. If production adds a new query WITH `withTenant` and removes one, count stays 3 but coverage degrades silently.
+- **M3:** `confirmNativeReview.action.test.ts` — `dbState.valuesCaptures` used to find `actionType === 'confirm_native'` INSERT but the test does NOT verify the mock DB call index order. If the schema mock captures values from `findingAssignments.update` at same position, `valuesCaptures.find(...)` could match the wrong row without failing.
+- **L1:** `ReviewPageClient.story53.test.tsx` AC4.2 — action bar focus test uses `await new Promise(resolve => requestAnimationFrame(resolve))` twice, but jsdom's `requestAnimationFrame` implementation calls callbacks synchronously. Double-rAF in jsdom is not actually asynchronous — the test may pass even if rAF scheduling is broken.
+- **L2:** `epic5-integration.spec.ts` Step 7 — `expect(nativePage.getByText(/confirmed/i).first()).toBeVisible()` can match any text containing "confirmed" (e.g., the finding status badge on the card already says "confirmed" from Step 6). Should scope to toast notification specifically.
 
 ### Story CR Review History (most recent first)
 

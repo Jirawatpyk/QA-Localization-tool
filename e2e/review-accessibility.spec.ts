@@ -175,24 +175,31 @@ test.describe.serial('Review Accessibility — Keyboard-Only Flow', () => {
     await signupOrLogin(page, testEmail, testPassword)
     await gotoReviewPageWithRetry(page, projectId, fileId)
 
-    // Click first finding to set focus
-    const firstRow = page.locator('[role="row"]').first()
-    await firstRow.click()
+    // Focus the active row directly — use focus() not click() because FindingList
+    // inits activeFindingId to flattenedIds[0], so clicking first row is a no-op.
+    // Grid onKeyDown fires when any descendant has focus (event bubbles).
+    const firstRow = page.locator('[role="row"][tabindex="0"]')
+    await expect(firstRow).toBeVisible({ timeout: 5_000 })
+    await firstRow.focus()
+    await expect(firstRow).toBeFocused()
     const firstId = await firstRow.getAttribute('data-finding-id')
 
     // Press J to move to next
     await page.keyboard.press('j')
-    await page.waitForTimeout(100)
 
-    const activeRow = page.locator('[role="row"][tabindex="0"]')
-    const activeId = await activeRow.getAttribute('data-finding-id')
+    // Wait for tabindex to update (not fixed timeout — observe DOM change)
+    const nextRow = page.locator('[role="row"][tabindex="0"]')
+    await expect(nextRow).not.toHaveAttribute('data-finding-id', firstId!, { timeout: 5_000 })
+    const activeId = await nextRow.getAttribute('data-finding-id')
     expect(activeId).not.toBe(firstId)
 
     // Press K to go back
     await page.keyboard.press('k')
-    await page.waitForTimeout(100)
 
-    const backId = await page.locator('[role="row"][tabindex="0"]').getAttribute('data-finding-id')
+    // Wait for tabindex to settle back to first finding
+    const backRow = page.locator('[role="row"][tabindex="0"]')
+    await expect(backRow).toHaveAttribute('data-finding-id', firstId!, { timeout: 5_000 })
+    const backId = await backRow.getAttribute('data-finding-id')
     expect(backId).toBe(firstId)
   })
 
@@ -365,11 +372,11 @@ test.describe.serial('Review Performance Benchmarks', () => {
     await signupOrLogin(page, perfEmail, perfPassword)
     await gotoReviewPageWithRetry(page, perfProjectId, perfFileId)
 
-    // J/K navigation works from the initially-active row (first row) without needing
-    // a click to change activeFindingId. Wait for tabindex="0" to confirm ready.
-    const firstRow = page.locator('[role="row"]').first()
-    await firstRow.click()
-    await expect(page.locator('[role="row"][tabindex="0"]')).toBeVisible({ timeout: 5_000 })
+    // Focus active row directly (not click — first row is already activeFindingId, click is no-op)
+    const activeRow = page.locator('[role="row"][tabindex="0"]')
+    await expect(activeRow).toBeVisible({ timeout: 5_000 })
+    await activeRow.focus()
+    await expect(activeRow).toBeFocused()
 
     const prevId = await page.locator('[role="row"][tabindex="0"]').getAttribute('data-finding-id')
 
