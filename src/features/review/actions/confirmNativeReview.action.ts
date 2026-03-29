@@ -2,7 +2,7 @@
 
 import 'server-only'
 
-import { and, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
@@ -98,7 +98,8 @@ export async function confirmNativeReview(
     return { success: false, error: 'Assignment already completed', code: 'INVALID_STATE' }
   }
 
-  // Determine re_accepted vs accepted: lookup original flag_for_native review_action
+  // Determine re_accepted vs accepted: lookup MOST RECENT flag_for_native review_action
+  // C5 fix: orderBy(desc) ensures correct row when finding flagged multiple times
   const flagActionRows = await db
     .select({ previousState: reviewActions.previousState })
     .from(reviewActions)
@@ -109,6 +110,7 @@ export async function confirmNativeReview(
         withTenant(reviewActions.tenantId, tenantId),
       ),
     )
+    .orderBy(desc(reviewActions.createdAt))
     .limit(1)
 
   // CR-M9: If no flag action found (defensive), default to 'accepted' (not undefined crash)

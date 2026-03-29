@@ -79,6 +79,9 @@ test.beforeAll(async ({ browser }, testInfo) => {
   const page = await browser.newPage()
   try {
     await signupOrLogin(page, NON_NATIVE_EMAIL)
+    // I4 fix: explicitly set qa_reviewer role (don't rely on default signup role)
+    const nnUser = await getUserInfo(NON_NATIVE_EMAIL)
+    if (nnUser) await setUserRole(nnUser.id, 'qa_reviewer')
     // Suppress onboarding tours so driver.js overlay doesn't intercept clicks
     await setUserMetadata(NON_NATIVE_EMAIL, {
       setup_tour_completed: '2026-01-01T00:00:00Z',
@@ -403,7 +406,16 @@ test('[P0] Step 5: Non-native flags finding for native review → assignment cre
       await page.waitForTimeout(10_000) // Let DB connections settle
     }
   }
-  expect(dialogReady).toBe(true)
+  // I3 fix: descriptive error when reviewers never load
+  if (!dialogReady) {
+    const dialogContent = await page
+      .getByRole('dialog')
+      .textContent()
+      .catch(() => '(dialog not visible)')
+    throw new Error(
+      `FlagForNativeDialog reviewers never loaded after 3 attempts. Dialog content: "${dialogContent}"`,
+    )
+  }
 
   // Dialog is open with reviewers loaded — select the native reviewer
   const dialog = page.getByRole('dialog')
@@ -481,9 +493,14 @@ test('[P0] Step 6: Native reviewer sees only assigned findings (RLS enforced)', 
     }
     await grid.locator('[role="row"]').first().waitFor({ timeout: 10_000 })
 
-    // Finding rows should be visible (native reviewer sees findings in the file)
+    // I1 fix: Assert native reviewer sees ONLY assigned findings (proves RLS scoping)
+    // We assigned exactly 1 finding in Step 5 → expect exactly 1 row visible
     const visibleRows = await grid.locator('[role="row"]').count()
-    expect(visibleRows).toBeGreaterThan(0)
+    expect(visibleRows).toBe(1)
+
+    // Verify the visible row is specifically the flagged finding
+    const flaggedVisible = await grid.locator(`[data-finding-id="${flaggedFindingId}"]`).count()
+    expect(flaggedVisible).toBe(1)
 
     // Verify via PostgREST: assignment exists for native user in this tenant
     const nativeUser = await getUserInfo(NATIVE_EMAIL)
@@ -492,7 +509,8 @@ test('[P0] Step 6: Native reviewer sees only assigned findings (RLS enforced)', 
       { headers: adminHeaders() },
     ).then((r) => r.json())
 
-    expect(assignments.length).toBeGreaterThan(0)
+    expect(assignments.length).toBe(1)
+    expect(assignments[0].finding_id).toBe(flaggedFindingId)
   } finally {
     await nativePage.close()
   }
@@ -583,18 +601,19 @@ test('[P0] Step 7: Native reviewer confirms finding → status updated, notifica
     // Verify confirm succeeded — toast "Finding confirmed" or status change in UI
     await expect(nativePage.getByText(/confirmed/i).first()).toBeVisible({ timeout: 15_000 })
 
-    // Verify assignment status via PostgREST
+    // Verify assignment status via PostgREST — scoped to THIS finding (C2 fix)
     const assignments = await fetch(
-      `${SUPABASE_URL}/rest/v1/finding_assignments?select=id,status&limit=5&order=updated_at.desc`,
+      `${SUPABASE_URL}/rest/v1/finding_assignments?finding_id=eq.${flaggedFindingId}&tenant_id=eq.${tenantId}&select=id,status&limit=1&order=updated_at.desc`,
       { headers: adminHeaders() },
     ).then((r) => r.json())
 
-    const confirmed = assignments.find((a: { status: string }) => a.status === 'confirmed')
-    expect(confirmed).toBeDefined()
+    expect(Array.isArray(assignments)).toBe(true)
+    expect(assignments.length).toBeGreaterThan(0)
+    expect(assignments[0].status).toBe('confirmed')
 
-    // Verify notification created — scoped to tenant (notifications has no entity_id column)
+    // Verify notification created — scoped to tenant + type (C3 fix: not vacuous)
     const notifications = await fetch(
-      `${SUPABASE_URL}/rest/v1/notifications?tenant_id=eq.${tenantId}&select=id,type&limit=5&order=created_at.desc`,
+      `${SUPABASE_URL}/rest/v1/notifications?tenant_id=eq.${tenantId}&type=eq.native_review_completed&select=id,type&limit=5&order=created_at.desc`,
       { headers: adminHeaders() },
     ).then((r) => r.json())
 
@@ -629,10 +648,13 @@ test('[P0] Step 8: Score recalculates after native confirmation', async () => {
 test('[P0] Verify: back_translation_cache has rows', async () => {
   test.skip(!HAS_INFRA, SKIP_REASON)
 
-  const btCache = await fetch(`${SUPABASE_URL}/rest/v1/back_translation_cache?select=id&limit=5`, {
-    headers: adminHeaders(),
-  }).then((r) => r.json())
+  // C4 fix: scope to this tenant (not vacuous from prior test runs)
+  const btCache = await fetch(
+    `${SUPABASE_URL}/rest/v1/back_translation_cache?tenant_id=eq.${tenantId}&select=id&limit=5`,
+    { headers: adminHeaders() },
+  ).then((r) => r.json())
 
+  expect(Array.isArray(btCache)).toBe(true)
   expect(btCache.length).toBeGreaterThan(0)
 })
 

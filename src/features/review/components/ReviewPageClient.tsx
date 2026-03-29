@@ -711,13 +711,15 @@ export function ReviewPageClient({
       return
     }
     // CF-1 fix: track whether this is first init (not F5 re-init) for filter override
-    const isFirstInit = processedFileIdRef.current !== fileId
+    // I2 fix: also check if store already has this file (return navigation → no-op resetForFile)
+    const storeAlreadyHasFile = useReviewStore.getState().currentFileId === fileId
+    const isFirstInit = processedFileIdRef.current !== fileId && !storeAlreadyHasFile
     processedFileIdRef.current = fileId
 
     resetForFile(fileId)
 
     // Story 5.2c AC2: native_reviewer's default filter = 'flagged' (scoped view)
-    // Only on first init — F5/RSC re-init must NOT override user's filter choice (CF-1)
+    // Only on GENUINE first init — not F5 re-init or return navigation (CF-1 + I2)
     if (isFirstInit && initialData.userRole === 'native_reviewer') {
       setFilter('status', 'flagged')
     }

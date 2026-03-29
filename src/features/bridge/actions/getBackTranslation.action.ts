@@ -52,7 +52,8 @@ export async function getBackTranslation(
 
   try {
     // Auth
-    const user = await requireRole('qa_reviewer')
+    // Story 5.2c: native_reviewer needs BT access for assigned findings
+    const user = await requireRole('native_reviewer')
     const { tenantId } = user
 
     // Validate input
