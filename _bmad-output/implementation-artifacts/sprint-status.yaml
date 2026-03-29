@@ -139,7 +139,7 @@ development_status:
   5-2a-non-native-auto-tag: done
   5-2b-schema-rls-scoped-access: done
   5-2c-native-reviewer-workflow: done
-  5-3-verification-integration: review
+  5-3-verification-integration: done
   epic-5-retrospective: optional
 
   # ============================================================

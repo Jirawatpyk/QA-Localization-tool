@@ -458,10 +458,11 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'desktop')
 
-    // At desktop, [role="complementary"] must be the static aside, NOT a portal-mounted Sheet
+    // At desktop, the only [role="complementary"] in DOM must be the static aside.
+    // Radix Sheet unmounts SheetContent when open=false (no forceMount), so Sheet's
+    // complementary is not in DOM at all — no aria-hidden filter needed.
     const complementaryIsAside = await page.evaluate(() => {
-      const comp = document.querySelector('[role="complementary"]:not([aria-hidden])')
-      // Static aside has data-testid="finding-detail-aside"; Sheet has "finding-detail-sheet"
+      const comp = document.querySelector('[role="complementary"]')
       return comp?.getAttribute('data-testid') === 'finding-detail-aside'
     })
     expect(complementaryIsAside).toBe(true)

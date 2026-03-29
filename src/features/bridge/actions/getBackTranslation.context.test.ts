@@ -4,7 +4,7 @@
  * Tests that getBackTranslation queries adjacent segments (+/- 2)
  * and passes them as contextSegments to buildBTPrompt.
  *
- * RED PHASE: All tests are it.skip() — will be unskipped during implementation.
+ * Tests implemented and active (GREEN phase).
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'

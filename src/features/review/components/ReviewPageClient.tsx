@@ -1282,6 +1282,23 @@ export function ReviewPageClient({
     setMobileDrawerOpen(true)
   }
 
+  // CR R2 P1: Mobile→laptop viewport transition — prevent phantom Sheet re-open.
+  // When user explicitly closed Sheet at mobile (mobileDrawerOpen=false but selectedId
+  // preserved for toggle button), clear selectedId on transition to laptop.
+  // Uses prevLayoutMode from the sync block at line ~408.
+  const [prevLayoutForSheet, setPrevLayoutForSheet] = useState(layoutMode)
+  if (prevLayoutForSheet !== layoutMode) {
+    setPrevLayoutForSheet(layoutMode)
+    if (
+      prevLayoutForSheet === 'mobile' &&
+      layoutMode === 'laptop' &&
+      !mobileDrawerOpen &&
+      selectedId !== null
+    ) {
+      setSelectedFinding(null)
+    }
+  }
+
   // Derive Sheet open state for non-desktop: laptop auto-opens on select, mobile uses toggle
   const sheetOpen = isDesktop
     ? false

@@ -3,7 +3,6 @@
  *
  * Tests for ReviewPageClient keyboard and layout behavior.
  *
- * RED PHASE: All tests are it.skip() — will be unskipped during implementation.
  *
  * WARNING (from story spec):
  * - j/k use grid onKeyDown in handleReviewZoneKeyDown, NOT use-keyboard-actions.ts registry
@@ -15,6 +14,8 @@ import { renderHook } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 import { useFocusManagement } from '@/features/review/hooks/use-focus-management'
+import { useReviewStore, getStoreFileState } from '@/features/review/stores/review.store'
+import type { Finding } from '@/types/finding'
 
 // ── AC4: Sheet Focus Lifecycle (TD-E2E-018) ─────────────────────────────────
 
@@ -148,6 +149,12 @@ describe('AC5: Shift+J/K Bulk Selection', () => {
     expect(result.selectRangeCalled).toBe(false)
   })
 
+  // ── AC5 / Boundary [P1]: Shift+K at first finding → no-op (L1 fix) ──
+  it('should not call selectRange when Shift+K pressed at first finding', () => {
+    const result = simulateShiftJKHandler('k', true, 'f1', sortedIds)
+    expect(result.selectRangeCalled).toBe(false)
+  })
+
   // ── AC5 / Scenario 5.3 [P1]: Shift+J/K suppressed in input ───────────
   it('should suppress Shift+J/K when focus is in input/textarea (Guardrail #28)', () => {
     const resultInput = simulateShiftJKHandler('j', true, 'f1', sortedIds, 'INPUT')
@@ -165,42 +172,157 @@ describe('AC5: Shift+J/K Bulk Selection', () => {
 
 describe('AC6: Viewport Transition selectedId Sync', () => {
   /**
-   * Tests the viewport sync logic pattern:
-   * When layout transitions from desktop to non-desktop, selectedId should
-   * be synced from activeFindingState to ensure the detail panel shows
-   * the correct finding on the new viewport.
+   * Tests the render-time viewport sync logic in ReviewPageClient.tsx:408-418.
+   * When layout transitions from desktop→non-desktop, the code syncs selectedId
+   * from activeFindingState so the Sheet shows the correct finding.
    *
-   * The actual implementation is a render-time check in ReviewPageClient.tsx:
-   * if (prevLayoutMode !== layoutMode && prevLayoutMode === 'desktop') {
-   *   setSelectedFinding(activeFindingState)
-   * }
+   * Since the production code is a render-time "store-prev-compare" pattern
+   * (not a hook), we test the extracted logic function directly.
    */
 
-  // ── AC6 / Scenario 6.1 [P1]: Desktop → mobile preserves selectedId ────
-  it('should preserve selectedId when layout transitions from desktop to mobile', () => {
-    // Pattern: when desktop→mobile, activeFindingState should be used as selectedId
-    const activeFindingState = 'f2'
-    const selectedId: string | null = null // Desktop click only sets activeFindingState, not selectedId
+  /** Extracted viewport sync logic — mirrors ReviewPageClient.tsx:408-418 */
+  function viewportSyncLogic(
+    prevLayoutMode: 'desktop' | 'laptop' | 'mobile',
+    newLayoutMode: 'desktop' | 'laptop' | 'mobile',
+    activeFindingState: string | null,
+    selectedId: string | null,
+  ): { shouldSync: boolean; syncTarget: string | null } {
+    if (prevLayoutMode === newLayoutMode) return { shouldSync: false, syncTarget: null }
+    if (
+      prevLayoutMode === 'desktop' &&
+      activeFindingState !== null &&
+      selectedId !== activeFindingState
+    ) {
+      return { shouldSync: true, syncTarget: activeFindingState }
+    }
+    return { shouldSync: false, syncTarget: null }
+  }
 
-    // After desktop→mobile transition, the sync code sets selectedId = activeFindingState
-    const syncedSelectedId = activeFindingState
-    expect(syncedSelectedId).toBe('f2')
-    // Detail panel on mobile uses selectedId (not activeFindingState)
-    const detailFindingId = syncedSelectedId // isDesktop=false → uses selectedId
-    expect(detailFindingId).toBe('f2')
-    // selectedId was null before sync — proves sync is needed
-    expect(selectedId).toBeNull()
+  // ── AC6 / Scenario 6.1 [P1]: Desktop → mobile syncs selectedId ────────
+  it('should sync selectedId from activeFindingState on desktop→mobile transition', () => {
+    const result = viewportSyncLogic('desktop', 'mobile', 'f2', null)
+    expect(result.shouldSync).toBe(true)
+    expect(result.syncTarget).toBe('f2')
   })
 
-  // ── AC6 / Scenario 6.2 [P1]: Mobile → desktop preserves selectedId ────
-  it('should preserve selectedId when layout transitions from mobile to desktop', () => {
-    // Pattern: mobile→desktop, detailFindingId switches from selectedId to activeFindingState
-    const selectedId = 'f2'
+  // ── AC6 / Scenario 6.2 [P1]: Mobile → desktop does not sync ───────────
+  it('should not sync on mobile→desktop transition (handled by handleActiveFindingChange)', () => {
+    const result = viewportSyncLogic('mobile', 'desktop', 'f2', 'f2')
+    expect(result.shouldSync).toBe(false)
+  })
 
-    // On desktop, detailFindingId = activeFindingState (not selectedId)
-    // The selectedId in store is preserved — Zustand doesn't clear it
-    // Desktop detail panel uses activeFindingState which was set on the last click
-    // No sync needed for mobile→desktop — activeFindingState is already set
-    expect(selectedId).toBe('f2') // Store preserves selectedId
+  // ── AC6 / Boundary: activeFindingState null → no sync ─────────────────
+  it('should not sync when activeFindingState is null', () => {
+    const result = viewportSyncLogic('desktop', 'mobile', null, null)
+    expect(result.shouldSync).toBe(false)
+  })
+
+  // ── AC6 / Boundary: selectedId already matches → no sync ──────────────
+  it('should not sync when selectedId already matches activeFindingState', () => {
+    const result = viewportSyncLogic('desktop', 'laptop', 'f2', 'f2')
+    expect(result.shouldSync).toBe(false)
+  })
+})
+
+// ── CR-C1: Auto-reject UI sync reads from fileStates Map (not flat) ────────
+
+describe('CR-C1: Auto-reject suppression UI sync via getStoreFileState', () => {
+  const FILE_ID = 'file-cr-c1'
+
+  function makeFinding(id: string, status: string): Finding {
+    return {
+      id,
+      tenantId: 't1',
+      projectId: 'p1',
+      sessionId: '',
+      segmentId: null,
+      severity: 'minor',
+      originalSeverity: null,
+      category: 'accuracy',
+      status: status as Finding['status'],
+      description: 'test',
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+      fileId: FILE_ID,
+      detectedByLayer: 'L1',
+      aiModel: null,
+      aiConfidence: null,
+      suggestedFix: null,
+      sourceTextExcerpt: null,
+      targetTextExcerpt: null,
+      segmentCount: 1,
+      scope: 'per-file',
+      reviewSessionId: null,
+      relatedFileIds: null,
+    }
+  }
+
+  beforeEach(() => {
+    // Initialize store with fileId + findings in fileStates Map
+    const store = useReviewStore.getState()
+    store.resetForFile(FILE_ID)
+    const findingsMap = new Map<string, Finding>()
+    findingsMap.set('f1', makeFinding('f1', 'pending'))
+    findingsMap.set('f2', makeFinding('f2', 'pending'))
+    findingsMap.set('f3', makeFinding('f3', 'accepted'))
+    store.setFindings(findingsMap)
+  })
+
+  it('should update findings status to rejected via getStoreFileState (not flat findingsMap)', () => {
+    const autoRejectedIds = ['f1', 'f2']
+    const updatedAt = '2026-03-29T12:00:00Z'
+
+    // Simulate the C1-fixed auto-reject sync logic from ReviewPageClient.tsx:985-996
+    const currentState = useReviewStore.getState()
+    const currentFs = getStoreFileState(currentState, FILE_ID)
+
+    for (const id of autoRejectedIds) {
+      const finding = currentFs.findingsMap.get(id)
+      if (finding && finding.status === 'pending') {
+        currentState.setFinding(id, {
+          ...finding,
+          status: 'rejected',
+          updatedAt,
+        })
+      }
+    }
+
+    // Verify findings updated in fileStates Map
+    const afterFs = getStoreFileState(useReviewStore.getState(), FILE_ID)
+    expect(afterFs.findingsMap.get('f1')!.status).toBe('rejected')
+    expect(afterFs.findingsMap.get('f1')!.updatedAt).toBe(updatedAt)
+    expect(afterFs.findingsMap.get('f2')!.status).toBe('rejected')
+    // f3 was 'accepted' — should NOT be touched (guard: status === 'pending')
+    expect(afterFs.findingsMap.get('f3')!.status).toBe('accepted')
+  })
+
+  it('should NOT find anything if reading from flat findingsMap (pre-fix behavior)', () => {
+    // This test documents WHY the C1 fix was needed.
+    // The flat top-level findingsMap is always empty after TD-ARCH-002.
+    const currentState = useReviewStore.getState()
+
+    // Flat findingsMap should be empty (all data in fileStates Map)
+    expect(currentState.findingsMap.size).toBe(0)
+
+    // getStoreFileState returns the per-file data
+    const fs = getStoreFileState(currentState, FILE_ID)
+    expect(fs.findingsMap.size).toBe(3)
+  })
+
+  it('should skip already-reviewed findings (not pending)', () => {
+    const autoRejectedIds = ['f3'] // f3 is 'accepted', not 'pending'
+    const currentState = useReviewStore.getState()
+    const currentFs = getStoreFileState(currentState, FILE_ID)
+
+    for (const id of autoRejectedIds) {
+      const finding = currentFs.findingsMap.get(id)
+      if (finding && finding.status === 'pending') {
+        currentState.setFinding(id, { ...finding, status: 'rejected' })
+      }
+    }
+
+    // f3 should remain 'accepted' — guard prevented overwrite
+    const afterFs = getStoreFileState(useReviewStore.getState(), FILE_ID)
+    expect(afterFs.findingsMap.get('f3')!.status).toBe('accepted')
   })
 })
