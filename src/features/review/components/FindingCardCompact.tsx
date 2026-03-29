@@ -185,7 +185,7 @@ function FindingCardCompactInner({
       aria-selected={isSelected ? 'true' : undefined}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      className={`border rounded-lg px-3 py-2 cursor-pointer hover:bg-accent/50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 ${borderClass} ${bgClass} ${stateClass} ${showAnimation ? 'animate-fade-in' : ''} ${isSelected ? 'ring-2 ring-primary' : ''}`}
+      className={`border rounded-lg px-3 py-2 min-h-11 cursor-pointer hover:bg-accent/50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 ${borderClass} ${bgClass} ${stateClass} ${showAnimation ? 'animate-fade-in' : ''} ${isSelected ? 'ring-2 ring-primary' : ''}`}
     >
       <div role="gridcell" className="flex items-center gap-2">
         {/* Story 4.4a: Bulk selection checkbox — visible in bulk mode */}

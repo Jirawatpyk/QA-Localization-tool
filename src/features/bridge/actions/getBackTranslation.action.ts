@@ -206,11 +206,21 @@ export async function getBackTranslation(
     })
 
     // Access result via result.output (Guardrail #16: NOT result.object)
-    // Guardrail #4: guard rows[0]! pattern — null check before access
-    if (!result.output) {
-      return { success: false, error: 'AI returned no structured output', code: 'AI_NO_OUTPUT' }
+    // Guardrail #18: NoOutputGeneratedError = non-retriable (schema/content filter issue)
+    // result.output getter throws NoOutputGeneratedError if AI didn't produce valid output
+    let btResult: Awaited<typeof result.output>
+    try {
+      if (!result.output) {
+        return { success: false, error: 'AI returned no structured output', code: 'AI_NO_OUTPUT' }
+      }
+      btResult = result.output
+    } catch (outputErr) {
+      logger.error(
+        { err: outputErr, segmentId: input.segmentId, finishReason: result.finishReason },
+        'getBackTranslation: AI output accessor threw — schema mismatch or content filter',
+      )
+      return { success: false, error: 'AI failed to generate valid output', code: 'AI_NO_OUTPUT' }
     }
-    const btResult = result.output
 
     // Low-confidence fallback (Guardrail #56): retry with claude-sonnet if budget allows
     if (btResult.confidence < confidenceThreshold) {
@@ -246,10 +256,16 @@ export async function getBackTranslation(
             status: 'success',
           })
 
-          if (!fallbackResult.output) {
-            logger.warn({ segmentId }, 'BT fallback returned no output')
+          let fallbackOutput: typeof btResult | null = null
+          try {
+            if (fallbackResult.output) {
+              fallbackOutput = fallbackResult.output
+            } else {
+              logger.warn({ segmentId }, 'BT fallback returned no output')
+            }
+          } catch (fallbackOutputErr) {
+            logger.warn({ err: fallbackOutputErr, segmentId }, 'BT fallback output accessor threw')
           }
-          const fallbackOutput = fallbackResult.output
 
           // Use whichever has higher confidence
           if (fallbackOutput && fallbackOutput.confidence > btResult.confidence) {

@@ -157,7 +157,69 @@ export async function getFileReviewData(
 
     const file = fileRows[0]!
 
-    // Q2: Get ALL findings for file (all layers)
+    // Story 5.2c AC2: native_reviewer sees only assigned findings (scoped view)
+    // Pre-query assigned finding IDs before Q2 so the main query returns scoped results.
+    let assignedFindingIds: string[] | null = null
+    let assignedFindingCount = 0
+    if (currentUser.role === 'native_reviewer') {
+      const myAssignments = await db
+        .select({ findingId: findingAssignments.findingId })
+        .from(findingAssignments)
+        .where(
+          and(
+            eq(findingAssignments.fileId, fileId),
+            eq(findingAssignments.assignedTo, currentUser.id),
+            withTenant(findingAssignments.tenantId, tenantId),
+          ),
+        )
+      assignedFindingIds = myAssignments.map((a) => a.findingId)
+      // CF-2 fix: set count here (outside Q9 try-block) so Q9 failure doesn't zero it
+      assignedFindingCount = assignedFindingIds.length
+    }
+
+    // Q2: Get findings for file — scoped for native_reviewer (Guardrail #5: empty array guard)
+    const q2Where = and(
+      withTenant(findings.tenantId, tenantId),
+      eq(findings.fileId, fileId),
+      eq(findings.projectId, projectId),
+      ...(assignedFindingIds !== null && assignedFindingIds.length > 0
+        ? [inArray(findings.id, assignedFindingIds)]
+        : []),
+    )
+    // Native reviewer with 0 assignments → empty scoped view (Guardrail #5: inArray([]) guard)
+    if (assignedFindingIds !== null && assignedFindingIds.length === 0) {
+      return {
+        success: true,
+        data: {
+          tenantId,
+          file: { fileId, fileName: file.fileName, status: file.status as DbFileStatus },
+          findings: [],
+          score: {
+            mqmScore: null,
+            status: 'pending' as ScoreStatus,
+            layerCompleted: null,
+            criticalCount: 0,
+            majorCount: 0,
+            minorCount: 0,
+          },
+          processingMode: 'economy' as ProcessingMode,
+          l2ConfidenceMin: null,
+          l3ConfidenceMin: null,
+          autoPassRationale: null,
+          sourceLang: '',
+          targetLang: null,
+          segments: [],
+          categories: [],
+          overrideCounts: {},
+          siblingFiles: [],
+          isNonNative: false,
+          btConfidenceThreshold: 0.6,
+          userRole: currentUser.role,
+          assignedFindingCount: 0,
+        },
+      }
+    }
+
     const findingRows = await db
       .select({
         id: findings.id,
@@ -178,13 +240,7 @@ export async function getFileReviewData(
         updatedAt: findings.updatedAt,
       })
       .from(findings)
-      .where(
-        and(
-          withTenant(findings.tenantId, tenantId),
-          eq(findings.fileId, fileId),
-          eq(findings.projectId, projectId),
-        ),
-      )
+      .where(q2Where)
 
     // Q3: Get score for file
     const scoreRows = await db
@@ -378,7 +434,6 @@ export async function getFileReviewData(
         flaggerComment: string | null
       }
     >()
-    let assignedFindingCount = 0
     try {
       if (currentFindingIds.length > 0) {
         // CF-3 fix: for native_reviewer, filter by their own userId to avoid multi-assignment overwrite
@@ -429,20 +484,7 @@ export async function getFileReviewData(
           })
         }
 
-        // Count assignments for current user (native reviewer scoped view)
-        if (currentUser.role === 'native_reviewer') {
-          const myAssignments = await db
-            .select({ value: count() })
-            .from(findingAssignments)
-            .where(
-              and(
-                eq(findingAssignments.fileId, fileId),
-                eq(findingAssignments.assignedTo, currentUser.id),
-                withTenant(findingAssignments.tenantId, tenantId),
-              ),
-            )
-          assignedFindingCount = myAssignments[0]?.value ?? 0
-        }
+        // assignedFindingCount already set at line ~176 (before Q9) — CF-2 fix
       }
     } catch (assignErr) {
       logger.error(

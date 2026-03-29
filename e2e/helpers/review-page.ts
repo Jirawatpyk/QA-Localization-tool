@@ -60,22 +60,40 @@ export async function waitForReviewPageHydrated(page: Page) {
 }
 
 /**
- * Navigate to review page with retry — handles transient cloud Supabase SSR errors.
- * Retries up to 3 times with 3s delay between attempts.
- * Uses full hydration wait (findings visible + keyboard ready).
+ * Navigate to review page with retry — handles transient SSR errors.
+ *
+ * Strategy: retry only SSR errors ("File not found", auth failures). Once SSR
+ * succeeds (page loads without error), wait for full hydration WITHOUT retrying
+ * — reloading a working page just wastes the test timeout budget.
  */
 export async function gotoReviewPageWithRetry(page: Page, projectId: string, fileId: string) {
   const url = `/projects/${projectId}/review/${fileId}`
-  for (let attempt = 0; attempt < 3; attempt++) {
+
+  // Phase 1: Retry SSR errors (up to 5 attempts — cloud Supabase SSR can be slow)
+  for (let attempt = 0; attempt < 5; attempt++) {
     await page.goto(url)
     try {
-      await waitForReviewPageHydrated(page)
-      return
-    } catch {
-      if (attempt === 2) throw new Error(`Review page failed to load after 3 attempts: ${url}`)
-      await page.waitForTimeout(3_000)
+      await waitForReviewPageReady(page)
+      break // SSR OK — proceed to hydration
+    } catch (err) {
+      if (attempt === 4)
+        throw new Error(
+          `Review page SSR failed after 5 attempts: ${url}\nLast error: ${String(err)}`,
+        )
+      await page.waitForTimeout(5_000)
     }
   }
+
+  // Phase 2: Wait for full hydration (single attempt, no retry)
+  await waitForFindingsVisible(page)
+  await page.waitForSelector('[role="grid"][data-keyboard-ready="true"]', { timeout: 15_000 })
+  await page.waitForSelector('[data-testid="review-3-zone"][data-review-actions-ready="true"]', {
+    timeout: 10_000,
+  })
+  await page.evaluate(() => {
+    ;(document.activeElement as HTMLElement)?.blur()
+    document.body.focus()
+  })
 }
 
 /**

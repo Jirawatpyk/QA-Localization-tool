@@ -397,6 +397,13 @@ Claude Opus 4.6 (1M context)
 - AC4 test: `require()` doesn't work for ESM hooks → switched to standard import
 - AC8 accordion glitch: RESOLVED — two-effect coordination pattern already prevents flash
 
+### Production Bugs Found During E2E Debugging
+| Bug ID | Severity | File | Root Cause | Fix |
+|--------|----------|------|-----------|-----|
+| 5.2c-AC2-Q2 | P0 | `getFileReviewData.action.ts` | Q2 query returned ALL findings for native_reviewer — no assignment filter (Task 6 marked done but JOIN never implemented) | Pre-query `finding_assignments` → `inArray(findings.id, assignedFindingIds)` on Q2. Empty guard (Guardrail #5) |
+| 5.2c-AC2-Filter | P0 | `ReviewPageClient.tsx` | Default filter `pending` hid `flagged` findings for native_reviewer (Task 9.1 marked done but never implemented) | `setFilter('status', 'flagged')` with `isFirstInit` guard (CF-1) |
+| CF-2-Count | P0 | `getFileReviewData.action.ts` | `assignedFindingCount` set inside Q9 try-block — Q9 exception → count=0 → banner hidden + filter forced → blank screen | Moved assignment outside Q9, immediately after pre-query (line 176) |
+
 ### Completion Notes List
 - ✅ Task 1 (AC2): Adjacent segments query wired in getBackTranslation.action.ts with withTenant. 4/4 ATDD tests GREEN. Existing 21 BT tests updated and GREEN.
 - ✅ Task 2 (AC5): Shift+J/K added to handleReviewZoneKeyDown in ReviewPageClient.tsx. KeyboardCheatSheet updated. 4/4 ATDD tests GREEN.
@@ -404,15 +411,35 @@ Claude Opus 4.6 (1M context)
 - ✅ Task 4 (AC6): Viewport transition sync — prevLayoutMode pattern syncs selectedId from activeFindingState on desktop→non-desktop transition. 2/2 ATDD tests GREEN.
 - ✅ Task 5 (AC7): isTemplateCompatible() function exported from generate-verification-data.mjs. Validates template has required features (placeholders, glossary terms). 4/4 ATDD tests GREEN.
 - ✅ Task 6 (AC3): 28 per-test test.skip() removed from review-responsive.spec.ts. Suite-level skip guard kept.
-- ✅ Task 7 (AC8): Accordion glitch RESOLVED — two-effect coordination pattern prevents flash. React Compiler batching further prevents it. 1/1 test GREEN.
+- ✅ Task 7 (AC8): Accordion glitch RESOLVED — two-effect coordination pattern already prevents flash. React Compiler batching further prevents it. 1/1 test GREEN.
 - ✅ Task 8 (AC1): epic5-integration.spec.ts tests unskipped. 10 tests ready for real infra run.
 - ✅ Task 9: type-check ✓, lint ✓ (0 errors), 1302 review tests GREEN, cross-file review launched.
 
+#### E2E Integration Debugging (2026-03-29 — continuation session)
+
+**Production Bugs Found & Fixed:**
+- 🐛 **5.2c AC2 incomplete implementation**: `getFileReviewData` Q2 returned ALL findings for native_reviewer (not scoped to assignments). Task 6 was marked [x] done but JOIN filter was never implemented. Fixed: pre-query `finding_assignments WHERE assigned_to = currentUser.id` → filter Q2 with `inArray(findings.id, assignedFindingIds)`. Empty assignments guard (Guardrail #5).
+- 🐛 **5.2c AC2 default filter missing**: `ReviewPageClient` didn't pre-filter to `status: 'flagged'` for native_reviewer (Task 9.1 was marked done but not implemented). Fixed: `setFilter('status', 'flagged')` after `resetForFile` with `isFirstInit` guard to avoid overriding user's filter on F5/RSC re-init (CF-1 fix).
+- 🐛 **CF-2: `assignedFindingCount` in Q9 try-block**: Q9 exception → count=0 → banner hidden but filter forced → blank screen. Fixed: moved assignment outside Q9 try-block, immediately after pre-query.
+
+**E2E Test Fixes (5 bugs):**
+- Step 5: `comment` → `flagger_comment` (column name mismatch with schema)
+- Step 5: Added `review_actions` row for `flag_for_native` (needed by `confirmNativeReview`)
+- Step 4: Removed unnecessary page navigation (all PostgREST, SSR flaky)
+- Step 6: Accordion `[data-state]` guard — native scoped view has no accordion → `click()` hanged
+- Step 6+7: Timeout 60s → 120s (native login + page load needs more budget)
+- Step 7: Click `[data-finding-id="${flaggedFindingId}"]` instead of `row.first()` (wrong finding → NOT_FOUND)
+- CF-3: `test.skip(!flaggedFindingId)` guard in Steps 6+7
+
+**Debugging approach:** Systematic debugging (Phase 1-4) + `debug-explorer` agent for stacked root cause analysis. 10 E2E runs, root causes traced via diagnostic logging + schema comparison + data flow tracing.
+
+**Result:** E2E 10/10 passed × 2 consecutive runs.
+
 ### Pre-CR Scan Results
-- **anti-pattern-detector**: (pending)
-- **tenant-isolation-checker**: withTenant verified on all 3 DB queries in getBackTranslation.action.ts
-- **code-quality-analyzer**: (pending)
-- **feature-dev:code-reviewer (cross-file)**: launched — 3 cross-file pairs verified
+- **anti-pattern-detector**: (pending — run before final CR)
+- **tenant-isolation-checker**: withTenant verified on all DB queries (getBackTranslation + getFileReviewData pre-query)
+- **code-quality-analyzer**: (pending — run before final CR)
+- **feature-dev:code-reviewer (cross-file)**: 5 cross-file pairs analyzed. 3 findings: CF-1 (P0, fixed), CF-2 (P0, fixed), CF-3 (P1, fixed). 0 remaining P0/P1.
 - **rls-policy-reviewer**: SKIPPED — no schema/migration files changed
 - **inngest-function-validator**: SKIPPED — no pipeline files changed
 
@@ -422,7 +449,8 @@ Claude Opus 4.6 (1M context)
 - `src/features/bridge/actions/getBackTranslation.action.ts` — adjacent segments query (AC2)
 - `src/features/bridge/actions/getBackTranslation.action.test.ts` — updated mocks for new DB call
 - `src/features/bridge/actions/getBackTranslation.context.test.ts` — fixed mock pattern, unskipped 4 tests
-- `src/features/review/components/ReviewPageClient.tsx` — Shift+J/K (AC5), viewport sync (AC6)
+- `src/features/review/actions/getFileReviewData.action.ts` — **5.2c AC2 scoped view fix**: pre-query assignments → filter Q2 for native_reviewer + `assignedFindingCount` moved outside Q9 try-block (CF-2)
+- `src/features/review/components/ReviewPageClient.tsx` — Shift+J/K (AC5), viewport sync (AC6), **5.2c AC2 default filter fix**: `setFilter('flagged')` for native_reviewer with `isFirstInit` guard (CF-1)
 - `src/features/review/components/KeyboardCheatSheet.tsx` — Shift+J/K entries (AC5)
 - `src/features/review/hooks/use-review-actions.ts` — double-rAF focus after Sheet close (AC4)
 - `src/features/review/components/ReviewPageClient.story53.test.tsx` — AC4/5/6 tests implemented
@@ -430,7 +458,7 @@ Claude Opus 4.6 (1M context)
 - `scripts/generate-verification-data.mjs` — isTemplateCompatible + export (AC7)
 - `e2e/review-responsive.spec.ts` — 28 test.skip removed (AC3)
 - `e2e/review-actions.spec.ts` — E-B1 toBeFocused assertion (AC4)
-- `e2e/epic5-integration.spec.ts` — 10 test.skip removed (AC1)
+- `e2e/epic5-integration.spec.ts` — E2E fixes: column name, page nav, accordion guard, flaggedFindingId, click-by-id, review_actions seed, timeouts, skip guards (AC1)
 - `docs/test-data/verification-baseline/verification-500.sdlxliff` — regenerated (AC7)
 - `docs/test-data/verification-baseline/baseline-annotations.json` — regenerated (AC7)
 

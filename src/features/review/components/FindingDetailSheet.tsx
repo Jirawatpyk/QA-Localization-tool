@@ -89,9 +89,12 @@ export function FindingDetailSheet({
   }, [finding])
 
   // Responsive width: laptop = 360px, tablet/mobile = 300px
+  // Base SheetContent uses `w-3/4 sm:max-w-sm`. Override both:
+  // - Laptop (>= 1024px): sm:max-w overrides sm:max-w-sm
+  // - Mobile (< 640px): w-* overrides w-3/4 (max-w doesn't help at small viewports)
   const widthClass = isLaptop
-    ? 'max-w-[var(--detail-panel-width-laptop)]'
-    : 'max-w-[var(--detail-panel-width-tablet)]'
+    ? 'sm:max-w-[var(--detail-panel-width-laptop)]'
+    : 'w-[var(--detail-panel-width-tablet)] sm:max-w-[var(--detail-panel-width-tablet)]'
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

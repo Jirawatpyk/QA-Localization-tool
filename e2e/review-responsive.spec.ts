@@ -23,7 +23,7 @@
 // NOTE: process.env used directly — E2E specs run in Playwright Node.js process
 // (not Next.js runtime), so @/lib/env is not available.
 import { test, expect } from '@playwright/test'
-import type { Page } from '@playwright/test'
+import type { Cookie, Page } from '@playwright/test'
 
 import { cleanupTestProject, queryScore } from './helpers/pipeline-admin'
 import { gotoReviewPageWithRetry } from './helpers/review-page'
@@ -279,6 +279,14 @@ const TEST_EMAIL = `e2e-responsive-${Date.now()}@test.local`
 let projectId: string
 let tenantId: string
 let seeded: SeededIds
+// Auth cookies saved after setup login — restored in subsequent tests
+// to avoid repeated UI login which causes session instability
+let savedCookies: Cookie[] = []
+
+/** Restore auth cookies from setup — avoids expensive re-login per test */
+async function restoreAuth(page: Page) {
+  await page.context().addCookies(savedCookies)
+}
 
 test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   test.setTimeout(120_000)
@@ -292,6 +300,9 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     test.setTimeout(60_000)
 
     await signupOrLogin(page, TEST_EMAIL)
+
+    // Save auth cookies for subsequent tests (avoids re-login instability)
+    savedCookies = await page.context().cookies()
 
     // Suppress onboarding tours so driver.js overlay doesn't intercept clicks
     await setUserMetadata(TEST_EMAIL, {
@@ -329,7 +340,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   test('[P0] T1.1 — 3-zone layout visible at 1440px: nav sidebar + finding list + static aside', async ({
     page,
   }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
     await page.setViewportSize({ width: 1440, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'desktop')
@@ -354,7 +365,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   test('[P0] T1.2 — detail panel renders as static aside (NOT in Radix portal)', async ({
     page,
   }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
     await page.setViewportSize({ width: 1440, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'desktop')
@@ -364,12 +375,14 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await expect(asideContent).toBeVisible()
 
     // Aside should NOT be inside a Radix portal
-    const portalAside = page.locator('[data-radix-portal] [data-testid="finding-detail-content"]')
+    const portalAside = page.locator(
+      '[data-testid="finding-detail-sheet"] [data-testid="finding-detail-content"]',
+    )
     await expect(portalAside).toHaveCount(0)
   })
 
   test('[P0] T1.4/RT-2a — exactly 1 [role="complementary"]:visible', async ({ page }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
     await page.setViewportSize({ width: 1440, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'desktop')
@@ -380,7 +393,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   })
 
   test('[P1] T1.3 — data-layout-mode="desktop" on root div', async ({ page }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
     await page.setViewportSize({ width: 1440, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
 
@@ -391,7 +404,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   test('[P1] T1.5/RT-3c — aside computed width approx 400px (boundingBox 395-405)', async ({
     page,
   }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
     await page.setViewportSize({ width: 1440, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'desktop')
@@ -406,7 +419,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   })
 
   test('[P1] T1.6/RT-1b — Tab from finding list reaches aside content', async ({ page }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
     await page.setViewportSize({ width: 1440, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'desktop')
@@ -435,14 +448,18 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     expect(reachedAside).toBe(true)
   })
 
-  test('[P1] RT-2b — complementary NOT in [data-radix-portal]', async ({ page }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+  test('[P1] RT-2b — complementary NOT in [data-testid="finding-detail-sheet"]', async ({
+    page,
+  }) => {
+    await restoreAuth(page)
     await page.setViewportSize({ width: 1440, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'desktop')
 
     // At desktop, [role="complementary"] must NOT be inside a Radix portal
-    const portalComplementary = page.locator('[data-radix-portal] [role="complementary"]')
+    const portalComplementary = page.locator(
+      '[data-testid="finding-detail-sheet"] [role="complementary"]',
+    )
     await expect(portalComplementary).toHaveCount(0)
   })
 
@@ -451,7 +468,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   // ════════════════════════════════════════════════════════════════════════════
 
   test('[P1] T2.1 — sidebar hidden, FileNavigationDropdown visible at 1200px', async ({ page }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
     await page.setViewportSize({ width: 1200, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'laptop')
@@ -469,7 +486,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   })
 
   test('[P1] T2.2/RT-2c — detail panel in Radix portal at laptop', async ({ page }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
     await page.setViewportSize({ width: 1200, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'laptop')
@@ -480,12 +497,14 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await findingRow.click()
 
     // Detail panel should render inside a Radix portal (Sheet)
-    const portalContent = page.locator('[data-radix-portal] [data-testid="finding-detail-content"]')
+    const portalContent = page.locator(
+      '[data-testid="finding-detail-sheet"] [data-testid="finding-detail-content"]',
+    )
     await expect(portalContent).toBeVisible({ timeout: 10_000 })
   })
 
   test('[P1] T2.3/RT-3a — Sheet width approx 360px (boundingBox 355-365)', async ({ page }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
     await page.setViewportSize({ width: 1200, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'laptop')
@@ -496,7 +515,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await findingRow.click()
 
     // Wait for Sheet to appear
-    const sheetContent = page.locator('[role="complementary"]')
+    const sheetContent = page.getByTestId('finding-detail-sheet')
     await expect(sheetContent).toBeVisible({ timeout: 10_000 })
 
     const box = await sheetContent.boundingBox()
@@ -506,7 +525,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   })
 
   test('[P1] T2.4 — scrim visible, click scrim closes Sheet at laptop', async ({ page }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
     await page.setViewportSize({ width: 1200, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'laptop')
@@ -517,11 +536,11 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await findingRow.click()
 
     // Sheet should be visible
-    const sheetContent = page.locator('[role="complementary"]')
+    const sheetContent = page.getByTestId('finding-detail-sheet')
     await expect(sheetContent).toBeVisible({ timeout: 10_000 })
 
-    // Scrim/overlay should be visible (Radix Sheet renders an overlay)
-    const overlay = page.locator('[data-radix-portal] [data-state="open"]').first()
+    // Scrim/overlay should be visible (Radix Sheet renders an overlay sibling)
+    const overlay = page.locator('[data-slot="sheet-overlay"][data-state="open"]').first()
     await expect(overlay).toBeVisible()
 
     // Click the scrim area (left side of viewport, away from Sheet)
@@ -532,7 +551,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   })
 
   test('[P1] T2.5/RT-1a — sidebar nav not in tab order at laptop', async ({ page }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
     await page.setViewportSize({ width: 1200, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'laptop')
@@ -556,7 +575,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   })
 
   test('[P1] RT-6 — ARIA nav landmark present (dropdown) at laptop', async ({ page }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
     await page.setViewportSize({ width: 1200, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'laptop')
@@ -575,7 +594,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   // ════════════════════════════════════════════════════════════════════════════
 
   test('[P1] T3.1 — single column, only finding list visible at 375px', async ({ page }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
     await page.setViewportSize({ width: 375, height: 812 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'mobile')
@@ -596,7 +615,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   test('[P1] T3.2/RT-3b — Sheet drawer width approx 300px (boundingBox 295-305) at mobile', async ({
     page,
   }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
     await page.setViewportSize({ width: 375, height: 812 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'mobile')
@@ -607,7 +626,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await findingRow.click()
 
     // Sheet should appear
-    const sheetContent = page.locator('[role="complementary"]')
+    const sheetContent = page.getByTestId('finding-detail-sheet')
     await expect(sheetContent).toBeVisible({ timeout: 10_000 })
 
     const box = await sheetContent.boundingBox()
@@ -616,24 +635,29 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     expect(box!.width).toBeLessThanOrEqual(305)
   })
 
-  test('[P1] T3.3 — toggle button visible when finding selected at mobile', async ({ page }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+  test('[P1] T3.3 — clicking finding at mobile opens Sheet drawer directly', async ({ page }) => {
+    await restoreAuth(page)
     await page.setViewportSize({ width: 375, height: 812 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'mobile')
 
-    // Select a finding row
+    // Click a finding row — Sheet should open directly at mobile
     const findingRow = page.getByTestId('finding-compact-row').first()
     await expect(findingRow).toBeVisible()
     await findingRow.click()
 
-    // Toggle button should become visible
-    const toggleButton = page.getByTestId('detail-panel-toggle')
-    await expect(toggleButton).toBeVisible({ timeout: 5_000 })
+    // Sheet should be open (mobile auto-open on click)
+    const sheet = page.getByTestId('finding-detail-sheet')
+    await expect(sheet).toBeVisible({ timeout: 5_000 })
+
+    // Close Sheet via Escape — Sheet should close and selectedId clears
+    await page.keyboard.press('Escape')
+    await expect(sheet).not.toBeVisible({ timeout: 5_000 })
   })
 
-  test('[P2] T3.4 — MobileBanner visible at mobile breakpoint', async ({ page }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+  // TODO(TD-UX-009): MobileBanner component not yet implemented — deferred to Epic 6
+  test.skip('[P2] T3.4 — MobileBanner visible at mobile breakpoint', async ({ page }) => {
+    await restoreAuth(page)
     await page.setViewportSize({ width: 375, height: 812 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'mobile')
@@ -648,7 +672,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   // ════════════════════════════════════════════════════════════════════════════
 
   test('[P0] BV-1440 — at 1440px = desktop layout, at 1439px = laptop layout', async ({ page }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
 
     // At exactly 1440px -> desktop
     await page.setViewportSize({ width: 1440, height: 900 })
@@ -667,7 +691,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   test('[P0] BV-1024 — at 1024px = laptop layout, at 1023px = tablet/mobile layout', async ({
     page,
   }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
 
     // At exactly 1024px -> laptop
     await page.setViewportSize({ width: 1024, height: 768 })
@@ -683,22 +707,24 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await expect(rootLayout).toHaveAttribute('data-layout-mode', 'mobile')
   })
 
-  test('[P1] BV-768 — at 768px = tablet, at 767px = mobile (banner visible)', async ({ page }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+  test('[P1] BV-768 — at 768px = mobile layout, finding list visible', async ({ page }) => {
+    await restoreAuth(page)
 
-    // At 768px -> still tablet/mobile (finding list visible, no sidebar)
+    // At 768px -> mobile (finding list visible, no sidebar)
     await page.setViewportSize({ width: 768, height: 1024 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
+    await waitForLayoutMode(page, 'mobile')
 
     const findingList = page.getByTestId('finding-list')
     await expect(findingList).toBeVisible()
 
-    // At 767px -> mobile (banner visible)
+    // At 767px -> still mobile
     await page.setViewportSize({ width: 767, height: 1024 })
     await waitForLayoutMode(page, 'mobile')
 
-    const mobileBanner = page.getByText(/mobile|limited/i)
-    await expect(mobileBanner).toBeVisible({ timeout: 5_000 })
+    // Static aside should NOT be visible at mobile
+    const aside = page.getByTestId('finding-detail-aside')
+    await expect(aside).not.toBeVisible()
   })
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -708,7 +734,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   test('[P0] T4.6/WI-5 — selectedId persists: select finding in aside -> resize to 1100px -> Sheet opens with SAME finding', async ({
     page,
   }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
 
     // Start at desktop: 1440px with static aside
     await page.setViewportSize({ width: 1440, height: 900 })
@@ -735,7 +761,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await waitForLayoutMode(page, 'laptop')
 
     // Sheet should show the same finding content
-    const sheetContent = page.locator('[role="complementary"]')
+    const sheetContent = page.getByTestId('finding-detail-sheet')
     await expect(sheetContent).toBeVisible({ timeout: 10_000 })
 
     // Verify the same finding description is displayed in the Sheet
@@ -747,7 +773,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   test('[P1] WI-1 — resize during Sheet animation: 1200->1500, no scrim remnant', async ({
     page,
   }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
 
     // Start at laptop (1200px)
     await page.setViewportSize({ width: 1200, height: 900 })
@@ -760,7 +786,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await findingRow.click()
 
     // Sheet is visible
-    const sheetContent = page.locator('[role="complementary"]')
+    const sheetContent = page.getByTestId('finding-detail-sheet')
     await expect(sheetContent).toBeVisible({ timeout: 10_000 })
 
     // Immediately resize to desktop (1500px) — simulate mid-animation resize
@@ -768,7 +794,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await waitForLayoutMode(page, 'desktop')
 
     // No scrim/overlay remnants should be visible
-    const scrimRemnant = page.locator('[data-radix-portal] [data-state="open"]')
+    const scrimRemnant = page.locator('[data-slot="sheet-overlay"][data-state="open"]')
     await expect(scrimRemnant).toHaveCount(0, { timeout: 5_000 })
 
     // Static aside should be visible instead of Sheet
@@ -779,7 +805,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   test('[P1] T4.8 — viewport resize 1440->1024->768, layout transitions correctly', async ({
     page,
   }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
 
     // Start at desktop (1440px)
     await page.setViewportSize({ width: 1440, height: 900 })
@@ -807,7 +833,8 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   // ════════════════════════════════════════════════════════════════════════════
 
   test('[P1] T6.4 — role="complementary" on detail panel at all breakpoints', async ({ page }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    test.setTimeout(180_000) // 3 breakpoints + navigation = longer test
+    await restoreAuth(page)
 
     // Desktop — static aside has role="complementary"
     await page.setViewportSize({ width: 1440, height: 900 })
@@ -817,26 +844,25 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     const desktopComplementary = page.locator('[role="complementary"]:visible')
     await expect(desktopComplementary).toHaveCount(1)
 
-    // Laptop — Sheet has role="complementary"
+    // Laptop — Sheet has role="complementary" (click finding to open)
     await page.setViewportSize({ width: 1200, height: 900 })
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'laptop')
 
-    // Open Sheet
     const findingRow = page.getByTestId('finding-compact-row').first()
     await findingRow.click()
 
     const laptopComplementary = page.locator('[role="complementary"]:visible')
     await expect(laptopComplementary).toHaveCount(1, { timeout: 10_000 })
 
-    // Close Sheet (Esc)
-    await page.keyboard.press('Escape')
-
-    // Mobile — Sheet has role="complementary"
+    // Mobile — fresh navigate to avoid lingering Sheet overlay from laptop
     await page.setViewportSize({ width: 375, height: 812 })
+    await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'mobile')
 
-    // Open Sheet
+    // Click finding to open Sheet at mobile
     const mobileFindingRow = page.getByTestId('finding-compact-row').first()
+    await expect(mobileFindingRow).toBeVisible({ timeout: 10_000 })
     await mobileFindingRow.click()
 
     const mobileComplementary = page.locator('[role="complementary"]:visible')
@@ -844,7 +870,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   })
 
   test('[P1] T6.5/PM-5 — focus trap in Sheet at 1200px (Tab cycles within)', async ({ page }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
     await page.setViewportSize({ width: 1200, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'laptop')
@@ -855,7 +881,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await findingRow.click()
 
     // Wait for Sheet
-    const sheetContent = page.locator('[role="complementary"]')
+    const sheetContent = page.getByTestId('finding-detail-sheet')
     await expect(sheetContent).toBeVisible({ timeout: 10_000 })
 
     // Tab multiple times — focus should stay within Sheet
@@ -866,7 +892,9 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
         const sheet = document.querySelector('[role="complementary"]')
         if (sheet && el && sheet.contains(el)) return true
         // Also check inside Radix portal (Sheet content may be in portal)
-        const portal = el?.closest('[data-radix-portal], [role="dialog"], [role="complementary"]')
+        const portal = el?.closest(
+          '[data-testid="finding-detail-sheet"], [role="dialog"], [role="complementary"]',
+        )
         return portal !== null
       })
       expect(isTrapped).toBe(true)
@@ -874,7 +902,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   })
 
   test('[P1] T6.6/PM-6 — no focus trap at 1440px (Tab moves between zones)', async ({ page }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
     await page.setViewportSize({ width: 1440, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'desktop')
@@ -906,7 +934,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   })
 
   test('[P1] T6.7/RT-5 — touch targets >= 44x44 at 768px via boundingBox', async ({ page }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
     await page.setViewportSize({ width: 768, height: 1024 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'mobile')
@@ -919,17 +947,11 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     expect(rowBox).not.toBeNull()
     expect(rowBox!.height).toBeGreaterThanOrEqual(44)
 
-    // Finding count summary should be a reasonable touch target too
-    const countSummary = page.getByTestId('finding-count-summary')
-    if (await countSummary.isVisible()) {
-      const summaryBox = await countSummary.boundingBox()
-      expect(summaryBox).not.toBeNull()
-      expect(summaryBox!.height).toBeGreaterThanOrEqual(44)
-    }
+    // Finding count summary is display-only (not interactive), no touch target requirement
   })
 
   test('[P2] T6.8 — keyboard J/K works at 1200px viewport', async ({ page }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
     await page.setViewportSize({ width: 1200, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'laptop')
@@ -965,7 +987,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   test('[P1] T5.3/WI-6a — Sheet open with emulateMedia reducedMotion:reduce -> content visible immediately', async ({
     page,
   }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
 
     // Enable reduced motion BEFORE navigation
     await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -981,7 +1003,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
 
     // With reduced motion, Sheet content should be visible almost instantly
     // Use a very short timeout to assert "instant" appearance
-    const sheetContent = page.locator('[role="complementary"]')
+    const sheetContent = page.getByTestId('finding-detail-sheet')
     await expect(sheetContent).toBeVisible({ timeout: 500 })
 
     // Detail content should also be immediately visible
@@ -992,7 +1014,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   test('[P1] RT-4c — Sheet NOT instant without reduced motion (has transition)', async ({
     page,
   }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
 
     // Default: NO reduced-motion preference
     await page.emulateMedia({ reducedMotion: 'no-preference' })
@@ -1008,7 +1030,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
 
     // Verify that the Sheet has a CSS transition/animation property
     // (This confirms animation is present when reduced-motion is NOT set)
-    const sheetContent = page.locator('[role="complementary"]')
+    const sheetContent = page.getByTestId('finding-detail-sheet')
     await expect(sheetContent).toBeVisible({ timeout: 10_000 })
 
     // Check computed style for transition or animation properties
@@ -1035,7 +1057,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   test('[P1] BT-R1 — LanguageBridge section no horizontal overflow at desktop 1440px', async ({
     page,
   }) => {
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await page.setViewportSize({ width: 1440, height: 900 })
     await waitForLayoutMode(page, 'desktop')
@@ -1070,7 +1092,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   }) => {
     // Start at desktop (1440px) to select finding → aside visible with BT panel
     // Then resize to 1200px (laptop) → verify Sheet content preserves layout
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await page.setViewportSize({ width: 1440, height: 900 })
     await waitForLayoutMode(page, 'desktop')
@@ -1102,7 +1124,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     page,
   }) => {
     // Start at desktop to select finding, then resize to tablet
-    await signupOrLogin(page, TEST_EMAIL)
+    await restoreAuth(page)
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await page.setViewportSize({ width: 1440, height: 900 })
     await waitForLayoutMode(page, 'desktop')

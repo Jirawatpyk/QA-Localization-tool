@@ -116,6 +116,7 @@ export function ReviewPageClient({
   initialData,
 }: ReviewPageClientProps) {
   const resetForFile = useReviewStore((s) => s.resetForFile)
+  const setFilter = useReviewStore((s) => s.setFilter)
   const setFindings = useReviewStore((s) => s.setFindings)
   const findingsMap = useFileState((fs) => fs.findingsMap, fileId)
   const currentScore = useFileState((fs) => fs.currentScore, fileId)
@@ -382,9 +383,10 @@ export function ReviewPageClient({
     (id: string | null) => {
       activeFindingIdRef.current = id
       setActiveFindingState(id)
-      // Desktop only: sync selectedId for aside detail panel.
-      // Laptop/mobile: do NOT auto-set selectedId — Sheet would open and block finding list.
-      // (H3 viewport-resize edge case accepted as TD — users don't resize dev tools in production)
+      // Desktop only: sync selectedId for aside detail panel (non-blocking, side-by-side).
+      // Laptop/mobile: do NOT sync here — Sheet is a blocking overlay. User clicks
+      // sync via handleToggleExpand instead, which is only called from user interaction.
+      // This prevents Sheet from auto-opening on viewport transitions or mount init.
       if (isDesktop) {
         selectedIdFromClickRef.current = true
         setSelectedFinding(id)
@@ -708,9 +710,17 @@ export function ReviewPageClient({
     ) {
       return
     }
+    // CF-1 fix: track whether this is first init (not F5 re-init) for filter override
+    const isFirstInit = processedFileIdRef.current !== fileId
     processedFileIdRef.current = fileId
 
     resetForFile(fileId)
+
+    // Story 5.2c AC2: native_reviewer's default filter = 'flagged' (scoped view)
+    // Only on first init — F5/RSC re-init must NOT override user's filter choice (CF-1)
+    if (isFirstInit && initialData.userRole === 'native_reviewer') {
+      setFilter('status', 'flagged')
+    }
 
     const data = initialData
 
@@ -1137,17 +1147,36 @@ export function ReviewPageClient({
     }
   }
 
-  const handleToggleExpand = useCallback((id: string) => {
-    setExpandedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
+  const handleToggleExpand = useCallback(
+    (id: string) => {
+      setExpandedIds((prev) => {
+        const next = new Set(prev)
+        if (next.has(id)) {
+          next.delete(id)
+        } else {
+          next.add(id)
+        }
+        return next
+      })
+      // Non-desktop: sync selectedId when clicking a finding, even if already
+      // active (handleGridClick skips when id === activeFindingId). No initial-render
+      // guard needed — handleToggleExpand is only called from user interaction.
+      // Laptop: opens Sheet immediately (sheetOpen = selectedId !== null)
+      // Mobile: opens Sheet drawer (set both selectedId + mobileDrawerOpen)
+      if (!isDesktop) {
+        selectedIdFromClickRef.current = true
+        setSelectedFinding(id)
+        queueMicrotask(() => {
+          selectedIdFromClickRef.current = false
+        })
+        // Mobile: auto-open drawer on finding click (UX: one-tap access)
+        if (!isLaptop) {
+          setMobileDrawerOpen(true)
+        }
       }
-      return next
-    })
-  }, [])
+    },
+    [isDesktop, isLaptop, setSelectedFinding],
+  )
 
   // Reviewed count for ReviewProgress dual-track
   const reviewedCount = useMemo(

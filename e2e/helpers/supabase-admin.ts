@@ -5,7 +5,7 @@
  * NOTE: process.env is used directly because E2E helpers run in the Playwright
  * Node.js context (not Next.js runtime), so @/lib/env is not available.
  */
-import type { Page } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -31,13 +31,17 @@ export async function signupOrLogin(
   displayName: string = 'E2E Test User',
 ): Promise<void> {
   await page.goto('/login')
-  await page.getByLabel('Email').fill(email)
+  // Robust email field: try label first, fall back to input[type="email"] or placeholder
+  const emailField = page.getByLabel('Email').or(page.locator('input[type="email"]')).first()
+  await expect(emailField).toBeVisible({ timeout: 10_000 })
+  await emailField.fill(email)
   await page.getByLabel('Password').fill(password)
   await page.getByRole('button', { name: 'Sign in' }).click()
 
   let loginSucceeded = true
   try {
-    await page.waitForURL('**/dashboard', { timeout: 15000, waitUntil: 'domcontentloaded' })
+    // Cloud Supabase auth can be slow — 30s timeout for login
+    await page.waitForURL('**/dashboard', { timeout: 30_000, waitUntil: 'domcontentloaded' })
   } catch {
     loginSucceeded = false
   }
@@ -49,10 +53,15 @@ export async function signupOrLogin(
     if (await displayNameField.isVisible().catch(() => false)) {
       await displayNameField.fill(displayName)
     }
-    await page.getByLabel('Email').fill(email)
+    const signupEmailField = page
+      .getByLabel('Email')
+      .or(page.locator('input[type="email"]'))
+      .first()
+    await expect(signupEmailField).toBeVisible({ timeout: 10_000 })
+    await signupEmailField.fill(email)
     await page.getByLabel('Password').fill(password)
     await page.getByRole('button', { name: 'Create account' }).click()
-    await page.waitForURL('**/dashboard', { timeout: 30000, waitUntil: 'domcontentloaded' })
+    await page.waitForURL('**/dashboard', { timeout: 30_000, waitUntil: 'domcontentloaded' })
   }
 }
 
