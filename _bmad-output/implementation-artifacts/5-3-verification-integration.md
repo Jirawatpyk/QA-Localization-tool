@@ -221,6 +221,36 @@ So that I can confirm the epic is production-ready with no hidden bugs, no skipp
 - [x] 9.6 Run cross-file review (`feature-dev:code-reviewer`) on: bridge, review features (Guardrail #79)
 - [x] 9.7 Update all 7 TD entries to RESOLVED in `tech-debt-tracker.md`
 
+## Post-Implementation: Responsive E2E Systematic Fix (2026-03-29)
+
+### Commits
+- `176473f` — fix(review): Sheet not opening at laptop/mobile + E2E responsive 34/34 pass
+- `d3f8edf` — fix(review): CR R1 — stale Sheet on J/K, portal isolation, toggle button, BV-768
+- (pending) — fix(review): CR R2 — phantom Sheet on mobile→laptop resize + RT-2b assertion
+
+### Production Bugs Fixed (4)
+1. **Sheet not opening at laptop/mobile** — `handleActiveFindingChange` only synced `selectedId` at desktop. Fix: separate `onSelect` callback (user click → Sheet) from `onToggleExpand` (J/K nav → no Sheet). Files: `ReviewPageClient.tsx`, `FindingList.tsx`, `FindingCardCompact.tsx`
+2. **Sheet width wrong** — CSS specificity: `sm:max-w-sm` (384px) overrode custom 360px/300px tokens. Fix: `sm:` prefix for laptop, `w-[]` for mobile. File: `FindingDetailSheet.tsx`
+3. **Touch target < 44px** — `FindingCardCompact` row height 41.77px < WCAG 2.5.8 minimum. Fix: `min-h-11`. File: `FindingCardCompact.tsx`
+4. **J/K at laptop = stale Sheet** — `navigateNext`/`navigatePrev` didn't update `selectedId` → Sheet showed old finding. Fix: `onNavigateAway` callback closes Sheet on navigate. Files: `ReviewPageClient.tsx`, `FindingList.tsx`
+5. **Mobile close Sheet → resize laptop = phantom re-open** — `selectedId` preserved for toggle button but not cleared on mobile→laptop transition. Fix: render-time `prevLayoutForSheet` sync clears `selectedId`. File: `ReviewPageClient.tsx`
+6. **Mobile close clears selectedId** — `handleSheetChange` at mobile cleared `selectedId`, preventing toggle button. Fix: only clear `mobileDrawerOpen`, preserve `selectedId`. File: `ReviewPageClient.tsx`
+
+### E2E Test Fixes (5)
+1. **Stale `[data-radix-portal]` selector** — Radix UI v2 doesn't use this attribute. Fix: `[data-testid="finding-detail-sheet"]`
+2. **Portal isolation test trivially passing** — CSS descendant selector on same element. Fix: `page.evaluate` DOM traversal (`aside.contains(content)`)
+3. **RT-2b incorrect `:not([aria-hidden])` filter** — Radix unmounts, not aria-hidden. Fix: simplified querySelector
+4. **MobileBanner regex wrong** — `/mobile|limited/i` didn't match actual text. Fix: `/best review experience.*desktop/i`
+5. **Auth session instability** — `signupOrLogin` per test caused flaky failures. Fix: `restoreAuth` cookie reuse
+6. **BV-768 missing MobileBanner boundary check** — Added back at 767px
+
+### Systematic Review (2 rounds)
+- **CR R1:** 3 agents (prod-reviewer, e2e-reviewer, crossfile-reviewer) — found P1 stale Sheet on J/K, E2E weakened assertions
+- **CR R2:** 3 agents — found P1 phantom Sheet on mobile→laptop resize, RT-2b incorrect mechanism
+- **Path C intermediate render:** verified theoretical-only risk (action bar state lag 1 frame, ~16ms window, impossible for human to exploit)
+
+### Final Result: 34/34 E2E passed, 0 skipped
+
 ## Dev Notes
 
 ### Architecture Patterns & Constraints
