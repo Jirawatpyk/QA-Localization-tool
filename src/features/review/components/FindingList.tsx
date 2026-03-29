@@ -20,6 +20,8 @@ export type FindingListProps = {
   findings: FindingForDisplay[]
   expandedIds: Set<string>
   onToggleExpand: (id: string) => void
+  /** Called on user click/Enter on a finding — signals "user selected this" (opens Sheet at non-desktop) */
+  onFindingSelect?: ((id: string) => void) | undefined
   sourceLang?: string | undefined
   targetLang?: string | undefined
   l2ConfidenceMin?: number | null | undefined
@@ -56,6 +58,7 @@ export function FindingList({
   findings,
   expandedIds,
   onToggleExpand,
+  onFindingSelect,
   sourceLang,
   targetLang,
   l2ConfidenceMin,
@@ -407,6 +410,7 @@ export function FindingList({
           l2ConfidenceMin={l2ConfidenceMin}
           l3ConfidenceMin={l3ConfidenceMin}
           onExpand={onToggleExpand}
+          onSelect={onFindingSelect}
           onAccept={onAccept}
           onReject={onReject}
           isActionInFlight={isActionInFlight}

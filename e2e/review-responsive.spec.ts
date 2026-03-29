@@ -655,15 +655,14 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await expect(sheet).not.toBeVisible({ timeout: 5_000 })
   })
 
-  // TODO(TD-UX-009): MobileBanner component not yet implemented — deferred to Epic 6
-  test.skip('[P2] T3.4 — MobileBanner visible at mobile breakpoint', async ({ page }) => {
+  test('[P2] T3.4 — MobileBanner visible at mobile breakpoint', async ({ page }) => {
     await restoreAuth(page)
     await page.setViewportSize({ width: 375, height: 812 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'mobile')
 
-    // Mobile banner should be visible at mobile viewport
-    const mobileBanner = page.getByText(/mobile|limited/i)
+    // Mobile banner should be visible at mobile viewport (text from mobile-banner.tsx)
+    const mobileBanner = page.getByText(/best review experience.*desktop/i)
     await expect(mobileBanner).toBeVisible({ timeout: 5_000 })
   })
 

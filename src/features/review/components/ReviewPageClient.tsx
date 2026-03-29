@@ -983,8 +983,9 @@ export function ReviewPageClient({
           const autoRejectedSet = new Set(result.data.autoRejectedIds)
           const updatedAt = result.data.serverUpdatedAt ?? new Date().toISOString()
           const currentState = useReviewStore.getState()
+          const currentFs = getStoreFileState(currentState, fileId)
           for (const id of autoRejectedSet) {
-            const finding = currentState.findingsMap.get(id)
+            const finding = currentFs.findingsMap.get(id)
             if (finding && finding.status === 'pending') {
               currentState.setFinding(id, {
                 ...finding,
@@ -1147,32 +1148,30 @@ export function ReviewPageClient({
     }
   }
 
-  const handleToggleExpand = useCallback(
+  const handleToggleExpand = useCallback((id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }, [])
+
+  // Separate handler for finding selection at non-desktop (Sheet opening).
+  // Called only from FindingCardCompact click — NOT from J/K navigation.
+  const handleFindingSelect = useCallback(
     (id: string) => {
-      setExpandedIds((prev) => {
-        const next = new Set(prev)
-        if (next.has(id)) {
-          next.delete(id)
-        } else {
-          next.add(id)
-        }
-        return next
+      if (isDesktop) return
+      selectedIdFromClickRef.current = true
+      setSelectedFinding(id)
+      queueMicrotask(() => {
+        selectedIdFromClickRef.current = false
       })
-      // Non-desktop: sync selectedId when clicking a finding, even if already
-      // active (handleGridClick skips when id === activeFindingId). No initial-render
-      // guard needed — handleToggleExpand is only called from user interaction.
-      // Laptop: opens Sheet immediately (sheetOpen = selectedId !== null)
-      // Mobile: opens Sheet drawer (set both selectedId + mobileDrawerOpen)
-      if (!isDesktop) {
-        selectedIdFromClickRef.current = true
-        setSelectedFinding(id)
-        queueMicrotask(() => {
-          selectedIdFromClickRef.current = false
-        })
-        // Mobile: auto-open drawer on finding click (UX: one-tap access)
-        if (!isLaptop) {
-          setMobileDrawerOpen(true)
-        }
+      if (!isLaptop) {
+        setMobileDrawerOpen(true)
       }
     },
     [isDesktop, isLaptop, setSelectedFinding],
@@ -1469,6 +1468,7 @@ export function ReviewPageClient({
               findings={filteredFindings}
               expandedIds={expandedIds}
               onToggleExpand={handleToggleExpand}
+              onFindingSelect={handleFindingSelect}
               sourceLang={sourceLang}
               targetLang={targetLang ?? undefined}
               l2ConfidenceMin={storeL2ConfidenceMin ?? initialData.l2ConfidenceMin}

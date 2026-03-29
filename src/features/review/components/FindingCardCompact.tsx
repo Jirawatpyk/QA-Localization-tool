@@ -68,6 +68,8 @@ export type FindingCardCompactProps = {
   l2ConfidenceMin?: number | null | undefined
   l3ConfidenceMin?: number | null | undefined
   onExpand: (id: string) => void
+  /** Called on user click/Enter — signals "user selected this finding" (opens Sheet at non-desktop) */
+  onSelect?: ((id: string) => void) | undefined
   onAccept?: ((findingId: string) => void) | undefined
   onReject?: ((findingId: string) => void) | undefined
   isActionInFlight?: boolean | undefined
@@ -89,6 +91,7 @@ function FindingCardCompactInner({
   l2ConfidenceMin,
   l3ConfidenceMin,
   onExpand,
+  onSelect,
   onAccept,
   onReject,
   isActionInFlight = false,
@@ -156,11 +159,13 @@ function FindingCardCompactInner({
     }
 
     onExpand(finding.id)
+    onSelect?.(finding.id)
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     if (e.key === 'Enter') {
       onExpand(finding.id)
+      onSelect?.(finding.id)
     }
     if (e.key === 'Escape' && isExpanded) {
       e.stopPropagation()
