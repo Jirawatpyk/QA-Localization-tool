@@ -269,8 +269,15 @@ export function useReviewActions({
           updatedState.setSelectedFinding(nextPendingId)
         } else {
           // TD-E2E-018 fix: all findings reviewed — clear selectedFinding to close Sheet
-          // (Radix Sheet sets aria-hidden on background, blocking action bar focus)
+          // FIRST: close Sheet by clearing selectedId (removes aria-hidden from background)
           updatedState.setSelectedFinding(null)
+          // THEN: focus action bar after React commit + Sheet unmount (double rAF)
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              const actionBar = document.querySelector('[role="toolbar"]') as HTMLElement | null
+              actionBar?.focus()
+            })
+          })
         }
       } catch {
         // M4 fix: fresh state for rollback on unexpected error

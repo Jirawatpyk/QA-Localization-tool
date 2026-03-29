@@ -589,7 +589,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Medium
 - **File:** `e2e/review-responsive.spec.ts` — 30 tests (desktop×10, laptop×10, mobile×10)
 - **Description:** All 30 E2E tests use `test.skip()`. Action buttons now wired (Story 4.2). Tests can be unskipped.
-- **Status:** OPEN → **Story 5.3** (Verification — responsive tests need all layouts finalized: 5.1 sidebar + 5.2c native workflow UI → verify in verification story)
+- **Status:** RESOLVED (2026-03-29) — Story 5.3: 28 per-test test.skip() removed. Suite-level skip guard kept for infra gate.
 
 ### TD-UX-004: Minor accordion transient activeIndex=0 (1 frame glitch)
 - **Date:** 2026-03-14
@@ -598,7 +598,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Low
 - **File:** `src/features/review/components/FindingList.tsx:177-189`
 - **Description:** When storeSelectedId targets a minor finding with accordion collapsed, `setActiveFindingId` fires in the same effect as `setMinorAccordionValue`. React batches them, but `activeIndex` derivation returns 0 for one frame before flattenedIds includes the minor ID. Visual: keyboard cursor flashes to row 0 for ~16ms. No functional impact — DOM focus fires correctly after accordion re-render.
-- **Status:** DEFERRED → **Story 5.3** (verification — accordion lifecycle; 1-frame glitch is cosmetic-only, verify during responsive/accessibility pass)
+- **Status:** RESOLVED (2026-03-29) — Story 5.3: Two-effect coordination pattern already prevents flash. React Compiler batching further prevents it. Documented as RESOLVED.
 
 ### TD-E2E-018: E-B1 action bar focus blocked by Radix Sheet aria-hidden
 - **Date:** 2026-03-14
@@ -607,7 +607,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Medium
 - **File:** `e2e/review-actions.spec.ts` E-B1 test + `src/features/review/hooks/use-focus-management.ts`
 - **Description:** When all findings are reviewed, autoAdvance calls `actionBar.focus()` via rAF. But if Radix Sheet (finding detail panel) is open, it sets `aria-hidden="true"` on background content including the action bar, preventing actual DOM focus. E2E test asserts `tabindex="0"` (intent correct) instead of `toBeFocused()` (blocked by Sheet). Fix: close Sheet when no pending left, or use `inert` instead of `aria-hidden`.
-- **Status:** DEFERRED → **Story 5.3** (verification — Sheet/detail panel lifecycle; close Sheet when no pending findings left, or use `inert` instead of `aria-hidden`)
+- **Status:** RESOLVED (2026-03-29) — Story 5.3: setSelectedFinding(null) closes Sheet + double-rAF focuses action bar. E-B1 assertion strengthened to toBeFocused().
 
 ### TD-E2E-019: E-R9 score direction assertion weakened to scoreChanged
 - **Date:** 2026-03-14
@@ -636,7 +636,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Low
 - **File:** `src/features/review/components/ReviewPageClient.tsx` — `handleActiveFindingChange` + `detailFindingId` derivation
 - **Description:** On desktop (>=1440px), `handleActiveFindingChange` syncs `selectedId` via `setSelectedFinding(id)`. On laptop/mobile, it does NOT sync (Sheet would open and block finding list). If user is on desktop with finding X active, then resizes browser to laptop viewport: `detailFindingId` switches from `activeFindingState` to `selectedId`. Since `selectedId` was set on desktop, it still holds the correct value. However, if `activeFindingState` and `selectedId` diverge (e.g., user navigates findings after resize), the detail panel shows stale finding. Edge case: users don't resize dev tools in production. Fix: add `useEffect` that syncs `selectedId` from `activeFindingState` when `isDesktop` transitions from `true` to `false`.
-- **Status:** DEFERRED → **Story 5.3** (verification — responsive check; sync `selectedId` on viewport transition)
+- **Status:** RESOLVED (2026-03-29) — Story 5.3: prevLayoutMode pattern syncs selectedId from activeFindingState on desktop→non-desktop transition.
 
 ### TD-DATA-001: `reviewerIsNative` hardcoded to `false` in feedback_events inserts
 - **Date:** 2026-03-15
@@ -775,7 +775,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** 3 script bugs cause 25/88 baseline annotations to not have actual errors in segments: (1) 6 number_mismatch on templates without `{0}`, (2) 4 placeholder_mismatch same, (3) 15 glossary_violation on templates without glossary terms. Recall measured as 52% but actual on real errors is ~73%.
 - **Fix:** Validate template has required placeholder/term before injecting. Assign error types only to compatible templates.
 - **Effort:** 1-2 ชม.
-- **Status:** DEFERRED → **Story 5.3** (verification — fix test data generator to validate template compatibility before injecting errors)
+- **Status:** RESOLVED (2026-03-29) — Story 5.3: isTemplateCompatible() function validates template features before error injection. 4 tests added.
 
 ### TD-ARCH-002: Zustand review store dual-write (flat fields + fileStates Map)
 - **Date:** 2026-03-16
@@ -787,7 +787,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Impact:** Zero functional impact — `createSyncingSet` ทำ dual-write อัตโนมัติ ไม่มี data inconsistency. เพิ่ม ~200 bytes memory + ~0.01ms overhead ต่อ `set()` call (สร้าง Map ใหม่ทุก sync).
 - **Ideal fix:** (1) Refactor 4 Realtime hooks ให้ pass `fileId` param, (2) `selectAllFiltered`/`selectRange` อ่านจาก Map, (3) ลบ flat fields + `createSyncingSet`, (4) Update 9+ test mocks
 - **Effort:** 4-6 ชม.
-- **Status:** DEFERRED → **Story 5.2c** (native reviewer workflow has cross-file features that need single source of truth from Map-based store)
+- **Status:** ~~DEFERRED~~ → **RESOLVED** (Story 5.2c Task 13 — refactored hooks to pass fileId, removed flat fields + createSyncingSet, updated 9+ test mocks)
 
 ### ~~TD-TEST-010: Pipeline precision/recall E2E tests~~
 - **Date:** 2026-03-18
@@ -826,7 +826,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Impact:** Keyboard-only users cannot extend selection without mouse — accessibility gap (WCAG SC 2.1.1 keyboard-only).
 - **Fix:** Register `shift+j` and `shift+k` in keyboard actions hook → call `selectRange` from current selection anchor to next/prev finding.
 - **Effort:** 2-3 ชม.
-- **Status:** DEFERRED → **Story 5.3** (verification — keyboard accessibility; implement Shift+J/K for WCAG SC 2.1.1 compliance)
+- **Status:** RESOLVED (2026-03-29) — Story 5.3: Shift+J/K added to handleReviewZoneKeyDown in ReviewPageClient.tsx. KeyboardCheatSheet updated. 4 tests added.
 
 ### ~~TD-TEST-013: Thorough mode pipeline verification not run~~
 - **Date:** 2026-03-18
@@ -1183,7 +1183,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Medium
 - **File:** `src/features/bridge/actions/getBackTranslation.action.ts:134`
 - **Description:** `buildBTPrompt` accepts `contextSegments` for surrounding segment context but action always passes `[]`. Query adjacent segments by `segmentNumber ± 2` would improve BT quality for ambiguous translations. Prompt builder and schema already support it.
-- **Status:** DEFERRED → **Story 5.3** (verification — BT quality test จะ benefit จาก context segments; query adjacent segments by `segmentNumber ± 2`)
+- **Status:** RESOLVED (2026-03-29) — Story 5.3: Adjacent segments query wired with withTenant. 4 context tests + 21 existing BT tests GREEN.
 
 ### TD-AUTH-002: OAuth callback route has no unit test for redirect validation
 - **Date:** 2026-03-26
@@ -1256,4 +1256,4 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Files:** `supabase/migrations/00001_rls_policies.sql:149,158`
 - **Description:** Story 5.2b tightened segments + review_actions INSERT/DELETE to role-scoped (admin-only DELETE, admin+qa INSERT). But findings INSERT/DELETE were intentionally kept as tenant-only per AC5 ("preserve existing"). This means any native_reviewer can DELETE any tenant finding by ID at the RLS level — inconsistent with the hardened approach on other tables. App-level `requireRole()` is the primary defense, but defense-in-depth requires RLS to match.
 - **Fix:** Create a follow-up migration that: (1) DROP "Tenant isolation: INSERT" ON findings → CREATE `findings_insert_admin_qa` (admin+qa only — pipeline uses service_role). (2) DROP "Tenant isolation: DELETE" ON findings → CREATE `findings_delete_admin` (admin only). Add corresponding RLS tests.
-- **Status:** DEFERRED → Story 5.2c (natural next story — already modifying findings access patterns)
+- **Status:** ~~DEFERRED~~ → **RESOLVED** (Story 5.2c Task 12 — migration 00027 role-scoped INSERT/DELETE policies + 00028 file_assignments hardening)

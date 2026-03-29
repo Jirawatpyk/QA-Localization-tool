@@ -1,8 +1,8 @@
 /**
  * Story 4.1d ATDD — E2E: Responsive Layout
  *
- * TODO(TD-E2E-017): All 30 tests skipped — activate when review page is
- * stable with real data in E2E and Story 4.2 action buttons are wired.
+ * Story 5.3 AC3 (TD-E2E-017): All per-test skips removed.
+ * Suite-level skip guard kept: requires INNGEST_DEV_URL env.
  *
  * Tests the responsive 3-zone layout for the review page:
  *   - Desktop (1440px+): nav sidebar + finding list + static aside
@@ -326,7 +326,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   // Group 1: Desktop Layout (1440px+)
   // ════════════════════════════════════════════════════════════════════════════
 
-  test.skip('[P0] T1.1 — 3-zone layout visible at 1440px: nav sidebar + finding list + static aside', async ({
+  test('[P0] T1.1 — 3-zone layout visible at 1440px: nav sidebar + finding list + static aside', async ({
     page,
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
@@ -351,7 +351,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await expect(aside).toBeVisible()
   })
 
-  test.skip('[P0] T1.2 — detail panel renders as static aside (NOT in Radix portal)', async ({
+  test('[P0] T1.2 — detail panel renders as static aside (NOT in Radix portal)', async ({
     page,
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
@@ -368,7 +368,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await expect(portalAside).toHaveCount(0)
   })
 
-  test.skip('[P0] T1.4/RT-2a — exactly 1 [role="complementary"]:visible', async ({ page }) => {
+  test('[P0] T1.4/RT-2a — exactly 1 [role="complementary"]:visible', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1440, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
@@ -379,7 +379,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await expect(complementary).toHaveCount(1)
   })
 
-  test.skip('[P1] T1.3 — data-layout-mode="desktop" on root div', async ({ page }) => {
+  test('[P1] T1.3 — data-layout-mode="desktop" on root div', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1440, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
@@ -388,7 +388,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await expect(rootLayout).toHaveAttribute('data-layout-mode', 'desktop')
   })
 
-  test.skip('[P1] T1.5/RT-3c — aside computed width approx 400px (boundingBox 395-405)', async ({
+  test('[P1] T1.5/RT-3c — aside computed width approx 400px (boundingBox 395-405)', async ({
     page,
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
@@ -405,7 +405,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     expect(box!.width).toBeLessThanOrEqual(405)
   })
 
-  test.skip('[P1] T1.6/RT-1b — Tab from finding list reaches aside content', async ({ page }) => {
+  test('[P1] T1.6/RT-1b — Tab from finding list reaches aside content', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1440, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
@@ -435,7 +435,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     expect(reachedAside).toBe(true)
   })
 
-  test.skip('[P1] RT-2b — complementary NOT in [data-radix-portal]', async ({ page }) => {
+  test('[P1] RT-2b — complementary NOT in [data-radix-portal]', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1440, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
@@ -450,9 +450,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   // Group 2: Laptop Layout (1024-1439px)
   // ════════════════════════════════════════════════════════════════════════════
 
-  test.skip('[P1] T2.1 — sidebar hidden, FileNavigationDropdown visible at 1200px', async ({
-    page,
-  }) => {
+  test('[P1] T2.1 — sidebar hidden, FileNavigationDropdown visible at 1200px', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1200, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
@@ -470,7 +468,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await expect(staticAside).not.toBeVisible()
   })
 
-  test.skip('[P1] T2.2/RT-2c — detail panel in Radix portal at laptop', async ({ page }) => {
+  test('[P1] T2.2/RT-2c — detail panel in Radix portal at laptop', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1200, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
@@ -486,9 +484,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await expect(portalContent).toBeVisible({ timeout: 10_000 })
   })
 
-  test.skip('[P1] T2.3/RT-3a — Sheet width approx 360px (boundingBox 355-365)', async ({
-    page,
-  }) => {
+  test('[P1] T2.3/RT-3a — Sheet width approx 360px (boundingBox 355-365)', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1200, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
@@ -509,7 +505,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     expect(box!.width).toBeLessThanOrEqual(365)
   })
 
-  test.skip('[P1] T2.4 — scrim visible, click scrim closes Sheet at laptop', async ({ page }) => {
+  test('[P1] T2.4 — scrim visible, click scrim closes Sheet at laptop', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1200, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
@@ -535,7 +531,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await expect(sheetContent).not.toBeVisible({ timeout: 5_000 })
   })
 
-  test.skip('[P1] T2.5/RT-1a — sidebar nav not in tab order at laptop', async ({ page }) => {
+  test('[P1] T2.5/RT-1a — sidebar nav not in tab order at laptop', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1200, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
@@ -559,7 +555,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     expect(sidebarLinks).toHaveLength(0)
   })
 
-  test.skip('[P1] RT-6 — ARIA nav landmark present (dropdown) at laptop', async ({ page }) => {
+  test('[P1] RT-6 — ARIA nav landmark present (dropdown) at laptop', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1200, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
@@ -578,7 +574,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   // Group 3: Mobile Layout (<768px)
   // ════════════════════════════════════════════════════════════════════════════
 
-  test.skip('[P1] T3.1 — single column, only finding list visible at 375px', async ({ page }) => {
+  test('[P1] T3.1 — single column, only finding list visible at 375px', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 375, height: 812 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
@@ -597,7 +593,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await expect(sidebarNav).not.toBeVisible()
   })
 
-  test.skip('[P1] T3.2/RT-3b — Sheet drawer width approx 300px (boundingBox 295-305) at mobile', async ({
+  test('[P1] T3.2/RT-3b — Sheet drawer width approx 300px (boundingBox 295-305) at mobile', async ({
     page,
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
@@ -620,9 +616,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     expect(box!.width).toBeLessThanOrEqual(305)
   })
 
-  test.skip('[P1] T3.3 — toggle button visible when finding selected at mobile', async ({
-    page,
-  }) => {
+  test('[P1] T3.3 — toggle button visible when finding selected at mobile', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 375, height: 812 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
@@ -638,7 +632,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await expect(toggleButton).toBeVisible({ timeout: 5_000 })
   })
 
-  test.skip('[P2] T3.4 — MobileBanner visible at mobile breakpoint', async ({ page }) => {
+  test('[P2] T3.4 — MobileBanner visible at mobile breakpoint', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 375, height: 812 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
@@ -653,9 +647,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   // Group 4: Breakpoint Boundaries
   // ════════════════════════════════════════════════════════════════════════════
 
-  test.skip('[P0] BV-1440 — at 1440px = desktop layout, at 1439px = laptop layout', async ({
-    page,
-  }) => {
+  test('[P0] BV-1440 — at 1440px = desktop layout, at 1439px = laptop layout', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
 
     // At exactly 1440px -> desktop
@@ -672,7 +664,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await expect(rootLayout).toHaveAttribute('data-layout-mode', 'laptop')
   })
 
-  test.skip('[P0] BV-1024 — at 1024px = laptop layout, at 1023px = tablet/mobile layout', async ({
+  test('[P0] BV-1024 — at 1024px = laptop layout, at 1023px = tablet/mobile layout', async ({
     page,
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
@@ -691,9 +683,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await expect(rootLayout).toHaveAttribute('data-layout-mode', 'mobile')
   })
 
-  test.skip('[P1] BV-768 — at 768px = tablet, at 767px = mobile (banner visible)', async ({
-    page,
-  }) => {
+  test('[P1] BV-768 — at 768px = tablet, at 767px = mobile (banner visible)', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
 
     // At 768px -> still tablet/mobile (finding list visible, no sidebar)
@@ -715,7 +705,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   // Group 5: Mode Persistence & Transitions
   // ════════════════════════════════════════════════════════════════════════════
 
-  test.skip('[P0] T4.6/WI-5 — selectedId persists: select finding in aside -> resize to 1100px -> Sheet opens with SAME finding', async ({
+  test('[P0] T4.6/WI-5 — selectedId persists: select finding in aside -> resize to 1100px -> Sheet opens with SAME finding', async ({
     page,
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
@@ -754,7 +744,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     }
   })
 
-  test.skip('[P1] WI-1 — resize during Sheet animation: 1200->1500, no scrim remnant', async ({
+  test('[P1] WI-1 — resize during Sheet animation: 1200->1500, no scrim remnant', async ({
     page,
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
@@ -786,7 +776,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await expect(aside).toBeVisible()
   })
 
-  test.skip('[P1] T4.8 — viewport resize 1440->1024->768, layout transitions correctly', async ({
+  test('[P1] T4.8 — viewport resize 1440->1024->768, layout transitions correctly', async ({
     page,
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
@@ -816,9 +806,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   // Group 6: Accessibility
   // ════════════════════════════════════════════════════════════════════════════
 
-  test.skip('[P1] T6.4 — role="complementary" on detail panel at all breakpoints', async ({
-    page,
-  }) => {
+  test('[P1] T6.4 — role="complementary" on detail panel at all breakpoints', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
 
     // Desktop — static aside has role="complementary"
@@ -855,9 +843,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await expect(mobileComplementary).toHaveCount(1, { timeout: 10_000 })
   })
 
-  test.skip('[P1] T6.5/PM-5 — focus trap in Sheet at 1200px (Tab cycles within)', async ({
-    page,
-  }) => {
+  test('[P1] T6.5/PM-5 — focus trap in Sheet at 1200px (Tab cycles within)', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1200, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
@@ -887,9 +873,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     }
   })
 
-  test.skip('[P1] T6.6/PM-6 — no focus trap at 1440px (Tab moves between zones)', async ({
-    page,
-  }) => {
+  test('[P1] T6.6/PM-6 — no focus trap at 1440px (Tab moves between zones)', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1440, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
@@ -921,9 +905,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     expect(zonesWithContent.length).toBeGreaterThanOrEqual(2)
   })
 
-  test.skip('[P1] T6.7/RT-5 — touch targets >= 44x44 at 768px via boundingBox', async ({
-    page,
-  }) => {
+  test('[P1] T6.7/RT-5 — touch targets >= 44x44 at 768px via boundingBox', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 768, height: 1024 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
@@ -946,7 +928,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     }
   })
 
-  test.skip('[P2] T6.8 — keyboard J/K works at 1200px viewport', async ({ page }) => {
+  test('[P2] T6.8 — keyboard J/K works at 1200px viewport', async ({ page }) => {
     await signupOrLogin(page, TEST_EMAIL)
     await page.setViewportSize({ width: 1200, height: 900 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
@@ -980,7 +962,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
   // Group 7: Animation & Reduced Motion
   // ════════════════════════════════════════════════════════════════════════════
 
-  test.skip('[P1] T5.3/WI-6a — Sheet open with emulateMedia reducedMotion:reduce -> content visible immediately', async ({
+  test('[P1] T5.3/WI-6a — Sheet open with emulateMedia reducedMotion:reduce -> content visible immediately', async ({
     page,
   }) => {
     await signupOrLogin(page, TEST_EMAIL)
@@ -1007,7 +989,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await expect(detailContent).toBeVisible({ timeout: 500 })
   })
 
-  test.skip('[P1] RT-4c — Sheet NOT instant without reduced motion (has transition)', async ({
+  test('[P1] RT-4c — Sheet NOT instant without reduced motion (has transition)', async ({
     page,
   }) => {
     await signupOrLogin(page, TEST_EMAIL)

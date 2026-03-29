@@ -204,10 +204,35 @@ function generateNumbers(segNum) {
   return { n1, n2 }
 }
 
+// AC7 / TD-TEST-007: Validate template compatibility before error assignment
+function isTemplateCompatible(templateIdx, errorType) {
+  const src = SOURCE_TEMPLATES[templateIdx]
+  switch (errorType) {
+    case 'number_mismatch':
+      return /\{[0-9]+\}/.test(src) // Must have number placeholders
+    case 'placeholder_mismatch':
+      return /\{[0-9]+\}/.test(src) // Must have placeholders
+    case 'glossary_violation': {
+      const glossaryTerms = ['training', 'system', 'report', 'performance', 'application']
+      return glossaryTerms.some(term => src.toLowerCase().includes(term))
+    }
+    default:
+      return true // Other error types are always valid
+  }
+}
+
+// Exported for testing
+export { isTemplateCompatible }
+
 function generateSegment(segNum) {
   const templateIdx = (segNum - 1) % SOURCE_TEMPLATES.length
   const { n1, n2 } = generateNumbers(segNum)
-  const errorType = getErrorType(segNum)
+  let errorType = getErrorType(segNum)
+
+  // AC7: Skip incompatible error-template combinations (TD-TEST-007)
+  if (errorType && !isTemplateCompatible(templateIdx, errorType)) {
+    errorType = null // Drop error — template doesn't support this error type
+  }
 
   let sourceText = SOURCE_TEMPLATES[templateIdx]
     .replace('{0}', String(n1))

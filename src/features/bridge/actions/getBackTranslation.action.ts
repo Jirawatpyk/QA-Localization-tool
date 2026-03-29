@@ -3,7 +3,7 @@
 import 'server-only'
 
 import { generateText, Output } from 'ai'
-import { and, eq } from 'drizzle-orm'
+import { and, asc, between, eq, ne } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { db } from '@/db/client'
@@ -67,6 +67,7 @@ export async function getBackTranslation(
       .select({
         id: segments.id,
         fileId: segments.fileId,
+        segmentNumber: segments.segmentNumber,
         sourceText: segments.sourceText,
         targetText: segments.targetText,
         sourceLang: segments.sourceLang,
@@ -144,13 +145,38 @@ export async function getBackTranslation(
 
     const confidenceThreshold = project?.btConfidenceThreshold ?? 0.6
 
+    // Query adjacent segments for context (AC2 / TD-BT-001)
+    // Guardrail #1: withTenant on every query
+    const adjacentRows = await db
+      .select({
+        sourceText: segments.sourceText,
+        targetText: segments.targetText,
+        segmentNumber: segments.segmentNumber,
+      })
+      .from(segments)
+      .where(
+        and(
+          withTenant(segments.tenantId, tenantId),
+          eq(segments.fileId, segment.fileId),
+          between(segments.segmentNumber, segment.segmentNumber - 2, segment.segmentNumber + 2),
+          ne(segments.segmentNumber, segment.segmentNumber),
+        ),
+      )
+      .orderBy(asc(segments.segmentNumber))
+
+    const contextSegments = adjacentRows.map((r) => ({
+      sourceText: r.sourceText,
+      targetText: r.targetText,
+      segmentNumber: r.segmentNumber,
+    }))
+
     // Build prompt
     const { system, user: userPrompt } = buildBTPrompt({
       sourceText: segment.sourceText,
       targetText: segment.targetText,
       sourceLang: segment.sourceLang,
       targetLang: segment.targetLang,
-      contextSegments: [], // TODO(TD-BT-001): wire surrounding context segments (Story 5.2+)
+      contextSegments,
     })
 
     // AI call — primary model (Guardrail #16, #51)

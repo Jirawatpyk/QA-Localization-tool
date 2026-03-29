@@ -399,6 +399,22 @@ export function ReviewPageClient({
   // Story 4.3: selectedId synced from handleActiveFindingChange on all viewports (H3 fix).
   // Infinite loop prevented by skipStoreSyncRef passed to FindingList.
 
+  // AC6 / TD-UX-005: Sync selectedId when viewport transitions (desktop ↔ laptop/mobile)
+  // On desktop, clicking sets activeFindingState but only conditionally sets selectedId.
+  // When transitioning TO non-desktop, selectedId must reflect current active finding.
+  const [prevLayoutMode, setPrevLayoutMode] = useState(layoutMode)
+  if (prevLayoutMode !== layoutMode) {
+    setPrevLayoutMode(layoutMode)
+    // Desktop→non-desktop: sync selectedId from activeFindingState
+    if (
+      prevLayoutMode === 'desktop' &&
+      activeFindingState !== null &&
+      selectedId !== activeFindingState
+    ) {
+      setSelectedFinding(activeFindingState)
+    }
+  }
+
   // CR-R2 P1-2: shared native confirm handler with stale rollback guard
   const executeNativeConfirm = useCallback(
     (findingId: string) => {
@@ -610,25 +626,68 @@ export function ReviewPageClient({
     navigatePrevRef.current = fns.prev
   }, [])
 
-  const handleReviewZoneKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    // IME guard
-    if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return
-    // Input guard (Guardrail #28)
-    const target = e.target as HTMLElement
-    const tag = target.tagName
-    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return
-    if (target.getAttribute('contenteditable') === 'true') return
-    // Scope guard: skip when focus is in file navigation (Guardrail #28 — review area only)
-    if (target.closest('nav')) return
+  const handleReviewZoneKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      // IME guard
+      if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return
+      // Input guard (Guardrail #28)
+      const target = e.target as HTMLElement
+      const tag = target.tagName
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return
+      if (target.getAttribute('contenteditable') === 'true') return
+      // Scope guard: skip when focus is in file navigation (Guardrail #28 — review area only)
+      if (target.closest('nav')) return
 
-    if (e.key === 'j' || e.key === 'ArrowDown') {
-      e.preventDefault()
-      navigateNextRef.current?.()
-    } else if (e.key === 'k' || e.key === 'ArrowUp') {
-      e.preventDefault()
-      navigatePrevRef.current?.()
-    }
-  }, [])
+      const key = e.key.toLowerCase()
+
+      // AC5 / TD-UX-006: Shift+J/K extends selection range (same handler as j/k — Guardrail #28)
+      // Uses sortedFindingIds but skips non-visible findings (minor accordion collapsed)
+      // Cross-file review P1: must skip hidden minor findings to avoid selecting non-visible rows
+      if (e.shiftKey && (key === 'j' || e.key === 'ArrowDown')) {
+        e.preventDefault()
+        const currentId = activeFindingIdRef.current
+        if (!currentId) return
+        const fs = getStoreFileState(useReviewStore.getState(), fileId)
+        const ids = fs.sortedFindingIds
+        const idx = ids.indexOf(currentId)
+        // Find next VISIBLE finding by checking DOM (skip hidden minor findings)
+        for (let i = idx + 1; i < ids.length; i++) {
+          const nextId = ids[i]!
+          if (document.querySelector(`[data-finding-id="${CSS.escape(nextId)}"]`)) {
+            useReviewStore.getState().selectRange(currentId, nextId)
+            break
+          }
+        }
+        return
+      }
+      if (e.shiftKey && (key === 'k' || e.key === 'ArrowUp')) {
+        e.preventDefault()
+        const currentId = activeFindingIdRef.current
+        if (!currentId) return
+        const fs = getStoreFileState(useReviewStore.getState(), fileId)
+        const ids = fs.sortedFindingIds
+        const idx = ids.indexOf(currentId)
+        // Find previous VISIBLE finding by checking DOM
+        for (let i = idx - 1; i >= 0; i--) {
+          const prevId = ids[i]!
+          if (document.querySelector(`[data-finding-id="${CSS.escape(prevId)}"]`)) {
+            useReviewStore.getState().selectRange(currentId, prevId)
+            break
+          }
+        }
+        return
+      }
+
+      if (e.key === 'j' || e.key === 'ArrowDown') {
+        e.preventDefault()
+        navigateNextRef.current?.()
+      } else if (e.key === 'k' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        navigatePrevRef.current?.()
+      }
+    },
+    [fileId],
+  )
 
   // TD-ARCH-001: per-instance init guard (ref) + per-file initialized flag (Map).
   // processedFileIdRef is per-component-instance — ensures each mount initializes once.
@@ -1869,6 +1928,8 @@ export function ReviewPageClient({
             fetchOverrideHistory={getOverrideHistory}
             isNonNative={initialData.isNonNative}
             btConfidenceThreshold={initialData.btConfidenceThreshold}
+            assignmentId={selectedFinding?.assignmentId}
+            flaggerComment={selectedFinding?.flaggerComment}
           />
         )}
 

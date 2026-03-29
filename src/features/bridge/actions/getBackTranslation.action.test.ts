@@ -26,6 +26,9 @@ vi.mock('@/lib/logger', () => ({
 vi.mock('drizzle-orm', () => ({
   and: vi.fn((...args: unknown[]) => args),
   eq: vi.fn((...args: unknown[]) => args),
+  between: vi.fn((...args: unknown[]) => args),
+  ne: vi.fn((...args: unknown[]) => args),
+  asc: vi.fn((col: unknown) => col),
 }))
 
 // Mock AI/cache dependencies
@@ -72,7 +75,7 @@ const MOCK_USAGE = { inputTokens: 100, outputTokens: 50 }
 
 function setupDefaultMocks() {
   dbState.returnValues = [
-    // Segment query
+    // Call 0: Segment query
     [
       {
         id: 'seg-1',
@@ -80,10 +83,13 @@ function setupDefaultMocks() {
         targetText: 'สวัสดี',
         sourceLang: 'en-US',
         targetLang: 'th-TH',
+        segmentNumber: 1,
       },
     ],
-    // Project query (btConfidenceThreshold)
+    // Call 1: Project query (btConfidenceThreshold)
     [{ btConfidenceThreshold: 0.6 }],
+    // Call 2: Adjacent segments query (TD-BT-001 context segments)
+    [],
   ]
   mockComputeHash.mockResolvedValue('abc123')
   mockGetCachedBT.mockResolvedValue(null) // Cache miss by default
@@ -114,8 +120,8 @@ describe('getBackTranslation', () => {
     expect(mockGenerateText).toHaveBeenCalledWith(
       expect.objectContaining({ maxOutputTokens: 4096 }),
     )
-    // Verify withTenant called for both segment + project queries (Guardrail #1)
-    expect(mockWithTenant).toHaveBeenCalledTimes(2)
+    // Verify withTenant called for segment + project + adjacent queries (Guardrail #1)
+    expect(mockWithTenant).toHaveBeenCalledTimes(3)
   })
 
   // ── AC2 / Scenario 2.2 [P0]: Result shape ────────────────────────────

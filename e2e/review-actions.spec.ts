@@ -590,10 +590,10 @@ test.describe.serial('Review Actions — Story 4.2 ATDD', () => {
     expect(pendingCount).toBe(0)
 
     // Guardrail #32: no pending → autoAdvance targets action bar
-    // NOTE: Radix Sheet (detail panel) sets aria-hidden on background → actual DOM focus
-    // blocked. Verify tabindex="0" + no pending (autoAdvance intent is correct).
+    // TD-E2E-018 fix: Sheet closes first (setSelectedFinding(null)) → aria-hidden removed
+    // → action bar can now receive real DOM focus via double-rAF
     const actionBar = page.getByTestId('review-action-bar')
-    await expect(actionBar).toHaveAttribute('tabindex', '0', { timeout: 10_000 })
+    await expect(actionBar).toBeFocused({ timeout: 10_000 })
 
     const progress = page.getByTestId('review-progress')
     await expect(progress).toBeVisible({ timeout: 10_000 })

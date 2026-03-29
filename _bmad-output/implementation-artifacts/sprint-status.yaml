@@ -138,8 +138,8 @@ development_status:
   5-1-language-bridge-back-translation: done
   5-2a-non-native-auto-tag: done
   5-2b-schema-rls-scoped-access: done
-  5-2c-native-reviewer-workflow: review
-  5-3-verification-integration: backlog
+  5-2c-native-reviewer-workflow: done
+  5-3-verification-integration: review
   epic-5-retrospective: optional
 
   # ============================================================

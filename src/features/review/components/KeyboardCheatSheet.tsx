@@ -58,6 +58,8 @@ const SHORTCUT_CATEGORIES: ShortcutCategory[] = [
   {
     name: 'Bulk Operations',
     shortcuts: [
+      { keys: ['Shift+J'], description: 'Extend selection down' },
+      { keys: ['Shift+K'], description: 'Extend selection up' },
       { keys: ['Shift+Click'], description: 'Range select' },
       { keys: ['Ctrl+A'], description: 'Select all' },
       { keys: ['Ctrl+Z'], description: 'Undo' },
