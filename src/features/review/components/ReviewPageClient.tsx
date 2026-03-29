@@ -538,6 +538,26 @@ export function ReviewPageClient({
   useEffect(() => {
     const cleanups: Array<() => void> = []
 
+    // Shift+F — Flag for Native Review (opens dialog, QA reviewers only)
+    if (!isNativeReviewer) {
+      cleanups.push(
+        register(
+          'shift+f',
+          () => {
+            const findingId = activeFindingIdRef.current
+            if (!findingId) return
+            setFlagDialogFindingId(findingId)
+            setFlagDialogOpen(true)
+          },
+          {
+            scope: 'review',
+            description: 'Flag for native review',
+            category: 'Review Actions',
+          },
+        ),
+      )
+    }
+
     // Ctrl+A — select all filtered findings (Guardrail #34: only when finding list focused)
     cleanups.push(
       register(

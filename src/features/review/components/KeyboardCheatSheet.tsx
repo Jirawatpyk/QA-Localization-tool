@@ -50,6 +50,7 @@ const SHORTCUT_CATEGORIES: ShortcutCategory[] = [
   {
     name: 'Native Review',
     shortcuts: [
+      { keys: ['Shift+F'], description: 'Flag for native review' },
       { keys: ['C'], description: 'Confirm (native reviewer)' },
       { keys: ['O'], description: 'Override (native reviewer)' },
     ],
