@@ -1,6 +1,6 @@
 # Story 5.2c: Native Reviewer Workflow
 
-Status: review
+Status: done
 
 ## Story
 
@@ -12,7 +12,7 @@ So that quality is maintained through layered review while keeping native review
 
 ### AC1: Flag for Native Review Action (QA Reviewer)
 **Given** a QA reviewer (non-native for the file's target language) views a finding
-**When** they press F or click "Flag for Native Review"
+**When** they press Shift+F or click "Flag for Native Review" (F = direct flag per Story 4.2, Shift+F = native assignment dialog)
 **Then** a `FlagForNativeDialog` opens with:
 - Native reviewer dropdown (users with `role = 'native_reviewer'` + target language in `native_languages`)
 - Comment field explaining why native review is needed (required, 10-500 chars)
@@ -588,6 +588,33 @@ Claude Opus 4.6 (1M context)
 - L4: Assert `native_verified_by` and `native_verified_at` metadata fields in confirmNativeReview test
 
 **Verification:** type-check ✅ | lint ✅ | 139/139 test files, 1290/1290 tests GREEN
+
+### CR R2 Fixes (2026-03-29)
+
+**Reviewers:** 3 agents (code-quality, cross-file, testing-qa) + manual review
+**Findings:** 2 P0, 3 P1, 6 MEDIUM, 4 LOW → P0+P1+M fixed, L deferred
+
+**P0 fixes:**
+- P0-1: `assignmentId` returned from `flagForNative` action + written to store via `onSuccess` + Realtime handler — fixes `FindingCommentThread` not rendering until page refresh
+- P0-2: Override status picker dialog (Accept/Reject) replaces hardcoded `'accepted'` — native reviewer can now reject via override
+
+**P1 fixes:**
+- P1-1: Realtime assignment handler writes `assignmentId` from `row.id`
+- P1-2: Stale rollback guard — check `updatedAt === optimisticUpdatedAt` before reverting on confirm/override failure. Shared `executeNativeConfirm`/`executeNativeOverride` handlers replace 4 inline duplicates
+- P1-3: `flaggerComment` type aligned to `string | null | undefined` across `FindingDetailContent`, `FindingCommentThread`, `FindingForDisplay`, `Finding`
+
+**M fixes:**
+- M1: `startNativeReview` INVALID_STATE tests for `confirmed`/`overridden` (+2 tests)
+- M2: `getFindingComments` UUID validation test (+1 test)
+- M6: Vacuous keyboard test rewritten with real browser shortcuts check
+
+**Post-R2 manual fix (Mona):**
+- F key reverted to original `handleFlag` behavior (simple flag)
+- **Shift+F** = new shortcut to open `FlagForNativeDialog` (QA reviewers only) — registered via `register('shift+f', ...)` in bulk keyboard `useEffect`, guarded by `!isNativeReviewer`
+- KeyboardCheatSheet updated: `{ keys: ['Shift+F'], description: 'Flag for native review' }`
+- Rationale: F remains non-breaking for existing workflow, Shift+F is explicit action for native assignment dialog
+
+**Verification:** type-check ✅ | lint ✅ | 138/139 files, 1292/1293 tests GREEN (1 pre-existing fixed in commit)
 
 ### File List
 **New files (10):**
