@@ -47,10 +47,13 @@ describe('REVIEW_HOTKEYS — native reviewer shortcuts', () => {
     }
   })
 
-  it('C key should not be a browser shortcut (safe to intercept)', () => {
-    // Browser shortcuts: Ctrl+S, Ctrl+P, etc. — 'c' alone is safe
-    // Guardrail #34: never override Ctrl+S/P/W/N/T/F5
-    expect('c').not.toBe('ctrl+c') // 'c' alone, not Ctrl+C (which is copy)
+  it('C and O keys should not conflict with browser shortcuts (Guardrail #34)', () => {
+    // Known browser shortcuts that must NEVER be intercepted
+    const browserShortcuts = ['ctrl+s', 'ctrl+p', 'ctrl+w', 'ctrl+n', 'ctrl+t', 'f5']
+    const nativeKeys = nativeHotkeys.map((h) => h.key)
+    for (const nk of nativeKeys) {
+      expect(browserShortcuts).not.toContain(nk)
+    }
   })
 
   it('should have all hotkeys with non-empty descriptions', () => {

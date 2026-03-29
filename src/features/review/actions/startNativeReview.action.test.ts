@@ -131,4 +131,27 @@ describe('startNativeReview', () => {
       expect(result.code).toBe('NOT_FOUND')
     }
   })
+
+  // CR-R2 M1: INVALID_STATE for completed assignments
+  it('should return INVALID_STATE when assignment is confirmed', async () => {
+    dbState.returnValues = [[{ id: ASSIGNMENT_ID, status: 'confirmed' }]]
+
+    const result = await startNativeReview(ASSIGNMENT_ID)
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('INVALID_STATE')
+    }
+  })
+
+  it('should return INVALID_STATE when assignment is overridden', async () => {
+    dbState.returnValues = [[{ id: ASSIGNMENT_ID, status: 'overridden' }]]
+
+    const result = await startNativeReview(ASSIGNMENT_ID)
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('INVALID_STATE')
+    }
+  })
 })

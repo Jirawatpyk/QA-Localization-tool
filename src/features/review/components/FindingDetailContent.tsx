@@ -52,7 +52,7 @@ type FindingDetailContentProps = {
   btConfidenceThreshold?: number | undefined
   /** Story 5.2c: Assignment info for flagged findings */
   assignmentId?: string | undefined
-  flaggerComment?: string | undefined
+  flaggerComment?: string | null | undefined
 }
 
 /**

@@ -308,8 +308,11 @@ export function useFindingsSubscription(fileId: string, tenantId?: string | unde
           const fs = getStoreFileState(store, fileId)
           const existing = fs.findingsMap.get(findingId)
           if (existing) {
+            // CR-R2 P1-1: also write assignmentId so FindingCommentThread renders
+            const assignmentId = typeof row.id === 'string' ? row.id : existing.assignmentId
             store.setFinding(findingId, {
               ...existing,
+              assignmentId,
               assignmentStatus: newStatus as Finding['assignmentStatus'],
             })
           }

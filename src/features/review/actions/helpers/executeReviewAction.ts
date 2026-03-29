@@ -40,6 +40,8 @@ export type ReviewActionResult = {
   findingMeta: FindingMeta
   /** Server-side updatedAt timestamp — used to clear optimistic timestamp lock (H2 fix) */
   serverUpdatedAt: string
+  /** CR-R2 P0-1: Assignment ID returned by flagForNative action */
+  assignmentId?: string | undefined
 }
 
 export type ReviewActionNoOp = {

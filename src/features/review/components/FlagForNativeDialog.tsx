@@ -116,7 +116,10 @@ export function FlagForNativeDialog({
       // CR-M4: pass assignment data back for store merge
       const reviewerName = reviewers.find((r) => r.id === selectedReviewer)?.displayName ?? ''
       onSuccess?.({
-        assignmentId: result.data.findingId, // server returns findingId; real assignmentId from Realtime
+        // CR-R2 P0-1: use real assignmentId from server response
+        assignmentId:
+          ((result.data as Record<string, unknown>).assignmentId as string) ??
+          result.data.findingId,
         assignedToName: reviewerName,
         flaggerComment: comment,
       })

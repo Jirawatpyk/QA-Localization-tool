@@ -131,4 +131,14 @@ describe('getFindingComments', () => {
       expect(result.code).toBe('AUTH_ERROR')
     }
   })
+
+  // CR-R2 M2: UUID validation test
+  it('should reject invalid UUID assignment ID', async () => {
+    const result = await getFindingComments('not-a-uuid')
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('VALIDATION')
+    }
+  })
 })

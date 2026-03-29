@@ -23,7 +23,7 @@ type Comment = {
 type FindingCommentThreadProps = {
   findingId: string
   findingAssignmentId: string
-  flaggerComment?: string | undefined
+  flaggerComment?: string | null | undefined
 }
 
 const ROLE_LABELS: Record<string, string> = {

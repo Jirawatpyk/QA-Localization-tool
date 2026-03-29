@@ -189,6 +189,8 @@ export function ReviewPageClient({
   const isNativeReviewer = initialData.userRole === 'native_reviewer'
   const [flagDialogOpen, setFlagDialogOpen] = useState(false)
   const [flagDialogFindingId, setFlagDialogFindingId] = useState<string | null>(null)
+  // CR-R2 P0-2: native override status picker state
+  const [nativeOverridePickerOpen, setNativeOverridePickerOpen] = useState(false)
 
   // Story 4.4a: Bulk confirm dialog state
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false)
@@ -397,6 +399,99 @@ export function ReviewPageClient({
   // Story 4.3: selectedId synced from handleActiveFindingChange on all viewports (H3 fix).
   // Infinite loop prevented by skipStoreSyncRef passed to FindingList.
 
+  // CR-R2 P1-2: shared native confirm handler with stale rollback guard
+  const executeNativeConfirm = useCallback(
+    (findingId: string) => {
+      const store = useReviewStore.getState()
+      const f = getStoreFileState(store, fileId).findingsMap.get(findingId)
+      if (!f) return
+      const optimisticUpdatedAt = new Date().toISOString()
+      store.setFinding(findingId, { ...f, status: 'accepted', updatedAt: optimisticUpdatedAt })
+      void confirmNativeReview({ findingId, fileId, projectId })
+        .then((result) => {
+          if (result.success) {
+            const curr = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
+              findingId,
+            )
+            if (curr) {
+              useReviewStore.getState().setFinding(findingId, {
+                ...curr,
+                status: result.data.newState,
+                updatedAt: result.data.serverUpdatedAt,
+                assignmentStatus: 'confirmed',
+              })
+            }
+            toast.success('Finding confirmed')
+          } else {
+            const curr = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
+              findingId,
+            )
+            if (curr && curr.updatedAt === optimisticUpdatedAt) {
+              useReviewStore.getState().setFinding(findingId, f)
+            }
+            toast.error(result.error ?? 'Confirm failed')
+          }
+        })
+        .catch(() => {
+          const curr = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
+            findingId,
+          )
+          if (curr && curr.updatedAt === optimisticUpdatedAt) {
+            useReviewStore.getState().setFinding(findingId, f)
+          }
+          toast.error('Confirm failed')
+        })
+    },
+    [fileId, projectId],
+  )
+
+  // CR-R2 P0-2: shared native override handler with dynamic status
+  const executeNativeOverride = useCallback(
+    (findingId: string, newStatus: 'accepted' | 'rejected') => {
+      const store = useReviewStore.getState()
+      const f = getStoreFileState(store, fileId).findingsMap.get(findingId)
+      if (!f) return
+      const optimisticUpdatedAt = new Date().toISOString()
+      store.setFinding(findingId, { ...f, status: newStatus, updatedAt: optimisticUpdatedAt })
+      void overrideNativeReview({ findingId, fileId, projectId, newStatus })
+        .then((result) => {
+          if (result.success) {
+            const curr = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
+              findingId,
+            )
+            if (curr) {
+              useReviewStore.getState().setFinding(findingId, {
+                ...curr,
+                status: result.data.newState,
+                updatedAt: result.data.serverUpdatedAt,
+                assignmentStatus: 'overridden',
+              })
+            }
+            toast.success(`Overridden to ${result.data.newState}`)
+          } else {
+            // CR-R2 P1-2: check staleness before rollback
+            const curr = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
+              findingId,
+            )
+            if (curr && curr.updatedAt === optimisticUpdatedAt) {
+              useReviewStore.getState().setFinding(findingId, f)
+            }
+            toast.error(result.error ?? 'Override failed')
+          }
+        })
+        .catch(() => {
+          const curr = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
+            findingId,
+          )
+          if (curr && curr.updatedAt === optimisticUpdatedAt) {
+            useReviewStore.getState().setFinding(findingId, f)
+          }
+          toast.error('Override failed')
+        })
+    },
+    [fileId, projectId],
+  )
+
   // Register review hotkeys — A/R/F wired to real handlers (Story 4.2)
   // CR-C1: use ref (synchronous, no re-render dependency) for hotkey dispatch
   const getSelectedId = useCallback(() => activeFindingIdRef.current, [])
@@ -434,77 +529,12 @@ export function ReviewPageClient({
         setIsOverrideMenuOpen(true)
       },
       add: () => setIsAddFindingDialogOpen(true),
-      // CR-H3 fix: wire native reviewer keyboard shortcuts
-      confirmNative: (findingId: string) => {
-        const store = useReviewStore.getState()
-        const f = getStoreFileState(store, fileId).findingsMap.get(findingId)
-        if (!f) return
-        store.setFinding(findingId, {
-          ...f,
-          status: 'accepted',
-          updatedAt: new Date().toISOString(),
-        })
-        void confirmNativeReview({ findingId, fileId, projectId })
-          .then((result) => {
-            if (result.success) {
-              const curr = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
-                findingId,
-              )
-              if (curr) {
-                useReviewStore.getState().setFinding(findingId, {
-                  ...curr,
-                  status: result.data.newState,
-                  updatedAt: result.data.serverUpdatedAt,
-                  assignmentStatus: 'confirmed',
-                })
-              }
-              toast.success('Finding confirmed')
-            } else {
-              store.setFinding(findingId, f)
-              toast.error(result.error ?? 'Confirm failed')
-            }
-          })
-          .catch(() => {
-            store.setFinding(findingId, f)
-            toast.error('Confirm failed')
-          })
-      },
+      // CR-R2: use shared handlers (P0-2 status picker + P1-2 stale rollback guard)
+      confirmNative: executeNativeConfirm,
       overrideNative: () => {
-        const findingId = activeFindingIdRef.current
-        if (!findingId) return
-        const store = useReviewStore.getState()
-        const f = getStoreFileState(store, fileId).findingsMap.get(findingId)
-        if (!f) return
-        const newStatus = 'accepted' as const
-        store.setFinding(findingId, {
-          ...f,
-          status: newStatus,
-          updatedAt: new Date().toISOString(),
-        })
-        void overrideNativeReview({ findingId, fileId, projectId, newStatus })
-          .then((result) => {
-            if (result.success) {
-              const curr = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
-                findingId,
-              )
-              if (curr) {
-                useReviewStore.getState().setFinding(findingId, {
-                  ...curr,
-                  status: result.data.newState,
-                  updatedAt: result.data.serverUpdatedAt,
-                  assignmentStatus: 'overridden',
-                })
-              }
-              toast.success(`Overridden to ${result.data.newState}`)
-            } else {
-              store.setFinding(findingId, f)
-              toast.error(result.error ?? 'Override failed')
-            }
-          })
-          .catch(() => {
-            store.setFinding(findingId, f)
-            toast.error('Override failed')
-          })
+        if (!activeFindingIdRef.current) return
+        // CR-R2 P0-2: open status picker instead of hardcoded 'accepted'
+        setNativeOverridePickerOpen(true)
       },
     },
     getSelectedId,
@@ -1392,87 +1422,12 @@ export function ReviewPageClient({
             }
             isNativeReviewer={isNativeReviewer}
             onConfirmNative={() => {
-              if (!activeFindingState) return
-              const store = useReviewStore.getState()
-              const f = getStoreFileState(store, fileId).findingsMap.get(activeFindingState)
-              if (!f) return
-              // Optimistic: flagged → accepted (re_accepted determined server-side)
-              store.setFinding(activeFindingState, {
-                ...f,
-                status: 'accepted',
-                updatedAt: new Date().toISOString(),
-              })
-              void confirmNativeReview({ findingId: activeFindingState, fileId, projectId })
-                .then((result) => {
-                  if (result.success) {
-                    // Sync server state (may be re_accepted)
-                    const curr = getStoreFileState(
-                      useReviewStore.getState(),
-                      fileId,
-                    ).findingsMap.get(activeFindingState)
-                    if (curr) {
-                      useReviewStore.getState().setFinding(activeFindingState, {
-                        ...curr,
-                        status: result.data.newState,
-                        updatedAt: result.data.serverUpdatedAt,
-                        assignmentStatus: 'confirmed',
-                      })
-                    }
-                    toast.success('Finding confirmed by native reviewer')
-                  } else {
-                    // Rollback
-                    store.setFinding(activeFindingState, f)
-                    toast.error(result.error ?? 'Confirm failed')
-                  }
-                })
-                .catch(() => {
-                  store.setFinding(activeFindingState, f)
-                  toast.error('Confirm failed')
-                })
+              if (activeFindingState) executeNativeConfirm(activeFindingState)
             }}
             onOverrideNative={() => {
               if (!activeFindingState) return
-              // For override, use 'accepted' as default (user can choose reject via future status picker)
-              // AC3: Override button opens a dropdown (Accept/Reject) — simplified to accept for now
-              const store = useReviewStore.getState()
-              const f = getStoreFileState(store, fileId).findingsMap.get(activeFindingState)
-              if (!f) return
-              const newStatus = 'accepted' as const
-              store.setFinding(activeFindingState, {
-                ...f,
-                status: newStatus,
-                updatedAt: new Date().toISOString(),
-              })
-              void overrideNativeReview({
-                findingId: activeFindingState,
-                fileId,
-                projectId,
-                newStatus,
-              })
-                .then((result) => {
-                  if (result.success) {
-                    const curr = getStoreFileState(
-                      useReviewStore.getState(),
-                      fileId,
-                    ).findingsMap.get(activeFindingState)
-                    if (curr) {
-                      useReviewStore.getState().setFinding(activeFindingState, {
-                        ...curr,
-                        status: result.data.newState,
-                        updatedAt: result.data.serverUpdatedAt,
-                        assignmentStatus: 'overridden',
-                      })
-                    }
-                    toast.success(`Finding overridden to ${result.data.newState}`)
-                  } else {
-                    store.setFinding(activeFindingState, f)
-                    toast.error(result.error ?? 'Override failed')
-                  }
-                })
-                .catch(() => {
-                  store.setFinding(activeFindingState, f)
-                  toast.error('Override failed')
-                })
+              // CR-R2 P0-2: open status picker instead of hardcoded 'accepted'
+              setNativeOverridePickerOpen(true)
             }}
           />
 
@@ -1881,7 +1836,7 @@ export function ReviewPageClient({
               isNonNative={initialData.isNonNative}
               btConfidenceThreshold={initialData.btConfidenceThreshold}
               assignmentId={selectedFinding?.assignmentId}
-              flaggerComment={selectedFinding?.flaggerComment ?? undefined}
+              flaggerComment={selectedFinding?.flaggerComment}
             />
           </aside>
         ) : (
@@ -1947,7 +1902,8 @@ export function ReviewPageClient({
                     ...f,
                     status: 'flagged',
                     updatedAt: new Date().toISOString(),
-                    // CR-M4: merge assignment data from dialog callback
+                    // CR-M4 + R2 P0-1: merge assignment data including assignmentId
+                    assignmentId: data.assignmentId,
                     assignmentStatus: 'pending',
                     assignedToName: data.assignedToName,
                     flaggerComment: data.flaggerComment,
@@ -1955,6 +1911,54 @@ export function ReviewPageClient({
               }
             }}
           />
+        )}
+
+        {/* CR-R2 P0-2: Native override status picker (Accept/Reject) */}
+        {nativeOverridePickerOpen && activeFindingState && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onClick={() => setNativeOverridePickerOpen(false)}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Choose override status"
+          >
+            <div
+              className="bg-background rounded-lg border shadow-lg p-6 space-y-4 min-w-[280px]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="font-semibold text-lg">Override Finding</h3>
+              <p className="text-sm text-muted-foreground">Choose the new status:</p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  className="flex-1 rounded-md border px-4 py-2 text-sm font-medium bg-success/10 text-success border-success/20 hover:bg-success/20 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
+                  onClick={() => {
+                    setNativeOverridePickerOpen(false)
+                    executeNativeOverride(activeFindingState, 'accepted')
+                  }}
+                >
+                  Accept
+                </button>
+                <button
+                  type="button"
+                  className="flex-1 rounded-md border px-4 py-2 text-sm font-medium bg-error/10 text-error border-error/20 hover:bg-error/20 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
+                  onClick={() => {
+                    setNativeOverridePickerOpen(false)
+                    executeNativeOverride(activeFindingState, 'rejected')
+                  }}
+                >
+                  Reject
+                </button>
+              </div>
+              <button
+                type="button"
+                className="w-full rounded-md border px-4 py-1.5 text-sm text-muted-foreground hover:bg-muted"
+                onClick={() => setNativeOverridePickerOpen(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </ReviewFileIdContext.Provider>

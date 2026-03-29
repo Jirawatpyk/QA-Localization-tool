@@ -255,6 +255,8 @@ export async function flagForNative(
         targetTextExcerpt: finding.targetTextExcerpt,
       },
       serverUpdatedAt: now.toISOString(),
+      // CR-R2 P0-1: expose assignmentId for store merge (comment thread needs it)
+      assignmentId,
     },
   }
 }

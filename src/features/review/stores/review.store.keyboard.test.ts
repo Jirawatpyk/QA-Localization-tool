@@ -79,13 +79,13 @@ describe('useReviewStore — Keyboard Bulk Operations (Story 4.4a)', () => {
   it('[P1] Escape should no-op when not in bulk mode', () => {
     seedFindings(['pending'])
     // single mode, no selection
-    const state = useReviewStore.getState()
-    expect(state.selectionMode).toBe('single')
-    expect(state.selectedIds.size).toBe(0)
+    const fs = getStoreFileState()
+    expect(fs.selectionMode).toBe('single')
+    expect(fs.selectedIds.size).toBe(0)
 
     // clearSelection + setSelectionMode should be safe no-op
-    state.clearSelection()
-    state.setSelectionMode('single')
+    useReviewStore.getState().clearSelection()
+    useReviewStore.getState().setSelectionMode('single')
 
     expect(getStoreFileState().selectionMode).toBe('single')
     expect(getStoreFileState().selectedIds.size).toBe(0)
