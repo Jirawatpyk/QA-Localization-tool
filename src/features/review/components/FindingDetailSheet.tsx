@@ -39,6 +39,9 @@ type FindingDetailSheetProps = {
     | undefined
   isNonNative?: boolean | undefined
   btConfidenceThreshold?: number | undefined
+  /** Story 5.2c: Assignment info for comment thread */
+  assignmentId?: string | undefined
+  flaggerComment?: string | null | undefined
 }
 
 /**
@@ -66,6 +69,8 @@ export function FindingDetailSheet({
   fetchOverrideHistory,
   isNonNative,
   btConfidenceThreshold,
+  assignmentId,
+  flaggerComment,
 }: FindingDetailSheetProps) {
   const reducedMotion = useReducedMotion()
   const isLaptop = useIsLaptop()
@@ -126,6 +131,8 @@ export function FindingDetailSheet({
             fetchOverrideHistory={fetchOverrideHistory}
             isNonNative={isNonNative}
             btConfidenceThreshold={btConfidenceThreshold}
+            assignmentId={assignmentId}
+            flaggerComment={flaggerComment}
           />
         ) : null}
       </SheetContent>

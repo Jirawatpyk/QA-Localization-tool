@@ -19,6 +19,7 @@ import {
 } from '@/features/review/utils/finding-display'
 import { STATUS_BG } from '@/features/review/utils/finding-styles'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import type { AssignmentStatus } from '@/types/assignment'
 
 export type FindingCardProps = {
   finding: FindingForDisplay
@@ -36,7 +37,7 @@ export type FindingCardProps = {
   /** Story 5.2a: Whether this finding has any non-native review action */
   hasNonNativeAction?: boolean | undefined
   /** Story 5.2c: Assignment info for flagged findings */
-  assignmentStatus?: string | undefined
+  assignmentStatus?: AssignmentStatus | undefined
   assignedToName?: string | undefined
 }
 

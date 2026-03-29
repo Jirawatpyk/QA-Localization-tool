@@ -616,6 +616,22 @@ Claude Opus 4.6 (1M context)
 
 **Verification:** type-check ✅ | lint ✅ | 138/139 files, 1292/1293 tests GREEN (1 pre-existing fixed in commit)
 
+### CR R2 Post-fix: Missing UI Consumers (CRITICAL)
+
+**Root cause:** R1 แก้ `FindingDetailContent` props (desktop aside) แต่ไม่ได้ grep ทุก consumer ที่ mount component เดียวกัน — ทำให้ `FindingDetailSheet` (laptop/mobile) หลุดไม่ได้รับ `assignmentId`/`flaggerComment` → comment thread ไม่ render บน laptop/mobile. Cross-file agent ก็ไม่จับเพราะ scope เฉพาะ pairs ที่ระบุ ไม่ scan ทุก consumer.
+
+**Lesson:** เวลาเพิ่ม/แก้ props ของ component ต้อง `grep '<ComponentName'` ทุก consumer ที่ mount มัน — ไม่ใช่แค่ตัวแรกที่เจอ.
+
+**Fixes:**
+- `FindingDetailSheet.tsx`: เพิ่ม `assignmentId` + `flaggerComment` props + pass ไปที่ `FindingDetailContent`
+- `ReviewPageClient.tsx`: pass `assignmentId`/`flaggerComment` ไปที่ `FindingDetailSheet` (เหมือนที่ทำกับ desktop aside)
+- `FindingCardCompact.tsx`: เพิ่ม assignment status badge (compact) — ใช้ `finding.assignmentStatus` จาก `FindingForDisplay` ตรง
+
+**Consumer verification (post-fix):**
+- `FindingDetailContent` mounted by: ReviewPageClient (desktop) ✅, FindingDetailSheet (mobile) ✅, test file (no assignment test — acceptable)
+- `FindingCard` mounted by: FindingList ✅ (explicit props)
+- `FindingCardCompact` mounted by: FindingList ✅ (reads from finding object directly)
+
 ### File List
 **New files (10):**
 - src/features/review/actions/flagForNative.action.ts

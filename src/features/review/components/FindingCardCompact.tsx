@@ -325,6 +325,19 @@ function FindingCardCompactInner({
         {/* Story 5.2a: Non-native badge (AC4) — compact variant */}
         {hasNonNativeAction && <NonNativeBadge compact />}
 
+        {/* Story 5.2c: Assignment status indicator (compact) */}
+        {finding.assignmentStatus && (
+          <span
+            className="inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium shrink-0 border-info/30 text-info"
+            aria-label={`Assignment: ${finding.assignmentStatus}`}
+          >
+            {finding.assignmentStatus === 'pending' && 'Flagged'}
+            {finding.assignmentStatus === 'in_review' && 'Reviewing'}
+            {finding.assignmentStatus === 'confirmed' && 'Confirmed'}
+            {finding.assignmentStatus === 'overridden' && 'Overridden'}
+          </span>
+        )}
+
         {/* Quick action icons (Story 4.2) */}
         <div role="group" className="flex items-center gap-1 shrink-0" aria-label="Quick actions">
           <button
