@@ -849,7 +849,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     expect(screen.queryByTestId('mock-finding-detail-sheet')).not.toBeInTheDocument()
   })
 
-  it('[TA-G13][P2] onOpenChange(false) at mobile should clear selectedFinding AND mobileDrawerOpen', () => {
+  it('[TA-G13][P2] onOpenChange(false) at mobile should close Sheet but keep selectedId for toggle (ATDD T3.3)', () => {
     const finding = buildFinding({ id: 'find1', severity: 'major' })
 
     // Mobile mode
@@ -884,12 +884,13 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
       onOpenChange(false)
     })
 
-    // selectedFinding AND mobileDrawerOpen should be cleared
-    expect(getStoreFileState().selectedId).toBeNull()
-    // Sheet closed
+    // Mobile: handleSheetChange clears mobileDrawerOpen but KEEPS selectedId
+    // so toggle button stays visible (ATDD T3.3 — user can reopen Sheet)
+    expect(getStoreFileState().selectedId).toBe('find1')
+    // Sheet closed (mobileDrawerOpen=false → sheetOpen=false)
     expect(screen.queryByTestId('mock-finding-detail-sheet')).not.toBeInTheDocument()
-    // Toggle button also hidden (selectedId is null)
-    expect(screen.queryByTestId('detail-panel-toggle')).not.toBeInTheDocument()
+    // Toggle button STILL visible (selectedId !== null)
+    expect(screen.getByTestId('detail-panel-toggle')).toBeInTheDocument()
   })
 
   it('[TA-G13][P2] onOpenChange(true) should be a no-op (no state changes)', () => {

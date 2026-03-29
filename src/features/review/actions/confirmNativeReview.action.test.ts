@@ -38,6 +38,7 @@ vi.mock('@/db/helpers/withTenant', () => ({
 vi.mock('drizzle-orm', () => ({
   and: vi.fn((...args: unknown[]) => args),
   eq: vi.fn((...args: unknown[]) => args),
+  desc: vi.fn((col: unknown) => ({ desc: col })),
 }))
 vi.mock('@/db/schema/findings', () => ({
   findings: { id: 'id', tenantId: 'tenant_id', status: 'status', updatedAt: 'updated_at' },
