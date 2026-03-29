@@ -117,6 +117,67 @@ export async function createTestProject(
 }
 
 /**
+ * Move a user to a different tenant via PostgREST.
+ * Updates users.tenant_id and user_roles.tenant_id.
+ * Used in E2E to ensure multiple test users share the same tenant.
+ */
+export async function moveUserToTenant(userId: string, targetTenantId: string): Promise<void> {
+  // Update users table
+  const userRes = await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
+    method: 'PATCH',
+    headers: { ...adminHeaders(), Prefer: 'return=minimal' },
+    body: JSON.stringify({ tenant_id: targetTenantId }),
+  })
+  if (!userRes.ok) {
+    const text = await userRes.text()
+    throw new Error(`Failed to move user to tenant: ${userRes.status} ${text}`)
+  }
+
+  // Update user_roles table
+  const roleRes = await fetch(`${SUPABASE_URL}/rest/v1/user_roles?user_id=eq.${userId}`, {
+    method: 'PATCH',
+    headers: { ...adminHeaders(), Prefer: 'return=minimal' },
+    body: JSON.stringify({ tenant_id: targetTenantId }),
+  })
+  if (!roleRes.ok) {
+    const text = await roleRes.text()
+    throw new Error(`Failed to move user role to tenant: ${roleRes.status} ${text}`)
+  }
+}
+
+/**
+ * Set a user's role in user_roles via PostgREST PATCH.
+ * Updates the existing role row (unique constraint: user_id + tenant_id).
+ */
+export async function setUserRole(userId: string, role: string): Promise<void> {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/user_roles?user_id=eq.${userId}`, {
+    method: 'PATCH',
+    headers: { ...adminHeaders(), Prefer: 'return=minimal' },
+    body: JSON.stringify({ role }),
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Failed to set user role: ${res.status} ${text}`)
+  }
+}
+
+/**
+ * Set a user's native_languages column (jsonb array) via PostgREST PATCH.
+ * This sets the DB column directly — separate from metadata.native_languages.
+ */
+export async function setUserNativeLanguages(email: string, languages: string[]): Promise<void> {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}`, {
+    method: 'PATCH',
+    headers: { ...adminHeaders(), Prefer: 'return=minimal' },
+    body: JSON.stringify({ native_languages: languages }),
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Failed to set native languages: ${res.status} ${text}`)
+  }
+}
+
+/**
  * Insert a notification record for a user via PostgREST.
  */
 export async function createNotification(

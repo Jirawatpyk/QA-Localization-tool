@@ -15,6 +15,7 @@ import type { ReviewActionResult } from '@/features/review/actions/helpers/execu
 import { confirmNativeSchema } from '@/features/review/validation/reviewAction.schema'
 import type { ConfirmNativeInput } from '@/features/review/validation/reviewAction.schema'
 import { requireRole } from '@/lib/auth/requireRole'
+import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
 import type { DetectedByLayer, FindingSeverity, FindingStatus } from '@/types/finding'
@@ -163,6 +164,30 @@ export async function confirmNativeReview(
     oldValue: { status: assignment.status },
     newValue: { status: 'confirmed', findingStatus: newFindingStatus },
   })
+
+  // Send Inngest event for score recalculation (same pattern as executeReviewAction)
+  // CR-R2-H1: try-catch post-commit side effect — DB transaction already committed,
+  // Inngest failure must not propagate error to client
+  try {
+    await inngest.send({
+      name: 'finding.changed',
+      data: {
+        findingId,
+        fileId,
+        projectId,
+        tenantId,
+        previousState: 'flagged',
+        newState: newFindingStatus,
+        triggeredBy: userId,
+        timestamp: now.toISOString(),
+      },
+    })
+  } catch (inngestErr) {
+    logger.error(
+      { err: inngestErr, findingId },
+      'Inngest event send failed for native confirm — score recalculation may be delayed',
+    )
+  }
 
   // Notification to original flagger (non-blocking — Guardrail #74)
   try {
