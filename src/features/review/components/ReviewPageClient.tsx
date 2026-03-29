@@ -1177,6 +1177,15 @@ export function ReviewPageClient({
     [isDesktop, isLaptop, setSelectedFinding],
   )
 
+  // Close Sheet when J/K navigates away at non-desktop (P1 fix: stale Sheet content).
+  // J/K is for distraction-free list navigation — Sheet should close, not follow.
+  const handleNavigateAway = useCallback(() => {
+    if (!isDesktop && selectedId !== null) {
+      setSelectedFinding(null)
+      setMobileDrawerOpen(false)
+    }
+  }, [isDesktop, selectedId, setSelectedFinding])
+
   // Reviewed count for ReviewProgress dual-track
   const reviewedCount = useMemo(
     () => allFindings.filter((f) => f.status !== 'pending').length,
@@ -1282,10 +1291,13 @@ export function ReviewPageClient({
 
   function handleSheetChange(open: boolean) {
     if (!open) {
-      if (!isLaptop) {
+      if (isLaptop) {
+        // Laptop: clear selectedId to close Sheet (no toggle button at laptop)
+        setSelectedFinding(null)
+      } else {
+        // Mobile: keep selectedId so toggle button appears (ATDD T3.3)
         setMobileDrawerOpen(false)
       }
-      setSelectedFinding(null)
     }
   }
 
@@ -1469,6 +1481,7 @@ export function ReviewPageClient({
               expandedIds={expandedIds}
               onToggleExpand={handleToggleExpand}
               onFindingSelect={handleFindingSelect}
+              onNavigateAway={handleNavigateAway}
               sourceLang={sourceLang}
               targetLang={targetLang ?? undefined}
               l2ConfidenceMin={storeL2ConfidenceMin ?? initialData.l2ConfidenceMin}

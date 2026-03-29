@@ -22,6 +22,8 @@ export type FindingListProps = {
   onToggleExpand: (id: string) => void
   /** Called on user click/Enter on a finding — signals "user selected this" (opens Sheet at non-desktop) */
   onFindingSelect?: ((id: string) => void) | undefined
+  /** Called when J/K navigates away — closes Sheet at non-desktop (prevents stale content) */
+  onNavigateAway?: (() => void) | undefined
   sourceLang?: string | undefined
   targetLang?: string | undefined
   l2ConfidenceMin?: number | null | undefined
@@ -59,6 +61,7 @@ export function FindingList({
   expandedIds,
   onToggleExpand,
   onFindingSelect,
+  onNavigateAway,
   sourceLang,
   targetLang,
   l2ConfidenceMin,
@@ -265,22 +268,24 @@ export function FindingList({
   // Navigate to next finding (J / ArrowDown)
   const navigateNext = useCallback(() => {
     if (flattenedIds.length === 0) return
+    onNavigateAway?.() // Close Sheet at non-desktop (prevents stale content)
     if (activeFindingId && expandedIds.has(activeFindingId)) {
       onToggleExpand(activeFindingId)
     }
     const nextIndex = (activeIndex + 1) % flattenedIds.length
     setActiveFindingId(flattenedIds[nextIndex] ?? null)
-  }, [activeIndex, activeFindingId, expandedIds, flattenedIds, onToggleExpand])
+  }, [activeIndex, activeFindingId, expandedIds, flattenedIds, onToggleExpand, onNavigateAway])
 
   // Navigate to previous finding (K / ArrowUp)
   const navigatePrev = useCallback(() => {
     if (flattenedIds.length === 0) return
+    onNavigateAway?.() // Close Sheet at non-desktop (prevents stale content)
     if (activeFindingId && expandedIds.has(activeFindingId)) {
       onToggleExpand(activeFindingId)
     }
     const prevIndex = (activeIndex - 1 + flattenedIds.length) % flattenedIds.length
     setActiveFindingId(flattenedIds[prevIndex] ?? null)
-  }, [activeIndex, activeFindingId, expandedIds, flattenedIds, onToggleExpand])
+  }, [activeIndex, activeFindingId, expandedIds, flattenedIds, onToggleExpand, onNavigateAway])
 
   // J/K/Arrow handlers live on grid onKeyDown (handleGridKeyDown) — scoped to grid focus.
   // DO NOT also register via useKeyboardActions (document-level) — causes double-fire

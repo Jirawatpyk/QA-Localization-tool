@@ -374,11 +374,13 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     const asideContent = page.getByTestId('finding-detail-content')
     await expect(asideContent).toBeVisible()
 
-    // Aside should NOT be inside a Radix portal
-    const portalAside = page.locator(
-      '[data-testid="finding-detail-sheet"] [data-testid="finding-detail-content"]',
-    )
-    await expect(portalAside).toHaveCount(0)
+    // Detail content must be inside the static aside (NOT in a Radix portal)
+    const isInsideAside = await page.evaluate(() => {
+      const content = document.querySelector('[data-testid="finding-detail-content"]')
+      const aside = document.querySelector('[data-testid="finding-detail-aside"]')
+      return aside !== null && content !== null && aside.contains(content)
+    })
+    expect(isInsideAside).toBe(true)
   })
 
   test('[P0] T1.4/RT-2a — exactly 1 [role="complementary"]:visible', async ({ page }) => {
@@ -456,11 +458,13 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
     await waitForLayoutMode(page, 'desktop')
 
-    // At desktop, [role="complementary"] must NOT be inside a Radix portal
-    const portalComplementary = page.locator(
-      '[data-testid="finding-detail-sheet"] [role="complementary"]',
-    )
-    await expect(portalComplementary).toHaveCount(0)
+    // At desktop, [role="complementary"] must be the static aside, NOT a portal-mounted Sheet
+    const complementaryIsAside = await page.evaluate(() => {
+      const comp = document.querySelector('[role="complementary"]:not([aria-hidden])')
+      // Static aside has data-testid="finding-detail-aside"; Sheet has "finding-detail-sheet"
+      return comp?.getAttribute('data-testid') === 'finding-detail-aside'
+    })
+    expect(complementaryIsAside).toBe(true)
   })
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -635,7 +639,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     expect(box!.width).toBeLessThanOrEqual(305)
   })
 
-  test('[P1] T3.3 — clicking finding at mobile opens Sheet drawer directly', async ({ page }) => {
+  test('[P1] T3.3 — click finding opens Sheet, close shows toggle button', async ({ page }) => {
     await restoreAuth(page)
     await page.setViewportSize({ width: 375, height: 812 })
     await gotoReviewPageWithRetry(page, projectId, seeded.fileId)
@@ -650,9 +654,13 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     const sheet = page.getByTestId('finding-detail-sheet')
     await expect(sheet).toBeVisible({ timeout: 5_000 })
 
-    // Close Sheet via Escape — Sheet should close and selectedId clears
+    // Close Sheet via Escape — Sheet closes but selectedId preserved
     await page.keyboard.press('Escape')
     await expect(sheet).not.toBeVisible({ timeout: 5_000 })
+
+    // Toggle button visible when finding selected but panel closed (ATDD T3.3)
+    const toggleButton = page.getByTestId('detail-panel-toggle')
+    await expect(toggleButton).toBeVisible({ timeout: 5_000 })
   })
 
   test('[P2] T3.4 — MobileBanner visible at mobile breakpoint', async ({ page }) => {
@@ -717,13 +725,17 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     const findingList = page.getByTestId('finding-list')
     await expect(findingList).toBeVisible()
 
-    // At 767px -> still mobile
+    // At 767px -> still mobile, MobileBanner visible at boundary
     await page.setViewportSize({ width: 767, height: 1024 })
     await waitForLayoutMode(page, 'mobile')
 
     // Static aside should NOT be visible at mobile
     const aside = page.getByTestId('finding-detail-aside')
     await expect(aside).not.toBeVisible()
+
+    // MobileBanner visible below 768px (md:hidden breakpoint boundary)
+    const mobileBanner = page.getByText(/best review experience.*desktop/i)
+    await expect(mobileBanner).toBeVisible({ timeout: 5_000 })
   })
 
   // ════════════════════════════════════════════════════════════════════════════
