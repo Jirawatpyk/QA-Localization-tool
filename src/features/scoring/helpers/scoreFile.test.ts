@@ -175,19 +175,18 @@ describe('scoreFile', () => {
 
   // ── P0: Core scoring flow ──
 
-  it('should throw NonRetriableError when file has no segments', async () => {
-    // Empty segments query — parser produced no segments for a valid file
+  it('should return null when file has no segments (deleted file race condition)', async () => {
+    // Empty segments query — file may have been deleted between event trigger and score calc
     dbState.returnValues = [[]]
 
     const { scoreFile } = await import('./scoreFile')
-    await expect(
-      scoreFile({
-        fileId: VALID_FILE_ID,
-        projectId: VALID_PROJECT_ID,
-        tenantId: VALID_TENANT_ID,
-        userId: VALID_USER_ID,
-      }),
-    ).rejects.toThrow(/No segments found/)
+    const result = await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+    expect(result).toBeNull()
   })
 
   it('should calculate MQM score and persist', async () => {
@@ -202,8 +201,8 @@ describe('scoreFile', () => {
       userId: VALID_USER_ID,
     })
 
-    expect(result.mqmScore).toBe(85)
-    expect(result.scoreId).toBeDefined()
+    expect(result!.mqmScore).toBe(85)
+    expect(result!.scoreId).toBeDefined()
   })
 
   it('should delete existing score before inserting (idempotent)', async () => {
@@ -219,7 +218,7 @@ describe('scoreFile', () => {
       userId: VALID_USER_ID,
     })
 
-    expect(result.mqmScore).toBe(85)
+    expect(result!.mqmScore).toBe(85)
   })
 
   it('should load penalty weights for tenant', async () => {
@@ -332,8 +331,8 @@ describe('scoreFile', () => {
       userId: VALID_USER_ID,
     })
 
-    expect(result.status).toBe('auto_passed')
-    expect(result.autoPassRationale).toBe(mockAutoPassEligible.rationale)
+    expect(result!.status).toBe('auto_passed')
+    expect(result!.autoPassRationale).toBe(mockAutoPassEligible.rationale)
     // M3: assert INSERT.values() was called with status: 'auto_passed' (not just the returned row)
     expect(dbState.valuesCaptures).toContainEqual(
       expect.objectContaining({ status: 'auto_passed' }),
@@ -434,7 +433,7 @@ describe('scoreFile', () => {
       userId: VALID_USER_ID,
     })
 
-    expect(result.scoreId).toBeDefined()
+    expect(result!.scoreId).toBeDefined()
   })
 
   it('should fire graduation notification when file 51', async () => {
@@ -466,7 +465,7 @@ describe('scoreFile', () => {
       userId: VALID_USER_ID,
     })
 
-    expect(result.status).toBe('auto_passed')
+    expect(result!.status).toBe('auto_passed')
     // Graduation notification path consumed all 8 DB values
     expect(dbState.callIndex).toBe(8)
   })
@@ -580,7 +579,7 @@ describe('scoreFile', () => {
       userId: VALID_USER_ID,
     })
 
-    expect(result.mqmScore).toBe(100)
+    expect(result!.mqmScore).toBe(100)
   })
 
   it('should pass through mqmScore from calculator without modification', async () => {
@@ -605,8 +604,8 @@ describe('scoreFile', () => {
     })
 
     // scoreFile passes through calculator result — DB numeric(5,2) handles rounding at persist layer
-    expect(result.mqmScore).toBe(85.67)
-    expect(result.npt).toBe(14.33)
+    expect(result!.mqmScore).toBe(85.67)
+    expect(result!.npt).toBe(14.33)
   })
 
   it('should return ScoreFileResult with all fields', async () => {
@@ -620,7 +619,7 @@ describe('scoreFile', () => {
       userId: VALID_USER_ID,
     })
 
-    expect(result).toMatchObject({
+    expect(result!).toMatchObject({
       scoreId: expect.any(String),
       fileId: VALID_FILE_ID,
       mqmScore: expect.any(Number),
@@ -879,7 +878,7 @@ describe('scoreFile', () => {
       userId: VALID_USER_ID,
     })
 
-    expect(result.mqmScore).toBe(100)
+    expect(result!.mqmScore).toBe(100)
   })
 
   // ── TA: Coverage Gap Tests ──
@@ -898,7 +897,7 @@ describe('scoreFile', () => {
     })
 
     expect(mockCalculateMqmScore).toHaveBeenCalledWith(expect.any(Array), 200, expect.any(Object))
-    expect(result.scoreId).toBeDefined()
+    expect(result!.scoreId).toBeDefined()
   })
 
   // B3 [P2]: totalWords=0 — all segments have wordCount=0
@@ -934,7 +933,7 @@ describe('scoreFile', () => {
     })
 
     expect(mockCalculateMqmScore).toHaveBeenCalledWith(oneFinding, 1000, expect.any(Object))
-    expect(result.scoreId).toBeDefined()
+    expect(result!.scoreId).toBeDefined()
   })
 
   // F14 [P1]: scoreStatus='partial' skips auto-pass entirely
@@ -951,7 +950,7 @@ describe('scoreFile', () => {
       scoreStatus: 'partial',
     })
 
-    expect(result.status).toBe('partial')
+    expect(result!.status).toBe('partial')
     expect(mockCheckAutoPass).not.toHaveBeenCalled()
   })
 
@@ -1025,7 +1024,7 @@ describe('scoreFile', () => {
       userId: VALID_USER_ID,
     })
 
-    expect(result.status).toBe('auto_passed')
+    expect(result!.status).toBe('auto_passed')
     expect(dbState.callIndex).toBe(6)
   })
 
@@ -1048,7 +1047,7 @@ describe('scoreFile', () => {
       userId: VALID_USER_ID,
     })
 
-    expect(result.status).toBe('auto_passed')
+    expect(result!.status).toBe('auto_passed')
     expect(dbState.callIndex).toBe(7)
   })
 
@@ -1072,8 +1071,8 @@ describe('scoreFile', () => {
       userId: VALID_USER_ID,
     })
 
-    expect(result.status).toBe('auto_passed')
-    expect(result.scoreId).toBeDefined()
+    expect(result!.status).toBe('auto_passed')
+    expect(result!.scoreId).toBeDefined()
   })
 
   // Gap #6 [P2]: status='na' overrides auto-pass eligible + autoPassRationale null
@@ -1102,9 +1101,9 @@ describe('scoreFile', () => {
     })
 
     // status='na' overrides auto-pass eligible
-    expect(result.status).toBe('na')
+    expect(result!.status).toBe('na')
     // autoPassRationale must be null when status is not 'auto_passed'
-    expect(result.autoPassRationale).toBeNull()
+    expect(result!.autoPassRationale).toBeNull()
     // checkAutoPass must NOT be called when status='na' (S5 fix: skip auto-pass for totalWords=0)
     expect(mockCheckAutoPass).not.toHaveBeenCalled()
     // Verify INSERT values
@@ -1140,21 +1139,19 @@ describe('scoreFile', () => {
     )
   })
 
-  // T16 [P2] PM-B3: NonRetriableError type preserved on no-segments throw
-  it('[P2] should throw NonRetriableError (not generic Error) when no segments', async () => {
+  // T16 [P2] PM-B3: Graceful null return on no segments (race condition: file deleted)
+  it('[P2] should return null (not throw) when no segments — file may have been deleted', async () => {
     dbState.returnValues = [[]]
 
     const { scoreFile } = await import('./scoreFile')
-    const err = await scoreFile({
+    const result = await scoreFile({
       fileId: VALID_FILE_ID,
       projectId: VALID_PROJECT_ID,
       tenantId: VALID_TENANT_ID,
       userId: VALID_USER_ID,
-    }).catch((e: unknown) => e)
+    })
 
-    // Verify it's specifically NonRetriableError (Inngest won't retry)
-    // not a generic Error (which Inngest WOULD retry)
-    expect((err as Error).constructor.name).toBe('NonRetriableError')
+    expect(result).toBeNull()
   })
 
   // T17 [P2] PM-C1: checkAutoPass receives correct language pair from segments

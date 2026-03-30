@@ -88,6 +88,13 @@ export async function calculateScore(input: {
     }
 
     const result = await scoreFile({ fileId, projectId, tenantId, userId })
+    if (!result) {
+      return {
+        success: false,
+        code: 'NOT_FOUND',
+        error: 'File has no segments — may have been deleted',
+      }
+    }
     return { success: true, data: result }
   } catch (err) {
     logger.error({ err, fileId }, 'Score calculation failed')

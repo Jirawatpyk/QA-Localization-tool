@@ -60,7 +60,7 @@ export async function scoreFile({
   layerFilter,
   layerCompleted: layerCompletedOverride,
   scoreStatus,
-}: ScoreFileInput): Promise<ScoreFileResult> {
+}: ScoreFileInput): Promise<ScoreFileResult | null> {
   // Load all segments for word count SUM
   // Include ALL segments (even ApprovedSignOff) per MQM standard and Xbench parity
   const segmentRows = await db
@@ -79,7 +79,11 @@ export async function scoreFile({
     )
 
   if (segmentRows.length === 0) {
-    throw new NonRetriableError(`No segments found for file ${fileId} — cannot calculate score`)
+    // Race condition: file/segments may have been deleted between event trigger
+    // and score recalculation (E2E cleanup, user delete, cascade). Return null
+    // instead of throwing — caller handles gracefully.
+    logger.warn({ fileId, projectId }, 'scoreFile: no segments found — file may have been deleted')
+    return null
   }
 
   const totalWords = segmentRows.reduce((sum, s) => sum + s.wordCount, 0)

@@ -243,7 +243,7 @@ describe('scoreFile — partial status (Story 3.4)', () => {
     )
 
     // Runtime check that status='partial' is returned
-    expect(result.status).toBe('partial')
+    expect(result!.status).toBe('partial')
   })
 
   it('[P1] should pass through layerCompleted override alongside partial status', async () => {
