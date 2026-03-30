@@ -207,16 +207,18 @@ test.describe.serial('Review Accessibility — Keyboard-Only Flow', () => {
     await signupOrLogin(page, testEmail, testPassword)
     await gotoReviewPageWithRetry(page, projectId, fileId)
 
-    // Click nth(1) — NOT first() — because FindingList initializes activeFindingId
-    // to flattenedIds[0] before the test clicks. handleGridClick has guard
-    // `clickedId !== activeFindingId` so clicking first row is a NO-OP (activeFindingId
-    // already equals flattenedIds[0]). nth(1) is a different row → guard passes →
-    // setActiveFindingId fires → onActiveFindingChange → activeFindingIdRef.current set.
+    // Click 2nd row — 1st row is already activeFindingId, click is no-op
     const targetRow = page.locator('[role="row"]').nth(1)
     await targetRow.click()
-
-    // Wait for roving tabindex to settle — confirms activeFindingIdRef.current is set
     await expect(targetRow).toHaveAttribute('tabindex', '0', { timeout: 5_000 })
+
+    // Detail panel's <select> steals focus (browser auto-focus on first
+    // interactive element in aside). Blur + focus body so A hotkey dispatches
+    // on a non-input element (Guardrail #28 suppresses in <select>).
+    await page.evaluate(() => {
+      ;(document.activeElement as HTMLElement)?.blur()
+      document.body.focus()
+    })
 
     // Press A to accept
     await page.keyboard.press('a')
@@ -235,6 +237,11 @@ test.describe.serial('Review Accessibility — Keyboard-Only Flow', () => {
     const pendingRow = page.locator('[role="row"][data-status="pending"]').nth(1)
     await pendingRow.click()
     await expect(pendingRow).toHaveAttribute('tabindex', '0', { timeout: 5_000 })
+    // Blur <select> that steals focus from detail panel render
+    await page.evaluate(() => {
+      ;(document.activeElement as HTMLElement)?.blur()
+      document.body.focus()
+    })
 
     await page.keyboard.press('r')
     await expect(page.getByText('Finding rejected', { exact: true })).toBeVisible({
@@ -249,6 +256,10 @@ test.describe.serial('Review Accessibility — Keyboard-Only Flow', () => {
     const pendingRow = page.locator('[role="row"][data-status="pending"]').nth(1)
     await pendingRow.click()
     await expect(pendingRow).toHaveAttribute('tabindex', '0', { timeout: 5_000 })
+    await page.evaluate(() => {
+      ;(document.activeElement as HTMLElement)?.blur()
+      document.body.focus()
+    })
 
     await page.keyboard.press('f')
     await expect(page.getByText('Finding flagged for review', { exact: true })).toBeVisible({
@@ -264,6 +275,10 @@ test.describe.serial('Review Accessibility — Keyboard-Only Flow', () => {
     const pendingRow = page.locator('[role="row"][data-status="pending"]').nth(1)
     await pendingRow.click()
     await expect(pendingRow).toHaveAttribute('tabindex', '0', { timeout: 5_000 })
+    await page.evaluate(() => {
+      ;(document.activeElement as HTMLElement)?.blur()
+      document.body.focus()
+    })
     await page.keyboard.press('a')
     await expect(page.getByText('Finding accepted', { exact: true })).toBeVisible({
       timeout: 10_000,
@@ -397,15 +412,21 @@ test.describe.serial('Review Performance Benchmarks', () => {
     await signupOrLogin(page, perfEmail, perfPassword)
     await gotoReviewPageWithRetry(page, perfProjectId, perfFileId)
 
-    // Click nth(1) — NOT first() — same reason as TA-01b: first row is already
-    // activeFindingId (initialized by FindingList), click is NO-OP → ref not updated
+    // Click 2nd row, wait for detail panel, then blur <select> that steals focus
     const targetRow = page.locator('[role="row"]').nth(1)
     await targetRow.click()
     await expect(targetRow).toHaveAttribute('tabindex', '0', { timeout: 5_000 })
+    // Wait for detail panel to finish rendering (350 findings = slower render)
+    await page.waitForTimeout(1_000)
+    await page.evaluate(() => {
+      ;(document.activeElement as HTMLElement)?.blur()
+      document.body.focus()
+    })
 
     const startAction = Date.now()
     await page.keyboard.press('a')
-    await expect(page.getByText(/Finding accepted/i).first()).toBeVisible({ timeout: 10_000 })
+    const toast = page.locator('[data-sonner-toast]').first()
+    await expect(toast).toBeVisible({ timeout: 10_000 })
     const actionTime = Date.now() - startAction
 
     // eslint-disable-next-line no-console

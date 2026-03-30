@@ -1257,3 +1257,13 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** Story 5.2b tightened segments + review_actions INSERT/DELETE to role-scoped (admin-only DELETE, admin+qa INSERT). But findings INSERT/DELETE were intentionally kept as tenant-only per AC5 ("preserve existing"). This means any native_reviewer can DELETE any tenant finding by ID at the RLS level — inconsistent with the hardened approach on other tables. App-level `requireRole()` is the primary defense, but defense-in-depth requires RLS to match.
 - **Fix:** Create a follow-up migration that: (1) DROP "Tenant isolation: INSERT" ON findings → CREATE `findings_insert_admin_qa` (admin+qa only — pipeline uses service_role). (2) DROP "Tenant isolation: DELETE" ON findings → CREATE `findings_delete_admin` (admin only). Add corresponding RLS tests.
 - **Status:** ~~DEFERRED~~ → **RESOLVED** (Story 5.2c Task 12 — migration 00027 role-scoped INSERT/DELETE policies + 00028 file_assignments hardening)
+
+### TD-A11Y-001: Detail panel `<select>` steals focus from finding row on content update
+- **Date:** 2026-03-30
+- **Story:** Story 5.3 (E2E responsive fix — debug TA-01b)
+- **Phase:** E2E
+- **Severity:** Medium
+- **Files:** `src/features/review/components/FindingDetailContent.tsx:178` (`<select aria-label="Context range">`)
+- **Description:** When a user clicks a finding row, the detail aside re-renders with new content. The `<select>` element (context range selector) receives browser focus, stealing it from the finding row. This suppresses single-key hotkeys (A/R/F) because Guardrail #28 blocks hotkeys in `<select>`. No `autoFocus` attribute — appears to be browser behavior when previously-focused element is removed from DOM during React re-render. Violates Guardrail #40 (no focus stealing on mount). E2E workaround: `blur()` + `document.body.focus()` before pressing hotkeys.
+- **Fix:** Investigate root cause (browser focus restoration vs. React re-render timing). Options: (a) add `inert` attribute on aside during re-render, (b) use `requestAnimationFrame` to re-focus the active row after detail panel update, (c) prevent `<select>` from receiving focus during content transition via `tabIndex={-1}` temporarily. Quick fix estimate: ~1-2 hours.
+- **Status:** DEFERRED → Epic 6 (non-blocking — E2E workaround in place, hotkeys work via keyboard shortcut after manual blur)
