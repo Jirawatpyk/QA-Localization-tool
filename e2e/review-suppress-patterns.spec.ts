@@ -432,10 +432,8 @@ async function rejectTerminologyFindings(page: import('@playwright/test').Page, 
     // Wait for click to register focus + activeFindingId sync in store
     await page.waitForTimeout(500)
 
-    // Use inline "Reject finding" quick action button on the row (reliable in E2E)
-    const rejectButton = row.getByRole('button', { name: /reject finding/i })
-    await expect(rejectButton).toBeVisible({ timeout: 5_000 })
-    await rejectButton.click()
+    // Use 'r' hotkey to reject (more reliable than clicking inline button in E2E)
+    await page.keyboard.press('r')
 
     // Wait for pending count to decrease — optimistic update removes from pending filter
     await expect(terminologyRows).toHaveCount(pendingBefore - 1, { timeout: 15_000 })
