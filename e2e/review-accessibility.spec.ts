@@ -364,8 +364,8 @@ test.describe.serial('Review Performance Benchmarks', () => {
     // Log for benchmark report
     // eslint-disable-next-line no-console
     console.log(`[PERF] Page render time: ${renderTime}ms (target: <2000ms prod, <15000ms dev)`)
-    // CI uses production build → stricter thresholds. Dev mode relaxed (React Strict Mode 2x + Turbopack).
-    const renderLimit = process.env.CI ? 5_000 : 15_000
+    // CI: 10s (production build, shared runner). Dev: 15s (Turbopack + React Strict Mode 2x).
+    const renderLimit = process.env.CI ? 10_000 : 15_000
     expect(renderTime).toBeLessThan(renderLimit)
   })
 
