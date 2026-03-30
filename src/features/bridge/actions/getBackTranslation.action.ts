@@ -189,8 +189,58 @@ export async function getBackTranslation(
       maxOutputTokens: 4096, // Guardrail #16: maxOutputTokens, NOT maxTokens
     })
 
-    // Log usage (Guardrail #19, #52)
+    // CR-R2 F6: Log usage AFTER output validation so status reflects reality
     const primaryCost = estimateCost('gpt-4o-mini', 'BT', result.usage)
+    const primaryDurationMs = Date.now() - startTime
+
+    // Access result via result.output (Guardrail #16: NOT result.object)
+    // Guardrail #18: NoOutputGeneratedError = non-retriable (schema/content filter issue)
+    // CR-R2 F5: assign output to local var once — getter may throw or have side effects
+    let btResult: Awaited<typeof result.output>
+    try {
+      const output = result.output
+      if (!output) {
+        await logAIUsage({
+          tenantId,
+          projectId,
+          fileId: segment.fileId,
+          model: 'gpt-4o-mini',
+          layer: 'BT',
+          inputTokens: result.usage.inputTokens ?? 0,
+          outputTokens: result.usage.outputTokens ?? 0,
+          estimatedCostUsd: primaryCost,
+          chunkIndex: null,
+          durationMs: primaryDurationMs,
+          languagePair,
+          status: 'error',
+        })
+        return { success: false, error: 'AI returned no structured output', code: 'AI_NO_OUTPUT' }
+      }
+      btResult = output
+    } catch (outputErr) {
+      logger.error(
+        { err: outputErr, segmentId: input.segmentId, finishReason: result.finishReason },
+        'getBackTranslation: AI output accessor threw — schema mismatch or content filter',
+      )
+      // CR-R2 F6: log as no_output when accessor throws
+      await logAIUsage({
+        tenantId,
+        projectId,
+        fileId: segment.fileId,
+        model: 'gpt-4o-mini',
+        layer: 'BT',
+        inputTokens: result.usage.inputTokens ?? 0,
+        outputTokens: result.usage.outputTokens ?? 0,
+        estimatedCostUsd: primaryCost,
+        chunkIndex: null,
+        durationMs: primaryDurationMs,
+        languagePair,
+        status: 'error',
+      })
+      return { success: false, error: 'AI failed to generate valid output', code: 'AI_NO_OUTPUT' }
+    }
+
+    // CR-R2 F6: Log primary usage after output validation confirmed success (Guardrail #19, #52)
     await logAIUsage({
       tenantId,
       projectId,
@@ -201,27 +251,10 @@ export async function getBackTranslation(
       outputTokens: result.usage.outputTokens ?? 0,
       estimatedCostUsd: primaryCost,
       chunkIndex: null,
-      durationMs: Date.now() - startTime,
+      durationMs: primaryDurationMs,
       languagePair,
       status: 'success',
     })
-
-    // Access result via result.output (Guardrail #16: NOT result.object)
-    // Guardrail #18: NoOutputGeneratedError = non-retriable (schema/content filter issue)
-    // result.output getter throws NoOutputGeneratedError if AI didn't produce valid output
-    let btResult: Awaited<typeof result.output>
-    try {
-      if (!result.output) {
-        return { success: false, error: 'AI returned no structured output', code: 'AI_NO_OUTPUT' }
-      }
-      btResult = result.output
-    } catch (outputErr) {
-      logger.error(
-        { err: outputErr, segmentId: input.segmentId, finishReason: result.finishReason },
-        'getBackTranslation: AI output accessor threw — schema mismatch or content filter',
-      )
-      return { success: false, error: 'AI failed to generate valid output', code: 'AI_NO_OUTPUT' }
-    }
 
     // Low-confidence fallback (Guardrail #56): retry with claude-sonnet if budget allows
     if (btResult.confidence < confidenceThreshold) {
@@ -242,20 +275,7 @@ export async function getBackTranslation(
             'BT',
             fallbackResult.usage,
           )
-          await logAIUsage({
-            tenantId,
-            projectId,
-            fileId: segment.fileId,
-            model: 'claude-sonnet-4-5-20250929',
-            layer: 'BT',
-            inputTokens: fallbackResult.usage.inputTokens ?? 0,
-            outputTokens: fallbackResult.usage.outputTokens ?? 0,
-            estimatedCostUsd: fallbackCost,
-            chunkIndex: null,
-            durationMs: Date.now() - fallbackStart,
-            languagePair,
-            status: 'success',
-          })
+          const fallbackDurationMs = Date.now() - fallbackStart
 
           let fallbackOutput: typeof btResult | null = null
           try {
@@ -268,20 +288,43 @@ export async function getBackTranslation(
             logger.warn({ err: fallbackOutputErr, segmentId }, 'BT fallback output accessor threw')
           }
 
+          // CR-R2 F6: Log fallback usage after output validation
+          await logAIUsage({
+            tenantId,
+            projectId,
+            fileId: segment.fileId,
+            model: 'claude-sonnet-4-5-20250929',
+            layer: 'BT',
+            inputTokens: fallbackResult.usage.inputTokens ?? 0,
+            outputTokens: fallbackResult.usage.outputTokens ?? 0,
+            estimatedCostUsd: fallbackCost,
+            chunkIndex: null,
+            durationMs: fallbackDurationMs,
+            languagePair,
+            status: fallbackOutput ? 'success' : 'error',
+          })
+
           // Use whichever has higher confidence
           if (fallbackOutput && fallbackOutput.confidence > btResult.confidence) {
-            // Cache fallback result
-            await cacheBackTranslation({
-              segmentId,
-              tenantId,
-              languagePair,
-              modelVersion: BT_FALLBACK_MODEL_VERSION,
-              targetTextHash,
-              result: fallbackOutput,
-              inputTokens: fallbackResult.usage.inputTokens ?? 0,
-              outputTokens: fallbackResult.usage.outputTokens ?? 0,
-              estimatedCostUsd: fallbackCost,
-            })
+            // Cache fallback result (non-fatal: FK violation if file/segment deleted during AI call)
+            try {
+              await cacheBackTranslation({
+                segmentId,
+                tenantId,
+                languagePair,
+                modelVersion: BT_FALLBACK_MODEL_VERSION,
+                targetTextHash,
+                result: fallbackOutput,
+                inputTokens: fallbackResult.usage.inputTokens ?? 0,
+                outputTokens: fallbackResult.usage.outputTokens ?? 0,
+                estimatedCostUsd: fallbackCost,
+              })
+            } catch (cacheErr) {
+              logger.error(
+                { err: cacheErr, segmentId },
+                'Failed to cache BT fallback result (non-fatal)',
+              )
+            }
 
             return {
               success: true,
@@ -301,18 +344,22 @@ export async function getBackTranslation(
       }
     }
 
-    // Cache primary result
-    await cacheBackTranslation({
-      segmentId,
-      tenantId,
-      languagePair,
-      modelVersion: BT_MODEL_VERSION,
-      targetTextHash,
-      result: btResult,
-      inputTokens: result.usage.inputTokens ?? 0,
-      outputTokens: result.usage.outputTokens ?? 0,
-      estimatedCostUsd: primaryCost,
-    })
+    // Cache primary result (non-fatal: FK violation if file/segment deleted during AI call)
+    try {
+      await cacheBackTranslation({
+        segmentId,
+        tenantId,
+        languagePair,
+        modelVersion: BT_MODEL_VERSION,
+        targetTextHash,
+        result: btResult,
+        inputTokens: result.usage.inputTokens ?? 0,
+        outputTokens: result.usage.outputTokens ?? 0,
+        estimatedCostUsd: primaryCost,
+      })
+    } catch (cacheErr) {
+      logger.error({ err: cacheErr, segmentId }, 'Failed to cache BT primary result (non-fatal)')
+    }
 
     return {
       success: true,

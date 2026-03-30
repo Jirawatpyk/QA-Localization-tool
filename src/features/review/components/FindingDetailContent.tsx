@@ -82,12 +82,14 @@ export function FindingDetailContent({
 }: FindingDetailContentProps) {
   const [contextRange, setContextRange] = useState(contextRangeProp ?? 2)
 
-  // Sync contextRange when prop changes (Guardrail #12 — ref/state not reset on prop change)
-  useEffect(() => {
+  // CR-R2 F4: Render-time adjustment pattern (Guardrail — no setState in useEffect for React Compiler)
+  const [prevContextRangeProp, setPrevContextRangeProp] = useState(contextRangeProp)
+  if (contextRangeProp !== prevContextRangeProp) {
+    setPrevContextRangeProp(contextRangeProp)
     if (contextRangeProp !== undefined) {
-      setContextRange(contextRangeProp) // eslint-disable-line react-hooks/set-state-in-effect -- sync prop-driven initial value after parent changes (external system subscription pattern)
+      setContextRange(contextRangeProp)
     }
-  }, [contextRangeProp])
+  }
 
   // Story 4.4a: Override history visibility
   const [showHistory, setShowHistory] = useState(false)
@@ -109,6 +111,20 @@ export function FindingDetailContent({
       setGlossaryDialogOpen(false) // CR-R1 M4: close dialog when finding changes (stale form data)
     }
   }
+
+  // TD-A11Y-001: Suppress auto-focus on <select> during finding transition.
+  // Browser may auto-focus first form element in aside on re-render.
+  // Ref is true during transition, cleared after rAF. Select's onFocus
+  // checks this and redirects focus back to the active finding row.
+  const findingTransitionRef = useRef(false)
+  useEffect(() => {
+    if (!currentFindingId) return
+    findingTransitionRef.current = true
+    const rafId = requestAnimationFrame(() => {
+      findingTransitionRef.current = false
+    })
+    return () => cancelAnimationFrame(rafId)
+  }, [currentFindingId])
 
   // AC4: button visible only for Terminology findings with source text, both langs, and projectId
   // Case-insensitive: taxonomy seed uses 'Terminology', L1 rule engine may use 'terminology'
@@ -179,6 +195,17 @@ export function FindingDetailContent({
                   aria-label="Context range"
                   value={contextRange}
                   onChange={(e) => setContextRange(Number(e.target.value))}
+                  onFocus={() => {
+                    // TD-A11Y-001: If focus arrived during finding transition (aside re-render),
+                    // redirect to active row so hotkeys aren't suppressed (Guardrail #17).
+                    // Tab navigation outside transition is unaffected (WCAG SC 2.1.1).
+                    if (findingTransitionRef.current) {
+                      const row = document.querySelector(
+                        '[role="row"][tabindex="0"]',
+                      ) as HTMLElement | null
+                      row?.focus()
+                    }
+                  }}
                   className="text-xs border border-border rounded px-1 py-0.5 bg-background"
                   data-testid="context-range-selector"
                 >

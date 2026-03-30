@@ -86,6 +86,10 @@ export async function gotoReviewPageWithRetry(page: Page, projectId: string, fil
 
   // Phase 2: Wait for full hydration (single attempt, no retry)
   await waitForFindingsVisible(page)
+  // TD-A11Y-001 CR: Wait for layout mode to stabilize after hydration.
+  // useIsDesktop() initialises as false (SSR), then updates via useEffect.
+  // Without this guard, clicks during hydration gap hit Sheet mode at 1440px viewport.
+  await page.waitForSelector('[data-layout-mode]', { timeout: 10_000 })
   await page.waitForSelector('[role="grid"][data-keyboard-ready="true"]', { timeout: 15_000 })
   await page.waitForSelector('[data-testid="review-3-zone"][data-review-actions-ready="true"]', {
     timeout: 10_000,
