@@ -25,6 +25,25 @@ import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types'
 
+// PostgreSQL error code 23503 = foreign_key_violation (file/segment deleted during AI call)
+const PG_FK_VIOLATION = '23503'
+
+/** Check if error is a PostgreSQL FK violation (race condition: referenced row deleted) */
+function isFkViolation(err: unknown): boolean {
+  if (
+    err &&
+    typeof err === 'object' &&
+    'code' in err &&
+    (err as { code: unknown }).code === PG_FK_VIOLATION
+  )
+    return true
+  // Drizzle wraps postgres.js errors — check cause chain
+  if (err instanceof Error && err.cause && typeof err.cause === 'object' && 'code' in err.cause) {
+    return (err.cause as { code: unknown }).code === PG_FK_VIOLATION
+  }
+  return false
+}
+
 // ── Input validation ──
 
 const inputSchema = z.object({
@@ -320,10 +339,14 @@ export async function getBackTranslation(
                 estimatedCostUsd: fallbackCost,
               })
             } catch (cacheErr) {
-              logger.error(
-                { err: cacheErr, segmentId },
-                'Failed to cache BT fallback result (non-fatal)',
-              )
+              if (isFkViolation(cacheErr)) {
+                logger.warn(
+                  { segmentId },
+                  'BT fallback cache skipped — FK violation (file/segment deleted)',
+                )
+              } else {
+                throw cacheErr // Systemic error (DB down, schema mismatch) — propagate
+              }
             }
 
             return {
@@ -358,7 +381,11 @@ export async function getBackTranslation(
         estimatedCostUsd: primaryCost,
       })
     } catch (cacheErr) {
-      logger.error({ err: cacheErr, segmentId }, 'Failed to cache BT primary result (non-fatal)')
+      if (isFkViolation(cacheErr)) {
+        logger.warn({ segmentId }, 'BT primary cache skipped — FK violation (file/segment deleted)')
+      } else {
+        throw cacheErr // Systemic error (DB down, schema mismatch) — propagate
+      }
     }
 
     return {
