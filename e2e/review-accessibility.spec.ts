@@ -265,8 +265,10 @@ test.describe.serial('Review Accessibility — Keyboard-Only Flow', () => {
       timeout: 30_000,
     })
 
-    // Wait for inFlightRef to clear
-    await page.waitForTimeout(2000)
+    // Wait for accept toast to disappear (deterministic signal that inFlightRef is cleared)
+    await expect(page.getByText('Finding accepted', { exact: true })).not.toBeVisible({
+      timeout: 15_000,
+    })
 
     // Undo — toast shows "Undone: <description>"
     await page.keyboard.press('Control+z')
@@ -362,9 +364,9 @@ test.describe.serial('Review Performance Benchmarks', () => {
     // Log for benchmark report
     // eslint-disable-next-line no-console
     console.log(`[PERF] Page render time: ${renderTime}ms (target: <2000ms prod, <15000ms dev)`)
-    // TODO(TD-TEST-011): Dev mode threshold relaxed (React Strict Mode 2x + Turbopack).
-    // Production target: <2000ms. Add prod CI gate with AC4 thresholds.
-    expect(renderTime).toBeLessThan(15_000)
+    // CI uses production build → stricter thresholds. Dev mode relaxed (React Strict Mode 2x + Turbopack).
+    const renderLimit = process.env.CI ? 5_000 : 15_000
+    expect(renderTime).toBeLessThan(renderLimit)
   })
 
   test('TA-13: J/K navigation < 100ms (AC4, P1)', async ({ page }) => {
@@ -388,8 +390,8 @@ test.describe.serial('Review Performance Benchmarks', () => {
 
     // eslint-disable-next-line no-console
     console.log(`[PERF] J/K nav time: ${navTime}ms (target: <100ms prod, <2000ms dev)`)
-    // TODO(TD-TEST-011): Dev mode threshold relaxed. Production target: <100ms.
-    expect(navTime).toBeLessThan(2000)
+    const navLimit = process.env.CI ? 500 : 2000
+    expect(navTime).toBeLessThan(navLimit)
   })
 
   test('TA-14: Hotkey action < 200ms (AC4, P1)', async ({ page }) => {
@@ -420,9 +422,8 @@ test.describe.serial('Review Performance Benchmarks', () => {
 
     // eslint-disable-next-line no-console
     console.log(`[PERF] Hotkey action time: ${actionTime}ms (target: <200ms prod, <60000ms dev)`)
-    // TODO(TD-TEST-011): Dev mode threshold relaxed (350 findings + Turbopack + React Strict Mode).
-    // Production target: <200ms. Dev mode can hit 30-50s due to double-renders + no optimization.
-    expect(actionTime).toBeLessThan(60_000)
+    const actionLimit = process.env.CI ? 5_000 : 60_000
+    expect(actionTime).toBeLessThan(actionLimit)
   })
 
   test('TA-12b: Bulk action on 50 findings < 3s (AC4, P2)', async ({ page }) => {
@@ -452,7 +453,7 @@ test.describe.serial('Review Performance Benchmarks', () => {
 
     // eslint-disable-next-line no-console
     console.log(`[PERF] Bulk action (50) time: ${bulkTime}ms (target: <3000ms prod, <30000ms dev)`)
-    // TODO(TD-TEST-011): Dev mode threshold relaxed. Production target: <3000ms.
-    expect(bulkTime).toBeLessThan(30_000)
+    const bulkLimit = process.env.CI ? 10_000 : 30_000
+    expect(bulkTime).toBeLessThan(bulkLimit)
   })
 })

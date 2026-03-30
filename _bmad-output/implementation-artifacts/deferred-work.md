@@ -38,7 +38,12 @@
 
 ## Deferred from: code review of story-5.3 (2026-03-30)
 
-- **F9:** Perf benchmark thresholds relaxed 7.5-50x from production targets (TD-TEST-011 tracked). Need CI-only path with stricter thresholds.
+- ~~**F9:** Perf benchmark thresholds relaxed 7.5-50x from production targets (TD-TEST-011 tracked).~~ ✅ DONE — CI-only stricter thresholds via `process.env.CI` (render 5s, nav 500ms, action 5s, bulk 10s)
 - **F10:** Keyboard `bindingsRegistry` module-level singleton doesn't reset on HMR — pre-existing architecture, not 5.3 regression. Consider React context or Zustand migration.
-- **F11:** `confirmNativeReview` notification sent to `assignment.assignedBy` — may self-notify if admin re-assigns. Add `if (assignedBy !== userId)` guard.
-- **F12:** E2E `TA-01e` uses `waitForTimeout(2000)` as timing hack — should wait for deterministic signal instead.
+- ~~**F11:** `confirmNativeReview` notification self-notify guard.~~ ✅ DONE — `if (assignedBy !== userId)` guard on both confirm + override actions
+- ~~**F12:** E2E `TA-01e` `waitForTimeout(2000)` flaky timing.~~ ✅ DONE — replaced with deterministic toast visibility wait
+
+## Deferred from: code review of TD-A11Y-001 fix (2026-03-30)
+
+- ~~**Cache error classification:**~~ ✅ DONE — `isFkViolation()` helper classifies PG error code `23503`. FK violations log warn + continue. Systemic errors (DB down, schema) re-throw to propagate.
+- ~~**TA-14 perf threshold 60s:**~~ ✅ DONE — CI-only thresholds added (render 5s, nav 500ms, action 5s, bulk 10s). Dev mode keeps relaxed thresholds.

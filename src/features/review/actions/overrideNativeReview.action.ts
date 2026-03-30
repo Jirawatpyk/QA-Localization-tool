@@ -180,17 +180,20 @@ export async function overrideNativeReview(
   }
 
   // Notification (non-blocking — Guardrail #74)
-  try {
-    await db.insert(notifications).values({
-      tenantId,
-      userId: assignment.assignedBy,
-      type: 'native_review_completed',
-      title: 'Native review completed (override)',
-      body: `A native reviewer has overridden the finding to ${newFindingStatus}`,
-      metadata: { findingId, projectId, fileId, assignmentId: assignment.id },
-    })
-  } catch (err) {
-    logger.error({ err, findingId }, 'Failed to create notification')
+  // CR-R2 F11: Skip self-notification (e.g., admin re-assigned finding to themselves)
+  if (assignment.assignedBy !== userId) {
+    try {
+      await db.insert(notifications).values({
+        tenantId,
+        userId: assignment.assignedBy,
+        type: 'native_review_completed',
+        title: 'Native review completed (override)',
+        body: `A native reviewer has overridden the finding to ${newFindingStatus}`,
+        metadata: { findingId, projectId, fileId, assignmentId: assignment.id },
+      })
+    } catch (err) {
+      logger.error({ err, findingId }, 'Failed to create notification')
+    }
   }
 
   return {
