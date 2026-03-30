@@ -233,22 +233,10 @@ Each feature module contains: `components/`, `actions/` (Server Actions), `hooks
 - **AI pipeline: real integration test MANDATORY** — call real AI API + verify findings inserted. Mock-only tests don't catch format mismatch. `findingCount > 0` not just "pipeline completed"
 - **Orphan component scan** every 5 stories + epic sign-off
 
-## Pre-Story Checklist (MANDATORY — SM + Dev Lead)
+## Pre-Story Checklist
 
 **Run BEFORE locking Acceptance Criteria on any story:**
 → `_bmad-output/architecture-assumption-checklist.md` (9 sections, 25 checkboxes)
-
-Top red flags:
-
-| Red Flag                                                         | Section       |
-| ---------------------------------------------------------------- | ------------- |
-| Story references a `/route` that doesn't exist in `src/app/`     | S1: Routes    |
-| Story writes to DB but no migration task                         | S2: DB Schema |
-| Story uses Radix Select in E2E test (not native `<select>`)      | S3 + S5       |
-| Story assumes columns exist that haven't been added yet          | S2: DB Schema |
-| Story scope bleeds into future stories without explicit deferral | S8: Scope     |
-| Story creates component/dialog but no story mounts it in a page  | S9: Journey   |
-| E2E test bypasses UI flow without tech debt tracker entry        | S9: Journey   |
 
 ## Key Planning Documents
 

@@ -15,6 +15,7 @@ import type { ReviewActionResult } from '@/features/review/actions/helpers/execu
 import { overrideNativeSchema } from '@/features/review/validation/reviewAction.schema'
 import type { OverrideNativeInput } from '@/features/review/validation/reviewAction.schema'
 import { requireRole } from '@/lib/auth/requireRole'
+import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
 import type { DetectedByLayer, FindingSeverity, FindingStatus } from '@/types/finding'
@@ -87,7 +88,13 @@ export async function overrideNativeReview(
       targetTextExcerpt: findings.targetTextExcerpt,
     })
     .from(findings)
-    .where(and(eq(findings.id, findingId), withTenant(findings.tenantId, tenantId)))
+    .where(
+      and(
+        eq(findings.id, findingId),
+        eq(findings.projectId, projectId), // CR-R2 F3: defense-in-depth (Guardrail #7)
+        withTenant(findings.tenantId, tenantId),
+      ),
+    )
     .limit(1)
 
   const findingDetail = findingDetailRows[0]
@@ -104,7 +111,13 @@ export async function overrideNativeReview(
     await tx
       .update(findings)
       .set({ status: newFindingStatus, updatedAt: now })
-      .where(and(eq(findings.id, findingId), withTenant(findings.tenantId, tenantId)))
+      .where(
+        and(
+          eq(findings.id, findingId),
+          eq(findings.projectId, projectId), // CR-R2 F3: defense-in-depth
+          withTenant(findings.tenantId, tenantId),
+        ),
+      )
 
     await tx
       .update(findingAssignments)
@@ -143,6 +156,28 @@ export async function overrideNativeReview(
     oldValue: { status: assignment.status },
     newValue: { status: 'overridden', findingStatus: newFindingStatus },
   })
+
+  // Send Inngest event for score recalculation (same pattern as confirmNativeReview)
+  try {
+    await inngest.send({
+      name: 'finding.changed',
+      data: {
+        findingId,
+        fileId,
+        projectId,
+        tenantId,
+        previousState: 'flagged',
+        newState: newFindingStatus,
+        triggeredBy: userId,
+        timestamp: now.toISOString(),
+      },
+    })
+  } catch (inngestErr) {
+    logger.error(
+      { err: inngestErr, findingId },
+      'Inngest event send failed for native override — score recalculation may be delayed',
+    )
+  }
 
   // Notification (non-blocking — Guardrail #74)
   try {

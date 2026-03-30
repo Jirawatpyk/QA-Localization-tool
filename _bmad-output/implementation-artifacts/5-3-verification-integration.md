@@ -518,3 +518,28 @@ Claude Opus 4.6 (1M context)
 
 **Deleted:**
 - `scripts/generate-verification-data.test.mjs` — moved to src/test/
+
+### CR R2 Review Findings (2026-03-30)
+
+**Reviewers:** Blind Hunter + Edge Case Hunter + Acceptance Auditor (3-agent parallel)
+**Scope:** Full Story 5.3 diff (e510afe..HEAD + uncommitted) — 38 files, +2364/-422 lines
+**AC Compliance:** 8/8 ACs PASS
+
+#### Decision Needed
+- [ ] [Review][Decision] F7: `executeNativeConfirm`/`executeNativeOverride` ไม่ push undo entry — inconsistent กับ action อื่นทุกตัว [`ReviewPageClient.tsx:479-567`]
+- [ ] [Review][Decision] F8: `handleActiveFindingChange` sync selectedId เฉพาะ desktop — resize mobile→desktop อาจแสดง empty detail panel [`ReviewPageClient.tsx:440-457`]
+
+#### Patches
+- [ ] [Review][Patch] F1 (P0): `overrideNativeReview` ไม่ส่ง `finding.changed` event → MQM score ไม่ recalculate [`overrideNativeReview.action.ts`]
+- [ ] [Review][Patch] F2 (P1): Escape handler จับ stale `fileId` ใน closure — missing dep in useEffect [`ReviewPageClient.tsx:614-672`]
+- [ ] [Review][Patch] F3 (P1): `confirmNativeReview`/`overrideNativeReview` ขาด `eq(findings.projectId, projectId)` defense-in-depth filter [`confirmNativeReview.action.ts:91`, `overrideNativeReview.action.ts:90`]
+- [ ] [Review][Patch] F4 (P2): `setState` ใน `useEffect` สำหรับ `contextRange` — ขัด guardrail React Compiler [`FindingDetailContent.tsx:86-90`]
+- [ ] [Review][Patch] F5 (P2): `result.output` getter ถูกเรียก 2 ครั้ง — assign to local var once [`getBackTranslation.action.ts:212-224`]
+- [ ] [Review][Patch] F6 (P2): `logAIUsage` status='success' ก่อน validate output — misleading metrics [`getBackTranslation.action.ts:192-207,244-258`]
+- [ ] [Review][Patch] F13 (P3): Stale "RED PHASE" comment ใน epic5-integration.spec.ts [`epic5-integration.spec.ts:17`]
+
+#### Deferred
+- [x] [Review][Defer] F9: Perf benchmark thresholds relaxed 7.5-50x — TD-TEST-011 tracked [`review-accessibility.spec.ts`]
+- [x] [Review][Defer] F10: Keyboard `bindingsRegistry` singleton ไม่ reset ตอน HMR — pre-existing architecture [`use-keyboard-actions.ts:130-131`]
+- [x] [Review][Defer] F11: `confirmNativeReview` notification อาจส่งถึงตัวเอง — cosmetic edge case [`confirmNativeReview.action.ts:197`]
+- [x] [Review][Defer] F12: E2E `TA-01e` ใช้ `waitForTimeout(2000)` — flaky timing [`review-accessibility.spec.ts:269`]

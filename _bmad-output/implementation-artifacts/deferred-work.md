@@ -35,3 +35,10 @@
 - Added `visibilitychange` listener to pause/resume timer when tab hidden/visible
 - Added warning toast at T-5 minutes before session expiry
 - 5 tests covering: no-timeout, warning-at-25min, timeout-at-30min, activity-reset, background-tab-pause
+
+## Deferred from: code review of story-5.3 (2026-03-30)
+
+- **F9:** Perf benchmark thresholds relaxed 7.5-50x from production targets (TD-TEST-011 tracked). Need CI-only path with stricter thresholds.
+- **F10:** Keyboard `bindingsRegistry` module-level singleton doesn't reset on HMR — pre-existing architecture, not 5.3 regression. Consider React context or Zustand migration.
+- **F11:** `confirmNativeReview` notification sent to `assignment.assignedBy` — may self-notify if admin re-assigns. Add `if (assignedBy !== userId)` guard.
+- **F12:** E2E `TA-01e` uses `waitForTimeout(2000)` as timing hack — should wait for deterministic signal instead.

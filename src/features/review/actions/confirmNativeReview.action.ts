@@ -88,7 +88,13 @@ export async function confirmNativeReview(
       targetTextExcerpt: findings.targetTextExcerpt,
     })
     .from(findings)
-    .where(and(eq(findings.id, findingId), withTenant(findings.tenantId, tenantId)))
+    .where(
+      and(
+        eq(findings.id, findingId),
+        eq(findings.projectId, projectId), // CR-R2 F3: defense-in-depth (Guardrail #7)
+        withTenant(findings.tenantId, tenantId),
+      ),
+    )
     .limit(1)
 
   const findingDetail = findingRows[0]
@@ -125,7 +131,13 @@ export async function confirmNativeReview(
     await tx
       .update(findings)
       .set({ status: newFindingStatus, updatedAt: now })
-      .where(and(eq(findings.id, findingId), withTenant(findings.tenantId, tenantId)))
+      .where(
+        and(
+          eq(findings.id, findingId),
+          eq(findings.projectId, projectId), // CR-R2 F3: defense-in-depth
+          withTenant(findings.tenantId, tenantId),
+        ),
+      )
 
     // Update assignment status + updatedAt (5.2b TODO M4)
     await tx

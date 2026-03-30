@@ -14,8 +14,6 @@
  * 7. Native reviewer confirms finding → status updated, notification sent
  * 8. Score recalculates after native confirmation
  *
- * RED PHASE: All tests are test.skip() — will be unskipped during implementation.
- *
  * Prerequisites:
  * - Next.js dev server (npm run dev) on port 3000
  * - Supabase running (local or cloud)

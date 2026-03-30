@@ -473,6 +473,16 @@ export function ReviewPageClient({
     ) {
       setSelectedFinding(activeFindingState)
     }
+    // CR-R2 F8: Non-desktop→desktop: sync selectedId from activeFindingState
+    // Prevents empty detail panel after mobile J/K nav → resize to desktop
+    if (
+      prevLayoutMode !== 'desktop' &&
+      layoutMode === 'desktop' &&
+      activeFindingState !== null &&
+      selectedId !== activeFindingState
+    ) {
+      setSelectedFinding(activeFindingState)
+    }
   }
 
   // CR-R2 P1-2: shared native confirm handler with stale rollback guard
@@ -483,6 +493,22 @@ export function ReviewPageClient({
       if (!f) return
       const optimisticUpdatedAt = new Date().toISOString()
       store.setFinding(findingId, { ...f, status: 'accepted', updatedAt: optimisticUpdatedAt })
+      // CR-R2 F7: Push undo entry (consistent with all other review actions)
+      useReviewStore.getState().pushUndo({
+        id: crypto.randomUUID(),
+        type: 'single',
+        action: 'accept',
+        findingId,
+        batchId: null,
+        previousStates: new Map([[findingId, f.status]]),
+        newStates: new Map([[findingId, 'accepted' as FindingStatus]]),
+        previousSeverity: null,
+        newSeverity: null,
+        findingSnapshot: null,
+        description: 'Confirm native review',
+        timestamp: Date.now(),
+        staleFindings: new Set(),
+      })
       void confirmNativeReview({ findingId, fileId, projectId })
         .then((result) => {
           if (result.success) {
@@ -529,6 +555,22 @@ export function ReviewPageClient({
       if (!f) return
       const optimisticUpdatedAt = new Date().toISOString()
       store.setFinding(findingId, { ...f, status: newStatus, updatedAt: optimisticUpdatedAt })
+      // CR-R2 F7: Push undo entry (consistent with all other review actions)
+      useReviewStore.getState().pushUndo({
+        id: crypto.randomUUID(),
+        type: 'single',
+        action: 'reject',
+        findingId,
+        batchId: null,
+        previousStates: new Map([[findingId, f.status]]),
+        newStates: new Map([[findingId, newStatus as FindingStatus]]),
+        previousSeverity: null,
+        newSeverity: null,
+        findingSnapshot: null,
+        description: `Override native review to ${newStatus}`,
+        timestamp: Date.now(),
+        staleFindings: new Set(),
+      })
       void overrideNativeReview({ findingId, fileId, projectId, newStatus })
         .then((result) => {
           if (result.success) {
@@ -669,7 +711,7 @@ export function ReviewPageClient({
     return () => {
       for (const cleanup of cleanups) cleanup()
     }
-  }, [register])
+  }, [register, fileId, isNativeReviewer])
 
   // J/K navigation from review-zone scope (Guardrail #28: review area, not just grid)
   const navigateNextRef = useRef<(() => void) | null>(null)
