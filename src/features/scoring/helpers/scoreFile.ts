@@ -15,6 +15,7 @@ import { calculateMqmScore } from '@/features/scoring/mqmCalculator'
 import { loadPenaltyWeights } from '@/features/scoring/penaltyWeightLoader'
 import type { ContributingFinding, FindingsSummary, FindingStatus } from '@/features/scoring/types'
 import { logger } from '@/lib/logger'
+import { createBulkNotification, NOTIFICATION_TYPES } from '@/lib/notifications/createNotification'
 import { FINDING_SEVERITIES } from '@/types/finding'
 import type { DetectedByLayer, FindingSeverity, LayerCompleted } from '@/types/finding'
 import type { TenantId } from '@/types/tenant'
@@ -337,20 +338,18 @@ async function createGraduationNotification(params: {
       return
     }
 
-    // Insert one notification per admin
+    // Insert one notification per admin (Guardrail #85: centralized helper)
     // Note: no unique constraint on notifications table — dedup guard above (JSONB containment)
     // prevents duplicate graduation notifications. Race between concurrent Inngest runs is
     // possible but harmless (worst case: duplicate notifications, not data corruption).
-    await db.insert(notifications).values(
-      admins.map((admin) => ({
-        tenantId,
-        userId: admin.userId,
-        type: 'language_pair_graduated',
-        title: 'Language pair ready for calibration',
-        body: `${sourceLang}->${targetLang} has processed ${fileCount} files. Review confidence thresholds in language pair settings.`,
-        metadata: { sourceLang, targetLang, fileCount, projectId } as Record<string, unknown>,
-      })),
-    )
+    await createBulkNotification({
+      tenantId,
+      recipients: admins.map((admin) => ({ userId: admin.userId })),
+      type: NOTIFICATION_TYPES.LANGUAGE_PAIR_GRADUATED,
+      title: 'Language pair ready for calibration',
+      body: `${sourceLang}->${targetLang} has processed ${fileCount} files. Review confidence thresholds in language pair settings.`,
+      metadata: { sourceLang, targetLang, fileCount, projectId },
+    })
   } catch (err) {
     logger.warn(
       { err, tenantId, sourceLang, targetLang },

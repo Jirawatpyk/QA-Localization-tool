@@ -6,6 +6,7 @@ import { and, eq, desc, inArray } from 'drizzle-orm'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
+import { fileAssignments } from '@/db/schema/fileAssignments'
 import { files } from '@/db/schema/files'
 import { projects } from '@/db/schema/projects'
 import { reviewActions } from '@/db/schema/reviewActions'
@@ -27,6 +28,8 @@ type FileHistoryEntry = {
   status: DbFileStatus
   createdAt: Date
   lastReviewerName: string | null
+  assigneeName: string | null
+  assignmentPriority: 'normal' | 'urgent' | null
 }
 
 type FileHistoryData = {
@@ -112,12 +115,42 @@ export async function getFileHistory(input: unknown): Promise<ActionResult<FileH
       }
     }
 
+    // Query 4: Active file assignments (Story 6.1)
+    const assignmentMap = new Map<string, { assigneeName: string; priority: string }>()
+
+    if (fileIds.length > 0) {
+      const assignmentRows = await db
+        .select({
+          fileId: fileAssignments.fileId,
+          assigneeName: users.displayName,
+          priority: fileAssignments.priority,
+        })
+        .from(fileAssignments)
+        .innerJoin(users, eq(users.id, fileAssignments.assignedTo))
+        .where(
+          and(
+            withTenant(fileAssignments.tenantId, tenantId),
+            inArray(fileAssignments.fileId, fileIds),
+            inArray(fileAssignments.status, ['assigned', 'in_progress']),
+          ),
+        )
+
+      for (const row of assignmentRows) {
+        assignmentMap.set(row.fileId, { assigneeName: row.assigneeName, priority: row.priority })
+      }
+    }
+
     // SAFETY: Drizzle infers varchar → string; DB CHECK constraint guarantees valid DbFileStatus
-    const mappedFiles: FileHistoryEntry[] = filtered.map((f) => ({
-      ...f,
-      status: f.status as DbFileStatus,
-      lastReviewerName: reviewerMap.get(f.fileId) ?? null,
-    }))
+    const mappedFiles: FileHistoryEntry[] = filtered.map((f) => {
+      const assignment = assignmentMap.get(f.fileId)
+      return {
+        ...f,
+        status: f.status as DbFileStatus,
+        lastReviewerName: reviewerMap.get(f.fileId) ?? null,
+        assigneeName: assignment?.assigneeName ?? null,
+        assignmentPriority: (assignment?.priority as 'normal' | 'urgent') ?? null,
+      }
+    })
 
     // Pagination
     const currentPage = page ?? 1

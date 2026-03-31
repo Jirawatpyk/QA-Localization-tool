@@ -53,6 +53,9 @@ export default defineConfig({
           environment: 'node',
           setupFiles: ['./src/db/__tests__/rls/setup.ts'],
           testTimeout: 30000,
+          // RLS tests share Supabase auth instance — parallel creates/deletes
+          // cause email conflicts and stale JWT tokens. Run files sequentially.
+          fileParallelism: false,
         },
       },
       {

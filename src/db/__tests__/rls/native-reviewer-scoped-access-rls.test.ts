@@ -12,7 +12,14 @@
 import { createClient } from '@supabase/supabase-js'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { admin, type TestTenant, cleanupTestTenant, setupTestTenant, tenantClient } from './helpers'
+import {
+  admin,
+  type TestTenant,
+  cleanupStaleUser,
+  cleanupTestTenant,
+  setupTestTenant,
+  tenantClient,
+} from './helpers'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://127.0.0.1:54321'
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
@@ -193,6 +200,7 @@ beforeAll(async () => {
     .single()
 
   // --- QA Reviewer user in Tenant A ---
+  await cleanupStaleUser('rls-scoped-qa@test.local')
   const { data: qaAuth } = await admin.auth.admin.createUser({
     email: 'rls-scoped-qa@test.local',
     password: TEST_PASSWORD,
@@ -217,6 +225,7 @@ beforeAll(async () => {
   })
 
   // --- Native Reviewer user in Tenant A ---
+  await cleanupStaleUser('rls-scoped-native@test.local')
   const { data: nativeAuth } = await admin.auth.admin.createUser({
     email: 'rls-scoped-native@test.local',
     password: TEST_PASSWORD,
@@ -242,6 +251,7 @@ beforeAll(async () => {
   })
 
   // --- Native Reviewer in Tenant B (cross-tenant test) ---
+  await cleanupStaleUser('rls-scoped-native-b@test.local')
   const { data: nativeBAuth } = await admin.auth.admin.createUser({
     email: 'rls-scoped-native-b@test.local',
     password: TEST_PASSWORD,

@@ -8,12 +8,11 @@ import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { findingAssignments } from '@/db/schema/findingAssignments'
 import { findingComments } from '@/db/schema/findingComments'
-import { notifications } from '@/db/schema/notifications'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { addFindingCommentSchema } from '@/features/review/validation/reviewAction.schema'
 import type { AddFindingCommentInput } from '@/features/review/validation/reviewAction.schema'
 import { requireRole } from '@/lib/auth/requireRole'
-import { logger } from '@/lib/logger'
+import { createNotification, NOTIFICATION_TYPES } from '@/lib/notifications/createNotification'
 import type { ActionResult } from '@/types/actionResult'
 
 /**
@@ -103,21 +102,17 @@ export async function addFindingComment(
     newValue: { findingId, findingAssignmentId, bodyLength: body.length },
   })
 
-  // Notification to other party (non-blocking — Guardrail #74)
+  // Notification to other party (non-blocking — Guardrail #74, #85)
   const notifyUserId =
     userId === assignment.assignedTo ? assignment.assignedBy : assignment.assignedTo
-  try {
-    await db.insert(notifications).values({
-      tenantId,
-      userId: notifyUserId,
-      type: 'native_comment_added',
-      title: 'New comment on flagged finding',
-      body: `A comment was added to a flagged finding`,
-      metadata: { findingId, assignmentId: findingAssignmentId, commentId: comment.id },
-    })
-  } catch (err) {
-    logger.error({ err, findingId }, 'Failed to create comment notification')
-  }
+  await createNotification({
+    tenantId,
+    userId: notifyUserId,
+    type: NOTIFICATION_TYPES.NATIVE_COMMENT_ADDED,
+    title: 'New comment on flagged finding',
+    body: 'A comment was added to a flagged finding',
+    metadata: { findingId, assignmentId: findingAssignmentId, commentId: comment.id },
+  })
 
   return {
     success: true,

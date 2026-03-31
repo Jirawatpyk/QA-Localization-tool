@@ -1,7 +1,9 @@
 import { connection } from 'next/server'
 
+import { getFileAssignment } from '@/features/project/actions/getFileAssignment.action'
 import { getFileReviewData } from '@/features/review/actions/getFileReviewData.action'
 import { ReviewPageClient } from '@/features/review/components/ReviewPageClient'
+import { SoftLockWrapper } from '@/features/review/components/SoftLockWrapper'
 
 export default async function ReviewPage({
   params,
@@ -11,7 +13,10 @@ export default async function ReviewPage({
   await connection()
   const { projectId, fileId } = await params
 
-  const result = await getFileReviewData({ fileId, projectId })
+  const [result, assignmentResult] = await Promise.all([
+    getFileReviewData({ fileId, projectId }),
+    getFileAssignment({ fileId, projectId }),
+  ])
 
   if (!result.success) {
     return (
@@ -22,14 +27,19 @@ export default async function ReviewPage({
     )
   }
 
+  const assignment = assignmentResult.success ? assignmentResult.data.assignment : null
+  const currentUserId = assignmentResult.success ? assignmentResult.data.currentUserId : ''
+
   return (
     <div className="p-6">
-      <ReviewPageClient
-        fileId={fileId}
-        projectId={projectId}
-        tenantId={result.data.tenantId}
-        initialData={result.data}
-      />
+      <SoftLockWrapper assignment={assignment} currentUserId={currentUserId} projectId={projectId}>
+        <ReviewPageClient
+          fileId={fileId}
+          projectId={projectId}
+          tenantId={result.data.tenantId}
+          initialData={result.data}
+        />
+      </SoftLockWrapper>
     </div>
   )
 }

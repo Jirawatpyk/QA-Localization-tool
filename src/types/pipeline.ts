@@ -49,6 +49,7 @@ export type PipelineFileEventData = {
   mode: ProcessingMode
   uploadBatchId: UploadBatchId
   userId: string
+  priority?: 'normal' | 'urgent' // Story 6.1: file assignment priority (default: 'normal')
 }
 
 export type PipelineBatchEventData = {
@@ -59,6 +60,7 @@ export type PipelineBatchEventData = {
   mode: ProcessingMode
   uploadBatchId: UploadBatchId
   userId: string
+  priority?: 'normal' | 'urgent' // Story 6.1: file assignment priority (default: 'normal')
 }
 /** Batch completion event — emitted when all files in batch reach terminal layer (L2 for economy, L3 for thorough). */
 export type PipelineBatchCompletedEventData = {

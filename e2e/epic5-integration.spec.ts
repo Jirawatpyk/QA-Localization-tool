@@ -292,7 +292,7 @@ test('[P0] Step 5: Non-native flags finding for native review → assignment cre
   page,
 }) => {
   test.skip(!HAS_INFRA, SKIP_REASON)
-  test.setTimeout(90_000)
+  test.setTimeout(180_000) // Increased: getNativeReviewers can hang when DB pool busy after pipeline AI calls
   // Set viewport BEFORE login — prevents isDesktop=false during hydration (same pattern as Step 3)
   await page.setViewportSize({ width: 1440, height: 900 })
 

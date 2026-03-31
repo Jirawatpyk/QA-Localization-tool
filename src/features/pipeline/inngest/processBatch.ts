@@ -25,7 +25,8 @@ const handlerFn = async ({
   if (!pipelineBatchEventSchema.safeParse(event.data).success) {
     throw new NonRetriableError('Invalid batch event data: tenantId must be a valid UUID')
   }
-  const { batchId, fileIds, projectId, tenantId, userId, mode, uploadBatchId } = event.data
+  const { batchId, fileIds, projectId, tenantId, userId, mode, uploadBatchId, priority } =
+    event.data
 
   // Fan-out: batch-send all process-file events in a single step checkpoint (Inngest v3 pattern)
   await step.sendEvent(
@@ -39,6 +40,7 @@ const handlerFn = async ({
         userId,
         mode,
         uploadBatchId,
+        priority, // Story 6.1: forward priority for Inngest queue ordering
       },
     })),
   )

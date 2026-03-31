@@ -54,6 +54,7 @@ import {
   useReviewHotkeys,
   useUndoRedoHotkeys,
 } from '@/features/review/hooks/use-keyboard-actions'
+import { useReadOnlyMode } from '@/features/review/hooks/use-read-only-mode'
 import { useReviewActions } from '@/features/review/hooks/use-review-actions'
 import { useScoreSubscription } from '@/features/review/hooks/use-score-subscription'
 import { useThresholdSubscription } from '@/features/review/hooks/use-threshold-subscription'
@@ -166,6 +167,7 @@ export function ReviewPageClient({
   tenantId,
   initialData,
 }: ReviewPageClientProps) {
+  const isReadOnly = useReadOnlyMode()
   const resetForFile = useReviewStore((s) => s.resetForFile)
   const setFilter = useReviewStore((s) => s.setFilter)
   const setFindings = useReviewStore((s) => s.setFindings)
@@ -1536,7 +1538,7 @@ export function ReviewPageClient({
             onSource={() => activeFindingState && handleSourceIssue(activeFindingState)}
             onOverride={() => setIsOverrideMenuOpen(true)}
             onAdd={() => setIsAddFindingDialogOpen(true)}
-            isDisabled={!activeFindingState || isActionInFlight}
+            isDisabled={!activeFindingState || isActionInFlight || isReadOnly}
             isInFlight={isActionInFlight}
             activeAction={activeAction}
             findingNumber={activeFindingNumber}

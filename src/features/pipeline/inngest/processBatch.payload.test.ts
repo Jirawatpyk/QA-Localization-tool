@@ -123,7 +123,15 @@ describe('processBatch — payload size (P1-05, R3-033)', () => {
 
     // Only required fields — no extras like batchId, metadata, timestamps
     const dataKeys = Object.keys(eventPayload.data).sort()
-    const requiredKeys = ['fileId', 'mode', 'projectId', 'tenantId', 'uploadBatchId', 'userId']
+    const requiredKeys = [
+      'fileId',
+      'mode',
+      'priority',
+      'projectId',
+      'tenantId',
+      'uploadBatchId',
+      'userId',
+    ]
     expect(dataKeys).toEqual(requiredKeys)
 
     // Verify the event name

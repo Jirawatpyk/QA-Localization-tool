@@ -39,6 +39,10 @@ export type AIMockFunctions = {
   mockWriteAuditLog: ReturnType<typeof vi.fn>
   mockLogAIUsage: ReturnType<typeof vi.fn>
   mockEstimateCost: ReturnType<typeof vi.fn>
+  mockEstimateMaxCost: ReturnType<typeof vi.fn>
+  mockReserveBudget: ReturnType<typeof vi.fn>
+  mockSettleBudget: ReturnType<typeof vi.fn>
+  mockReleaseBudget: ReturnType<typeof vi.fn>
   mockAggregateUsage: ReturnType<typeof vi.fn>
   mockGetModelForLayerWithFallback: ReturnType<typeof vi.fn>
 }
@@ -113,6 +117,12 @@ export function createAIMock(options?: AIMockOptions): AIMockResult {
     Promise.resolve({ primary: defaultModel, fallbacks: [] }),
   )
   const mockEstimateCost = vi.fn((..._args: unknown[]) => 0.001)
+  const mockEstimateMaxCost = vi.fn((..._args: unknown[]) => 0.01)
+  const mockReserveBudget = vi.fn((..._args: unknown[]) =>
+    Promise.resolve({ hasQuota: true, reservationId: 'mock-reservation-id' }),
+  )
+  const mockSettleBudget = vi.fn((..._args: unknown[]) => Promise.resolve())
+  const mockReleaseBudget = vi.fn((..._args: unknown[]) => Promise.resolve())
   const mockAggregateUsage = vi.fn((..._args: unknown[]) => ({
     inputTokens: 100,
     outputTokens: 50,
@@ -169,10 +179,10 @@ export function createAIMock(options?: AIMockOptions): AIMockResult {
     aiBudget: {
       checkTenantBudget: (...args: unknown[]) => mockCheckTenantBudget(...args),
       checkProjectBudget: (...args: unknown[]) => mockCheckProjectBudget(...args),
-      estimateMaxCost: vi.fn(() => 0.01),
-      reserveBudget: vi.fn(async () => ({ hasQuota: true, reservationId: 'mock-reservation-id' })),
-      settleBudget: vi.fn(async () => undefined),
-      releaseBudget: vi.fn(async () => undefined),
+      estimateMaxCost: (...args: unknown[]) => mockEstimateMaxCost(...args),
+      reserveBudget: (...args: unknown[]) => mockReserveBudget(...args),
+      settleBudget: (...args: unknown[]) => mockSettleBudget(...args),
+      releaseBudget: (...args: unknown[]) => mockReleaseBudget(...args),
     },
     aiTypes: {
       MODEL_CONFIG: modelConfig,
@@ -212,6 +222,10 @@ export function createAIMock(options?: AIMockOptions): AIMockResult {
       mockWriteAuditLog,
       mockLogAIUsage,
       mockEstimateCost,
+      mockEstimateMaxCost,
+      mockReserveBudget,
+      mockSettleBudget,
+      mockReleaseBudget,
       mockAggregateUsage,
       mockGetModelForLayerWithFallback,
     },

@@ -1,6 +1,7 @@
 'use client'
 
 import { FILE_HISTORY_PAGE_SIZE } from '@/features/batch/types'
+import { FileAssignmentCell } from '@/features/project/components/FileAssignmentCell'
 import type { DbFileStatus } from '@/types/pipeline'
 
 import { formatFileStatus } from '../helpers/formatFileStatus'
@@ -14,6 +15,8 @@ type FileHistoryRow = {
   status: DbFileStatus
   mqmScore: number | null
   reviewerName: string | null
+  assigneeName?: string | null | undefined
+  assignmentPriority?: 'normal' | 'urgent' | null | undefined
 }
 
 type FileHistoryFilter = 'all' | 'passed' | 'needs_review' | 'failed'
@@ -26,6 +29,8 @@ type FileHistoryTableProps = {
   onFilterChange: (filter: FileHistoryFilter) => void
   onPageChange: (page: number) => void
   projectId: string
+  targetLanguage?: string | undefined
+  onRefresh?: (() => void) | undefined
 }
 
 const FILTER_LABELS: Record<FileHistoryFilter, string> = {
@@ -58,12 +63,15 @@ export function FileHistoryTable({
   activeFilter,
   onFilterChange,
   onPageChange,
+  projectId,
+  targetLanguage,
+  onRefresh,
 }: FileHistoryTableProps) {
   // Server already paginates — use totalCount for page calculation
   const totalPages = Math.ceil(totalCount / FILE_HISTORY_PAGE_SIZE)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-testid="file-list">
       {/* Filter buttons */}
       <div className="flex gap-2" role="group">
         {(Object.keys(FILTER_LABELS) as FileHistoryFilter[]).map((filter) => (
@@ -109,11 +117,14 @@ export function FileHistoryTable({
               <th className="border-b px-4 py-2 text-left text-sm font-medium" role="columnheader">
                 Reviewer
               </th>
+              <th className="border-b px-4 py-2 text-left text-sm font-medium" role="columnheader">
+                Assignment
+              </th>
             </tr>
           </thead>
           <tbody>
             {files.map((file) => (
-              <tr key={file.fileId} className="border-b">
+              <tr key={file.fileId} className="border-b" data-testid={`file-row-${file.fileId}`}>
                 <td className="px-4 py-2 text-sm">{file.fileName}</td>
                 <td className="px-4 py-2 text-sm text-muted-foreground">
                   {new Date(file.processedAt).toLocaleDateString()}
@@ -128,6 +139,17 @@ export function FileHistoryTable({
                 </td>
                 <td className="px-4 py-2 text-sm text-muted-foreground">
                   {file.reviewerName ?? '—'}
+                </td>
+                <td className="px-4 py-2">
+                  <FileAssignmentCell
+                    fileId={file.fileId}
+                    fileName={file.fileName}
+                    projectId={projectId}
+                    targetLanguage={targetLanguage ?? ''}
+                    assigneeName={file.assigneeName}
+                    priority={file.assignmentPriority}
+                    onAssigned={onRefresh}
+                  />
                 </td>
               </tr>
             ))}

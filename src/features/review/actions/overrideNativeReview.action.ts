@@ -8,7 +8,6 @@ import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { findingAssignments } from '@/db/schema/findingAssignments'
 import { findings } from '@/db/schema/findings'
-import { notifications } from '@/db/schema/notifications'
 import { reviewActions } from '@/db/schema/reviewActions'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import type { ReviewActionResult } from '@/features/review/actions/helpers/executeReviewAction'
@@ -17,6 +16,7 @@ import type { OverrideNativeInput } from '@/features/review/validation/reviewAct
 import { requireRole } from '@/lib/auth/requireRole'
 import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
+import { createNotification, NOTIFICATION_TYPES } from '@/lib/notifications/createNotification'
 import type { ActionResult } from '@/types/actionResult'
 import type { DetectedByLayer, FindingSeverity, FindingStatus } from '@/types/finding'
 
@@ -179,21 +179,17 @@ export async function overrideNativeReview(
     )
   }
 
-  // Notification (non-blocking — Guardrail #74)
+  // Notification (non-blocking — Guardrail #74, #85)
   // CR-R2 F11: Skip self-notification (e.g., admin re-assigned finding to themselves)
   if (assignment.assignedBy !== userId) {
-    try {
-      await db.insert(notifications).values({
-        tenantId,
-        userId: assignment.assignedBy,
-        type: 'native_review_completed',
-        title: 'Native review completed (override)',
-        body: `A native reviewer has overridden the finding to ${newFindingStatus}`,
-        metadata: { findingId, projectId, fileId, assignmentId: assignment.id },
-      })
-    } catch (err) {
-      logger.error({ err, findingId }, 'Failed to create notification')
-    }
+    await createNotification({
+      tenantId,
+      userId: assignment.assignedBy,
+      type: NOTIFICATION_TYPES.NATIVE_REVIEW_COMPLETED,
+      title: 'Native review completed (override)',
+      body: `A native reviewer has overridden the finding to ${newFindingStatus}`,
+      metadata: { findingId, projectId, fileId, assignmentId: assignment.id },
+    })
   }
 
   return {

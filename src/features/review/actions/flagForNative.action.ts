@@ -8,7 +8,6 @@ import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { findingAssignments } from '@/db/schema/findingAssignments'
 import { findings } from '@/db/schema/findings'
-import { notifications } from '@/db/schema/notifications'
 import { reviewActions } from '@/db/schema/reviewActions'
 import { segments } from '@/db/schema/segments'
 import { userRoles } from '@/db/schema/userRoles'
@@ -19,7 +18,7 @@ import { flagForNativeSchema } from '@/features/review/validation/reviewAction.s
 import type { FlagForNativeInput } from '@/features/review/validation/reviewAction.schema'
 import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { requireRole } from '@/lib/auth/requireRole'
-import { logger } from '@/lib/logger'
+import { createNotification, NOTIFICATION_TYPES } from '@/lib/notifications/createNotification'
 import type { ActionResult } from '@/types/actionResult'
 import { FINDING_STATUSES } from '@/types/finding'
 import type { DetectedByLayer, FindingSeverity, FindingStatus } from '@/types/finding'
@@ -226,19 +225,15 @@ export async function flagForNative(
     newValue: { status: 'flagged', assignedTo, flaggerComment },
   })
 
-  // Step 6: Notification (non-blocking — Guardrail #74)
-  try {
-    await db.insert(notifications).values({
-      tenantId,
-      userId: assignedTo,
-      type: 'finding_flagged_for_native',
-      title: 'Finding flagged for your review',
-      body: `A finding has been flagged for native review`,
-      metadata: { findingId, projectId, fileId: finding.fileId, assignmentId },
-    })
-  } catch (err) {
-    logger.error({ err, findingId, assignedTo }, 'Failed to create notification')
-  }
+  // Step 6: Notification (non-blocking — Guardrail #74, #85)
+  await createNotification({
+    tenantId,
+    userId: assignedTo,
+    type: NOTIFICATION_TYPES.FINDING_FLAGGED_FOR_NATIVE,
+    title: 'Finding flagged for your review',
+    body: 'A finding has been flagged for native review',
+    metadata: { findingId, projectId, fileId: finding.fileId, assignmentId },
+  })
 
   return {
     success: true,

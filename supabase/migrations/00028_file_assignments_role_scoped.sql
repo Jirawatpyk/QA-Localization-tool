@@ -11,6 +11,7 @@ BEGIN;
 
 -- Section 1: file_assignments INSERT — restrict to admin + qa_reviewer
 DROP POLICY IF EXISTS "Tenant isolation: INSERT" ON file_assignments;
+DROP POLICY IF EXISTS "file_assignments_insert_admin_qa" ON file_assignments;
 
 CREATE POLICY "file_assignments_insert_admin_qa" ON file_assignments
   FOR INSERT TO authenticated
@@ -21,6 +22,7 @@ CREATE POLICY "file_assignments_insert_admin_qa" ON file_assignments
 
 -- Section 2: file_assignments UPDATE — restrict to admin + qa_reviewer
 DROP POLICY IF EXISTS "Tenant isolation: UPDATE" ON file_assignments;
+DROP POLICY IF EXISTS "file_assignments_update_admin_qa" ON file_assignments;
 
 CREATE POLICY "file_assignments_update_admin_qa" ON file_assignments
   FOR UPDATE TO authenticated
@@ -35,6 +37,7 @@ CREATE POLICY "file_assignments_update_admin_qa" ON file_assignments
 
 -- Section 3: file_assignments DELETE — restrict to admin only
 DROP POLICY IF EXISTS "Tenant isolation: DELETE" ON file_assignments;
+DROP POLICY IF EXISTS "file_assignments_delete_admin" ON file_assignments;
 
 CREATE POLICY "file_assignments_delete_admin" ON file_assignments
   FOR DELETE TO authenticated

@@ -16,18 +16,22 @@ type FileRow = {
   status: DbFileStatus
   mqmScore: number | null
   reviewerName: string | null
+  assigneeName?: string | null | undefined
+  assignmentPriority?: 'normal' | 'urgent' | null | undefined
 }
 
 type FileHistoryPageClientProps = {
   projectId: string
   initialFiles: FileRow[]
   initialTotalCount: number
+  targetLanguage?: string | undefined
 }
 
 export function FileHistoryPageClient({
   projectId,
   initialFiles,
   initialTotalCount,
+  targetLanguage,
 }: FileHistoryPageClientProps) {
   const [filter, setFilter] = useState<FileHistoryFilter>('all')
   const [page, setPage] = useState(1)
@@ -51,6 +55,8 @@ export function FileHistoryPageClient({
             status: f.status,
             mqmScore: f.mqmScore,
             reviewerName: f.lastReviewerName,
+            assigneeName: f.assigneeName,
+            assignmentPriority: f.assignmentPriority,
           })),
         )
         setTotalCount(result.data.totalCount)
@@ -79,6 +85,8 @@ export function FileHistoryPageClient({
         onFilterChange={handleFilterChange}
         onPageChange={handlePageChange}
         projectId={projectId}
+        targetLanguage={targetLanguage}
+        onRefresh={() => fetchFiles(filter, page)}
       />
     </div>
   )

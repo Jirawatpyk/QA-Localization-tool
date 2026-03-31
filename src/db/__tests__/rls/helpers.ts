@@ -39,7 +39,7 @@ export function tenantClient(jwt: string): SupabaseClient {
  * Deletes stale auth user by email if it exists from a previous test run.
  * Also cleans up related rows (user_roles, users) to avoid FK conflicts.
  */
-async function cleanupStaleUser(email: string): Promise<void> {
+export async function cleanupStaleUser(email: string): Promise<void> {
   // Supabase admin API doesn't have getUserByEmail — list + filter
   const { data } = await admin.auth.admin.listUsers({ perPage: 1000 })
   const existing = data?.users?.find((u) => u.email === email)

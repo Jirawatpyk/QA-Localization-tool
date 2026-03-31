@@ -12,7 +12,14 @@
 import { createClient } from '@supabase/supabase-js'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { admin, type TestTenant, cleanupTestTenant, setupTestTenant, tenantClient } from './helpers'
+import {
+  admin,
+  type TestTenant,
+  cleanupStaleUser,
+  cleanupTestTenant,
+  setupTestTenant,
+  tenantClient,
+} from './helpers'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://127.0.0.1:54321'
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
@@ -35,6 +42,7 @@ beforeAll(async () => {
   tenantB = await setupTestTenant('rls-notif-admin-b@test.local')
 
   // --- User B in Tenant A (qa_reviewer) ---
+  await cleanupStaleUser('rls-notif-userb@test.local')
   const { data: userBAuth } = await admin.auth.admin.createUser({
     email: 'rls-notif-userb@test.local',
     password: TEST_PASSWORD,
