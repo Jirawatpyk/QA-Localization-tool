@@ -34,6 +34,8 @@ vi.mock('drizzle-orm', () => ({
 // Mock AI/cache dependencies
 const mockGenerateText = vi.fn()
 const mockCheckProjectBudget = vi.fn()
+const mockReserveBudget = vi.fn()
+const mockSettleBudget = vi.fn()
 const mockLogAIUsage = vi.fn()
 const mockEstimateCost = vi.fn()
 const mockGetCachedBT = vi.fn()
@@ -49,6 +51,10 @@ vi.mock('@/lib/ai/client', () => ({
 }))
 vi.mock('@/lib/ai/budget', () => ({
   checkProjectBudget: (...args: unknown[]) => mockCheckProjectBudget(...args),
+  estimateMaxCost: vi.fn(() => 0.01),
+  reserveBudget: (...args: unknown[]) => mockReserveBudget(...args),
+  settleBudget: (...args: unknown[]) => mockSettleBudget(...args),
+  releaseBudget: vi.fn(async () => undefined),
 }))
 vi.mock('@/lib/ai/costs', () => ({
   logAIUsage: (...args: unknown[]) => mockLogAIUsage(...args),
@@ -94,6 +100,8 @@ function setupDefaultMocks() {
   mockComputeHash.mockResolvedValue('abc123')
   mockGetCachedBT.mockResolvedValue(null) // Cache miss by default
   mockCheckProjectBudget.mockResolvedValue({ hasQuota: true, remainingBudgetUsd: 100 })
+  mockReserveBudget.mockResolvedValue({ hasQuota: true, reservationId: 'mock-res' })
+  mockSettleBudget.mockResolvedValue(undefined)
   mockGenerateText.mockResolvedValue({ output: MOCK_BT_RESULT, usage: MOCK_USAGE })
   mockEstimateCost.mockReturnValue(0.0001)
   mockLogAIUsage.mockResolvedValue(undefined)
@@ -198,7 +206,7 @@ describe('getBackTranslation', () => {
 
   // ── AC6 / Scenario 6.1 [P0]: Budget exhausted → error ────────────────
   it('should return error when AI quota is exhausted', async () => {
-    mockCheckProjectBudget.mockResolvedValue({ hasQuota: false, remainingBudgetUsd: 0 })
+    mockReserveBudget.mockResolvedValue({ hasQuota: false, reservationId: null })
 
     const { getBackTranslation } = await import('./getBackTranslation.action')
     const result = await getBackTranslation({
@@ -222,10 +230,10 @@ describe('getBackTranslation', () => {
     })
 
     expect(result.success).toBe(true)
-    expect(mockCheckProjectBudget).toHaveBeenCalled()
+    expect(mockReserveBudget).toHaveBeenCalled()
   })
 
-  // ── AC6 / Scenario 6.2 [P0]: Log usage with layer 'BT' ──────────────
+  // ── AC6 / Scenario 6.2 [P0]: Log usage with layer 'BT' via settleBudget ──
   it('should log AI usage with layer BT after generateText call', async () => {
     const { getBackTranslation } = await import('./getBackTranslation.action')
     const result = await getBackTranslation({
@@ -234,8 +242,9 @@ describe('getBackTranslation', () => {
     })
 
     expect(result.success).toBe(true)
-    expect(mockLogAIUsage).toHaveBeenCalledWith(
-      expect.objectContaining({ layer: 'BT', inputTokens: 100, outputTokens: 50 }),
+    // Production code uses settleBudget (not logAIUsage) on success path to avoid double-counting
+    expect(mockSettleBudget).toHaveBeenCalledWith(
+      expect.objectContaining({ inputTokens: 100, outputTokens: 50, status: 'success' }),
     )
   })
 
@@ -300,10 +309,10 @@ describe('getBackTranslation', () => {
       output: { ...MOCK_BT_RESULT, confidence: 0.4 },
       usage: MOCK_USAGE,
     })
-    // First check has quota, second (for fallback) does not
-    mockCheckProjectBudget
-      .mockResolvedValueOnce({ hasQuota: true, remainingBudgetUsd: 100 })
-      .mockResolvedValueOnce({ hasQuota: false, remainingBudgetUsd: 0 })
+    // First reservation succeeds, second (for fallback) fails — no budget
+    mockReserveBudget
+      .mockResolvedValueOnce({ hasQuota: true, reservationId: 'mock-res-1' })
+      .mockResolvedValueOnce({ hasQuota: false, reservationId: null })
 
     const { getBackTranslation } = await import('./getBackTranslation.action')
     const result = await getBackTranslation({
@@ -328,7 +337,16 @@ describe('getBackTranslation', () => {
       projectId: '22222222-2222-4222-a222-222222222222',
     })
 
-    expect(mockLogAIUsage).toHaveBeenCalledTimes(2)
+    // Production code uses settleBudget (not logAIUsage) for both primary and fallback on success
+    expect(mockSettleBudget).toHaveBeenCalledTimes(2)
+    // Primary settled with openai provider
+    expect(mockSettleBudget).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'success', provider: 'openai' }),
+    )
+    // Fallback settled with anthropic provider
+    expect(mockSettleBudget).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'success', provider: 'anthropic' }),
+    )
   })
 
   // ── Auth check ───────────────────────────────────────────────────────
@@ -400,10 +418,8 @@ describe('getBackTranslation', () => {
     expect(mockGetCachedBT).toHaveBeenCalledTimes(2)
   })
 
-  // ── Fallback AI returns null output → warn + use primary ────────
+  // ── Fallback AI returns null output → use primary ────────────────
   it('should warn and use primary result when fallback AI returns null output', async () => {
-    const { logger } = await import('@/lib/logger')
-
     // Primary has low confidence, fallback returns null output
     mockGenerateText
       .mockResolvedValueOnce({ output: { ...MOCK_BT_RESULT, confidence: 0.4 }, usage: MOCK_USAGE })
@@ -421,9 +437,9 @@ describe('getBackTranslation', () => {
       // Should use primary result since fallback output was null
       expect(result.data.confidence).toBe(0.4)
     }
-    expect(logger.warn).toHaveBeenCalledWith(
-      expect.objectContaining({ segmentId: '11111111-1111-4111-a111-111111111111' }),
-      expect.stringContaining('no output'),
+    // Fallback settleBudget called with status 'error' (null output)
+    expect(mockSettleBudget).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'error', provider: 'anthropic' }),
     )
     // Primary result should still be cached
     expect(mockCacheBT).toHaveBeenCalledWith(

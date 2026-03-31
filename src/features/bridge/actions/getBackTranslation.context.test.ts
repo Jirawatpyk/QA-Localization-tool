@@ -54,6 +54,10 @@ vi.mock('@/lib/ai/client', () => ({
 }))
 vi.mock('@/lib/ai/budget', () => ({
   checkProjectBudget: (...args: unknown[]) => mockCheckProjectBudget(...args),
+  estimateMaxCost: vi.fn(() => 0.01),
+  reserveBudget: vi.fn(async () => ({ hasQuota: true, reservationId: 'mock-res' })),
+  settleBudget: vi.fn(async () => undefined),
+  releaseBudget: vi.fn(async () => undefined),
 }))
 vi.mock('@/lib/ai/costs', () => ({
   logAIUsage: (...args: unknown[]) => mockLogAIUsage(...args),

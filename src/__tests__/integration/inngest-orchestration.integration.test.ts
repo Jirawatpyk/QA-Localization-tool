@@ -189,6 +189,10 @@ vi.mock('@/features/pipeline/helpers/crossFileConsistency', () => ({
 }))
 
 vi.mock('@/lib/ai/budget', () => ({
+  estimateMaxCost: vi.fn(() => 0.01),
+  reserveBudget: vi.fn(async () => ({ hasQuota: true, reservationId: 'mock-res' })),
+  settleBudget: vi.fn(async () => undefined),
+  releaseBudget: vi.fn(async () => undefined),
   checkProjectBudget: vi.fn().mockResolvedValue({
     hasQuota: true,
     remainingBudgetUsd: 100,
