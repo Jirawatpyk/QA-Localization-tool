@@ -8,6 +8,11 @@ import type { DbFileStatus } from '@/types/pipeline'
 
 import { FileHistoryTable } from './FileHistoryTable'
 
+// Mock FileAssignmentCell (imports server-only transitively via action imports)
+vi.mock('@/features/project/components/FileAssignmentCell', () => ({
+  FileAssignmentCell: vi.fn(() => <span data-testid="mock-assignment-cell" />),
+}))
+
 // Mock ScoreBadge to isolate
 vi.mock('./ScoreBadge', () => ({
   ScoreBadge: vi.fn(({ score }: { score: number | null }) => (
