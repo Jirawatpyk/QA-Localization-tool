@@ -51,12 +51,11 @@ npx vitest --project unit
 ```bash
 npm install
 npx supabase start                    # Start local Supabase (requires Docker)
-DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres npx drizzle-kit migrate  # Drizzle → local DB
-npx supabase db push --local           # Supabase migrations (RLS, indexes) → local DB
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres npx drizzle-kit migrate  # All migrations (tables + RLS + storage policies)
 npm run dev
 ```
 
-**Order matters:** Drizzle creates tables → Supabase migrations add RLS policies that reference those tables. Reversing causes `relation does not exist` errors.
+**All migrations via Drizzle:** Tables, RLS policies, storage policies, indexes — all in `src/db/migrations/`. Use `npm run db:migrate` (cloud) or `DATABASE_URL=... npx drizzle-kit migrate` (local). Do NOT use `npx supabase db push` — pooler user lacks owner permissions on system tables like `storage.objects`.
 
 ## Architecture
 
@@ -138,6 +137,7 @@ Each feature module contains: `components/`, `actions/` (Server Actions), `hooks
 - `generateObject()`, `streamObject()` (deprecated in AI SDK 6.0 — use `generateText` + `Output.object()`)
 - `.optional()` / `.nullish()` in AI output Zod schemas (OpenAI rejects — use `.nullable()` only)
 - AI calls without cost logging, AI calls without budget check, inline `openai()`/`anthropic()` constructor
+- Bare `result.output` access without try/catch — throwing getter, crashes on `finishReason !== "stop"` (proven bug: BT test failure 2026-03-30)
 - `setState` inside `useEffect` (React Compiler error — use render-time adjustment pattern: `const [prev, setPrev] = useState(prop); if (prev !== prop) { setPrev(prop); setState(newVal) }`)
 
 ## Guardrails
@@ -156,7 +156,7 @@ Each feature module contains: `components/`, `actions/` (Server Actions), `hooks
 ### AI Pipeline
 
 9. **Inngest function requirements** — config MUST have `retries` + `onFailure`. `Object.assign` MUST expose `handler` + `onFailure` for tests. Register in `route.ts` functions array
-10. **AI structured output** — use `generateText({ output: Output.object({ schema }), ... })`. Access via `result.output`. Use `maxOutputTokens` (not `maxTokens`). Zod schemas: `.nullable()` only (no `.optional()`, `.nullish()`). For streaming: `streamText` + `Output.object()`. Import `Output` from `'ai'`
+10. **AI structured output** — use `generateText({ output: Output.object({ schema }), ... })`. Access `result.output` via **try/catch only** — it is a throwing getter that raises `NoObjectGeneratedError` when `finishReason !== "stop"` (NOT return `undefined`). Use `maxOutputTokens` (not `maxTokens`). Zod schemas: `.nullable()` only (no `.optional()`, `.nullish()`). For streaming: `streamText` + `Output.object()`. Import `Output` from `'ai'`. **FORBIDDEN:** `if (!result.output)`, `result.output?.field`, `expect(result.output).toBeDefined()` — all throw before the guard/assertion evaluates
 11. **AI error handling in Inngest** — `RateLimitError` (429) = retriable. `NoObjectGeneratedError` / auth 401 / content filter = `throw new NonRetriableError(...)`. Always log `{ finishReason, usage, model, cause }`
 12. **AI cost + budget** — every `generateText`/`streamText` MUST log `result.usage` via `logAIUsage()` from `@/lib/ai/costs`. Check `checkTenantBudget(tenantId)` BEFORE making AI calls. Use shared `customProvider` from `@/lib/ai/client.ts` — never inline `openai()`/`anthropic()`
 13. **AI chunks in Inngest** — chunk at 30K chars. One `step.run()` per chunk with deterministic ID: `l2-chunk-${fileId}-${i}`. Failed chunk logs + continues. Return `{ findingCount, chunksProcessed, partialFailure }`
@@ -202,6 +202,15 @@ Each feature module contains: `components/`, `actions/` (Server Actions), `hooks
 - **#66-67** Cross-Role: non-native tag write-once (never clear), flag-for-native atomic 3-table transaction
 - **#68-70** Thai/CJK BT Quality: Thai tone/compound/particle handling, CJK `getBTLanguageInstructions()`, `lang` attribute on BT text
 - **#71-78** General Epic 5: RLS from migration day 1, `AssignmentStatus` union type, comment ownership validation, non-blocking notifications, BT abort on segment change, RLS test mandatory, cached indicator, assignment audit log
+
+### Epic 6 Guardrails (#79-94) — Sharded
+
+**Full details in `CLAUDE-guardrails-epic6.md`** (16 guardrails). Summary by category:
+
+- **#79-84** File Assignment: union type status/priority, soft lock via DB heartbeat (not Presence), optimistic locking on takeover, one active assignment per file, workload LEFT JOIN pattern, Inngest priority config
+- **#85-90** Notifications: centralize INSERT helper, server-side grouping (not INSERT-time), schema add project_id+archived_at, Inngest cron archive, RLS policy required, toast coalescing for batch
+- **#91-92** Responsive: use `useViewportTransition` hook, responsive E2E test-first
+- **#93-94** General Epic 6: `result.output` try/catch only (throwing getter), metadata merge never replace
 
 ## Naming Conventions
 

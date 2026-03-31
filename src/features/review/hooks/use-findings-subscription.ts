@@ -186,6 +186,8 @@ export function useFindingsSubscription(fileId: string, tenantId?: string | unde
     }
 
     const handleInsert = (payload: { new: Record<string, unknown> }) => {
+      // Client-side tenant guard (Realtime filter only supports single column)
+      if (tenantId && payload.new.tenant_id !== tenantId) return
       const finding = mapRowToFinding(payload.new)
       if (!finding) return
       const buf = insertBufferRef.current
@@ -197,6 +199,8 @@ export function useFindingsSubscription(fileId: string, tenantId?: string | unde
     }
 
     const handleUpdate = (payload: { new: Record<string, unknown> }) => {
+      // Client-side tenant guard (Realtime filter only supports single column)
+      if (tenantId && payload.new.tenant_id !== tenantId) return
       const finding = mapRowToFinding(payload.new)
       if (!finding) return
       // Merge guard: only apply if Realtime event has newer data than the store.
@@ -224,6 +228,8 @@ export function useFindingsSubscription(fileId: string, tenantId?: string | unde
     }
 
     const handleDelete = (payload: { old: Record<string, unknown> }) => {
+      // Client-side tenant guard (Realtime filter only supports single column)
+      if (tenantId && payload.old.tenant_id !== tenantId) return
       const id = typeof payload.old.id === 'string' ? payload.old.id : null
       if (id) {
         const store = useReviewStore.getState()
@@ -236,10 +242,8 @@ export function useFindingsSubscription(fileId: string, tenantId?: string | unde
       }
     }
 
-    // TD-TENANT-003: compound filter with tenant_id when available
-    const realtimeFilter = tenantId
-      ? `file_id=eq.${fileId}&tenant_id=eq.${tenantId}`
-      : `file_id=eq.${fileId}`
+    // Supabase Realtime supports single-column filter only (compound silently ignored)
+    const realtimeFilter = `file_id=eq.${fileId}`
 
     const channel = supabase
       .channel(`findings:${fileId}`)
@@ -283,9 +287,8 @@ export function useFindingsSubscription(fileId: string, tenantId?: string | unde
       })
 
     // CR-M3: Subscribe to finding_assignments for live assignment status updates
-    const assignmentFilter = tenantId
-      ? `file_id=eq.${fileId}&tenant_id=eq.${tenantId}`
-      : `file_id=eq.${fileId}`
+    // Supabase Realtime supports single-column filter only (compound silently ignored)
+    const assignmentFilter = `file_id=eq.${fileId}`
 
     const assignmentChannel = supabase
       .channel(`assignments:${fileId}`)
@@ -299,6 +302,8 @@ export function useFindingsSubscription(fileId: string, tenantId?: string | unde
         },
         (payload) => {
           const row = payload.new as Record<string, unknown>
+          // Client-side tenant guard (Realtime filter only supports single column)
+          if (tenantId && row.tenant_id !== tenantId) return
           const findingId = row.finding_id as string | undefined
           const newStatus = row.status as string | undefined
           if (!findingId || !newStatus) return

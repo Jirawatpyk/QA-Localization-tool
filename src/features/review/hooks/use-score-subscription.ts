@@ -97,6 +97,8 @@ export function useScoreSubscription(fileId: string, tenantId: string) {
     supabaseRef.current = supabase
 
     const handleScoreChange = (payload: { new: Record<string, unknown> }) => {
+      // Client-side tenant guard (Realtime filter only supports single column)
+      if (payload.new.tenant_id !== tenantId) return
       // CR-H1: skip write if fileId no longer active (prevents cross-file corruption during transition)
       if (useReviewStore.getState().currentFileId !== fileId) return
       const row = payload.new
@@ -112,8 +114,9 @@ export function useScoreSubscription(fileId: string, tenantId: string) {
       useReviewStore.getState().updateScore(mqm_score, status, layerCompleted, autoPassRationale)
     }
 
-    // TD-TENANT-003 + S4 fix: compound filter always includes tenant_id (now required param)
-    const realtimeFilter = `file_id=eq.${fileId}&tenant_id=eq.${tenantId}`
+    // Supabase Realtime supports single-column filter only (compound silently ignored)
+    // Client-side tenant guard in handleScoreChange provides defense-in-depth
+    const realtimeFilter = `file_id=eq.${fileId}`
 
     const channel = supabase
       .channel(`scores:${fileId}`)

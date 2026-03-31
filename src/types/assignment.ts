@@ -8,5 +8,14 @@ export const ASSIGNMENT_STATUSES = ['pending', 'in_review', 'confirmed', 'overri
 export type AssignmentStatus = (typeof ASSIGNMENT_STATUSES)[number]
 
 // File-level assignment statuses (separate domain from finding assignments)
-export const FILE_ASSIGNMENT_STATUSES = ['pending', 'accepted', 'completed'] as const
+export const FILE_ASSIGNMENT_STATUSES = [
+  'assigned',
+  'in_progress',
+  'completed',
+  'cancelled',
+] as const
 export type FileAssignmentStatus = (typeof FILE_ASSIGNMENT_STATUSES)[number]
+
+// File-level assignment priorities
+export const FILE_ASSIGNMENT_PRIORITIES = ['normal', 'urgent'] as const
+export type FileAssignmentPriority = (typeof FILE_ASSIGNMENT_PRIORITIES)[number]

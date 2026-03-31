@@ -112,6 +112,7 @@ vi.mock('@/db/schema/segments', () => ({
     id: 'id',
     segmentNumber: 'segment_number',
     sourceText: 'source_text',
+    targetLang: 'target_lang',
     fileId: 'file_id',
     tenantId: 'tenant_id',
   },
@@ -175,6 +176,7 @@ describe('getFileReviewData — hasNonNativeAction (Story 5.2a)', () => {
       [file], // Q1: file SELECT
       [finding1, finding2], // Q2: findings SELECT
       [score], // Q3: score SELECT
+      [{ targetLang: 'th' }], // Q4a: file targetLang from segments
       [
         {
           processingMode: 'economy',
@@ -184,7 +186,7 @@ describe('getFileReviewData — hasNonNativeAction (Story 5.2a)', () => {
           targetLang: 'th',
           btConfidenceThreshold: 0.6,
         },
-      ], // Q4: config
+      ], // Q4b: config
       [], // Q5: segments for AddFinding
       [], // Q6: taxonomy categories
       [], // Q7: overrideCounts
@@ -217,6 +219,7 @@ describe('getFileReviewData — hasNonNativeAction (Story 5.2a)', () => {
       [file],
       [finding1],
       [score],
+      [{ targetLang: 'th' }], // Q4a
       [
         {
           processingMode: 'economy',
@@ -256,6 +259,7 @@ describe('getFileReviewData — hasNonNativeAction (Story 5.2a)', () => {
       [file],
       [finding1],
       [score],
+      [{ targetLang: 'th' }], // Q4a
       [
         {
           processingMode: 'economy',

@@ -273,3 +273,211 @@ describe('checkTenantBudget', () => {
     expect(result.usedBudgetUsd).toBe(0)
   })
 })
+
+// ── Budget Reservation (TOCTOU fix) ──
+
+describe('reserveBudget', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    dbState.callIndex = 0
+    dbState.returnValues = []
+    dbState.valuesCaptures = []
+    dbState.throwAtCallIndex = null
+  })
+
+  it('should return hasQuota=true and reservationId when budget allows', async () => {
+    // DB call sequence inside advisory-locked transaction (D2: project read inside lock):
+    // callIndex=0: tx.execute(advisory lock) → ignored
+    // callIndex=1: tx projects SELECT → [{ aiBudgetMonthlyUsd: '100.00' }]
+    // callIndex=2: tx SUM query → [{ total: '50.00' }]
+    // callIndex=3: tx INSERT reservation → returning [{ id: 'res-1' }]
+    dbState.returnValues = [
+      [], // advisory lock
+      [{ aiBudgetMonthlyUsd: '100.00' }],
+      [{ total: '50.00' }],
+      [{ id: 'res-1' }],
+    ]
+
+    const { reserveBudget } = await import('./budget')
+    const result = await reserveBudget({
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      fileId: 'file-1',
+      model: 'gpt-4o-mini',
+      layer: 'L2',
+      estimatedCost: 0.05,
+      languagePair: 'en→th',
+    })
+
+    expect(result.hasQuota).toBe(true)
+    expect(result.reservationId).toBe('res-1')
+    expect(result.usedBudgetUsd).toBeCloseTo(50.05)
+  })
+
+  it('should return hasQuota=false when estimated cost would exceed budget', async () => {
+    // Current spend $95, estimated cost $10, budget $100 → over
+    // D2: project read inside lock
+    dbState.returnValues = [
+      [], // advisory lock
+      [{ aiBudgetMonthlyUsd: '100.00' }],
+      [{ total: '95.00' }],
+      // No INSERT — should short-circuit
+    ]
+
+    const { reserveBudget } = await import('./budget')
+    const result = await reserveBudget({
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      fileId: 'file-1',
+      model: 'gpt-4o-mini',
+      layer: 'L2',
+      estimatedCost: 10,
+      languagePair: 'en→th',
+    })
+
+    expect(result.hasQuota).toBe(false)
+    expect(result.reservationId).toBeNull()
+    expect(result.remainingBudgetUsd).toBe(5) // $100 - $95
+  })
+
+  it('should skip reservation for unlimited budget (NULL)', async () => {
+    // D2: project read inside lock
+    dbState.returnValues = [
+      [], // advisory lock
+      [{ aiBudgetMonthlyUsd: null }],
+    ]
+
+    const { reserveBudget } = await import('./budget')
+    const result = await reserveBudget({
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      fileId: 'file-1',
+      model: 'gpt-4o-mini',
+      layer: 'L2',
+      estimatedCost: 0.05,
+      languagePair: 'en→th',
+    })
+
+    expect(result.hasQuota).toBe(true)
+    expect(result.reservationId).toBeNull()
+    expect(result.monthlyBudgetUsd).toBeNull()
+    expect(result.remainingBudgetUsd).toBe(Infinity)
+  })
+
+  it('should throw when project not found', async () => {
+    // D2: project read inside lock
+    dbState.returnValues = [
+      [], // advisory lock
+      [], // projects SELECT — empty
+    ]
+
+    const { reserveBudget } = await import('./budget')
+    await expect(
+      reserveBudget({
+        projectId: VALID_PROJECT_ID,
+        tenantId: VALID_TENANT_ID,
+        fileId: 'file-1',
+        model: 'gpt-4o-mini',
+        layer: 'L2',
+        estimatedCost: 0.05,
+        languagePair: 'en→th',
+      }),
+    ).rejects.toThrow('Project not found')
+  })
+})
+
+describe('settleBudget', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    dbState.callIndex = 0
+    dbState.returnValues = []
+    dbState.setCaptures = []
+    dbState.throwAtCallIndex = null
+  })
+
+  it('should update the reservation row with actual cost and status', async () => {
+    dbState.returnValues = [[{ id: 'res-1' }]]
+
+    const { settleBudget } = await import('./budget')
+    await settleBudget({
+      reservationId: 'res-1',
+      tenantId: VALID_TENANT_ID,
+      actualCost: 0.023,
+      inputTokens: 1500,
+      outputTokens: 300,
+      durationMs: 1200,
+      status: 'success',
+      provider: 'openai',
+    })
+
+    // Verify set was called with actual cost
+    expect(dbState.setCaptures).toHaveLength(1)
+    expect(dbState.setCaptures[0]).toMatchObject({
+      estimatedCost: 0.023,
+      inputTokens: 1500,
+      outputTokens: 300,
+      latencyMs: 1200,
+      status: 'success',
+      provider: 'openai',
+    })
+  })
+
+  it('should not throw when reservation row is missing (logs warning)', async () => {
+    dbState.returnValues = [[]] // empty returning — row not found
+
+    const { settleBudget } = await import('./budget')
+    // Should not throw
+    await settleBudget({
+      reservationId: 'missing-id',
+      tenantId: VALID_TENANT_ID,
+      actualCost: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      durationMs: 0,
+      status: 'error',
+      provider: 'openai',
+    })
+  })
+})
+
+describe('releaseBudget', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    dbState.callIndex = 0
+    dbState.returnValues = []
+    dbState.throwAtCallIndex = null
+  })
+
+  it('should delete the pending reservation row', async () => {
+    dbState.returnValues = [[]]
+
+    const { releaseBudget } = await import('./budget')
+    await releaseBudget('res-1', VALID_TENANT_ID)
+
+    // Verify delete was called (callIndex advanced)
+    expect(dbState.callIndex).toBe(1)
+  })
+})
+
+describe('estimateMaxCost', () => {
+  it('should return a conservative cost estimate for L2 model', async () => {
+    const { estimateMaxCost } = await import('./budget')
+    const cost = estimateMaxCost('gpt-4o-mini', 'L2')
+
+    // gpt-4o-mini: maxOutputTokens=4096, costPer1kOutput=0.0006, costPer1kInput=0.00015
+    // output: (4096/1000) * 0.0006 = 0.0024576
+    // input (4x): (16384/1000) * 0.00015 = 0.0024576
+    // total ≈ 0.004915
+    expect(cost).toBeGreaterThan(0)
+    expect(cost).toBeLessThan(0.01) // sanity upper bound
+  })
+
+  it('should return a higher cost estimate for L3 model', async () => {
+    const { estimateMaxCost } = await import('./budget')
+    const l2Cost = estimateMaxCost('gpt-4o-mini', 'L2')
+    const l3Cost = estimateMaxCost('claude-sonnet-4-5-20250929', 'L3')
+
+    // L3 (claude-sonnet) is much more expensive than L2 (gpt-4o-mini)
+    expect(l3Cost).toBeGreaterThan(l2Cost)
+  })
+})

@@ -58,6 +58,7 @@ import { useReviewActions } from '@/features/review/hooks/use-review-actions'
 import { useScoreSubscription } from '@/features/review/hooks/use-score-subscription'
 import { useThresholdSubscription } from '@/features/review/hooks/use-threshold-subscription'
 import { useUndoRedo } from '@/features/review/hooks/use-undo-redo'
+import { useViewportTransition } from '@/features/review/hooks/use-viewport-transition'
 import {
   useReviewStore,
   useFileState,
@@ -76,7 +77,6 @@ import { saveFilterCache } from '@/features/review/utils/filter-cache'
 import { findingMatchesFilters } from '@/features/review/utils/filter-helpers'
 import { resetPatternCounter } from '@/features/review/utils/pattern-detection'
 import { getNewState } from '@/features/review/utils/state-transitions'
-import { useIsDesktop, useIsLaptop } from '@/hooks/useMediaQuery'
 import type {
   Finding,
   FindingSeverity,
@@ -160,13 +160,6 @@ function deriveScoreBadgeState(
 /** Score statuses that allow manual approval */
 const APPROVABLE_STATUSES = new Set<ScoreStatus>(['calculated', 'overridden'])
 
-/** Derive layout mode string for data-layout-mode attribute */
-function getLayoutMode(isDesktop: boolean, isLaptop: boolean): 'desktop' | 'laptop' | 'mobile' {
-  if (isDesktop) return 'desktop'
-  if (isLaptop) return 'laptop'
-  return 'mobile'
-}
-
 export function ReviewPageClient({
   fileId,
   projectId,
@@ -191,10 +184,25 @@ export function ReviewPageClient({
   const searchQuery = useFileState((fs) => fs.searchQuery, fileId)
   const aiSuggestionsEnabled = useFileState((fs) => fs.aiSuggestionsEnabled, fileId)
 
-  // Responsive breakpoint hooks
-  const isDesktop = useIsDesktop()
-  const isLaptop = useIsLaptop()
-  const layoutMode = getLayoutMode(isDesktop, isLaptop)
+  // Responsive viewport transition hook — consolidates all layout state + callbacks
+  const {
+    layoutMode,
+    isDesktop,
+    sheetOpen,
+    showToggleButton,
+    detailFindingId,
+    handleFindingSelect,
+    handleNavigateAway,
+    handleSheetChange,
+    handleToggleDrawer,
+    handleActiveFindingChange,
+    activeFindingIdRef,
+    activeFindingState,
+    selectedIdFromClickRef,
+  } = useViewportTransition({
+    setSelectedFinding,
+    selectedId,
+  })
 
   // Mount announcer for screen reader (Guardrail #33 — pre-exist in DOM)
   useEffect(() => {
@@ -430,60 +438,12 @@ export function ReviewPageClient({
   // CR-R1-H3: capture findingId at NoteInput open time (prevent stale closure)
   const noteTargetIdRef = useRef<string | null>(null)
 
-  // CR-C1: Track active finding via ref (for hotkeys) + state (for action bar re-render)
-  const activeFindingIdRef = useRef<string | null>(null)
-  const [activeFindingState, setActiveFindingState] = useState<string | null>(null)
-  // Ref to signal FindingList that selectedId change came from row click (not SegmentContext navigation)
-  // FindingList's storeSelectedId effect should skip re-setting activeFindingId in this case.
-  const selectedIdFromClickRef = useRef(false)
+  // CR-C1: activeFindingIdRef, activeFindingState, selectedIdFromClickRef
+  // now provided by useViewportTransition hook above
 
-  const handleActiveFindingChange = useCallback(
-    (id: string | null) => {
-      activeFindingIdRef.current = id
-      setActiveFindingState(id)
-      // Desktop only: sync selectedId for aside detail panel (non-blocking, side-by-side).
-      // Laptop/mobile: do NOT sync here — Sheet is a blocking overlay. User clicks
-      // sync via handleToggleExpand instead, which is only called from user interaction.
-      // This prevents Sheet from auto-opening on viewport transitions or mount init.
-      if (isDesktop) {
-        selectedIdFromClickRef.current = true
-        setSelectedFinding(id)
-        queueMicrotask(() => {
-          selectedIdFromClickRef.current = false
-        })
-      }
-    },
-    [isDesktop, setSelectedFinding],
-  )
+  // handleActiveFindingChange now provided by useViewportTransition hook
 
-  // Story 4.3: selectedId synced from handleActiveFindingChange on all viewports (H3 fix).
-  // Infinite loop prevented by skipStoreSyncRef passed to FindingList.
-
-  // AC6 / TD-UX-005: Sync selectedId when viewport transitions (desktop ↔ laptop/mobile)
-  // On desktop, clicking sets activeFindingState but only conditionally sets selectedId.
-  // When transitioning TO non-desktop, selectedId must reflect current active finding.
-  const [prevLayoutMode, setPrevLayoutMode] = useState(layoutMode)
-  if (prevLayoutMode !== layoutMode) {
-    setPrevLayoutMode(layoutMode)
-    // Desktop→non-desktop: sync selectedId from activeFindingState
-    if (
-      prevLayoutMode === 'desktop' &&
-      activeFindingState !== null &&
-      selectedId !== activeFindingState
-    ) {
-      setSelectedFinding(activeFindingState)
-    }
-    // CR-R2 F8: Non-desktop→desktop: sync selectedId from activeFindingState
-    // Prevents empty detail panel after mobile J/K nav → resize to desktop
-    if (
-      prevLayoutMode !== 'desktop' &&
-      layoutMode === 'desktop' &&
-      activeFindingState !== null &&
-      selectedId !== activeFindingState
-    ) {
-      setSelectedFinding(activeFindingState)
-    }
-  }
+  // Viewport transition sync (prevLayoutMode) now handled inside useViewportTransition hook
 
   // CR-R2 P1-2: shared native confirm handler with stale rollback guard
   const executeNativeConfirm = useCallback(
@@ -1263,31 +1223,7 @@ export function ReviewPageClient({
     })
   }, [])
 
-  // Separate handler for finding selection at non-desktop (Sheet opening).
-  // Called only from FindingCardCompact click — NOT from J/K navigation.
-  const handleFindingSelect = useCallback(
-    (id: string) => {
-      if (isDesktop) return
-      selectedIdFromClickRef.current = true
-      setSelectedFinding(id)
-      queueMicrotask(() => {
-        selectedIdFromClickRef.current = false
-      })
-      if (!isLaptop) {
-        setMobileDrawerOpen(true)
-      }
-    },
-    [isDesktop, isLaptop, setSelectedFinding],
-  )
-
-  // Close Sheet when J/K navigates away at non-desktop (P1 fix: stale Sheet content).
-  // J/K is for distraction-free list navigation — Sheet should close, not follow.
-  const handleNavigateAway = useCallback(() => {
-    if (!isDesktop && selectedId !== null) {
-      setSelectedFinding(null)
-      setMobileDrawerOpen(false)
-    }
-  }, [isDesktop, selectedId, setSelectedFinding])
+  // handleFindingSelect + handleNavigateAway now provided by useViewportTransition hook
 
   // Reviewed count for ReviewProgress dual-track
   const reviewedCount = useMemo(
@@ -1305,10 +1241,7 @@ export function ReviewPageClient({
     return idx >= 0 ? idx + 1 : undefined
   }, [activeFindingState, findingsForDisplay])
 
-  // Selected finding for detail panel
-  // Desktop: derive from activeFindingState (synced via selectedId in handleActiveFindingChange).
-  // Laptop/mobile: derive from selectedId (set by autoAdvance or explicit user action).
-  const detailFindingId = isDesktop ? activeFindingState : selectedId
+  // detailFindingId now provided by useViewportTransition hook
   const selectedFinding = detailFindingId
     ? (findingsForDisplay.find((f) => f.id === detailFindingId) ?? null)
     : null
@@ -1377,49 +1310,8 @@ export function ReviewPageClient({
     [fileId, projectId, setSelectedFinding],
   )
 
-  // Toggle button for mobile drawer (visible when finding selected but sheet closed)
-  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
-  const showToggleButton = !isDesktop && !isLaptop && selectedId !== null && !mobileDrawerOpen
-
-  function handleToggleDrawer() {
-    setMobileDrawerOpen(true)
-  }
-
-  // CR R2 P1: Mobile→laptop viewport transition — prevent phantom Sheet re-open.
-  // When user explicitly closed Sheet at mobile (mobileDrawerOpen=false but selectedId
-  // preserved for toggle button), clear selectedId on transition to laptop.
-  // Uses prevLayoutMode from the sync block at line ~408.
-  const [prevLayoutForSheet, setPrevLayoutForSheet] = useState(layoutMode)
-  if (prevLayoutForSheet !== layoutMode) {
-    setPrevLayoutForSheet(layoutMode)
-    if (
-      prevLayoutForSheet === 'mobile' &&
-      layoutMode === 'laptop' &&
-      !mobileDrawerOpen &&
-      selectedId !== null
-    ) {
-      setSelectedFinding(null)
-    }
-  }
-
-  // Derive Sheet open state for non-desktop: laptop auto-opens on select, mobile uses toggle
-  const sheetOpen = isDesktop
-    ? false
-    : isLaptop
-      ? selectedId !== null
-      : mobileDrawerOpen && selectedId !== null
-
-  function handleSheetChange(open: boolean) {
-    if (!open) {
-      if (isLaptop) {
-        // Laptop: clear selectedId to close Sheet (no toggle button at laptop)
-        setSelectedFinding(null)
-      } else {
-        // Mobile: keep selectedId so toggle button appears (ATDD T3.3)
-        setMobileDrawerOpen(false)
-      }
-    }
-  }
+  // mobileDrawerOpen, showToggleButton, handleToggleDrawer, prevLayoutForSheet,
+  // sheetOpen, handleSheetChange — all now provided by useViewportTransition hook
 
   // TD-ARCH-001: Detect stale instance during <Link> transition.
   // When another instance takes over (different currentFileId), this instance

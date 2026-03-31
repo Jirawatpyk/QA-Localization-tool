@@ -134,20 +134,28 @@ development_status:
   # ============================================================
   # Epic 5: Language Intelligence & Non-Native Support (MVP)
   # ============================================================
-  epic-5: in-progress
+  epic-5: done
   5-1-language-bridge-back-translation: done
   5-2a-non-native-auto-tag: done
   5-2b-schema-rls-scoped-access: done
   5-2c-native-reviewer-workflow: done
   5-3-verification-integration: done
-  epic-5-retrospective: optional
+  # Retrospective completed 2026-03-30
+  epic-5-retrospective: done
 
   # ============================================================
   # Epic 6: Batch Processing & Team Collaboration (MVP)
   # ============================================================
   epic-6: backlog
   6-1-file-assignment-language-pair-matching: backlog
-  6-2-event-notifications-real-time-updates: backlog
+  # Story 6.2 split into 4 sub-stories per P6 assessment (2026-03-30)
+  # Original: 6-2-event-notifications-real-time-updates — too complex for single story
+  6-2a-notification-schema-helper-centralization: backlog
+  6-2b-new-event-types-wiring: backlog
+  6-2c-grouped-ui-navigation-toast: backlog
+  6-2d-archive-cron-cleanup: backlog
+  # Verification story (mandatory per Guardrail #34)
+  6-3-verification-integration: backlog
   epic-6-retrospective: optional
 
   # ============================================================

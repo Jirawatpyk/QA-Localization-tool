@@ -47,8 +47,10 @@ describe('getFileReviewData', () => {
     mockWithTenant.mockClear()
     mockRequireRole.mockResolvedValue({
       userId: mockUserId,
+      id: mockUserId,
       tenantId: mockTenantId,
       role: 'qa_reviewer',
+      nativeLanguages: [],
     })
   })
 
@@ -87,11 +89,12 @@ describe('getFileReviewData', () => {
       status: 'calculated',
     })
 
-    // Query order: file, findings, score, languagePairConfig
+    // Query order: file, findings, score, targetLang(Q4a), languagePairConfig(Q4b)
     dbState.returnValues = [
       [mockFile],
       mockFindings,
       [mockScore],
+      [{ targetLang: 'th' }], // Q4a: file targetLang from segments
       [{ l2ConfidenceMin: 70, processingMode: 'economy' }],
     ]
 
@@ -118,6 +121,7 @@ describe('getFileReviewData', () => {
       [buildFile({ fileId })],
       [buildDbFinding({ fileId, tenantId: mockTenantId })],
       [buildScoreRecord({ fileId, tenantId: mockTenantId })],
+      [{ targetLang: 'th' }], // Q4a: file targetLang from segments
       [{ l2ConfidenceMin: 70 }],
       [], // Q5: segments
       [], // Q6: categories/overrideCounts
@@ -127,8 +131,8 @@ describe('getFileReviewData', () => {
 
     await getFileReviewData({ fileId, projectId })
 
-    // withTenant called for: files, findings, scores, languagePairConfigs(JOIN), projects(WHERE), segments, reviewActions(overrideCounts), reviewActions(hasNonNativeAction), findingAssignments(Q9), users(Q9 JOIN), findingAssignments(count), siblingFiles = 11
-    expect(mockWithTenant).toHaveBeenCalledTimes(11)
+    // withTenant called for: files, findings, scores, segments(Q4a), languagePairConfigs(JOIN), projects(WHERE), segments(Q5), reviewActions(overrideCounts), reviewActions(hasNonNativeAction), findingAssignments(Q9), users(Q9 JOIN), findingAssignments(count), siblingFiles = 12
+    expect(mockWithTenant).toHaveBeenCalledTimes(12)
     // Every call must use the authenticated user's tenantId
     for (const call of mockWithTenant.mock.calls) {
       expect(call[1]).toBe(mockTenantId)
@@ -152,6 +156,7 @@ describe('getFileReviewData', () => {
       [buildFile({ fileId })],
       findings,
       [buildScoreRecord({ fileId, tenantId: mockTenantId })],
+      [{ targetLang: 'th' }], // Q4a
       [{ l2ConfidenceMin: 70 }],
     ]
 
@@ -196,6 +201,7 @@ describe('getFileReviewData', () => {
       [buildFile({ fileId })],
       [buildDbFinding({ fileId, tenantId: mockTenantId })],
       [buildScoreRecord({ fileId, tenantId: mockTenantId })],
+      [{ targetLang: 'th' }], // Q4a
       [{ l2ConfidenceMin: 70, processingMode: 'thorough' }],
     ]
 
@@ -217,6 +223,7 @@ describe('getFileReviewData', () => {
       [buildFile({ fileId })],
       [], // no findings
       [buildScoreRecord({ fileId, tenantId: mockTenantId })],
+      [{ targetLang: 'th' }], // Q4a
       [{ l2ConfidenceMin: 70 }],
     ]
 
@@ -264,6 +271,7 @@ describe('getFileReviewData', () => {
       [buildFile({ fileId })],
       [],
       [buildScoreRecord({ fileId, tenantId: mockTenantId })],
+      [{ targetLang: 'th' }], // Q4a
       [], // no config
     ]
 
@@ -289,6 +297,57 @@ describe('getFileReviewData', () => {
     expect(result.success).toBe(false)
     if (!result.success) {
       expect(result.code).toBe('INTERNAL_ERROR')
+    }
+  })
+
+  // ── P1: Multi-target project — Q4a resolves correct targetLang for JOIN ──
+
+  it('[P1] should resolve file targetLang from segments for correct language pair config match', async () => {
+    const fileId = 'c3d4e5f6-a1b2-4c1d-ae2f-5a6b7c8d9e0f'
+    const projectId = 'd4e5f6a1-b2c3-4d1e-bf3a-6b7c8d9e0f1a'
+
+    dbState.returnValues = [
+      [buildFile({ fileId })],
+      [buildDbFinding({ fileId, tenantId: mockTenantId })],
+      [buildScoreRecord({ fileId, tenantId: mockTenantId })],
+      [{ targetLang: 'ja' }], // Q4a: this file targets Japanese (not Thai)
+      [{ l2ConfidenceMin: 80, l3ConfidenceMin: 90, processingMode: 'thorough', targetLang: 'ja' }],
+      [], // Q5: segments
+      [], // Q6: categories
+      [], // Q7: overrideCounts
+      [], // Q8: nonNative
+      [], // Q9: assignments
+      [], // siblingFiles
+    ]
+
+    const result = await getFileReviewData({ fileId, projectId })
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.l2ConfidenceMin).toBe(80)
+      expect(result.data.l3ConfidenceMin).toBe(90)
+      expect(result.data.targetLang).toBe('ja')
+    }
+  })
+
+  it('[P1] should handle file with no segments (no targetLang) — falls back to sourceLang-only JOIN', async () => {
+    const fileId = 'c3d4e5f6-a1b2-4c1d-ae2f-5a6b7c8d9e0f'
+    const projectId = 'd4e5f6a1-b2c3-4d1e-bf3a-6b7c8d9e0f1a'
+
+    dbState.returnValues = [
+      [buildFile({ fileId })],
+      [],
+      [buildScoreRecord({ fileId, tenantId: mockTenantId })],
+      [], // Q4a: no segments → null targetLang
+      [{ l2ConfidenceMin: 70, processingMode: 'economy' }],
+    ]
+
+    const result = await getFileReviewData({ fileId, projectId })
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.l2ConfidenceMin).toBe(70)
+      expect(result.data.processingMode).toBe('economy')
     }
   })
 
@@ -326,6 +385,7 @@ describe('getFileReviewData', () => {
       [buildFile({ fileId })],
       findingsData,
       [buildScoreRecord({ fileId, tenantId: mockTenantId })],
+      [{ targetLang: 'th' }], // Q4a
       [{ l2ConfidenceMin: 70 }],
     ]
 

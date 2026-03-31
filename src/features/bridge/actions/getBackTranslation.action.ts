@@ -18,12 +18,13 @@ import {
 import { buildBTPrompt } from '@/features/bridge/helpers/buildBTPrompt'
 import type { BackTranslationOutput } from '@/features/bridge/types'
 import { backTranslationSchema } from '@/features/bridge/validation/btSchema'
-import { checkProjectBudget } from '@/lib/ai/budget'
+import { estimateMaxCost, releaseBudget, reserveBudget, settleBudget } from '@/lib/ai/budget'
 import { qaProvider } from '@/lib/ai/client'
 import { estimateCost, logAIUsage } from '@/lib/ai/costs'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types'
+import type { TenantId } from '@/types/tenant'
 
 // PostgreSQL error code 23503 = foreign_key_violation (file/segment deleted during AI call)
 const PG_FK_VIOLATION = '23503'
@@ -68,6 +69,7 @@ export async function getBackTranslation(
   input: z.input<typeof inputSchema>,
 ): Promise<ActionResult<BackTranslationOutput>> {
   const startTime = Date.now()
+  let reservationToRelease: { reservationId: string | null; tenantId: TenantId } | null = null
 
   try {
     // Auth
@@ -151,11 +153,22 @@ export async function getBackTranslation(
       }
     }
 
-    // Budget check (Guardrail #22)
-    const budget = await checkProjectBudget(projectId, tenantId)
-    if (!budget.hasQuota) {
+    // Budget reservation (TOCTOU-safe — Guardrail #22)
+    const btEstimatedCost = estimateMaxCost('gpt-4o-mini', 'BT')
+    const reservation = await reserveBudget({
+      projectId,
+      tenantId,
+      fileId: segment.fileId,
+      model: 'gpt-4o-mini',
+      layer: 'BT',
+      estimatedCost: btEstimatedCost,
+      languagePair,
+    })
+
+    if (!reservation.hasQuota) {
       return { success: false, error: 'AI quota exhausted', code: 'BUDGET_EXHAUSTED' }
     }
+    reservationToRelease = { reservationId: reservation.reservationId, tenantId }
 
     // Load project confidence threshold
     const [project] = await db
@@ -233,6 +246,20 @@ export async function getBackTranslation(
           languagePair,
           status: 'error',
         })
+        // Settle reservation with actual (error) cost
+        if (reservation.reservationId) {
+          await settleBudget({
+            reservationId: reservation.reservationId,
+            tenantId,
+            actualCost: primaryCost,
+            inputTokens: result.usage.inputTokens ?? 0,
+            outputTokens: result.usage.outputTokens ?? 0,
+            durationMs: primaryDurationMs,
+            status: 'error',
+            provider: 'openai',
+          }).catch(() => {})
+          reservationToRelease = null
+        }
         return { success: false, error: 'AI returned no structured output', code: 'AI_NO_OUTPUT' }
       }
       btResult = output
@@ -256,29 +283,55 @@ export async function getBackTranslation(
         languagePair,
         status: 'error',
       })
+      // Settle reservation with actual (error) cost
+      if (reservation.reservationId) {
+        await settleBudget({
+          reservationId: reservation.reservationId,
+          tenantId,
+          actualCost: primaryCost,
+          inputTokens: result.usage.inputTokens ?? 0,
+          outputTokens: result.usage.outputTokens ?? 0,
+          durationMs: primaryDurationMs,
+          status: 'error',
+          provider: 'openai',
+        }).catch(() => {})
+        reservationToRelease = null
+      }
       return { success: false, error: 'AI failed to generate valid output', code: 'AI_NO_OUTPUT' }
     }
 
-    // CR-R2 F6: Log primary usage after output validation confirmed success (Guardrail #19, #52)
-    await logAIUsage({
-      tenantId,
-      projectId,
-      fileId: segment.fileId,
-      model: 'gpt-4o-mini',
-      layer: 'BT',
-      inputTokens: result.usage.inputTokens ?? 0,
-      outputTokens: result.usage.outputTokens ?? 0,
-      estimatedCostUsd: primaryCost,
-      chunkIndex: null,
-      durationMs: primaryDurationMs,
-      languagePair,
-      status: 'success',
-    })
+    // Settle reservation with actual cost (primary call done)
+    // NOTE: settleBudget UPDATE replaces the pending row's estimatedCost with actualCost.
+    // Do NOT also call logAIUsage here — that would INSERT a second row, double-counting
+    // the cost in the budget SUM. (CR fix: P1 double-counting bug)
+    if (reservation.reservationId) {
+      await settleBudget({
+        reservationId: reservation.reservationId,
+        tenantId,
+        actualCost: primaryCost,
+        inputTokens: result.usage.inputTokens ?? 0,
+        outputTokens: result.usage.outputTokens ?? 0,
+        durationMs: primaryDurationMs,
+        status: 'success',
+        provider: 'openai',
+      }).catch(() => {})
+      reservationToRelease = null // settled — prevent double-release in catch
+    }
 
     // Low-confidence fallback (Guardrail #56): retry with claude-sonnet if budget allows
+    // D3 fix: use reserveBudget (TOCTOU-safe) instead of snapshot checkProjectBudget
     if (btResult.confidence < confidenceThreshold) {
-      const fallbackBudget = await checkProjectBudget(projectId, tenantId)
-      if (fallbackBudget.hasQuota) {
+      const fallbackEstimatedCost = estimateMaxCost('claude-sonnet-4-5-20250929', 'BT')
+      const fallbackReservation = await reserveBudget({
+        projectId,
+        tenantId,
+        fileId: segment.fileId,
+        model: 'claude-sonnet-4-5-20250929',
+        layer: 'BT',
+        estimatedCost: fallbackEstimatedCost,
+        languagePair,
+      })
+      if (fallbackReservation.hasQuota) {
         const fallbackStart = Date.now()
         try {
           const fallbackResult = await generateText({
@@ -298,30 +351,26 @@ export async function getBackTranslation(
 
           let fallbackOutput: typeof btResult | null = null
           try {
-            if (fallbackResult.output) {
-              fallbackOutput = fallbackResult.output
-            } else {
-              logger.warn({ segmentId }, 'BT fallback returned no output')
-            }
+            // Guardrail #10: result.output is a throwing getter — access via try/catch only.
+            const output = fallbackResult.output
+            fallbackOutput = output
           } catch (fallbackOutputErr) {
             logger.warn({ err: fallbackOutputErr, segmentId }, 'BT fallback output accessor threw')
           }
 
-          // CR-R2 F6: Log fallback usage after output validation
-          await logAIUsage({
-            tenantId,
-            projectId,
-            fileId: segment.fileId,
-            model: 'claude-sonnet-4-5-20250929',
-            layer: 'BT',
-            inputTokens: fallbackResult.usage.inputTokens ?? 0,
-            outputTokens: fallbackResult.usage.outputTokens ?? 0,
-            estimatedCostUsd: fallbackCost,
-            chunkIndex: null,
-            durationMs: fallbackDurationMs,
-            languagePair,
-            status: fallbackOutput ? 'success' : 'error',
-          })
+          // Settle fallback reservation with actual cost
+          if (fallbackReservation.reservationId) {
+            await settleBudget({
+              reservationId: fallbackReservation.reservationId,
+              tenantId,
+              actualCost: fallbackCost,
+              inputTokens: fallbackResult.usage.inputTokens ?? 0,
+              outputTokens: fallbackResult.usage.outputTokens ?? 0,
+              durationMs: fallbackDurationMs,
+              status: fallbackOutput ? 'success' : 'error',
+              provider: 'anthropic',
+            }).catch(() => {})
+          }
 
           // Use whichever has higher confidence
           if (fallbackOutput && fallbackOutput.confidence > btResult.confidence) {
@@ -359,6 +408,10 @@ export async function getBackTranslation(
             }
           }
         } catch (err) {
+          // Release fallback reservation on error (before AI response or unexpected failure)
+          if (fallbackReservation.reservationId) {
+            await releaseBudget(fallbackReservation.reservationId, tenantId).catch(() => {})
+          }
           logger.warn(
             { err, segmentId },
             'BT fallback to claude-sonnet failed, using primary result',
@@ -398,6 +451,14 @@ export async function getBackTranslation(
     }
   } catch (err) {
     logger.error({ err }, 'getBackTranslation failed')
+
+    // Best-effort release budget reservation (if it was made and not yet settled)
+    if (reservationToRelease?.reservationId) {
+      releaseBudget(reservationToRelease.reservationId, reservationToRelease.tenantId).catch(
+        () => {},
+      )
+    }
+
     return {
       success: false,
       error: err instanceof Error ? err.message : 'Unknown error',

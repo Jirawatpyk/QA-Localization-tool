@@ -20,7 +20,7 @@ import { buildL3Prompt as buildL3PromptShared } from '@/features/pipeline/prompt
 import type { SurroundingSegmentContext } from '@/features/pipeline/prompts/types'
 import { l3OutputSchema } from '@/features/pipeline/schemas/l3-output'
 import type { L3Finding, L3Output } from '@/features/pipeline/schemas/l3-output'
-import { checkProjectBudget } from '@/lib/ai/budget'
+import { estimateMaxCost, releaseBudget, reserveBudget, settleBudget } from '@/lib/ai/budget'
 import { getModelById } from '@/lib/ai/client'
 import { aggregateUsage, estimateCost, logAIUsage } from '@/lib/ai/costs'
 import { AIRateLimitExceededError, classifyAIError } from '@/lib/ai/errors'
@@ -128,6 +128,8 @@ export async function runL3ForFile({
     throw new NonRetriableError('File not in l2_completed state or already being processed')
   }
 
+  let reservation: Awaited<ReturnType<typeof reserveBudget>> | null = null
+
   try {
     // Step 2a: Per-project L3 rate limit (retriable — Inngest retries with backoff)
     // Fail-open: if Redis is unreachable, log warning and proceed (infra issue ≠ file failure)
@@ -147,13 +149,7 @@ export async function runL3ForFile({
       )
     }
 
-    // Step 2b: Budget guard (Guardrail #22)
-    const budget = await checkProjectBudget(projectId, tenantId)
-    if (!budget.hasQuota) {
-      throw new NonRetriableError('AI quota exhausted')
-    }
-
-    // Step 2c: Resolve model (pinned model from project config → fallback chain)
+    // Step 2b: Resolve model first (needed for budget estimation)
     const { primary: modelId, fallbacks } = await getModelForLayerWithFallback(
       'L3',
       projectId,
@@ -385,6 +381,24 @@ export async function runL3ForFile({
     // Step 5: Chunk FILTERED segments (Guardrail #21)
     const chunks = chunkSegments(filteredSegments)
 
+    // Step 5b: Budget reservation (TOCTOU-safe — Guardrail #22)
+    const perChunkCost = estimateMaxCost(modelId, 'L3')
+    const totalEstimatedCost = perChunkCost * Math.max(1, chunks.length)
+
+    reservation = await reserveBudget({
+      projectId,
+      tenantId,
+      fileId,
+      model: modelId,
+      layer: 'L3',
+      estimatedCost: totalEstimatedCost,
+      languagePair,
+    })
+
+    if (!reservation.hasQuota) {
+      throw new NonRetriableError('AI quota exhausted')
+    }
+
     // Step 6: Process each chunk with AI (fallback chain support)
     const chunkResults: ChunkResult<L3ChunkResponse>[] = []
     const usageRecords: AIUsageRecord[] = []
@@ -456,10 +470,30 @@ export async function runL3ForFile({
         })
         usageRecords.push(record)
 
+        // AI SDK 6.0: result.output is a throwing getter — throws NoObjectGeneratedError
+        // when finishReason !== "stop". Extract in its own try/catch to avoid masking the cause.
+        let chunkOutput: L3ChunkResponse
+        try {
+          chunkOutput = result.output
+        } catch (outputErr) {
+          logger.warn(
+            { finishReason: result.finishReason, chunkIndex: chunk.chunkIndex, fileId },
+            'L3 chunk produced no structured output',
+          )
+          chunkResults.push({
+            chunkIndex: chunk.chunkIndex,
+            success: false,
+            data: null,
+            error: outputErr instanceof Error ? outputErr.message : String(outputErr),
+            usage: result.usage,
+          })
+          continue
+        }
+
         chunkResults.push({
           chunkIndex: chunk.chunkIndex,
           success: true,
-          data: result.output,
+          data: chunkOutput,
           error: null,
           usage: result.usage,
         })
@@ -508,6 +542,25 @@ export async function runL3ForFile({
     }
 
     const duration = Math.round(performance.now() - startTime)
+
+    // Step 6b: Settle budget reservation with actual total cost
+    const totalUsageForSettlement = aggregateUsage(usageRecords)
+    if (reservation.reservationId) {
+      try {
+        await settleBudget({
+          reservationId: reservation.reservationId,
+          tenantId,
+          actualCost: totalUsageForSettlement.estimatedCostUsd,
+          inputTokens: totalUsageForSettlement.inputTokens,
+          outputTokens: totalUsageForSettlement.outputTokens,
+          durationMs: duration,
+          status: chunkResults.some((c) => c.success) ? 'success' : 'error',
+          provider: 'multi-chunk',
+        })
+      } catch (settleErr) {
+        logger.error({ err: settleErr, fileId }, 'Failed to settle budget reservation (non-fatal)')
+      }
+    }
 
     // Step 7: Flatten + validate findings
     const segmentIdSet = new Set(segmentRows.map((s) => s.id))
@@ -821,6 +874,18 @@ export async function runL3ForFile({
     }
   } catch (err) {
     logger.error({ err, fileId }, 'L3 deep analysis failed')
+
+    // Best-effort release budget reservation (if it was made)
+    if (reservation?.reservationId) {
+      try {
+        await releaseBudget(reservation.reservationId, tenantId)
+      } catch (releaseErr) {
+        logger.error(
+          { err: releaseErr, fileId },
+          'Failed to release budget reservation (non-fatal)',
+        )
+      }
+    }
 
     try {
       await db

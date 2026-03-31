@@ -188,6 +188,9 @@ export async function getFileReviewData(
     )
     // Native reviewer with 0 assignments → empty scoped view (Guardrail #5: inArray([]) guard)
     if (assignedFindingIds !== null && assignedFindingIds.length === 0) {
+      // CR fix P6: conservative default — show LanguageBridge panel when targetLang unknown.
+      // Matches line 330-332 pattern: `true` when targetLang unavailable at early-return.
+      // Native reviewers may still be non-native for the file's target language.
       return {
         success: true,
         data: {
@@ -212,7 +215,7 @@ export async function getFileReviewData(
           categories: [],
           overrideCounts: {},
           siblingFiles: [],
-          isNonNative: false,
+          isNonNative: true,
           btConfidenceThreshold: 0.6,
           userRole: currentUser.role,
           assignedFindingCount: 0,
@@ -282,10 +285,15 @@ export async function getFileReviewData(
         }
     const autoPassRationale = scoreRow?.autoPassRationale ?? null
 
-    // Q4: Get project processingMode + language pair l2ConfidenceMin
-    // TODO(TD-REVIEW-001): JOIN matches sourceLang only — projects.targetLangs is a JSONB array,
-    // so a proper match requires file-level target language metadata (not yet available).
-    // For single-target-language projects this is correct; multi-target may return wrong config.
+    // Q4a: Get file's targetLang from its first segment (all segments in a file share the same targetLang)
+    const targetLangRows = await db
+      .select({ targetLang: segments.targetLang })
+      .from(segments)
+      .where(and(withTenant(segments.tenantId, tenantId), eq(segments.fileId, fileId)))
+      .limit(1)
+    const fileTargetLang = targetLangRows[0]?.targetLang ?? null
+
+    // Q4b: Get project processingMode + language pair confidence thresholds
     const configRows = await db
       .select({
         processingMode: projects.processingMode,
@@ -301,6 +309,10 @@ export async function getFileReviewData(
         and(
           withTenant(languagePairConfigs.tenantId, tenantId),
           eq(languagePairConfigs.sourceLang, projects.sourceLang),
+          // D5 fix: when fileTargetLang is null (0 segments), prevent matching any
+          // config row — LEFT JOIN returns NULLs → defaults used. Without this,
+          // multi-target projects could match an arbitrary language pair config.
+          ...(fileTargetLang ? [eq(languagePairConfigs.targetLang, fileTargetLang)] : [sql`false`]),
         ),
       )
       .where(and(withTenant(projects.tenantId, tenantId), eq(projects.id, projectId)))

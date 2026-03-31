@@ -70,7 +70,7 @@ describe('useScoreSubscription', () => {
         event: 'INSERT',
         schema: 'public',
         table: 'scores',
-        filter: 'file_id=eq.file-123&tenant_id=eq.tenant-test',
+        filter: 'file_id=eq.file-123',
       }),
       expect.any(Function),
     )
@@ -82,7 +82,7 @@ describe('useScoreSubscription', () => {
         event: 'UPDATE',
         schema: 'public',
         table: 'scores',
-        filter: 'file_id=eq.file-123&tenant_id=eq.tenant-test',
+        filter: 'file_id=eq.file-123',
       }),
       expect.any(Function),
     )
@@ -95,11 +95,11 @@ describe('useScoreSubscription', () => {
 
     // Simulate Realtime payload
     const onHandler = mockChannel.on.mock.calls[0]![2] as (payload: {
-      new: { mqm_score: number; status: string }
+      new: Record<string, unknown>
     }) => void
     act(() => {
       onHandler({
-        new: { mqm_score: 92, status: 'calculated' },
+        new: { mqm_score: 92, status: 'calculated', tenant_id: 'tenant-test' },
       })
     })
 
@@ -110,11 +110,11 @@ describe('useScoreSubscription', () => {
     renderHook(() => useScoreSubscription('file-123', 'tenant-test'))
 
     const onHandler = mockChannel.on.mock.calls[0]![2] as (payload: {
-      new: { mqm_score: number; status: string }
+      new: Record<string, unknown>
     }) => void
     act(() => {
       onHandler({
-        new: { mqm_score: 92, status: 'calculated' },
+        new: { mqm_score: 92, status: 'calculated', tenant_id: 'tenant-test' },
       })
     })
 
@@ -284,7 +284,7 @@ describe('useScoreSubscription', () => {
         event: 'INSERT',
         schema: 'public',
         table: 'scores',
-        filter: 'file_id=eq.file-123&tenant_id=eq.tenant-test',
+        filter: 'file_id=eq.file-123',
       }),
     )
   })
@@ -304,6 +304,7 @@ describe('useScoreSubscription', () => {
           mqm_score: 88.5,
           status: 'calculated',
           layer_completed: 'L1L2',
+          tenant_id: 'tenant-test',
         },
       })
     })
@@ -339,7 +340,7 @@ describe('useScoreSubscription', () => {
     }) => void
     act(() => {
       onHandler({
-        new: { mqm_score: 0, status: 'calculated' },
+        new: { mqm_score: 0, status: 'calculated', tenant_id: 'tenant-test' },
       })
     })
 
@@ -390,7 +391,7 @@ describe('useScoreSubscription', () => {
     }) => void
     act(() => {
       onHandler({
-        new: { mqm_score: '85', status: 'calculated' },
+        new: { mqm_score: '85', status: 'calculated', tenant_id: 'tenant-test' },
       })
     })
 
@@ -406,7 +407,7 @@ describe('useScoreSubscription', () => {
     }) => void
     act(() => {
       onHandler({
-        new: { mqm_score: 92, status: 'invalid_status' },
+        new: { mqm_score: 92, status: 'invalid_status', tenant_id: 'tenant-test' },
       })
     })
 
@@ -422,7 +423,12 @@ describe('useScoreSubscription', () => {
     }) => void
     act(() => {
       onHandler({
-        new: { mqm_score: 92, status: 'calculated', layer_completed: 123 },
+        new: {
+          mqm_score: 92,
+          status: 'calculated',
+          layer_completed: 123,
+          tenant_id: 'tenant-test',
+        },
       })
     })
 
@@ -452,18 +458,38 @@ describe('useScoreSubscription', () => {
 
   // ── TD-TENANT-003: tenantId filter (Story 4.1a) ──
 
-  it('[T5.2][P0] should include tenant_id in Realtime filter when tenantId provided', () => {
+  it('[T5.2][P0] should use single-column filter (file_id only) and guard tenant client-side', () => {
     renderHook(() => useScoreSubscription('file-abc', 'tenant-xyz'))
 
-    // Verify .on() is called with a filter containing tenant_id compound filter
+    // Supabase Realtime supports single-column filter only — verify no compound filter
     const onCalls = mockChannel.on.mock.calls as unknown[][]
-    const hasCompoundFilter = onCalls.some((callArgs) => {
-      const filterConfig = callArgs[1] as Record<string, unknown> | undefined
-      if (!filterConfig) return false
-      const filter = filterConfig.filter as string | undefined
-      return filter?.includes('tenant_id=eq.tenant-xyz')
+    const allFilters = onCalls
+      .map((callArgs) => {
+        const filterConfig = callArgs[1] as Record<string, unknown> | undefined
+        return filterConfig?.filter as string | undefined
+      })
+      .filter(Boolean)
+    // Every filter should be file_id only, no compound
+    for (const filter of allFilters) {
+      expect(filter).toBe('file_id=eq.file-abc')
+      expect(filter).not.toContain('&')
+    }
+  })
+
+  it('[T5.2][P0] should reject Realtime payload with wrong tenant_id (client-side guard)', () => {
+    renderHook(() => useScoreSubscription('file-123', 'tenant-test'))
+
+    const onHandler = mockChannel.on.mock.calls[0]![2] as (payload: {
+      new: Record<string, unknown>
+    }) => void
+    act(() => {
+      onHandler({
+        new: { mqm_score: 92, status: 'calculated', tenant_id: 'wrong-tenant' },
+      })
     })
-    expect(hasCompoundFilter).toBe(true)
+
+    // Store should NOT be updated — tenant guard rejected the payload
+    expect(getStoreFileState().currentScore).toBeNull()
   })
 
   // ── Story 4.0 TD Regression ──
@@ -483,6 +509,7 @@ describe('useScoreSubscription', () => {
           status: 'auto_passed',
           layer_completed: 'L1L2',
           auto_pass_rationale: 'Score 98.5 exceeds threshold 95.0 with 0 critical findings',
+          tenant_id: 'tenant-test',
         },
       })
     })

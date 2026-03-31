@@ -82,6 +82,7 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   parityReports: many(parityReports),
   missingCheckReports: many(missingCheckReports),
   findingAssignments: many(findingAssignments),
+  notifications: many(notifications),
 }))
 
 // --- Files ---
@@ -347,6 +348,7 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
     references: [tenants.id],
   }),
   user: one(users, { fields: [notifications.userId], references: [users.id] }),
+  project: one(projects, { fields: [notifications.projectId], references: [projects.id] }),
 }))
 
 // --- Exported Reports ---

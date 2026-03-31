@@ -519,6 +519,15 @@ Claude Opus 4.6 (1M context)
 **Deleted:**
 - `scripts/generate-verification-data.test.mjs` — moved to src/test/
 
+### Production Bugs Found During CR R2 (2026-03-30)
+| Bug ID | Severity | File | Root Cause | Fix |
+|--------|----------|------|-----------|-----|
+| CR-R2-F1 | P0 | `overrideNativeReview.action.ts` | Missing `inngest.send('finding.changed')` event — MQM score never recalculates after native override. `confirmNativeReview` had the event but `overrideNativeReview` was missed entirely. | Added Inngest event dispatch with try-catch (same pattern as confirmNativeReview) |
+| CR-R2-F2 | P1 | `ReviewPageClient.tsx` | Escape handler `useEffect` had `[register]` deps only — `fileId` captured in closure became stale after file navigation. Pressing Escape cleared bulk selection on the **wrong file**. | Added `fileId`, `isNativeReviewer` to dependency array |
+| CR-R2-F3 | P1 | `confirmNativeReview.action.ts`, `overrideNativeReview.action.ts` | Finding detail SELECT + UPDATE queries used only `eq(findings.id, findingId)` + `withTenant()` — missing `eq(findings.projectId, projectId)`. A compromised client could pass findingId from project B while operating on project A (same tenant). | Added `eq(findings.projectId, projectId)` defense-in-depth filter on all finding queries + UPDATE WHERE clause |
+| CR-R2-F6 | P2 | `getBackTranslation.action.ts` | `logAIUsage` called with `status: 'success'` immediately after `generateText`, before checking if `result.output` was valid. If AI returned no output → cost logged as success → inflated success metrics + hidden failure rate. Same issue on fallback AI call. | Moved `logAIUsage` after output validation. Status = `'success'` only when output confirmed valid, `'error'` when null or accessor throws. |
+| CR-R2-F11 | P3 | `confirmNativeReview.action.ts`, `overrideNativeReview.action.ts` | Notification sent to `assignment.assignedBy` unconditionally — if admin re-assigns a finding to themselves, they receive a "your flagged finding was confirmed" notification from themselves. | Added `if (assignedBy !== userId)` guard before notification insert |
+
 ### CR R2 Review Findings (2026-03-30)
 
 **Reviewers:** Blind Hunter + Edge Case Hunter + Acceptance Auditor (3-agent parallel)
@@ -529,17 +538,25 @@ Claude Opus 4.6 (1M context)
 - [ ] [Review][Decision] F7: `executeNativeConfirm`/`executeNativeOverride` ไม่ push undo entry — inconsistent กับ action อื่นทุกตัว [`ReviewPageClient.tsx:479-567`]
 - [ ] [Review][Decision] F8: `handleActiveFindingChange` sync selectedId เฉพาะ desktop — resize mobile→desktop อาจแสดง empty detail panel [`ReviewPageClient.tsx:440-457`]
 
-#### Patches
-- [ ] [Review][Patch] F1 (P0): `overrideNativeReview` ไม่ส่ง `finding.changed` event → MQM score ไม่ recalculate [`overrideNativeReview.action.ts`]
-- [ ] [Review][Patch] F2 (P1): Escape handler จับ stale `fileId` ใน closure — missing dep in useEffect [`ReviewPageClient.tsx:614-672`]
-- [ ] [Review][Patch] F3 (P1): `confirmNativeReview`/`overrideNativeReview` ขาด `eq(findings.projectId, projectId)` defense-in-depth filter [`confirmNativeReview.action.ts:91`, `overrideNativeReview.action.ts:90`]
-- [ ] [Review][Patch] F4 (P2): `setState` ใน `useEffect` สำหรับ `contextRange` — ขัด guardrail React Compiler [`FindingDetailContent.tsx:86-90`]
-- [ ] [Review][Patch] F5 (P2): `result.output` getter ถูกเรียก 2 ครั้ง — assign to local var once [`getBackTranslation.action.ts:212-224`]
-- [ ] [Review][Patch] F6 (P2): `logAIUsage` status='success' ก่อน validate output — misleading metrics [`getBackTranslation.action.ts:192-207,244-258`]
-- [ ] [Review][Patch] F13 (P3): Stale "RED PHASE" comment ใน epic5-integration.spec.ts [`epic5-integration.spec.ts:17`]
+#### Patches — ALL FIXED ✅
+- [x] [Review][Patch] F1 (P0): `overrideNativeReview` ไม่ส่ง `finding.changed` event → MQM score ไม่ recalculate [`overrideNativeReview.action.ts`]
+- [x] [Review][Patch] F2 (P1): Escape handler จับ stale `fileId` ใน closure — missing dep in useEffect [`ReviewPageClient.tsx:614-672`]
+- [x] [Review][Patch] F3 (P1): `confirmNativeReview`/`overrideNativeReview` ขาด `eq(findings.projectId, projectId)` defense-in-depth filter [`confirmNativeReview.action.ts:91`, `overrideNativeReview.action.ts:90`]
+- [x] [Review][Patch] F4 (P2): `setState` ใน `useEffect` สำหรับ `contextRange` — ขัด guardrail React Compiler [`FindingDetailContent.tsx:86-90`]
+- [x] [Review][Patch] F5 (P2): `result.output` getter ถูกเรียก 2 ครั้ง — assign to local var once [`getBackTranslation.action.ts:212-224`]
+- [x] [Review][Patch] F6 (P2): `logAIUsage` status='success' ก่อน validate output — misleading metrics [`getBackTranslation.action.ts:192-207,244-258`]
+- [x] [Review][Patch] F7 (P2): `executeNativeConfirm`/`Override` ไม่ push undo entry — added full UndoEntry [`ReviewPageClient.tsx:479-567`]
+- [x] [Review][Patch] F8 (P2): non-desktop→desktop viewport sync — added selectedId sync from activeFindingState [`ReviewPageClient.tsx:466-476`]
+- [x] [Review][Patch] F13 (P3): Stale "RED PHASE" comment ใน epic5-integration.spec.ts [`epic5-integration.spec.ts:17`]
 
-#### Deferred
-- [x] [Review][Defer] F9: Perf benchmark thresholds relaxed 7.5-50x — TD-TEST-011 tracked [`review-accessibility.spec.ts`]
-- [x] [Review][Defer] F10: Keyboard `bindingsRegistry` singleton ไม่ reset ตอน HMR — pre-existing architecture [`use-keyboard-actions.ts:130-131`]
-- [x] [Review][Defer] F11: `confirmNativeReview` notification อาจส่งถึงตัวเอง — cosmetic edge case [`confirmNativeReview.action.ts:197`]
-- [x] [Review][Defer] F12: E2E `TA-01e` ใช้ `waitForTimeout(2000)` — flaky timing [`review-accessibility.spec.ts:269`]
+#### Deferred — 3/4 RESOLVED ✅
+- [x] ~~[Review][Defer] F9~~ → ✅ FIXED: CI-only stricter perf thresholds via `process.env.CI` [`review-accessibility.spec.ts`]
+- [x] [Review][Defer] F10: Keyboard `bindingsRegistry` singleton ไม่ reset ตอน HMR — pre-existing architecture → defer Epic 6 [`use-keyboard-actions.ts:130-131`]
+- [x] ~~[Review][Defer] F11~~ → ✅ FIXED: `if (assignedBy !== userId)` guard on both native actions [`confirmNativeReview.action.ts`, `overrideNativeReview.action.ts`]
+- [x] ~~[Review][Defer] F12~~ → ✅ FIXED: deterministic toast visibility wait replaces `waitForTimeout(2000)` [`review-accessibility.spec.ts:269`]
+
+#### CR R2 Verification
+- type-check: PASS
+- lint: 0 errors
+- unit tests: 4437 pass (6 flaky pre-existing, pass when run isolated)
+- E2E epic5-integration: **10/10 PASS × 2 consecutive runs** (3.9m each)

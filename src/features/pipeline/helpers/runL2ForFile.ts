@@ -18,7 +18,7 @@ import { deriveLanguagePair } from '@/features/pipeline/helpers/deriveLanguagePa
 import { buildL2Prompt } from '@/features/pipeline/prompts/build-l2-prompt'
 import type { L2Output } from '@/features/pipeline/schemas/l2-output'
 import { l2OutputSchema } from '@/features/pipeline/schemas/l2-output'
-import { checkProjectBudget } from '@/lib/ai/budget'
+import { estimateMaxCost, releaseBudget, reserveBudget, settleBudget } from '@/lib/ai/budget'
 import { getModelById } from '@/lib/ai/client'
 import { aggregateUsage, estimateCost, logAIUsage } from '@/lib/ai/costs'
 import { AIRateLimitExceededError, classifyAIError } from '@/lib/ai/errors'
@@ -130,6 +130,8 @@ export async function runL2ForFile({
     throw new NonRetriableError('File not in l1_completed state or already being processed')
   }
 
+  let reservation: Awaited<ReturnType<typeof reserveBudget>> | null = null
+
   try {
     // Step 2a: Per-project L2 rate limit (retriable — Inngest retries with backoff)
     // Fail-open: if Redis is unreachable, log warning and proceed (infra issue ≠ file failure)
@@ -149,13 +151,7 @@ export async function runL2ForFile({
       )
     }
 
-    // Step 2b: Budget guard (Guardrail #22)
-    const budget = await checkProjectBudget(projectId, tenantId)
-    if (!budget.hasQuota) {
-      throw new NonRetriableError('AI quota exhausted')
-    }
-
-    // Step 2c: Resolve model (pinned model from project config → fallback chain)
+    // Step 2b: Resolve model first (needed for budget estimation)
     const { primary: modelId, fallbacks } = await getModelForLayerWithFallback(
       'L2',
       projectId,
@@ -250,13 +246,31 @@ export async function runL2ForFile({
     // Step 5: Chunk segments (Guardrail #21)
     const chunks = chunkSegments(segmentRows)
 
+    // Step 5b: Budget reservation (TOCTOU-safe — Guardrail #22)
+    // Reserve estimated max cost for all chunks atomically.
+    const languagePair = deriveLanguagePair(segmentRows)
+    const perChunkCost = estimateMaxCost(modelId, 'L2')
+    const totalEstimatedCost = perChunkCost * Math.max(1, chunks.length)
+
+    reservation = await reserveBudget({
+      projectId,
+      tenantId,
+      fileId,
+      model: modelId,
+      layer: 'L2',
+      estimatedCost: totalEstimatedCost,
+      languagePair,
+    })
+
+    if (!reservation.hasQuota) {
+      throw new NonRetriableError('AI quota exhausted')
+    }
+
     // Step 6: Process each chunk with AI (partial failure tolerance + fallback chain)
     const startTime = performance.now()
     const chunkResults: ChunkResult<L2Output>[] = []
     const usageRecords: AIUsageRecord[] = []
     const config = getConfigForModel(modelId, 'L2')
-    // M3 fix: cache outside loop — deriveLanguagePair is pure (same result every call)
-    const languagePair = deriveLanguagePair(segmentRows)
     const chunkActualModel = new Map<number, string>()
     let anyFallbackUsed = false
 
@@ -313,10 +327,30 @@ export async function runL2ForFile({
         })
         usageRecords.push(record)
 
+        // AI SDK 6.0: result.output is a throwing getter — throws NoObjectGeneratedError
+        // when finishReason !== "stop". Extract in its own try/catch to avoid masking the cause.
+        let chunkOutput: L2Output
+        try {
+          chunkOutput = result.output
+        } catch (outputErr) {
+          logger.warn(
+            { finishReason: result.finishReason, chunkIndex: chunk.chunkIndex, fileId },
+            'L2 chunk produced no structured output',
+          )
+          chunkResults.push({
+            chunkIndex: chunk.chunkIndex,
+            success: false,
+            data: null,
+            error: outputErr instanceof Error ? outputErr.message : String(outputErr),
+            usage: result.usage,
+          })
+          continue
+        }
+
         chunkResults.push({
           chunkIndex: chunk.chunkIndex,
           success: true,
-          data: result.output,
+          data: chunkOutput,
           error: null,
           usage: result.usage,
         })
@@ -371,6 +405,25 @@ export async function runL2ForFile({
     }
 
     const duration = Math.round(performance.now() - startTime)
+
+    // Step 6b: Settle budget reservation with actual total cost
+    const totalUsageForSettlement = aggregateUsage(usageRecords)
+    if (reservation.reservationId) {
+      try {
+        await settleBudget({
+          reservationId: reservation.reservationId,
+          tenantId,
+          actualCost: totalUsageForSettlement.estimatedCostUsd,
+          inputTokens: totalUsageForSettlement.inputTokens,
+          outputTokens: totalUsageForSettlement.outputTokens,
+          durationMs: duration,
+          status: chunkResults.some((c) => c.success) ? 'success' : 'error',
+          provider: 'multi-chunk',
+        })
+      } catch (settleErr) {
+        logger.error({ err: settleErr, fileId }, 'Failed to settle budget reservation (non-fatal)')
+      }
+    }
 
     // TD-AI-006: Collect segment IDs from failed chunks — these segments were never screened by L2.
     // L3 must include them as "unscreened" so they are not silently excluded from deep analysis.
@@ -588,6 +641,18 @@ export async function runL2ForFile({
     }
   } catch (err) {
     logger.error({ err, fileId }, 'L2 screening failed')
+
+    // Best-effort release budget reservation (if it was made)
+    if (reservation?.reservationId) {
+      try {
+        await releaseBudget(reservation.reservationId, tenantId)
+      } catch (releaseErr) {
+        logger.error(
+          { err: releaseErr, fileId },
+          'Failed to release budget reservation (non-fatal)',
+        )
+      }
+    }
 
     // Best-effort rollback to 'failed' status
     try {

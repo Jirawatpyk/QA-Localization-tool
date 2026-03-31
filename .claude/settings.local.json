@@ -196,7 +196,26 @@
       "Bash(mkdir -p \"C:/Users/Jiraw/OneDrive/Documents/qa-localization-tool/src/features/bridge/hooks\")",
       "Bash(DATABASE_URL=\"postgresql://postgres:postgres@127.0.0.1:54322/postgres\" node scripts/apply-migration.mjs)",
       "Bash(DATABASE_URL=\"postgresql://postgres:postgres@127.0.0.1:54322/postgres\" npx drizzle-kit migrate)",
-      "Bash(do sed:*)"
+      "Bash(do sed:*)",
+      "Bash(1)",
+      "Bash(python:*)",
+      "Bash(grep -c \"it\\(\" /c/Users/Jiraw/OneDrive/Documents/qa-localization-tool/src/db/__tests__/rls/*.test.ts)",
+      "Bash(DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres npx vitest run --project integration src/__tests__/integration/parser-db.integration.test.ts)",
+      "Bash(DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres npx vitest run src/__tests__/integration/bt-cache.integration.test.ts --reporter=verbose)",
+      "Bash(DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres npx vitest run src/__tests__/integration/back-translation-action.integration.test.ts)",
+      "Bash(DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres npx vitest run src/__tests__/integration/batch-file-history.integration.test.ts --reporter=verbose)",
+      "Bash(DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres npx drizzle-kit introspect)",
+      "Bash(DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres psql -c \"\\\\d users\")",
+      "Bash(DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres npx vitest run src/__tests__/integration/parity-db.integration.test.ts --reporter=verbose)",
+      "Bash(DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres npx vitest run src/__tests__/integration/upload-route.integration.test.ts --reporter=verbose)",
+      "Bash(DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres node -e \":*)",
+      "Bash(DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres npx tsx -e \":*)",
+      "Bash(DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres npx drizzle-kit migrate)",
+      "Bash(sed -i \"s/const segmentId = /const _segmentId = /\" src/__tests__/integration/back-translation-action.integration.test.ts)",
+      "Bash(sed -i \"s/const fileBId = /const _fileBId = /\" src/__tests__/integration/batch-file-history.integration.test.ts)",
+      "Bash(sed -i \"s/asTenantId,//\" src/__tests__/integration/glossary-compliance-l1.integration.test.ts)",
+      "Bash(sed -i \"s/users,//\" src/__tests__/integration/parity-db.integration.test.ts)",
+      "Bash(sed -i \"s/const projectIdB = /const _projectIdB = /\" src/__tests__/integration/parity-db.integration.test.ts)"
     ]
   },
   "enabledPlugins": {

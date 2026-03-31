@@ -1,7 +1,7 @@
 # Tech Debt Tracker
 
 **Created:** 2026-02-25 (post Story 2.7 CR R4)
-**Last Verified:** 2026-03-26 (DEFERRED target audit — Guardrail #23 compliance: all vague/stale targets re-assigned to specific Story IDs or Epic+Story)
+**Last Verified:** 2026-03-31 (Full triage for Epic 6 prep — resolved TDs updated, deferred targets re-assigned)
 **Source:** Cross-referenced from agent memory (anti-pattern-detector, code-quality-analyzer, tenant-isolation-checker, testing-qa-expert, inngest-function-validator)
 
 ---
@@ -864,7 +864,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** `checkProjectBudget()` does a snapshot `SUM(estimated_cost)` read. Between budget check and AI call, 4+ DB round-trips occur. Concurrent pipelines on the same project can all pass the check and overshoot by `N × cost_per_chunk`. Cost logging is fire-and-forget (`.catch()`), compounding the issue.
 - **Fix:** Implement budget reservation pattern: atomically reserve estimated cost BEFORE AI call, release/adjust after actual cost is known.
 - **Effort:** 6-8 ชม.
-- **Status:** DEFERRED → **Epic 6** (billing infrastructure — requires reservation table + atomic decrement pattern)
+- **Status:** ~~DEFERRED~~ → **RESOLVED** (2026-03-30 — Budget reservation pattern implemented with `pg_advisory_xact_lock` + pending rows in `ai_usage_logs`. See `src/lib/ai/budget.ts`)
 
 ### TD-PIPE-004: Oversized single segment — no pre-flight token limit check
 - **Date:** 2026-03-26
@@ -875,7 +875,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** `chunkSegments()` places a single segment that exceeds 30K chars into its own chunk without checking total prompt token count. If prompt (segment + context + glossary + instructions) exceeds model context limit, `maxOutputTokens` may be insufficient for structured JSON output → `NoObjectGeneratedError` → `NonRetriableError`. Same segment fails in both L2 and L3.
 - **Fix:** Add pre-flight check: estimate total tokens (segment chars / 4 + prompt overhead), warn/skip segments that would exceed model context limit.
 - **Effort:** 3-4 ชม.
-- **Status:** DEFERRED → **Epic 6** (pipeline optimization — requires token estimation utility; real-world risk is low because 30K-char single segments are extremely rare in localization files)
+- **Status:** DEFERRED → **ทำได้เลย** (self-contained, 3-4 hrs — add pre-flight token estimation in chunkSegments. Risk low but prevents NoObjectGeneratedError on edge case)
 
 ### ~~TD-PIPE-005: L3 has no category validation against taxonomy~~
 - **Date:** 2026-03-26
@@ -897,7 +897,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** `costPer1kInput` and `costPer1kOutput` are hardcoded constants. If OpenAI or Anthropic change pricing (frequent), cost estimates drift → budget checks become inaccurate. No mechanism to update rates without code deploy.
 - **Fix:** Move cost rates to DB table (admin-configurable) or external config. Add periodic pricing validation.
 - **Effort:** 4-6 ชม.
-- **Status:** DEFERRED → **Epic 6** (billing infrastructure — cost rate management is part of billing admin feature)
+- **Status:** DEFERRED → **Epic 8** (billing admin UI — not in Epic 6 scope, re-triaged 2026-03-31)
 
 ### TD-PIPE-007: Cost logging fire-and-forget may undercount budget usage
 - **Date:** 2026-03-26
@@ -908,7 +908,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** `logAIUsage(record).catch()` is fire-and-forget. If DB insert fails (constraint violation, connection timeout), cost is not recorded → `checkProjectBudget()` undercounts → budget can be exceeded silently. Compounds with TD-PIPE-003 TOCTOU race.
 - **Fix:** Make cost logging part of the main transaction, or at minimum retry once on failure. Alternatively, implement the reservation pattern in TD-PIPE-003 which makes post-hoc logging less critical.
 - **Effort:** 2-3 ชม.
-- **Status:** DEFERRED → **Epic 6** (billing infrastructure — coupled with TD-PIPE-003 budget reservation redesign)
+- **Status:** DEFERRED → **Epic 8** (billing — TD-PIPE-003 resolved with reservation pattern, but cost logging still fire-and-forget. Reservation mitigates impact. Re-triaged 2026-03-31)
 
 ## Category 10: Scoring Adversarial Review (2026-03-26)
 
@@ -931,7 +931,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** `executeReviewAction` sends `finding.changed` via `inngest.send()` directly. The 500ms debounce emitter (`finding-changed-emitter.ts`) is only used client-side. 5 rapid single-finding actions = 5 Inngest events = 5 sequential scoreFile calls. Not a bug (final score is always correct) but unnecessary work. Inngest projectId concurrency serializes them safely.
 - **Fix:** Add Inngest-level debounce (`debounce` config) or batch event accumulation.
 - **Effort:** 2-3 ชม.
-- **Status:** DEFERRED → **Epic 6** (performance optimization — current behavior is correct, just wasteful)
+- **Status:** DEFERRED → **ทำได้เลย** (self-contained, 2-3 hrs — add Inngest `debounce` config. Correct but wasteful. Risk: none)
 
 ### TD-SCORE-003: penaltyWeight uses PostgreSQL `real` (float32) — precision loss with very small custom weights
 - **Date:** 2026-03-26
@@ -941,7 +941,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Files:** `src/db/schema/severityConfigs.ts`, `src/features/scoring/mqmCalculator.ts`
 - **Description:** `penaltyWeight: real` = float32. Default weights (25, 5, 1) are exact integers — no issue. Custom weights like `0.001` accumulate float32 errors across many findings. Mitigated by 2dp rounding in calculator. Would need `numeric` type for arbitrary-precision.
 - **Effort:** 2 ชม. (migration + type changes)
-- **Status:** DEFERRED → **Epic 6** (admin config — no current admin UI sets custom weights)
+- **Status:** DEFERRED → **Epic 8** (admin config UI — no current UI sets custom weights, 2dp rounding mitigates. Re-triaged 2026-03-31)
 
 ### TD-SCORE-004: Score DELETE+INSERT may cause brief Realtime "no score" flash
 - **Date:** 2026-03-26
@@ -963,7 +963,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** `autoPassRationale` is `text` column storing JSON string. Component parses with Zod + falls back to raw text for legacy. If schema changes (Epic 5+), old rows parse fail → structured display breaks. Fallback handles it but not graceful.
 - **Fix:** Add schema version field to JSON. Or use JSONB column type with explicit version key.
 - **Effort:** 2 ชม.
-- **Status:** DEFERRED → **Epic 6** (when rationale schema actually changes — premature to version now)
+- **Status:** DEFERRED → **Epic 9+** (premature — no schema change planned. Fallback handles legacy. Re-triaged 2026-03-31)
 
 ### TD-SCORE-006: scores.fileId nullable for future project-level aggregates — unused, confusing schema
 - **Date:** 2026-03-26
@@ -985,7 +985,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** `inArray(scores.status, ['calculated', 'auto_passed', 'overridden'])` includes `'overridden'` but no code path currently writes `status: 'overridden'` to the `scores` table. `scoreFile.ts` only writes `'calculated' | 'na' | 'auto_passed' | 'partial'`. The `ScoreStatus` union type includes `'overridden'` for future PM override feature. Including it in the graduation count is harmless today but establishes an undocumented forward dependency.
 - **Fix:** When override-score feature is added (Epic 6), verify the override action writes consistent status through `scoreFile` and that overridden files should count toward graduation threshold.
 - **Effort:** N/A (verification when feature is built)
-- **Status:** DEFERRED → **Epic 6** (override-score feature — `TODO(Epic 6)` comment added in code)
+- **Status:** DEFERRED → **Epic 8** (override-score feature not in Epic 6 scope. Verify when feature built. Re-triaged 2026-03-31)
 
 ---
 
@@ -1031,7 +1031,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Medium
 - **Files:** `src/features/review/actions/approveFile.action.ts`
 - **Description:** Checks score.status but not whether score is the latest version. Score could change (recalculation) between user viewing and approving. Race window is small but real.
-- **Status:** DEFERRED → **Epic 6** (add score.calculatedAt comparison or optimistic lock)
+- **Status:** DEFERRED → **Epic 7** (score approval race — small window, low risk. Re-triaged 2026-03-31)
 
 ## Category 12: Parser Adversarial Review (2026-03-26)
 
@@ -1085,7 +1085,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Medium
 - **Files:** `supabase/migrations/`
 - **Description:** Upload uses service_role admin client bypassing all RLS. No storage.objects policies in migrations. If service_role key leaks, cross-tenant file access possible. Application-level path check ({tenantId}/...) is sole defense.
-- **Status:** DEFERRED → **Epic 6** (add storage.objects RLS policies matching tenant_id in path prefix)
+- **Status:** ~~DEFERRED~~ → **RESOLVED** (2026-03-30 — Storage RLS migration 0019 + 4 policies. See `src/db/migrations/0019_storage_rls_policies.sql`)
 
 ### TD-UPLOAD-004: File type detection is extension-only — no magic byte sniffing
 - **Date:** 2026-03-26
@@ -1134,7 +1134,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Low
 - **Files:** `supabase/config.toml`
 - **Description:** Bucket must be created manually in Supabase dashboard. Fresh deploy has no bucket → upload fails immediately. Should be in seed or migration.
-- **Status:** DEFERRED → **Epic 6** (add bucket creation to supabase/seed.sql or migration)
+- **Status:** DEFERRED → **Epic 6 Story 6.1** (quick fix — add bucket creation to setup. Re-triaged 2026-03-31)
 
 ---
 
@@ -1165,7 +1165,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Low
 - **File:** `src/features/pipeline/helpers/orphanFileDetector.test.ts`
 - **Description:** Inline concept implementation of orphan file detection (files stuck in `*_processing` > 1 hour). Tests pass against local function. Needs extraction to `orphanFileDetector.ts` module with DB query, Inngest cron trigger, and alert/notification system. Test wrapped in `describe.skip()` to prevent false coverage.
-- **Status:** DEFERRED → Epic 6 (monitoring & observability)
+- **Status:** DEFERRED → **Epic 7** (monitoring — concept only, needs production module. Re-triaged 2026-03-31)
 
 ### TD-PIPE-009: Cross-layer dedup — extract inline concept to production module
 - **Date:** 2026-03-27
@@ -1174,7 +1174,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Low
 - **File:** `src/features/pipeline/helpers/crossLayerDedup.test.ts`
 - **Description:** Inline concept implementation of cross-layer deduplication (L2+L3 same segment/category → boost, disagree → marker). Tests pass against local function but do not test any production code. Needs extraction to production module when pipeline orchestrator implements dedup logic.
-- **Status:** DEFERRED → Epic 6 (pipeline orchestrator dedup)
+- **Status:** DEFERRED → **Epic 9** (pipeline dedup — concept only, needs orchestrator changes. Re-triaged 2026-03-31)
 
 ### TD-BT-001: Back-translation contextSegments not wired (surrounding context)
 - **Date:** 2026-03-27
@@ -1219,7 +1219,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Phase:** CR
 - **Files:** `src/features/parity/components/ReportMissingCheckDialog.tsx`
 - **Description:** Custom dialog lacks focus trap (Tab/Shift+Tab cycle, Guardrail #30). Requires migration to Radix Dialog or custom focus trap implementation. Currently only has Escape key handling.
-- **Status:** DEFERRED → Epic 6 (UX polish — dialog accessibility improvements)
+- **Status:** DEFERRED → **Epic 6 nice-to-have** (UX polish — low priority, re-triaged 2026-03-31)
 
 ### TD-UX-008: ReportMissingCheckDialog pre-fills fileId UUID instead of filename
 - **Date:** 2026-03-28
@@ -1228,7 +1228,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Phase:** CR
 - **Files:** `src/features/parity/components/ReportMissingCheckDialog.tsx`
 - **Description:** `fileId` prop is a UUID but pre-filled into fileReference text input. Should resolve to human-readable filename via DB query or parent component prop.
-- **Status:** DEFERRED → Epic 6 (UX polish — parity dialog improvements)
+- **Status:** DEFERRED → **Epic 6 nice-to-have** (UX polish — low priority, re-triaged 2026-03-31)
 
 ### TD-DB-007: Missing UNIQUE(tenant_id, source_lang, target_lang) on language_pair_configs
 - **Date:** 2026-03-28
@@ -1266,4 +1266,30 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Files:** `src/features/review/components/FindingDetailContent.tsx:178` (`<select aria-label="Context range">`)
 - **Description:** When a user clicks a finding row, the detail aside re-renders with new content. The `<select>` element (context range selector) receives browser focus, stealing it from the finding row. This suppresses single-key hotkeys (A/R/F) because Guardrail #28 blocks hotkeys in `<select>`. No `autoFocus` attribute — appears to be browser behavior when previously-focused element is removed from DOM during React re-render. Violates Guardrail #40 (no focus stealing on mount). E2E workaround: `blur()` + `document.body.focus()` before pressing hotkeys.
 - **Fix:** Investigate root cause (browser focus restoration vs. React re-render timing). Options: (a) add `inert` attribute on aside during re-render, (b) use `requestAnimationFrame` to re-focus the active row after detail panel update, (c) prevent `<select>` from receiving focus during content transition via `tabIndex={-1}` temporarily. Quick fix estimate: ~1-2 hours.
-- **Status:** DEFERRED → Epic 6 (non-blocking — E2E workaround in place, hotkeys work via keyboard shortcut after manual blur)
+- **Status:** ~~DEFERRED~~ → **RESOLVED** (fix exists in `FindingDetailContent.tsx:115-202` — `findingTransitionRef` + `onFocus` redirect during transition. Verified 2026-03-31)
+
+---
+
+## Category 14: Realtime Integration Findings (2026-03-30)
+
+### TD-RT-001: Compound Realtime filters silently ignored — only first column effective
+- **Date:** 2026-03-30
+- **Story:** P1 Integration Test Audit (Epic 5 retro prep)
+- **Phase:** Integration test
+- **Severity:** Medium
+- **Files:** `src/features/review/hooks/use-findings-subscription.ts`, `src/features/review/hooks/use-score-subscription.ts`
+- **Description:** Production hooks use compound filter `file_id=eq.X&tenant_id=eq.Y` on Supabase Realtime `postgres_changes`. Supabase Realtime only supports **single-column equality filters** — the second condition (`tenant_id`) is silently ignored. Cross-tenant isolation currently works ONLY because RLS policies block events at the DB level, not because of the filter. If RLS has any gap, data leaks to wrong tenant via Realtime.
+- **Fix:** (1) Remove the compound filter — use single `file_id=eq.X` only (honest about what's filtered). (2) Keep client-side tenant guard as defense-in-depth (already exists in hooks). (3) Document that Realtime tenant isolation depends on RLS, not filter.
+- **Effort:** 1-2 hrs
+- **Status:** ~~OPEN~~ → **RESOLVED** (2026-03-30 — Compound filters removed, single-column only + client-side tenant guard. See `use-findings-subscription.ts`, `use-score-subscription.ts`)
+
+### TD-RT-002: notifications table not in supabase_realtime publication
+- **Date:** 2026-03-30
+- **Story:** P1 Integration Test Audit (Epic 5 retro prep)
+- **Phase:** Integration test
+- **Severity:** High
+- **Files:** `src/features/dashboard/hooks/useNotifications.ts`, `supabase/migrations/`
+- **Description:** `useNotifications` hook subscribes to `postgres_changes` INSERT on `notifications` table. However, the `notifications` table was **never added to the `supabase_realtime` publication**. Supabase Realtime only delivers events for tables in the publication. This means notification Realtime push may silently fail in some Supabase configurations (works in local dev if all tables are auto-published, fails in production if publication is explicitly managed).
+- **Fix:** Add migration: `ALTER PUBLICATION supabase_realtime ADD TABLE notifications;` (wrap in idempotent `DO $$ IF NOT EXISTS $$` per Supabase gotcha — `ALTER PUBLICATION` is not idempotent).
+- **Effort:** 30 min
+- **Status:** ~~OPEN~~ → **RESOLVED** (2026-03-30 — Migration 0020 adds notifications to supabase_realtime publication. See `src/db/migrations/0020_notifications_realtime_publication.sql`)

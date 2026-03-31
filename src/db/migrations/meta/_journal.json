@@ -134,6 +134,20 @@
       "when": 1774687998441,
       "tag": "0018_known_blindfold",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1774891154714,
+      "tag": "0019_green_clint_barton",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1774891207246,
+      "tag": "0020_youthful_midnight",
+      "breakpoints": true
     }
   ]
 }

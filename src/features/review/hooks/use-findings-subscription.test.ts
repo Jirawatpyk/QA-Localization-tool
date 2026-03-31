@@ -570,18 +570,21 @@ describe('useFindingsSubscription', () => {
 
   // ── TD-TENANT-003: tenantId filter (Story 4.1a) ──
 
-  it('[T5.1][P0] should include tenant_id in Realtime filter when tenantId provided', () => {
+  it('[T5.1][P0] should use single-column filter (file_id only) and guard tenant client-side', () => {
     renderHook(() => useFindingsSubscription('file-abc', 'tenant-xyz'))
 
-    // Verify .on() is called with a filter containing tenant_id compound filter
+    // Supabase Realtime supports single-column filter only — verify no compound filter
     const onCalls = mockChannel.on.mock.calls as unknown[][]
-    const hasCompoundFilter = onCalls.some((callArgs) => {
-      const filterConfig = callArgs[1] as Record<string, unknown> | undefined
-      if (!filterConfig) return false
-      const filter = filterConfig.filter as string | undefined
-      return filter?.includes('tenant_id=eq.tenant-xyz')
-    })
-    expect(hasCompoundFilter).toBe(true)
+    const allFilters = onCalls
+      .map((callArgs) => {
+        const filterConfig = callArgs[1] as Record<string, unknown> | undefined
+        return filterConfig?.filter as string | undefined
+      })
+      .filter(Boolean)
+    for (const filter of allFilters) {
+      expect(filter).toBe('file_id=eq.file-abc')
+      expect(filter).not.toContain('&')
+    }
   })
 
   it('[T5.3][P0] should include tenant_id in polling fallback query', async () => {

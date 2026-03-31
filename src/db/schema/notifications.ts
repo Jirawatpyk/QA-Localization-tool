@@ -1,5 +1,6 @@
 import { pgTable, uuid, varchar, text, boolean, jsonb, timestamp } from 'drizzle-orm/pg-core'
 
+import { projects } from './projects'
 import { tenants } from './tenants'
 import { users } from './users'
 
@@ -16,5 +17,7 @@ export const notifications = pgTable('notifications', {
   body: text('body').notNull(),
   isRead: boolean('is_read').notNull().default(false),
   metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+  projectId: uuid('project_id').references(() => projects.id, { onDelete: 'set null' }),
+  archivedAt: timestamp('archived_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
