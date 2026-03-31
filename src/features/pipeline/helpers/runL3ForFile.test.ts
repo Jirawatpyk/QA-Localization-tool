@@ -11,6 +11,7 @@ const {
     mockClassifyAIError,
     mockCheckTenantBudget,
     mockCheckProjectBudget,
+    mockReserveBudget,
     mockWriteAuditLog,
     mockLogAIUsage,
     mockGetModelForLayerWithFallback,
@@ -380,8 +381,15 @@ describe('runL3ForFile', () => {
   })
 
   it('should roll back file status to failed on error', async () => {
-    mockCheckProjectBudget.mockRejectedValue(new Error('DB down'))
-    dbState.returnValues = [[mockFile], [], []]
+    // Production code now uses reserveBudget (not checkProjectBudget).
+    // Crash it to trigger the error/rollback path.
+    mockReserveBudget.mockRejectedValueOnce(new Error('DB down'))
+
+    // Need enough DB returns to reach reserveBudget (Step 5b).
+    // L3 execution order: CAS(0), segments(1), priorFindings(2), l2Stats(3),
+    // langConfig(4), glossary(5), taxonomy(6), project(7) → then reserveBudget crashes.
+    // Rollback needs one more DB call for status update.
+    dbState.returnValues = buildDbReturns({ rest: [[]] })
 
     const { runL3ForFile } = await import('./runL3ForFile')
 

@@ -15,6 +15,7 @@ const {
     mockGenerateText,
     mockClassifyAIError,
     mockCheckProjectBudget,
+    mockReserveBudget,
     mockWriteAuditLog,
     mockLogAIUsage,
     mockAggregateUsage,
@@ -230,8 +231,12 @@ describe('runL2ForFile', () => {
   })
 
   it('should throw NonRetriableError when budget exhausted', async () => {
-    mockCheckProjectBudget.mockResolvedValue(BUDGET_EXHAUSTED)
-    dbState.returnValues = [[mockFile]]
+    // Production code now uses reserveBudget (not checkProjectBudget)
+    mockReserveBudget.mockResolvedValueOnce({ hasQuota: false, reservationId: null })
+
+    // CAS(0), segments(1), l1Findings(2), glossary(3), taxonomy(4), project(5)
+    // reserveBudget happens after project query — needs all DB returns up to project
+    dbState.returnValues = [[mockFile], [buildSegmentRow()], [], [], [], [mockProject]]
 
     const { runL2ForFile } = await import('./runL2ForFile')
 
@@ -472,9 +477,13 @@ describe('runL2ForFile', () => {
   })
 
   it('should not fail if status rollback fails (non-fatal)', async () => {
-    mockCheckProjectBudget.mockRejectedValue(new Error('budget crash'))
-    // CAS succeeds, rollback fails (no more return values)
-    dbState.returnValues = [[mockFile]]
+    // Production code now uses reserveBudget — crash it to trigger the error path
+    mockReserveBudget.mockRejectedValueOnce(new Error('budget crash'))
+
+    // CAS(0), segments(1), l1Findings(2), glossary(3), taxonomy(4), project(5)
+    // reserveBudget crashes after project query. Rollback needs one more DB call for status update.
+    // But we intentionally don't provide it so rollback also "fails" (no more return values).
+    dbState.returnValues = [[mockFile], [buildSegmentRow()], [], [], [], [mockProject]]
 
     const { runL2ForFile } = await import('./runL2ForFile')
 
