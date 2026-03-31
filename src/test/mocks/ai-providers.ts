@@ -169,6 +169,10 @@ export function createAIMock(options?: AIMockOptions): AIMockResult {
     aiBudget: {
       checkTenantBudget: (...args: unknown[]) => mockCheckTenantBudget(...args),
       checkProjectBudget: (...args: unknown[]) => mockCheckProjectBudget(...args),
+      estimateMaxCost: vi.fn(() => 0.01),
+      reserveBudget: vi.fn(async () => ({ hasQuota: true, reservationId: 'mock-reservation-id' })),
+      settleBudget: vi.fn(async () => undefined),
+      releaseBudget: vi.fn(async () => undefined),
     },
     aiTypes: {
       MODEL_CONFIG: modelConfig,
