@@ -14,6 +14,7 @@ const {
     mockClassifyAIError,
     mockCheckTenantBudget,
     mockCheckProjectBudget,
+    mockReserveBudget,
     mockWriteAuditLog,
     mockLogAIUsage,
     mockGetModelForLayerWithFallback,
@@ -1008,8 +1009,8 @@ describe('runL3ForFile — Story 3.3: Selective Filtering & Context', () => {
 
   // Gap C: Budget exhaustion
   it('[P1] TA-C: should throw NonRetriableError when budget exhausted', async () => {
-    dbState.returnValues = [[mockFile], []] // CAS + rollback
-    mockCheckProjectBudget.mockResolvedValue({ hasQuota: false, remainingBudgetUsd: 0 })
+    dbState.returnValues = buildDbReturns({ rest: [] })
+    mockReserveBudget.mockResolvedValueOnce({ hasQuota: false, reservationId: null })
 
     const { runL3ForFile } = await import('./runL3ForFile')
     await expect(
