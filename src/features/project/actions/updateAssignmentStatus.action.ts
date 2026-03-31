@@ -66,6 +66,14 @@ export async function updateAssignmentStatus(
     return { success: false, code: 'NOT_FOUND', error: 'Assignment not found' }
   }
 
+  // Ownership check: only assigned reviewer, assigning admin/QA, or admin can update
+  const isAssignee = current.assignedTo === userId
+  const isAssigner = current.assignedBy === userId
+  const isAdmin = currentUser.role === 'admin' || currentUser.role === 'qa_reviewer'
+  if (!isAssignee && !isAssigner && !isAdmin) {
+    return { success: false, code: 'FORBIDDEN', error: 'Not authorized to update this assignment' }
+  }
+
   const oldStatus = current.status as FileAssignmentStatus
 
   // Validate transition

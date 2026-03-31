@@ -48,10 +48,13 @@ export function SoftLockWrapper({
     autoTransition,
   } = useSoftLock({ assignment, currentUserId })
 
-  // Heartbeat for own active assignment (AC6)
+  // Heartbeat for own assignment (AC6) — enabled for both 'assigned' and 'in_progress'
+  // because autoTransition is async and the prop doesn't update after transition
+  const isOwnActive =
+    isOwnAssignment && (assignment?.status === 'assigned' || assignment?.status === 'in_progress')
   useFilePresence({
     assignmentId: isOwnAssignment ? assignmentId : null,
-    enabled: isOwnAssignment && assignment?.status === 'in_progress',
+    enabled: isOwnActive,
   })
 
   // Auto-transition on mount: assigned→in_progress (AC7)

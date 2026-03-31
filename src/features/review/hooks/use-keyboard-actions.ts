@@ -496,12 +496,15 @@ const HOTKEY_ACTION_MAP: Record<string, keyof ReviewHotkeyHandlers> = {
 export function useReviewHotkeys(
   handlers: ReviewHotkeyHandlers = {},
   getSelectedId?: () => string | null,
+  options?: { readOnly?: boolean },
 ): void {
   const { register } = useKeyboardActions()
   const handlersRef = useRef(handlers)
+  const readOnlyRef = useRef(options?.readOnly ?? false)
 
   useEffect(() => {
     handlersRef.current = handlers
+    readOnlyRef.current = options?.readOnly ?? false
   })
 
   useEffect(() => {
@@ -512,6 +515,7 @@ export function useReviewHotkeys(
       const cleanup = register(
         hotkey.key,
         () => {
+          if (readOnlyRef.current) return // Suppress all hotkeys in read-only mode (AC4)
           if (!actionName) return
           const handler = handlersRef.current[actionName]
           if (!handler) return

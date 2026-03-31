@@ -2,6 +2,7 @@
 
 import { AlertTriangle } from 'lucide-react'
 import { useTransition } from 'react'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { takeOverFile } from '@/features/project/actions/takeOverFile.action'
@@ -45,6 +46,8 @@ export function SoftLockBanner({
 
       if (result.success) {
         onTakeOver?.()
+      } else {
+        toast.error(result.error)
       }
     })
   }

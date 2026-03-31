@@ -134,9 +134,12 @@ export async function getFileHistory(input: unknown): Promise<ActionResult<FileH
             inArray(fileAssignments.status, ['assigned', 'in_progress']),
           ),
         )
+        .orderBy(desc(fileAssignments.updatedAt))
 
       for (const row of assignmentRows) {
-        assignmentMap.set(row.fileId, { assigneeName: row.assigneeName, priority: row.priority })
+        if (!assignmentMap.has(row.fileId)) {
+          assignmentMap.set(row.fileId, { assigneeName: row.assigneeName, priority: row.priority })
+        }
       }
     }
 

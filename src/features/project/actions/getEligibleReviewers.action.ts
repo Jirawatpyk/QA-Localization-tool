@@ -85,7 +85,8 @@ export async function getEligibleReviewers(
     role: r.role,
     nativeLanguages: r.nativeLanguages ?? [],
     workload: r.workload,
-    isAutoSuggested: i === 0,
+    isAutoSuggested:
+      i === 0 && (reviewers.length === 1 || r.workload < (reviewers[1]?.workload ?? Infinity)),
   }))
 
   return { success: true, data: result }

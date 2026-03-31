@@ -64,7 +64,7 @@ CREATE POLICY "file_assignments_update_admin_qa" ON file_assignments
   );
 
 -- Assigned reviewer: UPDATE own assignment (status transitions + heartbeat)
--- Allowed transitions: assigned→in_progress, in_progress→completed, in_progress→assigned (release)
+-- Allowed: assigned→in_progress, in_progress→completed. Release (→assigned) is QA/admin only.
 -- Cannot change: assigned_to, assigned_by, tenant_id, project_id, file_id
 CREATE POLICY "file_assignments_update_assigned" ON file_assignments
   FOR UPDATE TO authenticated
@@ -75,7 +75,7 @@ CREATE POLICY "file_assignments_update_assigned" ON file_assignments
   WITH CHECK (
     tenant_id = ((SELECT auth.jwt()) ->> 'tenant_id')::uuid
     AND assigned_to = ((SELECT auth.jwt()) ->> 'sub')::uuid
-    AND status IN ('assigned', 'in_progress', 'completed')
+    AND status IN ('in_progress', 'completed')
   );
 
 -- Admin only: DELETE assignments

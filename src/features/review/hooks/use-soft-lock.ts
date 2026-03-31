@@ -49,7 +49,10 @@ function computeState(
   }
 
   const la = assignment.lastActiveAt ? new Date(assignment.lastActiveAt) : null
-  const stale = la ? Date.now() - la.getTime() > STALE_THRESHOLD_MS : false
+  // null lastActiveAt on 'assigned' status = nobody started work → treat as stale
+  const stale = la
+    ? Date.now() - la.getTime() > STALE_THRESHOLD_MS
+    : assignment.status === 'assigned'
   return { lockState: stale ? 'stale' : 'locked', isStale: stale }
 }
 
@@ -92,7 +95,7 @@ export function useSoftLock({ assignment, currentUserId }: UseSoftLockOptions): 
   return {
     lockState,
     isOwnAssignment,
-    isReadOnly: !isOwnAssignment && lockState !== 'unlocked',
+    isReadOnly: !isOwnAssignment && lockState === 'locked',
     assigneeName: assignment?.assigneeName ?? null,
     lastActiveAt,
     isStale,

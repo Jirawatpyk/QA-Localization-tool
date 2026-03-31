@@ -610,6 +610,7 @@ export function ReviewPageClient({
       },
     },
     getSelectedId,
+    { readOnly: isReadOnly },
   )
 
   // Story 4.4a: Bulk keyboard shortcuts — Ctrl+A (select all) + Escape (clear bulk)

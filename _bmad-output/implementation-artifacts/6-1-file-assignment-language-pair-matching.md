@@ -313,6 +313,18 @@ Claude Opus 4.6 (1M context)
 
 ### Change Log
 - 2026-03-31: Story 6.1 implementation complete — all 11 tasks done
+- 2026-03-31: Bug fix round — 2 Critical + 8 Important bugs fixed:
+  - C-1: Moved audit+notification outside db.transaction() in takeOverFile (Guardrail #2, #5)
+  - C-2: Added ownership check in updateAssignmentStatus (security)
+  - I-1: Fire-and-forget notifications in assignFile (Guardrail #85)
+  - I-2: Heartbeat enabled for both assigned+in_progress own assignment
+  - I-3: isAutoSuggested only when workload strictly lower (non-deterministic fix)
+  - I-4: Added toast.error on takeover failure (UX)
+  - I-5: Stale state no longer blocks read-only (allows takeover)
+  - I-6: null lastActiveAt + assigned status = stale (prevents permanent lock)
+  - I-7: ORDER BY + keep-first in getFileHistory Query 4
+  - I-8: RLS WITH CHECK tightened — reviewer cannot set status back to 'assigned'
+- 2026-03-31: E2E debugging — 12 root causes found and fixed (testid alignment, hydration waits, data flow gaps, read-only context, keyboard suppression, separate files per test group)
 
 ### File List
 - `src/db/migrations/0022_story_6_1_file_assignments_rls.sql` (new)
@@ -350,3 +362,9 @@ Claude Opus 4.6 (1M context)
 - `src/features/pipeline/inngest/processBatch.ts` (modified — priority forwarding)
 - `src/types/pipeline.ts` (modified — priority field on event data types)
 - `src/features/pipeline/inngest/processBatch.payload.test.ts` (modified — added 'priority' to required keys)
+- `src/features/review/hooks/use-read-only-mode.ts` (new — ReadOnlyContext for review page)
+- `src/features/review/hooks/use-keyboard-actions.ts` (modified — readOnlyRef suppression)
+- `src/features/review/components/ReviewPageClient.tsx` (modified — isReadOnly integration)
+- `src/features/batch/components/FileHistoryPageClient.tsx` (modified — targetLanguage + assignment data)
+- `src/features/batch/actions/getFileHistory.action.ts` (modified — Query 4 file_assignments JOIN)
+- `src/app/(app)/projects/[projectId]/files/page.tsx` (modified — targetLanguage from project)

@@ -97,8 +97,8 @@ export async function assignFile(input: unknown): Promise<ActionResult<FileAssig
     newValue: { fileId, assignedTo, priority, notes },
   })
 
-  // Notification (non-blocking — Guardrail #85)
-  await createNotification({
+  // Notification (fire-and-forget — Guardrail #85)
+  void createNotification({
     tenantId,
     userId: assignedTo,
     type: NOTIFICATION_TYPES.FILE_ASSIGNED,
@@ -110,7 +110,7 @@ export async function assignFile(input: unknown): Promise<ActionResult<FileAssig
 
   // Urgent notification (separate — Guardrail #85)
   if (priority === 'urgent') {
-    await createNotification({
+    void createNotification({
       tenantId,
       userId: assignedTo,
       type: NOTIFICATION_TYPES.FILE_URGENT,

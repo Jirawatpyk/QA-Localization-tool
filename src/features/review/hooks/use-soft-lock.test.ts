@@ -86,19 +86,19 @@ describe('useSoftLock', () => {
     )
     expect(result.current.lockState).toBe('stale')
     expect(result.current.isStale).toBe(true)
-    expect(result.current.isReadOnly).toBe(true)
+    expect(result.current.isReadOnly).toBe(false) // I-5: stale = not read-only (takeover offered)
   })
 
-  it('should return stale when lastActiveAt is null (unknown activity)', () => {
+  it('should return stale when lastActiveAt is null on assigned status', () => {
     const { result } = renderHook(() =>
       useSoftLock({
-        assignment: { ...baseAssignment, lastActiveAt: null },
+        assignment: { ...baseAssignment, status: 'assigned' as const, lastActiveAt: null },
         currentUserId: 'user-me',
       }),
     )
-    // null lastActiveAt = cannot determine staleness, treat as locked
-    expect(result.current.lockState).toBe('locked')
-    expect(result.current.isStale).toBe(false)
+    // I-6: null lastActiveAt on 'assigned' = nobody started work → stale
+    expect(result.current.lockState).toBe('stale')
+    expect(result.current.isStale).toBe(true)
   })
 
   it('should return unlocked for completed assignment by another user', () => {

@@ -82,41 +82,16 @@ export async function takeOverFile(input: unknown): Promise<ActionResult<FileAss
     }
     const newAssignment = newRows[0]!
 
-    // Audit log (Guardrail #2: happy path — let throw)
-    await writeAuditLog({
-      tenantId,
-      userId,
-      entityType: 'file_assignment',
-      entityId: newAssignment.id,
-      action: 'file_takeover',
-      oldValue: {
-        assignmentId: oldAssignment.id,
+    return {
+      conflict: false as const,
+      assignment: newAssignment,
+      oldAssignment: {
+        id: oldAssignment.id,
         assignedTo: oldAssignment.assignedTo,
         status: oldAssignment.status,
-      },
-      newValue: {
-        assignmentId: newAssignment.id,
-        assignedTo: userId,
-        status: 'in_progress',
-      },
-    })
-
-    // Notification to original assignee (non-blocking — Guardrail #85)
-    await createNotification({
-      tenantId,
-      userId: oldAssignment.assignedTo,
-      type: NOTIFICATION_TYPES.FILE_REASSIGNED,
-      title: 'File reassigned',
-      body: 'Another reviewer has taken over the file you were assigned',
-      projectId,
-      metadata: {
         fileId: oldAssignment.fileId,
-        oldAssignmentId: oldAssignment.id,
-        newAssignmentId: newAssignment.id,
       },
-    })
-
-    return { conflict: false as const, assignment: newAssignment }
+    }
   })
 
   if (result.conflict) {
@@ -126,6 +101,39 @@ export async function takeOverFile(input: unknown): Promise<ActionResult<FileAss
       error: 'Assignment no longer active — may have been completed or cancelled',
     }
   }
+
+  // Audit + notification OUTSIDE transaction (Guardrail #2, #5, #85)
+  await writeAuditLog({
+    tenantId,
+    userId,
+    entityType: 'file_assignment',
+    entityId: result.assignment.id,
+    action: 'file_takeover',
+    oldValue: {
+      assignmentId: result.oldAssignment.id,
+      assignedTo: result.oldAssignment.assignedTo,
+      status: result.oldAssignment.status,
+    },
+    newValue: {
+      assignmentId: result.assignment.id,
+      assignedTo: userId,
+      status: 'in_progress',
+    },
+  })
+
+  void createNotification({
+    tenantId,
+    userId: result.oldAssignment.assignedTo,
+    type: NOTIFICATION_TYPES.FILE_REASSIGNED,
+    title: 'File reassigned',
+    body: 'Another reviewer has taken over the file you were assigned',
+    projectId,
+    metadata: {
+      fileId: result.oldAssignment.fileId,
+      oldAssignmentId: result.oldAssignment.id,
+      newAssignmentId: result.assignment.id,
+    },
+  })
 
   logger.info({ assignmentId: result.assignment.id, userId }, 'File takeover completed')
 
