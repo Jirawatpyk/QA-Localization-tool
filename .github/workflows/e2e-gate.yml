@@ -11,14 +11,14 @@ concurrency:
 
 jobs:
   e2e:
-    name: E2E Shard ${{ matrix.shardIndex }}/5
+    name: E2E Shard ${{ matrix.shardIndex }}/3
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        shardIndex: [1, 2, 3, 4, 5]
-        shardTotal: [5]
+        shardIndex: [1, 2, 3]
+        shardTotal: [3]
 
     env:
       # Supabase Cloud — required for E2E auth tests
@@ -104,8 +104,8 @@ jobs:
           sleep 3
           echo "Inngest function sync complete"
 
-      - name: Run E2E tests (shard ${{ matrix.shardIndex }}/5)
-        run: npx playwright test --shard=${{ matrix.shardIndex }}/5
+      - name: Run E2E tests (shard ${{ matrix.shardIndex }}/3)
+        run: npx playwright test --shard=${{ matrix.shardIndex }}/3
 
       - name: Upload blob report
         if: always()
