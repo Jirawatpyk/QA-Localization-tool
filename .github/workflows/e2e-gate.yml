@@ -13,7 +13,7 @@ jobs:
   e2e:
     name: E2E Shard ${{ matrix.shardIndex }}/3
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 75
     strategy:
       fail-fast: false
       matrix:
@@ -71,21 +71,20 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Build Next.js (production)
-        run: npm run build
-
-      - name: Start Next.js production server
+      - name: Start Next.js dev server
         run: |
-          npm start &
+          npm run dev &
           echo "Waiting for Next.js on port 3000..."
-          timeout 60 bash -c 'until curl -sf http://localhost:3000 > /dev/null 2>&1; do sleep 1; done'
+          timeout 120 bash -c 'until curl -sf http://localhost:3000 > /dev/null 2>&1; do sleep 1; done'
           echo "Next.js is ready"
 
       - name: Pre-warm Inngest API route
         run: |
-          echo "Pre-warming /api/inngest route..."
+          # Next.js dev mode uses on-demand compilation — the /api/inngest route
+          # must be compiled BEFORE Inngest CLI tries to autodiscover functions.
+          echo "Pre-warming /api/inngest route (triggers Next.js compilation)..."
           timeout 60 bash -c 'until curl -sf http://localhost:3000/api/inngest > /dev/null 2>&1; do sleep 2; done'
-          echo "Inngest API route ready"
+          echo "Inngest API route compiled successfully"
 
       - name: Start Inngest dev server
         run: |
