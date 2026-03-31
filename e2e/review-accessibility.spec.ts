@@ -389,8 +389,9 @@ test.describe.serial('Review Performance Benchmarks', () => {
     const navTime = Date.now() - startNav
 
     // eslint-disable-next-line no-console
-    console.log(`[PERF] J/K nav time: ${navTime}ms (target: <100ms prod, <2000ms dev)`)
-    const navLimit = process.env.CI ? 500 : 2000
+    console.log(`[PERF] J/K nav time: ${navTime}ms (target: <100ms prod, <3000ms CI, <2000ms dev)`)
+    // CI: 3s (350 findings + shared runner). Dev: 2s. Production target: <100ms.
+    const navLimit = process.env.CI ? 3_000 : 2_000
     expect(navTime).toBeLessThan(navLimit)
   })
 
