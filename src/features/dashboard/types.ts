@@ -59,6 +59,7 @@ export type AppNotification = {
   tenantId: string
   userId: string
   type: NotificationType
+  projectId: string | null
   title: string
   body: string
   isRead: boolean

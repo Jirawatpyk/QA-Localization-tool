@@ -21,6 +21,7 @@ const rawNotificationSchema = z.object({
   tenant_id: z.string(),
   user_id: z.string(),
   type: z.enum(notificationTypeValues),
+  project_id: z.string().nullable(),
   title: z.string(),
   body: z.string(),
   is_read: z.boolean(),
@@ -37,6 +38,7 @@ function mapRealtimePayload(raw: RawNotificationPayload): AppNotification {
     tenantId: raw.tenant_id,
     userId: raw.user_id,
     type: raw.type as NotificationType,
+    projectId: raw.project_id,
     title: raw.title,
     body: raw.body,
     isRead: raw.is_read,
@@ -102,12 +104,22 @@ export function useNotifications(userId: string, tenantId: string) {
   }, [userId, tenantId, supabase])
 
   // Re-fetch on tab visibility change (cross-tab staleness fix — AC7)
+  // Uses functional update to merge with Realtime state, preventing race condition
+  // where a Realtime INSERT during the fetch would be discarded by a full replace.
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         getNotifications()
           .then((result) => {
-            if (result.success) setNotifications(result.data)
+            if (result.success) {
+              setNotifications((prev) => {
+                const fetchedIds = new Set(result.data.map((n) => n.id))
+                const realtimeOnly = prev.filter((n) => !fetchedIds.has(n.id))
+                return [...realtimeOnly, ...result.data].sort(
+                  (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+                )
+              })
+            }
           })
           .catch(() => {}) // Non-critical
       }

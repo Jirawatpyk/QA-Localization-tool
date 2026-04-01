@@ -8,12 +8,14 @@ import { getNotificationLink } from './getNotificationLink'
 function makeNotif(
   type: NotificationType,
   metadata: Record<string, unknown> | null = null,
+  projectId: string | null = null,
 ): AppNotification {
   return {
     id: 'n-1',
     tenantId: 't-1',
     userId: 'u-1',
     type,
+    projectId,
     title: 'Test',
     body: 'Test body',
     isRead: false,
@@ -87,6 +89,18 @@ describe('getNotificationLink', () => {
       targetLang: 'th',
     })
     expect(getNotificationLink(notif)).toBe('/projects/p1/settings')
+  })
+
+  // ── projectId column-first fallback ──
+
+  it('should use projectId from column when metadata lacks projectId', () => {
+    const notif = makeNotif('file_assigned', { fileId: 'f1' }, 'p-col')
+    expect(getNotificationLink(notif)).toBe('/projects/p-col/review/f1')
+  })
+
+  it('should prefer projectId from column over metadata', () => {
+    const notif = makeNotif('file_assigned', { projectId: 'p-meta', fileId: 'f1' }, 'p-col')
+    expect(getNotificationLink(notif)).toBe('/projects/p-col/review/f1')
   })
 
   // ── Null fallback cases ──

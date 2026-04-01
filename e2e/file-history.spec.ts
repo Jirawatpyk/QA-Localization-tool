@@ -135,7 +135,7 @@ test.describe('File History Page (Story 2.7)', () => {
     const totalCount = await allRows.count()
 
     // Click a status filter — filter button MUST be visible (seeded 1 failed file)
-    const failedFilter = page.getByRole('button', { name: /Failed/i })
+    const failedFilter = page.getByRole('button', { name: 'Failed', exact: true })
     await expect(failedFilter).toBeVisible({ timeout: 5_000 })
     await failedFilter.click()
     // Wait for filter to apply — expect header + 1 failed file = 2 rows
