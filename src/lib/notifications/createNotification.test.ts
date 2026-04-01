@@ -76,7 +76,7 @@ describe('createNotification', () => {
     )
   })
 
-  it('should export all notification type constants', () => {
+  it('should export all notification type constants (8 existing + 3 new = 11)', () => {
     expect(NOTIFICATION_TYPES.FINDING_FLAGGED_FOR_NATIVE).toBe('finding_flagged_for_native')
     expect(NOTIFICATION_TYPES.NATIVE_REVIEW_COMPLETED).toBe('native_review_completed')
     expect(NOTIFICATION_TYPES.NATIVE_COMMENT_ADDED).toBe('native_comment_added')
@@ -85,6 +85,12 @@ describe('createNotification', () => {
     expect(NOTIFICATION_TYPES.FILE_REASSIGNED).toBe('file_reassigned')
     expect(NOTIFICATION_TYPES.FILE_URGENT).toBe('file_urgent')
     expect(NOTIFICATION_TYPES.ASSIGNMENT_COMPLETED).toBe('assignment_completed')
+    // Story 6.2a: 3 new types for 6-2b wiring
+    expect(NOTIFICATION_TYPES.ANALYSIS_COMPLETE).toBe('analysis_complete')
+    expect(NOTIFICATION_TYPES.GLOSSARY_UPDATED).toBe('glossary_updated')
+    expect(NOTIFICATION_TYPES.AUTO_PASS_TRIGGERED).toBe('auto_pass_triggered')
+    // Total: 11 constants
+    expect(Object.keys(NOTIFICATION_TYPES)).toHaveLength(11)
   })
 })
 

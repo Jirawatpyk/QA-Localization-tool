@@ -1,3 +1,4 @@
+import type { NotificationType } from '@/lib/notifications/types'
 import type { DbFileStatus } from '@/types/pipeline'
 
 // ── AI Usage Dashboard types (Story 3.1a) ──────────────────────────────────
@@ -57,7 +58,7 @@ export type AppNotification = {
   id: string
   tenantId: string
   userId: string
-  type: string
+  type: NotificationType
   title: string
   body: string
   isRead: boolean

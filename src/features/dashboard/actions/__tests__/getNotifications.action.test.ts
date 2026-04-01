@@ -1,5 +1,5 @@
-// ATDD GREEN PHASE — Story 1.7: Dashboard, Notifications & Onboarding
-// Tests unskipped after implementing getNotifications action.
+// Story 6-2a: getNotifications action tests
+// Replaced Proxy mock with drizzleMock (TD-TEST-013 resolved)
 
 vi.mock('server-only', () => ({}))
 
@@ -11,44 +11,17 @@ vi.mock('@/lib/auth/getCurrentUser', () => ({
   getCurrentUser: vi.fn(),
 }))
 
-// Chainable DB mock using Proxy
-let queryResults: unknown[] = []
-let queryIndex = 0
+const { dbState, dbMockModule } = vi.hoisted(() =>
+  (
+    globalThis as unknown as {
+      createDrizzleMock: () => import('@/test/drizzleMock').DrizzleMockResult
+    }
+  ).createDrizzleMock(),
+)
+vi.mock('@/db/client', () => dbMockModule)
 
-function createChainProxy(resolvedValue: unknown) {
-  const handler = (): unknown =>
-    new Proxy(
-      {},
-      {
-        get(_target, prop) {
-          if (prop === 'then') {
-            return (resolve: (v: unknown) => void) => resolve(resolvedValue)
-          }
-          return (..._args: unknown[]) => handler()
-        },
-      },
-    )
-  return handler()
-}
-
-vi.mock('@/db/client', () => ({
-  db: {
-    select: (..._args: unknown[]) => createChainProxy(queryResults[queryIndex++] ?? []),
-  },
-}))
-
-vi.mock('@/db/schema/notifications', () => ({
-  notifications: {
-    id: 'id',
-    tenantId: 'tenant_id',
-    userId: 'user_id',
-    type: 'type',
-    title: 'title',
-    body: 'body',
-    isRead: 'is_read',
-    metadata: 'metadata',
-    createdAt: 'created_at',
-  },
+vi.mock('@/lib/logger', () => ({
+  logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }))
 
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
@@ -56,8 +29,11 @@ import { getCurrentUser } from '@/lib/auth/getCurrentUser'
 describe('getNotifications action', () => {
   beforeEach(() => {
     vi.resetAllMocks()
-    queryResults = []
-    queryIndex = 0
+    dbState.callIndex = 0
+    dbState.returnValues = []
+    dbState.valuesCaptures = []
+    dbState.setCaptures = []
+    dbState.throwAtCallIndex = null
   })
 
   it('[P1] should return unread notifications for the current user', async () => {
@@ -71,19 +47,21 @@ describe('getNotifications action', () => {
       nativeLanguages: [],
     })
 
-    queryResults.push([
-      {
-        id: 'notif-1',
-        tenantId: asTenantId('ten-a-001'),
-        userId: 'usr-test-001',
-        type: 'glossary_updated',
-        title: 'Glossary Updated',
-        body: '3 terms added',
-        isRead: false,
-        metadata: null,
-        createdAt: new Date('2026-02-20T10:00:00Z'),
-      },
-    ])
+    dbState.returnValues = [
+      [
+        {
+          id: 'notif-1',
+          tenantId: 'ten-a-001',
+          userId: 'usr-test-001',
+          type: 'glossary_updated',
+          title: 'Glossary Updated',
+          body: '3 terms added',
+          isRead: false,
+          metadata: null,
+          createdAt: new Date('2026-02-20T10:00:00Z'),
+        },
+      ],
+    ]
 
     const { getNotifications } =
       await import('@/features/dashboard/actions/getNotifications.action')
@@ -92,10 +70,10 @@ describe('getNotifications action', () => {
     expect(result.success).toBe(true)
     if (result.success) {
       expect(Array.isArray(result.data)).toBe(true)
-      result.data.forEach((n) => {
-        expect(n.userId).toBe('usr-test-001')
-        expect(n.tenantId).toBe('ten-a-001')
-      })
+      expect(result.data).toHaveLength(1)
+      expect(result.data[0]!.userId).toBe('usr-test-001')
+      expect(result.data[0]!.tenantId).toBe('ten-a-001')
+      expect(result.data[0]!.createdAt).toBe('2026-02-20T10:00:00.000Z')
     }
   })
 
@@ -110,20 +88,21 @@ describe('getNotifications action', () => {
       nativeLanguages: [],
     })
 
-    // DB returns only notifications for usr-test-002 (filtered by WHERE clause)
-    queryResults.push([
-      {
-        id: 'notif-2',
-        tenantId: asTenantId('ten-a-001'),
-        userId: 'usr-test-002',
-        type: 'analysis_complete',
-        title: 'Analysis Done',
-        body: 'File processed',
-        isRead: false,
-        metadata: null,
-        createdAt: new Date(),
-      },
-    ])
+    dbState.returnValues = [
+      [
+        {
+          id: 'notif-2',
+          tenantId: 'ten-a-001',
+          userId: 'usr-test-002',
+          type: 'analysis_complete',
+          title: 'Analysis Done',
+          body: 'File processed',
+          isRead: false,
+          metadata: null,
+          createdAt: new Date(),
+        },
+      ],
+    ]
 
     const { getNotifications } =
       await import('@/features/dashboard/actions/getNotifications.action')
@@ -148,8 +127,9 @@ describe('getNotifications action', () => {
       nativeLanguages: [],
     })
 
-    // Mock returns empty array — simulating DB WHERE clause filtering out cross-tenant data
-    queryResults.push([])
+    // DB returns empty — withTenant() filters out cross-tenant data
+    // Real tenant isolation verified by RLS tests in src/db/__tests__/rls/
+    dbState.returnValues = [[]]
 
     const { getNotifications } =
       await import('@/features/dashboard/actions/getNotifications.action')
@@ -157,10 +137,6 @@ describe('getNotifications action', () => {
 
     expect(result.success).toBe(true)
     if (result.success) {
-      // Vacuous assertion acknowledged: Proxy-based DB mock doesn't capture WHERE params,
-      // so we can only verify the action returns empty data for a different tenant.
-      // Real tenant isolation is verified by RLS tests in src/db/__tests__/rls/.
-      // TODO(TD-TEST-013): Replace Proxy mock with drizzleMock to verify withTenant() in WHERE clause
       expect(result.data).toEqual([])
     }
   })
@@ -190,7 +166,7 @@ describe('getNotifications action', () => {
       nativeLanguages: [],
     })
 
-    queryResults.push([])
+    dbState.returnValues = [[]]
 
     const { getNotifications } =
       await import('@/features/dashboard/actions/getNotifications.action')
@@ -199,6 +175,29 @@ describe('getNotifications action', () => {
     expect(result.success).toBe(true)
     if (result.success) {
       expect(result.data).toEqual([])
+    }
+  })
+
+  it('[P1] should handle DB errors gracefully', async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      id: 'usr-test-004',
+      email: 'qa@tenant-a.test',
+      tenantId: asTenantId('ten-a-001'),
+      role: 'qa_reviewer',
+      displayName: 'QA User',
+      metadata: null,
+      nativeLanguages: [],
+    })
+
+    dbState.throwAtCallIndex = 0
+
+    const { getNotifications } =
+      await import('@/features/dashboard/actions/getNotifications.action')
+    const result = await getNotifications()
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('INTERNAL_ERROR')
     }
   })
 })

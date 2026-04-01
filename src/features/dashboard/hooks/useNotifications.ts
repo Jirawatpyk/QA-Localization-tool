@@ -5,14 +5,22 @@ import { z } from 'zod'
 import { getNotifications } from '@/features/dashboard/actions/getNotifications.action'
 import { markNotificationRead as markNotificationReadAction } from '@/features/dashboard/actions/markNotificationRead.action'
 import type { AppNotification } from '@/features/dashboard/types'
+import { NOTIFICATION_TYPES, type NotificationType } from '@/lib/notifications/types'
 import { createBrowserClient } from '@/lib/supabase/client'
 
-/** Zod schema for validating raw Supabase Realtime payload (snake_case DB columns) */
+/**
+ * Zod schema for validating raw Supabase Realtime payload (snake_case DB columns).
+ * Type field is validated against known NOTIFICATION_TYPES — unknown types are
+ * intentionally rejected to enforce type-safety. If a new type is inserted without
+ * adding to NOTIFICATION_TYPES first, the Realtime handler will skip it and log a warning.
+ */
+const notificationTypeValues = Object.values(NOTIFICATION_TYPES) as [string, ...string[]]
+
 const rawNotificationSchema = z.object({
   id: z.string(),
   tenant_id: z.string(),
   user_id: z.string(),
-  type: z.string(),
+  type: z.enum(notificationTypeValues),
   title: z.string(),
   body: z.string(),
   is_read: z.boolean(),
@@ -28,7 +36,7 @@ function mapRealtimePayload(raw: RawNotificationPayload): AppNotification {
     id: raw.id,
     tenantId: raw.tenant_id,
     userId: raw.user_id,
-    type: raw.type,
+    type: raw.type as NotificationType,
     title: raw.title,
     body: raw.body,
     isRead: raw.is_read,
@@ -70,7 +78,11 @@ export function useNotifications(userId: string, tenantId: string) {
         },
         (payload) => {
           const parsed = rawNotificationSchema.safeParse(payload.new)
-          if (!parsed.success) return // Skip invalid payloads silently
+          if (!parsed.success) {
+            // Log discarded payloads so unknown types are discoverable
+            console.warn('[useNotifications] Discarded Realtime payload:', parsed.error.issues)
+            return
+          }
           const raw = parsed.data
           // Client-side tenant guard (defense-in-depth)
           if (raw.tenant_id !== tenantId) return
@@ -88,6 +100,21 @@ export function useNotifications(userId: string, tenantId: string) {
       void supabase.removeChannel(channel)
     }
   }, [userId, tenantId, supabase])
+
+  // Re-fetch on tab visibility change (cross-tab staleness fix — AC7)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        getNotifications()
+          .then((result) => {
+            if (result.success) setNotifications(result.data)
+          })
+          .catch(() => {}) // Non-critical
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [])
 
   const unreadCount = useMemo(() => notifications.filter((n) => !n.isRead).length, [notifications])
 

@@ -1,7 +1,7 @@
 'use server'
 import 'server-only'
 
-import { desc, eq, and } from 'drizzle-orm'
+import { desc, eq, and, isNull } from 'drizzle-orm'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
@@ -9,6 +9,7 @@ import { notifications } from '@/db/schema/notifications'
 import type { AppNotification } from '@/features/dashboard/types'
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
 import { logger } from '@/lib/logger'
+import type { NotificationType } from '@/lib/notifications/types'
 import type { ActionResult } from '@/types/actionResult'
 
 export async function getNotifications(): Promise<ActionResult<AppNotification[]>> {
@@ -25,6 +26,7 @@ export async function getNotifications(): Promise<ActionResult<AppNotification[]
         and(
           eq(notifications.userId, currentUser.id),
           withTenant(notifications.tenantId, currentUser.tenantId),
+          isNull(notifications.archivedAt),
         ),
       )
       .orderBy(desc(notifications.createdAt))
@@ -34,7 +36,7 @@ export async function getNotifications(): Promise<ActionResult<AppNotification[]
       id: row.id,
       tenantId: row.tenantId,
       userId: row.userId,
-      type: row.type,
+      type: row.type as NotificationType,
       title: row.title,
       body: row.body,
       isRead: row.isRead,

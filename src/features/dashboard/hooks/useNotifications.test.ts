@@ -2,6 +2,10 @@
  * TDD RED PHASE — Story 4.0: Review Infrastructure Setup
  * TD-UX-003 Regression: useNotifications Realtime payload validation
  */
+vi.mock('server-only', () => ({}))
+vi.mock('@/db/client', () => ({ db: {} }))
+vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }))
+
 import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
@@ -79,7 +83,7 @@ describe('useNotifications — TD-UX-003', () => {
           id: 'n-1',
           tenant_id: 'tenant-other',
           user_id: 'user-1',
-          type: 'info',
+          type: 'file_assigned',
           title: 'Cross-tenant',
           body: 'Should be blocked',
           is_read: false,
@@ -111,7 +115,7 @@ describe('useNotifications — TD-UX-003', () => {
           id: 'n-2',
           tenantId: 'tenant-1',
           userId: 'user-1',
-          type: 'info',
+          type: 'file_assigned',
           title: 'Test',
           body: 'Body',
           isRead: false,
@@ -173,7 +177,7 @@ describe('useNotifications — TD-UX-003', () => {
           id: 'n-3',
           tenantId: 'tenant-1',
           userId: 'user-1',
-          type: 'info',
+          type: 'file_assigned',
           title: 'Test',
           body: 'Body',
           isRead: false,
@@ -211,6 +215,86 @@ describe('useNotifications — TD-UX-003', () => {
     })
 
     expect(toast.error).toHaveBeenCalledWith('Failed to mark notifications as read')
+  })
+
+  // ── AC7: visibilitychange re-fetch ──
+
+  it('[P1] should re-fetch notifications when tab becomes visible', async () => {
+    const { getNotifications } =
+      await import('@/features/dashboard/actions/getNotifications.action')
+    const mockGet = vi.mocked(getNotifications)
+    // Initial fetch returns empty
+    mockGet.mockResolvedValueOnce({ success: true, data: [] })
+
+    const { result } = renderHook(() => useNotifications('user-1', 'tenant-1'))
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0))
+    })
+
+    expect(result.current.notifications).toHaveLength(0)
+
+    // Simulate tab becoming visible with fresh data
+    mockGet.mockResolvedValueOnce({
+      success: true,
+      data: [
+        {
+          id: 'n-fresh',
+          tenantId: 'tenant-1',
+          userId: 'user-1',
+          type: 'file_assigned',
+          title: 'Fresh',
+          body: 'From other tab',
+          isRead: true,
+          metadata: null,
+          createdAt: '2026-04-01T00:00:00Z',
+        },
+      ],
+    })
+
+    // Fire visibilitychange with document.visibilityState = 'visible'
+    Object.defineProperty(document, 'visibilityState', {
+      value: 'visible',
+      writable: true,
+      configurable: true,
+    })
+
+    await act(async () => {
+      document.dispatchEvent(new Event('visibilitychange'))
+      await new Promise((r) => setTimeout(r, 0))
+    })
+
+    expect(result.current.notifications).toHaveLength(1)
+    expect(result.current.notifications[0]!.id).toBe('n-fresh')
+  })
+
+  it('[P2] should NOT re-fetch when tab becomes hidden', async () => {
+    const { getNotifications } =
+      await import('@/features/dashboard/actions/getNotifications.action')
+    const mockGet = vi.mocked(getNotifications)
+    mockGet.mockResolvedValueOnce({ success: true, data: [] })
+
+    renderHook(() => useNotifications('user-1', 'tenant-1'))
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0))
+    })
+
+    const callCountAfterInit = mockGet.mock.calls.length
+
+    Object.defineProperty(document, 'visibilityState', {
+      value: 'hidden',
+      writable: true,
+      configurable: true,
+    })
+
+    await act(async () => {
+      document.dispatchEvent(new Event('visibilitychange'))
+      await new Promise((r) => setTimeout(r, 0))
+    })
+
+    // No additional calls — only fires on 'visible'
+    expect(mockGet.mock.calls.length).toBe(callCountAfterInit)
   })
 
   it('[P2] should toast error when initial fetch fails', async () => {
