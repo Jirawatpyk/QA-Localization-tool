@@ -86,7 +86,7 @@ describe('useSoftLock', () => {
     )
     expect(result.current.lockState).toBe('stale')
     expect(result.current.isStale).toBe(true)
-    expect(result.current.isReadOnly).toBe(false) // I-5: stale = not read-only (takeover offered)
+    expect(result.current.isReadOnly).toBe(true) // D2: stale = read-only (must takeover first)
   })
 
   it('should return stale when lastActiveAt is null on assigned status', () => {

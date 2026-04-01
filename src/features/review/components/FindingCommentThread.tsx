@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
+import { useCallback, useEffect, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -41,19 +41,18 @@ export function FindingCommentThread({
   const [newComment, setNewComment] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoadingComments, startLoadTransition] = useTransition()
-  const mountedRef = useRef(false)
 
   // Load comments on mount + when assignmentId changes
   useEffect(() => {
-    mountedRef.current = true
+    let cancelled = false
     startLoadTransition(async () => {
       const result = await getFindingComments(findingAssignmentId)
-      if (mountedRef.current && result.success) {
+      if (!cancelled && result.success) {
         setComments(result.data)
       }
     })
     return () => {
-      mountedRef.current = false
+      cancelled = true
     }
   }, [findingAssignmentId])
 

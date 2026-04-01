@@ -73,11 +73,12 @@ export function FileHistoryTable({
   return (
     <div className="space-y-4" data-testid="file-list">
       {/* Filter buttons */}
-      <div className="flex gap-2" role="group">
+      <div className="flex gap-2" role="group" aria-label="Filter files">
         {(Object.keys(FILTER_LABELS) as FileHistoryFilter[]).map((filter) => (
           <button
             key={filter}
             type="button"
+            aria-pressed={activeFilter === filter}
             className={`rounded-md border px-3 py-1.5 text-sm ${
               activeFilter === filter
                 ? 'bg-primary text-primary-foreground'
@@ -169,6 +170,7 @@ export function FileHistoryTable({
               <button
                 key={p}
                 type="button"
+                aria-current={currentPage === p ? 'page' : undefined}
                 className={`rounded px-3 py-1 text-sm ${
                   currentPage === p ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 }`}

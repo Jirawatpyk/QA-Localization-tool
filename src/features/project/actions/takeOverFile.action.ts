@@ -40,6 +40,25 @@ export async function takeOverFile(input: unknown): Promise<ActionResult<FileAss
   const { currentAssignmentId, projectId } = parsed.data
   const { tenantId, id: userId } = currentUser
 
+  // Fetch old assignment to check self-takeover (P5)
+  const [oldCheck] = await db
+    .select({ assignedTo: fileAssignments.assignedTo })
+    .from(fileAssignments)
+    .where(
+      and(
+        eq(fileAssignments.id, currentAssignmentId),
+        withTenant(fileAssignments.tenantId, tenantId),
+        inArray(fileAssignments.status, ['assigned', 'in_progress']),
+      ),
+    )
+
+  if (!oldCheck) {
+    return { success: false, code: 'CONFLICT', error: 'Assignment no longer active' }
+  }
+  if (oldCheck.assignedTo === userId) {
+    return { success: false, code: 'CONFLICT', error: 'Cannot take over your own assignment' }
+  }
+
   // Transaction: cancel old + insert new (Guardrail #5)
   const result = await db.transaction(async (tx) => {
     // Optimistic locking: WHERE id AND status IN active (Guardrail #81)
@@ -121,7 +140,7 @@ export async function takeOverFile(input: unknown): Promise<ActionResult<FileAss
     },
   })
 
-  void createNotification({
+  createNotification({
     tenantId,
     userId: result.oldAssignment.assignedTo,
     type: NOTIFICATION_TYPES.FILE_REASSIGNED,
@@ -133,7 +152,7 @@ export async function takeOverFile(input: unknown): Promise<ActionResult<FileAss
       oldAssignmentId: result.oldAssignment.id,
       newAssignmentId: result.assignment.id,
     },
-  })
+  }).catch(() => {})
 
   logger.info({ assignmentId: result.assignment.id, userId }, 'File takeover completed')
 

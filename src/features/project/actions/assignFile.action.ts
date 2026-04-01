@@ -97,28 +97,30 @@ export async function assignFile(input: unknown): Promise<ActionResult<FileAssig
     newValue: { fileId, assignedTo, priority, notes },
   })
 
-  // Notification (fire-and-forget — Guardrail #85)
-  void createNotification({
+  // Notification (fire-and-forget — Guardrail #85, #23)
+  const safeFileName =
+    file.fileName.length > 80 ? `${file.fileName.slice(0, 77)}...` : file.fileName
+  createNotification({
     tenantId,
     userId: assignedTo,
     type: NOTIFICATION_TYPES.FILE_ASSIGNED,
-    title: `File '${file.fileName}' assigned to you`,
+    title: `File '${safeFileName}' assigned to you`,
     body: `You have been assigned a file for review${priority === 'urgent' ? ' (URGENT)' : ''}`,
     projectId,
     metadata: { fileId, assignmentId: assignment.id, priority },
-  })
+  }).catch(() => {})
 
-  // Urgent notification (separate — Guardrail #85)
+  // Urgent notification (separate — Guardrail #85, #23)
   if (priority === 'urgent') {
-    void createNotification({
+    createNotification({
       tenantId,
       userId: assignedTo,
       type: NOTIFICATION_TYPES.FILE_URGENT,
-      title: `File '${file.fileName}' marked as urgent`,
+      title: `File '${safeFileName}' marked as urgent`,
       body: 'This file has been marked as urgent priority',
       projectId,
       metadata: { fileId, assignmentId: assignment.id },
-    })
+    }).catch(() => {})
   }
 
   logger.info({ fileId, assignedTo, priority }, 'File assigned')

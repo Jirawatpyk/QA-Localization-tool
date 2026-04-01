@@ -235,6 +235,70 @@ describe('file_assignments RLS', () => {
     expect(data).toEqual([])
   })
 
+  // T5: Admin can INSERT file_assignments
+  it('T5: admin can INSERT file_assignments', async () => {
+    // Create a separate file to avoid partial unique index conflict
+    const { data: tempFile } = await admin
+      .from('files')
+      .insert({
+        project_id: projectId,
+        tenant_id: tenantA.id,
+        file_name: 'test-t5.sdlxliff',
+        file_type: 'sdlxliff',
+        file_size_bytes: 256,
+        storage_path: `${tenantA.id}/${projectId}/t5/test-t5.sdlxliff`,
+      })
+      .select('id')
+      .single()
+
+    const client = tenantClient(tenantA.jwt)
+    const { error } = await client.from('file_assignments').insert({
+      file_id: tempFile!.id,
+      project_id: projectId,
+      tenant_id: tenantA.id,
+      assigned_to: nativeUser.id,
+      assigned_by: tenantA.userId,
+      status: 'assigned',
+    })
+    expect(error).toBeNull()
+
+    // Cleanup
+    await admin.from('file_assignments').delete().eq('file_id', tempFile!.id)
+    await admin.from('files').delete().eq('id', tempFile!.id)
+  })
+
+  // T6: QA reviewer can INSERT file_assignments
+  it('T6: QA reviewer can INSERT file_assignments', async () => {
+    // Create a separate file to avoid partial unique index conflict
+    const { data: tempFile } = await admin
+      .from('files')
+      .insert({
+        project_id: projectId,
+        tenant_id: tenantA.id,
+        file_name: 'test-t6.sdlxliff',
+        file_type: 'sdlxliff',
+        file_size_bytes: 256,
+        storage_path: `${tenantA.id}/${projectId}/t6/test-t6.sdlxliff`,
+      })
+      .select('id')
+      .single()
+
+    const client = tenantClient(qaUser.jwt)
+    const { error } = await client.from('file_assignments').insert({
+      file_id: tempFile!.id,
+      project_id: projectId,
+      tenant_id: tenantA.id,
+      assigned_to: nativeUser.id,
+      assigned_by: qaUser.id,
+      status: 'assigned',
+    })
+    expect(error).toBeNull()
+
+    // Cleanup
+    await admin.from('file_assignments').delete().eq('file_id', tempFile!.id)
+    await admin.from('files').delete().eq('id', tempFile!.id)
+  })
+
   // T7: Admin can UPDATE any assignment
   it('T7: admin can UPDATE any assignment in tenant', async () => {
     const client = tenantClient(tenantA.jwt)
@@ -255,6 +319,49 @@ describe('file_assignments RLS', () => {
       .eq('id', assignmentForNative)
 
     expect(error).toBeNull()
+  })
+
+  // T9: Admin can DELETE assignments
+  it('T9: admin can DELETE assignments', async () => {
+    // Create a temp file + assignment, then delete via admin client
+    const { data: tempFile } = await admin
+      .from('files')
+      .insert({
+        project_id: projectId,
+        tenant_id: tenantA.id,
+        file_name: 'test-t9.sdlxliff',
+        file_type: 'sdlxliff',
+        file_size_bytes: 256,
+        storage_path: `${tenantA.id}/${projectId}/t9/test-t9.sdlxliff`,
+      })
+      .select('id')
+      .single()
+
+    const { data: tempAssignment } = await admin
+      .from('file_assignments')
+      .insert({
+        file_id: tempFile!.id,
+        project_id: projectId,
+        tenant_id: tenantA.id,
+        assigned_to: nativeUser.id,
+        assigned_by: tenantA.userId,
+        status: 'assigned',
+      })
+      .select('id')
+      .single()
+
+    const client = tenantClient(tenantA.jwt)
+    const { data } = await client
+      .from('file_assignments')
+      .delete()
+      .eq('id', tempAssignment!.id)
+      .select('id')
+
+    expect(data).toHaveLength(1)
+    expect(data?.[0]?.id).toBe(tempAssignment!.id)
+
+    // Cleanup temp file
+    await admin.from('files').delete().eq('id', tempFile!.id)
   })
 
   // T10: Native reviewer cannot DELETE

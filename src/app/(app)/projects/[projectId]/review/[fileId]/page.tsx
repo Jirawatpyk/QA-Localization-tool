@@ -28,7 +28,7 @@ export default async function ReviewPage({
   }
 
   const assignment = assignmentResult.success ? assignmentResult.data.assignment : null
-  const currentUserId = assignmentResult.success ? assignmentResult.data.currentUserId : ''
+  const currentUserId = assignmentResult.success ? assignmentResult.data.currentUserId : null
 
   return (
     <div className="p-6">

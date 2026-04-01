@@ -34,8 +34,14 @@ export const heartbeatSchema = z.object({
 export type HeartbeatInput = z.infer<typeof heartbeatSchema>
 
 export const getEligibleReviewersSchema = z.object({
-  projectId: z.string().uuid(),
   targetLanguage: z.string().min(2).max(10),
 })
 
 export type GetEligibleReviewersInput = z.infer<typeof getEligibleReviewersSchema>
+
+export const getFileAssignmentSchema = z.object({
+  fileId: z.string().uuid(),
+  projectId: z.string().uuid(),
+})
+
+export type GetFileAssignmentInput = z.infer<typeof getFileAssignmentSchema>

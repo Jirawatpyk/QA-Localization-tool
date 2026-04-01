@@ -521,7 +521,7 @@ export function ReviewPageClient({
       useReviewStore.getState().pushUndo({
         id: crypto.randomUUID(),
         type: 'single',
-        action: 'reject',
+        action: newStatus === 'accepted' ? 'accept' : 'reject',
         findingId,
         batchId: null,
         previousStates: new Map([[findingId, f.status]]),
@@ -960,11 +960,12 @@ export function ReviewPageClient({
   const pendingPatternRef = useRef<DetectedPattern | null>(null)
   const [pendingPattern, setPendingPattern] = useState<DetectedPattern | null>(null)
 
-  // Show toast when pattern detected
+  // Show toast when pattern detected — dismiss on unmount to prevent stale closures
+  const patternToastIdRef = useRef<string | number | null>(null)
   useEffect(() => {
     if (!detectedPattern) return
     const patternRef = detectedPattern
-    toast(
+    const toastId = toast(
       `Pattern detected: '${patternRef.patternName}' (${patternRef.matchingFindingIds.length} rejects)`,
       {
         duration: Infinity, // persistent — requires user decision
@@ -996,7 +997,11 @@ export function ReviewPageClient({
         },
       },
     )
+    patternToastIdRef.current = toastId
     clearDetectedPattern()
+    return () => {
+      if (patternToastIdRef.current) toast.dismiss(patternToastIdRef.current)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fileId stable while dialog open
   }, [detectedPattern, clearDetectedPattern])
 
@@ -1252,13 +1257,14 @@ export function ReviewPageClient({
   // CR-R1-M1: shared delete handler for desktop aside + mobile sheet (DRY)
   const handleDeleteFinding = useCallback(
     (findingId: string) => {
+      // Capture snapshot BEFORE server call — Realtime may remove it before .then() runs
+      const findingSnapshot = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
+        findingId,
+      )
       void deleteFinding({ findingId, fileId, projectId })
         .then((result) => {
           if (result.success) {
-            // C1 fix: Capture snapshot from store RIGHT BEFORE removal (freshest state)
-            const finding = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
-              findingId,
-            )
+            const finding = findingSnapshot
             useReviewStore.getState().removeFinding(findingId)
             setSelectedFinding(null)
             toast.success('Finding deleted')
@@ -1537,7 +1543,10 @@ export function ReviewPageClient({
               }
             }}
             onSource={() => activeFindingState && handleSourceIssue(activeFindingState)}
-            onOverride={() => setIsOverrideMenuOpen(true)}
+            onOverride={() => {
+              if (!activeFindingState) return
+              setIsOverrideMenuOpen(true)
+            }}
             onAdd={() => setIsAddFindingDialogOpen(true)}
             isDisabled={!activeFindingState || isActionInFlight || isReadOnly}
             isInFlight={isActionInFlight}

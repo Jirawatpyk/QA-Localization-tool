@@ -14,7 +14,6 @@ type SoftLockBannerProps = {
   lastActiveAt: Date | null
   isStale: boolean
   onTakeOver?: () => void
-  onViewReadOnly?: () => void
 }
 
 function formatRelativeTime(date: Date): string {
@@ -33,7 +32,6 @@ export function SoftLockBanner({
   lastActiveAt,
   isStale,
   onTakeOver,
-  onViewReadOnly,
 }: SoftLockBannerProps) {
   const [isPending, startTransition] = useTransition()
 
@@ -73,9 +71,6 @@ export function SoftLockBanner({
         </p>
       </div>
       <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={onViewReadOnly}>
-          View read-only
-        </Button>
         <Button variant="destructive" size="sm" onClick={handleTakeOver} disabled={isPending}>
           {isPending ? 'Taking over...' : `Take over (notify ${assigneeName})`}
         </Button>

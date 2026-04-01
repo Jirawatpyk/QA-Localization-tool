@@ -137,9 +137,9 @@ export async function updateAssignmentStatus(
     newValue: { status: newStatus },
   })
 
-  // Notification on completion (Guardrail #85)
+  // Notification on completion (fire-and-forget — Guardrail #85, #23)
   if (newStatus === 'completed' && current.assignedBy !== userId) {
-    await createNotification({
+    createNotification({
       tenantId,
       userId: current.assignedBy,
       type: NOTIFICATION_TYPES.ASSIGNMENT_COMPLETED,
@@ -147,7 +147,7 @@ export async function updateAssignmentStatus(
       body: 'A reviewer has completed the assigned file review',
       projectId,
       metadata: { fileId: current.fileId, assignmentId },
-    })
+    }).catch(() => {})
   }
 
   logger.info({ assignmentId, oldStatus, newStatus }, 'Assignment status updated')

@@ -60,24 +60,30 @@ export function FileAssignmentDialog({
     }
   }
 
-  // Fetch eligible reviewers when dialog opens
+  // Fetch eligible reviewers when dialog opens (P6: abort flag, P7: auto-select guard)
   useEffect(() => {
     if (!open) return
+    let aborted = false
 
     startTransition(async () => {
-      const result = await getEligibleReviewers({ projectId, targetLanguage })
+      const result = await getEligibleReviewers({ targetLanguage })
+      if (aborted) return
       if (result.success) {
         setReviewers(result.data)
-        // Auto-select the suggested reviewer
+        // Auto-select only when user hasn't manually selected yet
         const suggested = result.data.find((r) => r.isAutoSuggested)
-        if (suggested) {
+        if (suggested && !selectedReviewer) {
           setSelectedReviewer(suggested.userId)
         }
       } else {
         setError(result.error)
       }
     })
-  }, [open, projectId, targetLanguage])
+
+    return () => {
+      aborted = true
+    }
+  }, [open, targetLanguage]) // eslint-disable-line react-hooks/exhaustive-deps -- selectedReviewer excluded intentionally
 
   function handleAssign() {
     if (!selectedReviewer) return

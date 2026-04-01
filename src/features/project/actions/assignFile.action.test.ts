@@ -42,6 +42,8 @@ const mockAssignment = {
 // ── Track DB calls explicitly ──
 let dbCallIndex = 0
 let dbReturnValues: unknown[][] = []
+let dbThrowAtCallIndex: number | null = null
+let dbThrowError: Error | null = null
 
 const dbProxy = (): unknown =>
   new Proxy(
@@ -50,13 +52,22 @@ const dbProxy = (): unknown =>
       get: (_target, prop) => {
         if (prop === 'returning') {
           return vi.fn(() => {
+            if (dbThrowAtCallIndex !== null && dbCallIndex === dbThrowAtCallIndex) {
+              dbCallIndex++
+              return Promise.reject(dbThrowError ?? new Error('DB error'))
+            }
             const value = dbReturnValues[dbCallIndex] ?? []
             dbCallIndex++
             return Promise.resolve(value)
           })
         }
         if (prop === 'then') {
-          return (resolve?: (v: unknown) => void) => {
+          return (resolve?: (v: unknown) => void, reject?: (err: unknown) => void) => {
+            if (dbThrowAtCallIndex !== null && dbCallIndex === dbThrowAtCallIndex) {
+              dbCallIndex++
+              reject?.(dbThrowError ?? new Error('DB error'))
+              return
+            }
             const value = dbReturnValues[dbCallIndex] ?? []
             dbCallIndex++
             resolve?.(value)
@@ -115,6 +126,8 @@ describe('assignFile', () => {
     vi.clearAllMocks()
     dbCallIndex = 0
     dbReturnValues = []
+    dbThrowAtCallIndex = null
+    dbThrowError = null
   })
 
   it('should create an assignment with valid input', async () => {
@@ -182,6 +195,47 @@ describe('assignFile', () => {
       success: false,
       code: 'NOT_FOUND',
       error: 'File not found in project',
+    })
+  })
+
+  it('should return CONFLICT when db.insert throws unique constraint (23505)', async () => {
+    dbReturnValues = [[mockFile]] // Call 0: SELECT file → found
+    // Call 1: INSERT returning → reject with 23505
+    const pgError = new Error('unique_violation') as Error & { code: string }
+    pgError.code = '23505'
+    dbThrowAtCallIndex = 1
+    dbThrowError = pgError
+
+    const result = await assignFile({
+      fileId: FILE_ID,
+      projectId: PROJECT_ID,
+      assignedTo: USER_REVIEWER_ID,
+      priority: 'normal',
+    })
+
+    expect(result).toEqual({
+      success: false,
+      code: 'CONFLICT',
+      error: 'File already has an active assignment',
+    })
+  })
+
+  it('should return CREATE_FAILED when db.insert returns empty array', async () => {
+    // Call 0: SELECT file → found
+    // Call 1: INSERT returning → [] (empty)
+    dbReturnValues = [[mockFile], []]
+
+    const result = await assignFile({
+      fileId: FILE_ID,
+      projectId: PROJECT_ID,
+      assignedTo: USER_REVIEWER_ID,
+      priority: 'normal',
+    })
+
+    expect(result).toEqual({
+      success: false,
+      code: 'CREATE_FAILED',
+      error: 'Failed to create assignment',
     })
   })
 

@@ -47,3 +47,14 @@
 
 - ~~**Cache error classification:**~~ ✅ DONE — `isFkViolation()` helper classifies PG error code `23503`. FK violations log warn + continue. Systemic errors (DB down, schema) re-throw to propagate.
 - ~~**TA-14 perf threshold 60s:**~~ ✅ DONE — CI-only thresholds added (render 5s, nav 500ms, action 5s, bulk 10s). Dev mode keeps relaxed thresholds.
+
+## ~~Deferred from: code review of story-6.1 (2026-03-31)~~ ✅ ALL FIXED (2026-04-01)
+
+- ~~**FindingCommentThread mountedRef race:**~~ ✅ DONE — replaced mountedRef with per-effect `let cancelled` pattern
+- ~~**FlagForNativeDialog mountedRef race:**~~ ✅ DONE — same per-effect cancelled pattern
+- ~~**ReviewPageClient.onOverride no activeFinding guard:**~~ ✅ DONE — added `if (!activeFindingState) return` guard
+- ~~**ReviewPageClient pattern detection toast duration:Infinity:**~~ ✅ DONE — capture toastId, dismiss on effect cleanup
+- ~~**ReviewPageClient.executeNativeOverride undo action hardcoded 'reject':**~~ ✅ DONE — dynamic action based on newStatus
+- ~~**ReviewPageClient.handleDeleteFinding snapshot race:**~~ ✅ DONE — capture snapshot BEFORE server call
+- ~~**FileHistoryTable filter/pagination ARIA gaps:**~~ ✅ DONE — added aria-pressed + aria-current
+- ~~**Notification fileName not sanitized:**~~ ✅ DONE — truncate to 80 chars in assignFile

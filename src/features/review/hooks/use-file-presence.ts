@@ -33,12 +33,22 @@ export function useFilePresence({ assignmentId, enabled }: UseFilePresenceOption
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
-    // Send initial heartbeat
-    void sendHeartbeat()
+    // Send initial heartbeat (P8: .catch stops interval if assignment gone)
+    sendHeartbeat().catch(() => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    })
 
     // Start interval
     intervalRef.current = setInterval(() => {
-      void sendHeartbeat()
+      sendHeartbeat().catch(() => {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current)
+          intervalRef.current = null
+        }
+      })
     }, HEARTBEAT_INTERVAL_MS)
 
     return () => {

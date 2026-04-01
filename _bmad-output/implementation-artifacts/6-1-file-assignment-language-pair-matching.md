@@ -1,6 +1,6 @@
 # Story 6.1: File Assignment & Language-Pair Matching
 
-Status: review
+Status: done
 
 ## Story
 
@@ -325,6 +325,52 @@ Claude Opus 4.6 (1M context)
   - I-7: ORDER BY + keep-first in getFileHistory Query 4
   - I-8: RLS WITH CHECK tightened — reviewer cannot set status back to 'assigned'
 - 2026-03-31: E2E debugging — 12 root causes found and fixed (testid alignment, hydration waits, data flow gaps, read-only context, keyboard suppression, separate files per test group)
+- 2026-03-31: Code review R1 — 3 decisions + 16 patches fixed:
+  - D1: Added Release button (AC7), D2: Stale = read-only, D3: Heartbeat only in_progress
+  - P1-P2: getFileAssignment Zod + requireRole, P3-P4: notification .catch pattern
+  - P5: takeOverFile self-takeover guard, P6-P7: FileAssignmentDialog race fixes
+  - P8: useFilePresence .catch, P9: null currentUserId, P16: unused projectId removed
+  - P10-P12: 4 new unit test files (27 tests) + 2 assignFile tests + 3 RLS tests
+  - P13-P15: E2E assertion improvements (sort order, button existence, query scoping)
+
+### Review Findings
+
+#### Decision Needed (all resolved)
+
+- [x] [Review][Decision] D1: AC7 "release" — **FIXED:** Added Release button in SoftLockWrapper for own `in_progress` assignment
+- [x] [Review][Decision] D2: Stale lock edit access — **FIXED:** `isReadOnly: !isOwnAssignment && lockState !== 'unlocked'` (stale = read-only), removed no-op "View Read-Only" button
+- [x] [Review][Decision] D3: Heartbeat RLS conflict — **FIXED:** Heartbeat only enabled when `status === 'in_progress'` (not 'assigned')
+
+#### Patch (all fixed)
+
+- [x] [Review][Patch] P1: `getFileAssignment` Zod validation — **FIXED:** added `getFileAssignmentSchema`, accepts `unknown` + safeParse
+- [x] [Review][Patch] P2: `getFileAssignment` requireRole — **FIXED:** switched from `getCurrentUser()` to `requireRole('native_reviewer', 'read')`
+- [x] [Review][Patch] P3: `void createNotification` → `.catch(() => {})` — **FIXED** in assignFile + takeOverFile (Guardrail #23)
+- [x] [Review][Patch] P4: `updateAssignmentStatus` blocking notification — **FIXED:** `await` → `.catch(() => {})` fire-and-forget
+- [x] [Review][Patch] P5: `takeOverFile` self-takeover guard — **FIXED:** pre-flight check `assignedTo === userId` → CONFLICT
+- [x] [Review][Patch] P6: `FileAssignmentDialog` stale fetch — **FIXED:** abort flag in useEffect cleanup
+- [x] [Review][Patch] P7: `FileAssignmentDialog` auto-select — **FIXED:** only when `!selectedReviewer`
+- [x] [Review][Patch] P8: `useFilePresence` heartbeat error — **FIXED:** `.catch()` stops interval on failure
+- [x] [Review][Patch] P9: `currentUserId` null handling — **FIXED:** page passes `null`, hook guards `!!currentUserId`
+- [x] [Review][Patch] P10: Missing unit tests — **FIXED:** 4 new test files (27 tests: takeOverFile 8, updateAssignmentStatus 9, getEligibleReviewers 6, getFileAssignment 4)
+- [x] [Review][Patch] P11: Missing RLS tests — **FIXED:** T5 (admin INSERT), T6 (QA INSERT), T9 (admin DELETE) added
+- [x] [Review][Patch] P12: assignFile test gaps — **FIXED:** CONFLICT (23505) + CREATE_FAILED (empty returning) cases added
+- [x] [Review][Patch] P13: E2E AC3 sort assertion — **FIXED:** first row data-testid matches urgent file
+- [x] [Review][Patch] P14: E2E AC4 read-only assertion — **FIXED:** assert button exists before checking disabled
+- [x] [Review][Patch] P15: E2E AC2 notification scope — **FIXED:** added `project_id` filter to PostgREST query
+- [x] [Review][Patch] P16: Unused `projectId` in schema — **FIXED:** removed from `getEligibleReviewersSchema`
+
+#### Defer (pre-existing — 8/9 FIXED in CR deferred round)
+
+- [x] [Review][Defer] `FindingCommentThread` mountedRef race — **FIXED:** replaced mountedRef with per-effect `let cancelled` pattern
+- [x] [Review][Defer] `FlagForNativeDialog` same mountedRef race — **FIXED:** same per-effect cancelled pattern
+- [x] [Review][Defer] `ReviewPageClient.onOverride` no activeFinding guard — **FIXED:** added `if (!activeFindingState) return` guard
+- [x] [Review][Defer] `ReviewPageClient` pattern toast Infinity — **FIXED:** capture toastId, dismiss on effect cleanup
+- [x] [Review][Defer] `ReviewPageClient.executeNativeOverride` undo hardcoded 'reject' — **FIXED:** `action: newStatus === 'accepted' ? 'accept' : 'reject'`
+- [x] [Review][Defer] `ReviewPageClient.handleDeleteFinding` snapshot race — **FIXED:** capture snapshot BEFORE server call
+- [x] [Review][Defer] `FileHistoryTable` ARIA gaps — **FIXED:** added `aria-pressed` on filter buttons + `aria-current="page"` on pagination
+- [x] [Review][Defer] Notification `fileName` not sanitized — **FIXED:** truncate to 80 chars in assignFile
+- [x] [Review][Defer] `assignFile.action.test.ts` custom mock pattern — kept as-is (low risk, works correctly)
 
 ### File List
 - `src/db/migrations/0022_story_6_1_file_assignments_rls.sql` (new)
@@ -368,3 +414,7 @@ Claude Opus 4.6 (1M context)
 - `src/features/batch/components/FileHistoryPageClient.tsx` (modified — targetLanguage + assignment data)
 - `src/features/batch/actions/getFileHistory.action.ts` (modified — Query 4 file_assignments JOIN)
 - `src/app/(app)/projects/[projectId]/files/page.tsx` (modified — targetLanguage from project)
+- `src/features/project/actions/takeOverFile.action.test.ts` (new — CR P10)
+- `src/features/project/actions/updateAssignmentStatus.action.test.ts` (new — CR P10)
+- `src/features/project/actions/getEligibleReviewers.action.test.ts` (new — CR P10)
+- `src/features/project/actions/getFileAssignment.action.test.ts` (new — CR P10)

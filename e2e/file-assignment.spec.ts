@@ -346,7 +346,7 @@ test.describe('Story 6.1: File Assignment & Language-Pair Matching', () => {
   test('[AC2-P1] assigned reviewer should receive notification', async () => {
     // Verify notification created via PostgREST (Realtime push timing is non-deterministic)
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/notifications?type=eq.file_assigned&select=id,type,title,user_id`,
+      `${SUPABASE_URL}/rest/v1/notifications?type=eq.file_assigned&project_id=eq.${projectId}&select=id,type,title,user_id`,
       { headers: adminHeaders() },
     )
     const notifications = (await res.json()) as Array<{
@@ -389,6 +389,10 @@ test.describe('Story 6.1: File Assignment & Language-Pair Matching', () => {
 
     // Urgent badge should be visible (seeded in AC3-P1)
     await expect(page.getByTestId('urgent-badge').first()).toBeVisible({ timeout: 10_000 })
+
+    // Verify urgent file appears as the first row in the list
+    const firstRow = page.locator('[data-testid^="file-row-"]').first()
+    await expect(firstRow).toHaveAttribute('data-testid', `file-row-${fileIdUrgent}`)
   })
 
   // ════════════════════════════════════════════════════
@@ -447,8 +451,11 @@ test.describe('Story 6.1: File Assignment & Language-Pair Matching', () => {
     await expect(page.getByTestId('read-only-banner')).toBeVisible()
     await expect(page.getByTestId('read-only-banner')).toContainText(/read-only/i)
 
-    // Action buttons should be disabled
+    // Action buttons should exist and be disabled
     const actionBar = page.getByTestId('review-action-bar')
+    const actionButtons = actionBar.getByRole('button')
+    await expect(actionButtons.first()).toBeVisible({ timeout: 10_000 })
+
     const acceptBtn = actionBar.getByRole('button', { name: /accept/i })
     if (await acceptBtn.isVisible().catch(() => false)) {
       await expect(acceptBtn).toBeDisabled()

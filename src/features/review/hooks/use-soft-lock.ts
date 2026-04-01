@@ -21,7 +21,7 @@ type FileAssignment = {
 
 type UseSoftLockOptions = {
   assignment: FileAssignment | null
-  currentUserId: string
+  currentUserId: string | null
 }
 
 type UseSoftLockResult = {
@@ -37,9 +37,9 @@ type UseSoftLockResult = {
 
 function computeState(
   assignment: FileAssignment | null,
-  currentUserId: string,
+  currentUserId: string | null,
 ): { lockState: LockState; isStale: boolean } {
-  if (!assignment || assignment.assignedTo === currentUserId) {
+  if (!assignment || !currentUserId || assignment.assignedTo === currentUserId) {
     return { lockState: 'unlocked', isStale: false }
   }
 
@@ -65,7 +65,7 @@ export function useSoftLock({ assignment, currentUserId }: UseSoftLockOptions): 
   const [lockState, setLockState] = useState<LockState>('unlocked')
   const [isStale, setIsStale] = useState(false)
 
-  const isOwnAssignment = assignment?.assignedTo === currentUserId
+  const isOwnAssignment = !!currentUserId && assignment?.assignedTo === currentUserId
   const lastActiveAt = assignment?.lastActiveAt ? new Date(assignment.lastActiveAt) : null
 
   // Stale check via interval — Date.now() only inside effect callback (React Compiler purity)
@@ -95,7 +95,7 @@ export function useSoftLock({ assignment, currentUserId }: UseSoftLockOptions): 
   return {
     lockState,
     isOwnAssignment,
-    isReadOnly: !isOwnAssignment && lockState === 'locked',
+    isReadOnly: !isOwnAssignment && lockState !== 'unlocked',
     assigneeName: assignment?.assigneeName ?? null,
     lastActiveAt,
     isStale,

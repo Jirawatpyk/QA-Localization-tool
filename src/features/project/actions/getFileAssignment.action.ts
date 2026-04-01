@@ -8,7 +8,8 @@ import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { fileAssignments } from '@/db/schema/fileAssignments'
 import { users } from '@/db/schema/users'
-import { getCurrentUser } from '@/lib/auth/getCurrentUser'
+import { getFileAssignmentSchema } from '@/features/project/validation/fileAssignmentSchemas'
+import { requireRole } from '@/lib/auth/requireRole'
 import type { ActionResult } from '@/types/actionResult'
 import type { FileAssignmentPriority, FileAssignmentStatus } from '@/types/assignment'
 
@@ -28,16 +29,22 @@ type FileAssignmentWithUser = {
  * Fetch the current active assignment for a file (if any).
  * Used by the review page to determine soft lock state.
  */
-export async function getFileAssignment(params: {
-  fileId: string
-  projectId: string
-}): Promise<ActionResult<{ assignment: FileAssignmentWithUser | null; currentUserId: string }>> {
-  const user = await getCurrentUser()
-  if (!user) {
+export async function getFileAssignment(
+  input: unknown,
+): Promise<ActionResult<{ assignment: FileAssignmentWithUser | null; currentUserId: string }>> {
+  let currentUser
+  try {
+    currentUser = await requireRole('native_reviewer', 'read')
+  } catch {
     return { success: false, code: 'UNAUTHORIZED', error: 'Not authenticated' }
   }
 
-  const { fileId, projectId } = params
+  const parsed = getFileAssignmentSchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, code: 'VALIDATION_ERROR', error: parsed.error.message }
+  }
+
+  const { fileId, projectId } = parsed.data
 
   const rows = await db
     .select({
@@ -57,7 +64,7 @@ export async function getFileAssignment(params: {
       and(
         eq(fileAssignments.fileId, fileId),
         eq(fileAssignments.projectId, projectId),
-        withTenant(fileAssignments.tenantId, user.tenantId),
+        withTenant(fileAssignments.tenantId, currentUser.tenantId),
         inArray(fileAssignments.status, ['assigned', 'in_progress']),
       ),
     )
@@ -80,6 +87,6 @@ export async function getFileAssignment(params: {
 
   return {
     success: true,
-    data: { assignment, currentUserId: user.id },
+    data: { assignment, currentUserId: currentUser.id },
   }
 }

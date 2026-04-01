@@ -147,7 +147,7 @@ development_status:
   # Epic 6: Batch Processing & Team Collaboration (MVP)
   # ============================================================
   epic-6: in-progress
-  6-1-file-assignment-language-pair-matching: review
+  6-1-file-assignment-language-pair-matching: done
   # Story 6.2 split into 4 sub-stories per P6 assessment (2026-03-30)
   # Original: 6-2-event-notifications-real-time-updates — too complex for single story
   6-2a-notification-schema-helper-centralization: backlog

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
+import { useCallback, useEffect, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -60,8 +60,6 @@ export function FlagForNativeDialog({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoadingReviewers, startLoadTransition] = useTransition()
-  const mountedRef = useRef(false)
-
   // Guardrail #11: Reset form on re-open
   // Use prev-compare pattern to avoid setState in effect (React Compiler)
   const [prevOpen, setPrevOpen] = useState(open)
@@ -77,17 +75,16 @@ export function FlagForNativeDialog({
 
   // Load reviewers when dialog opens
   useEffect(() => {
-    mountedRef.current = true
-    if (open) {
-      startLoadTransition(async () => {
-        const result = await getNativeReviewers()
-        if (mountedRef.current && result.success) {
-          setReviewers(result.data)
-        }
-      })
-    }
+    if (!open) return
+    let cancelled = false
+    startLoadTransition(async () => {
+      const result = await getNativeReviewers()
+      if (!cancelled && result.success) {
+        setReviewers(result.data)
+      }
+    })
     return () => {
-      mountedRef.current = false
+      cancelled = true
     }
   }, [open])
 

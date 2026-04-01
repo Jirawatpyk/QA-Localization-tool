@@ -1,7 +1,9 @@
 'use client'
 
-import { useMemo, useEffect } from 'react'
+import { useMemo, useEffect, useTransition } from 'react'
 
+import { Button } from '@/components/ui/button'
+import { updateAssignmentStatus } from '@/features/project/actions/updateAssignmentStatus.action'
 import { SoftLockBanner } from '@/features/review/components/SoftLockBanner'
 import { useFilePresence } from '@/features/review/hooks/use-file-presence'
 import { ReadOnlyContext } from '@/features/review/hooks/use-read-only-mode'
@@ -21,7 +23,7 @@ type FileAssignment = {
 
 type SoftLockWrapperProps = {
   assignment: FileAssignment | null
-  currentUserId: string
+  currentUserId: string | null
   projectId: string
   children: React.ReactNode
 }
@@ -48,10 +50,8 @@ export function SoftLockWrapper({
     autoTransition,
   } = useSoftLock({ assignment, currentUserId })
 
-  // Heartbeat for own assignment (AC6) — enabled for both 'assigned' and 'in_progress'
-  // because autoTransition is async and the prop doesn't update after transition
-  const isOwnActive =
-    isOwnAssignment && (assignment?.status === 'assigned' || assignment?.status === 'in_progress')
+  // Heartbeat for own assignment (AC6) — only when in_progress (RLS WITH CHECK requires it)
+  const isOwnActive = isOwnAssignment && assignment?.status === 'in_progress'
   useFilePresence({
     assignmentId: isOwnAssignment ? assignmentId : null,
     enabled: isOwnActive,
@@ -62,10 +62,37 @@ export function SoftLockWrapper({
     void autoTransition()
   }, [autoTransition])
 
+  const [isReleasePending, startReleaseTransition] = useTransition()
+
+  function handleRelease() {
+    if (!assignment) return
+    startReleaseTransition(async () => {
+      await updateAssignmentStatus({
+        assignmentId: assignment.id,
+        projectId,
+        status: 'assigned' as FileAssignmentStatus,
+      })
+      window.location.reload()
+    })
+  }
+
   const contextValue = useMemo(() => ({ isReadOnly }), [isReadOnly])
 
   return (
     <ReadOnlyContext value={contextValue}>
+      {/* D1: Release bar for own in_progress assignment (AC7) */}
+      {isOwnAssignment && assignment?.status === 'in_progress' && (
+        <div
+          className="bg-muted/50 border-b flex items-center justify-between px-4 py-2 text-sm"
+          data-testid="own-assignment-bar"
+        >
+          <span className="text-muted-foreground">You are reviewing this file</span>
+          <Button variant="outline" size="sm" onClick={handleRelease} disabled={isReleasePending}>
+            {isReleasePending ? 'Releasing...' : 'Release file'}
+          </Button>
+        </div>
+      )}
+      {/* Soft lock banner for other user's assignment */}
       {lockState !== 'unlocked' && assigneeName && (
         <SoftLockBanner
           assignmentId={assignment?.id ?? ''}
@@ -75,9 +102,6 @@ export function SoftLockWrapper({
           isStale={isStale}
           onTakeOver={() => {
             window.location.reload()
-          }}
-          onViewReadOnly={() => {
-            // Already in read-only — banner stays visible
           }}
         />
       )}
