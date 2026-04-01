@@ -67,12 +67,14 @@ export function SoftLockWrapper({
   function handleRelease() {
     if (!assignment) return
     startReleaseTransition(async () => {
-      await updateAssignmentStatus({
+      const result = await updateAssignmentStatus({
         assignmentId: assignment.id,
         projectId,
         status: 'assigned' as FileAssignmentStatus,
       })
-      window.location.reload()
+      if (result.success) {
+        window.location.reload()
+      }
     })
   }
 
@@ -111,7 +113,7 @@ export function SoftLockWrapper({
           role="status"
           data-testid="read-only-banner"
         >
-          Read-only mode — assigned to {assigneeName}
+          Read-only mode — assigned to {assigneeName ?? 'another reviewer'}
         </div>
       )}
       {children}

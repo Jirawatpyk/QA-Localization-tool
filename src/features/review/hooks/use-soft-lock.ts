@@ -39,7 +39,14 @@ function computeState(
   assignment: FileAssignment | null,
   currentUserId: string | null,
 ): { lockState: LockState; isStale: boolean } {
-  if (!assignment || !currentUserId || assignment.assignedTo === currentUserId) {
+  if (!assignment) {
+    return { lockState: 'unlocked', isStale: false }
+  }
+  // Deny-by-default: null currentUserId = unauthenticated → locked read-only
+  if (!currentUserId) {
+    return { lockState: 'locked', isStale: false }
+  }
+  if (assignment.assignedTo === currentUserId) {
     return { lockState: 'unlocked', isStale: false }
   }
 

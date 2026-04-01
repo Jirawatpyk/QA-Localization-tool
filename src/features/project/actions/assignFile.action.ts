@@ -98,8 +98,8 @@ export async function assignFile(input: unknown): Promise<ActionResult<FileAssig
   })
 
   // Notification (fire-and-forget — Guardrail #85, #23)
-  const safeFileName =
-    file.fileName.length > 80 ? `${file.fileName.slice(0, 77)}...` : file.fileName
+  const rawFileName = file.fileName ?? 'Unnamed file'
+  const safeFileName = rawFileName.length > 80 ? `${rawFileName.slice(0, 77)}...` : rawFileName
   createNotification({
     tenantId,
     userId: assignedTo,

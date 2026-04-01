@@ -999,8 +999,9 @@ export function ReviewPageClient({
     )
     patternToastIdRef.current = toastId
     clearDetectedPattern()
+    // Use local toastId (not ref) to avoid dismissing a newer toast on cleanup
     return () => {
-      if (patternToastIdRef.current) toast.dismiss(patternToastIdRef.current)
+      toast.dismiss(toastId)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fileId stable while dialog open
   }, [detectedPattern, clearDetectedPattern])
@@ -1261,6 +1262,10 @@ export function ReviewPageClient({
       const findingSnapshot = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
         findingId,
       )
+      if (!findingSnapshot) {
+        toast.error('Finding already removed')
+        return
+      }
       void deleteFinding({ findingId, fileId, projectId })
         .then((result) => {
           if (result.success) {
