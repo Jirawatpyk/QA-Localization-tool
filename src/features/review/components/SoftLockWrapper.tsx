@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useEffect, useTransition } from 'react'
+import { useMemo, useEffect, useState, useTransition } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { updateAssignmentStatus } from '@/features/project/actions/updateAssignmentStatus.action'
@@ -62,6 +62,7 @@ export function SoftLockWrapper({
     void autoTransition()
   }, [autoTransition])
 
+  const [bannerDismissed, setBannerDismissed] = useState(false)
   const [isReleasePending, startReleaseTransition] = useTransition()
 
   function handleRelease() {
@@ -94,8 +95,8 @@ export function SoftLockWrapper({
           </Button>
         </div>
       )}
-      {/* Soft lock banner for other user's assignment */}
-      {lockState !== 'unlocked' && assigneeName && (
+      {/* Soft lock banner for other user's assignment (AC4: "View read-only" or "Take over") */}
+      {lockState !== 'unlocked' && assigneeName && !bannerDismissed && (
         <SoftLockBanner
           assignmentId={assignment?.id ?? ''}
           projectId={projectId}
@@ -104,6 +105,9 @@ export function SoftLockWrapper({
           isStale={isStale}
           onTakeOver={() => {
             window.location.reload()
+          }}
+          onViewReadOnly={() => {
+            setBannerDismissed(true)
           }}
         />
       )}

@@ -428,7 +428,7 @@ test.describe('Story 6.1: File Assignment & Language-Pair Matching', () => {
     await expect(banner).toBeVisible({ timeout: 10_000 })
     await expect(banner).toContainText(/being reviewed by/i)
 
-    // Should show "View Read-Only" and "Take Over" buttons
+    // AC4: Should show "View Read-Only" and "Take Over" buttons
     await expect(banner.getByRole('button', { name: /read-only/i })).toBeVisible()
     await expect(banner.getByRole('button', { name: /take over/i })).toBeVisible()
 
@@ -731,18 +731,24 @@ test.describe('Story 6.1: File Assignment & Language-Pair Matching', () => {
     const qaCtx = await browser.newContext()
     const qaPage = await qaCtx.newPage()
     await signupOrLogin(qaPage, qaEmail)
-    await qaPage.goto(`/projects/${projectId}/files`)
-    await qaPage.waitForSelector('[data-testid="file-list"]', { timeout: 30_000 })
-    await qaPage.waitForLoadState('networkidle')
 
-    await qaPage
-      .getByRole('button', { name: /assign/i })
-      .first()
-      .click()
+    // Cancel ALL active assignments so at least one Assign button is visible
+    await cancelActiveAssignments(fileIdTenantIso)
+    await cancelActiveAssignments(fileId)
+    await cancelActiveAssignments(fileIdUrgent)
+
+    await qaPage.goto(`/projects/${projectId}/files`)
+    await qaPage.waitForSelector('[data-testid="file-list"]', { timeout: 60_000 })
+
+    // Wait for Assign button to appear after page loads
+    const assignBtn = qaPage.getByRole('button', { name: /assign/i }).first()
+    await expect(assignBtn).toBeVisible({ timeout: 10_000 })
+    await assignBtn.click()
     const dialog = qaPage.getByTestId('file-assignment-dialog')
     await expect(dialog).toBeVisible({ timeout: 10_000 })
 
-    await dialog.getByTestId('reviewer-selector').click()
+    // Reviewer list is already visible (Command, not Popover) — check tenant isolation
+    await expect(dialog.getByTestId('reviewer-selector')).toBeVisible()
     // Other-tenant user should NOT be in the list
     await expect(dialog.getByText(otherEmail)).not.toBeVisible({ timeout: 3_000 })
 
