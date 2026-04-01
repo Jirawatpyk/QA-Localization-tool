@@ -2,7 +2,7 @@
 
 import 'server-only'
 
-import { and, eq, desc, inArray } from 'drizzle-orm'
+import { and, eq, desc, inArray, sql } from 'drizzle-orm'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
@@ -57,7 +57,8 @@ export async function getFileHistory(input: unknown): Promise<ActionResult<FileH
 
     const threshold = project?.autoPassThreshold ?? DEFAULT_AUTO_PASS_THRESHOLD
 
-    // Query 2: Files with scores (hard cap to prevent unbounded memory on large projects)
+    // Query 2: Files with scores + active assignment priority (AC3: urgent files first)
+    // LEFT JOIN file_assignments for DB-side priority sort (partial unique index = max 1 active row)
     const QUERY_HARD_CAP = 10_000
     const allFiles = await db
       .select({
@@ -67,11 +68,23 @@ export async function getFileHistory(input: unknown): Promise<ActionResult<FileH
         criticalCount: scores.criticalCount,
         status: files.status,
         createdAt: files.createdAt,
+        assignmentPriority: fileAssignments.priority,
       })
       .from(files)
       .leftJoin(scores, and(eq(scores.fileId, files.id), withTenant(scores.tenantId, tenantId)))
+      .leftJoin(
+        fileAssignments,
+        and(
+          eq(fileAssignments.fileId, files.id),
+          withTenant(fileAssignments.tenantId, tenantId),
+          inArray(fileAssignments.status, ['assigned', 'in_progress']),
+        ),
+      )
       .where(and(withTenant(files.tenantId, tenantId), eq(files.projectId, projectId)))
-      .orderBy(desc(files.createdAt))
+      .orderBy(
+        sql`CASE WHEN ${fileAssignments.priority} = 'urgent' THEN 0 ELSE 1 END`,
+        desc(files.createdAt),
+      )
       .limit(QUERY_HARD_CAP)
 
     // Application-side filtering
@@ -144,6 +157,7 @@ export async function getFileHistory(input: unknown): Promise<ActionResult<FileH
     }
 
     // SAFETY: Drizzle infers varchar → string; DB CHECK constraint guarantees valid DbFileStatus
+    // Priority sort already handled by DB ORDER BY (AC3: urgent first)
     const mappedFiles: FileHistoryEntry[] = filtered.map((f) => {
       const assignment = assignmentMap.get(f.fileId)
       return {
@@ -151,7 +165,7 @@ export async function getFileHistory(input: unknown): Promise<ActionResult<FileH
         status: f.status as DbFileStatus,
         lastReviewerName: reviewerMap.get(f.fileId) ?? null,
         assigneeName: assignment?.assigneeName ?? null,
-        assignmentPriority: (assignment?.priority as 'normal' | 'urgent') ?? null,
+        assignmentPriority: (f.assignmentPriority as 'normal' | 'urgent') ?? null,
       }
     })
 
