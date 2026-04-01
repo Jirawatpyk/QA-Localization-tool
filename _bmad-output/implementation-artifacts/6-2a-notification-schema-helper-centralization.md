@@ -1,6 +1,6 @@
 # Story 6.2a: Notification Schema & Helper Centralization
 
-Status: review
+Status: done
 
 ## Story
 
@@ -395,6 +395,14 @@ Claude Opus 4.6 (1M context)
 - `src/features/dashboard/actions/__tests__/getNotifications.action.test.ts` (drizzleMock replacement)
 - `src/features/dashboard/components/NotificationDropdown.test.tsx` (fixed invalid type strings)
 
+### Review Findings
+
+- [x] [Review][Patch] **projectId column not extracted to AppNotification** — `getNotificationLink()` only reads `metadata.projectId`, but `file_assigned`/`file_urgent`/`file_reassigned`/`assignment_completed` store projectId as DB column NOT in metadata. Fix: (1) add `projectId: string | null` to `AppNotification`, (2) extract `row.projectId` in `getNotifications.action.ts` mapper, (3) add `project_id` to `rawNotificationSchema` + `mapRealtimePayload` in `useNotifications.ts`, (4) use `notif.projectId ?? metadata.projectId` in `getNotificationLink.ts` [src/features/dashboard/helpers/getNotificationLink.ts:16-18]
+- [x] [Review][Patch] **Test visibilityState leak between tests** — `Object.defineProperty(document, 'visibilityState', ...)` not cleaned up in afterEach, may cause false positives in other tests [src/features/dashboard/hooks/useNotifications.test.ts:257-261]
+- [x] [Review][Defer] **native_comment_added has no lookup mechanism** — returns null when projectId/fileId missing, spec explicitly defers to future story [src/features/dashboard/helpers/getNotificationLink.ts:43-47] — deferred, by design (spec says "returns null until lookup mechanism")
+- [x] [Review][Defer] **New notification types (analysis_complete, glossary_updated, auto_pass_triggered) metadata shape TBD** — types declared but no INSERT code wired yet [src/lib/notifications/types.ts:19-21] — deferred, 6-2b scope
+
 ## Change Log
 
 - **2026-04-01:** Story 6-2a implemented — all 8 tasks complete, 8 ACs satisfied, 2 TDs resolved
+- **2026-04-01:** CR R1 — 2 patches fixed (projectId column extraction, test visibilityState leak), 2 deferred, 7 dismissed

@@ -54,6 +54,7 @@ describe('getNotifications action', () => {
           tenantId: 'ten-a-001',
           userId: 'usr-test-001',
           type: 'glossary_updated',
+          projectId: 'proj-001',
           title: 'Glossary Updated',
           body: '3 terms added',
           isRead: false,
@@ -73,6 +74,7 @@ describe('getNotifications action', () => {
       expect(result.data).toHaveLength(1)
       expect(result.data[0]!.userId).toBe('usr-test-001')
       expect(result.data[0]!.tenantId).toBe('ten-a-001')
+      expect(result.data[0]!.projectId).toBe('proj-001')
       expect(result.data[0]!.createdAt).toBe('2026-02-20T10:00:00.000Z')
     }
   })
@@ -95,6 +97,7 @@ describe('getNotifications action', () => {
           tenantId: 'ten-a-001',
           userId: 'usr-test-002',
           type: 'analysis_complete',
+          projectId: 'proj-002',
           title: 'Analysis Done',
           body: 'File processed',
           isRead: false,

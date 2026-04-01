@@ -97,6 +97,7 @@ export function buildNotification(overrides?: Partial<AppNotification>): AppNoti
     tenantId: faker.string.uuid(),
     userId: faker.string.uuid(),
     type: 'glossary_updated',
+    projectId: null,
     title: faker.lorem.words(3),
     body: faker.lorem.sentence(),
     isRead: false,

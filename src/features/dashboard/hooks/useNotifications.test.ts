@@ -5,6 +5,9 @@
 vi.mock('server-only', () => ({}))
 vi.mock('@/db/client', () => ({ db: {} }))
 vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }))
+vi.mock('@/lib/logger-edge', () => ({
+  edgeLogger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() },
+}))
 
 import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -42,9 +45,20 @@ vi.mock('sonner', () => ({
 import { useNotifications } from '@/features/dashboard/hooks/useNotifications'
 
 describe('useNotifications — TD-UX-003', () => {
+  const originalVisibilityState = document.visibilityState
+
   beforeEach(() => {
     vi.clearAllMocks()
     mockChannel.on.mockReturnValue(mockChannel)
+  })
+
+  afterEach(() => {
+    // Restore visibilityState to prevent leak between tests (CR P2)
+    Object.defineProperty(document, 'visibilityState', {
+      value: originalVisibilityState,
+      writable: true,
+      configurable: true,
+    })
   })
 
   it('[P1] TD6: should validate Realtime payload with Zod and skip invalid', () => {
@@ -59,9 +73,9 @@ describe('useNotifications — TD-UX-003', () => {
     const onInsertHandler = insertCall![2] as (payload: { new: Record<string, unknown> }) => void
 
     act(() => {
-      // Send an invalid payload (id is number, missing title/body/etc.)
+      // Send an invalid payload (id is number, missing required fields)
       onInsertHandler({
-        new: { id: 123, tenant_id: 'tenant-1' },
+        new: { id: 123, tenant_id: 'tenant-1', project_id: null },
       })
     })
 
@@ -84,6 +98,7 @@ describe('useNotifications — TD-UX-003', () => {
           tenant_id: 'tenant-other',
           user_id: 'user-1',
           type: 'file_assigned',
+          project_id: null,
           title: 'Cross-tenant',
           body: 'Should be blocked',
           is_read: false,
@@ -97,32 +112,36 @@ describe('useNotifications — TD-UX-003', () => {
   })
 
   it('[P2] should mark single notification as read (markAsRead success branch)', async () => {
+    const { getNotifications } =
+      await import('@/features/dashboard/actions/getNotifications.action')
     const { markNotificationRead } =
       await import('@/features/dashboard/actions/markNotificationRead.action')
+    const mockGet = vi.mocked(getNotifications)
     const mockMark = vi.mocked(markNotificationRead)
 
-    const { result } = renderHook(() => useNotifications('user-1', 'tenant-1'))
-
-    // Wait for initial fetch
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 0))
-    })
-
-    // Inject a notification via setNotifications (direct state setter)
-    act(() => {
-      result.current.setNotifications([
+    // Initial fetch returns 1 unread notification
+    mockGet.mockResolvedValueOnce({
+      success: true,
+      data: [
         {
           id: 'n-2',
           tenantId: 'tenant-1',
           userId: 'user-1',
           type: 'file_assigned',
+          projectId: null,
           title: 'Test',
           body: 'Body',
           isRead: false,
           metadata: null,
           createdAt: '2026-03-28T00:00:00Z',
         },
-      ])
+      ],
+    })
+
+    const { result } = renderHook(() => useNotifications('user-1', 'tenant-1'))
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0))
     })
 
     expect(result.current.notifications).toHaveLength(1)
@@ -159,32 +178,36 @@ describe('useNotifications — TD-UX-003', () => {
   })
 
   it('[P2] should mark all notifications as read', async () => {
+    const { getNotifications } =
+      await import('@/features/dashboard/actions/getNotifications.action')
     const { markNotificationRead } =
       await import('@/features/dashboard/actions/markNotificationRead.action')
+    const mockGet = vi.mocked(getNotifications)
     const mockMark = vi.mocked(markNotificationRead)
 
-    const { result } = renderHook(() => useNotifications('user-1', 'tenant-1'))
-
-    // Wait for initial fetch
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 0))
-    })
-
-    // Inject notification via setNotifications
-    act(() => {
-      result.current.setNotifications([
+    // Initial fetch returns 1 unread notification
+    mockGet.mockResolvedValueOnce({
+      success: true,
+      data: [
         {
           id: 'n-3',
           tenantId: 'tenant-1',
           userId: 'user-1',
           type: 'file_assigned',
+          projectId: null,
           title: 'Test',
           body: 'Body',
           isRead: false,
           metadata: null,
           createdAt: '2026-03-28T00:00:00Z',
         },
-      ])
+      ],
+    })
+
+    const { result } = renderHook(() => useNotifications('user-1', 'tenant-1'))
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0))
     })
 
     mockMark.mockResolvedValueOnce({ success: true, data: undefined })
@@ -243,6 +266,7 @@ describe('useNotifications — TD-UX-003', () => {
           tenantId: 'tenant-1',
           userId: 'user-1',
           type: 'file_assigned',
+          projectId: null,
           title: 'Fresh',
           body: 'From other tab',
           isRead: true,

@@ -13,6 +13,7 @@ const MOCK_NOTIFICATIONS: AppNotification[] = [
     tenantId: 't1',
     userId: 'u1',
     type: 'glossary_updated',
+    projectId: 'p1',
     title: 'Glossary Updated',
     body: 'New terms added to glossary',
     isRead: false,
@@ -24,6 +25,7 @@ const MOCK_NOTIFICATIONS: AppNotification[] = [
     tenantId: 't1',
     userId: 'u1',
     type: 'analysis_complete',
+    projectId: 'p1',
     title: 'File Processed',
     body: 'Processing complete for report.xliff',
     isRead: false,
@@ -35,6 +37,7 @@ const MOCK_NOTIFICATIONS: AppNotification[] = [
     tenantId: 't1',
     userId: 'u1',
     type: 'language_pair_graduated',
+    projectId: 'p1',
     title: 'Score Updated',
     body: 'MQM score recalculated',
     isRead: true,
@@ -56,7 +59,6 @@ async function setupMock(overrides?: { notifications?: AppNotification[]; unread
     unreadCount: unread,
     markAsRead: mockMarkAsRead,
     markAllAsRead: mockMarkAllAsRead,
-    setNotifications: vi.fn(),
   })
 }
 

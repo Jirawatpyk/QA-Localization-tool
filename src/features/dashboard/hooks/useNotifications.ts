@@ -5,7 +5,8 @@ import { z } from 'zod'
 import { getNotifications } from '@/features/dashboard/actions/getNotifications.action'
 import { markNotificationRead as markNotificationReadAction } from '@/features/dashboard/actions/markNotificationRead.action'
 import type { AppNotification } from '@/features/dashboard/types'
-import { NOTIFICATION_TYPES, type NotificationType } from '@/lib/notifications/types'
+import { edgeLogger } from '@/lib/logger-edge'
+import { NOTIFICATION_TYPE_VALUES, type NotificationType } from '@/lib/notifications/types'
 import { createBrowserClient } from '@/lib/supabase/client'
 
 /**
@@ -14,13 +15,11 @@ import { createBrowserClient } from '@/lib/supabase/client'
  * intentionally rejected to enforce type-safety. If a new type is inserted without
  * adding to NOTIFICATION_TYPES first, the Realtime handler will skip it and log a warning.
  */
-const notificationTypeValues = Object.values(NOTIFICATION_TYPES) as [string, ...string[]]
-
 const rawNotificationSchema = z.object({
   id: z.string(),
   tenant_id: z.string(),
   user_id: z.string(),
-  type: z.enum(notificationTypeValues),
+  type: z.enum(NOTIFICATION_TYPE_VALUES),
   project_id: z.string().nullable(),
   title: z.string(),
   body: z.string(),
@@ -81,8 +80,9 @@ export function useNotifications(userId: string, tenantId: string) {
         (payload) => {
           const parsed = rawNotificationSchema.safeParse(payload.new)
           if (!parsed.success) {
-            // Log discarded payloads so unknown types are discoverable
-            console.warn('[useNotifications] Discarded Realtime payload:', parsed.error.issues)
+            edgeLogger.warn('Discarded Realtime notification payload', {
+              issues: parsed.error.issues,
+            })
             return
           }
           const raw = parsed.data
@@ -150,5 +150,5 @@ export function useNotifications(userId: string, tenantId: string) {
     }
   }, [])
 
-  return { notifications, unreadCount, markAsRead, markAllAsRead, setNotifications }
+  return { notifications, unreadCount, markAsRead, markAllAsRead }
 }

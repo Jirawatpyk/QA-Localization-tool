@@ -24,6 +24,9 @@ const mockSupabaseClient = {
 vi.mock('@/lib/supabase/client', () => ({
   createBrowserClient: vi.fn(() => mockSupabaseClient),
 }))
+vi.mock('@/lib/logger-edge', () => ({
+  edgeLogger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() },
+}))
 
 const mockGetNotifications = vi.fn()
 vi.mock('@/features/dashboard/actions/getNotifications.action', () => ({
@@ -51,6 +54,7 @@ describe('useNotifications hook', () => {
     tenantId: 'ten-a-001',
     userId: mockUserId,
     type: 'glossary_updated',
+    projectId: null,
     title: 'Glossary Updated',
     body: '3 terms added to Project Alpha glossary',
     isRead: false,
@@ -64,6 +68,7 @@ describe('useNotifications hook', () => {
     tenant_id: 'ten-a-001',
     user_id: mockUserId,
     type: 'glossary_updated',
+    project_id: null,
     title: 'Glossary Updated',
     body: '3 terms added to Project Alpha glossary',
     is_read: false,

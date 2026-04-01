@@ -22,3 +22,12 @@ export const NOTIFICATION_TYPES = {
 } as const
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES]
+
+/** Pre-computed values array for Zod enum validation — shared across action + hook */
+export const NOTIFICATION_TYPE_VALUES = Object.values(NOTIFICATION_TYPES) as [
+  NotificationType,
+  ...NotificationType[],
+]
+
+/** Set for O(1) runtime type validation */
+export const NOTIFICATION_TYPE_SET: ReadonlySet<string> = new Set(Object.values(NOTIFICATION_TYPES))

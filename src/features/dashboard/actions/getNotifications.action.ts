@@ -9,7 +9,7 @@ import { notifications } from '@/db/schema/notifications'
 import type { AppNotification } from '@/features/dashboard/types'
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
 import { logger } from '@/lib/logger'
-import type { NotificationType } from '@/lib/notifications/types'
+import { NOTIFICATION_TYPE_SET, type NotificationType } from '@/lib/notifications/types'
 import type { ActionResult } from '@/types/actionResult'
 
 export async function getNotifications(): Promise<ActionResult<AppNotification[]>> {
@@ -32,17 +32,26 @@ export async function getNotifications(): Promise<ActionResult<AppNotification[]
       .orderBy(desc(notifications.createdAt))
       .limit(50)
 
-    const data: AppNotification[] = rows.map((row) => ({
-      id: row.id,
-      tenantId: row.tenantId,
-      userId: row.userId,
-      type: row.type as NotificationType,
-      title: row.title,
-      body: row.body,
-      isRead: row.isRead,
-      metadata: row.metadata ?? null,
-      createdAt: row.createdAt.toISOString(),
-    }))
+    const data: AppNotification[] = rows
+      .filter((row) => {
+        if (!NOTIFICATION_TYPE_SET.has(row.type)) {
+          logger.warn({ type: row.type, id: row.id }, 'Unknown notification type in DB — skipped')
+          return false
+        }
+        return true
+      })
+      .map((row) => ({
+        id: row.id,
+        tenantId: row.tenantId,
+        userId: row.userId,
+        type: row.type as NotificationType,
+        projectId: row.projectId ?? null,
+        title: row.title,
+        body: row.body,
+        isRead: row.isRead,
+        metadata: row.metadata ?? null,
+        createdAt: row.createdAt.toISOString(),
+      }))
 
     return { success: true, data }
   } catch (err) {

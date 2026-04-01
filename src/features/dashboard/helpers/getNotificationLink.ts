@@ -1,25 +1,21 @@
 import type { AppNotification } from '@/features/dashboard/types'
-import type { NotificationType } from '@/lib/notifications/types'
 
 /**
  * Maps a notification to its navigation route.
  * Returns `null` when required metadata IDs are missing.
  *
- * Note: `projectId` is a top-level column on the notification row.
- * Some types also have `projectId` in metadata (e.g., finding_flagged_for_native).
- * We prefer the column, then fall back to metadata.
+ * `projectId` is preferred from the top-level column, with metadata as fallback.
+ * `fileId`/`findingId` come from metadata only.
  *
  * WARNING: `native_comment_added` lacks both `projectId` and `fileId` in metadata.
  * It only has `assignmentId` — returns `null` until we have a lookup mechanism.
  */
 export function getNotificationLink(notif: AppNotification): string | null {
-  const projectId = notif.metadata?.projectId as string | undefined
+  const projectId = notif.projectId ?? (notif.metadata?.projectId as string | undefined)
   const fileId = notif.metadata?.fileId as string | undefined
   const findingId = notif.metadata?.findingId as string | undefined
 
-  const type = notif.type as NotificationType
-
-  switch (type) {
+  switch (notif.type) {
     // File-level routes (need projectId + fileId)
     case 'analysis_complete':
     case 'file_assigned':
@@ -31,15 +27,11 @@ export function getNotificationLink(notif: AppNotification): string | null {
       return `/projects/${projectId}/review/${fileId}`
     }
 
-    // Finding-level routes (need projectId + fileId + findingId)
+    // Finding-level routes (need projectId + fileId, optionally findingId)
+    // Note: native_comment_added lacks projectId/fileId in metadata — will return
+    // null unless projectId comes from the column. Lookup by assignmentId deferred.
     case 'finding_flagged_for_native':
-    case 'native_review_completed': {
-      if (!projectId || !fileId) return null
-      if (!findingId) return `/projects/${projectId}/review/${fileId}`
-      return `/projects/${projectId}/review/${fileId}?findingId=${findingId}`
-    }
-
-    // native_comment_added has NO projectId/fileId in metadata — graceful null
+    case 'native_review_completed':
     case 'native_comment_added': {
       if (!projectId || !fileId) return null
       if (!findingId) return `/projects/${projectId}/review/${fileId}`

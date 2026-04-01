@@ -58,3 +58,8 @@
 - ~~**ReviewPageClient.handleDeleteFinding snapshot race:**~~ ✅ DONE — capture snapshot BEFORE server call
 - ~~**FileHistoryTable filter/pagination ARIA gaps:**~~ ✅ DONE — added aria-pressed + aria-current
 - ~~**Notification fileName not sanitized:**~~ ✅ DONE — truncate to 80 chars in assignFile
+
+## Deferred from: code review of story-6.2a (2026-04-01)
+
+- **native_comment_added has no lookup mechanism:** returns null for navigation when projectId/fileId missing from metadata — spec defers to future story for assignmentId→projectId/fileId lookup
+- **New notification types metadata shape TBD:** `analysis_complete`, `glossary_updated`, `auto_pass_triggered` declared but INSERT code not wired — deferred to Story 6-2b
