@@ -50,6 +50,8 @@ export async function addFindingComment(
       id: findingAssignments.id,
       assignedTo: findingAssignments.assignedTo,
       assignedBy: findingAssignments.assignedBy,
+      fileId: findingAssignments.fileId,
+      projectId: findingAssignments.projectId,
     })
     .from(findingAssignments)
     .where(
@@ -102,17 +104,29 @@ export async function addFindingComment(
     newValue: { findingId, findingAssignmentId, bodyLength: body.length },
   })
 
-  // Notification to other party (non-blocking — Guardrail #74, #85)
-  const notifyUserId =
-    userId === assignment.assignedTo ? assignment.assignedBy : assignment.assignedTo
-  await createNotification({
-    tenantId,
-    userId: notifyUserId,
-    type: NOTIFICATION_TYPES.NATIVE_COMMENT_ADDED,
-    title: 'New comment on flagged finding',
-    body: 'A comment was added to a flagged finding',
-    metadata: { findingId, assignmentId: findingAssignmentId, commentId: comment.id },
-  })
+  // Notification to other parties (non-blocking — Guardrail #74, #85)
+  // Notify all involved parties except the commenter (handles admin as 3rd actor)
+  const notifyUserIds = new Set<string>()
+  if (userId !== assignment.assignedTo) notifyUserIds.add(assignment.assignedTo)
+  if (userId !== assignment.assignedBy) notifyUserIds.add(assignment.assignedBy)
+
+  for (const recipientId of notifyUserIds) {
+    createNotification({
+      tenantId,
+      userId: recipientId,
+      type: NOTIFICATION_TYPES.NATIVE_COMMENT_ADDED,
+      title: 'New comment on flagged finding',
+      body: 'A comment was added to a flagged finding',
+      projectId: assignment.projectId,
+      metadata: {
+        findingId,
+        assignmentId: findingAssignmentId,
+        commentId: comment.id,
+        projectId: assignment.projectId,
+        fileId: assignment.fileId,
+      },
+    }).catch(() => {})
+  }
 
   return {
     success: true,

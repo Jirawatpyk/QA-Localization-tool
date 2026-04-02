@@ -11,6 +11,8 @@ import { glossaries } from '@/db/schema/glossaries'
 import { glossaryTerms } from '@/db/schema/glossaryTerms'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { requireRole } from '@/lib/auth/requireRole'
+import { createBulkNotification, NOTIFICATION_TYPES } from '@/lib/notifications/createNotification'
+import { getAdminRecipients } from '@/lib/notifications/recipients'
 import { isUuid } from '@/lib/validation/uuid'
 import type { ActionResult } from '@/types/actionResult'
 
@@ -70,7 +72,28 @@ export async function deleteTerm(termId: string): Promise<ActionResult<{ id: str
     },
   })
 
-  revalidateTag(`glossary-${existing.projectId}`, 'minutes')
+  // Notification: glossary_updated (low-impact → admins only, fire-and-forget)
+  getAdminRecipients(currentUser.tenantId, currentUser.id)
+    .then((recipients) =>
+      createBulkNotification({
+        tenantId: currentUser.tenantId,
+        recipients,
+        type: NOTIFICATION_TYPES.GLOSSARY_UPDATED,
+        title: 'Glossary term deleted',
+        body: `Term "${existing.sourceTerm}" removed`,
+        ...(existing.projectId ? { projectId: existing.projectId } : {}),
+        metadata: {
+          glossaryId: existing.glossaryId,
+          action: 'term_deleted',
+          sourceTerm: existing.sourceTerm,
+        },
+      }),
+    )
+    .catch(() => {})
+
+  if (existing.projectId) {
+    revalidateTag(`glossary-${existing.projectId}`, 'minutes')
+  }
 
   return { success: true, data: { id: termId } }
 }

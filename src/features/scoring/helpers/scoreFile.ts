@@ -15,7 +15,12 @@ import { calculateMqmScore } from '@/features/scoring/mqmCalculator'
 import { loadPenaltyWeights } from '@/features/scoring/penaltyWeightLoader'
 import type { ContributingFinding, FindingsSummary, FindingStatus } from '@/features/scoring/types'
 import { logger } from '@/lib/logger'
-import { createBulkNotification, NOTIFICATION_TYPES } from '@/lib/notifications/createNotification'
+import {
+  createBulkNotification,
+  createNotification,
+  NOTIFICATION_TYPES,
+} from '@/lib/notifications/createNotification'
+import { getAdminRecipients, getFileAssignee } from '@/lib/notifications/recipients'
 import { FINDING_SEVERITIES } from '@/types/finding'
 import type { DetectedByLayer, FindingSeverity, LayerCompleted } from '@/types/finding'
 import type { TenantId } from '@/types/tenant'
@@ -259,6 +264,71 @@ export async function scoreFile({
     })
   } catch (auditErr) {
     logger.error({ err: auditErr, scoreId: newScore.id }, 'Audit log write failed for score')
+  }
+
+  // ── Event notifications (Story 6.2b) ──
+  // analysis_complete → assignee only (when status = 'calculated')
+  // auto_pass_triggered → assignee + admins (when status = 'auto_passed')
+  // na/partial → no notification
+  if (status === 'calculated') {
+    try {
+      const assignee = await getFileAssignee(fileId, tenantId)
+      if (assignee && assignee !== userId) {
+        await createNotification({
+          tenantId,
+          userId: assignee,
+          type: NOTIFICATION_TYPES.ANALYSIS_COMPLETE,
+          title: 'File analysis complete',
+          body: `MQM score: ${newScore.mqmScore} (${newScore.layerCompleted})`,
+          projectId,
+          metadata: {
+            fileId,
+            layerCompleted: newScore.layerCompleted,
+            mqmScore: newScore.mqmScore,
+            status: newScore.status,
+          },
+        })
+      }
+    } catch (notifErr) {
+      logger.warn({ err: notifErr, fileId }, 'analysis_complete notification failed')
+    }
+  } else if (status === 'auto_passed') {
+    try {
+      const assignee = await getFileAssignee(fileId, tenantId)
+      const admins = await getAdminRecipients(tenantId, userId)
+      // Merge assignee + admins, deduplicate, exclude triggering user
+      const seen = new Set<string>()
+      const recipients: Array<{ userId: string }> = []
+      if (assignee && assignee !== userId) {
+        seen.add(assignee)
+        recipients.push({ userId: assignee })
+      }
+      for (const a of admins) {
+        if (!seen.has(a.userId)) {
+          seen.add(a.userId)
+          recipients.push(a)
+        }
+      }
+      if (recipients.length > 0) {
+        await createBulkNotification({
+          tenantId,
+          recipients,
+          type: NOTIFICATION_TYPES.AUTO_PASS_TRIGGERED,
+          title: 'File auto-passed',
+          body: `MQM score: ${newScore.mqmScore} met auto-pass threshold`,
+          projectId,
+          metadata: {
+            fileId,
+            mqmScore: newScore.mqmScore,
+            threshold: autoPassResult?.rationaleData?.threshold ?? null,
+            rationale: newScore.autoPassRationale ?? null,
+            isNewPair: autoPassResult?.isNewPair ?? null,
+          },
+        })
+      }
+    } catch (notifErr) {
+      logger.warn({ err: notifErr, fileId }, 'auto_pass_triggered notification failed')
+    }
   }
 
   // Language pair graduation notification (file 51+ for new pair)

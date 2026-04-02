@@ -88,6 +88,19 @@ vi.mock('next/cache', () => ({
   revalidateTag: (...args: unknown[]) => mockRevalidateTag(...args),
 }))
 
+// 6. Mock notification helpers
+const mockCreateBulkNotification = vi.fn().mockResolvedValue(undefined)
+const mockGetAdminRecipients = vi.fn().mockResolvedValue([{ userId: 'admin-other' }])
+vi.mock('@/lib/notifications/createNotification', () => ({
+  createBulkNotification: (...args: unknown[]) => mockCreateBulkNotification(...args),
+  NOTIFICATION_TYPES: {
+    GLOSSARY_UPDATED: 'glossary_updated',
+  },
+}))
+vi.mock('@/lib/notifications/recipients', () => ({
+  getAdminRecipients: (...args: unknown[]) => mockGetAdminRecipients(...args),
+}))
+
 describe('createTerm', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -269,5 +282,36 @@ describe('createTerm', () => {
     if (!result.success) {
       expect(result.code).toBe('CREATE_FAILED')
     }
+  })
+
+  // ── Story 6.2b: glossary_updated notification ──
+
+  it('should send glossary_updated notification to admins on successful create', async () => {
+    const { createTerm } = await import('./createTerm.action')
+    const result = await createTerm({
+      glossaryId: GLOSSARY_ID,
+      sourceTerm: 'cloud computing',
+      targetTerm: 'คลาวด์คอมพิวติ้ง',
+      caseSensitive: false,
+    })
+
+    expect(result.success).toBe(true)
+    // Wait for fire-and-forget promise chain
+    await vi.waitFor(() => {
+      expect(mockGetAdminRecipients).toHaveBeenCalledWith(TENANT_ID, USER_ID)
+      expect(mockCreateBulkNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId: TENANT_ID,
+          type: 'glossary_updated',
+          projectId: PROJECT_ID,
+          metadata: expect.objectContaining({
+            glossaryId: GLOSSARY_ID,
+            action: 'term_created',
+            sourceTerm: 'cloud computing',
+            targetTerm: 'คลาวด์คอมพิวติ้ง',
+          }),
+        }),
+      )
+    })
   })
 })

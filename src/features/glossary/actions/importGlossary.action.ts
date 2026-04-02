@@ -18,6 +18,8 @@ import {
   importGlossarySchema,
 } from '@/features/glossary/validation/glossarySchemas'
 import { requireRole } from '@/lib/auth/requireRole'
+import { createBulkNotification, NOTIFICATION_TYPES } from '@/lib/notifications/createNotification'
+import { getProjectMembers } from '@/lib/notifications/recipients'
 import type { ActionResult } from '@/types/actionResult'
 
 const BATCH_SIZE = 500
@@ -167,6 +169,25 @@ export async function importGlossary(formData: FormData): Promise<ActionResult<I
     action: 'glossary.created',
     newValue: { name: parsed.data.name, termCount: uniqueTerms.length },
   })
+
+  // Notification: glossary_updated (high-impact → project members, fire-and-forget)
+  getProjectMembers(parsed.data.projectId, currentUser.tenantId, currentUser.id)
+    .then((recipients) =>
+      createBulkNotification({
+        tenantId: currentUser.tenantId,
+        recipients,
+        type: NOTIFICATION_TYPES.GLOSSARY_UPDATED,
+        title: 'Glossary imported',
+        body: `${uniqueTerms.length} terms imported to "${parsed.data.name}"`,
+        projectId: parsed.data.projectId,
+        metadata: {
+          glossaryId: glossary.id,
+          action: 'glossary_imported',
+          termCount: uniqueTerms.length,
+        },
+      }),
+    )
+    .catch(() => {})
 
   // Cache invalidation
   revalidateTag(`glossary-${parsed.data.projectId}`, 'minutes')

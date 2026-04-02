@@ -1293,3 +1293,13 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Fix:** Add migration: `ALTER PUBLICATION supabase_realtime ADD TABLE notifications;` (wrap in idempotent `DO $$ IF NOT EXISTS $$` per Supabase gotcha — `ALTER PUBLICATION` is not idempotent).
 - **Effort:** 30 min
 - **Status:** ~~OPEN~~ → **RESOLVED** (2026-03-30 — Migration 0020 adds notifications to supabase_realtime publication. See `src/db/migrations/0020_notifications_realtime_publication.sql`)
+
+### TD-NOTIF-001: `native_comment_added` notification missing projectId + fileId for navigation
+- **Severity:** Medium
+- **Files:** `src/features/review/actions/addFindingComment.action.ts:108-114`
+- **Description:** `createNotification()` call for `native_comment_added` lacks `projectId` param and `fileId` in metadata. `getNotificationLink()` returns `null` because it can't construct a route. Need to JOIN `findings` table to get `fileId`, then look up `projectId` from files. Currently harmless because `getNotificationLink()` isn't wired into UI yet.
+- **Fix:** In `addFindingComment.action.ts`, add JOIN to `findings` → `files` to get `fileId` + `projectId`, then pass `projectId` param + add `fileId` to metadata.
+- **Effort:** 30 min
+- **Target:** Story 6-2c (when navigation UI is wired)
+- **Origin:** Story 6.2a CR R1 (2026-04-01)
+- **Status:** DEFERRED → 6-2c

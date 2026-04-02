@@ -9,6 +9,10 @@ const {
   mockCheckAutoPass,
   mockLoadPenaltyWeights,
   mockWriteAuditLog,
+  mockCreateNotification,
+  mockCreateBulkNotification,
+  mockGetFileAssignee,
+  mockGetAdminRecipients,
   dbState,
   dbMockModule,
 } = vi.hoisted(() => {
@@ -20,6 +24,12 @@ const {
       Promise.resolve({ critical: 25, major: 5, minor: 1 }),
     ),
     mockWriteAuditLog: vi.fn((..._args: unknown[]) => Promise.resolve()),
+    mockCreateNotification: vi.fn((..._args: unknown[]) => Promise.resolve()),
+    mockCreateBulkNotification: vi.fn((..._args: unknown[]) => Promise.resolve()),
+    mockGetFileAssignee: vi.fn((..._args: unknown[]) => Promise.resolve(null as string | null)),
+    mockGetAdminRecipients: vi.fn((..._args: unknown[]) =>
+      Promise.resolve([] as Array<{ userId: string }>),
+    ),
     dbState,
     dbMockModule,
   }
@@ -43,6 +53,29 @@ vi.mock('@/features/audit/actions/writeAuditLog', () => ({
 
 vi.mock('@/lib/logger', () => ({
   logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}))
+
+vi.mock('@/lib/notifications/createNotification', () => ({
+  createNotification: (...args: unknown[]) => mockCreateNotification(...args),
+  createBulkNotification: (...args: unknown[]) => mockCreateBulkNotification(...args),
+  NOTIFICATION_TYPES: {
+    ANALYSIS_COMPLETE: 'analysis_complete',
+    AUTO_PASS_TRIGGERED: 'auto_pass_triggered',
+    LANGUAGE_PAIR_GRADUATED: 'language_pair_graduated',
+    FINDING_FLAGGED_FOR_NATIVE: 'finding_flagged_for_native',
+    NATIVE_REVIEW_COMPLETED: 'native_review_completed',
+    NATIVE_COMMENT_ADDED: 'native_comment_added',
+    FILE_ASSIGNED: 'file_assigned',
+    FILE_REASSIGNED: 'file_reassigned',
+    FILE_URGENT: 'file_urgent',
+    ASSIGNMENT_COMPLETED: 'assignment_completed',
+    GLOSSARY_UPDATED: 'glossary_updated',
+  },
+}))
+
+vi.mock('@/lib/notifications/recipients', () => ({
+  getFileAssignee: (...args: unknown[]) => mockGetFileAssignee(...args),
+  getAdminRecipients: (...args: unknown[]) => mockGetAdminRecipients(...args),
 }))
 
 vi.mock('@/db/client', () => dbMockModule)
@@ -171,6 +204,10 @@ describe('scoreFile', () => {
     mockCheckAutoPass.mockResolvedValue(mockAutoPassNotEligible)
     mockLoadPenaltyWeights.mockResolvedValue({ critical: 25, major: 5, minor: 1 })
     mockWriteAuditLog.mockResolvedValue(undefined)
+    mockCreateNotification.mockResolvedValue(undefined)
+    mockCreateBulkNotification.mockResolvedValue(undefined)
+    mockGetFileAssignee.mockResolvedValue(null)
+    mockGetAdminRecipients.mockResolvedValue([])
   })
 
   // ── P0: Core scoring flow ──
@@ -466,8 +503,9 @@ describe('scoreFile', () => {
     })
 
     expect(result!.status).toBe('auto_passed')
-    // Graduation notification path consumed all 8 DB values
-    expect(dbState.callIndex).toBe(8)
+    // Graduation notification path: dedup check + admin query = 2 extra DB calls
+    // (createBulkNotification is mocked — no DB insert)
+    expect(dbState.callIndex).toBe(7)
   })
 
   it('should not fire notification when file < 51', async () => {
@@ -1206,5 +1244,185 @@ describe('scoreFile', () => {
         }),
       }),
     )
+  })
+
+  // ── Story 6.2b: Event notifications ──
+
+  it('should send analysis_complete to assignee when status=calculated', async () => {
+    mockGetFileAssignee.mockResolvedValue('assignee-user-1')
+    dbState.returnValues = [mockSegments, [], [undefined], [], [mockNewScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    expect(mockCreateNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: VALID_TENANT_ID,
+        userId: 'assignee-user-1',
+        type: 'analysis_complete',
+        title: 'File analysis complete',
+        projectId: VALID_PROJECT_ID,
+        metadata: expect.objectContaining({
+          fileId: VALID_FILE_ID,
+          layerCompleted: expect.any(String),
+          mqmScore: expect.any(Number),
+          status: 'calculated',
+        }),
+      }),
+    )
+  })
+
+  it('should skip analysis_complete when no assignee exists', async () => {
+    mockGetFileAssignee.mockResolvedValue(null)
+    dbState.returnValues = [mockSegments, [], [undefined], [], [mockNewScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    expect(mockCreateNotification).not.toHaveBeenCalled()
+  })
+
+  it('should skip analysis_complete when assignee is the triggering user (self-notify guard)', async () => {
+    mockGetFileAssignee.mockResolvedValue(VALID_USER_ID)
+    dbState.returnValues = [mockSegments, [], [undefined], [], [mockNewScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    expect(mockCreateNotification).not.toHaveBeenCalled()
+  })
+
+  it('should send auto_pass_triggered to assignee+admins when status=auto_passed', async () => {
+    mockCheckAutoPass.mockResolvedValue({
+      ...mockAutoPassEligible,
+      rationaleData: {
+        threshold: 95,
+        score: 96,
+        margin: 1,
+        severityCounts: {},
+        riskiestFinding: null,
+        criteria: {},
+      },
+    })
+    mockGetFileAssignee.mockResolvedValue('assignee-user-1')
+    mockGetAdminRecipients.mockResolvedValue([{ userId: 'admin-1' }])
+    const autoPassedScore = {
+      ...mockNewScore,
+      status: 'auto_passed',
+      autoPassRationale: mockAutoPassEligible.rationale,
+    }
+    dbState.returnValues = [mockSegments, [], [undefined], [], [autoPassedScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    expect(mockCreateBulkNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: VALID_TENANT_ID,
+        recipients: expect.arrayContaining([{ userId: 'assignee-user-1' }, { userId: 'admin-1' }]),
+        type: 'auto_pass_triggered',
+        projectId: VALID_PROJECT_ID,
+        metadata: expect.objectContaining({
+          fileId: VALID_FILE_ID,
+          mqmScore: expect.any(Number),
+          threshold: 95,
+          rationale: expect.any(String),
+          isNewPair: expect.any(Boolean),
+        }),
+      }),
+    )
+  })
+
+  it('should not send any notification when status=na', async () => {
+    mockCalculateMqmScore.mockReturnValue({
+      ...mockScoreResult,
+      status: 'na' as const,
+    })
+    const naScore = { ...mockNewScore, status: 'na' }
+    dbState.returnValues = [mockSegments, [], [undefined], [], [naScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    expect(mockCreateNotification).not.toHaveBeenCalled()
+    expect(mockCreateBulkNotification).not.toHaveBeenCalled()
+    expect(mockGetFileAssignee).not.toHaveBeenCalled()
+  })
+
+  it('should not send any notification when status=partial', async () => {
+    const partialScore = { ...mockNewScore, status: 'partial' }
+    dbState.returnValues = [mockSegments, [], [undefined], [], [partialScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      scoreStatus: 'partial',
+    })
+
+    expect(mockCreateNotification).not.toHaveBeenCalled()
+    expect(mockCreateBulkNotification).not.toHaveBeenCalled()
+    expect(mockGetFileAssignee).not.toHaveBeenCalled()
+  })
+
+  it('should skip auto_pass_triggered when all recipients are excluded (self=assignee, no other admins)', async () => {
+    mockCheckAutoPass.mockResolvedValue({
+      ...mockAutoPassEligible,
+      rationaleData: {
+        threshold: 95,
+        score: 96,
+        margin: 1,
+        severityCounts: {},
+        riskiestFinding: null,
+        criteria: {},
+      },
+    })
+    // Assignee is the triggering user (self-notify guard)
+    mockGetFileAssignee.mockResolvedValue(VALID_USER_ID)
+    // No other admins after excluding self
+    mockGetAdminRecipients.mockResolvedValue([])
+    const autoPassedScore = {
+      ...mockNewScore,
+      status: 'auto_passed',
+      autoPassRationale: mockAutoPassEligible.rationale,
+    }
+    dbState.returnValues = [mockSegments, [], [undefined], [], [autoPassedScore]]
+
+    const { scoreFile } = await import('./scoreFile')
+    await scoreFile({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+    })
+
+    expect(mockCreateBulkNotification).not.toHaveBeenCalled()
   })
 })

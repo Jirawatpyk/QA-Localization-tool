@@ -151,7 +151,7 @@ development_status:
   # Story 6.2 split into 4 sub-stories per P6 assessment (2026-03-30)
   # Original: 6-2-event-notifications-real-time-updates — too complex for single story
   6-2a-notification-schema-helper-centralization: done
-  6-2b-new-event-types-wiring: backlog
+  6-2b-new-event-types-wiring: done
   6-2c-grouped-ui-navigation-toast: backlog
   6-2d-archive-cron-cleanup: backlog
   # Verification story (mandatory per Guardrail #34)

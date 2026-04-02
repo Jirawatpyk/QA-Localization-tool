@@ -113,6 +113,19 @@ vi.mock('next/cache', () => ({
   revalidateTag: (...args: unknown[]) => mockRevalidateTag(...args),
 }))
 
+// 7. Mock notification helpers
+const mockCreateBulkNotification = vi.fn().mockResolvedValue(undefined)
+const mockGetProjectMembers = vi.fn().mockResolvedValue([{ userId: 'member-1' }])
+vi.mock('@/lib/notifications/createNotification', () => ({
+  createBulkNotification: (...args: unknown[]) => mockCreateBulkNotification(...args),
+  NOTIFICATION_TYPES: {
+    GLOSSARY_UPDATED: 'glossary_updated',
+  },
+}))
+vi.mock('@/lib/notifications/recipients', () => ({
+  getProjectMembers: (...args: unknown[]) => mockGetProjectMembers(...args),
+}))
+
 function makeFormData() {
   const fd = new FormData()
   fd.append(
@@ -300,6 +313,31 @@ describe('importGlossary', () => {
       expect(result.code).toBe('VALIDATION_ERROR')
       expect(result.error).toContain('too large')
     }
+  })
+
+  // ── Story 6.2b: glossary_updated notification ──
+
+  it('should send glossary_updated notification to project members on successful import', async () => {
+    const { importGlossary } = await import('./importGlossary.action')
+    const result = await importGlossary(makeFormData())
+
+    expect(result.success).toBe(true)
+    // Wait for fire-and-forget promise chain
+    await vi.waitFor(() => {
+      expect(mockGetProjectMembers).toHaveBeenCalledWith(PROJECT_ID, TENANT_ID, USER_ID)
+      expect(mockCreateBulkNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId: TENANT_ID,
+          type: 'glossary_updated',
+          projectId: PROJECT_ID,
+          metadata: expect.objectContaining({
+            glossaryId: GLOSSARY_ID,
+            action: 'glossary_imported',
+            termCount: 2,
+          }),
+        }),
+      )
+    })
   })
 
   // ── Branch coverage: intra-file dedup ──

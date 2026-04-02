@@ -12,6 +12,8 @@ import { glossaryTerms } from '@/db/schema/glossaryTerms'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { updateTermSchema } from '@/features/glossary/validation/glossarySchemas'
 import { requireRole } from '@/lib/auth/requireRole'
+import { createBulkNotification, NOTIFICATION_TYPES } from '@/lib/notifications/createNotification'
+import { getAdminRecipients } from '@/lib/notifications/recipients'
 import { isUuid } from '@/lib/validation/uuid'
 import type { ActionResult } from '@/types/actionResult'
 
@@ -126,7 +128,29 @@ export async function updateTerm(
     newValue: updateValues,
   })
 
-  revalidateTag(`glossary-${existing.projectId}`, 'minutes')
+  // Notification: glossary_updated (low-impact → admins only, fire-and-forget)
+  getAdminRecipients(currentUser.tenantId, currentUser.id)
+    .then((recipients) =>
+      createBulkNotification({
+        tenantId: currentUser.tenantId,
+        recipients,
+        type: NOTIFICATION_TYPES.GLOSSARY_UPDATED,
+        title: 'Glossary term updated',
+        body: `Term "${updated.sourceTerm}" → "${updated.targetTerm}" updated`,
+        ...(existing.projectId ? { projectId: existing.projectId } : {}),
+        metadata: {
+          glossaryId: existing.glossaryId,
+          action: 'term_updated',
+          sourceTerm: updated.sourceTerm,
+          targetTerm: updated.targetTerm,
+        },
+      }),
+    )
+    .catch(() => {})
+
+  if (existing.projectId) {
+    revalidateTag(`glossary-${existing.projectId}`, 'minutes')
+  }
 
   return {
     success: true,

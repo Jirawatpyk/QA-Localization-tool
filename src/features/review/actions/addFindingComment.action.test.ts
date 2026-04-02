@@ -6,23 +6,25 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { asTenantId } from '@/types/tenant'
 
-const { dbState, dbMockModule, mockRequireRole, mockWriteAuditLog } = vi.hoisted(() => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { dbState, dbMockModule } = (createDrizzleMock as any)()
-  return {
-    dbState,
-    dbMockModule,
-    mockRequireRole: vi.fn((..._args: unknown[]) =>
-      Promise.resolve({
-        id: '44444444-4444-4444-8444-444444444444',
-        tenantId: asTenantId('c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f'),
-        role: 'native_reviewer' as string,
-        nativeLanguages: ['th'] as string[],
-      }),
-    ),
-    mockWriteAuditLog: vi.fn((..._args: unknown[]) => Promise.resolve()),
-  }
-})
+const { dbState, dbMockModule, mockRequireRole, mockWriteAuditLog, mockCreateNotification } =
+  vi.hoisted(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { dbState, dbMockModule } = (createDrizzleMock as any)()
+    return {
+      dbState,
+      dbMockModule,
+      mockRequireRole: vi.fn((..._args: unknown[]) =>
+        Promise.resolve({
+          id: '44444444-4444-4444-8444-444444444444',
+          tenantId: asTenantId('c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f'),
+          role: 'native_reviewer' as string,
+          nativeLanguages: ['th'] as string[],
+        }),
+      ),
+      mockWriteAuditLog: vi.fn((..._args: unknown[]) => Promise.resolve()),
+      mockCreateNotification: vi.fn((..._args: unknown[]) => Promise.resolve()),
+    }
+  })
 
 vi.mock('server-only', () => ({}))
 vi.mock('@/db/client', () => dbMockModule)
@@ -46,6 +48,8 @@ vi.mock('@/db/schema/findingAssignments', () => ({
     tenantId: 'tenant_id',
     assignedTo: 'assigned_to',
     assignedBy: 'assigned_by',
+    fileId: 'file_id',
+    projectId: 'project_id',
   },
 }))
 vi.mock('@/db/schema/findingComments', () => ({
@@ -70,6 +74,12 @@ vi.mock('@/db/schema/notifications', () => ({
     metadata: 'metadata',
   },
 }))
+vi.mock('@/lib/notifications/createNotification', () => ({
+  createNotification: (...args: unknown[]) => mockCreateNotification(...args),
+  NOTIFICATION_TYPES: {
+    NATIVE_COMMENT_ADDED: 'native_comment_added',
+  },
+}))
 vi.mock('@/lib/logger', () => ({
   logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }))
@@ -81,6 +91,16 @@ const NATIVE_USER_ID = '44444444-4444-4444-8444-444444444444'
 const FLAGGER_USER_ID = 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d'
 const FINDING_ID = '11111111-1111-4111-8111-111111111111'
 const ASSIGNMENT_ID = '55555555-5555-4555-8555-555555555555'
+const FILE_ID = '66666666-6666-4666-8666-666666666666'
+const PROJECT_ID = '77777777-7777-4777-8777-777777777777'
+
+const mockAssignment = {
+  id: ASSIGNMENT_ID,
+  assignedTo: NATIVE_USER_ID,
+  assignedBy: FLAGGER_USER_ID,
+  fileId: FILE_ID,
+  projectId: PROJECT_ID,
+}
 
 const validInput = {
   findingId: FINDING_ID,
@@ -101,7 +121,7 @@ describe('addFindingComment', () => {
   it('should insert comment and return commentId and createdAt', async () => {
     const createdAt = new Date()
     dbState.returnValues = [
-      [{ id: ASSIGNMENT_ID, assignedTo: NATIVE_USER_ID, assignedBy: FLAGGER_USER_ID }], // 0: assignment
+      [mockAssignment], // 0: assignment
       [{ id: 'new-comment-id', createdAt }], // 1: INSERT .returning()
       [], // 2: notification
     ]
@@ -124,9 +144,7 @@ describe('addFindingComment', () => {
       role: 'native_reviewer' as const,
       nativeLanguages: ['th'],
     })
-    dbState.returnValues = [
-      [{ id: ASSIGNMENT_ID, assignedTo: NATIVE_USER_ID, assignedBy: FLAGGER_USER_ID }],
-    ]
+    dbState.returnValues = [[mockAssignment]]
 
     const result = await addFindingComment(validInput)
 
@@ -147,11 +165,7 @@ describe('addFindingComment', () => {
   it('should enforce tenant isolation via withTenant', async () => {
     const { withTenant } = await import('@/db/helpers/withTenant')
     const createdAt = new Date()
-    dbState.returnValues = [
-      [{ id: ASSIGNMENT_ID, assignedTo: NATIVE_USER_ID, assignedBy: FLAGGER_USER_ID }],
-      [{ id: 'cid', createdAt }],
-      [],
-    ]
+    dbState.returnValues = [[mockAssignment], [{ id: 'cid', createdAt }], []]
 
     await addFindingComment(validInput)
 
@@ -160,11 +174,7 @@ describe('addFindingComment', () => {
 
   it('should write audit log for comment_created', async () => {
     const createdAt = new Date()
-    dbState.returnValues = [
-      [{ id: ASSIGNMENT_ID, assignedTo: NATIVE_USER_ID, assignedBy: FLAGGER_USER_ID }],
-      [{ id: 'cid', createdAt }],
-      [],
-    ]
+    dbState.returnValues = [[mockAssignment], [{ id: 'cid', createdAt }], []]
 
     await addFindingComment(validInput)
 
@@ -173,21 +183,45 @@ describe('addFindingComment', () => {
     )
   })
 
-  it('should create notification to other party — non-blocking', async () => {
+  it('should create notification to other party', async () => {
     const createdAt = new Date()
-    dbState.returnValues = [
-      [{ id: ASSIGNMENT_ID, assignedTo: NATIVE_USER_ID, assignedBy: FLAGGER_USER_ID }],
-      [{ id: 'cid', createdAt }],
-    ]
-    dbState.throwAtCallIndex = 2 // notification insert fails
+    dbState.returnValues = [[mockAssignment], [{ id: 'cid', createdAt }]]
 
     const result = await addFindingComment(validInput)
 
     expect(result.success).toBe(true)
+    expect(mockCreateNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'native_comment_added',
+        userId: FLAGGER_USER_ID, // other party
+      }),
+    )
+  })
+
+  // ── Story 6.2b: AC5 — native_comment_added metadata includes projectId + fileId ──
+
+  it('should include projectId and fileId in native_comment_added notification metadata', async () => {
+    const createdAt = new Date()
+    dbState.returnValues = [[mockAssignment], [{ id: 'cid', createdAt }]]
+
+    await addFindingComment(validInput)
+
+    expect(mockCreateNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'native_comment_added',
+        projectId: PROJECT_ID,
+        metadata: expect.objectContaining({
+          findingId: FINDING_ID,
+          assignmentId: ASSIGNMENT_ID,
+          projectId: PROJECT_ID,
+          fileId: FILE_ID,
+        }),
+      }),
+    )
   })
 
   // CR-M6: admin role bypasses ownership check
-  it('should allow admin to comment regardless of assignment ownership', async () => {
+  it('should allow admin to comment and notify both assignedTo + assignedBy', async () => {
     const adminUserId = '99999999-9999-4999-8999-999999999999'
     mockRequireRole.mockResolvedValueOnce({
       id: adminUserId,
@@ -198,12 +232,20 @@ describe('addFindingComment', () => {
     const createdAt = new Date()
     dbState.returnValues = [
       // Assignment exists but admin is NOT assignedTo or assignedBy
-      [{ id: ASSIGNMENT_ID, assignedTo: NATIVE_USER_ID, assignedBy: FLAGGER_USER_ID }],
+      [mockAssignment],
       [{ id: 'cid-admin', createdAt }],
     ]
 
     const result = await addFindingComment(validInput)
 
     expect(result.success).toBe(true)
+    // Admin is 3rd actor: both assignedTo and assignedBy should be notified
+    expect(mockCreateNotification).toHaveBeenCalledTimes(2)
+    expect(mockCreateNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: NATIVE_USER_ID }),
+    )
+    expect(mockCreateNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: FLAGGER_USER_ID }),
+    )
   })
 })

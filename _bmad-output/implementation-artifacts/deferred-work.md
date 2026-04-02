@@ -61,5 +61,10 @@
 
 ## Deferred from: code review of story-6.2a (2026-04-01)
 
-- **native_comment_added has no lookup mechanism:** returns null for navigation when projectId/fileId missing from metadata — spec defers to future story for assignmentId→projectId/fileId lookup
-- **New notification types metadata shape TBD:** `analysis_complete`, `glossary_updated`, `auto_pass_triggered` declared but INSERT code not wired — deferred to Story 6-2b
+- ~~**native_comment_added has no lookup mechanism:**~~ ✅ DONE (Story 6.2b) — metadata now includes projectId + fileId from findingAssignments SELECT
+- ~~**New notification types metadata shape TBD:**~~ ✅ DONE (Story 6.2b) — all 3 types wired with INSERT calls + metadata contracts
+
+## ~~Deferred from: code review of story-6.2b (2026-04-02)~~ ✅ ALL FIXED (2026-04-02)
+
+- ~~**D1: `addFindingComment` admin commenter notifies only 1 of 2 other parties**~~ ✅ DONE — Set-based recipient collection: notifies all parties (assignedTo + assignedBy) except the commenter. Handles admin as 3rd actor correctly.
+- ~~**D2: `revalidateTag(\`glossary-null\`)` when `glossary.projectId` is null**~~ ✅ DONE — Added `if (projectId)` guard in createTerm, updateTerm, deleteTerm before calling revalidateTag.

@@ -10,6 +10,8 @@ import { withTenant } from '@/db/helpers/withTenant'
 import { glossaries } from '@/db/schema/glossaries'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { requireRole } from '@/lib/auth/requireRole'
+import { createBulkNotification, NOTIFICATION_TYPES } from '@/lib/notifications/createNotification'
+import { getProjectMembers } from '@/lib/notifications/recipients'
 import { isUuid } from '@/lib/validation/uuid'
 import type { ActionResult } from '@/types/actionResult'
 
@@ -57,7 +59,32 @@ export async function deleteGlossary(glossaryId: string): Promise<ActionResult<{
     },
   })
 
-  revalidateTag(`glossary-${existing.projectId}`, 'minutes')
+  // Notification: glossary_updated (high-impact → project members, fire-and-forget)
+  // Guard: skip if glossary has no project (orphaned by cascade set null)
+  const glossaryProjectId = existing.projectId
+  if (glossaryProjectId) {
+    getProjectMembers(glossaryProjectId, currentUser.tenantId, currentUser.id)
+      .then((recipients) =>
+        createBulkNotification({
+          tenantId: currentUser.tenantId,
+          recipients,
+          type: NOTIFICATION_TYPES.GLOSSARY_UPDATED,
+          title: 'Glossary deleted',
+          body: `Glossary "${existing.name}" was deleted`,
+          projectId: glossaryProjectId,
+          metadata: {
+            glossaryId,
+            action: 'glossary_deleted',
+            glossaryName: existing.name,
+          },
+        }),
+      )
+      .catch(() => {})
+  }
+
+  if (existing.projectId) {
+    revalidateTag(`glossary-${existing.projectId}`, 'minutes')
+  }
 
   return { success: true, data: { id: glossaryId } }
 }
