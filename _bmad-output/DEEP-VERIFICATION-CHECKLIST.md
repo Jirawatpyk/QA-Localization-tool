@@ -110,7 +110,7 @@
 - [x] Noted — auto-advance ✅
 - [x] Source Issue — auto-advance ✅
 - [ ] Manual — NOT TESTED (Add Finding not working via keyboard)
-- [ ] **FINDING R-05:** Finding states don't show colored tints per UX spec — accepted/rejected/flagged findings are hidden by Pending filter, not shown with colored backgrounds. UX spec says "Green tint (accepted), Red tint (rejected), Yellow tint (flagged)". **Priority: P2**
+- [ ] **FINDING R-05:** Finding states don't show colored tints per UX spec. When Status=All, accepted findings show **dimmed/greyed text** instead of **green tint**. Rejected shows same dimmed style instead of **red tint**. Flagged findings don't show **yellow tint**. UX spec says: "Accepted = green-tinted background, Rejected = red-tinted dimmed, Flagged = yellow-tinted with flag icon, Noted = blue tint, Source Issue = purple tint". Currently all resolved states use same grey dimmed style — **no color distinction between states**. **Priority: P2**
 
 ### Keyboard Navigation
 - [x] J / ↓ → next finding ✅ (tested: focus moved with blue border)
@@ -208,7 +208,7 @@
 ### Status "All" View — Additional Observations
 - [x] "Showing 52 of 52 findings" when Status=All ✅
 - [x] Filter badge "Status: All × Clear all" — removable ✅
-- [x] Accepted findings show dimmed/greyed text ✅ (but not green tint per spec)
+- [x] Accepted findings show dimmed/greyed text — **WRONG: UX spec says green tint, not grey dimmed** (= R-05)
 - [x] "Non-native" badge on findings ✅
 - [x] "Subject to native audit" text on reviewed findings ✅ (non-native auto-tag works!)
 
@@ -473,7 +473,7 @@
 | R-02 | Review Card | No inline AI suggestion | P2 | Need to add |
 | R-03 | Review Card | Only 2 quick actions on card | P2 | Design review |
 | R-04 | Review Actions | [+] Add Finding unclear | P2 | Investigate |
-| R-05 | Review States | State tints not visible | P2 | Need to add |
+| R-05 | Review States | State tints wrong — all use grey dimmed, not green/red/yellow/blue/purple per UX spec | P2 | Need to add |
 | R-06 | Review Filters | Category lowercase | P2 | In S-UX-4 |
 | R-07 | Review Filters | Missing Noted/Source Issue filter | P2 | Need to add |
 | R-08 | Review Filters | Counts need recheck | P3 | Recheck |
