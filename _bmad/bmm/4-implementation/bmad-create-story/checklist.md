@@ -126,6 +126,14 @@ You will systematically re-do the entire story creation process, but with a crit
   - Performance improvements or deprecations
   - Best practices for current versions
 
+#### **2.6 UX Specification Analysis (Guardrail #95-97)**
+
+- **MANDATORY for UI stories** — skip if pure backend
+- Load UX Design Specification (path in CLAUDE.md Key Planning Documents)
+- Extract: layout, UI states (loading/error/empty/success/partial), a11y, animations
+- Cross-check existing UI against UX spec for gaps
+- Output: Populate UX States Checklist in story template
+
 ### **Step 3: Disaster Prevention Gap Analysis**
 
 **🚨 CRITICAL: Identify every mistake the original LLM missed that could cause DISASTERS!**
