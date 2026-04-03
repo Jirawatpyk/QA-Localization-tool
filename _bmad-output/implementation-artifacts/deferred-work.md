@@ -80,3 +80,8 @@
 - ~~**W3: Error codes use inline strings codebase-wide**~~ ✅ DONE — Created `ActionErrorCode` union type at `@/types/actionErrorCode.ts`, updated `ActionResult`
 - ~~**W4: `support@example.com` placeholder**~~ ✅ DONE — Centralized to `SUPPORT_EMAIL` constant in `@/lib/constants.ts`
 - ~~**W5: No `error.tsx` at review/batch route level**~~ ✅ DONE — Created `review/[fileId]/error.tsx` + `batches/[batchId]/error.tsx`
+
+## ~~Deferred from: code review of s-fix-2 (2026-04-03)~~ ✅ ALL FIXED (2026-04-03)
+
+- ~~**D1: DragOverlay tooltip with tabIndex=0 during keyboard drag**~~ ✅ DONE — `tabIndex={readOnly ? -1 : 0}` removes focusability from DragOverlay clone
+- ~~**D2: Unsaved draft lost when switching Edit to another row**~~ ✅ DONE — `startEdit()` detects dirty draft and shows toast.info before switching

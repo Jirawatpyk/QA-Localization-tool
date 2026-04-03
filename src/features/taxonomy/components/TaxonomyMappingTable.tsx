@@ -21,6 +21,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical } from 'lucide-react'
 import { useState, useSyncExternalStore } from 'react'
+import { toast } from 'sonner'
 
 import {
   AlertDialog,
@@ -220,7 +221,7 @@ function MappingCells({
             <TooltipTrigger asChild>
               <span
                 className="text-sm text-text-secondary truncate block cursor-default"
-                tabIndex={0}
+                tabIndex={readOnly ? -1 : 0}
               >
                 {mapping.description}
               </span>
@@ -349,6 +350,20 @@ export function TaxonomyMappingTable({
   )
 
   function startEdit(mapping: TaxonomyMapping) {
+    // D2 review fix: warn when switching edit with unsaved changes
+    if (editingId && editingId !== mapping.id && draft) {
+      const prev = mappings.find((m) => m.id === editingId)
+      if (
+        prev &&
+        (draft.internalName !== (prev.internalName ?? '') ||
+          draft.category !== prev.category ||
+          draft.parentCategory !== (prev.parentCategory ?? '') ||
+          draft.severity !== (prev.severity ?? 'minor') ||
+          draft.description !== prev.description)
+      ) {
+        toast.info('Previous edit discarded')
+      }
+    }
     setEditingId(mapping.id)
     setDraft({
       internalName: mapping.internalName ?? '',

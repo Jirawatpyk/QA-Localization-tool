@@ -1,6 +1,6 @@
 # Story S-FIX-2: SSR Hydration + Taxonomy Edit UX
 
-Status: review
+Status: done
 
 ## Story
 
@@ -139,6 +139,16 @@ This is the **second story in Phase 1 (P0 Critical)** of the UX/UI Debt Clearanc
   - [x] T6.2: Added `MqmCategoryCombobox.test.tsx` — 7 tests (render, placeholder, aria-label, aria-expanded, className)
   - [x] T6.3: Added 2 tooltip tests in `TaxonomyMappingTable.test.tsx` (truncate+tabIndex, empty em-dash)
   - [x] T6.4: lint 0 errors, type-check clean, 28/28 taxonomy tests GREEN
+
+### Review Findings
+
+- [x] [Review][Patch] **F1 (P1): Combobox search state not reset on popover re-open (Guardrail #21)** — `search` state in `MqmCategoryCombobox` persists when popover closes without selection. On re-open, stale search text shown and filter applied incorrectly. Fix: reset `search` to `''` in `onOpenChange` when closing. [MqmCategoryCombobox.tsx:34-46]
+- [x] [Review][Patch] **F2 (P3): `required` attribute removed from MQM Category field** — Old `<Input required>` provided HTML5 validation; new `MqmCategoryCombobox` (Button trigger) cannot use `required`. Server Zod `.trim().min(1)` catches empty, but no client-side feedback. Fix: add disabled state or early return in `handleSubmit` when `form.category.trim()` is empty. [AddMappingDialog.tsx:107]
+- [x] [Review][Patch] **F3 (P2): E2E cleanup fallback corrupts data when originalFirstRowName is null** — If edit test fails before capturing name, cleanup writes `'Reverted by E2E cleanup'` which is itself stale test data. Fix: skip cleanup if `originalFirstRowName` is null. [taxonomy-admin.spec.ts:383]
+- [x] [Review][Patch] **F4 (P3): PopoverContent width 200px mismatched with trigger w-full** — Trigger button is `w-full` (fills column) but dropdown is hardcoded `w-[200px]`. Fix: use `w-[var(--radix-popover-trigger-width)]` or `min-w-[200px] w-[var(--radix-popover-trigger-width)]`. [MqmCategoryCombobox.tsx:63]
+- [x] [Review][Patch] **F5 (P2): E2E `isVisible({ timeout: 3000 })` uses invalid API** — Playwright `isVisible()` does not accept timeout option. The param is silently ignored. Fix: remove `{ timeout: 3000 }` or use `await editedCell.waitFor({ state: 'visible', timeout: 3000 }).catch(() => null)`. [taxonomy-admin.spec.ts:376]
+- [x] [Review][Fixed] **D1: DragOverlay tooltip with tabIndex=0 during keyboard drag** — fixed: `tabIndex={readOnly ? -1 : 0}` removes focusability from DragOverlay clone. [TaxonomyMappingTable.tsx:223]
+- [x] [Review][Fixed] **D2: Unsaved draft lost when switching Edit to another row** — fixed: `startEdit()` now detects dirty draft and shows `toast.info('Previous edit discarded')` before switching. [TaxonomyMappingTable.tsx:353-366]
 
 ## Dev Notes
 

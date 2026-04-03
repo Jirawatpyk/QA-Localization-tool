@@ -67,8 +67,11 @@ export function AddMappingDialog({
     setPrevOpen(open)
   }
 
+  const isCategoryEmpty = form.category.trim().length === 0
+
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    if (isCategoryEmpty) return
     onSubmit({
       category: form.category,
       parentCategory: form.parentCategory || null,
@@ -161,7 +164,12 @@ export function AddMappingDialog({
           <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button form="add-mapping-form" type="submit" data-testid="submit-add-mapping">
+          <Button
+            form="add-mapping-form"
+            type="submit"
+            disabled={isCategoryEmpty}
+            data-testid="submit-add-mapping"
+          >
             Add Mapping
           </Button>
         </DialogFooter>

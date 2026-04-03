@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-02-15
-last_updated: 2026-04-03
+last_updated: 2026-04-03  # CR R1 s-fix-2 done
 project: qa-localization-tool
 project_key: NOKEY
 tracking_system: file-system
@@ -187,7 +187,7 @@ development_status:
   # Root cause: src/features/admin/components/ — same component files
   # Fix: SSR client-only boundary + MQM dropdown + Save/Cancel + description tooltip + data cleanup
   # Ref: DEEP-VERIFICATION-CHECKLIST.md > Taxonomy, screenshot deep-05/18
-  s-fix-2-ssr-taxonomy-edit-ux: review
+  s-fix-2-ssr-taxonomy-edit-ux: done
 
   # S-FIX-3: User Menu & Logout [M]
   # Findings: BUG-8 (P0)

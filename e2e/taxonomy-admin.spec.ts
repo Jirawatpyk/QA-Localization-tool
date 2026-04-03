@@ -378,13 +378,16 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
 
     // Find any row matching E2E_EDIT_NAME and revert to original
     const editedCell = page.getByRole('cell', { name: E2E_EDIT_NAME, exact: true })
-    const isVisible = await editedCell.isVisible({ timeout: 3000 }).catch(() => false)
+    // Skip cleanup if original name was never captured (edit test failed early)
+    if (!originalFirstRowName) return
+
+    const isVisible = await editedCell.isVisible()
     if (isVisible) {
-      const row = editedCell.locator('..')
+      const row = editedCell.locator('xpath=ancestor::tr')
       await row.getByRole('button', { name: 'Edit', exact: true }).click()
       const nameInput = page.getByRole('textbox', { name: /QA Cosmetic name/i })
       await nameInput.clear()
-      await nameInput.fill(originalFirstRowName ?? 'Reverted by E2E cleanup')
+      await nameInput.fill(originalFirstRowName)
       await page.getByRole('button', { name: 'Save' }).click()
       await expect(page.getByText('Mapping updated')).toBeVisible({ timeout: 10000 })
     }

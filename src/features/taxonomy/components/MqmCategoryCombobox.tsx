@@ -34,6 +34,13 @@ export function MqmCategoryCombobox({
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
 
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen)
+    if (!nextOpen) {
+      setSearch('')
+    }
+  }
+
   function handleSelect(selectedValue: string) {
     onValueChange(selectedValue)
     setOpen(false)
@@ -47,7 +54,7 @@ export function MqmCategoryCombobox({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -60,7 +67,10 @@ export function MqmCategoryCombobox({
           <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-0" align="start">
+      <PopoverContent
+        className="min-w-[200px] w-[var(--radix-popover-trigger-width)] p-0"
+        align="start"
+      >
         <Command shouldFilter={false}>
           <CommandInput
             placeholder="Search..."
