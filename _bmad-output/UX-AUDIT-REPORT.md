@@ -248,4 +248,93 @@
 
 ---
 
+---
+
+## Sally's Round 2 — Detailed Re-Verification (Post-Bugfix)
+
+**Date:** 2026-04-03 (after commit `04b6913`)
+**Method:** Playwright browser + screenshots every page + ARIA snapshot + console error check
+
+### 7 Bugfix Verification — ALL PASSED
+
+| Bug | Page | Before | After | Screenshot |
+|---|---|---|---|---|
+| BUG-1 | Projects | Card not clickable | Card clickable + hover shadow + keyboard a11y | `sally-01-projects.png` |
+| BUG-2 | Projects | "-1 days ago" | "Today" | `sally-01-projects.png` |
+| BUG-3 | History | UUID in breadcrumb | "Demo EN-TH Project > History" | `sally-02-history.png` |
+| BUG-4 | Suppression Rules | "suppression-rules" | "Suppression Rules" | `32-verify-breadcrumb-suppression.png` |
+| BUG-5 | History | File name plain text | File name as blue link | `sally-02-history.png` |
+| BUG-6 | All project pages | Onboarding repeats | Onboarding stays dismissed | `sally-02-history.png` (no tooltip!) |
+| BUG-9 | Sidebar | Admin visible to all | Admin hidden for qa_reviewer | `33-verify-sidebar-qa-reviewer.png` |
+
+### New UX Issues Found in Round 2
+
+| # | Page | Issue | UX Spec Reference | Priority |
+|---|---|---|---|---|
+| UX-NEW-01 | Parity | Native `<input type="file">` shows "เลือกไฟล์ ไม่ได้เลือกไฟล์ใด" — unstyled, inconsistent with drag-drop pattern on Upload page | visual-design-foundation.md: custom components | P2 |
+| UX-NEW-02 | Dashboard | Onboarding "Welcome" dialog still appears on every visit to Dashboard — separate scope from project tour (BUG-6 fixed project tour only, dashboard tour is separate) | ux-consistency-patterns.md: onboarding persistence | P1 |
+| UX-NEW-03 | Dashboard | Status badges show `l3_completed` / `l2_completed` raw technical text | TD-UX-010 (already tracked) | P1 |
+| UX-NEW-04 | Dashboard | File rows in recent table not clickable — can't navigate to review from dashboard | core-user-experience.md: "Click file → review" | P1 |
+| UX-NEW-05 | Settings | No language pair display/edit — UX spec says "Language pair display, editable if wrong" | core-user-experience.md: language pair auto-detect | P2 |
+| UX-NEW-06 | Settings | No "Reset" button — only "Save Settings" — UX spec says "Save/Reset buttons" | settings spec | P3 |
+| UX-NEW-07 | Settings | No confidence thresholds per language — UX spec says "Per-language sliders" | core-user-experience.md: confidence thresholds | P2 (Epic 7) |
+| UX-NEW-08 | Review | AI progress bar shows "L2 complete" but UX spec says 3-phase indicator (L1/L2/L3 separately) | ux-consistency-patterns.md: 3-layer progressive | TD-UX-009 |
+| UX-NEW-09 | Review | No persistent Status Bar (32px bottom) — UX spec: "Score, Progress, AI, Shortcuts always visible" like VS Code | visual-design-foundation.md: layout structure | P2 |
+| UX-NEW-10 | Review | Sidebar stays expanded in review mode — UX spec: "Default collapsed in review mode" | visual-design-foundation.md: sidebar behavior | P3 |
+| UX-NEW-11 | Review | No Detail Panel as persistent side panel (400px) — findings expand inline instead | visual-design-foundation.md: layout structure | P2 |
+| UX-NEW-12 | Review | Category filter shows raw names: "completeness", "punctuation", "tag_integrity" — should be Title Case | visual-design-foundation.md: typography | P2 |
+| UX-NEW-13 | Admin Users | "Joined" date shows Thai Buddhist Era (3/4/2569) — inconsistent with "Today" on project card | ux-consistency-patterns.md: date formatting | P2 |
+| UX-NEW-14 | Admin Users | No "Language pairs assigned" column — UX spec says "Language pair assignment per QA Reviewer" | admin user management spec | P2 (Epic 6) |
+| UX-NEW-15 | Header | Bell icon (Notifications) has no dropdown — just icon, no badge count | Epic 6.2c (in progress) | P1 |
+| UX-NEW-16 | Header | Help icon (?) has no functionality | layout spec | P3 |
+| UX-NEW-17 | Header | User icon has no dropdown/menu — no logout, no profile | BUG-8 (separate story) | P0 |
+| UX-NEW-18 | All pages | No "Skip to main content" link for keyboard users | WCAG 2.4.1 | P2 |
+| UX-NEW-19 | Batches | Batch names show truncated UUIDs ("Batch d95f0ee4") — not meaningful | ux-consistency-patterns.md: batch naming | P2 |
+| UX-NEW-20 | Batches | Batch cards not clickable — can't drill into batch detail | core-user-experience.md: "Batch → File" nav | P2 |
+
+### Console Errors Across All Pages
+
+| Page | Errors | Warnings |
+|---|---|---|
+| Login | 0 | 0 |
+| Signup | 0 | 0 |
+| Dashboard | 0 | 0 |
+| Projects | 0 | 0 |
+| Upload | 0 | 0 |
+| History | 0 | 0 |
+| Batches | 0 | 0 |
+| Parity | 0 | 0 |
+| Settings | 0 | 0 |
+| Glossary | 0 | 0 |
+| Review | 0 | 0 |
+| Admin (all 4 tabs) | 0 | 0 |
+
+**0 console errors across all 12+ pages** ✅
+
+### Updated Gap Summary
+
+| Priority | Count | Items |
+|---|---|---|
+| **P0** | 1 | UX-NEW-17 (No Logout) = BUG-8 |
+| **P1** | 4 | UX-NEW-02 (Dashboard onboarding), UX-NEW-03 (Status badges), UX-NEW-04 (Dashboard file click), UX-NEW-15 (Notification dropdown) |
+| **P2** | 11 | UX-NEW-01, 05, 07, 08, 09, 11, 12, 13, 14, 18, 19, 20 |
+| **P3** | 3 | UX-NEW-06, 10, 16 |
+| **Already tracked** | 3 | TD-UX-009, TD-UX-010, TD-UX-011 |
+| **Total new gaps** | **20** |
+
+### Mapping to Epic/Story
+
+| Gap Group | Items | Best Epic |
+|---|---|---|
+| Logout + User Menu | UX-NEW-17 | **Standalone story (P0)** |
+| Dashboard improvements | UX-NEW-02, 03, 04 | **Epic 6 (remaining) or Epic 7** |
+| Notification UI | UX-NEW-15 | **Epic 6.2c (already planned)** |
+| Review Panel UX | UX-NEW-08, 09, 10, 11, 12 | **Epic 7 or dedicated UX polish story** |
+| Settings completeness | UX-NEW-05, 06, 07 | **Epic 7 (Auto-Pass config)** |
+| Admin improvements | UX-NEW-13, 14 | **Epic 6 (remaining)** |
+| Accessibility | UX-NEW-18 | **Any sprint (quick fix)** |
+| Batch/Parity polish | UX-NEW-01, 19, 20 | **Epic 7-8** |
+
+*Sally's Round 2 completed — 2026-04-03 post-bugfix commit `04b6913`*
+
 *Generated from automated UI tour + UX spec cross-reference on 2026-04-03*
