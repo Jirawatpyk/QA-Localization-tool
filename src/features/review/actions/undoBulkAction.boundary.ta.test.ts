@@ -73,7 +73,7 @@ describe('undoBulkAction — Boundary Tests', () => {
     // Zod .min(1) rejects empty array before reaching the inArray guard
     expect(result.success).toBe(false)
     if (!result.success) {
-      expect(result.code).toBe('VALIDATION')
+      expect(result.code).toBe('VALIDATION_ERROR')
     }
     // Must NOT call DB at all
     expect(dbState.callIndex).toBe(0)

@@ -37,7 +37,7 @@ export async function flagForNative(
     return {
       success: false,
       error: parsed.error.issues[0]?.message ?? 'Invalid input',
-      code: 'VALIDATION',
+      code: 'VALIDATION_ERROR',
     }
   }
 
@@ -86,7 +86,7 @@ export async function flagForNative(
     return {
       success: false,
       error: 'Cross-file findings cannot be assigned',
-      code: 'VALIDATION',
+      code: 'VALIDATION_ERROR',
     }
   }
 
@@ -163,7 +163,7 @@ export async function flagForNative(
     return {
       success: false,
       error: 'User is not a native reviewer for this language',
-      code: 'VALIDATION',
+      code: 'VALIDATION_ERROR',
     }
   }
 

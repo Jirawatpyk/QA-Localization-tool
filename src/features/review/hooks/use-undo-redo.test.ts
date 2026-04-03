@@ -241,7 +241,7 @@ describe('useUndoRedo — branch coverage', () => {
 
     mockUndoSeverityOverride.mockResolvedValueOnce({
       success: false,
-      code: 'INTERNAL',
+      code: 'INTERNAL_ERROR',
       error: 'Server error',
     })
 
@@ -317,7 +317,7 @@ describe('useUndoRedo — branch coverage', () => {
 
     mockUndoDeleteFinding.mockResolvedValueOnce({
       success: false,
-      code: 'INTERNAL',
+      code: 'INTERNAL_ERROR',
       error: 'DB error',
     })
 
@@ -494,7 +494,7 @@ describe('useUndoRedo — branch coverage', () => {
 
     mockUndoAction.mockResolvedValueOnce({
       success: false,
-      code: 'INTERNAL',
+      code: 'INTERNAL_ERROR',
       error: 'Internal error',
     })
 

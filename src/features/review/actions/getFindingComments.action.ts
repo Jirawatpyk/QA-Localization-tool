@@ -31,7 +31,7 @@ export async function getFindingComments(
 ): Promise<ActionResult<FindingComment[]>> {
   // CR-H5 fix: UUID validation (consistent with other actions)
   if (!isUuid(findingAssignmentId)) {
-    return { success: false, error: 'Invalid assignment ID', code: 'VALIDATION' }
+    return { success: false, error: 'Invalid assignment ID', code: 'VALIDATION_ERROR' }
   }
 
   let user: Awaited<ReturnType<typeof requireRole>>

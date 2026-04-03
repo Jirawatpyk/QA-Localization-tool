@@ -16,7 +16,7 @@ export async function redoAction(input: RedoActionInput): Promise<ActionResult<U
     return {
       success: false,
       error: parsed.error.issues[0]?.message ?? 'Invalid input',
-      code: 'VALIDATION',
+      code: 'VALIDATION_ERROR',
     }
   }
 

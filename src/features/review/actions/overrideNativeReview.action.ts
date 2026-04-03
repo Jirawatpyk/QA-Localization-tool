@@ -33,7 +33,7 @@ export async function overrideNativeReview(
     return {
       success: false,
       error: parsed.error.issues[0]?.message ?? 'Invalid input',
-      code: 'VALIDATION',
+      code: 'VALIDATION_ERROR',
     }
   }
 

@@ -138,7 +138,7 @@ describe('getFindingComments', () => {
 
     expect(result.success).toBe(false)
     if (!result.success) {
-      expect(result.code).toBe('VALIDATION')
+      expect(result.code).toBe('VALIDATION_ERROR')
     }
   })
 })

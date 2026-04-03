@@ -297,7 +297,7 @@ export async function getFileReviewData(
       return {
         success: false,
         error: 'This file has no translatable content',
-        code: 'EMPTY_FILE' as const,
+        code: 'EMPTY_FILE',
       }
     }
 

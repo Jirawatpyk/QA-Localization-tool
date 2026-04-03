@@ -11,6 +11,7 @@ import { scores } from '@/db/schema/scores'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
+import type { ActionErrorCode } from '@/types/actionErrorCode'
 import type { ActionResult } from '@/types/actionResult'
 import type { ScoreStatus } from '@/types/finding'
 
@@ -34,7 +35,7 @@ const inputSchema = z.object({
 const APPROVABLE_STATUSES = new Set(['calculated', 'overridden'])
 
 /** Map non-approvable statuses to error codes */
-const STATUS_ERROR_MAP: Record<string, string> = {
+const STATUS_ERROR_MAP: Record<string, ActionErrorCode> = {
   calculating: 'SCORE_STALE',
   partial: 'SCORE_PARTIAL',
   na: 'SCORE_NA',
@@ -60,7 +61,7 @@ export async function approveFile(input: ApproveFileInput): Promise<ActionResult
     return {
       success: false,
       error: parsed.error.issues[0]?.message ?? 'Invalid input',
-      code: 'VALIDATION',
+      code: 'VALIDATION_ERROR',
     }
   }
 
@@ -71,7 +72,7 @@ export async function approveFile(input: ApproveFileInput): Promise<ActionResult
   try {
     user = await requireRole('qa_reviewer')
   } catch (err) {
-    const authErr = err as { success: false; code: string; error: string }
+    const authErr = err as { success: false; code: ActionErrorCode; error: string }
     return {
       success: false,
       error: authErr.error ?? 'Unauthorized',

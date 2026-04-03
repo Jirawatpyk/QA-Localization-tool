@@ -298,15 +298,15 @@ For this story, commits should use: `fix(security): UUID validation on route par
 
 ### Review Findings
 
-- [x] [Review][Defer] **D1: ScoreBadge "N/A" missing for 0-segment files** — Deferred to S-FIX-5. Not trivially addable (requires import + layout rework). ScoreBadge belongs in file list/header context, not EMPTY_FILE page.
-- [x] [Review][Defer] **D2: Route-level UUID validation test missing** — Cover via E2E test (navigate /projects/not-a-uuid ��� verify not-found). isUuid() has 14 unit tests. Server Component notFound() not testable in vitest/jsdom.
-- [x] [Review][Resolved] **D3: AutoFocusHeading vs guardrail #20** — Keep as-is. Document guardrail #20 exception for error/not-found pages (WCAG SC 4.1.3 requires focus for screen reader announcement).
-- [x] [Review][Patch] **P1: Empty-file UI missing `role="alert"` + auto-focus** [review/[fileId]/page.tsx:34-56] — FIXED: added `role="alert"` + `AutoFocusHeading` component
-- [x] [Review][Defer] **W1: Error boundary UI duplicated 4 times (DRY)** — pre-existing pattern, Next.js convention files must be separate; refactor scope larger than S-FIX-1
-- [x] [Review][Defer] **W2: Batch page missing `connection()` call** — Next.js auto-detects dynamic via requireRole(); not a bug but inconsistent with ReviewPage
-- [x] [Review][Defer] **W3: Error codes use inline strings codebase-wide** — EMPTY_FILE `as const` matches existing pattern; needs codebase-wide union type refactor
-- [x] [Review][Defer] **W4: `support@example.com` placeholder in all error pages** — dev stage, no real support email; configure at deploy time
-- [x] [Review][Defer] **W5: No `error.tsx` at review/batch route level** — parent [projectId]/error.tsx catches adequately; file-specific boundaries are nice-to-have
+- [x] [Review][Fixed] **D1: ScoreBadge "N/A" for 0-segment files** — FIXED: Added `<ScoreBadge score={null} size="md" />` to EMPTY_FILE UI (shows "N/A" gray)
+- [x] [Review][Fixed] **D2: Route-level UUID validation E2E test** — FIXED: Created `e2e/uuid-validation.spec.ts` (5 tests: invalid projectId, SQL injection, invalid fileId, invalid batchId, no Postgres errors)
+- [x] [Review][Resolved] **D3: AutoFocusHeading vs guardrail #20** — Keep as-is. Documented guardrail #20 exception for error/not-found pages (WCAG SC 4.1.3)
+- [x] [Review][Fixed] **P1: Empty-file UI missing `role="alert"` + auto-focus** — FIXED: added `role="alert"` + `AutoFocusHeading` component
+- [x] [Review][Fixed] **W1: Error boundary DRY** — FIXED: Extracted `ErrorPageContent` shared component (`src/components/ui/error-page-content.tsx`), refactored all 4 error/not-found pages
+- [x] [Review][Fixed] **W2: Batch page missing `connection()` call** — FIXED: Added `await connection()` for consistency with ReviewPage
+- [x] [Review][Fixed] **W3: Error codes union type** — FIXED: Created `ActionErrorCode` union type (`src/types/actionErrorCode.ts`), updated `ActionResult` to use it, 40+ error codes centralized
+- [x] [Review][Fixed] **W4: `support@example.com` centralized** — FIXED: Added `SUPPORT_EMAIL` constant to `src/lib/constants.ts`, used in `ErrorPageContent`
+- [x] [Review][Fixed] **W5: error.tsx at review/batch level** — FIXED: Created `review/[fileId]/error.tsx` + `batches/[batchId]/error.tsx` using shared `ErrorPageContent`
 
 ## Dev Agent Record
 

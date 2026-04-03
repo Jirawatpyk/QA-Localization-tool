@@ -34,7 +34,7 @@ export async function redoBulkAction(
     return {
       success: false,
       error: parsed.error.issues[0]?.message ?? 'Invalid input',
-      code: 'VALIDATION',
+      code: 'VALIDATION_ERROR',
     }
   }
 

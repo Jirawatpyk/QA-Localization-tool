@@ -37,7 +37,7 @@ export async function addFinding(input: AddFindingInput): Promise<ActionResult<A
     return {
       success: false,
       error: parsed.error.issues[0]?.message ?? 'Invalid input',
-      code: 'VALIDATION',
+      code: 'VALIDATION_ERROR',
     }
   }
 

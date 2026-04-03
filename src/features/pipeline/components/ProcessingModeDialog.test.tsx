@@ -360,10 +360,10 @@ describe('ProcessingModeDialog', () => {
   })
 
   // ── TA Gap J: Budget exceeded error display ──
-  it('[P2] should show budget exceeded error toast when startProcessing returns BUDGET_EXCEEDED', async () => {
+  it('[P2] should show budget exhausted error toast when startProcessing returns BUDGET_EXHAUSTED', async () => {
     mockStartProcessing.mockResolvedValue({
       success: false,
-      code: 'BUDGET_EXCEEDED',
+      code: 'BUDGET_EXHAUSTED',
       error: 'AI budget exhausted for this project',
     })
     const user = userEvent.setup()

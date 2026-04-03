@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { connection } from 'next/server'
 
 import { getBatchSummary } from '@/features/batch/actions/getBatchSummary.action'
 import { BatchSummaryView } from '@/features/batch/components/BatchSummaryView'
@@ -10,6 +11,7 @@ export default async function BatchDetailPage({
 }: {
   params: Promise<{ projectId: string; batchId: string }>
 }) {
+  await connection()
   const { projectId, batchId } = await params
 
   if (!isUuid(batchId)) {

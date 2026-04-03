@@ -4,7 +4,7 @@ import { AlertTriangle } from 'lucide-react'
 
 import { ErrorPageContent } from '@/components/ui/error-page-content'
 
-export default function ProjectError({
+export default function ReviewError({
   error,
   reset,
 }: {
@@ -14,8 +14,8 @@ export default function ProjectError({
   return (
     <ErrorPageContent
       icon={AlertTriangle}
-      title="This page couldn't load"
-      description="An unexpected error occurred while loading this project. Your data is safe."
+      title="Review page couldn't load"
+      description="An unexpected error occurred while loading the review. Your data is safe."
       digest={error.digest}
       reset={reset}
       links={[

@@ -61,7 +61,7 @@ export async function startProcessing(
     if (!budget.hasQuota) {
       return {
         success: false,
-        code: 'BUDGET_EXCEEDED',
+        code: 'BUDGET_EXHAUSTED',
         error: `AI budget exhausted ($${budget.usedBudgetUsd.toFixed(2)}/$${budget.monthlyBudgetUsd?.toFixed(2) ?? '∞'}). Upgrade plan or set new budget`,
       }
     }

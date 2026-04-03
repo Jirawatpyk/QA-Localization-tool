@@ -228,7 +228,7 @@ describe('useNotifications — TD-UX-003', () => {
     mockMark.mockResolvedValueOnce({
       success: false,
       error: 'Server error',
-      code: 'INTERNAL',
+      code: 'INTERNAL_ERROR',
     } as never)
 
     const { result } = renderHook(() => useNotifications('user-1', 'tenant-1'))

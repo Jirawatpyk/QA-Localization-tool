@@ -525,7 +525,7 @@ describe('startProcessing', () => {
     expect(mockInngestSend).toHaveBeenCalled()
   })
 
-  it('should return BUDGET_EXCEEDED when checkProjectBudget returns hasQuota=false', async () => {
+  it('should return BUDGET_EXHAUSTED when checkProjectBudget returns hasQuota=false', async () => {
     mockCheckProjectBudget.mockResolvedValue({
       hasQuota: false,
       usedBudgetUsd: 100,
@@ -553,7 +553,7 @@ describe('startProcessing', () => {
 
     expect(result.success).toBe(false)
     if (result.success) return
-    expect(result.code).toBe('BUDGET_EXCEEDED')
+    expect(result.code).toBe('BUDGET_EXHAUSTED')
     expect(result.error).toContain('budget exhausted')
     expect(mockInngestSend).not.toHaveBeenCalled()
   })
@@ -671,7 +671,7 @@ describe('startProcessing', () => {
 
     expect(result.success).toBe(false)
     if (result.success) return
-    expect(result.code).toBe('BUDGET_EXCEEDED')
+    expect(result.code).toBe('BUDGET_EXHAUSTED')
     expect(result.error).toContain('∞')
   })
 

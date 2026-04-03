@@ -13,3 +13,6 @@ export const SCORE_DEBOUNCE_MS = 500
 
 export const RATE_LIMIT_WINDOW_MS = 60_000
 export const RATE_LIMIT_MAX_REQUESTS = 100
+
+/** Placeholder support email — replace with real address before production deploy */
+export const SUPPORT_EMAIL = 'support@example.com'

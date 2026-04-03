@@ -28,7 +28,7 @@ export async function addFindingComment(
     return {
       success: false,
       error: parsed.error.issues[0]?.message ?? 'Invalid input',
-      code: 'VALIDATION',
+      code: 'VALIDATION_ERROR',
     }
   }
 
@@ -91,7 +91,7 @@ export async function addFindingComment(
     .returning({ id: findingComments.id, createdAt: findingComments.createdAt })
 
   if (!comment) {
-    return { success: false, error: 'Failed to create comment', code: 'INTERNAL' }
+    return { success: false, error: 'Failed to create comment', code: 'INTERNAL_ERROR' }
   }
 
   // Audit log (Guardrail #78)

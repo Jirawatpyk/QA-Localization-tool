@@ -167,7 +167,7 @@ describe('addFinding.action', () => {
     const result = await addFinding({ ...VALID_INPUT, description: 'Short' })
 
     expect(result.success).toBe(false)
-    if (!result.success) expect(result.code).toBe('VALIDATION')
+    if (!result.success) expect(result.code).toBe('VALIDATION_ERROR')
   })
 
   it('[P1] U-AF4: should insert feedback_events row (FR80)', async () => {
