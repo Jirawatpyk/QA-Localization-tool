@@ -179,7 +179,7 @@ development_status:
   # Root cause: src/app/(app)/projects/[projectId]/ — no UUID validation before DB query
   # Fix: Zod UUID validation on route params, error boundary with recovery actions, 0-segment guard
   # Ref: DEEP-VERIFICATION-CHECKLIST.md > Error States, screenshot deep-19/20
-  s-fix-1-security-uuid-error-states: review
+  s-fix-1-security-uuid-error-states: done
 
   # S-FIX-2: SSR Hydration + Taxonomy Edit UX [M] (merged S-FIX-2 + S-FIX-15)
   # Findings: T-05 (P0 SSR hydration), T-01 (description tooltip), T-02 (E2E data cleanup),

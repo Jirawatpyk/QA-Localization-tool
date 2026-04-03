@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { connection } from 'next/server'
 
+import { AutoFocusHeading } from '@/components/ui/auto-focus-heading'
 import { getFileAssignment } from '@/features/project/actions/getFileAssignment.action'
 import { getFileReviewData } from '@/features/review/actions/getFileReviewData.action'
 import { ReviewPageClient } from '@/features/review/components/ReviewPageClient'
@@ -32,10 +33,12 @@ export default async function ReviewPage({
     // AC4: Dedicated empty-file UI for 0-segment files
     if (result.code === 'EMPTY_FILE') {
       return (
-        <div className="flex flex-1 items-center justify-center p-8">
+        <div className="flex flex-1 items-center justify-center p-8" role="alert">
           <div className="flex max-w-md flex-col items-center gap-4 text-center">
             <FileQuestion size={48} className="text-text-muted" />
-            <h1 className="text-lg font-semibold text-text-primary">No translatable content</h1>
+            <AutoFocusHeading className="text-lg font-semibold text-text-primary outline-none">
+              No translatable content
+            </AutoFocusHeading>
             <p className="text-sm text-text-secondary">This file has no segments to review.</p>
             <div className="flex flex-col items-center gap-2">
               <Link

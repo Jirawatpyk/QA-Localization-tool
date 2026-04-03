@@ -169,7 +169,7 @@ Each feature module contains: `components/`, `actions/` (Server Actions), `hooks
 17. **Keyboard shortcuts** — single-key hotkeys (A/R/F/N/S/+/-/J/K/C/O) active ONLY in review area. Suppress in `<input>`, `<textarea>`, `<select>`, `[contenteditable]`, modals (SC 2.1.4). No browser shortcut override (Ctrl+S/P/W/N/T/F5). Grid navigation: roving tabindex (`tabindex="0"` on focused row, `-1` on others)
 18. **Modal + escape** — modal: trap focus + restore on close (`aria-modal="true"` + `inert`). Escape: innermost layer first, one layer per press, `event.stopPropagation()`. Auto-advance: `requestAnimationFrame` delay, never sync focus in handler
 19. **ARIA + lang** — landmarks: `<nav>` file nav, `<main>` finding list, `role="complementary"` detail panel. `aria-live="polite"` default, `"assertive"` only errors. `lang="{languageCode}"` on every source/target text element. CJK containers: 1.1x font scale
-20. **Motion + focus** — `prefers-reduced-motion: reduce` on ALL animations. No focus stealing on mount — auto-expand is visual only. `useEffect` + `.focus()` FORBIDDEN except modal open + auto-advance
+20. **Motion + focus** — `prefers-reduced-motion: reduce` on ALL animations. No focus stealing on mount — auto-expand is visual only. `useEffect` + `.focus()` FORBIDDEN except modal open, auto-advance, and error/not-found pages (WCAG SC 4.1.3 — screen reader must announce error state)
 21. **Dialog state reset** — custom dialogs must reset form state on re-open: `useEffect(() => { if (open) resetForm() }, [open])`. `useRef` not reset on prop change — reset ref in `useEffect` watching that prop
 
 ### React & TypeScript

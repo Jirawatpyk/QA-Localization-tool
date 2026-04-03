@@ -72,3 +72,11 @@
 ## Deferred from: UI tour bugfix review (2026-04-03)
 
 - ~~**FileHistoryTable: link shown for unprocessed files**~~ ✅ DONE — Gate link on `L1_COMPLETED_STATUSES` (l1_completed, l2_processing, l2_completed, l3_processing, l3_completed, ai_partial). Files in uploaded/parsing/parsed/l1_processing/failed status render as plain text instead of link.
+
+## Deferred from: code review of s-fix-1 (2026-04-03)
+
+- **W1: Error boundary UI duplicated 4 times (DRY)** — Root, app, project error.tsx + not-found.tsx share nearly identical markup. Extract shared ErrorPageLayout component. Next.js convention files must be separate but can share UI.
+- **W2: Batch page missing `connection()` call** — ReviewPage has explicit `await connection()` but BatchDetailPage relies on auto-detection via `requireRole()`. Add for consistency.
+- **W3: Error codes use inline strings codebase-wide** — EMPTY_FILE, VALIDATION_ERROR, NOT_FOUND etc. all use `as const` or bare strings. Centralize into a union type at `@/types/errorCodes.ts`.
+- **W4: `support@example.com` placeholder in all error pages** — Replace with configurable support URL/email at deploy time.
+- **W5: No `error.tsx` at review/batch route level** — Parent [projectId]/error.tsx catches but lacks file-specific recovery context. Add file-aware error boundaries.

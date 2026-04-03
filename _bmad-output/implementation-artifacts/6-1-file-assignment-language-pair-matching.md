@@ -310,6 +310,7 @@ Claude Opus 4.6 (1M context)
 - T9: FileAssignmentCell component with Assign button + badge + UrgentBadge, integrated into FileHistoryTable
 - T10: 16 unit tests (assignFile 5, heartbeat 5, createNotification 6) + 7 boundary tests (useSoftLock) + RLS test file (10 tests, requires Supabase)
 - T11: Unskipped all 20 E2E test stubs in file-assignment.spec.ts
+- CR: 3 review rounds (R1: 19 findings fixed, R2: verified, Final: clean). 31 new tests added. 8 pre-existing deferred issues resolved. Commits: `413e415` (bug fixes), `fc78f2f` (CR fixes)
 
 ### Change Log
 - 2026-03-31: Story 6.1 implementation complete — all 11 tasks done
@@ -332,6 +333,13 @@ Claude Opus 4.6 (1M context)
   - P8: useFilePresence .catch, P9: null currentUserId, P16: unused projectId removed
   - P10-P12: 4 new unit test files (27 tests) + 2 assignFile tests + 3 RLS tests
   - P13-P15: E2E assertion improvements (sort order, button existence, query scoping)
+- 2026-04-01: Code review R2 — all 19 R1 findings verified, 0 new issues
+- 2026-04-01: Deferred fixes round — 8/9 pre-existing issues fixed:
+  - FindingCommentThread + FlagForNativeDialog: mountedRef → per-effect cancelled pattern
+  - ReviewPageClient: onOverride guard, toast dismiss on cleanup, undo action dynamic, delete snapshot before server call
+  - FileHistoryTable: aria-pressed + aria-current (WCAG SC 4.1.2)
+  - assignFile: fileName truncation (80 chars) in notifications
+- 2026-04-01: Final review — AC1-AC7 all PASS, 17/17 guardrails compliant, 8/8 deferred verified
 
 ### Review Findings
 
@@ -418,3 +426,7 @@ Claude Opus 4.6 (1M context)
 - `src/features/project/actions/updateAssignmentStatus.action.test.ts` (new — CR P10)
 - `src/features/project/actions/getEligibleReviewers.action.test.ts` (new — CR P10)
 - `src/features/project/actions/getFileAssignment.action.test.ts` (new — CR P10)
+- `src/features/review/components/FindingCommentThread.tsx` (modified — CR deferred: mountedRef → cancelled)
+- `src/features/review/components/FlagForNativeDialog.tsx` (modified — CR deferred: mountedRef → cancelled)
+- `src/features/review/components/ReviewPageClient.tsx` (modified — CR deferred: 4 fixes)
+- `src/features/batch/components/FileHistoryTable.tsx` (modified — CR deferred: aria-pressed + aria-current)

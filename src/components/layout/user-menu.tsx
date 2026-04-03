@@ -4,6 +4,7 @@ import { LogOut, User } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,7 +57,9 @@ export function UserMenu({ displayName, email, role }: UserMenuProps) {
           <div className="flex flex-col gap-1">
             <p className="text-sm font-medium">{displayName}</p>
             <p className="text-xs text-muted-foreground">{email}</p>
-            <p className="text-xs text-muted-foreground">{ROLE_LABELS[role] ?? role}</p>
+            <Badge variant="secondary" className="mt-0.5 text-[10px]">
+              {ROLE_LABELS[role] ?? role}
+            </Badge>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
