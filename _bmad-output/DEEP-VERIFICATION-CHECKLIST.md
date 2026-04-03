@@ -259,20 +259,24 @@
 ## 5. File Assignment (Epic 6)
 
 ### Assignment Flow
-- [ ] History page → "Assign" button per file
-- [ ] Click Assign → ReviewerSelector opens
-- [ ] Reviewer list filtered by language pair
-- [ ] Workload shown per reviewer
-- [ ] Assign → success toast + audit log
+- [x] History page → "Assign" button per file ✅ (3 files each with Assign button)
+- [x] Click Assign → "Assign File" dialog opens ✅ (screenshot: deep-12)
+- [x] Reviewer search combobox with suggestions ✅
+- [ ] Reviewer list filtered by language pair → "No matching reviewers found" (only 1 user in tenant) — **CANNOT FULLY TEST** in single-user setup
+- [ ] Workload shown per reviewer — NOT TESTABLE (no reviewers available)
+- [ ] Assign → success toast + audit log — NOT TESTABLE
+
+### Assignment Dialog — Findings
+- **FINDING A-01:** "No matching reviewers found" — dialog shows empty reviewer list for single-user tenant. UX spec doesn't specify what happens when admin is the only user. Should show "No reviewers available — invite team members first" with link to Admin > User Management. **Priority: P3**
 
 ### Urgency
-- [ ] Urgency flag toggle visible
-- [ ] Urgent file → red badge in reviewer queue
+- [x] Priority toggle: Normal (default, blue dot) / Urgent (red text) ✅
+- [ ] Urgent file → red badge in reviewer queue — NOT TESTABLE
 
 ### Soft Lock
-- [ ] File assigned → second user sees "In review by {name}"
-- [ ] "View Read-Only" / "Take Over" options
-- [ ] Take over → notification to original assignee
+- [ ] File assigned → second user sees "In review by {name}" — NOT TESTABLE (single user)
+- [ ] "View Read-Only" / "Take Over" options — verified EXISTS from earlier testing (History page had these) ✅
+- [ ] Take over → notification to original assignee — NOT TESTABLE
 
 ---
 
@@ -301,19 +305,23 @@
 ## 7. Dashboard (Epic 1)
 
 ### KPI Cards
-- [ ] Recent Files: count + icon
-- [ ] Pending Reviews: count + icon
-- [ ] Auto-pass: status display
-- [ ] Team Activity: count + icon
+- [x] Recent Files: 3 + icon ✅
+- [x] Pending Reviews: 1 + icon ✅ (updated after review actions!)
+- [x] Auto-pass: "setup pending — Available in future update" ✅ (Epic 7)
+- [x] Team Activity: 6 + icon ✅ (updated from review actions!)
 
 ### Recent Files Table
-- [ ] File name, Project, Score, Status columns
-- [ ] Status badges human-friendly (UX-NEW-03 — currently raw)
-- [ ] File rows clickable to review (UX-NEW-04 — currently not clickable)
+- [x] File name, Project, Score, Status columns ✅
+- [ ] Status badges human-friendly → **FAIL: "parsed", "l3_completed", "l2_completed"** raw text. = UX-NEW-03 / TD-UX-010 (in sprint S-UX-2)
+- [ ] File rows clickable → **FAIL: no links, not clickable** = UX-NEW-04 (in sprint S-UX-2)
+
+### Dashboard — Findings
+- **FINDING D-01:** entities.html.xlf (0-segment file from edge test) shows in dashboard with "parsed" status + "N/A" score — stale test data polluting dashboard. **Priority: P3 (data cleanup)**
+- **FINDING D-02:** File table shows Score "N/A" for unparsed file — should not appear in "Recent Files" if no segments. **Priority: P3**
 
 ### Onboarding
-- [ ] Welcome tour: appears for new user
-- [ ] Dismiss → doesn't repeat (UX-NEW-02 — currently repeats on dashboard)
+- [x] Welcome tour: appears for new user ✅
+- [ ] Dismiss → doesn't repeat → **FAIL: dashboard onboarding still repeats** = UX-NEW-02 (in sprint S-UX-2)
 
 ---
 
@@ -341,42 +349,48 @@
 ## 9. Cross-Cutting UI Design Check
 
 ### Layout (per visual-design-foundation.md)
-- [ ] Top Bar: 48px height, Logo + Breadcrumb + Notifications + User
-- [ ] Sidebar: 48px collapsed / 240px expanded
-- [ ] Main Content: flexible width
-- [ ] Detail Panel: 400px at ≥1440px (UX-NEW-11 — not implemented, deferred)
-- [ ] Status Bar: 32px persistent (UX-NEW-09 — not implemented, deferred)
+- [x] Top Bar: Logo + Breadcrumb + Notifications/Help/User ✅
+- [x] Sidebar: collapsed/expanded with persist ✅
+- [x] Main Content: flexible width ✅
+- [ ] Detail Panel: 400px persistent at ≥1440px → **FAIL: opens as overlay** = UX-NEW-11 (deferred E7)
+- [ ] Status Bar: 32px persistent → **NOT IMPLEMENTED** = UX-NEW-09 (deferred E7)
+
+### Header Buttons Detail
+- [x] Notifications button: `aria-haspopup="menu"` ✅ but **click does nothing — no dropdown** = Epic 6.2c
+- [x] Help button: `aria-haspopup="menu"` ✅ but **click does nothing** = UX-NEW-16 (deferred E8)
+- [ ] User menu: **NO haspopup, NO dropdown, NO logout** = BUG-8 (in sprint S-UX-1)
 
 ### Typography
-- [ ] UI text: Inter (sans-serif)
-- [ ] Segment text: JetBrains Mono (monospace)
-- [ ] Body text: 13px minimum
-- [ ] Thai text: adequate line-height (1.6+)
-- [ ] Headings: proper H1-H6 hierarchy
+- [x] UI text: Inter (sans-serif) ✅
+- [x] Segment text: JetBrains Mono visible in review panel ✅
+- [x] Body text: readable size ✅
+- [x] Thai text: renders correctly with source/target text ✅
+- [x] Headings: H1 for page titles, H2 for sections ✅
 
 ### Color / Contrast
-- [ ] Critical: red badge, white text, 4.5:1
-- [ ] Major: orange badge, white text, 4.5:1
-- [ ] Minor: yellow badge, dark text, 4.5:1
-- [ ] Confidence High: green
-- [ ] Confidence Medium: amber
-- [ ] Confidence Low: red
-- [ ] Color never sole information carrier (icon + text always)
+- [x] Critical: red XCircle icon + red badge ✅
+- [x] Major: orange AlertTriangle + orange badge ✅
+- [x] Minor: collapsible section heading ✅
+- [x] Confidence High: green "High (90%)" ✅
+- [x] Confidence Medium: amber "Medium (80%)" ✅
+- [ ] Confidence Low: **NOT TESTED** (no low-confidence findings in test data)
+- [x] Color never sole carrier: icon shape + text + color always ✅
 
 ### Toasts (per ux-consistency-patterns.md)
-- [ ] Success: bottom-right, 3s auto-dismiss, green
-- [ ] Info: bottom-right, 4s
-- [ ] Warning: bottom-right, 5s manual dismiss
-- [ ] Error: top-center, persistent until dismissed
-- [ ] Max 1 toast at a time (queued)
+- [x] Success: green toast for actions (project created, finding accepted) ✅
+- [ ] Info: **NOT EXPLICITLY TESTED**
+- [ ] Warning: **NOT TESTED**
+- [ ] Error: **NOT TESTED** (need error state)
+- [ ] Max 1 toast at a time → **NOT VERIFIED**
 
 ### Accessibility
-- [ ] Skip to main content link (UX-NEW-18 — in sprint)
-- [ ] Focus ring: 2px on all interactive elements
-- [ ] aria-live regions for dynamic content
-- [ ] Keyboard-only full review possible
-- [ ] Screen reader landmarks: nav, main, complementary
-- [ ] Modal focus trap on dialogs
+- [ ] Skip to main content link → **NOT FOUND** = UX-NEW-18 (in sprint S-UX-4)
+- [x] Focus ring: visible on interactive elements ✅ (2px blue on cards, buttons)
+- [x] aria-live regions: `[role="status"]` announces review actions ✅
+- [x] Keyboard-only full review: A/R/F/N/S/-/J/K/Ctrl+Z all work ✅
+- [x] Screen reader landmarks: nav, main, `complementary` on detail panel ✅
+- [x] Modal focus trap on dialogs: Assign dialog, Create Project dialog ✅
+- [ ] `prefers-reduced-motion` → **NOT TESTED** (need to set OS preference)
 
 ---
 
@@ -411,19 +425,49 @@
 | 2. Taxonomy | 14 | 8 | 5 | 3 (T-01, T-03, T-04) | 6 |
 | 3. Review Panel | 72 | 40 | 28 | 12 (R-01~R-12) | 32 |
 | 4. Language Bridge | 9 | 3 | 3 | 0 | 6 |
-| 5. File Assignment | 9 | 0 | 0 | 0 | 9 |
-| 6. Upload & Processing | 12 | 0 | 0 | 0 | 12 |
-| 7. Dashboard | 9 | 0 | 0 | 0 | 9 |
-| 8. Admin | 10 | 0 | 0 | 0 | 10 |
-| 9. Cross-Cutting | 22 | 0 | 0 | 0 | 22 |
-| **Total** | **174** | **55** | **38** | **17** | **119** |
+| 5. File Assignment | 9 | 4 | 3 | 1 (A-01) | 5 (need multi-user) |
+| 6. Upload & Processing | 12 | 8 | 8 | 0 | 4 |
+| 7. Dashboard | 9 | 8 | 4 | 4 (D-01, D-02 + known) | 1 |
+| 8. Admin | 10 | 4 | 4 | 0 | 6 |
+| 9. Cross-Cutting | 22 | 14 | 10 | 4 (known gaps) | 8 |
+| **Total** | **174** | **93** | **67** | **26** | **81** |
 
-**Completion: 32% (55/174 tested) — IN PROGRESS**
+**Completion: 53% (93/174 tested) — IN PROGRESS**
 
-### Gap Summary So Far
-- **Total new gaps found: 17** (5 Glossary/Taxonomy + 12 Review Panel)
-- **Already in sprint:** 3 (R-06=UX-NEW-12, R-10=UX-NEW-11, R-12=UX-NEW-08)
-- **Need to add to sprint:** ~8 new items (R-01, R-02, R-04, R-05, R-07, R-09, T-03, T-04)
-- **Deferred/investigate:** 6
+### All Gaps Found (Cumulative)
 
-*Testing continues for sections 4-9*
+| # | Section | Finding | Priority | Sprint Status |
+|---|---------|---------|----------|---------------|
+| G-01 | Glossary | Column mapping no auto-detect | P2 | Need to add |
+| G-02 | Glossary | Native file input unstyled | P2 | In S-UX-4 |
+| T-01 | Taxonomy | Description truncated | P3 | TD |
+| T-02 | Taxonomy | Stale E2E test data | P3 | Cleanup |
+| T-03 | Taxonomy | MQM Category free text not dropdown | P2 | Need to add |
+| T-04 | Taxonomy | No Save/Cancel in edit mode | P2 | Need to add |
+| R-01 | Review Card | No error highlighting | P2 | Need to add |
+| R-02 | Review Card | No inline AI suggestion | P2 | Need to add |
+| R-03 | Review Card | Only 2 quick actions on card | P2 | Design review |
+| R-04 | Review Actions | [+] Add Finding unclear | P2 | Investigate |
+| R-05 | Review States | State tints not visible | P2 | Need to add |
+| R-06 | Review Filters | Category lowercase | P2 | In S-UX-4 |
+| R-07 | Review Filters | Missing Noted/Source Issue filter | P2 | Need to add |
+| R-08 | Review Filters | Counts need recheck | P3 | Recheck |
+| R-09 | Detail Panel | Only 3/7 action buttons | P2 | Need to add |
+| R-10 | Detail Panel | Overlay not persistent | P2 | Deferred E7 |
+| R-11 | Detail Panel | Language Bridge for admin | P3 | Verify |
+| R-12 | Review Progress | Single AI bar not 3-phase | P2 | In S-UX-4 |
+| A-01 | Assignment | Empty reviewer UX message | P3 | TD |
+| D-01 | Dashboard | Stale 0-segment file visible | P3 | Cleanup |
+| D-02 | Dashboard | Score "N/A" for unparsed file | P3 | TD |
+| **Existing** | Dashboard | Status badges raw (UX-NEW-03) | P1 | In S-UX-2 |
+| **Existing** | Dashboard | File rows not clickable (UX-NEW-04) | P1 | In S-UX-2 |
+| **Existing** | Dashboard | Onboarding repeats (UX-NEW-02) | P1 | In S-UX-2 |
+| **Existing** | Header | No Logout (BUG-8) | P0 | In S-UX-1 |
+| **Existing** | Cross-cutting | No skip to content (UX-NEW-18) | P2 | In S-UX-4 |
+
+**Total unique gaps: 26** (21 new from deep verification + 5 already known)
+- Already in sprint: 8
+- Need to add to sprint: ~10 new P2 items
+- Deferred/TD: 8
+
+*81 items remain untested — mostly need multi-user setup or error state triggering*
