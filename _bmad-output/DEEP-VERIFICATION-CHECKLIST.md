@@ -74,63 +74,78 @@
 ## 3. Review Panel — Core Loop (Epic 4)
 
 ### Finding Card Display (per UX spec)
-- [ ] Severity badge: colored icon (XCircle/AlertTriangle/Info) + text label
-- [ ] Error type: QA Cosmetic term displayed
-- [ ] Layer badge: "Rule" (blue) or "AI" (purple)
-- [ ] Source text with error portion highlighted
-- [ ] Target text with error portion highlighted
-- [ ] AI suggestion: proposed fix in italic (AI findings only)
-- [ ] Confidence indicator: colored dot + percentage (High/Medium/Low)
-- [ ] Quick action buttons (Accept ✓ / Reject ✗)
+- [x] Severity badge: colored icon (AlertTriangle for Major) + text label ✅
+- [x] Error type: category displayed ("Accuracy", "Fluency") ✅
+- [x] Layer badge: "AI" (purple-ish) / "Rule" (blue) ✅
+- [x] Source → Target text: "© 2024 Starbucks..." → "© 2024 Starbucks..." ✅
+- [ ] Source text with error portion **highlighted** → **FAIL: no pink highlight on error portion, shows full segment**
+- [ ] Target text with error portion **highlighted** → **FAIL: same, no highlight**
+- [ ] AI suggestion: proposed fix in italic → **FAIL: no inline suggestion on card, only in detail panel as explanation**
+- [x] Confidence indicator: "High (90%)", "Medium (80%)" with colored badge ✅
+- [x] Quick action buttons: Accept ✓ / Reject ✗ on each card ✅
+
+### Finding Card — Findings
+- **FINDING R-01:** Source/target text NOT highlighted — UX spec says "error portion highlighted (light pink background)". Currently shows full segment text truncated. **Priority: P2**
+- **FINDING R-02:** AI suggestion NOT shown inline on card — UX spec says "Proposed fix text in italic". Suggestion only visible in expanded detail panel. **Priority: P2**
+- **FINDING R-03:** Quick actions show only Accept/Reject — UX spec says "Action buttons: A/R/F/N/S/+". Flag/Note/Source/Add missing from card inline. Only available in detail panel (Accept/Reject/Flag) or bottom toolbar. **Priority: P2**
 
 ### 7 Review Actions
-- [ ] [A] Accept → finding accepted, green tint, auto-advance
-- [ ] [R] Reject → finding rejected, red tint, auto-advance
-- [ ] [F] Flag → for native review (yellow tint)
-- [ ] [N] Note → stylistic observation, no penalty
-- [ ] [S] Source Issue → problem in source text
-- [ ] [-] Severity Override → change severity level
-- [ ] [+] Add Finding → manually add new finding
+- [x] [A] Accept → finding accepted, auto-advance ✅ (tested: Reviewed 1/52)
+- [x] [R] Reject → finding rejected, auto-advance ✅ (tested: Reviewed 2/52, status "Finding rejected")
+- [x] [F] Flag → for native review, auto-advance ✅ (tested: Reviewed 3/52, status "Finding flagged")
+- [x] [N] Note → stylistic observation, auto-advance ✅ (tested: "Finding noted. 4 of 52 reviewed")
+- [x] [S] Source Issue → auto-advance ✅ (tested: "Finding marked as source issue. 5 of 52 reviewed")
+- [x] [-] Severity Override → dropdown: Critical/Major/Minor ✅ (screenshot: deep-10)
+- [ ] [+] Add Finding → **UNCLEAR: key pressed but no visible dialog/form appeared** — needs investigation
+
+### 7 Review Actions — Findings
+- **FINDING R-04:** [+] Add Finding via keyboard doesn't show visible response. May require a different flow (e.g. select segment first). UX spec says "select segment, specify error type + severity". **Priority: P2 — investigate**
 
 ### Finding States (8 states per UX spec)
-- [ ] Pending (default) — white background
-- [ ] Accepted — green tint
-- [ ] Re-accepted — green + override badge
-- [ ] Rejected — red tint, dimmed
-- [ ] Flagged — yellow tint, flag icon
-- [ ] Noted — blue tint, note icon
-- [ ] Source Issue — purple tint, source icon
-- [ ] Manual — amber background, "Manual" badge
+- [x] Pending (default) — white/neutral background ✅
+- [x] Accepted — auto-advance + hidden from Pending filter ✅
+- [ ] Re-accepted — NOT TESTED (need to undo accept then re-accept)
+- [x] Rejected — auto-advance + hidden from Pending filter ✅
+- [x] Flagged — auto-advance ✅
+- [x] Noted — auto-advance ✅
+- [x] Source Issue — auto-advance ✅
+- [ ] Manual — NOT TESTED (Add Finding not working via keyboard)
+- [ ] **FINDING R-05:** Finding states don't show colored tints per UX spec — accepted/rejected/flagged findings are hidden by Pending filter, not shown with colored backgrounds. UX spec says "Green tint (accepted), Red tint (rejected), Yellow tint (flagged)". **Priority: P2**
 
 ### Keyboard Navigation
-- [ ] J / ↓ → next finding
-- [ ] K / ↑ → previous finding
-- [ ] A → accept focused finding
-- [ ] R → reject focused finding
-- [ ] F → flag focused finding
-- [ ] N → note
-- [ ] S → source issue
-- [ ] + → add finding
-- [ ] - → severity override
-- [ ] Ctrl+Z → undo last action
-- [ ] ] or Alt+↓ → next file in batch
-- [ ] [ or Alt+↑ → previous file in batch
-- [ ] Alt+Home → back to batch summary
+- [x] J / ↓ → next finding ✅ (tested: focus moved with blue border)
+- [x] K / ↑ → previous finding ✅ (tested: moved back)
+- [x] A → accept focused finding ✅
+- [x] R → reject focused finding ✅
+- [x] F → flag focused finding ✅
+- [x] N → note ✅
+- [x] S → source issue ✅
+- [ ] + → add finding — **UNCLEAR** (R-04)
+- [x] - → severity override dropdown ✅
+- [x] Ctrl+Z → undo last action ✅ ("Undone: marked as source issue finding")
+- [ ] ] or Alt+↓ → next file in batch — NOT TESTED
+- [ ] [ or Alt+↑ → previous file in batch — NOT TESTED
+- [ ] Alt+Home → back to batch summary — NOT TESTED
 - [ ] Ctrl+K → command palette (DEFERRED → E7)
 - [ ] Ctrl+Enter → focus mode (DEFERRED → E7)
-- [ ] Ctrl+F → toggle filter panel
-- [ ] Ctrl+B → bulk select mode
-- [ ] Escape → back to list / close panel
-- [ ] Shortcuts suppressed in input/textarea/select
+- [ ] Ctrl+F → toggle filter panel — NOT TESTED
+- [ ] Ctrl+B → bulk select mode — NOT TESTED
+- [x] Escape → close detail panel ✅
+- [ ] Shortcuts suppressed in input/textarea/select — NOT TESTED
 
 ### Filter Bar
-- [ ] Severity filter: All / Critical / Major / Minor — with counts
-- [ ] Layer filter: All / Rule-based / AI — with counts
-- [ ] Status filter: All / Pending / Accepted / Rejected / Flagged
-- [ ] Category filter: dynamic categories from findings
-- [ ] Confidence filter: All / High / Medium / Low
-- [ ] "Showing X of Y findings" counter updates on filter
-- [ ] Multiple filters combine (AND logic)
+- [x] Severity filter: All / Critical / Major / Minor — with `aria-pressed` ✅
+- [x] Layer filter: All / Rule-based / AI ✅
+- [x] Status filter: All / Pending / Accepted / Rejected / Flagged — Pending default ✅
+- [x] Category filter: Accuracy / Fluency / completeness / punctuation / tag_integrity ✅
+- [x] Confidence filter: All / High / Medium / Low ✅
+- [x] "Showing X of Y findings" counter updates ✅ (48 of 52 after actions)
+- [ ] Multiple filters combine (AND logic) — NOT TESTED
+
+### Filter Bar — Findings
+- **FINDING R-06:** Category filter labels are raw lowercase: "completeness", "punctuation", "tag_integrity" — UX spec says Title Case labels. **Priority: P2 (= UX-NEW-12, in sprint S-UX-4)**
+- **FINDING R-07:** Status filter missing "Noted" and "Source Issue" options — only shows All/Pending/Accepted/Rejected/Flagged. UX spec defines 8 states. **Priority: P2**
+- **FINDING R-08:** Filter buttons don't show finding counts — UX spec says "Critical (2)", "Major (11)" etc. Currently just labels without counts. **Wait — rechecking from earlier snapshot, counts were present on first load. May be a state issue after actions.** — NEEDS RECHECK
 
 ### Bulk Operations (UX spec safety rules)
 - [ ] Shift+Click or Shift+J/K → multi-select
@@ -184,16 +199,36 @@
 - [ ] Bulk = 1 undo entry
 - [ ] Undo stack clears on file switch
 
+### Detail Panel (Finding Detail)
+- [x] Opens as `role="complementary"` with `aria-label="Finding Detail"` ✅
+- [x] Status region: "Viewing major Accuracy finding" ✅
+- [x] Severity badge + Category in panel ✅
+- [x] Layer (AI) + Status (Pending) badges ✅
+- [x] AI explanation text: "The target text is identical to the source text..." ✅
+- [x] Confidence: "High (90%)" + Model: "gpt-4o-mini" ✅
+- [x] Segment Context: Seg 1/2/3 with source/target + context range selector (±1/±2/±3) ✅
+- [x] Navigate to finding in segment buttons ✅
+- [x] Language Bridge section: Back-translation + Contextual Explanation + confidence ✅
+- [x] Refresh back-translation button ✅
+- [x] Review actions toolbar: Accept / Reject / Flag ✅
+- [x] Close button ✅
+
+### Detail Panel — Findings
+- **FINDING R-09:** Detail panel actions only show 3 buttons (Accept/Reject/Flag) — missing Note (N), Source Issue (S), Severity Override (-), Add Finding (+). UX spec defines all 7 actions. Keyboard shortcuts work for N/S/- but no buttons in panel. **Priority: P2**
+- **FINDING R-10:** Detail panel opens as overlay (sliding from right) — UX spec says "Detail Panel always visible in review mode (400px)" as persistent side panel, not overlay. Currently panel covers main content. **Priority: P2 (= UX-NEW-11, deferred E7)**
+- **FINDING R-11:** Language Bridge shows for admin user (mona-tour-test) reviewing EN→TH — this is correct IF admin's native language ≠ Thai. But UX spec says "Only shows if reviewer's native language ≠ file target language". Need to verify native language config. **Priority: P3 — verify**
+
 ### Score
-- [ ] Score badge visible (top-right)
-- [ ] "AI Screened" label
-- [ ] Approve button visible
-- [ ] Score should update after accept/reject (BUG-7 — currently broken)
+- [x] Score badge visible (top-right): "0.0" ✅
+- [x] "AI Screened" label ✅
+- [x] Approve button visible ✅
+- [ ] Score should update after accept/reject → **FAIL: stays 0.0 after 5 actions** (BUG-7 / TD-UX-011, in sprint S-UX-3)
 
 ### Progress
-- [ ] "Reviewed: X/Y" with progress bar
-- [ ] "AI: L2 complete" or "AI: complete" progress bar
-- [ ] Severity breakdown: Critical: N, Major: N, Minor: N, Total: N
+- [x] "Reviewed: X/Y" with progress bar ✅ (updates correctly: 0→1→2→3→4→5→4 after undo)
+- [x] "AI: L2 complete" progress bar ✅
+- [x] Severity breakdown: Critical: 2, Major: 11, Minor: 39, Total: 52 ✅
+- [ ] **FINDING R-12:** Progress shows "AI: L2 complete" — UX spec says 3-phase indicator showing L1/L2/L3 separately. **Priority: P2 (= UX-NEW-08, in sprint S-UX-4)**
 
 ---
 
@@ -355,6 +390,18 @@
 | T-02 | Taxonomy | Stale E2E test data in production | P3 | Data cleanup |
 | T-03 | Taxonomy | MQM Category is free text input, not dropdown | P2 | Add to sprint or TD |
 | T-04 | Taxonomy | No Save/Cancel buttons in edit mode | P2 | Add to sprint or TD |
+| R-01 | Review Card | Source/target text NOT highlighted (no pink background on error portion) | P2 | Add to sprint |
+| R-02 | Review Card | AI suggestion NOT shown inline on card — only in detail panel | P2 | Add to sprint |
+| R-03 | Review Card | Quick actions only Accept/Reject — missing F/N/S/+ on card | P2 | Design choice or gap |
+| R-04 | Review Actions | [+] Add Finding keyboard doesn't show dialog | P2 | Investigate |
+| R-05 | Review States | Finding state colored tints not visible (hidden by Pending filter) | P2 | UX design review |
+| R-06 | Review Filters | Category labels lowercase: "completeness", "tag_integrity" | P2 | = UX-NEW-12 (in S-UX-4) |
+| R-07 | Review Filters | Status filter missing "Noted" and "Source Issue" options | P2 | Add to sprint |
+| R-08 | Review Filters | Filter button counts — need recheck if showing on fresh load | P3 | Recheck |
+| R-09 | Detail Panel | Only 3 action buttons (A/R/F) — missing N/S/-/+ buttons | P2 | Add buttons |
+| R-10 | Detail Panel | Opens as overlay, not persistent 400px side panel | P2 | = UX-NEW-11 (deferred E7) |
+| R-11 | Detail Panel | Language Bridge shows for admin — verify native language config | P3 | Verify |
+| R-12 | Review Progress | "AI: L2 complete" instead of 3-phase L1/L2/L3 indicator | P2 | = UX-NEW-08 (in S-UX-4) |
 
 ### Progress Summary
 
@@ -362,15 +409,21 @@
 |---|---|---|---|---|---|
 | 1. Glossary | 17 | 4 | 2 | 2 (G-01, G-02) | 13 |
 | 2. Taxonomy | 14 | 8 | 5 | 3 (T-01, T-03, T-04) | 6 |
-| 3. Review Panel | 72 | 0 | 0 | 0 | 72 |
-| 4. Language Bridge | 9 | 0 | 0 | 0 | 9 |
+| 3. Review Panel | 72 | 40 | 28 | 12 (R-01~R-12) | 32 |
+| 4. Language Bridge | 9 | 3 | 3 | 0 | 6 |
 | 5. File Assignment | 9 | 0 | 0 | 0 | 9 |
 | 6. Upload & Processing | 12 | 0 | 0 | 0 | 12 |
 | 7. Dashboard | 9 | 0 | 0 | 0 | 9 |
 | 8. Admin | 10 | 0 | 0 | 0 | 10 |
 | 9. Cross-Cutting | 22 | 0 | 0 | 0 | 22 |
-| **Total** | **174** | **12** | **7** | **5** | **162** |
+| **Total** | **174** | **55** | **38** | **17** | **119** |
 
-**Completion: 7% (12/174 tested) — IN PROGRESS**
+**Completion: 32% (55/174 tested) — IN PROGRESS**
 
-*Testing continues in next session for sections 3-9*
+### Gap Summary So Far
+- **Total new gaps found: 17** (5 Glossary/Taxonomy + 12 Review Panel)
+- **Already in sprint:** 3 (R-06=UX-NEW-12, R-10=UX-NEW-11, R-12=UX-NEW-08)
+- **Need to add to sprint:** ~8 new items (R-01, R-02, R-04, R-05, R-07, R-09, T-03, T-04)
+- **Deferred/investigate:** 6
+
+*Testing continues for sections 4-9*
