@@ -14,6 +14,18 @@ so that {{benefit}}.
 
 1. [Add acceptance criteria from epics/PRD]
 
+## UX States Checklist (Guardrail #96)
+
+<!-- MANDATORY for stories that create/modify UI. Delete if story is backend-only. -->
+<!-- Each state must be addressed: implement, N/A with reason, or "existing — verified". -->
+
+- [ ] **Loading state:** {{what shows while data loads}}
+- [ ] **Error state:** {{what shows on failure + recovery action}}
+- [ ] **Empty state:** {{what shows when no data + CTA}}
+- [ ] **Success state:** {{what shows after action completes}}
+- [ ] **Partial state:** {{what shows during progressive loading}}
+- [ ] **UX Spec match:** Verified against `_bmad-output/planning-artifacts/ux-design-specification/`
+
 ## Tasks / Subtasks
 
 - [ ] Task 1 (AC: #)

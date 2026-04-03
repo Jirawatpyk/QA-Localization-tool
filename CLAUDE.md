@@ -212,6 +212,12 @@ Each feature module contains: `components/`, `actions/` (Server Actions), `hooks
 - **#91-92** Responsive: use `useViewportTransition` hook, responsive E2E test-first
 - **#93-94** General Epic 6: `result.output` try/catch only (throwing getter), metadata merge never replace
 
+### UX/UI Compliance Guardrails (#95-97)
+
+35. **#95: ทุก UI component ต้องเช็คกับ UX spec ก่อน mark story done** — ไม่ใช่แค่ functional pass แต่ต้อง visual + state ตรง UX design spec ด้วย ถ้า UX spec กำหนด state (loading, error, empty, success, partial) ต้อง implement ครบ ไม่ข้าม UX spec อยู่ที่ `_bmad-output/planning-artifacts/ux-design-specification/`
+36. **#96: UX States Checklist mandatory ใน story** — ทุก story ที่สร้าง/แก้ UI ต้องมี section "UX States" ใน AC ระบุ: loading state, error state, empty state, success state, partial state — ต้อง address ทุก state ที่ relevant ก่อน done
+37. **#97: UX audit per epic** — จบทุก epic ต้องทำ Playwright browser audit ทุกหน้า ทุก role เทียบ UX spec ก่อน sign-off ห้ามข้ามไม่งั้นจะสะสม gap เหมือน 71 gaps ที่พบใน session 2026-04-03
+
 ## Naming Conventions
 
 | Element              | Convention                      | Example                          |
