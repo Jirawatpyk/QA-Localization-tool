@@ -36,6 +36,14 @@ async function login(page: Page) {
   await page.waitForURL('**/dashboard', { timeout: 10000 })
 }
 
+/** Wait for taxonomy table to be visible AND React-hydrated (DnD grip handles render after mount) */
+async function waitForTaxonomyTable(page: Page, timeout = 10000) {
+  await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout })
+  await expect(
+    page.getByTestId('taxonomy-mapping-table').locator('[aria-roledescription="sortable"]').first(),
+  ).toBeVisible({ timeout })
+}
+
 // ---------------------------------------------------------------------------
 // Auth Gate — Non-admin should be redirected
 // ---------------------------------------------------------------------------
@@ -124,7 +132,7 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     await page.goto('/admin/taxonomy')
 
     // Then: The mapping table is visible
-    await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 10000 })
+    await waitForTaxonomyTable(page)
 
     // And: The table has multiple rows (36 seeded entries + 1 header)
     // NOTE: We do not assert specific cell values here because taxonomy_definitions is a
@@ -170,7 +178,7 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     // Given: Admin is on /admin/taxonomy with mapping table loaded
     await login(page)
     await page.goto('/admin/taxonomy')
-    await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 10000 })
+    await waitForTaxonomyTable(page)
 
     // When: Admin clicks Edit on the first data row (position-based — avoids relying on
     // a specific internalName value that may have been changed by a previous test run)
@@ -204,7 +212,7 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     // Given: Admin is on /admin/taxonomy
     await login(page)
     await page.goto('/admin/taxonomy')
-    await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 10000 })
+    await waitForTaxonomyTable(page)
 
     // When: Admin clicks Edit on the second data row (position-based)
     const secondDataRow = page.getByTestId('taxonomy-mapping-table').getByRole('row').nth(2)
@@ -235,7 +243,7 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     // Given: Admin clicks Edit on a row (use 5th data row to avoid rows used in other AC2 tests)
     await login(page)
     await page.goto('/admin/taxonomy')
-    await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 10000 })
+    await waitForTaxonomyTable(page)
 
     const row = page.getByTestId('taxonomy-mapping-table').getByRole('row').nth(5)
     await row.getByRole('button', { name: 'Edit', exact: true }).click()
@@ -258,7 +266,7 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     // Given: Admin is on /admin/taxonomy
     await login(page)
     await page.goto('/admin/taxonomy')
-    await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 10000 })
+    await waitForTaxonomyTable(page)
 
     // When: Admin clicks "Add Mapping" button
     await page.getByTestId('add-mapping-btn').click()
@@ -270,7 +278,11 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     // When: Admin fills in all required fields
     // NOTE: E2E_MAPPING_NAME is unique per run to avoid conflicts with prior incomplete runs
     await dialog.getByTestId('internal-name-input').fill(E2E_MAPPING_NAME)
-    await dialog.getByTestId('mqm-category-input').fill('Accuracy')
+    // MQM Category is now a combobox (S-FIX-2) — click to open, type to filter, select option
+    const categoryCombobox = dialog.getByRole('combobox', { name: /MQM category/i })
+    await categoryCombobox.click()
+    await page.getByPlaceholder('Search...').fill('Accuracy')
+    await page.getByRole('option', { name: 'Accuracy' }).click()
     // NOTE: Radix UI <Select> — click trigger to open, then click option
     await dialog.getByTestId('severity-select').click()
     await page.getByRole('option', { name: /major/i }).click()
@@ -300,11 +312,11 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     const dialog = page.getByTestId('add-mapping-dialog')
     await expect(dialog).toBeVisible()
 
-    // When: Admin submits without filling required fields
-    await dialog.getByTestId('submit-add-mapping').click()
+    // Then: Submit button is disabled when MQM Category is empty (F2 CR fix)
+    const submitBtn = dialog.getByTestId('submit-add-mapping')
+    await expect(submitBtn).toBeDisabled()
 
-    // Then: Dialog stays open (HTML5 required attribute prevents form submission)
-    // Note: internalName uses required attribute — browser native validation, no DOM error text
+    // And: Dialog stays open — form cannot be submitted
     await expect(dialog).toBeVisible()
   })
 
@@ -316,7 +328,7 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     // Given: Admin is on /admin/taxonomy with table loaded
     await login(page)
     await page.goto('/admin/taxonomy')
-    await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 10000 })
+    await waitForTaxonomyTable(page)
 
     // And: E2E_MAPPING_NAME exists (created in AC3 test — run serially)
     const targetRow = page.getByRole('cell', { name: E2E_MAPPING_NAME, exact: true }).locator('..')
@@ -344,7 +356,7 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     // "Capitalization" (displayOrder 7) is safe to use: no other test permanently modifies it
     await login(page)
     await page.goto('/admin/taxonomy')
-    await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 10000 })
+    await waitForTaxonomyTable(page)
 
     // NOTE: the "Capitalization" row has both internalName and parentCategory = "Capitalization"
     // — use .first() to avoid strict mode violation (2 matching cells in the same row)
@@ -374,7 +386,7 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
   test('[cleanup] revert edited row names to original values', async ({ page }) => {
     await login(page)
     await page.goto('/admin/taxonomy')
-    await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 10000 })
+    await waitForTaxonomyTable(page)
 
     // Find any row matching E2E_EDIT_NAME and revert to original
     const editedCell = page.getByRole('cell', { name: E2E_EDIT_NAME, exact: true })
@@ -403,7 +415,7 @@ test.describe.serial('Story 3.2b7 — Taxonomy Mapping Reorder', () => {
     // Reuse login helper — ensures admin session for the serial block
     await login(page)
     await page.goto('/admin/taxonomy')
-    await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 10000 })
+    await waitForTaxonomyTable(page)
   })
 
   test('[P0] AC1 — should reorder taxonomy mapping via drag-and-drop and persist after reload', async ({
@@ -415,7 +427,7 @@ test.describe.serial('Story 3.2b7 — Taxonomy Mapping Reorder', () => {
     // Given: Admin is on /admin/taxonomy with mapping table loaded
     await login(page)
     await page.goto('/admin/taxonomy')
-    await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 10000 })
+    await waitForTaxonomyTable(page)
 
     // Capture the internalName text of the first data row BEFORE reorder
     // Row nth(0) = header, nth(1) = first data row, nth(3) = third data row
@@ -462,7 +474,7 @@ test.describe.serial('Story 3.2b7 — Taxonomy Mapping Reorder', () => {
 
     // And: After page reload, the new order persists (server action saved to DB)
     await page.reload()
-    await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 30_000 })
+    await waitForTaxonomyTable(page, 30_000)
 
     // Verify: the row that was originally first should no longer be in position 1
     // and the row that was originally third should no longer be in position 3
