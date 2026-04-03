@@ -10,50 +10,64 @@
 ## 1. Glossary (Epic 1)
 
 ### Import Flow
-- [ ] Click "Import Glossary" → dialog opens with file input
-- [ ] Upload CSV file → shows column mapping step
-- [ ] Upload TBX file → parses terminology entries
-- [ ] Upload XLSX file → shows column mapping step
-- [ ] Invalid file type → error message
-- [ ] Oversize file (>10MB) → error message
-- [ ] After import → glossary terms display in table
-- [ ] Term count shown after import
+- [x] Click "Import Glossary" → dialog opens with file input ✅ (screenshot: deep-01)
+- [x] Upload CSV file → shows column mapping step ✅ (screenshot: deep-02, deep-03)
+- [ ] Upload TBX file → parses terminology entries — NOT TESTED YET
+- [ ] Upload XLSX file → shows column mapping step — NOT TESTED YET
+- [ ] Invalid file type → error message — NOT TESTED YET
+- [ ] Oversize file (>10MB) → error message — NOT TESTED YET
+- [ ] After import → glossary terms display in table — NOT TESTED YET
+- [ ] Term count shown after import — NOT TESTED YET
+
+### Import Flow — Findings
+- **FINDING G-01:** Column mapping shows default "source"/"target" instead of auto-detecting CSV column headers ("Description","en","de-AT","fr"). User must manually type correct column names. UX spec says auto-detect. **Priority: P2**
+- **FINDING G-02:** File input uses native browser `<input type="file">` showing "เลือกไฟล์" in Thai — unstyled, inconsistent with drag-drop pattern on Upload page. **Priority: P2 (= UX-NEW-01, in sprint S-UX-4)**
+- **FINDING G-03:** "Next: Column Mapping" button properly disabled until file selected ✅
 
 ### Glossary Display
-- [ ] Table shows: Source term, Target term, language pair
-- [ ] Search/filter glossary terms
-- [ ] Edit glossary term inline
-- [ ] Delete glossary term
-- [ ] Export glossary
+- [ ] Table shows: Source term, Target term, language pair — NOT TESTED (no terms imported yet)
+- [ ] Search/filter glossary terms — NOT TESTED
+- [ ] Edit glossary term inline — NOT TESTED
+- [ ] Delete glossary term — NOT TESTED
+- [ ] Export glossary — NOT TESTED
 
 ### UX Spec Check
-- [ ] "Precomputed index at import time" — instant match per run
-- [ ] UX spec: file input should be styled (not native browser input)
+- [ ] "Precomputed index at import time" — instant match per run — NOT TESTED
+- [x] UX spec: file input should be styled → **FAIL** (native input, G-02)
 
 ---
 
 ## 2. Taxonomy Editor (Epic 1)
 
 ### Display
-- [ ] Two-column: QA Cosmetic Term → MQM Category
-- [ ] Shows MQM Parent, Severity, Description columns
-- [ ] 74 mappings visible (from screenshot)
+- [x] Two-column: QA Cosmetic Term → MQM Category ✅
+- [x] Shows MQM Parent, Severity, Description columns ✅ (Description truncated)
+- [x] 74 mappings visible ✅
+- [x] Actions column: Edit + Delete buttons per row ✅ (screenshot: deep-04)
+
+### Display — Findings
+- **FINDING T-01:** Description column text truncated with no tooltip/expand — user can't read full description. **Priority: P3**
+- **FINDING T-02:** Stale E2E test data rows ("E2E Edit 1775020942885") visible in production taxonomy. Not a code bug but data cleanup needed. **Priority: P3**
 
 ### Edit Flow
-- [ ] Click row → edit mapping
-- [ ] Change MQM category via dropdown
-- [ ] Change severity
-- [ ] Save changes → toast confirmation
-- [ ] Add new mapping → "Add Mapping" button
+- [x] Click Edit button → row becomes editable inline ✅ (screenshot: deep-05)
+- [ ] Change MQM category via dropdown → **FAIL: renders as free text input, not dropdown** — UX spec says "dropdown selects correct MQM term"
+- [x] Change severity → dropdown (major/minor/critical/enhancement) ✅
+- [ ] Save changes → **FINDING: no explicit Save/Cancel buttons in edit mode** — unclear how to confirm or cancel edit
+- [x] Add new mapping → "Add Mapping" button visible ✅
+
+### Edit Flow — Findings
+- **FINDING T-03:** MQM Category is free text input instead of dropdown selector. UX spec: "Click to edit, dropdown selects correct MQM term". Free text allows typos and invalid categories. **Priority: P2**
+- **FINDING T-04:** No Save/Cancel buttons in edit mode. User doesn't know how to confirm changes. UX spec: "Save/Reset buttons". **Priority: P2**
 
 ### Drag & Drop
-- [ ] Drag handles visible (6-dot icon)
-- [ ] Reorder mappings via drag
-- [ ] Order persists after save
+- [x] Drag handles visible (6-dot icon) ✅
+- [ ] Reorder mappings via drag — NOT TESTED (functional)
+- [ ] Order persists after save — NOT TESTED
 
 ### UX Spec Check
-- [ ] "Mapping preview — shows how findings will be tagged in reports"
-- [ ] "Validation — warn if QA term maps to multiple MQM terms"
+- [ ] "Mapping preview — shows how findings will be tagged in reports" — NOT VISIBLE
+- [ ] "Validation — warn if QA term maps to multiple MQM terms" — NOT TESTED
 
 ---
 
@@ -335,6 +349,28 @@
 
 | # | Feature | Finding | Priority | Action |
 |---|---------|---------|----------|--------|
-| | | | | |
+| G-01 | Glossary Import | Column mapping defaults "source"/"target" instead of auto-detecting CSV headers | P2 | Add to sprint or TD |
+| G-02 | Glossary Import | Native file input unstyled "เลือกไฟล์" | P2 | = UX-NEW-01 (in S-UX-4) |
+| T-01 | Taxonomy | Description column truncated, no tooltip | P3 | TD |
+| T-02 | Taxonomy | Stale E2E test data in production | P3 | Data cleanup |
+| T-03 | Taxonomy | MQM Category is free text input, not dropdown | P2 | Add to sprint or TD |
+| T-04 | Taxonomy | No Save/Cancel buttons in edit mode | P2 | Add to sprint or TD |
 
-*Will be populated during testing*
+### Progress Summary
+
+| Section | Items | Tested | Passed | Failed/Gap | Not Tested |
+|---|---|---|---|---|---|
+| 1. Glossary | 17 | 4 | 2 | 2 (G-01, G-02) | 13 |
+| 2. Taxonomy | 14 | 8 | 5 | 3 (T-01, T-03, T-04) | 6 |
+| 3. Review Panel | 72 | 0 | 0 | 0 | 72 |
+| 4. Language Bridge | 9 | 0 | 0 | 0 | 9 |
+| 5. File Assignment | 9 | 0 | 0 | 0 | 9 |
+| 6. Upload & Processing | 12 | 0 | 0 | 0 | 12 |
+| 7. Dashboard | 9 | 0 | 0 | 0 | 9 |
+| 8. Admin | 10 | 0 | 0 | 0 | 10 |
+| 9. Cross-Cutting | 22 | 0 | 0 | 0 | 22 |
+| **Total** | **174** | **12** | **7** | **5** | **162** |
+
+**Completion: 7% (12/174 tested) — IN PROGRESS**
+
+*Testing continues in next session for sections 3-9*
