@@ -167,7 +167,10 @@ development_status:
   # Items: UX-NEW-02 (onboarding repeat), UX-NEW-03 (status badges), UX-NEW-04 (file rows clickable),
   #   EDGE-BUG-01 (0-segment block), UX-NEW-14 (admin language pairs column),
   #   D-01 (stale 0-segment file in dashboard), D-02 (Score N/A for unparsed),
-  #   A-01 (empty reviewer message UX)
+  #   A-01 (empty reviewer message UX),
+  #   MULTI-02 P1 (onboarding tooltip blocks Review page for new users),
+  #   MULTI-04 (formatFileStatus inconsistent: History Title Case vs Dashboard raw),
+  #   MULTI-05 (reviewer list empty — language pair matching has no data, needs UX-NEW-14)
   # Verification: Playwright — dashboard badges, file rows click, onboarding, 0-segment, admin lang pairs, empty reviewer msg
   s-ux-2-dashboard-upload-polish: backlog
 
@@ -181,14 +184,17 @@ development_status:
   # Items: R-01 (error highlight), R-02 (inline AI suggestion), R-03 (card quick actions 7),
   #   R-05 (state colored tints: green/red/yellow/blue/purple), R-06 (category Title Case),
   #   R-07 (status filter add Noted/Source Issue), R-08 (filter counts on buttons),
-  #   R-12 (3-phase AI progress), R-16 (reject reason dropdown)
+  #   R-12 (3-phase AI progress), R-16 (reject reason dropdown),
+  #   LAY-03 (badges overlap on dense cards), LAY-04 (finding text truncated too aggressively)
   # Verification: Playwright — card highlights, suggestion, actions, tints, filters, progress, reject reason
   s-ux-4a-review-card-filter-polish: backlog
 
   # S-UX-4b: Navigation & Accessibility Polish [M]
   # Items: UX-NEW-01 (Parity input styled), UX-NEW-10 (sidebar auto-collapse review),
   #   UX-NEW-13 (date format), UX-NEW-18 (skip to content), UX-NEW-19 (batch names),
-  #   UX-NEW-20 (batch cards clickable), R-09 (detail panel 7 actions), R-04 (Add Finding)
+  #   UX-NEW-20 (batch cards clickable), R-09 (detail panel 7 actions), R-04 (Add Finding),
+  #   LB-01 ("When in doubt, Flag" guidance text in Language Bridge),
+  #   A11Y-01 (prefers-reduced-motion not fully effective — 2 animations persist)
   # Verification: Playwright — parity input, sidebar, dates, skip link, batch, detail actions
   s-ux-4b-navigation-accessibility-polish: backlog
 
@@ -209,7 +215,12 @@ development_status:
 
   # S-UX-4e: Review Layout — Persistent Detail Panel + Status Bar [XL]
   # Items: UX-NEW-09 (32px persistent status bar), UX-NEW-11 (400px persistent detail panel),
-  #   Score phase display + animation, concurrent reviewer soft lock UI
+  #   LAY-01 P1 (detail panel overlaps/squeezes main content — findings truncated),
+  #   LAY-02 (bottom toolbar cropped — [+] Add off screen),
+  #   LAY-05 (detail panel visible on Dashboard — should only show in Review),
+  #   MULTI-01 P1 (no soft lock — 2 users edit same file, no banner/read-only),
+  #   MULTI-03 P1 (detail panel + onboarding squeezes main content unreadable),
+  #   Score phase display + animation
   # UX Spec: visual-design-foundation.md layout structure
   # Verification: Playwright — detail panel visible at 1440px+, status bar persistent, score animation
   s-ux-4e-review-layout-persistent-panels: backlog
@@ -220,18 +231,25 @@ development_status:
   # Verification: Playwright — upload → watch 5-phase progress in History page
   s-ux-5-history-progressive-loading: backlog
 
-  # S-UX-6: Error States Pattern [M] — added from Sally UX review (P0 gap)
-  # Items: Pipeline fail UI, Upload fail UI, API error UI, consistent error pattern
+  # S-UX-6: Error States Pattern [M→L] — added from Sally UX review (P0 gap)
+  # Items: Pipeline fail UI, Upload fail UI, API error UI, consistent error pattern,
+  #   ERR-01 (error page no recovery action — "File not found" page bare),
+  #   ERR-02 (generic "Something went wrong" — no reason, "Try again" useless for invalid data),
+  #   ERR-03 P0 CRITICAL (invalid UUID sent to DB — no input validation before Postgres query),
+  #   ERR-04 (0-segment file: "AI analyzing" stuck permanently + Approve button enabled,
+  #     "invalid-not-uuid" causes server error + client fallback rendering, potential security risk)
   # UX Spec: core-user-experience.md Edge Cases, ux-consistency-patterns.md Error Handling
-  # Verification: Playwright — trigger error states (invalid file, network mock, pipeline fail) + verify UI
+  # Verification: Playwright — error states, recovery actions, UUID validation, error toast
   s-ux-6-error-states-pattern: backlog
 
   # S-UX-7: Taxonomy & Glossary Edit UX [M→L]
   # Items: T-03 (MQM Category dropdown), T-04 (Save/Cancel edit mode),
   #   G-01 (column auto-detect), T-01 (description tooltip), T-02 (E2E data cleanup),
-  #   G-03 (language pair mismatch), G-04 (term drill-down view), G-05 (export glossary),
-  #   T-05 (hydration mismatch error)
-  # Verification: Playwright — taxonomy edit, glossary term view, export, column detect
+  #   G-03 (language pair mismatch), G-04 (term drill-down view),
+  #   G-07 (search/filter individual terms), G-08 (edit individual terms),
+  #   G-05 (export glossary), G-06 (date inconsistency on glossary = UX-NEW-13),
+  #   T-05 (SSR hydration mismatch — P0 CRITICAL, fix immediately)
+  # Verification: Playwright — taxonomy edit, glossary term CRUD + search, export, dates, column detect
 
   # S-UX-9: Settings Completeness [M] — NEW (was deferred, now in sprint for 100%)
   # Items: TD-UX-012 (language pair display/edit), TD-UX-013 (Reset button),
@@ -248,9 +266,15 @@ development_status:
 
   # S-UX-8: Verification — Full UX Audit Pass [M]
   # Retest ALL pages, ALL roles — confirm 100% UX gap closed
-  # Including 81 untested items from deep verification (multi-user, error states)
+  # 21 remaining untested items: multi-user (13), error states (4), special setup (4)
+  #   - Concurrent reviewer: soft lock, view-only, timeout, banner
+  #   - File assignment: reviewer list, workload, assign success, urgent badge, takeover notification
+  #   - Notifications: delivery to reviewer
+  #   - Error UI: pipeline fail, API error, toast Info/Warning/Error, max 1 toast
+  #   - Special: drag reorder persist, prefers-reduced-motion, undo 20 depth, Low confidence display
+  #   - R-11 verify: Language Bridge native language config
   # Depends: All S-UX stories done
-  # Verification: Playwright — every page, every role, screenshot + checklist 174 items
+  # Verification: Playwright multi-browser — every page, every role, 174 items checklist
   s-ux-8-verification-full-ux-audit: backlog
 
   sprint-ux-ui-debt-clearance-retrospective: optional
