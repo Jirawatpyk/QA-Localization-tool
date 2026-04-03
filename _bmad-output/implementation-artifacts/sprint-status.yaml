@@ -34,6 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-02-15
+last_updated: 2026-04-03
 project: qa-localization-tool
 project_key: NOKEY
 tracking_system: file-system
@@ -114,7 +115,7 @@ development_status:
   # ============================================================
   # Epic 4: Review & Decision Workflow (MVP)
   # ============================================================
-  epic-4: in-progress
+  epic-4: done
   4-0-review-infrastructure-setup: done
   4-1a-finding-list-display-progressive-disclosure: done
   4-1b-keyboard-navigation-focus-management: done
@@ -124,27 +125,83 @@ development_status:
   4-3-extended-actions: done
   4-4a-bulk-operations-decision-override: done
   4-4b-undo-redo-realtime-conflict-resolution: done
-  4-5-search-filter-ai-layer-toggle: ready-for-dev
-  4-6-suppress-false-positive-patterns: backlog
-  4-7-add-to-glossary-from-review: backlog
-  4-8-accessibility-integration-verification: backlog
-  epic-4-retrospective: optional
+  4-5-search-filter-ai-layer-toggle: done
+  4-6-suppress-false-positive-patterns: done
+  4-7-add-to-glossary-from-review: done
+  4-8-accessibility-integration-verification: done
+  epic-4-retrospective: done
 
   # ============================================================
   # Epic 5: Language Intelligence & Non-Native Support (MVP)
   # ============================================================
-  epic-5: backlog
-  5-1-language-bridge-back-translation: backlog
-  5-2-non-native-auto-tag-native-reviewer-access: backlog
-  epic-5-retrospective: optional
+  epic-5: done
+  5-1-language-bridge-back-translation: done
+  5-2a-per-segment-bt-caching: done
+  5-2b-rls-scoped-access-finding-assignments: done
+  5-3-verification-real-ai-real-db-real-e2e: done
+  epic-5-retrospective: done
 
   # ============================================================
   # Epic 6: Batch Processing & Team Collaboration (MVP)
   # ============================================================
-  epic-6: backlog
-  6-1-file-assignment-language-pair-matching: backlog
-  6-2-event-notifications-real-time-updates: backlog
+  epic-6: in-progress
+  6-1-file-assignment-language-pair-matching: done
+  6-2a-notification-schema-helper-centralization: done
+  6-2b-notification-event-types-wiring: done
+  6-2c-notification-dropdown-auto-pass-event: backlog
+  6-3-responsive-layout-mobile-optimization: backlog
   epic-6-retrospective: optional
+
+  # ============================================================
+  # Sprint: UX/UI Debt Clearance (before Epic 7)
+  # ============================================================
+  sprint-ux-ui-debt-clearance: in-progress
+
+  # S-UX-1: User Menu & Logout [M]
+  # Items: BUG-8, UX-NEW-17
+  # Create user menu dropdown + sign-out action + user profile info
+  # Verification: Playwright — login → click user menu → logout → redirect to login
+  s-ux-1-user-menu-logout: backlog
+
+  # S-UX-2: Dashboard & Upload Polish [M→L]
+  # Items: UX-NEW-02 (onboarding repeat), UX-NEW-03 (status badges), UX-NEW-04 (file rows clickable),
+  #   EDGE-BUG-01 (0-segment block), + UX-NEW-14 (admin language pairs column — needed before Epic 7 Auto-Pass)
+  # Verification: Playwright — dashboard badges, file rows click, onboarding persist, 0-segment disabled, admin language pairs
+  s-ux-2-dashboard-upload-polish: backlog
+
+  # S-UX-3: Score Recalculation after Pipeline [L]
+  # Items: BUG-7, TD-UX-011
+  # Investigate Inngest pipeline → emit finding.changed after L2/L3 → trigger recalculateScore
+  # Verification: Playwright — upload file → pipeline complete → score ≠ 0.0
+  s-ux-3-score-recalculation-pipeline: backlog
+
+  # S-UX-4: Review & Navigation Polish [M→L]
+  # Items: UX-NEW-08 (AI progress 3-phase), UX-NEW-12 (category Title Case),
+  #   UX-NEW-13 (date format), UX-NEW-18 (skip to content), UX-NEW-19 (batch names)
+  #   + Sally R2: UX-NEW-01 (Parity file input styled), UX-NEW-10 (sidebar auto-collapse in review),
+  #   UX-NEW-20 (batch cards clickable)
+  # Verification: Playwright — review progress, filters, dates, skip link, batch names+click, parity input, sidebar collapse
+  s-ux-4-review-navigation-polish: backlog
+
+  # S-UX-5: History Progressive Loading [L]
+  # Items: TD-UX-009 (5-phase progressive loading per UX spec)
+  # Depends: S-UX-3 (score must be correct first)
+  # Verification: Playwright — upload → watch 5-phase progress in History page
+  s-ux-5-history-progressive-loading: backlog
+
+  # S-UX-6: Error States Pattern [M] — added from Sally UX review (P0 gap)
+  # Items: Pipeline fail UI, Upload fail UI, API error UI, consistent error pattern
+  # UX Spec: core-user-experience.md Edge Cases, ux-consistency-patterns.md Error Handling
+  # Verification: Playwright — trigger error states (invalid file, network mock, pipeline fail) + verify UI
+  s-ux-6-error-states-pattern: backlog
+
+  # S-UX-8: Verification — Full UX Audit Pass [M]
+  # Retest ALL pages, ALL roles — confirm 100% UX gap closed
+  # Depends: All S-UX stories done
+  # Verification: Playwright — every page, every role, screenshot + checklist
+  s-ux-8-verification-full-ux-audit: backlog
+
+  sprint-ux-ui-debt-clearance-retrospective: optional
 
   # ============================================================
   # Epic 7: Auto-Pass & Trust Automation (MVP)

@@ -1313,9 +1313,9 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **UX Spec Reference:** `_bmad-output/planning-artifacts/ux-design-specification/ux-consistency-patterns.md` lines 93-144
 - **Fix:** Add pipeline progress component to History table rows showing: current layer (L1/L2/L3), segment progress, partial finding count, live score via Supabase Realtime subscription
 - **Effort:** 1-2 days (needs Realtime subscription + progress component)
-- **Target:** Epic 7 or Epic 8 (Dashboard/History revamp)
+- **Target:** UX Sprint S-UX-5
 - **Origin:** UI Tour 2026-04-03
-- **Status:** DEFERRED → E7/E8
+- **Status:** DEFERRED → UX Sprint S-UX-5
 
 ### TD-UX-010: Dashboard status badge shows raw technical names
 - **Severity:** Low
@@ -1323,9 +1323,9 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** Dashboard file table shows raw `l2_completed` / `l3_completed` instead of human-friendly labels like "AI Screening Complete" / "Deep Analysis Complete". `formatFileStatus()` helper exists but may not cover all display contexts.
 - **Fix:** Ensure `formatFileStatus()` maps all `DbFileStatus` values to human-friendly labels, use consistently in Dashboard + History
 - **Effort:** 30 min
-- **Target:** Epic 7/8
+- **Target:** UX Sprint S-UX-2
 - **Origin:** UI Tour 2026-04-03
-- **Status:** DEFERRED → E7/E8
+- **Status:** DEFERRED → UX Sprint S-UX-2
 
 ### TD-UX-011: Score stays 0.0 during pipeline (BUG-7)
 - **Severity:** Medium
@@ -1335,4 +1335,94 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Effort:** 2-4 hours (Inngest pipeline + scoring integration)
 - **Target:** Epic 7 (Auto-Pass depends on accurate scores)
 - **Origin:** UI Tour 2026-04-03, confirmed by code review
+- **Status:** DEFERRED → UX Sprint S-UX-3
+
+### TD-UX-012: Settings — no language pair display/edit
+- **Severity:** Medium
+- **Files:** `src/app/(app)/projects/[projectId]/settings/page.tsx`
+- **Description:** UX spec says language pair should be displayed and editable if auto-detect was wrong. Currently Settings page shows only name, description, processing mode, and auto-pass threshold — no language pair section.
+- **Fix:** Add source/target language display (read-only after initial setup, or editable with confirmation)
+- **Effort:** 2-4 hours
+- **Target:** Epic 7 (Settings revamp with Auto-Pass config)
+- **Origin:** UX Audit 2026-04-03, UX-NEW-05
 - **Status:** DEFERRED → E7
+
+### TD-UX-013: Settings — no Reset button
+- **Severity:** Low
+- **Files:** `src/app/(app)/projects/[projectId]/settings/page.tsx`
+- **Description:** UX spec says "Save/Reset buttons" but only "Save Settings" exists. No way to revert unsaved changes.
+- **Fix:** Add Reset button that reverts form to last saved state
+- **Effort:** 30 min
+- **Target:** Epic 7
+- **Origin:** UX Audit 2026-04-03, UX-NEW-06
+- **Status:** DEFERRED → E7
+
+### TD-UX-014: Settings — no per-language confidence thresholds
+- **Severity:** Medium
+- **Files:** `src/app/(app)/projects/[projectId]/settings/page.tsx`
+- **Description:** UX spec defines per-language confidence sliders (EN→TH: 85%, EN→ZH: 92%, etc.). Currently only a single auto-pass threshold exists. Per-language thresholds needed for accurate Auto-Pass routing.
+- **Fix:** Add per-language threshold sliders, store in project settings, use in auto-pass logic
+- **Effort:** 1-2 days (new feature)
+- **Target:** Epic 7 (Auto-Pass config)
+- **Origin:** UX Audit 2026-04-03, UX-NEW-07
+- **Status:** DEFERRED → E7
+
+### TD-UX-015: Review — no persistent Status Bar (VS Code pattern)
+- **Severity:** Medium
+- **Files:** `src/features/review/components/ReviewPageClient.tsx`
+- **Description:** UX spec layout defines a 32px persistent Status Bar at bottom showing "Score | Progress | AI | Shortcuts" always visible (VS Code pattern). Currently score/progress are at top and scroll away. Keyboard shortcuts bar at bottom but not a full status bar.
+- **Fix:** Add fixed-bottom StatusBar component with Score badge + Review progress + AI status + Shortcut hints
+- **Effort:** 1-2 days (layout refactor)
+- **Target:** Epic 7 (Review UX enhancement)
+- **Origin:** UX Audit 2026-04-03, UX-NEW-09
+- **Status:** DEFERRED → E7
+
+### TD-UX-016: Review — no Detail Panel as persistent side panel (400px)
+- **Severity:** Medium
+- **Files:** `src/features/review/components/ReviewPageClient.tsx`, `src/components/layout/detail-panel.tsx`
+- **Description:** UX spec defines Detail Panel as always-visible 400px right panel in review mode (like VS Code sidebar). Currently findings expand inline — no persistent side panel. DetailPanel component exists in layout but not wired for review.
+- **Fix:** Wire DetailPanel to show finding detail, segment context, Language Bridge — always visible at ≥1440px, collapsible at smaller
+- **Effort:** 2-3 days (major layout refactor)
+- **Target:** Epic 7 (Review layout enhancement)
+- **Origin:** UX Audit 2026-04-03, UX-NEW-11
+- **Status:** DEFERRED → E7
+
+### TD-UX-017: Help icon has no functionality
+- **Severity:** Low
+- **Files:** `src/components/layout/app-header.tsx`
+- **Description:** Help button (?) in header has no onClick, no dropdown, no functionality. UX spec expects help menu with keyboard shortcuts overlay, documentation link, support contact.
+- **Fix:** Add dropdown menu with: Keyboard Shortcuts (?), Documentation link, Support/Feedback link
+- **Effort:** 1-2 hours
+- **Target:** Epic 8
+- **Origin:** UX Audit 2026-04-03, UX-NEW-16
+- **Status:** DEFERRED → E8
+
+### TD-UX-018: Command palette (Ctrl+K) not implemented
+- **Severity:** Medium
+- **Files:** New component needed
+- **Description:** UX spec defines Ctrl+K command palette for search actions, files, findings, navigation — similar to VS Code/GitHub. Not implemented.
+- **Fix:** Create CommandPalette component with combobox, 3-tier results (Actions/Files/Findings), keyboard navigation
+- **Effort:** 2-3 days (new feature)
+- **Target:** Epic 7
+- **Origin:** UX Audit 2026-04-03, core-user-experience.md
+- **Status:** DEFERRED → E7
+
+### TD-UX-019: Resume review prompt not implemented
+- **Severity:** Medium
+- **Files:** `src/features/review/components/ReviewPageClient.tsx`
+- **Description:** UX spec Safeguard #9: "Continue from Finding #15?" when returning to partially-reviewed file. Default filter on return should show only unresolved findings. Session breadcrumb showing last-reviewed position.
+- **Fix:** Track last-reviewed finding index per file in localStorage, show resume prompt on return, auto-filter to unresolved
+- **Effort:** 1-2 days
+- **Target:** Epic 7
+- **Origin:** UX Audit 2026-04-03, core-user-experience.md Safeguard #9
+- **Status:** DEFERRED → E7
+
+### TD-UX-020: Duplicate file detection not implemented
+- **Severity:** Low
+- **Files:** `src/features/upload/` components
+- **Description:** UX spec defines "Uploaded yesterday (Score 97) — re-run?" prompt when duplicate file hash detected. Prevents unnecessary re-processing and gives user context about previous results.
+- **Fix:** Hash file content on upload, check against existing files in project, show dialog with previous score if match found
+- **Effort:** 1 day
+- **Target:** Epic 7-8
+- **Origin:** UX Audit 2026-04-03, core-user-experience.md Effortless Interactions
+- **Status:** DEFERRED → E7/E8
