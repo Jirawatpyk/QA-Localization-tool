@@ -1,8 +1,11 @@
+import { notFound } from 'next/navigation'
 import type { ReactNode } from 'react'
 
 import { ProjectTour } from '@/features/onboarding/components/ProjectTour'
 import { ProjectSubNav } from '@/features/project/components/ProjectSubNav'
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
+import { logger } from '@/lib/logger'
+import { isUuid } from '@/lib/validation/uuid'
 
 export default async function ProjectLayout({
   children,
@@ -12,6 +15,12 @@ export default async function ProjectLayout({
   params: Promise<{ projectId: string }>
 }) {
   const { projectId } = await params
+
+  if (!isUuid(projectId)) {
+    logger.warn({ param: 'projectId', value: projectId }, 'Invalid UUID in route param')
+    notFound()
+  }
+
   const currentUser = await getCurrentUser()
 
   return (

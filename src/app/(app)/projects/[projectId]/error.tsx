@@ -4,7 +4,7 @@ import { AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useRef } from 'react'
 
-export default function AppError({
+export default function ProjectError({
   error,
   reset,
 }: {
@@ -29,7 +29,7 @@ export default function AppError({
           This page couldn&apos;t load
         </h2>
         <p className="text-sm text-text-secondary">
-          An unexpected error occurred. Your data is safe.
+          An unexpected error occurred while loading this project. Your data is safe.
         </p>
         {error.digest && <p className="text-xs text-text-muted">Error reference: {error.digest}</p>}
         <div className="flex flex-col items-center gap-2">
@@ -40,8 +40,14 @@ export default function AppError({
             Try again
           </button>
           <Link
-            href="/dashboard"
+            href="/projects"
             className="text-sm text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+          >
+            Back to Projects
+          </Link>
+          <Link
+            href="/dashboard"
+            className="text-sm text-text-secondary hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
           >
             Go to Dashboard
           </Link>

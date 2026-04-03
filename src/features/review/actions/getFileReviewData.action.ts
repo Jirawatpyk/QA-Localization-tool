@@ -19,6 +19,7 @@ import { users } from '@/db/schema/users'
 import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
+import { isUuid } from '@/lib/validation/uuid'
 import type { ActionResult } from '@/types/actionResult'
 import type {
   DetectedByLayer,
@@ -125,8 +126,7 @@ export async function getFileReviewData(
   const { fileId, projectId } = input
 
   // Guard against invalid UUID params (e.g., URL with "undefined" string)
-  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-  if (!UUID_RE.test(fileId) || !UUID_RE.test(projectId)) {
+  if (!isUuid(fileId) || !isUuid(projectId)) {
     return { success: false, error: 'Invalid file or project ID', code: 'VALIDATION_ERROR' }
   }
 
@@ -291,6 +291,16 @@ export async function getFileReviewData(
       .from(segments)
       .where(and(withTenant(segments.tenantId, tenantId), eq(segments.fileId, fileId)))
       .limit(1)
+
+    // S-FIX-1 AC4: Early exit for 0-segment files — show dedicated empty-file UI
+    if (targetLangRows.length === 0) {
+      return {
+        success: false,
+        error: 'This file has no translatable content',
+        code: 'EMPTY_FILE' as const,
+      }
+    }
+
     const fileTargetLang = targetLangRows[0]?.targetLang ?? null
 
     // Q4b: Get project processingMode + language pair confidence thresholds

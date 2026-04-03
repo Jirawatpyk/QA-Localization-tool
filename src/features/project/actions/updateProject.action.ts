@@ -12,6 +12,7 @@ import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { updateProjectSchema } from '@/features/project/validation/projectSchemas'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
+import { isUuid } from '@/lib/validation/uuid'
 import type { ActionResult } from '@/types/actionResult'
 import type { ProcessingMode } from '@/types/pipeline'
 
@@ -22,13 +23,11 @@ type ProjectResult = {
   autoPassThreshold: number
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
 export async function updateProject(
   projectId: string,
   input: unknown,
 ): Promise<ActionResult<ProjectResult>> {
-  if (!UUID_RE.test(projectId)) {
+  if (!isUuid(projectId)) {
     return { success: false, code: 'VALIDATION_ERROR', error: 'Invalid project ID' }
   }
 

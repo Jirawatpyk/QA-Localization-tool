@@ -10,6 +10,7 @@ import { findingComments } from '@/db/schema/findingComments'
 import { userRoles } from '@/db/schema/userRoles'
 import { users } from '@/db/schema/users'
 import { requireRole } from '@/lib/auth/requireRole'
+import { isUuid } from '@/lib/validation/uuid'
 import type { ActionResult } from '@/types/actionResult'
 
 type FindingComment = {
@@ -29,8 +30,7 @@ export async function getFindingComments(
   findingAssignmentId: string,
 ): Promise<ActionResult<FindingComment[]>> {
   // CR-H5 fix: UUID validation (consistent with other actions)
-  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-  if (!UUID_RE.test(findingAssignmentId)) {
+  if (!isUuid(findingAssignmentId)) {
     return { success: false, error: 'Invalid assignment ID', code: 'VALIDATION' }
   }
 

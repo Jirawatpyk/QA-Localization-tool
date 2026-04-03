@@ -330,7 +330,8 @@ describe('getFileReviewData', () => {
     }
   })
 
-  it('[P1] should handle file with no segments (no targetLang) — falls back to sourceLang-only JOIN', async () => {
+  // S-FIX-1 AC4: 0-segment file returns EMPTY_FILE error code
+  it('[P0] should return EMPTY_FILE error for file with no segments', async () => {
     const fileId = 'c3d4e5f6-a1b2-4c1d-ae2f-5a6b7c8d9e0f'
     const projectId = 'd4e5f6a1-b2c3-4d1e-bf3a-6b7c8d9e0f1a'
 
@@ -338,16 +339,15 @@ describe('getFileReviewData', () => {
       [buildFile({ fileId })],
       [],
       [buildScoreRecord({ fileId, tenantId: mockTenantId })],
-      [], // Q4a: no segments → null targetLang
-      [{ l2ConfidenceMin: 70, processingMode: 'economy' }],
+      [], // Q4a: no segments → early EMPTY_FILE return
     ]
 
     const result = await getFileReviewData({ fileId, projectId })
 
-    expect(result.success).toBe(true)
-    if (result.success) {
-      expect(result.data.l2ConfidenceMin).toBe(70)
-      expect(result.data.processingMode).toBe('economy')
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('EMPTY_FILE')
+      expect(result.error).toMatch(/no translatable content/i)
     }
   })
 

@@ -1,5 +1,9 @@
+import { notFound } from 'next/navigation'
+
 import { getBatchSummary } from '@/features/batch/actions/getBatchSummary.action'
 import { BatchSummaryView } from '@/features/batch/components/BatchSummaryView'
+import { logger } from '@/lib/logger'
+import { isUuid } from '@/lib/validation/uuid'
 
 export default async function BatchDetailPage({
   params,
@@ -7,6 +11,11 @@ export default async function BatchDetailPage({
   params: Promise<{ projectId: string; batchId: string }>
 }) {
   const { projectId, batchId } = await params
+
+  if (!isUuid(batchId)) {
+    logger.warn({ param: 'batchId', value: batchId }, 'Invalid UUID in route param')
+    notFound()
+  }
 
   const result = await getBatchSummary({ projectId, batchId })
 
