@@ -194,7 +194,7 @@ development_status:
   # Root cause: src/components/layout/app-header.tsx:30-35 — button has no dropdown/onClick
   # Fix: DropdownMenu on User button with sign-out action + user profile info
   # Ref: PROJECT-TOUR-REPORT.md > BUG-8, spec-ui-tour-bugfix-7.md
-  s-fix-3-user-menu-logout: ready-for-dev
+  s-fix-3-user-menu-logout: review
 
   # S-FIX-V1: Verify & Optimize Phase 1 [M]
   # Scope: Playwright verify S-FIX-1/2/3 — error pages, UUID rejection, taxonomy hydration, logout
