@@ -1417,6 +1417,24 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Origin:** UX Audit 2026-04-03, core-user-experience.md Safeguard #9
 - **Status:** DEFERRED → E7
 
+### TD-UX-021: File Assignment — empty reviewer message UX
+- **Severity:** Low
+- **Files:** `src/features/project/components/FileAssignmentCell.tsx` or assignment dialog
+- **Description:** "No matching reviewers found" shown when single-user tenant tries to assign. Should show "No reviewers available — invite team members" with link to Admin > User Management.
+- **Effort:** 30 min
+- **Target:** Epic 7
+- **Origin:** Deep Verification 2026-04-03, A-01
+- **Status:** DEFERRED → E7
+
+### TD-UX-022: Dashboard — stale 0-segment file visible
+- **Severity:** Low
+- **Files:** Dashboard query / `src/app/(app)/dashboard/page.tsx`
+- **Description:** Files with 0 segments (e.g. entities.html.xlf from edge test) appear in "Recent Files" with "N/A" score + "parsed" status. Should filter out files with 0 segments or show differently.
+- **Effort:** 30 min
+- **Target:** Epic 7
+- **Origin:** Deep Verification 2026-04-03, D-01/D-02
+- **Status:** DEFERRED → E7
+
 ### TD-UX-020: Duplicate file detection not implemented
 - **Severity:** Low
 - **Files:** `src/features/upload/` components

@@ -175,13 +175,20 @@ development_status:
   # Verification: Playwright — upload file → pipeline complete → score ≠ 0.0
   s-ux-3-score-recalculation-pipeline: backlog
 
-  # S-UX-4: Review & Navigation Polish [M→L]
-  # Items: UX-NEW-08 (AI progress 3-phase), UX-NEW-12 (category Title Case),
-  #   UX-NEW-13 (date format), UX-NEW-18 (skip to content), UX-NEW-19 (batch names)
-  #   + Sally R2: UX-NEW-01 (Parity file input styled), UX-NEW-10 (sidebar auto-collapse in review),
-  #   UX-NEW-20 (batch cards clickable)
-  # Verification: Playwright — review progress, filters, dates, skip link, batch names+click, parity input, sidebar collapse
-  s-ux-4-review-navigation-polish: backlog
+  # S-UX-4a: Review Card & Filter Polish [L] — split from S-UX-4
+  # Items: R-01 (error highlight), R-02 (inline AI suggestion), R-05 (state colored tints),
+  #   R-06/UX-NEW-12 (category Title Case), R-07 (status filter missing Noted/Source Issue),
+  #   R-12/UX-NEW-08 (3-phase AI progress indicator)
+  # Verification: Playwright — finding card highlights, inline suggestion, state tints, filter completeness, progress phases
+  s-ux-4a-review-card-filter-polish: backlog
+
+  # S-UX-4b: Navigation & Accessibility Polish [M] — split from S-UX-4
+  # Items: UX-NEW-01 (Parity file input styled), UX-NEW-10 (sidebar auto-collapse in review),
+  #   UX-NEW-13 (date format consistency), UX-NEW-18 (skip to content a11y),
+  #   UX-NEW-19 (batch names human-friendly), UX-NEW-20 (batch cards clickable),
+  #   R-09 (detail panel 7 action buttons), R-04 (Add Finding investigate)
+  # Verification: Playwright — parity input, sidebar collapse, dates, skip link, batch names+click, detail panel actions
+  s-ux-4b-navigation-accessibility-polish: backlog
 
   # S-UX-5: History Progressive Loading [L]
   # Items: TD-UX-009 (5-phase progressive loading per UX spec)
@@ -195,10 +202,17 @@ development_status:
   # Verification: Playwright — trigger error states (invalid file, network mock, pipeline fail) + verify UI
   s-ux-6-error-states-pattern: backlog
 
+  # S-UX-7: Taxonomy & Glossary Edit UX [M] — NEW from deep verification
+  # Items: T-03 (MQM Category dropdown not free text), T-04 (Save/Cancel buttons in edit mode),
+  #   G-01 (Glossary column auto-detect from CSV headers)
+  # Verification: Playwright — taxonomy edit with dropdown + save/cancel, glossary import column detection
+  s-ux-7-taxonomy-glossary-edit-ux: backlog
+
   # S-UX-8: Verification — Full UX Audit Pass [M]
   # Retest ALL pages, ALL roles — confirm 100% UX gap closed
+  # Including 81 untested items from deep verification (multi-user, error states)
   # Depends: All S-UX stories done
-  # Verification: Playwright — every page, every role, screenshot + checklist
+  # Verification: Playwright — every page, every role, screenshot + checklist 174 items
   s-ux-8-verification-full-ux-audit: backlog
 
   sprint-ux-ui-debt-clearance-retrospective: optional
