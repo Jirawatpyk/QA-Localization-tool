@@ -4,13 +4,14 @@ import { AppBreadcrumb } from '@/components/layout/app-breadcrumb'
 import { UserMenu } from '@/components/layout/user-menu'
 import { NotificationDropdown } from '@/features/dashboard/components/NotificationDropdown'
 import { HelpMenu } from '@/features/onboarding/components/HelpMenu'
+import type { AppRole } from '@/lib/auth/getCurrentUser'
 
 type AppHeaderProps = {
   userId?: string | undefined
   tenantId?: string | undefined
   displayName?: string | undefined
   email?: string | undefined
-  role?: string | undefined
+  role?: AppRole | undefined
 }
 
 export function AppHeader({ userId, tenantId, displayName, email, role }: AppHeaderProps) {
@@ -24,8 +25,9 @@ export function AppHeader({ userId, tenantId, displayName, email, role }: AppHea
           <NotificationDropdown userId={userId} tenantId={tenantId} />
         ) : (
           <button
-            className="flex h-8 w-8 items-center justify-center rounded-md text-text-secondary hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-text-secondary opacity-50 cursor-not-allowed"
             aria-label="Notifications"
+            disabled
           >
             <Bell size={16} />
           </button>
@@ -35,7 +37,7 @@ export function AppHeader({ userId, tenantId, displayName, email, role }: AppHea
           <UserMenu displayName={displayName} email={email} role={role} />
         ) : (
           <button
-            className="flex h-8 w-8 items-center justify-center rounded-md text-text-secondary hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-text-secondary opacity-50 cursor-not-allowed"
             aria-label="User menu"
             disabled
           >

@@ -1,6 +1,6 @@
 # Story S-FIX-3: User Menu & Logout
 
-Status: review
+Status: done
 
 ## Story
 
@@ -215,17 +215,38 @@ None — clean implementation, no debug issues.
 
 - T1+T2: Created `UserMenu` client component with DropdownMenu (Radix), role label formatting via `ROLE_LABELS` Record, sign-out via `createBrowserClient().auth.signOut()` + hard redirect to `/login`, error toast on failure, `signingOut` pending state via `useState`
 - T3: Wired into AppHeader (added `displayName`, `email`, `role` props) + Layout (passes user data from `getCurrentUser()`). AppHeader remains server component. Null guard renders disabled icon-only button when no user data.
-- T4: 8 unit tests — dropdown render, 3 role format tests (admin/qa_reviewer/native_reviewer + unknown fallback), sign-out success redirect, sign-out failure toast, aria-label, menu item presence
-- T5: type-check GREEN, lint GREEN, 8/8 UserMenu tests PASS. 7 pre-existing failures (NoteInput, updateTerm, getBackTranslation, AiUsageDashboard) unrelated to this story.
+- T4: 9 unit tests — dropdown render, 3 role format tests (admin/qa_reviewer/native_reviewer + unknown fallback), sign-out success redirect, sign-out thrown-error toast, sign-out returned-error toast (CR R1 F2), aria-label, menu item presence
+- T5: type-check GREEN, lint GREEN, 9/9 UserMenu tests PASS.
 - T5.3: Manual browser test deferred to S-FIX-V1 verification story
+
+### Review Findings (CR R1 — 2026-04-04)
+
+- [x] [Review][Patch] F1: `signOut()` returns `{ error }` not throw — must check return value, else silent redirect on failure [user-menu.tsx:37-40] (AC2 violation — all 3 layers flagged) ✅ Fixed: destructure `{ error }`, throw if truthy
+- [x] [Review][Patch] F2: Missing test for non-throwing `signOut` failure path — `mockResolvedValue({ error })` case [user-menu.test.tsx] (test gap for F1) ✅ Fixed: added test, also added `not.toHaveBeenCalled` redirect assertion to thrown-error test
+- [x] [Review][Patch] F3: `role` prop typed as bare `string` — should use `AppRole` union from `getCurrentUser.ts` (Guardrail #22) [user-menu.tsx:28, app-header.tsx:10] ✅ Fixed: imported `AppRole`, typed props + ROLE_LABELS
+- [x] [Review][Patch] F4: Fallback disabled button has no visual disabled state — add `opacity-50 cursor-not-allowed` [app-header.tsx:38] ✅ Fixed: added opacity-50 + cursor-not-allowed, removed hover styles
+
+### Review Findings (CR R2 — 2026-04-04)
+
+- All R1 fixes verified by 3 layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor)
+- All ACs re-verified: AC1-4 PASS, constraints PASS, `import type` safety PASS
+- [x] [Review][Patch] F5: `void handleSignOut()` violates Guardrail #23 — changed to `.catch(() => {})` pattern
+- [x] [Review][Patch] F6: Notification Bell fallback button missing disabled state (pre-existing inconsistency) — applied same `opacity-50 cursor-not-allowed disabled` pattern
+- [x] [Review][Dismiss] BH-2: `setSigningOut(false)` not reset on success — hard redirect destroys component immediately
+- [x] [Review][Dismiss] BH-3: No auth guard at layout level — proxy handles auth externally
+- [x] [Review][Dismiss] BH-4: Missing `project_manager` role — getCurrentUser validates, moot
+- [x] [Review][Dismiss] BH-5: `as AppRole` cast in test — intentional, has explanatory comment
+- CR R2 result: **Clean** — 0 open issues
 
 ### Change Log
 
 - 2026-04-03: Implemented S-FIX-3 — UserMenu dropdown with sign-out, wired into AppHeader + Layout, 8 unit tests
+- 2026-04-04: CR R1 — 4 patches fixed (signOut error check, test gap, AppRole type, disabled visual)
+- 2026-04-04: CR R2 — 2 additional fixes (void→catch, Bell fallback disabled), all verified clean
 
 ### File List
 
 - `src/components/layout/user-menu.tsx` — **CREATED** — UserMenu client component
-- `src/components/layout/user-menu.test.tsx` — **CREATED** — 8 unit tests
-- `src/components/layout/app-header.tsx` — **MODIFIED** — Import UserMenu, extend props, conditional render
+- `src/components/layout/user-menu.test.tsx` — **CREATED** — 9 unit tests
+- `src/components/layout/app-header.tsx` — **MODIFIED** — Import UserMenu, extend props, conditional render, both fallback buttons disabled+styled
 - `src/app/(app)/layout.tsx` — **MODIFIED** — Pass displayName/email/role to AppHeader

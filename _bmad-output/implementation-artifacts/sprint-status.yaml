@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-02-15
-last_updated: 2026-04-03  # CR R1 s-fix-2 done
+last_updated: 2026-04-04  # CR R1 s-fix-3 done
 project: qa-localization-tool
 project_key: NOKEY
 tracking_system: file-system
@@ -194,7 +194,7 @@ development_status:
   # Root cause: src/components/layout/app-header.tsx:30-35 — button has no dropdown/onClick
   # Fix: DropdownMenu on User button with sign-out action + user profile info
   # Ref: PROJECT-TOUR-REPORT.md > BUG-8, spec-ui-tour-bugfix-7.md
-  s-fix-3-user-menu-logout: review
+  s-fix-3-user-menu-logout: done
 
   # S-FIX-V1: Verify & Optimize Phase 1 [M]
   # Scope: Playwright verify S-FIX-1/2/3 — error pages, UUID rejection, taxonomy hydration, logout

@@ -85,3 +85,7 @@
 
 - ~~**D1: DragOverlay tooltip with tabIndex=0 during keyboard drag**~~ ✅ DONE — `tabIndex={readOnly ? -1 : 0}` removes focusability from DragOverlay clone
 - ~~**D2: Unsaved draft lost when switching Edit to another row**~~ ✅ DONE — `startEdit()` detects dirty draft and shows toast.info before switching
+
+## Deferred from: code review of s-fix-3 (2026-04-04)
+
+- ~~**D1: Notification Bell fallback button missing disabled state**~~ ✅ DONE — Applied same `opacity-50 cursor-not-allowed disabled` pattern as User menu fallback

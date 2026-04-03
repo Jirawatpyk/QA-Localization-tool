@@ -1,7 +1,9 @@
 /// <reference types="vitest/globals" />
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import type { AppRole } from '@/lib/auth/getCurrentUser'
 
 import { UserMenu } from './user-menu'
 
@@ -44,7 +46,7 @@ beforeEach(() => {
 const defaultProps = {
   displayName: 'Mona Test',
   email: 'mona@example.com',
-  role: 'qa_reviewer',
+  role: 'qa_reviewer' as const,
 }
 
 describe('UserMenu', () => {
@@ -85,7 +87,8 @@ describe('UserMenu', () => {
 
   it('should show raw role string for unknown roles', async () => {
     const user = userEvent.setup()
-    render(<UserMenu {...defaultProps} role="super_admin" />)
+    // Cast to test fallback behavior for unexpected role values
+    render(<UserMenu {...defaultProps} role={'super_admin' as AppRole} />)
 
     await user.click(screen.getByRole('button', { name: 'User menu' }))
     expect(screen.getByText('super_admin')).toBeInTheDocument()
@@ -106,8 +109,8 @@ describe('UserMenu', () => {
     expect(mockLocationHref).toHaveBeenCalledWith('/login')
   })
 
-  // T4.5: Sign-out failure shows error toast
-  it('should show error toast when signOut fails', async () => {
+  // T4.5: Sign-out failure shows error toast (thrown error)
+  it('should show error toast when signOut throws', async () => {
     mockSignOut.mockRejectedValue(new Error('Network error'))
     const user = userEvent.setup()
     render(<UserMenu {...defaultProps} />)
@@ -119,6 +122,23 @@ describe('UserMenu', () => {
     await waitFor(() => {
       expect(mockToastError).toHaveBeenCalledWith('Failed to sign out. Please try again.')
     })
+    expect(mockLocationHref).not.toHaveBeenCalled()
+  })
+
+  // F2: Sign-out failure via returned error object (Supabase pattern)
+  it('should show error toast when signOut returns error object', async () => {
+    mockSignOut.mockResolvedValue({ error: new Error('Session expired') })
+    const user = userEvent.setup()
+    render(<UserMenu {...defaultProps} />)
+
+    await user.click(screen.getByRole('button', { name: 'User menu' }))
+    const signOutItem = screen.getByRole('menuitem', { name: /sign out/i })
+    await user.click(signOutItem)
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Failed to sign out. Please try again.')
+    })
+    expect(mockLocationHref).not.toHaveBeenCalled()
   })
 
   // Trigger button renders with correct aria-label

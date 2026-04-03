@@ -13,9 +13,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import type { AppRole } from '@/lib/auth/getCurrentUser'
 import { createBrowserClient } from '@/lib/supabase/client'
 
-const ROLE_LABELS: Record<string, string> = {
+const ROLE_LABELS: Record<AppRole, string> = {
   admin: 'Admin',
   qa_reviewer: 'QA Reviewer',
   native_reviewer: 'Native Reviewer',
@@ -24,7 +25,7 @@ const ROLE_LABELS: Record<string, string> = {
 type UserMenuProps = {
   displayName: string
   email: string
-  role: string
+  role: AppRole
 }
 
 export function UserMenu({ displayName, email, role }: UserMenuProps) {
@@ -34,7 +35,8 @@ export function UserMenu({ displayName, email, role }: UserMenuProps) {
     setSigningOut(true)
     try {
       const supabase = createBrowserClient()
-      await supabase.auth.signOut()
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
       window.location.href = '/login'
     } catch {
       toast.error('Failed to sign out. Please try again.')
@@ -63,7 +65,12 @@ export function UserMenu({ displayName, email, role }: UserMenuProps) {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => void handleSignOut()} disabled={signingOut}>
+        <DropdownMenuItem
+          onClick={() => {
+            handleSignOut().catch(() => {})
+          }}
+          disabled={signingOut}
+        >
           <LogOut size={16} />
           {signingOut ? 'Signing out…' : 'Sign out'}
         </DropdownMenuItem>
