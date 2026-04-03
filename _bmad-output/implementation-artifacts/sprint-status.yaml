@@ -176,10 +176,11 @@ development_status:
   s-ux-3-score-recalculation-pipeline: backlog
 
   # S-UX-4a: Review Card & Filter Polish [L] — split from S-UX-4
-  # Items: R-01 (error highlight), R-02 (inline AI suggestion), R-05 (state colored tints),
-  #   R-06/UX-NEW-12 (category Title Case), R-07 (status filter missing Noted/Source Issue),
+  # Items: R-01 (error highlight), R-02 (inline AI suggestion), R-03 (card quick actions expand to 7),
+  #   R-05 (state colored tints), R-06/UX-NEW-12 (category Title Case),
+  #   R-07 (status filter missing Noted/Source Issue), R-08 (filter counts on buttons),
   #   R-12/UX-NEW-08 (3-phase AI progress indicator)
-  # Verification: Playwright — finding card highlights, inline suggestion, state tints, filter completeness, progress phases
+  # Verification: Playwright — finding card highlights, inline suggestion, card actions, state tints, filter completeness+counts, progress phases
   s-ux-4a-review-card-filter-polish: backlog
 
   # S-UX-4b: Navigation & Accessibility Polish [M] — split from S-UX-4
