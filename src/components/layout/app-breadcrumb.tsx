@@ -31,7 +31,17 @@ const STATIC_SEGMENTS = new Set([
   'batch',
   'details',
   'findings',
+  'files',
+  'batches',
+  'parity',
+  'suppression-rules',
 ])
+
+const SEGMENT_LABELS: Record<string, string> = {
+  files: 'History',
+  'ai-usage': 'AI Usage',
+  'suppression-rules': 'Suppression Rules',
+}
 
 type ParsedSegment = {
   label: string
@@ -40,8 +50,11 @@ type ParsedSegment = {
 }
 
 function capitalize(s: string): string {
-  if (s === 'ai-usage') return 'AI Usage'
-  return s.charAt(0).toUpperCase() + s.slice(1)
+  if (SEGMENT_LABELS[s]) return SEGMENT_LABELS[s]
+  return s
+    .split('-')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
 }
 
 function parsePath(pathname: string): {

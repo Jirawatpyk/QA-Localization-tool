@@ -1,7 +1,10 @@
 'use client'
 
+import Link from 'next/link'
+
 import { FILE_HISTORY_PAGE_SIZE } from '@/features/batch/types'
 import { FileAssignmentCell } from '@/features/project/components/FileAssignmentCell'
+import { L1_COMPLETED_STATUSES } from '@/types/pipeline'
 import type { DbFileStatus } from '@/types/pipeline'
 
 import { formatFileStatus } from '../helpers/formatFileStatus'
@@ -126,7 +129,18 @@ export function FileHistoryTable({
           <tbody>
             {files.map((file) => (
               <tr key={file.fileId} className="border-b" data-testid={`file-row-${file.fileId}`}>
-                <td className="px-4 py-2 text-sm">{file.fileName}</td>
+                <td className="px-4 py-2 text-sm">
+                  {L1_COMPLETED_STATUSES.has(file.status) ? (
+                    <Link
+                      href={`/projects/${projectId}/review/${file.fileId}`}
+                      className="text-primary underline-offset-4 hover:underline"
+                    >
+                      {file.fileName}
+                    </Link>
+                  ) : (
+                    <span className="text-muted-foreground">{file.fileName}</span>
+                  )}
+                </td>
                 <td className="px-4 py-2 text-sm text-muted-foreground">
                   {new Date(file.processedAt).toLocaleDateString()}
                 </td>

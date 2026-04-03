@@ -45,6 +45,17 @@ export function ProjectTour({ userId, userMetadata }: ProjectTourProps) {
 
   useEffect(() => {
     if (userMetadata?.project_tour_completed) return
+    // Sync dismissedRef from server-persisted state on remount (BUG-6 fix).
+    // When navigating between project sub-tabs, component unmounts/remounts
+    // which resets dismissedRef to false. Check server state to prevent
+    // tour from re-initializing after tab navigation — but still allow
+    // resume from the dismissed step (don't permanently suppress).
+    if (
+      typeof userMetadata?.dismissed_at_step?.project === 'number' &&
+      userMetadata.dismissed_at_step.project > 0
+    ) {
+      dismissedRef.current = true
+    }
     // Reset dismissedRef when a restart has cleared dismissed_at_step.
     // After router.refresh() from HelpMenu restart, userMetadata reflects the
     // server-cleared state (dismissed_at_step.project = null/undefined).

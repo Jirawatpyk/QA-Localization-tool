@@ -68,3 +68,7 @@
 
 - ~~**D1: `addFindingComment` admin commenter notifies only 1 of 2 other parties**~~ ✅ DONE — Set-based recipient collection: notifies all parties (assignedTo + assignedBy) except the commenter. Handles admin as 3rd actor correctly.
 - ~~**D2: `revalidateTag(\`glossary-null\`)` when `glossary.projectId` is null**~~ ✅ DONE — Added `if (projectId)` guard in createTerm, updateTerm, deleteTerm before calling revalidateTag.
+
+## Deferred from: UI tour bugfix review (2026-04-03)
+
+- ~~**FileHistoryTable: link shown for unprocessed files**~~ ✅ DONE — Gate link on `L1_COMPLETED_STATUSES` (l1_completed, l2_processing, l2_completed, l3_processing, l3_completed, ai_partial). Files in uploaded/parsing/parsed/l1_processing/failed status render as plain text instead of link.

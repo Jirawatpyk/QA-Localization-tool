@@ -4,18 +4,36 @@ import { ChevronLeft, ChevronRight, FolderOpen, LayoutDashboard, Shield } from '
 import Link from 'next/link'
 import { useEffect } from 'react'
 
+import type { AppRole } from '@/lib/auth/getCurrentUser'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui.store'
 
 const STORAGE_KEY = 'sidebar-collapsed'
 
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, dataTour: undefined },
-  { href: '/projects', label: 'Projects', icon: FolderOpen, dataTour: 'create-project' },
-  { href: '/admin', label: 'Admin', icon: Shield, dataTour: undefined },
-] as const
+const ALL_NAV_ITEMS = [
+  {
+    href: '/dashboard',
+    label: 'Dashboard',
+    icon: LayoutDashboard,
+    dataTour: undefined,
+    adminOnly: false,
+  },
+  {
+    href: '/projects',
+    label: 'Projects',
+    icon: FolderOpen,
+    dataTour: 'create-project',
+    adminOnly: false,
+  },
+  { href: '/admin', label: 'Admin', icon: Shield, dataTour: undefined, adminOnly: true },
+]
 
-export function AppSidebar() {
+type AppSidebarProps = {
+  userRole?: AppRole | null
+}
+
+export function AppSidebar({ userRole }: AppSidebarProps) {
+  const navItems = ALL_NAV_ITEMS.filter((item) => !item.adminOnly || userRole === 'admin')
   const sidebarOpen = useUIStore((s) => s.sidebarOpen)
   const setSidebarOpen = useUIStore((s) => s.setSidebarOpen)
   const toggleSidebar = useUIStore((s) => s.toggleSidebar)

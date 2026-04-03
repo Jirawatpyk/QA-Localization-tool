@@ -2,6 +2,7 @@
 
 import { FileText, Settings } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,7 +20,7 @@ function formatRelativeDate(date: Date): string {
   const diffMs = now.getTime() - date.getTime()
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
 
-  if (diffDays === 0) return 'Today'
+  if (diffDays <= 0) return 'Today'
   if (diffDays === 1) return 'Yesterday'
   if (diffDays < 7) return `${diffDays} days ago`
   if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`
@@ -32,11 +33,28 @@ function formatRelativeDate(date: Date): string {
 }
 
 export function ProjectCard({ project, userRole }: ProjectCardProps) {
+  const router = useRouter()
   const isAdmin = userRole === 'admin'
   const targetDisplay = project.targetLangs.map((t) => t.toUpperCase()).join(', ')
 
   return (
-    <Card>
+    <Card
+      className="cursor-pointer transition-shadow hover:shadow-md"
+      onClick={(e) => {
+        if (e.target === e.currentTarget || !(e.target as HTMLElement).closest('a, button')) {
+          router.push(`/projects/${project.id}/upload`)
+        }
+      }}
+      tabIndex={0}
+      aria-label={`Open project ${project.name}`}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          router.push(`/projects/${project.id}/upload`)
+        }
+      }}
+    >
       <CardHeader>
         <CardTitle className="text-base">{project.name}</CardTitle>
       </CardHeader>
@@ -57,7 +75,12 @@ export function ProjectCard({ project, userRole }: ProjectCardProps) {
 
         {isAdmin && (
           <div className="pt-1">
-            <Button variant="outline" size="sm" asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            >
               <Link href={`/projects/${project.id}/settings`}>
                 <Settings size={14} className="mr-1.5" aria-hidden />
                 Settings

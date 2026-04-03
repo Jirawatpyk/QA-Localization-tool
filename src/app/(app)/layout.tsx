@@ -21,7 +21,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar: hidden below md, collapsed at lg, expanded at xl+ */}
         <div className="hidden md:flex">
-          <AppSidebar />
+          <AppSidebar userRole={user?.role ?? null} />
         </div>
 
         {/* Main content area */}

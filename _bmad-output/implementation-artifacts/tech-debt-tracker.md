@@ -1303,3 +1303,36 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Target:** Story 6-2c (when navigation UI is wired)
 - **Origin:** Story 6.2a CR R1 (2026-04-01)
 - **Status:** DEFERRED → 6-2c
+
+## Category 15: UI Tour Findings (2026-04-03)
+
+### TD-UX-009: History page missing progressive loading UI per UX spec
+- **Severity:** Medium
+- **Files:** `src/features/batch/components/FileHistoryTable.tsx`, `src/app/(app)/projects/[projectId]/files/page.tsx`
+- **Description:** UX spec (`ux-consistency-patterns.md` Section 3) defines 5-phase progressive loading (Upload → L1 → L2 → L3 → Complete) with per-layer progress, finding count, and live score updates. Currently History page shows only flat "Processing" / "Completed" text — no progress bar, no segment progress (8/12), no live score. Review page has AI progress bar but History page doesn't.
+- **UX Spec Reference:** `_bmad-output/planning-artifacts/ux-design-specification/ux-consistency-patterns.md` lines 93-144
+- **Fix:** Add pipeline progress component to History table rows showing: current layer (L1/L2/L3), segment progress, partial finding count, live score via Supabase Realtime subscription
+- **Effort:** 1-2 days (needs Realtime subscription + progress component)
+- **Target:** Epic 7 or Epic 8 (Dashboard/History revamp)
+- **Origin:** UI Tour 2026-04-03
+- **Status:** DEFERRED → E7/E8
+
+### TD-UX-010: Dashboard status badge shows raw technical names
+- **Severity:** Low
+- **Files:** `src/app/(app)/dashboard/page.tsx` or dashboard components
+- **Description:** Dashboard file table shows raw `l2_completed` / `l3_completed` instead of human-friendly labels like "AI Screening Complete" / "Deep Analysis Complete". `formatFileStatus()` helper exists but may not cover all display contexts.
+- **Fix:** Ensure `formatFileStatus()` maps all `DbFileStatus` values to human-friendly labels, use consistently in Dashboard + History
+- **Effort:** 30 min
+- **Target:** Epic 7/8
+- **Origin:** UI Tour 2026-04-03
+- **Status:** DEFERRED → E7/E8
+
+### TD-UX-011: Score stays 0.0 during pipeline (BUG-7)
+- **Severity:** Medium
+- **Files:** `src/features/pipeline/inngest/processFile.ts`, `src/features/pipeline/inngest/recalculateScore.ts`
+- **Description:** MQM score shows 0.0 after pipeline completes with 52 findings. Pipeline does not emit `finding.changed` event after L2/L3 findings are inserted, so `recalculateScore` (triggered by finding.changed) never fires after pipeline completion. Score only updates when reviewer accepts/rejects findings.
+- **Fix:** Emit `finding.changed` event after final pipeline layer completes, OR call `scoreFile()` as final pipeline step after all findings committed
+- **Effort:** 2-4 hours (Inngest pipeline + scoring integration)
+- **Target:** Epic 7 (Auto-Pass depends on accurate scores)
+- **Origin:** UI Tour 2026-04-03, confirmed by code review
+- **Status:** DEFERRED → E7
