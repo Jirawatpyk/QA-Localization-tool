@@ -165,8 +165,10 @@ development_status:
 
   # S-UX-2: Dashboard & Upload Polish [M→L]
   # Items: UX-NEW-02 (onboarding repeat), UX-NEW-03 (status badges), UX-NEW-04 (file rows clickable),
-  #   EDGE-BUG-01 (0-segment block), + UX-NEW-14 (admin language pairs column — needed before Epic 7 Auto-Pass)
-  # Verification: Playwright — dashboard badges, file rows click, onboarding persist, 0-segment disabled, admin language pairs
+  #   EDGE-BUG-01 (0-segment block), UX-NEW-14 (admin language pairs column),
+  #   D-01 (stale 0-segment file in dashboard), D-02 (Score N/A for unparsed),
+  #   A-01 (empty reviewer message UX)
+  # Verification: Playwright — dashboard badges, file rows click, onboarding, 0-segment, admin lang pairs, empty reviewer msg
   s-ux-2-dashboard-upload-polish: backlog
 
   # S-UX-3: Score Recalculation after Pipeline [L]
@@ -224,10 +226,12 @@ development_status:
   # Verification: Playwright — trigger error states (invalid file, network mock, pipeline fail) + verify UI
   s-ux-6-error-states-pattern: backlog
 
-  # S-UX-7: Taxonomy & Glossary Edit UX [M]
-  # Items: T-03 (MQM Category dropdown not free text), T-04 (Save/Cancel buttons in edit mode),
-  #   G-01 (Glossary column auto-detect from CSV headers)
-  # Verification: Playwright — taxonomy edit with dropdown + save/cancel, glossary import column detection
+  # S-UX-7: Taxonomy & Glossary Edit UX [M→L]
+  # Items: T-03 (MQM Category dropdown), T-04 (Save/Cancel edit mode),
+  #   G-01 (column auto-detect), T-01 (description tooltip), T-02 (E2E data cleanup),
+  #   G-03 (language pair mismatch), G-04 (term drill-down view), G-05 (export glossary),
+  #   T-05 (hydration mismatch error)
+  # Verification: Playwright — taxonomy edit, glossary term view, export, column detect
 
   # S-UX-9: Settings Completeness [M] — NEW (was deferred, now in sprint for 100%)
   # Items: TD-UX-012 (language pair display/edit), TD-UX-013 (Reset button),

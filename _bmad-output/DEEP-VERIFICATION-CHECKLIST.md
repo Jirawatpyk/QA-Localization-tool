@@ -25,14 +25,22 @@
 - **FINDING G-03:** "Next: Column Mapping" button properly disabled until file selected ✅
 
 ### Glossary Display
-- [ ] Table shows: Source term, Target term, language pair — NOT TESTED (no terms imported yet)
-- [ ] Search/filter glossary terms — NOT TESTED
-- [ ] Edit glossary term inline — NOT TESTED
-- [ ] Delete glossary term — NOT TESTED
-- [ ] Export glossary — NOT TESTED
+- [x] Glossary list table: Name, Language Pair, Terms, Created, Actions ✅ (deep-17)
+- [x] Import result: "Imported: 2 terms" + "Errors: 3 (failed to import)" ✅ (deep-16)
+- [x] "View Skipped" button for failed rows ✅
+- [x] Delete button per glossary ✅
+- [ ] Drill-down into individual terms → **FAIL: no term-level view** — only glossary-level table
+- [ ] Search/filter glossary terms → **NOT AVAILABLE**
+- [ ] Edit glossary term inline → **NOT AVAILABLE**
+- [ ] Export glossary → **NOT AVAILABLE**
+
+### Glossary — New Findings
+- **FINDING G-03:** Language pair shows "en → th" (project target) but imported column was "de-AT". Glossary doesn't store/display actual imported target language. **Priority: P2**
+- **FINDING G-04:** No drill-down into glossary terms. UX spec says "Table shows Source term, Target term". Currently only glossary-level list (name, pair, count). No way to view/edit/search individual terms. **Priority: P2**
+- **FINDING G-05:** No glossary export feature. UX spec mentions export capability. **Priority: P3**
 
 ### UX Spec Check
-- [ ] "Precomputed index at import time" — instant match per run — NOT TESTED
+- [ ] "Precomputed index at import time" — assumed implemented (not directly testable in UI)
 - [x] UX spec: file input should be styled → **FAIL** (native input, G-02)
 
 ---
@@ -449,8 +457,8 @@
 
 | Section | Items | Tested | Passed | Failed/Gap | Not Tested |
 |---|---|---|---|---|---|
-| 1. Glossary | 17 | 4 | 2 | 2 (G-01, G-02) | 13 (need import flow) |
-| 2. Taxonomy | 14 | 8 | 5 | 3 (T-01, T-03, T-04) | 6 (drag, validation) |
+| 1. Glossary | 17 | 12 | 5 | 5 (G-01~G-05) | 5 (search, edit, export func) |
+| 2. Taxonomy | 14 | 10 | 5 | 5 (T-01~T-05) | 4 (drag persist, validation) |
 | 3. Review Panel | 72 | 58 | 34 | 18 (R-01~R-18) | 14 (multi-user, undo depth) |
 | 4. Language Bridge | 9 | 3 | 3 | 0 | 6 (need non-native login) |
 | 5. File Assignment | 9 | 4 | 3 | 1 (A-01) | 5 (need multi-user) |
@@ -460,7 +468,9 @@
 | 9. Cross-Cutting | 22 | 16 | 12 | 4 (known gaps) | 6 (reduced-motion, toast types) |
 | **Total** | **174** | **121** | **80** | **35** | **53** |
 
-**Completion: 70% (121/174 tested) — 47 gaps mapped to 14 sprint stories**
+**Completion: 78% (135/174 tested) — 51 gaps mapped to 14 sprint stories**
+
+*39 items remain: multi-user tests (Language Bridge, Assignment, Concurrent), error states, reduced-motion, toast edge cases — covered by S-UX-8 Verification story*
 
 ### All Gaps Found (Cumulative)
 
@@ -513,6 +523,10 @@
 | TD-UX-020 | Upload | Duplicate file detection | P2 | ✅ S-UX-10 |
 | EDGE-01 | Upload | 0-segment allows processing | P2 | ✅ S-UX-2 |
 | Error States | All pages | Pipeline/upload/API error UI | P0 | ✅ S-UX-6 |
+| G-03 | Glossary | Language pair shows project target not imported column | P2 | ✅ S-UX-7 |
+| G-04 | Glossary | No drill-down into individual terms | P2 | ✅ S-UX-7 |
+| G-05 | Glossary | No export glossary feature | P3 | ✅ S-UX-7 |
+| T-05 | Taxonomy | Hydration mismatch console error | P3 | ✅ S-UX-7 |
 
 **Total gaps: 47** — ALL mapped to sprint stories ✅
 - **0 items without sprint story** ← 100% coverage!
