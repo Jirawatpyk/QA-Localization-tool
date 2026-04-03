@@ -58,6 +58,9 @@ test.describe('Taxonomy Admin — Auth Gate', () => {
 // ---------------------------------------------------------------------------
 
 test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
+  // Shared state for cleanup — must be at describe level for serial tests
+  let originalFirstRowName: string | null = null
+
   test('[setup] signup or login as admin user', async ({ page }) => {
     test.setTimeout(120000) // retry loop may take up to ~60s for replica sync
 
@@ -172,6 +175,9 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     // When: Admin clicks Edit on the first data row (position-based — avoids relying on
     // a specific internalName value that may have been changed by a previous test run)
     const firstDataRow = page.getByTestId('taxonomy-mapping-table').getByRole('row').nth(1)
+    // Capture original name BEFORE editing for cleanup (T-02 fix)
+    // Column index: canReorder={true} → col 0 = drag handle, col 1 = QA Cosmetic Term
+    originalFirstRowName = await firstDataRow.getByRole('cell').nth(1).textContent()
     await firstDataRow.getByRole('button', { name: 'Edit', exact: true }).click()
 
     // Then: The row becomes editable
@@ -359,6 +365,29 @@ test.describe.serial('Story 1.6 — Taxonomy Mapping Editor', () => {
     await expect(
       page.getByRole('cell', { name: 'Capitalization', exact: true }).first(),
     ).toBeVisible()
+  })
+
+  // -------------------------------------------------------------------------
+  // Cleanup: revert E2E-modified rows (T-02 fix)
+  // -------------------------------------------------------------------------
+
+  test('[cleanup] revert edited row names to original values', async ({ page }) => {
+    await login(page)
+    await page.goto('/admin/taxonomy')
+    await expect(page.getByTestId('taxonomy-mapping-table')).toBeVisible({ timeout: 10000 })
+
+    // Find any row matching E2E_EDIT_NAME and revert to original
+    const editedCell = page.getByRole('cell', { name: E2E_EDIT_NAME, exact: true })
+    const isVisible = await editedCell.isVisible({ timeout: 3000 }).catch(() => false)
+    if (isVisible) {
+      const row = editedCell.locator('..')
+      await row.getByRole('button', { name: 'Edit', exact: true }).click()
+      const nameInput = page.getByRole('textbox', { name: /QA Cosmetic name/i })
+      await nameInput.clear()
+      await nameInput.fill(originalFirstRowName ?? 'Reverted by E2E cleanup')
+      await page.getByRole('button', { name: 'Save' }).click()
+      await expect(page.getByText('Mapping updated')).toBeVisible({ timeout: 10000 })
+    }
   })
 })
 

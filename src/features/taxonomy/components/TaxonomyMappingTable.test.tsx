@@ -394,3 +394,67 @@ describe('TaxonomyMappingTable — Null Severity Fallback', () => {
     expect(fallbackBadge.className).toMatch(/bg-severity-minor/)
   })
 })
+
+// ---------------------------------------------------------------------------
+// S-FIX-2 — Description Tooltip (T-01 fix)
+// ---------------------------------------------------------------------------
+describe('TaxonomyMappingTable — Description Tooltip', () => {
+  const mockOnUpdate = vi.fn()
+  const mockOnDelete = vi.fn()
+  const mockOnAdd = vi.fn()
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('[P1] should render description with truncate class and tooltip trigger', async () => {
+    const { TaxonomyMappingTable } = await import('./TaxonomyMappingTable')
+    render(
+      <TaxonomyMappingTable
+        mappings={MOCK_MAPPINGS}
+        onUpdate={mockOnUpdate}
+        onDelete={mockOnDelete}
+        onAdd={mockOnAdd}
+      />,
+    )
+
+    // Each mapping with a description should render with truncate class and cursor-default
+    const descriptionSpan = screen.getByText('Critical terminology error')
+    expect(descriptionSpan.className).toContain('truncate')
+    expect(descriptionSpan.className).toContain('cursor-default')
+    // tabIndex=0 for keyboard tooltip access
+    expect(descriptionSpan).toHaveAttribute('tabindex', '0')
+  })
+
+  it('[P2] should render em-dash for empty description', async () => {
+    const EMPTY_DESC_MAPPING: TaxonomyMapping = {
+      id: 'a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c85',
+      internalName: 'empty-desc',
+      category: 'fluency',
+      parentCategory: 'parent-cat',
+      severity: 'minor',
+      description: '',
+      isCustom: false,
+      isActive: true,
+      displayOrder: 0,
+      createdAt: new Date('2026-03-01T00:00:00Z'),
+      updatedAt: new Date('2026-03-01T00:00:00Z'),
+    }
+
+    const { TaxonomyMappingTable } = await import('./TaxonomyMappingTable')
+    render(
+      <TaxonomyMappingTable
+        mappings={[EMPTY_DESC_MAPPING]}
+        onUpdate={mockOnUpdate}
+        onDelete={mockOnDelete}
+        onAdd={mockOnAdd}
+      />,
+    )
+
+    // Empty description renders as italic em-dash
+    const emDashes = screen.getAllByText('\u2014')
+    // At least one should be italic (description column)
+    const italicDash = emDashes.find((el) => el.className.includes('italic'))
+    expect(italicDash).toBeTruthy()
+  })
+})

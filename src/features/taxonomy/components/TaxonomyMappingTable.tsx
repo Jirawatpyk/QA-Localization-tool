@@ -20,7 +20,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 
 import {
   AlertDialog,
@@ -49,6 +49,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { MqmCategoryCombobox } from '@/features/taxonomy/components/MqmCategoryCombobox'
 import type { TaxonomyMapping } from '@/features/taxonomy/types'
 import type { Severity } from '@/features/taxonomy/validation/taxonomySchemas'
 import { severityValues } from '@/features/taxonomy/validation/taxonomySchemas'
@@ -112,6 +114,8 @@ type MappingCellsProps = {
   onCancelEdit: () => void
   onDeleteRequest: (id: string) => void
   readOnly?: boolean | undefined
+  allCategories: string[]
+  allParentCategories: string[]
 }
 
 function MappingCells({
@@ -124,6 +128,8 @@ function MappingCells({
   onCancelEdit,
   onDeleteRequest,
   readOnly,
+  allCategories,
+  allParentCategories,
 }: MappingCellsProps) {
   return (
     <>
@@ -146,11 +152,11 @@ function MappingCells({
       {/* category */}
       <TableCell>
         {isEditing && draft ? (
-          <Input
-            aria-label="MQM category"
+          <MqmCategoryCombobox
             value={draft.category}
-            onChange={(e) => onDraftChange({ ...draft, category: e.target.value })}
-            className="h-7 text-sm"
+            onValueChange={(val) => onDraftChange({ ...draft, category: val })}
+            suggestions={allCategories}
+            aria-label="MQM category"
           />
         ) : (
           <span className="text-sm">{mapping.category}</span>
@@ -160,11 +166,11 @@ function MappingCells({
       {/* parentCategory */}
       <TableCell>
         {isEditing && draft ? (
-          <Input
-            aria-label="MQM parent category"
+          <MqmCategoryCombobox
             value={draft.parentCategory}
-            onChange={(e) => onDraftChange({ ...draft, parentCategory: e.target.value })}
-            className="h-7 text-sm"
+            onValueChange={(val) => onDraftChange({ ...draft, parentCategory: val })}
+            suggestions={allParentCategories}
+            aria-label="MQM parent category"
           />
         ) : (
           <span className="text-sm">
@@ -209,8 +215,22 @@ function MappingCells({
             onChange={(e) => onDraftChange({ ...draft, description: e.target.value })}
             className="h-7 text-sm"
           />
+        ) : mapping.description ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                className="text-sm text-text-secondary truncate block cursor-default"
+                tabIndex={0}
+              >
+                {mapping.description}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[400px]">
+              <p>{mapping.description}</p>
+            </TooltipContent>
+          </Tooltip>
         ) : (
-          <span className="text-sm text-text-secondary truncate block">{mapping.description}</span>
+          <span className="text-text-secondary italic">—</span>
         )}
       </TableCell>
 
@@ -308,6 +328,14 @@ export function TaxonomyMappingTable({
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
 
+  // SSR hydration fix (T-05): @dnd-kit DndContext accesses DOM globals during render.
+  // useSyncExternalStore is React Compiler safe (no setState in effect).
+  const hasMounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  )
+
   const isDragDisabled = editingId !== null
 
   // Hooks must be called unconditionally (Rules of Hooks) even when canReorder=false
@@ -367,6 +395,11 @@ export function TaxonomyMappingTable({
     setActiveDragId(null)
   }
 
+  const allCategories = [...new Set(mappings.map((m) => m.category))]
+  const allParentCategories = [
+    ...new Set(mappings.map((m) => m.parentCategory).filter(Boolean)),
+  ] as string[]
+
   function getCellProps(mapping: TaxonomyMapping): MappingCellsProps {
     return {
       mapping,
@@ -377,6 +410,8 @@ export function TaxonomyMappingTable({
       onSaveEdit: saveEdit,
       onCancelEdit: cancelEdit,
       onDeleteRequest: setDeleteTargetId,
+      allCategories,
+      allParentCategories,
     }
   }
 
@@ -399,7 +434,7 @@ export function TaxonomyMappingTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {canReorder ? (
+          {hasMounted && canReorder ? (
             <SortableContext
               items={mappings.map((m) => m.id)}
               strategy={verticalListSortingStrategy}
@@ -416,6 +451,11 @@ export function TaxonomyMappingTable({
           ) : (
             mappings.map((mapping) => (
               <TableRow key={mapping.id}>
+                {canReorder && (
+                  <TableCell className="w-8">
+                    <GripVertical className="h-4 w-4 text-text-secondary opacity-50" />
+                  </TableCell>
+                )}
                 <MappingCells {...getCellProps(mapping)} />
               </TableRow>
             ))
@@ -437,76 +477,78 @@ export function TaxonomyMappingTable({
   )
 
   return (
-    <>
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-text-secondary">
-          {mappings.length} mapping{mappings.length !== 1 ? 's' : ''}
-        </p>
-        <Button size="sm" onClick={onAdd} data-testid="add-mapping-btn">
-          Add Mapping
-        </Button>
-      </div>
+    <TooltipProvider>
+      <>
+        <div className="flex justify-between items-center">
+          <p className="text-sm text-text-secondary">
+            {mappings.length} mapping{mappings.length !== 1 ? 's' : ''}
+          </p>
+          <Button size="sm" onClick={onAdd} data-testid="add-mapping-btn">
+            Add Mapping
+          </Button>
+        </div>
 
-      {canReorder ? (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onDragCancel={handleDragCancel}
+        {hasMounted && canReorder ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
+          >
+            {tableElement}
+            <DragOverlay>
+              {activeDragMapping && (
+                <Table>
+                  <TableBody>
+                    <TableRow className="bg-surface shadow-md">
+                      <TableCell className="w-8">
+                        <GripVertical className="h-4 w-4 text-text-secondary" />
+                      </TableCell>
+                      <MappingCells {...getCellProps(activeDragMapping)} readOnly />
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              )}
+            </DragOverlay>
+          </DndContext>
+        ) : (
+          tableElement
+        )}
+
+        {/* Delete confirmation dialog */}
+        <AlertDialog
+          open={deleteTargetId !== null}
+          onOpenChange={(open) => {
+            if (!open) setDeleteTargetId(null)
+          }}
         >
-          {tableElement}
-          <DragOverlay>
-            {activeDragMapping && (
-              <Table>
-                <TableBody>
-                  <TableRow className="bg-surface shadow-md">
-                    <TableCell className="w-8">
-                      <GripVertical className="h-4 w-4 text-text-secondary" />
-                    </TableCell>
-                    <MappingCells {...getCellProps(activeDragMapping)} readOnly />
-                  </TableRow>
-                </TableBody>
-              </Table>
-            )}
-          </DragOverlay>
-        </DndContext>
-      ) : (
-        tableElement
-      )}
-
-      {/* Delete confirmation dialog */}
-      <AlertDialog
-        open={deleteTargetId !== null}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTargetId(null)
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Mapping?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will soft-delete the mapping (it will no longer appear in the QA engine). The
-              audit trail will be preserved.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-error text-white hover:bg-error/90"
-              data-testid="confirm-delete-mapping"
-              onClick={() => {
-                if (deleteTargetId) {
-                  onDelete(deleteTargetId)
-                  setDeleteTargetId(null)
-                }
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Mapping?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will soft-delete the mapping (it will no longer appear in the QA engine). The
+                audit trail will be preserved.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-error text-white hover:bg-error/90"
+                data-testid="confirm-delete-mapping"
+                onClick={() => {
+                  if (deleteTargetId) {
+                    onDelete(deleteTargetId)
+                    setDeleteTargetId(null)
+                  }
+                }}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </>
+    </TooltipProvider>
   )
 }

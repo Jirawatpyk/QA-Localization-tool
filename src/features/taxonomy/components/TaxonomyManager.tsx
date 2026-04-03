@@ -142,6 +142,10 @@ export function TaxonomyManager({ initialMappings, isAdmin }: Props) {
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
         onSubmit={handleAddSubmit}
+        allCategories={[...new Set(mappings.map((m) => m.category))]}
+        allParentCategories={
+          [...new Set(mappings.map((m) => m.parentCategory).filter(Boolean))] as string[]
+        }
       />
     </div>
   )

@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { MqmCategoryCombobox } from '@/features/taxonomy/components/MqmCategoryCombobox'
 import type { Severity } from '@/features/taxonomy/types'
 import { severityValues } from '@/features/taxonomy/validation/taxonomySchemas'
 
@@ -35,6 +36,8 @@ type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSubmit: (input: SubmitInput) => void
+  allCategories: string[]
+  allParentCategories: string[]
 }
 
 const EMPTY_FORM = {
@@ -45,7 +48,13 @@ const EMPTY_FORM = {
   description: '',
 }
 
-export function AddMappingDialog({ open, onOpenChange, onSubmit }: Props) {
+export function AddMappingDialog({
+  open,
+  onOpenChange,
+  onSubmit,
+  allCategories,
+  allParentCategories,
+}: Props) {
   const [form, setForm] = useState(EMPTY_FORM)
 
   // Guardrail #11: reset form state on re-open (cancel → re-open clears stale draft)
@@ -98,24 +107,24 @@ export function AddMappingDialog({ open, onOpenChange, onSubmit }: Props) {
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="category">MQM Category *</Label>
-            <Input
-              id="category"
-              data-testid="mqm-category-input"
+            <Label>MQM Category *</Label>
+            <MqmCategoryCombobox
               value={form.category}
-              onChange={(e) => handleChange('category', e.target.value)}
+              onValueChange={(val) => handleChange('category', val)}
+              suggestions={allCategories}
               placeholder="e.g. Accuracy"
-              required
+              aria-label="MQM category"
             />
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="parentCategory">MQM Parent Category</Label>
-            <Input
-              id="parentCategory"
+            <Label>MQM Parent Category</Label>
+            <MqmCategoryCombobox
               value={form.parentCategory}
-              onChange={(e) => handleChange('parentCategory', e.target.value)}
+              onValueChange={(val) => handleChange('parentCategory', val)}
+              suggestions={allParentCategories}
               placeholder="e.g. Omission (optional)"
+              aria-label="MQM parent category"
             />
           </div>
 

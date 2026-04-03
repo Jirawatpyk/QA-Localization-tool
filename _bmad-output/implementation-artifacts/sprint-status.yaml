@@ -154,7 +154,7 @@ development_status:
 
   # ============================================================
   # Sprint: UX/UI Debt Clearance (before Epic 6+ continues)
-  # 26 stories across 5 phases — 71 gaps, 174 checklist items
+  # 24 stories across 5 phases — 71 gaps, 174 checklist items
   # Rule: NO Epic 6+ work until Phase 1-3 PASS
   #
   # CONTEXT REFERENCES (for CS / dev agent):
@@ -179,21 +179,22 @@ development_status:
   # Root cause: src/app/(app)/projects/[projectId]/ — no UUID validation before DB query
   # Fix: Zod UUID validation on route params, error boundary with recovery actions, 0-segment guard
   # Ref: DEEP-VERIFICATION-CHECKLIST.md > Error States, screenshot deep-19/20
-  s-fix-1-security-uuid-error-states: backlog
+  s-fix-1-security-uuid-error-states: review
 
-  # S-FIX-2: SSR Hydration Fix — Taxonomy [S]
-  # Findings: T-05 (P0)
-  # Root cause: src/features/admin/components/ — SortableContext renders differently SSR vs client
-  # Fix: Wrap SortableContext in client-only boundary or dynamic import with ssr:false
-  # Ref: DEEP-VERIFICATION-CHECKLIST.md > Taxonomy, screenshot deep-18
-  s-fix-2-ssr-hydration-taxonomy: backlog
+  # S-FIX-2: SSR Hydration + Taxonomy Edit UX [M] (merged S-FIX-2 + S-FIX-15)
+  # Findings: T-05 (P0 SSR hydration), T-01 (description tooltip), T-02 (E2E data cleanup),
+  #   T-03 (MQM Category dropdown), T-04 (Save/Cancel buttons)
+  # Root cause: src/features/admin/components/ — same component files
+  # Fix: SSR client-only boundary + MQM dropdown + Save/Cancel + description tooltip + data cleanup
+  # Ref: DEEP-VERIFICATION-CHECKLIST.md > Taxonomy, screenshot deep-05/18
+  s-fix-2-ssr-taxonomy-edit-ux: review
 
   # S-FIX-3: User Menu & Logout [M]
   # Findings: BUG-8 (P0)
   # Root cause: src/components/layout/app-header.tsx:30-35 — button has no dropdown/onClick
   # Fix: DropdownMenu on User button with sign-out action + user profile info
   # Ref: PROJECT-TOUR-REPORT.md > BUG-8, spec-ui-tour-bugfix-7.md
-  s-fix-3-user-menu-logout: backlog
+  s-fix-3-user-menu-logout: ready-for-dev
 
   # S-FIX-V1: Verify & Optimize Phase 1 [M]
   # Scope: Playwright verify S-FIX-1/2/3 — error pages, UUID rejection, taxonomy hydration, logout
@@ -301,14 +302,7 @@ development_status:
   # Ref: DEEP-VERIFICATION-CHECKLIST.md > Cross-Cutting, UX-SPEC > Accessibility
   s-fix-12-navigation-accessibility: backlog
 
-  # S-FIX-15: Taxonomy Edit UX [M]
-  # Findings: T-01, T-02, T-03, T-04
-  # Root cause: src/features/admin/components/ — TaxonomyMappingTable, edit row components
-  # Fix: Description tooltip/expand, E2E data cleanup, MQM Category dropdown, Save/Cancel buttons
-  # Ref: DEEP-VERIFICATION-CHECKLIST.md > Taxonomy, screenshot deep-05
-  s-fix-15-taxonomy-edit-ux: backlog
-
-  # S-FIX-16: Glossary Complete [M]
+# S-FIX-16: Glossary Complete [M]
   # Findings: G-01, G-03, G-04, G-05, G-06, G-07, G-08
   # Root cause: src/features/glossary/ — import flow, glossary list, no term-level view
   # Fix: Column auto-detect, language pair display, term drill-down + search + edit, export, date format
@@ -323,7 +317,7 @@ development_status:
   s-fix-17-settings-completeness: backlog
 
   # S-FIX-V3B: Verify & Optimize Phase 3B — App-wide [L]
-  # Scope: Playwright verify S-FIX-11/12/15/16/17 — dashboard, nav, taxonomy, glossary, settings
+  # Scope: Playwright verify S-FIX-11/12/16/17 — dashboard, nav, glossary, settings (taxonomy verified in V1 with S-FIX-2)
   # DoD: every page screenshot matches UX spec, 0 console errors, all findings PASS
   s-fix-v3b-verify-phase-3b: backlog
 
@@ -331,19 +325,12 @@ development_status:
   # PHASE 4: NEW FEATURES from UX spec
   # ──────────────────────────────────────────
 
-  # S-FIX-18: Auto-Accept + Triage Mode [L]
-  # Findings: R-14, R-15
-  # Root cause: Not implemented — new features from UX spec Safeguard #1, Edge Case #1
-  # Fix: Auto-accept High+Minor with ⚡ badge, triage mode >50 findings with Minor collapsed
-  # Ref: UX-SPEC > core-user-experience.md Safeguards, DEEP-VERIFICATION-CHECKLIST.md > Auto-Accept/Triage
-  s-fix-18-auto-accept-triage: backlog
-
-  # S-FIX-19: Between-File Nav + Keyboard [M]
-  # Findings: R-17, R-18
-  # Root cause: Not implemented — keyboard shortcuts ]/[/Alt+Home, Ctrl+F browser intercept
-  # Fix: File nav shortcuts + remap Ctrl+F to custom filter toggle
-  # Ref: UX-SPEC > Keyboard Navigation table
-  s-fix-19-file-nav-keyboard: backlog
+  # S-FIX-18: Review Advanced Features [L] (merged S-FIX-18 + S-FIX-19)
+  # Findings: R-14 (auto-accept), R-15 (triage mode), R-17 (file nav ]/[), R-18 (Ctrl+F remap)
+  # Root cause: Not implemented — new features from UX spec
+  # Fix: Auto-accept ⚡ badge, triage >50, file nav shortcuts, Ctrl+F remap
+  # Ref: UX-SPEC > Safeguard #1, Edge Case #1, Keyboard Navigation table
+  s-fix-18-review-advanced-features: backlog
 
   # S-FIX-20: History Progressive Loading [L]
   # Findings: TD-UX-009
@@ -361,7 +348,7 @@ development_status:
   s-fix-21-help-command-palette: backlog
 
   # S-FIX-V4: Verify & Optimize Phase 4 [L]
-  # Scope: Playwright verify S-FIX-18/19/20/21 — auto-accept, triage, file nav, help, palette, resume
+  # Scope: Playwright verify S-FIX-18/20/21 — auto-accept, triage, file nav, help, palette, resume
   # DoD: all new features work per UX spec, performance acceptable, 0 console errors
   s-fix-v4-verify-phase-4: backlog
 
