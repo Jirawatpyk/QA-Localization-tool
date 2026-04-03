@@ -354,7 +354,7 @@
 - **Origin:** Story 2.7, identified during TODO scan (2026-03-02)
 - **Status:** RESOLVED (2026-03-26) — Added Query 3: review_actions INNER JOIN users, ordered DESC by createdAt, picks most recent reviewer per file. Guardrail #5 respected (skip inArray when fileIds empty). 16 unit tests pass.
 
-### TD-UX-003: File selection UI before processing — all files auto-selected
+### ~~TD-UX-003~~ → S-FIX-11: File selection UI before processing — all files auto-selected
 - **Severity:** Low
 - **Risk:** User ไม่สามารถเลือก/ยกเลิกไฟล์ที่ parse แล้วก่อนเริ่ม processing — ทุกไฟล์ถูก select อัตโนมัติ ถ้า upload ผิดไฟล์ต้อง cancel ทั้ง batch
 - **File:** `src/features/upload/components/UploadPageClient.tsx` (Story 3.2b5 wired ProcessingModeDialog → fileIds = all parsed files)
@@ -591,7 +591,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** All 30 E2E tests use `test.skip()`. Action buttons now wired (Story 4.2). Tests can be unskipped.
 - **Status:** RESOLVED (2026-03-29) — Story 5.3: 28 per-test test.skip() removed. Suite-level skip guard kept for infra gate.
 
-### TD-UX-004: Minor accordion transient activeIndex=0 (1 frame glitch)
+### ~~TD-UX-004~~ → S-FIX-9: Minor accordion transient activeIndex=0 (1 frame glitch)
 - **Date:** 2026-03-14
 - **Story:** Story 4.2 (CR systematic review — C2 finding)
 - **Phase:** CR
@@ -629,7 +629,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Fix:** Add `eq(reviewActions.userId, userId)` to the WHERE clause, OR make the design decision that notes are per-finding (shared). Requires UX design input.
 - **Status:** RESOLVED (2026-03-27) — Added `eq(reviewActions.userId, userId)` ownership check + FORBIDDEN response. Only note creator can edit. Test added.
 
-### TD-UX-005: Desktop→laptop viewport resize leaves detail panel blank
+### ~~TD-UX-005~~ → S-FIX-4: Desktop→laptop viewport resize leaves detail panel blank
 - **Date:** 2026-03-15
 - **Story:** Story 4.3 (CR adversarial review — H3 finding)
 - **Phase:** CR
@@ -816,7 +816,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Severity:** Low
 - **Status:** RESOLVED (2026-03-18) — TA-12b rewritten with Shift+Click (correct mechanism). 776ms PASSED.
 
-### TD-UX-006: Shift+J/K bulk selection not implemented — AC1 of Story 4.4a
+### ~~TD-UX-006~~ → S-FIX-8: Shift+J/K bulk selection not implemented — AC1 of Story 4.4a
 - **Date:** 2026-03-18
 - **Story:** 4.4a (discovered during Story 4.8 CR)
 - **Phase:** impl
@@ -1212,7 +1212,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** `tenantId` extracted from JWT in AuthListener is passed to `useRoleSync()` but may become stale after role/tenant changes. Requires refactoring useRoleSync callback flow to re-extract tenantId from refreshed session token.
 - **Status:** RESOLVED (2026-03-28) — Added `onSessionRefreshed` callback to useRoleSync; AuthListener passes `updateTenantFromSession` to re-extract tenantId from refreshed JWT immediately after role change
 
-### TD-UX-007: ReportMissingCheckDialog missing focus trap
+### ~~TD-UX-007~~ → S-FIX-12: ReportMissingCheckDialog missing focus trap
 - **Date:** 2026-03-28
 - **Severity:** Medium
 - **Story:** Parity Adversarial Review P-6
@@ -1221,7 +1221,7 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Description:** Custom dialog lacks focus trap (Tab/Shift+Tab cycle, Guardrail #30). Requires migration to Radix Dialog or custom focus trap implementation. Currently only has Escape key handling.
 - **Status:** DEFERRED → **Epic 6 nice-to-have** (UX polish — low priority, re-triaged 2026-03-31)
 
-### TD-UX-008: ReportMissingCheckDialog pre-fills fileId UUID instead of filename
+### ~~TD-UX-008~~ → S-FIX-12: ReportMissingCheckDialog pre-fills fileId UUID instead of filename
 - **Date:** 2026-03-28
 - **Severity:** Low
 - **Story:** Parity Adversarial Review P-5
@@ -1306,7 +1306,13 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 
 ## Category 15: UI Tour Findings (2026-04-03)
 
-### TD-UX-009: History page missing progressive loading UI per UX spec
+**NOTE: TD-UX-009 through TD-UX-022 moved to Sprint UX/UI Debt Clearance (S-FIX stories). Removed from TD tracker to avoid double-tracking. See sprint-status.yaml for current status.**
+
+~~### TD-UX-009~~ → S-FIX-20 | ~~TD-UX-010~~ → S-FIX-11 | ~~TD-UX-011~~ → S-FIX-5
+~~TD-UX-012/013/014~~ → S-FIX-17 | ~~TD-UX-015/016~~ → S-FIX-4
+~~TD-UX-017/018/019/020~~ → S-FIX-21 | ~~TD-UX-021~~ → S-FIX-14 | ~~TD-UX-022~~ → S-FIX-11
+
+### ~~TD-UX-009: History page missing progressive loading UI per UX spec~~
 - **Severity:** Medium
 - **Files:** `src/features/batch/components/FileHistoryTable.tsx`, `src/app/(app)/projects/[projectId]/files/page.tsx`
 - **Description:** UX spec (`ux-consistency-patterns.md` Section 3) defines 5-phase progressive loading (Upload → L1 → L2 → L3 → Complete) with per-layer progress, finding count, and live score updates. Currently History page shows only flat "Processing" / "Completed" text — no progress bar, no segment progress (8/12), no live score. Review page has AI progress bar but History page doesn't.
@@ -1315,9 +1321,9 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Effort:** 1-2 days (needs Realtime subscription + progress component)
 - **Target:** UX Sprint S-UX-5
 - **Origin:** UI Tour 2026-04-03
-- **Status:** DEFERRED → UX Sprint S-UX-5
+- **Status:** DEFERRED → S-FIX-20 (History Progressive Loading)
 
-### TD-UX-010: Dashboard status badge shows raw technical names
+### ~~TD-UX-010~~ → S-FIX-11: Dashboard status badge shows raw technical names
 - **Severity:** Low
 - **Files:** `src/app/(app)/dashboard/page.tsx` or dashboard components
 - **Description:** Dashboard file table shows raw `l2_completed` / `l3_completed` instead of human-friendly labels like "AI Screening Complete" / "Deep Analysis Complete". `formatFileStatus()` helper exists but may not cover all display contexts.
@@ -1325,9 +1331,9 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Effort:** 30 min
 - **Target:** UX Sprint S-UX-2
 - **Origin:** UI Tour 2026-04-03
-- **Status:** DEFERRED → UX Sprint S-UX-2
+- **Status:** DEFERRED → S-FIX-11 (Dashboard Polish)
 
-### TD-UX-011: Score stays 0.0 during pipeline (BUG-7)
+### ~~TD-UX-011~~ → S-FIX-5: Score stays 0.0 during pipeline (BUG-7)
 - **Severity:** Medium
 - **Files:** `src/features/pipeline/inngest/processFile.ts`, `src/features/pipeline/inngest/recalculateScore.ts`
 - **Description:** MQM score shows 0.0 after pipeline completes with 52 findings. Pipeline does not emit `finding.changed` event after L2/L3 findings are inserted, so `recalculateScore` (triggered by finding.changed) never fires after pipeline completion. Score only updates when reviewer accepts/rejects findings.
@@ -1335,9 +1341,9 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Effort:** 2-4 hours (Inngest pipeline + scoring integration)
 - **Target:** Epic 7 (Auto-Pass depends on accurate scores)
 - **Origin:** UI Tour 2026-04-03, confirmed by code review
-- **Status:** DEFERRED → UX Sprint S-UX-3
+- **Status:** DEFERRED → S-FIX-5 (Score Recalculation)
 
-### TD-UX-012: Settings — no language pair display/edit
+### ~~TD-UX-012~~ → S-FIX-17: Settings — no language pair display/edit
 - **Severity:** Medium
 - **Files:** `src/app/(app)/projects/[projectId]/settings/page.tsx`
 - **Description:** UX spec says language pair should be displayed and editable if auto-detect was wrong. Currently Settings page shows only name, description, processing mode, and auto-pass threshold — no language pair section.
@@ -1345,9 +1351,9 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Effort:** 2-4 hours
 - **Target:** Epic 7 (Settings revamp with Auto-Pass config)
 - **Origin:** UX Audit 2026-04-03, UX-NEW-05
-- **Status:** DEFERRED → E7
+- **Status:** DEFERRED → S-FIX-17 (Settings Completeness)
 
-### TD-UX-013: Settings — no Reset button
+### ~~TD-UX-013~~ → S-FIX-17: Settings — no Reset button
 - **Severity:** Low
 - **Files:** `src/app/(app)/projects/[projectId]/settings/page.tsx`
 - **Description:** UX spec says "Save/Reset buttons" but only "Save Settings" exists. No way to revert unsaved changes.
@@ -1355,9 +1361,9 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Effort:** 30 min
 - **Target:** Epic 7
 - **Origin:** UX Audit 2026-04-03, UX-NEW-06
-- **Status:** DEFERRED → E7
+- **Status:** DEFERRED → S-FIX-17 (Settings Completeness)
 
-### TD-UX-014: Settings — no per-language confidence thresholds
+### ~~TD-UX-014~~ → S-FIX-17: Settings — no per-language confidence thresholds
 - **Severity:** Medium
 - **Files:** `src/app/(app)/projects/[projectId]/settings/page.tsx`
 - **Description:** UX spec defines per-language confidence sliders (EN→TH: 85%, EN→ZH: 92%, etc.). Currently only a single auto-pass threshold exists. Per-language thresholds needed for accurate Auto-Pass routing.
@@ -1365,9 +1371,9 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Effort:** 1-2 days (new feature)
 - **Target:** Epic 7 (Auto-Pass config)
 - **Origin:** UX Audit 2026-04-03, UX-NEW-07
-- **Status:** DEFERRED → E7
+- **Status:** DEFERRED → S-FIX-17 (Settings Completeness)
 
-### TD-UX-015: Review — no persistent Status Bar (VS Code pattern)
+### ~~TD-UX-015~~ → S-FIX-4: Review — no persistent Status Bar (VS Code pattern)
 - **Severity:** Medium
 - **Files:** `src/features/review/components/ReviewPageClient.tsx`
 - **Description:** UX spec layout defines a 32px persistent Status Bar at bottom showing "Score | Progress | AI | Shortcuts" always visible (VS Code pattern). Currently score/progress are at top and scroll away. Keyboard shortcuts bar at bottom but not a full status bar.
@@ -1375,9 +1381,9 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Effort:** 1-2 days (layout refactor)
 - **Target:** Epic 7 (Review UX enhancement)
 - **Origin:** UX Audit 2026-04-03, UX-NEW-09
-- **Status:** DEFERRED → E7
+- **Status:** DEFERRED → S-FIX-4 (Review Layout Complete)
 
-### TD-UX-016: Review — no Detail Panel as persistent side panel (400px)
+### ~~TD-UX-016~~ → S-FIX-4: Review — no Detail Panel as persistent side panel (400px)
 - **Severity:** Medium
 - **Files:** `src/features/review/components/ReviewPageClient.tsx`, `src/components/layout/detail-panel.tsx`
 - **Description:** UX spec defines Detail Panel as always-visible 400px right panel in review mode (like VS Code sidebar). Currently findings expand inline — no persistent side panel. DetailPanel component exists in layout but not wired for review.
@@ -1385,9 +1391,9 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Effort:** 2-3 days (major layout refactor)
 - **Target:** Epic 7 (Review layout enhancement)
 - **Origin:** UX Audit 2026-04-03, UX-NEW-11
-- **Status:** DEFERRED → E7
+- **Status:** DEFERRED → S-FIX-4 (Review Layout Complete)
 
-### TD-UX-017: Help icon has no functionality
+### ~~TD-UX-017~~ → S-FIX-21: Help icon has no functionality
 - **Severity:** Low
 - **Files:** `src/components/layout/app-header.tsx`
 - **Description:** Help button (?) in header has no onClick, no dropdown, no functionality. UX spec expects help menu with keyboard shortcuts overlay, documentation link, support contact.
@@ -1395,9 +1401,9 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Effort:** 1-2 hours
 - **Target:** Epic 8
 - **Origin:** UX Audit 2026-04-03, UX-NEW-16
-- **Status:** DEFERRED → E8
+- **Status:** DEFERRED → S-FIX-21 (Help & Command Palette)
 
-### TD-UX-018: Command palette (Ctrl+K) not implemented
+### ~~TD-UX-018~~ → S-FIX-21: Command palette (Ctrl+K) not implemented
 - **Severity:** Medium
 - **Files:** New component needed
 - **Description:** UX spec defines Ctrl+K command palette for search actions, files, findings, navigation — similar to VS Code/GitHub. Not implemented.
@@ -1405,9 +1411,9 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Effort:** 2-3 days (new feature)
 - **Target:** Epic 7
 - **Origin:** UX Audit 2026-04-03, core-user-experience.md
-- **Status:** DEFERRED → E7
+- **Status:** DEFERRED → S-FIX-21 (Help & Command Palette)
 
-### TD-UX-019: Resume review prompt not implemented
+### ~~TD-UX-019~~ → S-FIX-21: Resume review prompt not implemented
 - **Severity:** Medium
 - **Files:** `src/features/review/components/ReviewPageClient.tsx`
 - **Description:** UX spec Safeguard #9: "Continue from Finding #15?" when returning to partially-reviewed file. Default filter on return should show only unresolved findings. Session breadcrumb showing last-reviewed position.
@@ -1415,27 +1421,27 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Effort:** 1-2 days
 - **Target:** Epic 7
 - **Origin:** UX Audit 2026-04-03, core-user-experience.md Safeguard #9
-- **Status:** DEFERRED → E7
+- **Status:** DEFERRED → S-FIX-21 (Help & Command Palette)
 
-### TD-UX-021: File Assignment — empty reviewer message UX
+### ~~TD-UX-021~~ → S-FIX-14: File Assignment — empty reviewer message UX
 - **Severity:** Low
 - **Files:** `src/features/project/components/FileAssignmentCell.tsx` or assignment dialog
 - **Description:** "No matching reviewers found" shown when single-user tenant tries to assign. Should show "No reviewers available — invite team members" with link to Admin > User Management.
 - **Effort:** 30 min
 - **Target:** Epic 7
 - **Origin:** Deep Verification 2026-04-03, A-01
-- **Status:** DEFERRED → E7
+- **Status:** DEFERRED → S-FIX-14 (Admin & Assignment UX)
 
-### TD-UX-022: Dashboard — stale 0-segment file visible
+### ~~TD-UX-022~~ → S-FIX-11: Dashboard — stale 0-segment file visible
 - **Severity:** Low
 - **Files:** Dashboard query / `src/app/(app)/dashboard/page.tsx`
 - **Description:** Files with 0 segments (e.g. entities.html.xlf from edge test) appear in "Recent Files" with "N/A" score + "parsed" status. Should filter out files with 0 segments or show differently.
 - **Effort:** 30 min
 - **Target:** Epic 7
 - **Origin:** Deep Verification 2026-04-03, D-01/D-02
-- **Status:** DEFERRED → E7
+- **Status:** DEFERRED → S-FIX-11 (Dashboard Polish)
 
-### TD-UX-020: Duplicate file detection not implemented
+### ~~TD-UX-020~~ → S-FIX-21: Duplicate file detection not implemented
 - **Severity:** Low
 - **Files:** `src/features/upload/` components
 - **Description:** UX spec defines "Uploaded yesterday (Score 97) — re-run?" prompt when duplicate file hash detected. Prevents unnecessary re-processing and gives user context about previous results.
@@ -1443,4 +1449,4 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Effort:** 1 day
 - **Target:** Epic 7-8
 - **Origin:** UX Audit 2026-04-03, core-user-experience.md Effortless Interactions
-- **Status:** DEFERRED → E7/E8
+- **Status:** DEFERRED → S-FIX-21 (Help & Command Palette)
