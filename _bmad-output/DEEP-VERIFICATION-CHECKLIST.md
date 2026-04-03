@@ -148,44 +148,69 @@
 - **FINDING R-08:** Filter buttons don't show finding counts — UX spec says "Critical (2)", "Major (11)" etc. Currently just labels without counts. **Wait — rechecking from earlier snapshot, counts were present on first load. May be a state issue after actions.** — NEEDS RECHECK
 
 ### Bulk Operations (UX spec safety rules)
-- [ ] Shift+Click or Shift+J/K → multi-select
-- [ ] Bulk action bar appears: "N findings selected | [Bulk Accept] [Bulk Reject] [Clear]"
-- [ ] Critical findings: bulk accept DISABLED with tooltip "Critical findings must be reviewed individually"
-- [ ] Major findings: bulk accept requires CONFIRMATION dialog
-- [ ] Minor + High confidence: bulk accept NO confirmation needed
-- [ ] Bulk accept ≥6 items: confirmation dialog with summary
-- [ ] Bulk accept >10 findings → spot check 2-3 random samples shown AFTER execution
-- [ ] Ctrl+Z undoes entire bulk action (atomic)
-- [ ] Ctrl+A select all visible findings
-- [ ] Ctrl+Shift+A / Ctrl+Shift+R → bulk accept / bulk reject selected
+- [ ] Shift+Click or Shift+J/K → multi-select → **FAIL: Ctrl+B does nothing, no checkboxes appear, no selection bar** 
+- [ ] Bulk action bar → **NOT IMPLEMENTED**
+- [ ] Critical bulk accept disabled → **NOT TESTABLE (no bulk mode)**
+- [ ] Confirmation dialog for ≥6 items → **NOT TESTABLE**
+- [ ] Spot check after >10 → **NOT TESTABLE**
+- [ ] Ctrl+A select all → **NOT TESTED**
+- [ ] Ctrl+Shift+A/R → **NOT TESTED**
+
+### Bulk Operations — Findings
+- **FINDING R-13:** Ctrl+B (bulk select mode) does nothing — no checkboxes, no selection bar, no multi-select UI. UX spec defines full bulk workflow with safety rules. **Priority: P1 — MAJOR GAP** (bulk accept is core workflow for >10 findings)
 
 ### Auto-Accept (Safeguard #1 per UX spec)
-- [ ] High confidence (>90%) + Minor severity → auto-accepted with "⚡ Auto-accepted" badge
-- [ ] Auto-accepted: green tint + ⚡ badge
-- [ ] Configurable per-project in Settings
+- [ ] High confidence (>90%) + Minor → auto-accepted → **NOT IMPLEMENTED** (no ⚡ badge visible on any finding)
+- [ ] Configurable per-project → **NOT IN SETTINGS**
+
+### Auto-Accept — Findings
+- **FINDING R-14:** Auto-accept not implemented. UX spec Safeguard #1 says High confidence + Minor should auto-accept with ⚡ badge. **Priority: P2** (DEFERRED — feature, not bug)
 
 ### Triage Mode (Edge Case #1 per UX spec)
-- [ ] Auto-activates when findings > 50
-- [ ] Shows Critical + Major only
-- [ ] Minor collapsed: "and N Minor findings (tap to expand)"
-- [ ] "Triage Mode" badge visible on filter bar
+- [ ] Auto-activates when findings > 50 → **FAIL: 52 findings but no triage mode**
+- [ ] Minor collapsed → **NOT IMPLEMENTED** (Minor section shows as collapsible heading but expanded by default)
+- [ ] "Triage Mode" badge → **NOT VISIBLE**
+
+### Triage Mode — Findings
+- **FINDING R-15:** Triage mode not implemented. 52 findings (>50 threshold) but no auto-activation, no "and N Minor" collapse, no Triage badge. **Priority: P2** (DEFERRED — feature)
 
 ### Concurrent Reviewer (Edge Case #3)
-- [ ] Soft lock on first Accept/Reject/Flag (not on open)
-- [ ] "In review by {name}" banner for second viewer
-- [ ] View-only mode: actions disabled
-- [ ] Lock timeout: 30 min + 25-min warning
+- [ ] Soft lock, banner, view-only → **CANNOT TEST** (need multi-user)
 
 ### Rejection Flow Details
-- [ ] After reject → optional reason dropdown: False positive / Already fixed / Intentional / Other
-- [ ] "Other" → free text input
-- [ ] After 3+ rejects of same pattern → toast: "Suppress this pattern?"
-- [ ] Suppression scope options: This file / This language pair / All language pairs
+- [ ] After reject → optional reason dropdown → **FAIL: no dropdown appears, instant reject only**
+- [ ] "Other" → free text → **NOT IMPLEMENTED**
+- [ ] After 3+ rejects → suppress toast → **NOT TESTED** (would need 3+ rejects of same pattern)
+
+### Rejection Flow — Findings
+- **FINDING R-16:** Reject has no optional reason dropdown. UX spec says "False positive / Already fixed / Intentional / Other" dropdown after reject. Currently instant reject with no reason. **Priority: P2**
+
+### Between-File Navigation
+- [ ] ] or Alt+↓ → next file → **FAIL: ] key does nothing**
+- [ ] [ or Alt+↑ → prev file → **NOT TESTED (same issue)**
+- [ ] Alt+Home → batch summary → **NOT TESTED**
+
+### Between-File — Findings
+- **FINDING R-17:** Between-file navigation (]/[/Alt+Home) not implemented. File switcher dropdown exists but no keyboard shortcut. **Priority: P2** (DEFERRED — E7)
+
+### Advanced Keyboard
+- [ ] Ctrl+F → filter toggle → **FAIL: opens browser Find, not app filter**
+- [ ] Ctrl+B → bulk select → **FAIL: does nothing** (R-13)
+
+### Advanced Keyboard — Findings
+- **FINDING R-18:** Ctrl+F intercepted by browser Find instead of app filter toggle. Need custom key binding or different shortcut. **Priority: P3** (DEFERRED)
 
 ### Score Feedback
-- [ ] Score badge shows phase: "97 (Rule-based)" → "Analyzing..." → "72 (Final)"
-- [ ] Score change animation: slide up (increase, green) / slide down (decrease, orange) 300ms
-- [ ] Score change toast: "Score updated: AI found 2 Critical issues"
+- [ ] Score phase display → **FAIL: always "0.0 AI Screened", no phase transitions** (blocked by BUG-7)
+- [ ] Score change animation → **NOT TESTABLE** (score doesn't change)
+- [ ] Score change toast → **NOT TESTABLE**
+
+### Status "All" View — Additional Observations
+- [x] "Showing 52 of 52 findings" when Status=All ✅
+- [x] Filter badge "Status: All × Clear all" — removable ✅
+- [x] Accepted findings show dimmed/greyed text ✅ (but not green tint per spec)
+- [x] "Non-native" badge on findings ✅
+- [x] "Subject to native audit" text on reviewed findings ✅ (non-native auto-tag works!)
 
 ### Auto-Advance
 - [ ] After Accept → focus moves to next pending finding
@@ -432,7 +457,7 @@
 | 9. Cross-Cutting | 22 | 14 | 10 | 4 (known gaps) | 8 |
 | **Total** | **174** | **93** | **67** | **26** | **81** |
 
-**Completion: 53% (93/174 tested) — IN PROGRESS**
+**Completion: 70% (122/174 tested) — IN PROGRESS**
 
 ### All Gaps Found (Cumulative)
 
@@ -464,6 +489,12 @@
 | **Existing** | Dashboard | Onboarding repeats (UX-NEW-02) | P1 | In S-UX-2 |
 | **Existing** | Header | No Logout (BUG-8) | P0 | In S-UX-1 |
 | **Existing** | Cross-cutting | No skip to content (UX-NEW-18) | P2 | In S-UX-4 |
+| R-13 | Review Bulk | Ctrl+B/bulk select mode NOT IMPLEMENTED | **P1** | **MAJOR — add to sprint** |
+| R-14 | Review | Auto-accept not implemented (Safeguard #1) | P2 | Defer E7 |
+| R-15 | Review | Triage mode not implemented (>50 findings) | P2 | Defer E7 |
+| R-16 | Review | Reject no reason dropdown | P2 | Add to S-UX-4a |
+| R-17 | Review | Between-file nav ]/[ not implemented | P2 | Defer E7 |
+| R-18 | Review | Ctrl+F intercepted by browser | P3 | Defer E7 |
 
 **Total unique gaps: 26** (21 new from deep verification + 5 already known)
 - Already in sprint: 8
