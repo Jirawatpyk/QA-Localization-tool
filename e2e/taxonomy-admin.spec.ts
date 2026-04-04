@@ -2,6 +2,9 @@ import { test, expect, type Page } from '@playwright/test'
 
 import { TEST_PASSWORD } from './helpers/supabase-admin'
 
+// All taxonomy tests share a global table — must run sequentially to avoid race conditions
+test.describe.configure({ mode: 'serial' })
+
 /**
  * Story 1.6 — Taxonomy Mapping Editor (E2E ATDD)
  *
@@ -448,24 +451,25 @@ test.describe.serial('Story 3.2b7 — Taxonomy Mapping Reorder', () => {
 
     // Step 1: Focus the drag handle button (KeyboardSensor listens on the activator)
     await dragHandle.focus()
-    await page.waitForTimeout(300)
+    await expect(dragHandle).toBeFocused()
 
     // Step 2: Activate drag mode — Space triggers KeyboardSensor.handleKeyDown()
     // which calls event.preventDefault() and starts the drag interaction.
     await dragHandle.press('Space')
-    // Wait for sensor activation — KeyboardSensor attaches a document-level
-    // keydown listener AFTER activation; ArrowDown won't work until it's ready.
-    await page.waitForTimeout(1000)
+    // Wait for DnD activation — DragOverlay renders a shadow-md row when active
+    await expect(page.locator('tr.shadow-md')).toBeVisible({ timeout: 5000 })
 
     // Step 3: Move down 2 positions (row 1 → row 3)
     // sortableKeyboardCoordinates maps ArrowDown to move-next in vertical list
     await page.keyboard.press('ArrowDown')
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(700)
     await page.keyboard.press('ArrowDown')
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(700)
 
     // Step 4: Confirm drop — Space ends the drag and fires onDragEnd
     await page.keyboard.press('Space')
+    // Wait for DragOverlay to disappear (drop confirmed)
+    await expect(page.locator('tr.shadow-md')).not.toBeVisible({ timeout: 5000 })
 
     // Then: Success toast appears confirming the reorder was saved
     // 60s timeout: server action runs 37 UPDATEs in transaction via cloud DB with network latency
