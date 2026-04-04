@@ -286,14 +286,22 @@ test.describe.serial('Review Accessibility — Keyboard-Only Flow', () => {
     await row.click()
     await expect(row).toHaveAttribute('tabindex', '0', { timeout: 5_000 })
 
-    // Verify detail sheet is visible after click
+    // S-FIX-4: At desktop (1440px), detail renders as persistent aside, not Sheet.
+    // Check for aside first, then fall back to Sheet (mobile) or aria-expanded.
+    const detailAside = page.getByTestId('finding-detail-aside')
     const detailSheet = page.getByTestId('finding-detail-sheet')
-    const detailVisible = await detailSheet.isVisible().catch(() => false)
+    const asideVisible = await detailAside.isVisible().catch(() => false)
+    const sheetVisible = await detailSheet.isVisible().catch(() => false)
 
-    if (detailVisible) {
-      // Esc should close the detail panel first (innermost layer)
+    if (sheetVisible) {
+      // Esc should close the Sheet first (innermost layer — mobile only)
       await page.keyboard.press('Escape')
       await expect(detailSheet).not.toBeVisible({ timeout: 5_000 })
+    } else if (asideVisible) {
+      // At desktop/laptop/tablet, aside is persistent — Esc should not close it.
+      // Esc at this level deselects the finding or does nothing (row keeps focus).
+      await page.keyboard.press('Escape')
+      await expect(row).toHaveAttribute('tabindex', '0', { timeout: 5_000 })
     } else {
       // If no detail panel, check aria-expanded on the row
       const isExpanded = await row.getAttribute('aria-expanded')

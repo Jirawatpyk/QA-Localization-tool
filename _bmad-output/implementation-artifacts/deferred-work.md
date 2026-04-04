@@ -89,3 +89,9 @@
 ## Deferred from: code review of s-fix-3 (2026-04-04)
 
 - ~~**D1: Notification Bell fallback button missing disabled state**~~ ✅ DONE — Applied same `opacity-50 cursor-not-allowed disabled` pattern as User menu fallback
+
+## Deferred from: code review of s-fix-4 (2026-04-04)
+
+- ~~**D1: `max-w-[1400px]` in app layout constrains review page at wide viewports**~~ ✅ DONE — Added `has-[[data-review-layout]]:max-w-none` on wrapper + `data-review-layout` attribute on review layout
+- ~~**D2: `DetailPanel` component + `ui.store` dead code cleanup**~~ ✅ DONE — Deleted `detail-panel.tsx`, removed `detailPanelOpen`/`toggleDetailPanel`/`setDetailPanelOpen` from ui.store + tests + setup
+- ~~**D3: `'tablet'` naming in layoutMode conflicts with UX spec terminology**~~ ✅ DONE — Renamed to `'compact'` in LayoutMode type, getLayoutMode, ReviewPageClient, and all tests

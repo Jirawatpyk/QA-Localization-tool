@@ -33,11 +33,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             role={user?.role}
           />
           <main className="flex-1 overflow-y-auto">
-            <div className="mx-auto max-w-[var(--content-max-width)]">{children}</div>
+            <div className="mx-auto max-w-[var(--content-max-width)] has-[[data-review-layout]]:max-w-none">
+              {children}
+            </div>
           </main>
         </div>
-
-        {/* S-FIX-4 AC5: DetailPanel removed — review page uses its own aside/Sheet */}
       </div>
     </div>
   )

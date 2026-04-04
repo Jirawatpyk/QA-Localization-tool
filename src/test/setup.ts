@@ -17,7 +17,6 @@ import { createAIMock } from './mocks/ai-providers'
 // Clear all Zustand stores to prevent state leak between tests
 afterEach(() => {
   useUIStore.getState().setSidebarOpen(true)
-  useUIStore.getState().setDetailPanelOpen(false)
   useKeyboardStore.getState().clearAll()
 })
 

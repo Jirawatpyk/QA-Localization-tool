@@ -76,12 +76,12 @@ export function ReviewStatusBar({
       </div>
 
       {/* Section 3: AI Status */}
-      <div aria-label="AI analysis status">
+      <div role="status" aria-label="AI analysis status">
         <span className={aiStatus.colorClass}>{aiStatus.text}</span>
       </div>
 
       {/* Section 4: Keyboard Shortcuts */}
-      <div className="text-muted-foreground hidden xl:block" aria-label="Keyboard shortcuts">
+      <div className="text-muted-foreground hidden lg:block" aria-label="Keyboard shortcuts">
         J/K navigate &nbsp; A accept &nbsp; R reject &nbsp; ? help
       </div>
     </div>

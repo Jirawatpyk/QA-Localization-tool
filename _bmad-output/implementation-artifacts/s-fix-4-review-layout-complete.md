@@ -1,6 +1,6 @@
 # Story S-FIX-4: Review Layout Complete
 
-Status: review
+Status: done
 
 ## Story
 
@@ -368,12 +368,49 @@ Claude Opus 4.6 (1M context)
 - **Task 2:** Created `ReviewStatusBar.tsx` — 32px persistent status bar with Score (ScoreBadge sm), Progress, AI Status (derives from layerCompleted+processingMode), Keyboard Shortcuts. Hidden at mobile. 7 unit tests pass.
 - **Task 3:** Replaced inline 3-button toolbar in `FindingDetailContent.tsx` with `ReviewActionBar` (all 7 actions). Added 10 new props (onNote, onSource, onOverride, onAdd, activeAction, isManualFinding, isNativeReviewer, onConfirmNative, onOverrideNative). Same props wired through FindingDetailSheet for mobile. 18 existing tests pass.
 - **Task 4:** Verified — `+` keyboard (line 617), center ReviewActionBar (line 1573), aside FindingDetailContent (line 2038), Sheet (line 2096) all wire to `setIsAddFindingDialogOpen(true)`. Form reset on re-open confirmed (Guardrail #21 compliance).
-- **Task 5:** Removed `<DetailPanel />` import + render from `src/app/(app)/layout.tsx`. Only consumer was the layout. `detail-panel.tsx` kept as dead code (no other imports).
+- **Task 5:** Removed `<DetailPanel />` import + render from `src/app/(app)/layout.tsx`. Only consumer was the layout. CR R1 D2: deleted `detail-panel.tsx` entirely + cleaned up `ui.store` dead properties.
 - **Task 6:** Flex layout handles height: outer `flex flex-col h-full`, 3-zone `flex-1 overflow-hidden`, StatusBar `h-8 shrink-0`. BulkActionBar z-10 > StatusBar z-[5].
 - **Task 7:** type-check GREEN, lint GREEN (0 errors), review tests: 144 files / 1341 tests all GREEN.
 
+### Review Findings (CR R1 — 2026-04-04)
+
+**Decision Needed:**
+- [x] [Review][Decision] #9: `bg-surface-raised` (AC2 spec) vs `bg-surface-secondary` (code) — DISMISSED: spec typo, `bg-surface-raised` token doesn't exist, `bg-surface-secondary` is correct
+
+**Patches:**
+- [x] [Review][Patch] #1: ~~`onNavigateToFinding` bypasses `activeFindingState`~~ — FALSE POSITIVE: code already uses `handleActiveFindingChange` (line 2016)
+- [x] [Review][Patch] #2: ~~`findingNumber` prop missing~~ — FALSE POSITIVE: already passed as `activeFindingNumber` (line 2017)
+- [x] [Review][Patch] #3: ~~Action buttons enabled when finding null~~ — FALSE POSITIVE: `isDisabled={!finding || isActionInFlight}` already has guard (line 304)
+- [x] [Review][Patch] #4: `activeFindingState` stale after deletion — FIXED: added `handleActiveFindingChange(null)` before `setSelectedFinding(null)` in delete handler
+- [x] [Review][Patch] #5: Keyboard Shortcuts `hidden xl:block` → `hidden lg:block` — FIXED: now shows at >= 1024px per AC2
+- [x] [Review][Patch] #6: ~~Chevron icon direction inverted~~ — FALSE POSITIVE: current direction follows IDE convention (arrow = action direction)
+- [x] [Review][Patch] #7: AI Status missing `role="status"` — FIXED: added `role="status"` for screen reader announcement
+- [x] [Review][Patch] #8: Dead width logic in FindingDetailSheet — FIXED: removed `isLaptop` branch + import, always uses tablet/mobile token
+
+**Deferred → FIXED (CR R1 deferred, resolved before R2):**
+- [x] [Review][Defer] #10: `max-w-[1400px]` constraining review page — FIXED: `has-[[data-review-layout]]:max-w-none` on app layout wrapper, `data-review-layout` on review layout
+- [x] [Review][Defer] #11: `DetailPanel` + `ui.store` dead code — FIXED: deleted `detail-panel.tsx`, removed `detailPanelOpen`/`toggleDetailPanel`/`setDetailPanelOpen` from store + tests + setup
+- [x] [Review][Defer] #12: `'tablet'` naming mismatch — FIXED: renamed to `'compact'` in LayoutMode type, getLayoutMode, ReviewPageClient, and all tests
+
+### Review Findings (CR R2 — 2026-04-04)
+
+**All R1 findings verified fixed. All deferred items resolved. CR R2 clean.**
+
+- [x] [Review][Patch] R2-1: Added clarifying comment on `setSelectedFinding(null)` in delete handler — redundant in aside mode, needed for mobile path (Nit)
+- [x] [Review][Dismiss] R2-2: Type mismatch `onNavigateToFinding` (string|null vs string) — FALSE POSITIVE: TypeScript contravariance allows this assignment. type-check GREEN.
+- [x] [Review][Dismiss] R2-3: CommandPalette type inconsistency — pre-existing, not introduced by S-FIX-4
+- [x] [Review][Dismiss] R2-4: `:has()` coupling documentation — architecture note, attribute name sufficiently specific
+- [x] [Review][Defer] R2-5: E2E cross-breakpoint resize test coverage gap — valid, but E2E scope for S-FIX-V2
+- [x] [Review][Dismiss] R2-6: `!finding` dead guard — FALSE POSITIVE: finding prop IS `FindingForDisplay | null`
+- [x] [Review][Dismiss] R2-7: widthClass could be inlined — style preference
+
+**CR R2 Result: 1 nit patch, 1 defer (E2E), 5 dismissed. 0 blocking. Story DONE.**
+
 ### Change Log
 - 2026-04-04: S-FIX-4 implementation — review layout refactor, persistent aside, status bar, 7-action detail panel
+- 2026-04-04: CR R1 — 4 patches fixed (#4 stale activeFindingState, #5 shortcuts visibility, #7 aria role, #8 dead code), 4 false positives dismissed, 3 deferred, 19 noise dismissed. All tests GREEN (144 files, 1340 tests)
+- 2026-04-04: CR R1 deferred fixes — D1 max-width opt-out via CSS :has(), D2 dead code cleanup (detail-panel.tsx + ui.store), D3 'tablet'→'compact' rename. All tests GREEN (145 files, 1343 tests)
+- 2026-04-04: CR R2 — clean review. 1 nit comment added, 1 defer (E2E coverage), 5 dismissed. Story DONE in 2 CR rounds.
 
 ### File List
 - `src/hooks/useMediaQuery.ts` — added `useIsXl()` (>= 1280px)
@@ -394,3 +431,7 @@ Claude Opus 4.6 (1M context)
 - `src/features/review/components/ReviewPageClient.story33.test.tsx` — added ReviewStatusBar mock
 - `src/features/review/components/ReviewPageClient.story35.test.tsx` — added ReviewStatusBar mock
 - `src/features/review/components/ReviewPageClient.story40.test.tsx` — updated Sheet test to mobile mode
+- `src/components/layout/detail-panel.tsx` — **DELETED** (dead code after AC5 removal)
+- `src/stores/ui.store.ts` — removed dead `detailPanelOpen`/`toggleDetailPanel`/`setDetailPanelOpen` properties
+- `src/stores/ui.store.test.ts` — removed dead detail panel test
+- `src/test/setup.ts` — removed dead `setDetailPanelOpen(false)` reset

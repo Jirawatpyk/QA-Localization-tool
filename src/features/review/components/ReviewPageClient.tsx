@@ -208,14 +208,14 @@ export function ReviewPageClient({
     selectedId,
   })
 
-  // S-FIX-4: Collapse toggle for tablet (1024-1279px) detail panel
+  // S-FIX-4: Collapse toggle for compact (1024-1279px) detail panel
   const [detailCollapsed, setDetailCollapsed] = useState(false)
-  const showCollapseToggle = layoutMode === 'tablet'
-  // Auto-uncollapse when leaving tablet range
+  const showCollapseToggle = layoutMode === 'compact'
+  // Auto-uncollapse when leaving compact range
   const [prevLayoutMode, setPrevLayoutMode] = useState(layoutMode)
   if (prevLayoutMode !== layoutMode) {
     setPrevLayoutMode(layoutMode)
-    if (layoutMode !== 'tablet' && detailCollapsed) {
+    if (layoutMode !== 'compact' && detailCollapsed) {
       setDetailCollapsed(false)
     }
   }
@@ -1285,6 +1285,9 @@ export function ReviewPageClient({
           if (result.success) {
             const finding = findingSnapshot
             useReviewStore.getState().removeFinding(findingId)
+            handleActiveFindingChange(null)
+            // Explicit setSelectedFinding needed for mobile path — handleActiveFindingChange
+            // only syncs Zustand selectedId in aside mode (see use-viewport-transition.ts)
             setSelectedFinding(null)
             toast.success('Finding deleted')
 
@@ -1335,7 +1338,7 @@ export function ReviewPageClient({
         })
         .catch(() => toast.error('Delete failed'))
     },
-    [fileId, projectId, setSelectedFinding],
+    [fileId, projectId, setSelectedFinding, handleActiveFindingChange],
   )
 
   // mobileDrawerOpen, showToggleButton, handleToggleDrawer, prevLayoutForSheet,
@@ -1971,7 +1974,7 @@ export function ReviewPageClient({
           {/* Zone 3: Detail Panel — S-FIX-4: aside at >= 1024px, Sheet at < 1024px */}
           {isAsideMode ? (
             <>
-              {/* S-FIX-4 AC1: Collapse toggle button (tablet 1024-1279px only) */}
+              {/* S-FIX-4 AC1: Collapse toggle button (compact 1024-1279px only) */}
               {showCollapseToggle && (
                 <button
                   type="button"
@@ -2013,7 +2016,8 @@ export function ReviewPageClient({
                     fileId={fileId}
                     projectId={projectId}
                     contextRange={undefined}
-                    onNavigateToFinding={setSelectedFinding}
+                    onNavigateToFinding={handleActiveFindingChange}
+                    findingNumber={activeFindingNumber}
                     onAccept={handleAccept}
                     onReject={handleReject}
                     onFlag={(id) => {
@@ -2071,7 +2075,8 @@ export function ReviewPageClient({
               sourceLang={sourceLang}
               targetLang={targetLang ?? ''}
               fileId={fileId}
-              onNavigateToFinding={setSelectedFinding}
+              onNavigateToFinding={handleActiveFindingChange}
+              findingNumber={activeFindingNumber}
               onAccept={handleAccept}
               onReject={handleReject}
               onFlag={(id) => {

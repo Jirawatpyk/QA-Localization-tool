@@ -46,6 +46,8 @@ type FindingDetailContentProps = {
   isActionInFlight?: boolean | undefined
   /** S-FIX-4 AC3: Active action for spinner display */
   activeAction?: string | null | undefined
+  /** S-FIX-4 AC3: Finding number for ARIA labels */
+  findingNumber?: number | undefined
   /** S-FIX-4 AC3: Manual finding flag */
   isManualFinding?: boolean | undefined
   /** S-FIX-4 AC3: Native reviewer mode */
@@ -92,6 +94,7 @@ export function FindingDetailContent({
   onAdd,
   isActionInFlight = false,
   activeAction = null,
+  findingNumber,
   isManualFinding = false,
   isNativeReviewer = false,
   onConfirmNative,
@@ -298,13 +301,14 @@ export function FindingDetailContent({
             onSource={onSource}
             onOverride={onOverride}
             onAdd={onAdd}
-            isDisabled={isActionInFlight}
+            isDisabled={!finding || isActionInFlight}
             isInFlight={isActionInFlight}
             activeAction={
               activeAction as
                 | import('@/features/review/utils/state-transitions').ReviewAction
                 | null
             }
+            findingNumber={findingNumber}
             isManualFinding={isManualFinding}
             isNativeReviewer={isNativeReviewer}
             onConfirmNative={onConfirmNative}

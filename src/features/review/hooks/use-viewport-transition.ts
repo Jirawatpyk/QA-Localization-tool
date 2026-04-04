@@ -3,7 +3,7 @@
  *
  * Extracted from ReviewPageClient.tsx to consolidate the 5+ state variables,
  * 2 render-time adjustment blocks, and 5 callbacks that manage viewport transitions
- * (desktop ↔ laptop ↔ tablet ↔ mobile) into a single source of truth.
+ * (desktop ↔ laptop ↔ compact ↔ mobile) into a single source of truth.
  *
  * Key patterns:
  * - Render-time adjustment (NOT useEffect) for viewport transition sync (React 19)
@@ -11,13 +11,13 @@
  * - selectedId lives in Zustand store — this hook is a consumer, not owner
  *
  * S-FIX-4: aside mode for ALL >= 1024px viewports, Sheet only for < 1024px.
- * Layout modes: desktop (>= 1440), laptop (1280-1439), tablet (1024-1279), mobile (< 1024).
+ * Layout modes: desktop (>= 1440), laptop (1280-1439), compact (1024-1279), mobile (< 1024).
  */
 import { useCallback, useRef, useState } from 'react'
 
 import { useIsDesktop, useIsLaptop, useIsXl } from '@/hooks/useMediaQuery'
 
-type LayoutMode = 'desktop' | 'laptop' | 'tablet' | 'mobile'
+type LayoutMode = 'desktop' | 'laptop' | 'compact' | 'mobile'
 
 type UseViewportTransitionOptions = {
   /** Zustand store setter for selectedId */
@@ -60,7 +60,7 @@ type UseViewportTransitionReturn = {
 function getLayoutMode(isDesktop: boolean, isXl: boolean, isLaptop: boolean): LayoutMode {
   if (isDesktop) return 'desktop'
   if (isXl) return 'laptop'
-  if (isLaptop) return 'tablet'
+  if (isLaptop) return 'compact'
   return 'mobile'
 }
 

@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-02-15
-last_updated: 2026-04-04  # s-fix-4 story created (ready-for-dev)
+last_updated: 2026-04-04  # s-fix-4 CR R1 done
 project: qa-localization-tool
 project_key: NOKEY
 tracking_system: file-system
@@ -213,7 +213,7 @@ development_status:
   # Depends: Must complete BEFORE S-FIX-9 (layout change affects card width)
   # Note: Score animation UI moved to S-FIX-V2 (depends S-FIX-5)
   # Ref: UX-SPEC-FULL-CHECKLIST.md > File Review Page, visual-design-foundation.md layout structure
-  s-fix-4-review-layout-complete: ready-for-dev
+  s-fix-4-review-layout-complete: done
 
   # S-FIX-5: Score Recalculation [L]
   # Findings: BUG-7 (P1), TD-UX-011

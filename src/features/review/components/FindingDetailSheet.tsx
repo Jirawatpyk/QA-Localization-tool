@@ -12,7 +12,6 @@ import {
 import { FindingDetailContent } from '@/features/review/components/FindingDetailContent'
 import type { OverrideHistoryEntry } from '@/features/review/components/OverrideHistoryPanel'
 import type { FindingForDisplay } from '@/features/review/types'
-import { useIsLaptop } from '@/hooks/useMediaQuery'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 
 type FindingDetailSheetProps = {
@@ -23,7 +22,8 @@ type FindingDetailSheetProps = {
   targetLang: string
   fileId: string | null
   contextRange?: number
-  onNavigateToFinding?: (findingId: string) => void
+  onNavigateToFinding?: (findingId: string | null) => void
+  findingNumber?: number | undefined
   onAccept?: ((findingId: string) => void) | undefined
   onReject?: ((findingId: string) => void) | undefined
   onFlag?: ((findingId: string) => void) | undefined
@@ -70,6 +70,7 @@ export function FindingDetailSheet({
   fileId,
   contextRange,
   onNavigateToFinding,
+  findingNumber,
   onAccept,
   onReject,
   onFlag,
@@ -92,7 +93,6 @@ export function FindingDetailSheet({
   flaggerComment,
 }: FindingDetailSheetProps) {
   const reducedMotion = useReducedMotion()
-  const isLaptop = useIsLaptop()
   const prevFindingIdRef = useRef<string | null>(null)
 
   // Announce finding changes via aria-live (Guardrail #33)
@@ -107,13 +107,9 @@ export function FindingDetailSheet({
     }
   }, [finding])
 
-  // Responsive width: laptop = 360px, tablet/mobile = 300px
-  // Base SheetContent uses `w-3/4 sm:max-w-sm`. Override both:
-  // - Laptop (>= 1024px): sm:max-w overrides sm:max-w-sm
-  // - Mobile (< 640px): w-* overrides w-3/4 (max-w doesn't help at small viewports)
-  const widthClass = isLaptop
-    ? 'sm:max-w-[var(--detail-panel-width-laptop)]'
-    : 'w-[var(--detail-panel-width-tablet)] sm:max-w-[var(--detail-panel-width-tablet)]'
+  // S-FIX-4: Sheet only renders at < 1024px (mobile). Width = tablet/mobile token (300px).
+  const widthClass =
+    'w-[var(--detail-panel-width-tablet)] sm:max-w-[var(--detail-panel-width-tablet)]'
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -144,6 +140,7 @@ export function FindingDetailSheet({
             fileId={fileId}
             contextRange={contextRange}
             onNavigateToFinding={onNavigateToFinding}
+            findingNumber={findingNumber}
             onAccept={onAccept}
             onReject={onReject}
             onFlag={onFlag}

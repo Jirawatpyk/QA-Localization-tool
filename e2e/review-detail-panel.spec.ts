@@ -18,20 +18,17 @@
  *
  * Dev Note #19: Viewport MUST be set to ≥1440px (desktop breakpoint).
  *
- * Layout behaviour by breakpoint (ReviewPageClient.tsx):
- *   - ≥1440px (isDesktop=true):  static <aside role="complementary"> in DOM.
+ * Layout behaviour by breakpoint (ReviewPageClient.tsx) — S-FIX-4:
+ *   - ≥1440px (desktop):         static <aside role="complementary"> in DOM.
  *     J key triggers handleActiveFindingChange → setSelectedFinding → aside shows finding.
- *   - 1024–1439px (isLaptop):    Radix Sheet overlay (role="complementary" inside portal).
- *     J key does NOT call setSelectedFinding (intentional — avoids blocking finding list).
- *     Sheet only opens when setSelectedFinding is called explicitly (e.g. from autoAdvance).
+ *   - 1280–1439px (laptop):      persistent aside (same as desktop, no sidebar).
+ *   - 1024–1279px (tablet):      persistent aside with collapse toggle, no sidebar.
  *   - <1024px (mobile):          Sheet only opens via toggle button.
  *
  * Playwright `devices['Desktop Chrome']` default viewport is 1280x720 (laptop breakpoint).
- * At 1280px the aside has CSS `hidden 2xl:block` (visible only at ≥1536px), so
- * `page.locator('[role="complementary"]')` resolves to the hidden aside — test fails.
+ * At 1280px the aside is now visible (S-FIX-4 made laptop/tablet use persistent aside).
  *
- * Fix: force desktop viewport (1440px) so the static aside is used, J key wires up
- * correctly, and `role="complementary"` resolves to the always-visible aside element.
+ * Fix: force desktop viewport (1440px) for consistency with sidebar + aside layout.
  *
  * E2E locators:
  *   - page.locator('[role="complementary"]') — works at ≥1440px (static aside)
@@ -294,10 +291,9 @@ let seeded: SeededIds
 test.describe.serial('Detail Panel & Segment Context — Story 4.1c ATDD', () => {
   test.setTimeout(120_000)
 
-  // Force desktop viewport (≥1440px) so the static aside is rendered.
-  // At the Playwright default of 1280px (laptop), the aside has `hidden 2xl:block`
-  // and J key does not call setSelectedFinding — Sheet never opens (by design).
-  // See Dev Note #19 in the file header for full explanation.
+  // Force desktop viewport (≥1440px) so the full 3-zone layout is rendered.
+  // S-FIX-4: At 1280px (laptop) the aside is now persistent, but we keep 1440px
+  // for consistency with sidebar + aside layout. See Dev Note #19 in the file header.
   test.use({ viewport: { width: 1440, height: 900 } })
 
   // Skip if Inngest dev server is not available (outer gate)
@@ -663,9 +659,10 @@ test.describe.serial('Detail Panel & Segment Context — Story 4.1c ATDD', () =>
   //   2. Tab from the grid can reach interactive elements inside the aside
   //   3. Grid is still keyboard-interactive after aside is populated
   //
-  // The Sheet focus trap (laptop-mode only) is tested separately at 1280px viewport
-  // when the Sheet-open trigger is wired via autoAdvance (Story 4.2 accept/reject flow).
-  // TODO(TD-E2E-020): add laptop-mode Sheet focus trap E2E once E7 trigger path is
+  // S-FIX-4: Sheet focus trap only applies at mobile (<1024px) now.
+  // Laptop/tablet use persistent aside (no focus trap). Sheet focus trap tested
+  // in review-responsive.spec.ts T6.5/PM-5 at mobile viewport.
+  // TODO(TD-E2E-020): add mobile-mode Sheet focus trap E2E once E7 trigger path is
   // confirmed (needs autoAdvance path or explicit setSelectedFinding call from UI).
   test('[P1] E7: should show detail panel content and keep grid interactive after J navigation', async ({
     page,

@@ -9,7 +9,7 @@ import type { ReactNode } from 'react'
  */
 export default function ReviewLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="h-full w-full" data-testid="review-layout">
+    <div className="h-full w-full" data-review-layout data-testid="review-layout">
       {children}
     </div>
   )

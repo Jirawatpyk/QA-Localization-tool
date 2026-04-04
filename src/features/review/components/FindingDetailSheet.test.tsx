@@ -25,10 +25,8 @@ vi.mock('@/hooks/useReducedMotion', () => ({
   useReducedMotion: (...args: unknown[]) => mockUseReducedMotion(...args),
 }))
 
-// Mock useIsLaptop — controllable per-test for G1
-const mockUseIsLaptop = vi.fn((..._args: unknown[]) => true)
+// S-FIX-4: Sheet only renders at < 1024px — useIsLaptop no longer imported
 vi.mock('@/hooks/useMediaQuery', () => ({
-  useIsLaptop: (...args: unknown[]) => mockUseIsLaptop(...args),
   useIsXl: () => true,
 }))
 
@@ -97,7 +95,6 @@ describe('FindingDetailSheet', () => {
       retry: vi.fn(),
     })
     mockUseReducedMotion.mockReturnValue(false)
-    mockUseIsLaptop.mockReturnValue(true)
   })
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -328,22 +325,11 @@ describe('FindingDetailSheet', () => {
 
   // ═══ TA Coverage: Story 4.1d gaps ═══
 
-  it('[TA-G1][P1] should apply laptop width class when useIsLaptop returns true', () => {
-    mockUseIsLaptop.mockReturnValue(true)
-
+  it('[TA-G1][P1] should always apply tablet/mobile width class (Sheet only renders at < 1024px after S-FIX-4)', () => {
     render(<FindingDetailSheet {...defaultProps()} />)
 
     const sheet = screen.getByTestId('finding-detail-sheet')
-    expect(sheet.className).toContain('max-w-[var(--detail-panel-width-laptop)]')
-    expect(sheet.className).not.toContain('max-w-[var(--detail-panel-width-tablet)]')
-  })
-
-  it('[TA-G1][P1] should apply tablet width class when useIsLaptop returns false', () => {
-    mockUseIsLaptop.mockReturnValue(false)
-
-    render(<FindingDetailSheet {...defaultProps()} />)
-
-    const sheet = screen.getByTestId('finding-detail-sheet')
+    // S-FIX-4: Sheet only renders at mobile — always uses tablet/mobile token
     expect(sheet.className).toContain('max-w-[var(--detail-panel-width-tablet)]')
     expect(sheet.className).not.toContain('max-w-[var(--detail-panel-width-laptop)]')
   })

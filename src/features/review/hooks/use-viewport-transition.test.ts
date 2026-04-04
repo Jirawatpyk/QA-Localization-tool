@@ -1,8 +1,8 @@
 /**
  * useViewportTransition — Unit tests for viewport transition logic.
  *
- * S-FIX-4: aside mode for ALL >= 1024px (desktop/laptop/tablet), Sheet only at < 1024px (mobile).
- * Layout modes: desktop (>= 1440), laptop (1280-1439), tablet (1024-1279), mobile (< 1024).
+ * S-FIX-4: aside mode for ALL >= 1024px (desktop/laptop/compact), Sheet only at < 1024px (mobile).
+ * Layout modes: desktop (>= 1440), laptop (1280-1439), compact (1024-1279), mobile (< 1024).
  *
  * T1-T3: Viewport transition scenarios (aside↔mobile selectedId sync)
  * T4-T5: Sheet close behavior (J/K nav, mobile close preserves selectedId)
@@ -30,7 +30,7 @@ vi.mock('@/hooks/useMediaQuery', () => ({
   useIsLaptop: () => mockIsLaptop,
 }))
 
-function setViewport(mode: 'desktop' | 'laptop' | 'tablet' | 'mobile') {
+function setViewport(mode: 'desktop' | 'laptop' | 'compact' | 'mobile') {
   if (mode === 'desktop') {
     mockIsDesktop = true
     mockIsXl = true
@@ -39,7 +39,7 @@ function setViewport(mode: 'desktop' | 'laptop' | 'tablet' | 'mobile') {
     mockIsDesktop = false
     mockIsXl = true
     mockIsLaptop = true
-  } else if (mode === 'tablet') {
+  } else if (mode === 'compact') {
     mockIsDesktop = false
     mockIsXl = false
     mockIsLaptop = true
@@ -89,8 +89,8 @@ describe('useViewportTransition', () => {
   })
 
   // ── T2: Aside mode → mobile syncs selectedId from activeFindingState ──
-  it('T2: should sync selectedId from activeFindingState on tablet → mobile transition', () => {
-    setViewport('tablet')
+  it('T2: should sync selectedId from activeFindingState on compact → mobile transition', () => {
+    setViewport('compact')
     const { result, rerender } = renderVTHook(null)
 
     act(() => {
@@ -107,7 +107,7 @@ describe('useViewportTransition', () => {
   })
 
   // ── T3: Mobile → aside transition syncs selectedId from activeFindingState ──
-  it('T3: should sync selectedId on mobile → tablet transition', () => {
+  it('T3: should sync selectedId on mobile → compact transition', () => {
     setViewport('mobile')
     const { result, rerender } = renderVTHook(null)
 
@@ -117,8 +117,8 @@ describe('useViewportTransition', () => {
     })
     mockSetSelectedFinding.mockClear()
 
-    // Transition mobile → tablet (aside mode)
-    setViewport('tablet')
+    // Transition mobile → compact (aside mode)
+    setViewport('compact')
     rerender({ selectedId: null })
 
     expect(mockSetSelectedFinding).toHaveBeenCalledWith('f-3')
@@ -139,7 +139,7 @@ describe('useViewportTransition', () => {
 
   // ── T4b: handleNavigateAway at aside mode is no-op ──
   it('T4b: should be no-op when handleNavigateAway called at aside mode', () => {
-    setViewport('tablet')
+    setViewport('compact')
     const { result } = renderVTHook('f-4')
 
     act(() => {
@@ -187,9 +187,9 @@ describe('useViewportTransition', () => {
     expect(laptopResult.current.sheetOpen).toBe(false)
 
     // Tablet: always false (aside mode — S-FIX-4 change)
-    setViewport('tablet')
-    const { result: tabletResult } = renderVTHook('f-6')
-    expect(tabletResult.current.sheetOpen).toBe(false)
+    setViewport('compact')
+    const { result: compactResult } = renderVTHook('f-6')
+    expect(compactResult.current.sheetOpen).toBe(false)
 
     // Mobile: true only when mobileDrawerOpen AND selectedId
     setViewport('mobile')
@@ -216,9 +216,9 @@ describe('useViewportTransition', () => {
     expect(mockSetSelectedFinding).not.toHaveBeenCalled()
   })
 
-  // ── T8: handleFindingSelect at tablet = no-op (aside mode — S-FIX-4) ──
-  it('T8: should be a no-op when handleFindingSelect called at tablet (aside mode)', () => {
-    setViewport('tablet')
+  // ── T8: handleFindingSelect at compact = no-op (aside mode — S-FIX-4) ──
+  it('T8: should be a no-op when handleFindingSelect called at compact (aside mode)', () => {
+    setViewport('compact')
     const { result } = renderVTHook(null)
 
     act(() => {
@@ -258,16 +258,16 @@ describe('useViewportTransition', () => {
     expect(result.current.activeFindingIdRef.current).toBe('f-10')
   })
 
-  // ── T11: handleActiveFindingChange at tablet syncs to selectedId (aside mode — S-FIX-4) ──
-  it('T11: should sync to selectedId when handleActiveFindingChange called at tablet (aside mode)', () => {
-    setViewport('tablet')
+  // ── T11: handleActiveFindingChange at compact syncs to selectedId (aside mode — S-FIX-4) ──
+  it('T11: should sync to selectedId when handleActiveFindingChange called at compact (aside mode)', () => {
+    setViewport('compact')
     const { result } = renderVTHook(null)
 
     act(() => {
       result.current.handleActiveFindingChange('f-11')
     })
 
-    // S-FIX-4: tablet is aside mode, so selectedId should be synced
+    // S-FIX-4: compact is aside mode, so selectedId should be synced
     expect(mockSetSelectedFinding).toHaveBeenCalledWith('f-11')
     expect(result.current.activeFindingState).toBe('f-11')
     expect(result.current.activeFindingIdRef.current).toBe('f-11')
@@ -286,14 +286,14 @@ describe('useViewportTransition', () => {
     expect(desktopResult.current.detailFindingId).toBe('active-id')
 
     // Tablet: detailFindingId = activeFindingState (aside mode — S-FIX-4)
-    setViewport('tablet')
-    const { result: tabletResult } = renderVTHook('store-id')
+    setViewport('compact')
+    const { result: compactResult } = renderVTHook('store-id')
 
     act(() => {
-      tabletResult.current.handleActiveFindingChange('tablet-active')
+      compactResult.current.handleActiveFindingChange('compact-active')
     })
 
-    expect(tabletResult.current.detailFindingId).toBe('tablet-active')
+    expect(compactResult.current.detailFindingId).toBe('compact-active')
 
     // Mobile: detailFindingId = selectedId (from store)
     setViewport('mobile')
@@ -302,7 +302,7 @@ describe('useViewportTransition', () => {
   })
 
   // ── T13: isAsideMode flag correctness ──
-  it('T13: should set isAsideMode true for desktop/laptop/tablet, false for mobile', () => {
+  it('T13: should set isAsideMode true for desktop/laptop/compact, false for mobile', () => {
     setViewport('desktop')
     const { result: dr } = renderVTHook(null)
     expect(dr.current.isAsideMode).toBe(true)
@@ -311,7 +311,7 @@ describe('useViewportTransition', () => {
     const { result: lr } = renderVTHook(null)
     expect(lr.current.isAsideMode).toBe(true)
 
-    setViewport('tablet')
+    setViewport('compact')
     const { result: tr } = renderVTHook(null)
     expect(tr.current.isAsideMode).toBe(true)
 
@@ -330,9 +330,9 @@ describe('useViewportTransition', () => {
     const { result: lr } = renderVTHook(null)
     expect(lr.current.layoutMode).toBe('laptop')
 
-    setViewport('tablet')
+    setViewport('compact')
     const { result: tr } = renderVTHook(null)
-    expect(tr.current.layoutMode).toBe('tablet')
+    expect(tr.current.layoutMode).toBe('compact')
 
     setViewport('mobile')
     const { result: mr } = renderVTHook(null)
