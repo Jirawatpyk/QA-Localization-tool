@@ -1,11 +1,9 @@
-import { FileQuestion } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { connection } from 'next/server'
 
-import { ErrorPageContent } from '@/components/ui/error-page-content'
-import { ScoreBadge } from '@/features/batch/components/ScoreBadge'
 import { getFileAssignment } from '@/features/project/actions/getFileAssignment.action'
 import { getFileReviewData } from '@/features/review/actions/getFileReviewData.action'
+import { EmptyFileContent } from '@/features/review/components/EmptyFileContent'
 import { ReviewPageClient } from '@/features/review/components/ReviewPageClient'
 import { SoftLockWrapper } from '@/features/review/components/SoftLockWrapper'
 import { logger } from '@/lib/logger'
@@ -32,20 +30,7 @@ export default async function ReviewPage({
   if (!result.success) {
     // AC4: Dedicated empty-file UI for 0-segment files
     if (result.code === 'EMPTY_FILE') {
-      return (
-        <ErrorPageContent
-          icon={FileQuestion}
-          iconClassName="text-text-muted"
-          title="No translatable content"
-          description="This file has no segments to review."
-          links={[
-            { href: `/projects/${projectId}/files`, label: 'Back to files', primary: true },
-            { href: `/projects/${projectId}/upload`, label: 'Upload a different file' },
-          ]}
-        >
-          <ScoreBadge score={null} size="md" />
-        </ErrorPageContent>
-      )
+      return <EmptyFileContent projectId={projectId} />
     }
 
     return (

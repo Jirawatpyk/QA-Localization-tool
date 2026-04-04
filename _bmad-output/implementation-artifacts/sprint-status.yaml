@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-02-15
-last_updated: 2026-04-04  # CR R1 s-fix-3 done
+last_updated: 2026-04-04  # s-fix-4 story created (ready-for-dev)
 project: qa-localization-tool
 project_key: NOKEY
 tracking_system: file-system
@@ -200,7 +200,7 @@ development_status:
   # Scope: Playwright verify S-FIX-1/2/3 — error pages, UUID rejection, taxonomy hydration, logout
   # Optimize: code quality, simplify error components, performance check
   # DoD: 0 console errors, type-check+lint pass, all P0 findings PASS in browser
-  s-fix-v1-verify-phase-1: backlog
+  s-fix-v1-verify-phase-1: done
 
   # ──────────────────────────────────────────
   # PHASE 2: P1 BROKEN — app unusable without these
@@ -213,7 +213,7 @@ development_status:
   # Depends: Must complete BEFORE S-FIX-9 (layout change affects card width)
   # Note: Score animation UI moved to S-FIX-V2 (depends S-FIX-5)
   # Ref: UX-SPEC-FULL-CHECKLIST.md > File Review Page, visual-design-foundation.md layout structure
-  s-fix-4-review-layout-complete: backlog
+  s-fix-4-review-layout-complete: ready-for-dev
 
   # S-FIX-5: Score Recalculation [L]
   # Findings: BUG-7 (P1), TD-UX-011

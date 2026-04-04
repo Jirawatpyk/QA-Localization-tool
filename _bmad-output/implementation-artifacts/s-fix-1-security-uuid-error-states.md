@@ -301,10 +301,10 @@ For this story, commits should use: `fix(security): UUID validation on route par
 - [x] [Review][Fixed] **D1: ScoreBadge "N/A" for 0-segment files** — FIXED: Added `<ScoreBadge score={null} size="md" />` to EMPTY_FILE UI (shows "N/A" gray)
 - [x] [Review][Fixed] **D2: Route-level UUID validation E2E test** — FIXED: Created `e2e/uuid-validation.spec.ts` (5 tests: invalid projectId, SQL injection, invalid fileId, invalid batchId, no Postgres errors)
 - [x] [Review][Resolved] **D3: AutoFocusHeading vs guardrail #20** — Keep as-is. Documented guardrail #20 exception for error/not-found pages (WCAG SC 4.1.3)
-- [x] [Review][Fixed] **P1: Empty-file UI missing `role="alert"` + auto-focus** — FIXED: added `role="alert"` + `AutoFocusHeading` component
+- [x] [Review][Fixed] **P1: Empty-file UI missing `role="alert"` + auto-focus** — FIXED: refactored to use `ErrorPageContent` with `role="alert"` + auto-focus built-in
 - [x] [Review][Fixed] **W1: Error boundary DRY** — FIXED: Extracted `ErrorPageContent` shared component (`src/components/ui/error-page-content.tsx`), refactored all 4 error/not-found pages
 - [x] [Review][Fixed] **W2: Batch page missing `connection()` call** — FIXED: Added `await connection()` for consistency with ReviewPage
-- [x] [Review][Fixed] **W3: Error codes union type** — FIXED: Created `ActionErrorCode` union type (`src/types/actionErrorCode.ts`), updated `ActionResult` to use it, 40+ error codes centralized
+- [x] [Review][Fixed] **W3: Error codes union type** — FIXED: Created `ActionErrorCode` union type (37 codes), updated `ActionResult`, consolidated duplicates (VALIDATION→VALIDATION_ERROR, INTERNAL→INTERNAL_ERROR, BUDGET_EXCEEDED→BUDGET_EXHAUSTED)
 - [x] [Review][Fixed] **W4: `support@example.com` centralized** — FIXED: Added `SUPPORT_EMAIL` constant to `src/lib/constants.ts`, used in `ErrorPageContent`
 - [x] [Review][Fixed] **W5: error.tsx at review/batch level** — FIXED: Created `review/[fileId]/error.tsx` + `batches/[batchId]/error.tsx` using shared `ErrorPageContent`
 
@@ -328,30 +328,50 @@ Claude Opus 4.6 (1M context)
 - T5: Added `EMPTY_FILE` early return in `getFileReviewData` when `targetLangRows.length === 0`. Review page shows dedicated empty-file UI with FileQuestion icon, "No translatable content", "Back to files" + "Upload a different file" links. No Approve button or ReviewPageClient rendered.
 - T6: Created `uuid.test.ts` (14 tests), `error.test.tsx` (6 tests), updated `getFileReviewData.action.test.ts` (0-segment test now expects `EMPTY_FILE`). Lint 0 errors, type-check clean, 4570/4590 unit tests pass.
 - Bonus: Fixed pre-existing ProjectTour resume bug (19/19 pass).
+- CR-R1: Fixed P1 (empty-file accessibility), resolved D1-D3 decisions, fixed W1-W5 deferred items
+- CR-R2: Fixed E2E signupOrLogin missing email, ScoreBadge ordering (after description)
+- CR-R3: Consolidated 3 duplicate code pairs (VALIDATION/INTERNAL/BUDGET), fixed 5 test files with stale codes
+- CR-R3+: Refactored EMPTY_FILE UI to use ErrorPageContent, deleted orphaned AutoFocusHeading
 
 ### Change Log
 
 - 2026-04-03: S-FIX-1 implementation complete — UUID validation, error boundaries, 0-segment guard, unit tests
 - 2026-04-03: Fixed pre-existing ProjectTour resume bug (dismissed_at_step server state was incorrectly suppressing tour)
+- 2026-04-04: CR R1-R3 fixes — ErrorPageContent DRY, ActionErrorCode union type, duplicate code consolidation, E2E tests, ScoreBadge N/A, guardrail #20 exception
 
 ### File List
 
 **NEW:**
-- `src/app/(app)/projects/[projectId]/error.tsx` — Project-level error boundary
-- `src/app/(app)/projects/[projectId]/not-found.tsx` — Project-level 404 page
+- `src/components/ui/error-page-content.tsx` — Shared ErrorPageContent component (DRY for all error/not-found pages)
+- `src/types/actionErrorCode.ts` — Centralized ActionErrorCode union type (37 codes)
+- `src/app/(app)/projects/[projectId]/error.tsx` — Project-level error boundary (uses ErrorPageContent)
+- `src/app/(app)/projects/[projectId]/not-found.tsx` — Project-level 404 page (uses ErrorPageContent)
+- `src/app/(app)/projects/[projectId]/review/[fileId]/error.tsx` — Review-level error boundary
+- `src/app/(app)/projects/[projectId]/batches/[batchId]/error.tsx` — Batch-level error boundary
 - `src/app/(app)/projects/[projectId]/error.test.tsx` — Error boundary tests (6 tests)
-- `src/components/ui/auto-focus-heading.tsx` — Reusable auto-focus heading client component
 - `src/lib/validation/uuid.test.ts` — isUuid unit tests (14 tests)
+- `e2e/uuid-validation.spec.ts` — E2E UUID validation tests (5 tests)
 
 **MODIFIED:**
 - `src/app/(app)/projects/[projectId]/layout.tsx` — UUID validation on projectId
-- `src/app/(app)/projects/[projectId]/review/[fileId]/page.tsx` — UUID validation on fileId + EMPTY_FILE UI
-- `src/app/(app)/projects/[projectId]/batches/[batchId]/page.tsx` — UUID validation on batchId
-- `src/app/error.tsx` — Improved messaging, digest, auto-focus, removed console.error
-- `src/app/(app)/error.tsx` — Improved messaging, digest, auto-focus, removed console.error
+- `src/app/(app)/projects/[projectId]/review/[fileId]/page.tsx` — UUID validation on fileId + EMPTY_FILE via ErrorPageContent + ScoreBadge N/A
+- `src/app/(app)/projects/[projectId]/batches/[batchId]/page.tsx` — UUID validation on batchId + `connection()`
+- `src/app/error.tsx` — Refactored to use ErrorPageContent
+- `src/app/(app)/error.tsx` — Refactored to use ErrorPageContent
+- `src/types/actionResult.ts` — `code: string` → `code: ActionErrorCode`
+- `src/lib/constants.ts` — Added SUPPORT_EMAIL constant
 - `src/features/review/actions/getFileReviewData.action.ts` — isUuid import + EMPTY_FILE guard
 - `src/features/project/actions/updateProject.action.ts` — isUuid import, removed inline UUID_RE
 - `src/features/review/actions/getFindingComments.action.ts` — isUuid import, removed inline UUID_RE
-- `src/features/review/actions/getFileReviewData.action.test.ts` — Updated 0-segment test for EMPTY_FILE
+- `src/features/review/actions/approveFile.action.ts` — ActionErrorCode typed STATUS_ERROR_MAP
+- `src/features/pipeline/actions/startProcessing.action.ts` — BUDGET_EXCEEDED → BUDGET_EXHAUSTED
+- `src/features/review/actions/addFindingComment.action.ts` — INTERNAL → INTERNAL_ERROR + VALIDATION → VALIDATION_ERROR
+- 22 review action files — VALIDATION → VALIDATION_ERROR
+- 7 test files — Updated error code assertions to match consolidated codes
 - `src/features/onboarding/components/ProjectTour.tsx` — Fixed resume bug (pre-existing)
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — Status update
+- `CLAUDE.md` — Guardrail #20 exception for error/not-found pages
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — Status: done
+- `_bmad-output/implementation-artifacts/deferred-work.md` — All S-FIX-1 deferred items marked done
+
+**DELETED:**
+- `src/components/ui/auto-focus-heading.tsx` — Orphaned after ErrorPageContent refactor

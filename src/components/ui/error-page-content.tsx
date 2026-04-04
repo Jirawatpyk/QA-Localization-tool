@@ -1,11 +1,18 @@
 'use client'
 
-import type { LucideIcon } from 'lucide-react'
+import { AlertTriangle, FileQuestion } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 
 import { SUPPORT_EMAIL } from '@/lib/constants'
+
+const ERROR_ICON_MAP = {
+  'alert-triangle': AlertTriangle,
+  'file-question': FileQuestion,
+} as const
+
+export type ErrorIcon = keyof typeof ERROR_ICON_MAP
 
 type ErrorLink = {
   href: string
@@ -14,7 +21,7 @@ type ErrorLink = {
 }
 
 type ErrorPageContentProps = {
-  icon: LucideIcon
+  icon: ErrorIcon
   iconClassName?: string
   title: string
   description: string
@@ -26,7 +33,7 @@ type ErrorPageContentProps = {
 }
 
 export function ErrorPageContent({
-  icon: Icon,
+  icon,
   iconClassName = 'text-error',
   title,
   description,
@@ -36,6 +43,7 @@ export function ErrorPageContent({
   links = [],
   children,
 }: ErrorPageContentProps) {
+  const Icon = ERROR_ICON_MAP[icon]
   const headingRef = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {

@@ -1,7 +1,5 @@
 'use client'
 
-import { AlertTriangle } from 'lucide-react'
-
 import { ErrorPageContent } from '@/components/ui/error-page-content'
 
 export default function BatchError({
@@ -13,7 +11,7 @@ export default function BatchError({
 }) {
   return (
     <ErrorPageContent
-      icon={AlertTriangle}
+      icon="alert-triangle"
       title="Batch page couldn't load"
       description="An unexpected error occurred while loading the batch summary. Your data is safe."
       digest={error.digest}
