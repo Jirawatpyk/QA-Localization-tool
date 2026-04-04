@@ -34,6 +34,11 @@ export function useIsLaptop(): boolean {
   return useMediaQuery('(min-width: 1024px)')
 }
 
+/** >= 1280px — xl layout (laptop with wider detail panel) */
+export function useIsXl(): boolean {
+  return useMediaQuery('(min-width: 1280px)')
+}
+
 /** < 768px — mobile layout (single column + MobileBanner) */
 export function useIsMobile(): boolean {
   return useMediaQuery('(max-width: 767px)')

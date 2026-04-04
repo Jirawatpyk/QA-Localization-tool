@@ -17,6 +17,7 @@ vi.mock('@/hooks/useMediaQuery', () => ({
   useIsDesktop: vi.fn(() => false),
   useIsLaptop: vi.fn(() => true),
   useIsMobile: vi.fn(() => false),
+  useIsXl: () => true,
 }))
 
 // Mock dependencies before importing the component
@@ -39,6 +40,10 @@ vi.mock('@/features/review/components/KeyboardCheatSheet', () => ({
 }))
 vi.mock('@/features/review/components/ReviewActionBar', () => ({
   ReviewActionBar: () => null,
+}))
+// S-FIX-4: ReviewStatusBar also renders ScoreBadge — mock to avoid duplicate score-badge testid
+vi.mock('@/features/review/components/ReviewStatusBar', () => ({
+  ReviewStatusBar: () => null,
 }))
 vi.mock('@/features/review/utils/announce', () => ({
   announce: vi.fn(),

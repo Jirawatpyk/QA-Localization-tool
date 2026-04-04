@@ -21,6 +21,7 @@ vi.mock('@/hooks/useMediaQuery', () => ({
   useIsDesktop: vi.fn(() => false),
   useIsLaptop: vi.fn(() => true),
   useIsMobile: vi.fn(() => false),
+  useIsXl: () => true,
 }))
 
 vi.mock('@/features/review/hooks/use-findings-subscription', () => ({

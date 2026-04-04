@@ -57,11 +57,13 @@ vi.mock('@/features/pipeline/actions/retryAiAnalysis.action', () => ({
 // Dynamic responsive mock — override per test
 const mockIsDesktop = vi.fn(() => false)
 const mockIsLaptop = vi.fn(() => false)
+const mockIsXl = vi.fn(() => false)
 vi.mock('@/hooks/useMediaQuery', () => ({
   useMediaQuery: vi.fn(() => false),
   useIsDesktop: (...args: unknown[]) => mockIsDesktop(...(args as [])),
   useIsLaptop: (...args: unknown[]) => mockIsLaptop(...(args as [])),
   useIsMobile: vi.fn(() => false),
+  useIsXl: (...args: unknown[]) => mockIsXl(...(args as [])),
 }))
 
 import type { FileReviewData } from '@/features/review/actions/getFileReviewData.action'
@@ -84,6 +86,7 @@ beforeEach(() => {
   })
   mockIsDesktop.mockReturnValue(false)
   mockIsLaptop.mockReturnValue(false)
+  mockIsXl.mockReturnValue(false)
   useReviewStore.getState().resetForFile('test')
 })
 
@@ -124,31 +127,41 @@ describe('ReviewPageClient — layout mode branches', () => {
   it('should set data-layout-mode="mobile" when neither desktop nor laptop', () => {
     mockIsDesktop.mockReturnValue(false)
     mockIsLaptop.mockReturnValue(false)
+    mockIsXl.mockReturnValue(false)
     const data = buildInitialData()
 
     render(<ReviewPageClient fileId="f1" projectId="p1" tenantId="t1" initialData={data} />)
 
-    expect(screen.getByTestId('review-3-zone')).toHaveAttribute('data-layout-mode', 'mobile')
+    // S-FIX-4: data-layout-mode is on the outer wrapper, not review-3-zone
+    const el = document.querySelector('[data-layout-mode]') as HTMLElement
+    expect(el).not.toBeNull()
+    expect(el.getAttribute('data-layout-mode')).toBe('mobile')
   })
 
   it('should set data-layout-mode="laptop" when isLaptop but not desktop', () => {
     mockIsDesktop.mockReturnValue(false)
     mockIsLaptop.mockReturnValue(true)
+    mockIsXl.mockReturnValue(true)
     const data = buildInitialData()
 
     render(<ReviewPageClient fileId="f1" projectId="p1" tenantId="t1" initialData={data} />)
 
-    expect(screen.getByTestId('review-3-zone')).toHaveAttribute('data-layout-mode', 'laptop')
+    const el = document.querySelector('[data-layout-mode]') as HTMLElement
+    expect(el).not.toBeNull()
+    expect(el.getAttribute('data-layout-mode')).toBe('laptop')
   })
 
   it('should set data-layout-mode="desktop" when isDesktop', () => {
     mockIsDesktop.mockReturnValue(true)
     mockIsLaptop.mockReturnValue(true) // both true = desktop wins
+    mockIsXl.mockReturnValue(true)
     const data = buildInitialData()
 
     render(<ReviewPageClient fileId="f1" projectId="p1" tenantId="t1" initialData={data} />)
 
-    expect(screen.getByTestId('review-3-zone')).toHaveAttribute('data-layout-mode', 'desktop')
+    const el = document.querySelector('[data-layout-mode]') as HTMLElement
+    expect(el).not.toBeNull()
+    expect(el.getAttribute('data-layout-mode')).toBe('desktop')
   })
 })
 

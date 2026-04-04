@@ -29,6 +29,7 @@ vi.mock('@/hooks/useReducedMotion', () => ({
 const mockUseIsLaptop = vi.fn((..._args: unknown[]) => true)
 vi.mock('@/hooks/useMediaQuery', () => ({
   useIsLaptop: (...args: unknown[]) => mockUseIsLaptop(...args),
+  useIsXl: () => true,
 }))
 
 // Mock useSegmentContext to isolate FindingDetailSheet from server action
@@ -197,6 +198,7 @@ describe('FindingDetailSheet', () => {
   it('[T-C3.6][P1] should render enabled action buttons (Accept, Reject, Flag) for non-manual findings (Story 4.2)', () => {
     render(<FindingDetailSheet {...defaultProps()} />)
 
+    // S-FIX-4: FindingDetailContent now uses ReviewActionBar with [A]/[R]/[F] hotkey labels
     const acceptBtn = screen.getByRole('button', { name: /Accept/i })
     const rejectBtn = screen.getByRole('button', { name: /Reject/i })
     const flagBtn = screen.getByRole('button', { name: /Flag/i })
@@ -205,10 +207,10 @@ describe('FindingDetailSheet', () => {
     expect(rejectBtn).toBeEnabled()
     expect(flagBtn).toBeEnabled()
 
-    // No keyboard shortcut hints in button text (those are in ReviewActionBar)
-    expect(acceptBtn.textContent).not.toMatch(/\[A\]/)
-    expect(rejectBtn.textContent).not.toMatch(/\[R\]/)
-    expect(flagBtn.textContent).not.toMatch(/\[F\]/)
+    // S-FIX-4: Buttons now show keyboard shortcut hints via ReviewActionBar
+    expect(acceptBtn.textContent).toMatch(/\[A\]/)
+    expect(rejectBtn.textContent).toMatch(/\[R\]/)
+    expect(flagBtn.textContent).toMatch(/\[F\]/)
   })
 
   // ═══════════════════════════════════════════════════════════════════════

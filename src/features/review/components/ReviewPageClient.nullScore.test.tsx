@@ -18,6 +18,7 @@ vi.mock('@/hooks/useMediaQuery', () => ({
   useIsDesktop: vi.fn(() => false),
   useIsLaptop: vi.fn(() => true),
   useIsMobile: vi.fn(() => false),
+  useIsXl: () => true,
 }))
 
 // ── Mocks ──
@@ -46,6 +47,10 @@ vi.mock('@/features/review/components/FindingDetailContent', () => ({
 }))
 vi.mock('@/features/review/components/FileNavigationDropdown', () => ({
   FileNavigationDropdown: () => null,
+}))
+// S-FIX-4: ReviewStatusBar also renders ScoreBadge — mock to avoid duplicate score-badge testid
+vi.mock('@/features/review/components/ReviewStatusBar', () => ({
+  ReviewStatusBar: () => null,
 }))
 vi.mock('@/features/review/utils/announce', () => ({
   announce: vi.fn(),

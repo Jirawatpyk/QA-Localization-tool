@@ -3,18 +3,21 @@
  *
  * Extracted from ReviewPageClient.tsx to consolidate the 5+ state variables,
  * 2 render-time adjustment blocks, and 5 callbacks that manage viewport transitions
- * (desktop ↔ laptop ↔ mobile) into a single source of truth.
+ * (desktop ↔ laptop ↔ tablet ↔ mobile) into a single source of truth.
  *
  * Key patterns:
  * - Render-time adjustment (NOT useEffect) for viewport transition sync (React 19)
  * - useCallback with correct deps for stable identity
  * - selectedId lives in Zustand store — this hook is a consumer, not owner
+ *
+ * S-FIX-4: aside mode for ALL >= 1024px viewports, Sheet only for < 1024px.
+ * Layout modes: desktop (>= 1440), laptop (1280-1439), tablet (1024-1279), mobile (< 1024).
  */
 import { useCallback, useRef, useState } from 'react'
 
-import { useIsDesktop, useIsLaptop } from '@/hooks/useMediaQuery'
+import { useIsDesktop, useIsLaptop, useIsXl } from '@/hooks/useMediaQuery'
 
-type LayoutMode = 'desktop' | 'laptop' | 'mobile'
+type LayoutMode = 'desktop' | 'laptop' | 'tablet' | 'mobile'
 
 type UseViewportTransitionOptions = {
   /** Zustand store setter for selectedId */
@@ -28,15 +31,17 @@ type UseViewportTransitionReturn = {
   layoutMode: LayoutMode
   isDesktop: boolean
   isLaptop: boolean
+  /** S-FIX-4: true when >= 1024px — detail panel renders as aside (not Sheet) */
+  isAsideMode: boolean
 
-  // ── Sheet state (derived) ──
+  // ── Sheet state (derived — only for mobile) ──
   sheetOpen: boolean
 
   // ── Mobile toggle button ──
   showToggleButton: boolean
 
   // ── Detail panel finding derivation ──
-  /** Desktop: activeFindingState, non-desktop: selectedId */
+  /** Aside mode: activeFindingState, mobile: selectedId */
   detailFindingId: string | null
 
   // ── Callbacks for consumers ──
@@ -52,9 +57,10 @@ type UseViewportTransitionReturn = {
   selectedIdFromClickRef: React.RefObject<boolean>
 }
 
-function getLayoutMode(isDesktop: boolean, isLaptop: boolean): LayoutMode {
+function getLayoutMode(isDesktop: boolean, isXl: boolean, isLaptop: boolean): LayoutMode {
   if (isDesktop) return 'desktop'
-  if (isLaptop) return 'laptop'
+  if (isXl) return 'laptop'
+  if (isLaptop) return 'tablet'
   return 'mobile'
 }
 
@@ -63,8 +69,11 @@ export function useViewportTransition({
   selectedId,
 }: UseViewportTransitionOptions): UseViewportTransitionReturn {
   const isDesktop = useIsDesktop()
+  const isXl = useIsXl()
   const isLaptop = useIsLaptop()
-  const layoutMode = getLayoutMode(isDesktop, isLaptop)
+  const layoutMode = getLayoutMode(isDesktop, isXl, isLaptop)
+  /** S-FIX-4: aside renders for ALL >= 1024px viewports */
+  const isAsideMode = isDesktop || isLaptop
 
   // ── Internal state ──
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
@@ -73,57 +82,40 @@ export function useViewportTransition({
   const selectedIdFromClickRef = useRef(false)
 
   // ── Render-time adjustment: viewport transition sync ──
-  // AC6 / TD-UX-005: Sync selectedId when viewport transitions (desktop ↔ laptop/mobile)
-  const [prevLayoutMode, setPrevLayoutMode] = useState(layoutMode)
-  if (prevLayoutMode !== layoutMode) {
-    setPrevLayoutMode(layoutMode)
-    // Desktop→non-desktop: sync selectedId from activeFindingState
+  // S-FIX-4: Sync selectedId when transitioning between aside mode ↔ mobile
+  const [prevIsAsideMode, setPrevIsAsideMode] = useState(isAsideMode)
+  if (prevIsAsideMode !== isAsideMode) {
+    setPrevIsAsideMode(isAsideMode)
+    // Aside→mobile: sync selectedId from activeFindingState so Sheet can show it
     if (
-      prevLayoutMode === 'desktop' &&
+      prevIsAsideMode &&
+      !isAsideMode &&
       activeFindingState !== null &&
       selectedId !== activeFindingState
     ) {
       setSelectedFinding(activeFindingState)
+      setMobileDrawerOpen(true)
     }
-    // CR-R2 F8: Non-desktop→desktop: sync selectedId from activeFindingState
-    // Prevents empty detail panel after mobile J/K nav → resize to desktop
+    // Mobile→aside: sync selectedId from activeFindingState so aside shows it
     if (
-      prevLayoutMode !== 'desktop' &&
-      layoutMode === 'desktop' &&
+      !prevIsAsideMode &&
+      isAsideMode &&
       activeFindingState !== null &&
       selectedId !== activeFindingState
     ) {
       setSelectedFinding(activeFindingState)
-    }
-  }
-
-  // ── Render-time adjustment: phantom Sheet prevention ──
-  // CR R2 P1: Mobile→laptop viewport transition — prevent phantom Sheet re-open.
-  // When user explicitly closed Sheet at mobile (mobileDrawerOpen=false but selectedId
-  // preserved for toggle button), clear selectedId on transition to laptop.
-  const [prevLayoutForSheet, setPrevLayoutForSheet] = useState(layoutMode)
-  if (prevLayoutForSheet !== layoutMode) {
-    setPrevLayoutForSheet(layoutMode)
-    if (
-      prevLayoutForSheet === 'mobile' &&
-      layoutMode === 'laptop' &&
-      !mobileDrawerOpen &&
-      selectedId !== null
-    ) {
-      setSelectedFinding(null)
     }
   }
 
   // ── Derived values ──
-  const showToggleButton = !isDesktop && !isLaptop && selectedId !== null && !mobileDrawerOpen
+  // S-FIX-4: toggle button only at mobile (< 1024px)
+  const showToggleButton = !isAsideMode && selectedId !== null && !mobileDrawerOpen
 
-  const sheetOpen = isDesktop
-    ? false
-    : isLaptop
-      ? selectedId !== null
-      : mobileDrawerOpen && selectedId !== null
+  // S-FIX-4: Sheet only for mobile
+  const sheetOpen = isAsideMode ? false : mobileDrawerOpen && selectedId !== null
 
-  const detailFindingId = isDesktop ? activeFindingState : selectedId
+  // S-FIX-4: aside mode uses activeFindingState, mobile uses selectedId
+  const detailFindingId = isAsideMode ? activeFindingState : selectedId
 
   // ── Callbacks ──
 
@@ -131,9 +123,9 @@ export function useViewportTransition({
     (id: string | null) => {
       activeFindingIdRef.current = id
       setActiveFindingState(id)
-      // Desktop only: sync selectedId for aside detail panel (non-blocking, side-by-side).
-      // Laptop/mobile: do NOT sync here — Sheet is a blocking overlay.
-      if (isDesktop) {
+      // S-FIX-4: Aside mode (>= 1024px): sync selectedId for aside detail panel (non-blocking).
+      // Mobile: do NOT sync here — Sheet is a blocking overlay.
+      if (isAsideMode) {
         selectedIdFromClickRef.current = true
         setSelectedFinding(id)
         queueMicrotask(() => {
@@ -141,48 +133,39 @@ export function useViewportTransition({
         })
       }
     },
-    [isDesktop, setSelectedFinding],
+    [isAsideMode, setSelectedFinding],
   )
 
-  // Separate handler for finding selection at non-desktop (Sheet opening).
+  // Separate handler for finding selection at mobile (Sheet opening).
   // Called only from FindingCardCompact click — NOT from J/K navigation.
   const handleFindingSelect = useCallback(
     (id: string) => {
-      if (isDesktop) return
+      if (isAsideMode) return
       selectedIdFromClickRef.current = true
       setSelectedFinding(id)
       queueMicrotask(() => {
         selectedIdFromClickRef.current = false
       })
-      if (!isLaptop) {
-        setMobileDrawerOpen(true)
-      }
+      // S-FIX-4: Only open drawer at mobile
+      setMobileDrawerOpen(true)
     },
-    [isDesktop, isLaptop, setSelectedFinding],
+    [isAsideMode, setSelectedFinding],
   )
 
-  // Close Sheet when J/K navigates away at non-desktop (P1 fix: stale Sheet content).
+  // Close Sheet when J/K navigates away at mobile (P1 fix: stale Sheet content).
   const handleNavigateAway = useCallback(() => {
-    if (!isDesktop && selectedId !== null) {
+    if (!isAsideMode && selectedId !== null) {
       setSelectedFinding(null)
       setMobileDrawerOpen(false)
     }
-  }, [isDesktop, selectedId, setSelectedFinding])
+  }, [isAsideMode, selectedId, setSelectedFinding])
 
-  const handleSheetChange = useCallback(
-    (open: boolean) => {
-      if (!open) {
-        if (isLaptop) {
-          // Laptop: clear selectedId to close Sheet (no toggle button at laptop)
-          setSelectedFinding(null)
-        } else {
-          // Mobile: keep selectedId so toggle button appears (ATDD T3.3)
-          setMobileDrawerOpen(false)
-        }
-      }
-    },
-    [isLaptop, setSelectedFinding],
-  )
+  const handleSheetChange = useCallback((open: boolean) => {
+    if (!open) {
+      // S-FIX-4: Sheet only at mobile — keep selectedId so toggle button appears (ATDD T3.3)
+      setMobileDrawerOpen(false)
+    }
+  }, [])
 
   const handleToggleDrawer = useCallback(() => {
     setMobileDrawerOpen(true)
@@ -192,6 +175,7 @@ export function useViewportTransition({
     layoutMode,
     isDesktop,
     isLaptop,
+    isAsideMode,
     sheetOpen,
     showToggleButton,
     detailFindingId,

@@ -21,12 +21,14 @@ vi.mock('server-only', () => ({}))
 const mockUseIsDesktop = vi.fn(() => true)
 const mockUseIsLaptop = vi.fn(() => false)
 const mockUseIsMobile = vi.fn(() => false)
+const mockUseIsXl = vi.fn(() => true)
 
 vi.mock('@/hooks/useMediaQuery', () => ({
   useMediaQuery: vi.fn(() => false),
   useIsDesktop: () => mockUseIsDesktop(),
   useIsLaptop: () => mockUseIsLaptop(),
   useIsMobile: () => mockUseIsMobile(),
+  useIsXl: () => mockUseIsXl(),
 }))
 
 // ── Mock Realtime subscription hooks ──
@@ -179,6 +181,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(true)
     mockUseIsLaptop.mockReturnValue(true)
     mockUseIsMobile.mockReturnValue(false)
+    mockUseIsXl.mockReturnValue(true)
 
     const finding = buildFinding({ id: 'find1', severity: 'major' })
 
@@ -210,11 +213,12 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
   // Laptop: Sheet side panel (1024-1439px)
   // ═══════════════════════════════════════════════════════════════════════
 
-  it('[P0] laptop mode: should render Sheet (not aside) when useIsDesktop=false, useIsLaptop=true', () => {
-    // Arrange: laptop breakpoint
+  it('[P0] laptop mode: should render aside (not Sheet) when useIsDesktop=false, useIsLaptop=true (S-FIX-4: aside for >= 1024px)', () => {
+    // Arrange: laptop breakpoint — S-FIX-4: laptop now uses aside (isAsideMode = isDesktop || isLaptop)
     mockUseIsDesktop.mockReturnValue(false)
     mockUseIsLaptop.mockReturnValue(true)
     mockUseIsMobile.mockReturnValue(false)
+    mockUseIsXl.mockReturnValue(true)
 
     const finding = buildFinding({ id: 'find1', severity: 'major' })
 
@@ -233,14 +237,13 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
       useReviewStore.getState().setSelectedFinding('find1')
     })
 
-    // Assert: Sheet should be used for laptop, NOT static aside
-    // The aside element should NOT be present as a direct layout element
-    const asides = screen.queryAllByRole('complementary')
-    const staticAside = asides.find((el) => el.tagName.toLowerCase() === 'aside')
-    expect(staticAside).toBeUndefined()
+    // Assert: static aside should be rendered (S-FIX-4: aside for all >= 1024px)
+    const aside = screen.getByRole('complementary')
+    expect(aside).toBeInTheDocument()
+    expect(aside.tagName.toLowerCase()).toBe('aside')
 
-    // Positive: Sheet IS rendered
-    expect(screen.getByTestId('mock-finding-detail-sheet')).toBeInTheDocument()
+    // Sheet should NOT be present in laptop mode (S-FIX-4)
+    expect(screen.queryByTestId('mock-finding-detail-sheet')).not.toBeInTheDocument()
   })
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -252,6 +255,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(false)
     mockUseIsLaptop.mockReturnValue(false)
     mockUseIsMobile.mockReturnValue(true)
+    mockUseIsXl.mockReturnValue(false)
 
     const finding = buildFinding({ id: 'find1', severity: 'major' })
 
@@ -299,6 +303,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(true)
     mockUseIsLaptop.mockReturnValue(true)
     mockUseIsMobile.mockReturnValue(false)
+    mockUseIsXl.mockReturnValue(true)
 
     // Act
     render(
@@ -328,6 +333,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(true)
     mockUseIsLaptop.mockReturnValue(true)
     mockUseIsMobile.mockReturnValue(false)
+    mockUseIsXl.mockReturnValue(true)
 
     // Act
     const { rerender } = render(
@@ -339,14 +345,16 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
       />,
     )
 
-    // Assert: desktop mode
-    const container = screen.getByTestId('review-3-zone')
+    // Assert: desktop mode — S-FIX-4: data-layout-mode is on outer wrapper, not review-3-zone
+    const container = document.querySelector('[data-layout-mode]') as HTMLElement
+    expect(container).not.toBeNull()
     expect(container.getAttribute('data-layout-mode')).toBe('desktop')
 
     // Switch to laptop
     mockUseIsDesktop.mockReturnValue(false)
     mockUseIsLaptop.mockReturnValue(true)
     mockUseIsMobile.mockReturnValue(false)
+    mockUseIsXl.mockReturnValue(true)
 
     rerender(
       <ReviewPageClient
@@ -363,6 +371,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(false)
     mockUseIsLaptop.mockReturnValue(false)
     mockUseIsMobile.mockReturnValue(true)
+    mockUseIsXl.mockReturnValue(false)
 
     rerender(
       <ReviewPageClient
@@ -385,6 +394,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(true)
     mockUseIsLaptop.mockReturnValue(true)
     mockUseIsMobile.mockReturnValue(false)
+    mockUseIsXl.mockReturnValue(true)
 
     const finding = buildFinding({ id: 'find1', severity: 'major', description: 'Test issue' })
 
@@ -401,6 +411,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(false)
     mockUseIsLaptop.mockReturnValue(true)
     mockUseIsMobile.mockReturnValue(false)
+    mockUseIsXl.mockReturnValue(true)
 
     act(() => {
       useReviewStore.getState().setSelectedFinding('find1')
@@ -415,7 +426,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
       />,
     )
 
-    // Assert: finding detail should be visible (in Sheet, not aside)
+    // Assert: finding detail should be visible (S-FIX-4: aside for laptop, not Sheet)
     // The component should not crash or show stale data
     expect(screen.queryByTestId('review-3-zone')).toBeInTheDocument()
   })
@@ -429,6 +440,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(true)
     mockUseIsLaptop.mockReturnValue(true)
     mockUseIsMobile.mockReturnValue(false)
+    mockUseIsXl.mockReturnValue(true)
 
     const { rerender } = render(
       <ReviewPageClient
@@ -447,6 +459,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(false)
     mockUseIsLaptop.mockReturnValue(true)
     mockUseIsMobile.mockReturnValue(false)
+    mockUseIsXl.mockReturnValue(true)
 
     rerender(
       <ReviewPageClient
@@ -464,6 +477,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(false)
     mockUseIsLaptop.mockReturnValue(false)
     mockUseIsMobile.mockReturnValue(true)
+    mockUseIsXl.mockReturnValue(false)
 
     rerender(
       <ReviewPageClient
@@ -487,6 +501,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(true)
     mockUseIsLaptop.mockReturnValue(true)
     mockUseIsMobile.mockReturnValue(false)
+    mockUseIsXl.mockReturnValue(true)
 
     const { rerender } = render(
       <ReviewPageClient
@@ -504,6 +519,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(false)
     mockUseIsLaptop.mockReturnValue(true)
     mockUseIsMobile.mockReturnValue(false)
+    mockUseIsXl.mockReturnValue(true)
 
     rerender(
       <ReviewPageClient
@@ -521,6 +537,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(false)
     mockUseIsLaptop.mockReturnValue(false)
     mockUseIsMobile.mockReturnValue(true)
+    mockUseIsXl.mockReturnValue(false)
 
     rerender(
       <ReviewPageClient
@@ -544,6 +561,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(false)
     mockUseIsLaptop.mockReturnValue(false)
     mockUseIsMobile.mockReturnValue(true)
+    mockUseIsXl.mockReturnValue(false)
 
     const finding = buildFinding({ id: 'find1', severity: 'major' })
 
@@ -584,6 +602,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(false)
     mockUseIsLaptop.mockReturnValue(false)
     mockUseIsMobile.mockReturnValue(true)
+    mockUseIsXl.mockReturnValue(false)
 
     render(
       <ReviewPageClient
@@ -605,6 +624,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(true)
     mockUseIsLaptop.mockReturnValue(true)
     mockUseIsMobile.mockReturnValue(false)
+    mockUseIsXl.mockReturnValue(true)
 
     const { rerender } = render(
       <ReviewPageClient
@@ -625,6 +645,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(false)
     mockUseIsLaptop.mockReturnValue(true)
     mockUseIsMobile.mockReturnValue(false)
+    mockUseIsXl.mockReturnValue(true)
 
     rerender(
       <ReviewPageClient
@@ -649,6 +670,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(true)
     mockUseIsLaptop.mockReturnValue(true)
     mockUseIsMobile.mockReturnValue(false)
+    mockUseIsXl.mockReturnValue(true)
 
     findingDetailSheetProps.mockClear()
     const { unmount } = render(
@@ -677,10 +699,11 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     unmount()
     useReviewStore.getState().resetForFile('test')
 
-    // ── Laptop + selectedId: open=true ──
+    // ── Laptop: S-FIX-4 — aside mode (not Sheet), same as desktop ──
     mockUseIsDesktop.mockReturnValue(false)
     mockUseIsLaptop.mockReturnValue(true)
     mockUseIsMobile.mockReturnValue(false)
+    mockUseIsXl.mockReturnValue(true)
 
     findingDetailSheetProps.mockClear()
     const { unmount: unmount2 } = render(
@@ -696,19 +719,15 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
       useReviewStore.getState().setSelectedFinding('find1')
     })
 
-    const laptopSelectedCall = findingDetailSheetProps.mock.calls.at(-1)?.[0]
-    expect(laptopSelectedCall).toBeDefined()
-    expect(laptopSelectedCall.open).toBe(true)
-    expect(screen.getByTestId('mock-finding-detail-sheet')).toBeInTheDocument()
+    // S-FIX-4: Laptop uses aside, so Sheet should NOT be rendered
+    const laptopSheetCalls = findingDetailSheetProps.mock.calls.filter(
+      (call: Record<string, unknown>[]) => call[0]?.open === true,
+    )
+    expect(laptopSheetCalls.length).toBe(0)
 
-    // ── Laptop + no selection: open=false ──
-    act(() => {
-      useReviewStore.getState().setSelectedFinding(null)
-    })
-
-    const laptopNoSelectCall = findingDetailSheetProps.mock.calls.at(-1)?.[0]
-    expect(laptopNoSelectCall.open).toBe(false)
-    expect(screen.queryByTestId('mock-finding-detail-sheet')).not.toBeInTheDocument()
+    // aside is rendered instead
+    const aside = screen.getByRole('complementary')
+    expect(aside.tagName.toLowerCase()).toBe('aside')
 
     unmount2()
     useReviewStore.getState().resetForFile('test')
@@ -717,6 +736,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(false)
     mockUseIsLaptop.mockReturnValue(false)
     mockUseIsMobile.mockReturnValue(true)
+    mockUseIsXl.mockReturnValue(false)
 
     findingDetailSheetProps.mockClear()
     render(
@@ -758,6 +778,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(false)
     mockUseIsLaptop.mockReturnValue(false)
     mockUseIsMobile.mockReturnValue(true)
+    mockUseIsXl.mockReturnValue(false)
 
     const { rerender } = render(
       <ReviewPageClient fileId="f1" projectId="p1" tenantId="t1" initialData={stableInitialData} />,
@@ -778,6 +799,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(true)
     mockUseIsLaptop.mockReturnValue(true)
     mockUseIsMobile.mockReturnValue(false)
+    mockUseIsXl.mockReturnValue(true)
 
     rerender(
       <ReviewPageClient fileId="f1" projectId="p1" tenantId="t1" initialData={stableInitialData} />,
@@ -790,6 +812,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(false)
     mockUseIsLaptop.mockReturnValue(false)
     mockUseIsMobile.mockReturnValue(true)
+    mockUseIsXl.mockReturnValue(false)
 
     findingDetailSheetProps.mockClear()
     rerender(
@@ -808,13 +831,14 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
   // G13: handleSheetChange close + no-op
   // ═══════════════════════════════════════════════════════════════════════
 
-  it('[TA-G13][P2] onOpenChange(false) at laptop should clear selectedFinding', () => {
+  it('[TA-G13][P2] S-FIX-4: laptop uses aside (not Sheet) — no onOpenChange to test', () => {
     const finding = buildFinding({ id: 'find1', severity: 'major' })
 
-    // Laptop mode
+    // Laptop mode — S-FIX-4: aside mode, Sheet not rendered
     mockUseIsDesktop.mockReturnValue(false)
     mockUseIsLaptop.mockReturnValue(true)
     mockUseIsMobile.mockReturnValue(false)
+    mockUseIsXl.mockReturnValue(true)
 
     render(
       <ReviewPageClient
@@ -830,23 +854,10 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
       useReviewStore.getState().setSelectedFinding('find1')
     })
 
-    // Verify Sheet is open
-    expect(screen.getByTestId('mock-finding-detail-sheet')).toBeInTheDocument()
-
-    // Capture onOpenChange callback from the latest Sheet render
-    const lastCall = findingDetailSheetProps.mock.calls.at(-1)?.[0]
-    expect(lastCall.onOpenChange).toBeDefined()
-    const onOpenChange = lastCall.onOpenChange as (open: boolean) => void
-
-    // Call onOpenChange(false) — simulates user closing the Sheet
-    act(() => {
-      onOpenChange(false)
-    })
-
-    // selectedFinding should be cleared
-    expect(getStoreFileState().selectedId).toBeNull()
-    // Sheet should now be closed (open=false because selectedId=null)
+    // S-FIX-4: laptop renders aside, not Sheet
     expect(screen.queryByTestId('mock-finding-detail-sheet')).not.toBeInTheDocument()
+    const aside = screen.getByRole('complementary')
+    expect(aside.tagName.toLowerCase()).toBe('aside')
   })
 
   it('[TA-G13][P2] onOpenChange(false) at mobile should close Sheet but keep selectedId for toggle (ATDD T3.3)', () => {
@@ -856,6 +867,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(false)
     mockUseIsLaptop.mockReturnValue(false)
     mockUseIsMobile.mockReturnValue(true)
+    mockUseIsXl.mockReturnValue(false)
 
     render(
       <ReviewPageClient
@@ -893,13 +905,14 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     expect(screen.getByTestId('detail-panel-toggle')).toBeInTheDocument()
   })
 
-  it('[TA-G13][P2] onOpenChange(true) should be a no-op (no state changes)', () => {
+  it('[TA-G13][P2] onOpenChange(true) at mobile should be a no-op (no state changes)', () => {
     const finding = buildFinding({ id: 'find1', severity: 'major' })
 
-    // Laptop mode
+    // Mobile mode — S-FIX-4: Sheet only used at mobile
     mockUseIsDesktop.mockReturnValue(false)
-    mockUseIsLaptop.mockReturnValue(true)
-    mockUseIsMobile.mockReturnValue(false)
+    mockUseIsLaptop.mockReturnValue(false)
+    mockUseIsMobile.mockReturnValue(true)
+    mockUseIsXl.mockReturnValue(false)
 
     render(
       <ReviewPageClient
@@ -910,13 +923,15 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
       />,
     )
 
-    // Select finding
+    // Select finding and open drawer
     act(() => {
       useReviewStore.getState().setSelectedFinding('find1')
     })
+    fireEvent.click(screen.getByTestId('detail-panel-toggle'))
 
-    // Capture onOpenChange
+    // Capture onOpenChange from the Sheet
     const lastCall = findingDetailSheetProps.mock.calls.at(-1)?.[0]
+    expect(lastCall).toBeDefined()
     const onOpenChange = lastCall.onOpenChange as (open: boolean) => void
 
     // Call onOpenChange(true) — should be no-op
@@ -943,6 +958,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(true)
     mockUseIsLaptop.mockReturnValue(true)
     mockUseIsMobile.mockReturnValue(false)
+    mockUseIsXl.mockReturnValue(true)
 
     const { rerender } = render(
       <ReviewPageClient fileId="f1" projectId="p1" tenantId="t1" initialData={stableInitialData} />,
@@ -961,6 +977,7 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     mockUseIsDesktop.mockReturnValue(false)
     mockUseIsLaptop.mockReturnValue(true)
     mockUseIsMobile.mockReturnValue(false)
+    mockUseIsXl.mockReturnValue(true)
 
     findingDetailSheetProps.mockClear()
     rerender(
@@ -970,10 +987,11 @@ describe('ReviewPageClient — Responsive Layout (Story 4.1d)', () => {
     // selectedId should persist in store
     expect(getStoreFileState().selectedId).toBe('find1')
 
-    // Sheet should auto-open with the selected finding (laptop: sheetOpen = selectedId !== null)
-    const lastCall = findingDetailSheetProps.mock.calls.at(-1)?.[0]
-    expect(lastCall).toBeDefined()
-    expect(lastCall.open).toBe(true)
-    expect(screen.getByTestId('mock-finding-detail-sheet')).toBeInTheDocument()
+    // S-FIX-4: Laptop also uses aside (not Sheet), so aside should still be visible
+    const aside = screen.getByRole('complementary')
+    expect(aside).toBeInTheDocument()
+    expect(aside.tagName.toLowerCase()).toBe('aside')
+    // Sheet should NOT be rendered at laptop
+    expect(screen.queryByTestId('mock-finding-detail-sheet')).not.toBeInTheDocument()
   })
 })

@@ -1,6 +1,6 @@
 'use client'
 
-import { BookMarked, Check, Flag, Trash2, X } from 'lucide-react'
+import { BookMarked, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,7 @@ import { FindingCommentThread } from '@/features/review/components/FindingCommen
 import { LayerBadge } from '@/features/review/components/LayerBadge'
 import type { OverrideHistoryEntry } from '@/features/review/components/OverrideHistoryPanel'
 import { OverrideHistoryPanel } from '@/features/review/components/OverrideHistoryPanel'
+import { ReviewActionBar } from '@/features/review/components/ReviewActionBar'
 import {
   SegmentContextList,
   SegmentContextSkeleton,
@@ -37,7 +38,20 @@ type FindingDetailContentProps = {
   onReject?: ((findingId: string) => void) | undefined
   onFlag?: ((findingId: string) => void) | undefined
   onDelete?: ((findingId: string) => void) | undefined
+  /** S-FIX-4 AC3: Additional action handlers for full 7-button ReviewActionBar */
+  onNote?: (() => void) | undefined
+  onSource?: (() => void) | undefined
+  onOverride?: (() => void) | undefined
+  onAdd?: (() => void) | undefined
   isActionInFlight?: boolean | undefined
+  /** S-FIX-4 AC3: Active action for spinner display */
+  activeAction?: string | null | undefined
+  /** S-FIX-4 AC3: Manual finding flag */
+  isManualFinding?: boolean | undefined
+  /** S-FIX-4 AC3: Native reviewer mode */
+  isNativeReviewer?: boolean | undefined
+  onConfirmNative?: (() => void) | undefined
+  onOverrideNative?: (() => void) | undefined
   projectId?: string | undefined
   fetchOverrideHistory?:
     | ((input: { findingId: string; projectId: string }) => Promise<{
@@ -72,7 +86,16 @@ export function FindingDetailContent({
   onReject,
   onFlag,
   onDelete,
+  onNote,
+  onSource,
+  onOverride,
+  onAdd,
   isActionInFlight = false,
+  activeAction = null,
+  isManualFinding = false,
+  isNativeReviewer = false,
+  onConfirmNative,
+  onOverrideNative,
   projectId,
   fetchOverrideHistory,
   isNonNative = false,
@@ -266,54 +289,43 @@ export function FindingDetailContent({
             </div>
           )}
 
-          {/* ── Action Buttons (Story 4.2) ── */}
-          <div
-            role="toolbar"
-            aria-label="Review actions"
-            className="flex items-center gap-2 pt-2 border-t border-border"
-          >
-            <button
-              type="button"
-              disabled={finding.status === 'manual' || isActionInFlight}
-              onClick={() => onAccept?.(finding.id)}
-              className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-sm font-medium bg-success/10 text-success border border-success/20 hover:bg-success/20 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
-            >
-              <Check className="h-4 w-4" aria-hidden="true" />
-              Accept
-            </button>
-            <button
-              type="button"
-              disabled={finding.status === 'manual' || isActionInFlight}
-              onClick={() => onReject?.(finding.id)}
-              className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-sm font-medium bg-error/10 text-error border border-error/20 hover:bg-error/20 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
-            >
-              <X className="h-4 w-4" aria-hidden="true" />
-              Reject
-            </button>
-            <button
-              type="button"
-              disabled={finding.status === 'manual' || isActionInFlight}
-              onClick={() => onFlag?.(finding.id)}
-              className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-sm font-medium bg-warning/10 text-warning border border-warning/20 hover:bg-warning/20 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
-            >
-              <Flag className="h-4 w-4" aria-hidden="true" />
-              Flag
-            </button>
+          {/* ── S-FIX-4 AC3: All 7 action buttons via ReviewActionBar ── */}
+          <ReviewActionBar
+            onAccept={finding ? () => onAccept?.(finding.id) : undefined}
+            onReject={finding ? () => onReject?.(finding.id) : undefined}
+            onFlag={finding ? () => onFlag?.(finding.id) : undefined}
+            onNote={onNote}
+            onSource={onSource}
+            onOverride={onOverride}
+            onAdd={onAdd}
+            isDisabled={isActionInFlight}
+            isInFlight={isActionInFlight}
+            activeAction={
+              activeAction as
+                | import('@/features/review/utils/state-transitions').ReviewAction
+                | null
+            }
+            isManualFinding={isManualFinding}
+            isNativeReviewer={isNativeReviewer}
+            onConfirmNative={onConfirmNative}
+            onOverrideNative={onOverrideNative}
+          />
 
-            {/* Story 4.3: Delete button — visible only for Manual findings (AC5) */}
-            {finding.detectedByLayer === 'Manual' && (
+          {/* Delete button — visible only for Manual findings (preserved from AC3) */}
+          {finding.detectedByLayer === 'Manual' && (
+            <div className="pt-2">
               <button
                 type="button"
                 disabled={isActionInFlight}
                 onClick={() => onDelete?.(finding.id)}
                 data-testid="delete-finding-button"
-                className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-sm font-medium bg-error/10 text-error border border-error/20 hover:bg-error/20 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 ml-auto"
+                className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-sm font-medium bg-error/10 text-error border border-error/20 hover:bg-error/20 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
               >
                 <Trash2 className="h-4 w-4" aria-hidden="true" />
                 Delete
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Story 4.7: Add to Glossary — OUTSIDE toolbar (glossary action ≠ review action) */}
           {showAddToGlossary && projectId && (

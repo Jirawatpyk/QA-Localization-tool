@@ -73,6 +73,7 @@ vi.mock('@/hooks/useMediaQuery', () => ({
   useIsDesktop: vi.fn(() => true),
   useIsLaptop: vi.fn(() => true),
   useIsMobile: vi.fn(() => false),
+  useIsXl: () => true,
 }))
 
 // Mock useReducedMotion — since it delegates to useMediaQuery (which is mocked above),
@@ -389,9 +390,9 @@ describe('ReviewPageClient — Story 4.0 reduced-motion', () => {
     setupMatchMedia(true)
     mockUseReducedMotion.mockReturnValue(true)
 
-    // Switch to laptop mode so Sheet is used (not aside)
+    // S-FIX-4: Switch to mobile mode so Sheet is used (laptop/tablet now use aside)
     vi.mocked(useIsDesktop).mockReturnValue(false)
-    vi.mocked(useIsLaptop).mockReturnValue(true)
+    vi.mocked(useIsLaptop).mockReturnValue(false)
 
     render(
       <ReviewPageClient
@@ -405,9 +406,14 @@ describe('ReviewPageClient — Story 4.0 reduced-motion', () => {
     )
 
     // Select a finding AFTER render (so resetForFile has already run)
+    // S-FIX-4: At mobile, setting selectedId shows toggle button; click toggle to open drawer
     act(() => {
       useReviewStore.getState().setSelectedFinding('find1')
     })
+
+    // Click the toggle button to open mobile drawer
+    const toggleBtn = await screen.findByTestId('detail-panel-toggle')
+    await userEvent.click(toggleBtn)
 
     // Sheet renders via Radix portal — wait for DOM update
     await waitFor(() => {

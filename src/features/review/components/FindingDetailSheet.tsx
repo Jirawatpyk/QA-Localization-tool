@@ -28,7 +28,17 @@ type FindingDetailSheetProps = {
   onReject?: ((findingId: string) => void) | undefined
   onFlag?: ((findingId: string) => void) | undefined
   onDelete?: ((findingId: string) => void) | undefined
+  /** S-FIX-4 AC3: Additional action handlers */
+  onNote?: (() => void) | undefined
+  onSource?: (() => void) | undefined
+  onOverride?: (() => void) | undefined
+  onAdd?: (() => void) | undefined
   isActionInFlight?: boolean | undefined
+  activeAction?: string | null | undefined
+  isManualFinding?: boolean | undefined
+  isNativeReviewer?: boolean | undefined
+  onConfirmNative?: (() => void) | undefined
+  onOverrideNative?: (() => void) | undefined
   projectId?: string | undefined
   fetchOverrideHistory?:
     | ((input: { findingId: string; projectId: string }) => Promise<{
@@ -45,10 +55,10 @@ type FindingDetailSheetProps = {
 }
 
 /**
- * Finding detail side sheet — used at < 1440px (laptop/tablet/mobile).
- * At >= 1440px, ReviewPageClient renders FindingDetailContent as a static aside instead.
+ * Finding detail side sheet — used at < 1024px (mobile only after S-FIX-4).
+ * At >= 1024px, ReviewPageClient renders FindingDetailContent as a persistent aside.
  *
- * AC4: width = 360px at 1024-1439px (laptop), 300px below 1024px (tablet/mobile).
+ * Width = 300px (tablet/mobile token).
  * SheetContent base has `sm:max-w-sm` (384px) — we override with responsive token.
  */
 export function FindingDetailSheet({
@@ -64,7 +74,16 @@ export function FindingDetailSheet({
   onReject,
   onFlag,
   onDelete,
+  onNote,
+  onSource,
+  onOverride,
+  onAdd,
   isActionInFlight = false,
+  activeAction = null,
+  isManualFinding = false,
+  isNativeReviewer = false,
+  onConfirmNative,
+  onOverrideNative,
   projectId,
   fetchOverrideHistory,
   isNonNative,
@@ -129,7 +148,16 @@ export function FindingDetailSheet({
             onReject={onReject}
             onFlag={onFlag}
             onDelete={onDelete}
+            onNote={onNote}
+            onSource={onSource}
+            onOverride={onOverride}
+            onAdd={onAdd}
             isActionInFlight={isActionInFlight}
+            activeAction={activeAction}
+            isManualFinding={isManualFinding}
+            isNativeReviewer={isNativeReviewer}
+            onConfirmNative={onConfirmNative}
+            onOverrideNative={onOverrideNative}
             projectId={projectId}
             fetchOverrideHistory={fetchOverrideHistory}
             isNonNative={isNonNative}

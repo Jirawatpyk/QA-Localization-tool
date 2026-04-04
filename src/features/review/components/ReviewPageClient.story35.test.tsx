@@ -18,6 +18,12 @@ vi.mock('@/hooks/useMediaQuery', () => ({
   useIsDesktop: vi.fn(() => false),
   useIsLaptop: vi.fn(() => true),
   useIsMobile: vi.fn(() => false),
+  useIsXl: () => true,
+}))
+
+// S-FIX-4: Mock ReviewStatusBar to avoid duplicate score-badge testid
+vi.mock('@/features/review/components/ReviewStatusBar', () => ({
+  ReviewStatusBar: () => null,
 }))
 
 // ── Mocks ──

@@ -2,7 +2,6 @@ import type { ReactNode } from 'react'
 
 import { AppHeader } from '@/components/layout/app-header'
 import { AppSidebar } from '@/components/layout/app-sidebar'
-import { DetailPanel } from '@/components/layout/detail-panel'
 import { MobileBanner } from '@/components/layout/mobile-banner'
 import { AuthListener } from '@/features/admin/components/AuthListener'
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
@@ -38,8 +37,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           </main>
         </div>
 
-        {/* Detail panel: side at 2xl, overlay below */}
-        <DetailPanel />
+        {/* S-FIX-4 AC5: DetailPanel removed — review page uses its own aside/Sheet */}
       </div>
     </div>
   )
