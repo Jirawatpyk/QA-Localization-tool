@@ -59,6 +59,7 @@ describe('ReviewStatusBar', () => {
     render(<ReviewStatusBar {...defaultProps} />)
 
     expect(screen.getByRole('status', { name: /MQM score/i })).toBeInTheDocument()
-    expect(screen.getByRole('status', { name: /review progress/i })).toBeInTheDocument()
+    // Progress section uses aria-label without role="status" to reduce screen reader noise
+    expect(screen.getByLabelText(/review progress/i)).toBeInTheDocument()
   })
 })

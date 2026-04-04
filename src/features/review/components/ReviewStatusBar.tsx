@@ -68,15 +68,17 @@ export function ReviewStatusBar({
       </div>
 
       {/* Section 2: Progress */}
-      <div role="status" aria-label="Review progress" aria-live="polite">
+      <div aria-label="Review progress">
         <span className="font-mono">
           {reviewedCount}/{totalCount}
         </span>
-        <span className="text-muted-foreground ml-1">reviewed ({remaining} remaining)</span>
+        <span className="text-muted-foreground ml-1">
+          reviewed ({Math.max(0, remaining)} remaining)
+        </span>
       </div>
 
       {/* Section 3: AI Status */}
-      <div role="status" aria-label="AI analysis status">
+      <div aria-label="AI analysis status">
         <span className={aiStatus.colorClass}>{aiStatus.text}</span>
       </div>
 

@@ -34,7 +34,7 @@ type FindingDetailSheetProps = {
   onOverride?: (() => void) | undefined
   onAdd?: (() => void) | undefined
   isActionInFlight?: boolean | undefined
-  activeAction?: string | null | undefined
+  activeAction?: import('@/features/review/utils/state-transitions').ReviewAction | null | undefined
   isManualFinding?: boolean | undefined
   isNativeReviewer?: boolean | undefined
   onConfirmNative?: (() => void) | undefined

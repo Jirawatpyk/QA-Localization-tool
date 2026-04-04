@@ -22,6 +22,7 @@ import { SeverityIndicator } from '@/features/review/components/SeverityIndicato
 import { useSegmentContext } from '@/features/review/hooks/use-segment-context'
 import { useFileState } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
+import type { ReviewAction } from '@/features/review/utils/state-transitions'
 import type { FindingStatus } from '@/types/finding'
 
 // Stable noop to avoid re-renders from inline arrow
@@ -45,7 +46,7 @@ type FindingDetailContentProps = {
   onAdd?: (() => void) | undefined
   isActionInFlight?: boolean | undefined
   /** S-FIX-4 AC3: Active action for spinner display */
-  activeAction?: string | null | undefined
+  activeAction?: ReviewAction | null | undefined
   /** S-FIX-4 AC3: Finding number for ARIA labels */
   findingNumber?: number | undefined
   /** S-FIX-4 AC3: Manual finding flag */
@@ -306,11 +307,7 @@ export function FindingDetailContent({
             onAdd={onAdd}
             isDisabled={!finding || isActionInFlight}
             isInFlight={isActionInFlight}
-            activeAction={
-              activeAction as
-                | import('@/features/review/utils/state-transitions').ReviewAction
-                | null
-            }
+            activeAction={activeAction}
             findingNumber={findingNumber}
             isManualFinding={isManualFinding}
             isNativeReviewer={isNativeReviewer}

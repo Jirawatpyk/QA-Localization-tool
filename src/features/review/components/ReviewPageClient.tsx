@@ -1549,53 +1549,55 @@ export function ReviewPageClient({
                 searchQuery={searchQuery}
               />
             </div>
-            {/* Action Bar (Task 5 — below finding list) */}
-            <ReviewActionBar
-              onAccept={() => activeFindingState && handleAccept(activeFindingState)}
-              onReject={() => activeFindingState && handleReject(activeFindingState)}
-              onFlag={() => {
-                if (!activeFindingState) return
-                // CR-C3 fix: open FlagForNativeDialog for QA reviewers instead of simple flag
-                if (!isNativeReviewer) {
-                  setFlagDialogFindingId(activeFindingState)
-                  setFlagDialogOpen(true)
-                } else {
-                  handleFlag(activeFindingState)
+            {/* Action Bar (Task 5 — below finding list, hidden when aside visible to avoid duplication) */}
+            {!isAsideMode && (
+              <ReviewActionBar
+                onAccept={() => activeFindingState && handleAccept(activeFindingState)}
+                onReject={() => activeFindingState && handleReject(activeFindingState)}
+                onFlag={() => {
+                  if (!activeFindingState) return
+                  // CR-C3 fix: open FlagForNativeDialog for QA reviewers instead of simple flag
+                  if (!isNativeReviewer) {
+                    setFlagDialogFindingId(activeFindingState)
+                    setFlagDialogOpen(true)
+                  } else {
+                    handleFlag(activeFindingState)
+                  }
+                }}
+                onNote={() => {
+                  if (!activeFindingState) return
+                  const result = handleNote(activeFindingState)
+                  if (result === 'open-note-input') {
+                    noteTargetIdRef.current = activeFindingState
+                    setIsNoteInputOpen(true)
+                  }
+                }}
+                onSource={() => activeFindingState && handleSourceIssue(activeFindingState)}
+                onOverride={() => {
+                  if (!activeFindingState) return
+                  setIsOverrideMenuOpen(true)
+                }}
+                onAdd={() => setIsAddFindingDialogOpen(true)}
+                isDisabled={!activeFindingState || isActionInFlight || isReadOnly}
+                isInFlight={isActionInFlight}
+                activeAction={activeAction}
+                findingNumber={activeFindingNumber}
+                isManualFinding={
+                  activeFindingState
+                    ? findingsMap.get(activeFindingState)?.detectedByLayer === 'Manual'
+                    : false
                 }
-              }}
-              onNote={() => {
-                if (!activeFindingState) return
-                const result = handleNote(activeFindingState)
-                if (result === 'open-note-input') {
-                  noteTargetIdRef.current = activeFindingState
-                  setIsNoteInputOpen(true)
-                }
-              }}
-              onSource={() => activeFindingState && handleSourceIssue(activeFindingState)}
-              onOverride={() => {
-                if (!activeFindingState) return
-                setIsOverrideMenuOpen(true)
-              }}
-              onAdd={() => setIsAddFindingDialogOpen(true)}
-              isDisabled={!activeFindingState || isActionInFlight || isReadOnly}
-              isInFlight={isActionInFlight}
-              activeAction={activeAction}
-              findingNumber={activeFindingNumber}
-              isManualFinding={
-                activeFindingState
-                  ? findingsMap.get(activeFindingState)?.detectedByLayer === 'Manual'
-                  : false
-              }
-              isNativeReviewer={isNativeReviewer}
-              onConfirmNative={() => {
-                if (activeFindingState) executeNativeConfirm(activeFindingState)
-              }}
-              onOverrideNative={() => {
-                if (!activeFindingState) return
-                // CR-R2 P0-2: open status picker instead of hardcoded 'accepted'
-                setNativeOverridePickerOpen(true)
-              }}
-            />
+                isNativeReviewer={isNativeReviewer}
+                onConfirmNative={() => {
+                  if (activeFindingState) executeNativeConfirm(activeFindingState)
+                }}
+                onOverrideNative={() => {
+                  if (!activeFindingState) return
+                  // CR-R2 P0-2: open status picker instead of hardcoded 'accepted'
+                  setNativeOverridePickerOpen(true)
+                }}
+              />
+            )}
 
             {/* Story 4.4a: Bulk selection aria-live announcer (persistent in DOM per Guardrail #33) */}
             <div aria-live="polite" className="sr-only" data-testid="bulk-selection-announcer">
