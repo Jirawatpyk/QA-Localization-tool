@@ -20,6 +20,32 @@ function isValidLayerCompleted(value: string): value is LayerCompleted {
   return LAYER_COMPLETED_VALUES.has(value)
 }
 
+/** Shared helper: fetch score from DB and update review store. Returns true if store was updated. */
+async function fetchAndUpdateScore(
+  supabase: ReturnType<typeof createBrowserClient>,
+  fileId: string,
+  tenantId: string,
+): Promise<boolean> {
+  const { data } = await supabase
+    .from('scores')
+    .select('mqm_score, status, layer_completed, auto_pass_rationale')
+    .eq('file_id', fileId)
+    .eq('tenant_id', tenantId)
+    .single()
+  if (!data || !isValidScoreStatus(data.status)) return false
+  if (useReviewStore.getState().currentFileId !== fileId) return false
+  const layerCompleted =
+    typeof data.layer_completed === 'string' && isValidLayerCompleted(data.layer_completed)
+      ? data.layer_completed
+      : null
+  const autoPassRationale =
+    typeof data.auto_pass_rationale === 'string' ? data.auto_pass_rationale : null
+  useReviewStore
+    .getState()
+    .updateScore(data.mqm_score, data.status, layerCompleted, autoPassRationale)
+  return true
+}
+
 /**
  * Subscribe to scores table changes for a specific file via Supabase Realtime.
  * Falls back to polling with exponential backoff on channel error.
@@ -47,31 +73,10 @@ export function useScoreSubscription(fileId: string, tenantId: string) {
     const poll = async () => {
       if (!isPollingRef.current) return
 
-      // Fetch current score from DB (RLS-protected)
       const supabase = supabaseRef.current
       if (supabase) {
         try {
-          // CR-H2: tenantId is required (S4 fix) — always filter by tenant_id
-          const { data } = await supabase
-            .from('scores')
-            .select('mqm_score, status, layer_completed, auto_pass_rationale')
-            .eq('file_id', fileId)
-            .eq('tenant_id', tenantId)
-            .single()
-          if (data && isValidScoreStatus(data.status)) {
-            // CR-H1: skip write if fileId no longer active (prevents cross-file corruption during transition)
-            if (useReviewStore.getState().currentFileId !== fileId) return
-            const layerCompleted =
-              typeof data.layer_completed === 'string' &&
-              isValidLayerCompleted(data.layer_completed)
-                ? data.layer_completed
-                : null
-            const autoPassRationale =
-              typeof data.auto_pass_rationale === 'string' ? data.auto_pass_rationale : null
-            useReviewStore
-              .getState()
-              .updateScore(data.mqm_score, data.status, layerCompleted, autoPassRationale)
-          }
+          await fetchAndUpdateScore(supabase, fileId, tenantId)
         } catch {
           // Polling errors are non-fatal — next poll will retry
         }
@@ -98,24 +103,7 @@ export function useScoreSubscription(fileId: string, tenantId: string) {
     const supabase = supabaseRef.current
     if (!supabase) return
     try {
-      const { data } = await supabase
-        .from('scores')
-        .select('mqm_score, status, layer_completed, auto_pass_rationale')
-        .eq('file_id', fileId)
-        .eq('tenant_id', tenantId)
-        .single()
-      if (data && isValidScoreStatus(data.status)) {
-        if (useReviewStore.getState().currentFileId !== fileId) return
-        const layerCompleted =
-          typeof data.layer_completed === 'string' && isValidLayerCompleted(data.layer_completed)
-            ? data.layer_completed
-            : null
-        const autoPassRationale =
-          typeof data.auto_pass_rationale === 'string' ? data.auto_pass_rationale : null
-        useReviewStore
-          .getState()
-          .updateScore(data.mqm_score, data.status, layerCompleted, autoPassRationale)
-      }
+      await fetchAndUpdateScore(supabase, fileId, tenantId)
     } catch {
       // Non-fatal — Realtime will catch subsequent updates
     }

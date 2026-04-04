@@ -157,7 +157,7 @@ const handlerFn = async ({ event, step }: { event: RetryEvent; step: StepApi }) 
           tenantId,
           layerCompleted: 'L1L2' as const,
           mqmScore: l2ScoreResult?.mqmScore ?? 0,
-          scoreStatus: l2ScoreResult?.status ?? 'calculated',
+          scoreStatus: l2ScoreResult?.status ?? 'na',
         },
       })
 
@@ -190,7 +190,7 @@ const handlerFn = async ({ event, step }: { event: RetryEvent; step: StepApi }) 
           tenantId,
           layerCompleted: 'L1L2L3' as const,
           mqmScore: l3ScoreResult?.mqmScore ?? 0,
-          scoreStatus: l3ScoreResult?.status ?? 'calculated',
+          scoreStatus: l3ScoreResult?.status ?? 'na',
         },
       })
 

@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-02-15
-last_updated: 2026-04-04  # s-fix-5 story created
+last_updated: 2026-04-04  # s-fix-5 CR done
 project: qa-localization-tool
 project_key: NOKEY
 tracking_system: file-system
@@ -220,7 +220,7 @@ development_status:
   # Root cause: src/features/pipeline/inngest/processFile.ts — no finding.changed event after L2/L3
   # Fix: Emit finding.changed after final layer → trigger recalculateScore
   # Ref: DEEP-VERIFICATION-CHECKLIST.md > Score, PROJECT-TOUR-REPORT.md > BUG-7
-  s-fix-5-score-recalculation: review
+  s-fix-5-score-recalculation: done
 
   # S-FIX-6: Onboarding Persistence [M]
   # Findings: UX-NEW-02 (P1), MULTI-02 (P1)

@@ -1801,9 +1801,9 @@ describe('processFilePipeline', () => {
     )
     expect(scoreEvents.length).toBeGreaterThanOrEqual(1)
 
-    // Fallback: mqmScore = 0, scoreStatus = 'calculated'
+    // Fallback: mqmScore = 0, scoreStatus = 'na' (null result = not available, not "calculated")
     const data = (scoreEvents[0]?.[1] as Record<string, unknown>)?.data as Record<string, unknown>
     expect(data?.mqmScore).toBe(0)
-    expect(data?.scoreStatus).toBe('calculated')
+    expect(data?.scoreStatus).toBe('na')
   })
 })

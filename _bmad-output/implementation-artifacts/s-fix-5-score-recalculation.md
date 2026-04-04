@@ -1,6 +1,6 @@
 # Story S-FIX-5: Score Recalculation
 
-Status: review
+Status: done
 
 ## Story
 
@@ -278,18 +278,32 @@ Claude Opus 4.6 (1M context)
 - Task 6: type-check GREEN, lint GREEN, 76/76 pipeline tests passed
 - Bonus fix: 3 `mockRejectedValue` → `mockRejectedValueOnce` fixes in retryFailedLayers.test.ts (pre-existing mock pollution bug)
 - **ACTUAL BUG FIX:** Added `fetchCurrentScore()` on Realtime SUBSCRIBED in `useScoreSubscription` — closes race window where score written between RSC fetch and subscription becoming active would be missed, leaving UI at 0.0
+- **CR R2 fix D1:** Null scoreFile fallback `?? 'calculated'` → `?? 'na'` — accurate semantics when score unavailable (5 locations across processFile + retryFailedLayers)
+- **CR R2 fix D2:** Extracted `fetchAndUpdateScore()` shared helper in `use-score-subscription.ts` — DRY dedup for Supabase query + store update logic
 
 ### Change Log
 
 - 2026-04-04: S-FIX-5 implementation — score.updated event emission for pipeline scoring observability
+- 2026-04-04: CR R2 — null fallback `'na'`, DRY `fetchAndUpdateScore` helper
 
 ### File List
 
 - `src/types/pipeline.ts` — Added `ScoreUpdatedEventData` type + `scoreUpdatedEventSchema` Zod schema
 - `src/lib/inngest/client.ts` — Registered `score.updated` in Events type map
-- `src/features/pipeline/inngest/processFile.ts` — Emit `score.updated` after each scoreFile() (4 locations)
-- `src/features/pipeline/inngest/retryFailedLayers.ts` — Emit `score.updated` after each retry scoreFile() (3 locations)
-- `src/features/pipeline/inngest/processFile.test.ts` — 7 new S-FIX-5 tests + 4 existing test assertion updates
+- `src/features/pipeline/inngest/processFile.ts` — Emit `score.updated` after each scoreFile() (4 locations) + CR R2: null fallback `'na'` (3 locations)
+- `src/features/pipeline/inngest/retryFailedLayers.ts` — Emit `score.updated` after each retry scoreFile() (3 locations) + CR R2: null fallback `'na'` (2 locations)
+- `src/features/pipeline/inngest/processFile.test.ts` — 7 new S-FIX-5 tests + 4 existing test assertion updates + CR R2: null fallback test `'na'`
 - `src/features/pipeline/inngest/retryFailedLayers.test.ts` — 5 new S-FIX-5 tests + 3 mockRejectedValue→Once fixes
-- `src/features/review/hooks/use-score-subscription.ts` — Added fetchCurrentScore() on SUBSCRIBED to close race window (actual 0.0 bug fix)
+- `src/features/review/hooks/use-score-subscription.ts` — Added fetchCurrentScore() on SUBSCRIBED + CR R2: extracted `fetchAndUpdateScore()` shared helper
 - `src/features/review/hooks/use-score-subscription.test.ts` — Updated recovery test for initial fetch on SUBSCRIBED
+
+### Review Findings (CR R1 — 2026-04-04)
+
+- [x] [Review][Defer] D1: Null scoreFile fallback `?.mqmScore ?? 0` emits misleading observability data when scoreFile returns null — deferred, observability-only events (UI gets score from Realtime on DB table, not from Inngest events)
+- [x] [Review][Defer] D2: DRY duplication between `fetchCurrentScore` and `poll` function in `use-score-subscription.ts` — deferred, cosmetic (identical Supabase query + store update logic, no correctness impact)
+
+**Summary:** 0 decision-needed, 0 patch, 2 defer, 15 dismissed. All 5 ACs pass. Anti-patterns clean.
+
+### Review Findings (CR R2 — 2026-04-04)
+
+Fixes for D1 (null fallback `'na'`) and D2 (DRY `fetchAndUpdateScore`). Full 3-layer review: 0 patch, 0 defer, 7 dismissed.

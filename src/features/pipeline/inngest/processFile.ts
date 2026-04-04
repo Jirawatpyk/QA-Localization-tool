@@ -61,7 +61,7 @@ const handlerFn = async ({
       tenantId,
       layerCompleted: 'L1' as const,
       mqmScore: l1ScoreResult?.mqmScore ?? 0,
-      scoreStatus: l1ScoreResult?.status ?? 'calculated',
+      scoreStatus: l1ScoreResult?.status ?? 'na',
     },
   })
 
@@ -97,7 +97,7 @@ const handlerFn = async ({
         tenantId,
         layerCompleted: 'L1L2' as const,
         mqmScore: finalScoreResult?.mqmScore ?? 0,
-        scoreStatus: finalScoreResult?.status ?? 'calculated',
+        scoreStatus: finalScoreResult?.status ?? 'na',
       },
     })
 
@@ -130,7 +130,7 @@ const handlerFn = async ({
             tenantId,
             layerCompleted: 'L1L2L3' as const,
             mqmScore: finalScoreResult?.mqmScore ?? 0,
-            scoreStatus: finalScoreResult?.status ?? 'calculated',
+            scoreStatus: finalScoreResult?.status ?? 'na',
           },
         })
       }
