@@ -177,9 +177,11 @@ describe('useScoreSubscription', () => {
       subscribeCallback('SUBSCRIBED')
     })
 
-    // After recovery, no more polls should fire
+    // S-FIX-5: fetchCurrentScore fires one fetch on SUBSCRIBED (race window closure)
+    // After that, no more periodic polls should fire
     await vi.advanceTimersByTimeAsync(60000)
-    expect(mockFrom.mock.calls.length).toBe(callsBeforeRecovery)
+    // +1 for the initial fetchCurrentScore on SUBSCRIBED recovery
+    expect(mockFrom.mock.calls.length).toBe(callsBeforeRecovery + 1)
   })
 
   it('should unsubscribe from old channel when fileId changes', () => {

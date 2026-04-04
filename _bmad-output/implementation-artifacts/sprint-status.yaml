@@ -220,7 +220,7 @@ development_status:
   # Root cause: src/features/pipeline/inngest/processFile.ts — no finding.changed event after L2/L3
   # Fix: Emit finding.changed after final layer → trigger recalculateScore
   # Ref: DEEP-VERIFICATION-CHECKLIST.md > Score, PROJECT-TOUR-REPORT.md > BUG-7
-  s-fix-5-score-recalculation: ready-for-dev
+  s-fix-5-score-recalculation: review
 
   # S-FIX-6: Onboarding Persistence [M]
   # Findings: UX-NEW-02 (P1), MULTI-02 (P1)

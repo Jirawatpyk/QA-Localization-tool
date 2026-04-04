@@ -48,9 +48,22 @@ const handlerFn = async ({
   )
 
   // Step 2: Calculate interim L1 score — visible immediately per FR15
-  await step.run(`score-l1-${fileId}`, () =>
+  const l1ScoreResult = await step.run(`score-l1-${fileId}`, () =>
     scoreFile({ fileId, projectId, tenantId, userId, layerFilter: 'L1' }),
   )
+
+  // S-FIX-5: Emit score.updated for pipeline observability (parity with review's finding.changed)
+  await step.sendEvent(`score-updated-l1-${fileId}`, {
+    name: 'score.updated' as const,
+    data: {
+      fileId,
+      projectId,
+      tenantId,
+      layerCompleted: 'L1' as const,
+      mqmScore: l1ScoreResult?.mqmScore ?? 0,
+      scoreStatus: l1ScoreResult?.status ?? 'calculated',
+    },
+  })
 
   // Step 3: Run L2 AI screening — wrapped in try-catch for partial results (AC5)
   let l2Result: Awaited<ReturnType<typeof runL2ForFile>> | null = null
@@ -75,6 +88,19 @@ const handlerFn = async ({
     )
     layerCompleted = 'L1L2'
 
+    // S-FIX-5: Emit score.updated after L1L2 scoring
+    await step.sendEvent(`score-updated-l1l2-${fileId}`, {
+      name: 'score.updated' as const,
+      data: {
+        fileId,
+        projectId,
+        tenantId,
+        layerCompleted: 'L1L2' as const,
+        mqmScore: finalScoreResult?.mqmScore ?? 0,
+        scoreStatus: finalScoreResult?.status ?? 'calculated',
+      },
+    })
+
     // Steps 5-6: Thorough mode — run L3 deep analysis + final score
     if (mode === 'thorough') {
       try {
@@ -94,6 +120,19 @@ const handlerFn = async ({
           scoreFile({ fileId, projectId, tenantId, userId, layerCompleted: 'L1L2L3' }),
         )
         layerCompleted = 'L1L2L3'
+
+        // S-FIX-5: Emit score.updated after L1L2L3 scoring
+        await step.sendEvent(`score-updated-l1l2l3-${fileId}`, {
+          name: 'score.updated' as const,
+          data: {
+            fileId,
+            projectId,
+            tenantId,
+            layerCompleted: 'L1L2L3' as const,
+            mqmScore: finalScoreResult?.mqmScore ?? 0,
+            scoreStatus: finalScoreResult?.status ?? 'calculated',
+          },
+        })
       }
     }
   }
@@ -119,6 +158,19 @@ const handlerFn = async ({
         layerCompleted,
       }),
     )
+
+    // S-FIX-5: Emit score.updated after partial scoring
+    await step.sendEvent(`score-updated-partial-${fileId}`, {
+      name: 'score.updated' as const,
+      data: {
+        fileId,
+        projectId,
+        tenantId,
+        layerCompleted,
+        mqmScore: finalScoreResult?.mqmScore ?? 0,
+        scoreStatus: finalScoreResult?.status ?? 'partial',
+      },
+    })
   }
 
   // Step 7: Check if batch is complete — mode-aware terminal status

@@ -126,6 +126,22 @@ export type RetryFailedLayersEventData = {
   l2FailedChunkSegmentIds?: string[]
 }
 
+/** Score update event — emitted by pipeline after scoreFile() completes. Provides observability parity with review's finding.changed. */
+export type ScoreUpdatedEventData = {
+  fileId: string
+  projectId: string
+  tenantId: TenantId
+  layerCompleted: 'L1' | 'L1L2' | 'L1L2L3'
+  mqmScore: number
+  scoreStatus: 'calculated' | 'na' | 'auto_passed' | 'partial'
+}
+
+export const scoreUpdatedEventSchema = z
+  .object({
+    tenantId: z.string().uuid(),
+  })
+  .passthrough()
+
 export type PipelineStatus = 'queued' | 'processing' | 'completed' | 'failed'
 
 export type PipelineRun = {

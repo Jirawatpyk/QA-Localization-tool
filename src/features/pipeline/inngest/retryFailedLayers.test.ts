@@ -297,7 +297,7 @@ describe('retryFailedLayers Inngest function (Story 3.4)', () => {
       } as L2Result)
 
       // L3 retry fails again
-      mockRunL3ForFile.mockRejectedValue(new Error('L3 still failing'))
+      mockRunL3ForFile.mockRejectedValueOnce(new Error('L3 still failing'))
 
       const step = createMockStep()
       const event = buildRetryEvent({ layersToRetry: ['L2', 'L3'], mode: 'thorough' })
@@ -367,7 +367,7 @@ describe('retryFailedLayers Inngest function (Story 3.4)', () => {
     it('[P1] should keep ai_partial status when retry also fails', async () => {
       const { retryFailedLayers } = await import('./retryFailedLayers')
 
-      mockRunL2ForFile.mockRejectedValue(new Error('L2 retry also failed'))
+      mockRunL2ForFile.mockRejectedValueOnce(new Error('L2 retry also failed'))
 
       const step = createMockStep()
       const event = buildRetryEvent({ layersToRetry: ['L2'] })
@@ -554,7 +554,7 @@ describe('retryFailedLayers Inngest function (Story 3.4)', () => {
       })
 
       // Only L3 retry requested (L2 was already done successfully)
-      mockRunL3ForFile.mockRejectedValue(new Error('L3 retry also failed'))
+      mockRunL3ForFile.mockRejectedValueOnce(new Error('L3 retry also failed'))
 
       const step = createMockStep()
       const event = buildRetryEvent({ layersToRetry: ['L3'] as PipelineLayer[], mode: 'thorough' })
@@ -655,6 +655,163 @@ describe('retryFailedLayers Inngest function (Story 3.4)', () => {
           step: createMockStep(),
         }),
       ).resolves.not.toThrow()
+    })
+  })
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // S-FIX-5: score.updated event emission tests
+  // ══════════════════════════════════════════════════════════════════════════
+
+  describe('score.updated event emission (S-FIX-5)', () => {
+    it('should emit score.updated after L2 retry scoring', async () => {
+      const { retryFailedLayers } = await import('./retryFailedLayers')
+      const step = createMockStep()
+      const event = buildRetryEvent({ layersToRetry: ['L2'] })
+
+      await (retryFailedLayers as { handler: (...args: unknown[]) => Promise<unknown> }).handler({
+        event,
+        step,
+      })
+
+      const scoreEvents = step.sendEvent.mock.calls.filter(
+        (c: unknown[]) => (c[1] as Record<string, unknown>)?.name === 'score.updated',
+      )
+      expect(scoreEvents).toHaveLength(1)
+      expect(scoreEvents[0]?.[0]).toBe(`score-updated-retry-l2-${VALID_FILE_ID}`)
+      expect(scoreEvents[0]?.[1]).toMatchObject({
+        name: 'score.updated',
+        data: {
+          fileId: VALID_FILE_ID,
+          projectId: VALID_PROJECT_ID,
+          tenantId: VALID_TENANT_ID,
+          layerCompleted: 'L1L2',
+          mqmScore: expect.any(Number),
+          scoreStatus: expect.any(String),
+        },
+      })
+    })
+
+    it('should emit score.updated after L3 retry scoring', async () => {
+      // Project validation + file status reset
+      dbState.returnValues = [[{ id: VALID_PROJECT_ID }], []]
+      const { retryFailedLayers } = await import('./retryFailedLayers')
+      const step = createMockStep()
+      const event = buildRetryEvent({ layersToRetry: ['L3'] })
+
+      await (retryFailedLayers as { handler: (...args: unknown[]) => Promise<unknown> }).handler({
+        event,
+        step,
+      })
+
+      const scoreEvents = step.sendEvent.mock.calls.filter(
+        (c: unknown[]) => (c[1] as Record<string, unknown>)?.name === 'score.updated',
+      )
+      expect(scoreEvents).toHaveLength(1)
+      expect(scoreEvents[0]?.[0]).toBe(`score-updated-retry-l3-${VALID_FILE_ID}`)
+      expect(scoreEvents[0]?.[1]).toMatchObject({
+        name: 'score.updated',
+        data: {
+          fileId: VALID_FILE_ID,
+          projectId: VALID_PROJECT_ID,
+          tenantId: VALID_TENANT_ID,
+          layerCompleted: 'L1L2L3',
+        },
+      })
+    })
+
+    it('should emit 2 score.updated events when retrying both L2 and L3', async () => {
+      // Project validation + L2 file status reset + L3 file status reset
+      dbState.returnValues = [[{ id: VALID_PROJECT_ID }], [], []]
+      const { retryFailedLayers } = await import('./retryFailedLayers')
+      const step = createMockStep()
+      const event = buildRetryEvent({ layersToRetry: ['L2', 'L3'], mode: 'thorough' })
+
+      await (retryFailedLayers as { handler: (...args: unknown[]) => Promise<unknown> }).handler({
+        event,
+        step,
+      })
+
+      const scoreEvents = step.sendEvent.mock.calls.filter(
+        (c: unknown[]) => (c[1] as Record<string, unknown>)?.name === 'score.updated',
+      )
+      expect(scoreEvents).toHaveLength(2)
+
+      const layers = scoreEvents.map(
+        (c: unknown[]) =>
+          ((c[1] as Record<string, unknown>)?.data as Record<string, unknown>)?.layerCompleted,
+      )
+      expect(layers).toEqual(['L1L2', 'L1L2L3'])
+    })
+
+    it('should emit score.updated with partial status when retry fails', async () => {
+      // Project validation + file status reset (L2 fail) + partial status set
+      dbState.returnValues = [[{ id: VALID_PROJECT_ID }], [], []]
+      mockRunL2ForFile.mockRejectedValueOnce(new Error('L2 retry failed'))
+      mockScoreFile.mockResolvedValueOnce({
+        scoreId: faker.string.uuid(),
+        fileId: VALID_FILE_ID,
+        mqmScore: 85,
+        npt: 15,
+        totalWords: 1000,
+        criticalCount: 0,
+        majorCount: 3,
+        minorCount: 0,
+        status: 'partial' as const,
+        autoPassRationale: null,
+      })
+
+      const { retryFailedLayers } = await import('./retryFailedLayers')
+      const step = createMockStep()
+      const event = buildRetryEvent({ layersToRetry: ['L2'] })
+
+      await (retryFailedLayers as { handler: (...args: unknown[]) => Promise<unknown> }).handler({
+        event,
+        step,
+      })
+
+      const scoreEvents = step.sendEvent.mock.calls.filter(
+        (c: unknown[]) => (c[1] as Record<string, unknown>)?.name === 'score.updated',
+      )
+      // Partial score event should be emitted
+      expect(scoreEvents).toHaveLength(1)
+      expect(scoreEvents[0]?.[0]).toBe(`score-updated-partial-retry-${VALID_FILE_ID}`)
+      expect(
+        ((scoreEvents[0]?.[1] as Record<string, unknown>)?.data as Record<string, unknown>)
+          ?.scoreStatus,
+      ).toBe('partial')
+    })
+
+    it('should include mqmScore from scoreFile result in score.updated event', async () => {
+      // Project validation + file status reset
+      dbState.returnValues = [[{ id: VALID_PROJECT_ID }], []]
+      mockScoreFile.mockResolvedValue({
+        scoreId: faker.string.uuid(),
+        fileId: VALID_FILE_ID,
+        mqmScore: 95.5,
+        npt: 4.5,
+        totalWords: 1000,
+        criticalCount: 0,
+        majorCount: 0,
+        minorCount: 2,
+        status: 'auto_passed',
+        autoPassRationale: 'Score above threshold',
+      })
+
+      const { retryFailedLayers } = await import('./retryFailedLayers')
+      const step = createMockStep()
+      const event = buildRetryEvent({ layersToRetry: ['L2'] })
+
+      await (retryFailedLayers as { handler: (...args: unknown[]) => Promise<unknown> }).handler({
+        event,
+        step,
+      })
+
+      const scoreEvents = step.sendEvent.mock.calls.filter(
+        (c: unknown[]) => (c[1] as Record<string, unknown>)?.name === 'score.updated',
+      )
+      const data = (scoreEvents[0]?.[1] as Record<string, unknown>)?.data as Record<string, unknown>
+      expect(data?.mqmScore).toBe(95.5)
+      expect(data?.scoreStatus).toBe('auto_passed')
     })
   })
 })

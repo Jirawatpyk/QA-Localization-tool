@@ -144,9 +144,22 @@ const handlerFn = async ({ event, step }: { event: RetryEvent; step: StepApi }) 
       l2FailedChunkSegmentIds = l2Result.failedChunkSegmentIds
 
       // Score after L2
-      await step.run(`score-retry-l2-${fileId}`, () =>
+      const l2ScoreResult = await step.run(`score-retry-l2-${fileId}`, () =>
         scoreFile({ fileId, projectId, tenantId, userId, layerCompleted: 'L1L2' }),
       )
+
+      // S-FIX-5: Emit score.updated after retry L2 scoring
+      await step.sendEvent(`score-updated-retry-l2-${fileId}`, {
+        name: 'score.updated' as const,
+        data: {
+          fileId,
+          projectId,
+          tenantId,
+          layerCompleted: 'L1L2' as const,
+          mqmScore: l2ScoreResult?.mqmScore ?? 0,
+          scoreStatus: l2ScoreResult?.status ?? 'calculated',
+        },
+      })
 
       lastCompletedLayer = 'L1L2'
     }
@@ -164,9 +177,22 @@ const handlerFn = async ({ event, step }: { event: RetryEvent; step: StepApi }) 
       })
 
       // Score after L3
-      await step.run(`score-retry-l3-${fileId}`, () =>
+      const l3ScoreResult = await step.run(`score-retry-l3-${fileId}`, () =>
         scoreFile({ fileId, projectId, tenantId, userId, layerCompleted: 'L1L2L3' }),
       )
+
+      // S-FIX-5: Emit score.updated after retry L3 scoring
+      await step.sendEvent(`score-updated-retry-l3-${fileId}`, {
+        name: 'score.updated' as const,
+        data: {
+          fileId,
+          projectId,
+          tenantId,
+          layerCompleted: 'L1L2L3' as const,
+          mqmScore: l3ScoreResult?.mqmScore ?? 0,
+          scoreStatus: l3ScoreResult?.status ?? 'calculated',
+        },
+      })
 
       lastCompletedLayer = 'L1L2L3'
     }
@@ -184,7 +210,7 @@ const handlerFn = async ({ event, step }: { event: RetryEvent; step: StepApi }) 
         .where(and(withTenant(files.tenantId, tenantId), eq(files.id, fileId)))
     })
 
-    await step.run(`score-partial-retry-${fileId}`, () =>
+    const partialScoreResult = await step.run(`score-partial-retry-${fileId}`, () =>
       scoreFile({
         fileId,
         projectId,
@@ -194,6 +220,19 @@ const handlerFn = async ({ event, step }: { event: RetryEvent; step: StepApi }) 
         layerCompleted: lastCompletedLayer,
       }),
     )
+
+    // S-FIX-5: Emit score.updated after partial retry scoring
+    await step.sendEvent(`score-updated-partial-retry-${fileId}`, {
+      name: 'score.updated' as const,
+      data: {
+        fileId,
+        projectId,
+        tenantId,
+        layerCompleted: lastCompletedLayer,
+        mqmScore: partialScoreResult?.mqmScore ?? 0,
+        scoreStatus: partialScoreResult?.status ?? 'partial',
+      },
+    })
 
     return {
       fileId,

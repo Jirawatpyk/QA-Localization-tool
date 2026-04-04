@@ -862,11 +862,15 @@ describe('processFilePipeline', () => {
 
     // Guardrail #10: sendEvent uses batch form — first arg is string step ID
     expect(mockStep.sendEvent).toHaveBeenCalled()
-    const sendEventArgs = mockStep.sendEvent.mock.calls[0]
-    expect(typeof sendEventArgs?.[0]).toBe('string')
+    // S-FIX-5: find the batch-completed event specifically (score.updated events now precede it)
+    const batchCall = mockStep.sendEvent.mock.calls.find(
+      (c: unknown[]) => (c[1] as Record<string, unknown>)?.name === 'pipeline.batch-completed',
+    )
+    expect(batchCall).toBeDefined()
+    expect(typeof batchCall?.[0]).toBe('string')
 
     // Second arg is the event object with name + data
-    const eventPayload = sendEventArgs?.[1] as Record<string, unknown>
+    const eventPayload = batchCall?.[1] as Record<string, unknown>
     expect(eventPayload).toMatchObject({
       name: 'pipeline.batch-completed',
       data: expect.objectContaining({
@@ -899,8 +903,16 @@ describe('processFilePipeline', () => {
       step: mockStep,
     })
 
-    // sendEvent should NOT be called when uploadBatchId is empty
-    expect(mockStep.sendEvent).not.toHaveBeenCalled()
+    // S-FIX-5: score.updated events ARE sent, but batch-completed must NOT fire
+    const batchEvents = mockStep.sendEvent.mock.calls.filter(
+      (c: unknown[]) => (c[1] as Record<string, unknown>)?.name === 'pipeline.batch-completed',
+    )
+    expect(batchEvents).toHaveLength(0)
+    // score.updated events should still be emitted (2 for economy: L1 + L1L2)
+    const scoreEvents = mockStep.sendEvent.mock.calls.filter(
+      (c: unknown[]) => (c[1] as Record<string, unknown>)?.name === 'score.updated',
+    )
+    expect(scoreEvents).toHaveLength(2)
   })
 
   // ── P1: L2 partial failure → proceeds (#16) ──
@@ -1246,8 +1258,12 @@ describe('processFilePipeline', () => {
       step: mockStep,
     })
 
-    // l2_completed is NOT terminal for thorough mode — batch must NOT fire
-    expect(mockStep.sendEvent).not.toHaveBeenCalled()
+    // l2_completed is NOT terminal for thorough mode — batch-completed must NOT fire
+    // S-FIX-5: score.updated events ARE emitted (3 for thorough: L1 + L1L2 + L1L2L3)
+    const batchEvents = mockStep.sendEvent.mock.calls.filter(
+      (c: unknown[]) => (c[1] as Record<string, unknown>)?.name === 'pipeline.batch-completed',
+    )
+    expect(batchEvents).toHaveLength(0)
   })
 
   // ── Boundary: thorough + batch combined = 7 steps ──
@@ -1277,9 +1293,10 @@ describe('processFilePipeline', () => {
       step: mockStep,
     })
 
-    // 6 step.run calls + 1 step.sendEvent (batch complete)
+    // 6 step.run calls + check-batch = 7 step.run calls
     expect(mockStep.run).toHaveBeenCalledTimes(7)
-    expect(mockStep.sendEvent).toHaveBeenCalledTimes(1)
+    // S-FIX-5: 3 score.updated events (L1 + L1L2 + L1L2L3) + 1 batch-completed = 4
+    expect(mockStep.sendEvent).toHaveBeenCalledTimes(4)
 
     // Verify all 7 step IDs in order
     const stepIds = mockStep.run.mock.calls.map((c: unknown[]) => c[0])
@@ -1473,7 +1490,11 @@ describe('processFilePipeline', () => {
     })
 
     // batch-completed must NOT fire for empty batch
-    expect(mockStep.sendEvent).not.toHaveBeenCalled()
+    // S-FIX-5: score.updated events ARE sent (2 for economy: L1 + L1L2)
+    const batchEvents = mockStep.sendEvent.mock.calls.filter(
+      (c: unknown[]) => (c[1] as Record<string, unknown>)?.name === 'pipeline.batch-completed',
+    )
+    expect(batchEvents).toHaveLength(0)
   })
 
   // Gap #5 [P2]: Thorough + L2 partial failure → L3 still runs
@@ -1508,5 +1529,281 @@ describe('processFilePipeline', () => {
     expect(mockRunL3ForFile).toHaveBeenCalled()
     // 6 steps: L1 + score-l1 + L2 + score-l1l2 + L3 + score-all
     expect(mockStep.run).toHaveBeenCalledTimes(6)
+  })
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // S-FIX-5: score.updated event emission tests
+  // ══════════════════════════════════════════════════════════════════════════
+
+  it('[S-FIX-5] should emit score.updated after L1 scoring in economy mode', async () => {
+    const mockStep = createMockStep()
+    const eventData = buildPipelineEvent({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      mode: 'economy',
+    })
+
+    const { processFilePipeline } = await import('./processFile')
+    await (processFilePipeline as { handler: (...args: unknown[]) => unknown }).handler({
+      event: { data: eventData },
+      step: mockStep,
+    })
+
+    // First sendEvent call should be score.updated with L1
+    const scoreEvents = mockStep.sendEvent.mock.calls.filter(
+      (c: unknown[]) => (c[1] as Record<string, unknown>)?.name === 'score.updated',
+    )
+    expect(scoreEvents.length).toBeGreaterThanOrEqual(1)
+
+    const l1Event = scoreEvents[0]
+    expect(l1Event?.[0]).toBe(`score-updated-l1-${VALID_FILE_ID}`)
+    expect(l1Event?.[1]).toMatchObject({
+      name: 'score.updated',
+      data: {
+        fileId: VALID_FILE_ID,
+        projectId: VALID_PROJECT_ID,
+        tenantId: VALID_TENANT_ID,
+        layerCompleted: 'L1',
+        mqmScore: expect.any(Number),
+        scoreStatus: expect.any(String),
+      },
+    })
+  })
+
+  it('[S-FIX-5] should emit 2 score.updated events in economy mode (L1 + L1L2)', async () => {
+    const mockStep = createMockStep()
+    const eventData = buildPipelineEvent({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      mode: 'economy',
+    })
+
+    const { processFilePipeline } = await import('./processFile')
+    await (processFilePipeline as { handler: (...args: unknown[]) => unknown }).handler({
+      event: { data: eventData },
+      step: mockStep,
+    })
+
+    const scoreEvents = mockStep.sendEvent.mock.calls.filter(
+      (c: unknown[]) => (c[1] as Record<string, unknown>)?.name === 'score.updated',
+    )
+    expect(scoreEvents).toHaveLength(2)
+
+    // Verify layer progression
+    const layers = scoreEvents.map(
+      (c: unknown[]) =>
+        ((c[1] as Record<string, unknown>)?.data as Record<string, unknown>)?.layerCompleted,
+    )
+    expect(layers).toEqual(['L1', 'L1L2'])
+  })
+
+  it('[S-FIX-5] should emit 3 score.updated events in thorough mode (L1 + L1L2 + L1L2L3)', async () => {
+    const mockStep = createMockStep()
+    const eventData = buildPipelineEvent({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      mode: 'thorough',
+    })
+
+    const { processFilePipeline } = await import('./processFile')
+    await (processFilePipeline as { handler: (...args: unknown[]) => unknown }).handler({
+      event: { data: eventData },
+      step: mockStep,
+    })
+
+    const scoreEvents = mockStep.sendEvent.mock.calls.filter(
+      (c: unknown[]) => (c[1] as Record<string, unknown>)?.name === 'score.updated',
+    )
+    expect(scoreEvents).toHaveLength(3)
+
+    const layers = scoreEvents.map(
+      (c: unknown[]) =>
+        ((c[1] as Record<string, unknown>)?.data as Record<string, unknown>)?.layerCompleted,
+    )
+    expect(layers).toEqual(['L1', 'L1L2', 'L1L2L3'])
+  })
+
+  it('[S-FIX-5] should emit score.updated with mqmScore from scoreFile result', async () => {
+    mockScoreFile
+      .mockResolvedValueOnce({
+        scoreId: faker.string.uuid(),
+        fileId: VALID_FILE_ID,
+        mqmScore: 70,
+        npt: 30,
+        totalWords: 1000,
+        criticalCount: 0,
+        majorCount: 5,
+        minorCount: 0,
+        status: 'calculated',
+        autoPassRationale: null,
+      })
+      .mockResolvedValueOnce({
+        scoreId: faker.string.uuid(),
+        fileId: VALID_FILE_ID,
+        mqmScore: 92,
+        npt: 8,
+        totalWords: 1000,
+        criticalCount: 0,
+        majorCount: 1,
+        minorCount: 0,
+        status: 'auto_passed',
+        autoPassRationale: 'Score above threshold',
+      })
+
+    const mockStep = createMockStep()
+    const eventData = buildPipelineEvent({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      mode: 'economy',
+    })
+
+    const { processFilePipeline } = await import('./processFile')
+    await (processFilePipeline as { handler: (...args: unknown[]) => unknown }).handler({
+      event: { data: eventData },
+      step: mockStep,
+    })
+
+    const scoreEvents = mockStep.sendEvent.mock.calls.filter(
+      (c: unknown[]) => (c[1] as Record<string, unknown>)?.name === 'score.updated',
+    )
+    // L1 event should have mqmScore 70
+    expect(
+      ((scoreEvents[0]?.[1] as Record<string, unknown>)?.data as Record<string, unknown>)?.mqmScore,
+    ).toBe(70)
+    // L1L2 event should have mqmScore 92
+    expect(
+      ((scoreEvents[1]?.[1] as Record<string, unknown>)?.data as Record<string, unknown>)?.mqmScore,
+    ).toBe(92)
+    expect(
+      ((scoreEvents[1]?.[1] as Record<string, unknown>)?.data as Record<string, unknown>)
+        ?.scoreStatus,
+    ).toBe('auto_passed')
+  })
+
+  it('[S-FIX-5] should emit score.updated with partial status when L2 fails', async () => {
+    mockRunL2ForFile.mockRejectedValueOnce(new Error('L2 provider unavailable'))
+    // L1 score call returns calculated, partial score call returns partial
+    mockScoreFile
+      .mockResolvedValueOnce({
+        scoreId: faker.string.uuid(),
+        fileId: VALID_FILE_ID,
+        mqmScore: 85,
+        npt: 15,
+        totalWords: 1000,
+        criticalCount: 0,
+        majorCount: 3,
+        minorCount: 0,
+        status: 'calculated',
+        autoPassRationale: null,
+      })
+      .mockResolvedValueOnce({
+        scoreId: faker.string.uuid(),
+        fileId: VALID_FILE_ID,
+        mqmScore: 85,
+        npt: 15,
+        totalWords: 1000,
+        criticalCount: 0,
+        majorCount: 3,
+        minorCount: 0,
+        status: 'partial',
+        autoPassRationale: null,
+      })
+
+    const mockStep = createMockStep()
+    const eventData = buildPipelineEvent({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      mode: 'economy',
+    })
+
+    const { processFilePipeline } = await import('./processFile')
+    await (processFilePipeline as { handler: (...args: unknown[]) => unknown }).handler({
+      event: { data: eventData },
+      step: mockStep,
+    })
+
+    const scoreEvents = mockStep.sendEvent.mock.calls.filter(
+      (c: unknown[]) => (c[1] as Record<string, unknown>)?.name === 'score.updated',
+    )
+    // L1 score event + partial score event = 2
+    expect(scoreEvents).toHaveLength(2)
+
+    // Last event should be the partial score
+    const partialEvent = scoreEvents[scoreEvents.length - 1]
+    expect(
+      ((partialEvent?.[1] as Record<string, unknown>)?.data as Record<string, unknown>)
+        ?.scoreStatus,
+    ).toBe('partial')
+  })
+
+  it('[S-FIX-5] should use deterministic step IDs for score.updated sendEvent calls', async () => {
+    const mockStep = createMockStep()
+    const eventData = buildPipelineEvent({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      mode: 'economy',
+    })
+
+    const { processFilePipeline } = await import('./processFile')
+    await (processFilePipeline as { handler: (...args: unknown[]) => unknown }).handler({
+      event: { data: eventData },
+      step: mockStep,
+    })
+
+    const scoreEvents = mockStep.sendEvent.mock.calls.filter(
+      (c: unknown[]) => (c[1] as Record<string, unknown>)?.name === 'score.updated',
+    )
+
+    // All step IDs must contain the fileId for determinism
+    for (const call of scoreEvents) {
+      expect(call[0]).toContain(VALID_FILE_ID)
+    }
+
+    // Verify specific step ID patterns
+    expect(scoreEvents[0]?.[0]).toBe(`score-updated-l1-${VALID_FILE_ID}`)
+    expect(scoreEvents[1]?.[0]).toBe(`score-updated-l1l2-${VALID_FILE_ID}`)
+  })
+
+  it('[S-FIX-5] should handle null scoreFile result gracefully in score.updated event', async () => {
+    // scoreFile returns null when no segments found
+    mockScoreFile.mockResolvedValue(null as unknown as Awaited<ReturnType<typeof mockScoreFile>>)
+
+    const mockStep = createMockStep()
+    const eventData = buildPipelineEvent({
+      fileId: VALID_FILE_ID,
+      projectId: VALID_PROJECT_ID,
+      tenantId: VALID_TENANT_ID,
+      userId: VALID_USER_ID,
+      mode: 'economy',
+    })
+
+    const { processFilePipeline } = await import('./processFile')
+    await (processFilePipeline as { handler: (...args: unknown[]) => unknown }).handler({
+      event: { data: eventData },
+      step: mockStep,
+    })
+
+    // Events should still be emitted with fallback values
+    const scoreEvents = mockStep.sendEvent.mock.calls.filter(
+      (c: unknown[]) => (c[1] as Record<string, unknown>)?.name === 'score.updated',
+    )
+    expect(scoreEvents.length).toBeGreaterThanOrEqual(1)
+
+    // Fallback: mqmScore = 0, scoreStatus = 'calculated'
+    const data = (scoreEvents[0]?.[1] as Record<string, unknown>)?.data as Record<string, unknown>
+    expect(data?.mqmScore).toBe(0)
+    expect(data?.scoreStatus).toBe('calculated')
   })
 })

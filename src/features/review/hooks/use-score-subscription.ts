@@ -92,6 +92,35 @@ export function useScoreSubscription(fileId: string, tenantId: string) {
     })
   }, [fileId, tenantId])
 
+  // S-FIX-5: Fetch current score once — closes race window between RSC fetch and Realtime subscription.
+  // Without this, a score written AFTER RSC fetch but BEFORE subscription is active would be missed.
+  const fetchCurrentScore = useCallback(async () => {
+    const supabase = supabaseRef.current
+    if (!supabase) return
+    try {
+      const { data } = await supabase
+        .from('scores')
+        .select('mqm_score, status, layer_completed, auto_pass_rationale')
+        .eq('file_id', fileId)
+        .eq('tenant_id', tenantId)
+        .single()
+      if (data && isValidScoreStatus(data.status)) {
+        if (useReviewStore.getState().currentFileId !== fileId) return
+        const layerCompleted =
+          typeof data.layer_completed === 'string' && isValidLayerCompleted(data.layer_completed)
+            ? data.layer_completed
+            : null
+        const autoPassRationale =
+          typeof data.auto_pass_rationale === 'string' ? data.auto_pass_rationale : null
+        useReviewStore
+          .getState()
+          .updateScore(data.mqm_score, data.status, layerCompleted, autoPassRationale)
+      }
+    } catch {
+      // Non-fatal — Realtime will catch subsequent updates
+    }
+  }, [fileId, tenantId])
+
   useEffect(() => {
     const supabase = createBrowserClient()
     supabaseRef.current = supabase
@@ -146,6 +175,11 @@ export function useScoreSubscription(fileId: string, tenantId: string) {
         }
         if (status === 'SUBSCRIBED') {
           stopPolling()
+          // S-FIX-5: Fetch current score to close race window — score may have been written
+          // between RSC fetch (initial page load) and Realtime subscription becoming active.
+          fetchCurrentScore().catch(() => {
+            /* best-effort — Realtime will catch subsequent updates */
+          })
         }
       })
 
@@ -153,5 +187,5 @@ export function useScoreSubscription(fileId: string, tenantId: string) {
       stopPolling()
       supabase.removeChannel(channel)
     }
-  }, [fileId, tenantId, startPolling, stopPolling])
+  }, [fileId, tenantId, startPolling, stopPolling, fetchCurrentScore])
 }
