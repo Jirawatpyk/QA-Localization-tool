@@ -172,7 +172,10 @@ export function FindingDetailContent({
   const isCrossFile = finding !== null && finding.segmentId === null
 
   return (
-    <div data-testid="finding-detail-content" className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div
+      data-testid="finding-detail-content"
+      className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-4 space-y-4"
+    >
       {finding ? (
         <>
           {/* ── Finding Metadata ── */}

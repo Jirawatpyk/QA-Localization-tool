@@ -16,7 +16,7 @@ export function BackTranslationSection({
   return (
     <div data-testid="bt-section">
       <h4 className="text-xs font-medium text-muted-foreground mb-1">Back-translation</h4>
-      <p className="text-sm leading-relaxed" lang={sourceLang} data-testid="bt-text">
+      <p className="text-sm leading-relaxed break-words" lang={sourceLang} data-testid="bt-text">
         {backTranslation}
       </p>
     </div>

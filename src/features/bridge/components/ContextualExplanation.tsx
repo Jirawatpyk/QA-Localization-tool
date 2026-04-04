@@ -42,7 +42,11 @@ export function ContextualExplanation({
   return (
     <div data-testid="bt-explanation">
       <h4 className="text-xs font-medium text-muted-foreground mb-1">Contextual Explanation</h4>
-      <p className="text-sm leading-relaxed mb-3" lang="en" data-testid="explanation-text">
+      <p
+        className="text-sm leading-relaxed mb-3 break-words"
+        lang="en"
+        data-testid="explanation-text"
+      >
         {explanation}
       </p>
 

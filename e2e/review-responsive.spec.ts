@@ -1114,8 +1114,7 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     }
   })
 
-  // TD: LanguageBridge overflows at 300px compact aside — needs responsive fix (not S-FIX-4 scope)
-  test.skip('[P1] BT-R2 — LanguageBridge section no horizontal overflow at tablet 1200px', async ({
+  test('[P1] BT-R2 — LanguageBridge section no horizontal overflow at tablet 1200px', async ({
     page,
   }) => {
     // S-FIX-4: At 1200px (tablet), aside is persistent — no Sheet.
@@ -1134,10 +1133,18 @@ test.describe.serial('Review Responsive Layout — Story 4.1d', () => {
     const aside = page.getByTestId('finding-detail-aside')
     await expect(aside).toBeVisible({ timeout: 10_000 })
 
-    // Check no horizontal scroll in aside content
+    // Check no visible horizontal overflow in aside content
+    // Note: scrollWidth may exceed clientWidth with overflow-x:hidden (CSS spec).
+    // Use bounding rect comparison for visual overflow detection.
     const detailContent = aside.getByTestId('finding-detail-content')
-    const hasHScroll = await detailContent.evaluate((el) => el.scrollWidth > el.clientWidth)
-    expect(hasHScroll).toBe(false)
+    const hasVisualOverflow = await detailContent.evaluate((el) => {
+      const containerRight = el.getBoundingClientRect().right
+      for (const child of el.querySelectorAll('*')) {
+        if (child.getBoundingClientRect().right > containerRight + 1) return true
+      }
+      return false
+    })
+    expect(hasVisualOverflow).toBe(false)
   })
 
   test('[P1] BT-R3 — LanguageBridge section no horizontal overflow at tablet 768px (Sheet)', async ({

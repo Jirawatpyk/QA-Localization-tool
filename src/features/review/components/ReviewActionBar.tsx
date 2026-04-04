@@ -171,7 +171,7 @@ export function ReviewActionBar({
       <div
         role="toolbar"
         aria-label="Review actions"
-        className="flex items-center gap-2 border-t pt-4 mt-4"
+        className="flex items-center gap-2 flex-wrap border-t pt-4 mt-4"
         tabIndex={0}
         data-testid="review-action-bar"
       >

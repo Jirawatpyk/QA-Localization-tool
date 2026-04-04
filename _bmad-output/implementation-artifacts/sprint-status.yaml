@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-02-15
-last_updated: 2026-04-04  # s-fix-4 CR R1 done
+last_updated: 2026-04-04  # s-fix-5 story created
 project: qa-localization-tool
 project_key: NOKEY
 tracking_system: file-system
@@ -220,7 +220,7 @@ development_status:
   # Root cause: src/features/pipeline/inngest/processFile.ts — no finding.changed event after L2/L3
   # Fix: Emit finding.changed after final layer → trigger recalculateScore
   # Ref: DEEP-VERIFICATION-CHECKLIST.md > Score, PROJECT-TOUR-REPORT.md > BUG-7
-  s-fix-5-score-recalculation: backlog
+  s-fix-5-score-recalculation: ready-for-dev
 
   # S-FIX-6: Onboarding Persistence [M]
   # Findings: UX-NEW-02 (P1), MULTI-02 (P1)
@@ -249,7 +249,7 @@ development_status:
   # Root cause: src/app/(app)/admin/page.tsx — no language pairs column in user table
   # Fix: Add language pair multi-select per reviewer, fallback reviewer list when no match
   # Ref: DEEP-VERIFICATION-CHECKLIST.md > Admin, screenshot deep-28
-  s-fix-14-admin-assignment-ux: backlog
+  s-fix-14-admin-assignment-ux: ready-for-dev
 
   # S-FIX-V2: Verify & Optimize Phase 2 [L]
   # Scope: Playwright verify S-FIX-4/5/6/7/8/14 — layout, score, onboarding, soft lock, bulk, admin
@@ -286,11 +286,12 @@ development_status:
   # PHASE 3B: P2 APP-WIDE UX — all other pages
   # ──────────────────────────────────────────
 
-  # S-FIX-11: Dashboard Polish [M]
-  # Findings: UX-NEW-03/TD-UX-010, UX-NEW-04, D-01, D-02, MULTI-04, EDGE-01, TD-UX-003
-  # Root cause: src/app/(app)/dashboard/, src/features/upload/ — formatFileStatus, file table, upload guard
-  # Fix: Human-friendly badges, clickable file rows, filter 0-segment, file deselect UI
-  # Ref: DEEP-VERIFICATION-CHECKLIST.md > Dashboard, screenshot deep-24
+  # S-FIX-11: Dashboard & Parity Polish [M]
+  # Findings: UX-NEW-03/TD-UX-010, UX-NEW-04, D-01, D-02, MULTI-04, EDGE-01, TD-UX-003,
+  #   PAR-01 P1 (Xbench Parity upload ไม่ทำงาน — Critical: trust foundation feature broken)
+  # Root cause: src/app/(app)/dashboard/, src/features/upload/, src/features/parity/
+  # Fix: Human-friendly badges, clickable file rows, filter 0-segment, file deselect UI, fix parity upload
+  # Ref: DEEP-VERIFICATION-CHECKLIST.md > Dashboard, screenshot deep-24, screenshot-16 (parity page)
   s-fix-11-dashboard-polish: backlog
 
   # S-FIX-12: Navigation & Accessibility [M]

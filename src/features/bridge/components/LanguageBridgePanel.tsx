@@ -52,12 +52,15 @@ export function LanguageBridgePanel({
     <section
       data-testid="language-bridge-panel"
       data-state={panelState}
-      className={cn('rounded border p-3 space-y-3', getPanelBorderClass(panelState))}
+      className={cn(
+        'rounded border p-3 space-y-3 overflow-hidden min-w-0 break-words',
+        getPanelBorderClass(panelState),
+      )}
     >
       {/* Header with cached indicator (Guardrail #77) */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium">Language Bridge</h3>
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <h3 className="text-sm font-medium shrink-0">Language Bridge</h3>
+        <div className="flex items-center gap-2 shrink-0">
           {data && !loading && (
             <>
               {cached && (

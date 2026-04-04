@@ -628,8 +628,8 @@ test.describe.serial('Detail Panel & Segment Context — Story 4.1c ATDD', () =>
 
     // Assert: Japanese text element has lang="ja-JP" or starts with "ja"
     // The lang attribute should be on the text container element (Guardrail #39)
-    // Scope to finding-list to avoid matching segment-text-target in detail panel
-    const jaContainer = page.getByTestId('finding-list').locator('[lang^="ja"]').filter({
+    // S-FIX-4: aside is persistent — JA text may be in segment context (aside) or finding list
+    const jaContainer = page.locator('[lang^="ja"]').filter({
       hasText: '設定項目',
     })
     await expect(jaContainer).toBeVisible({ timeout: 10_000 })
