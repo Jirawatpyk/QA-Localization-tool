@@ -899,6 +899,23 @@ describe('processFilePipeline — partial results (Story 3.4)', () => {
       expect(step.sendEvent).toHaveBeenCalled()
     })
 
+    // Helper: assert no `pipeline.batch-completed` event was emitted. Other
+    // events (`score.updated` from S-FIX-5) are allowed — the test only guards
+    // the batch-completion semantics, not the score-observability side channel.
+    //
+    // IMPORTANT: the exact event name is `pipeline.batch-completed` (see
+    // `processFile.ts:222` where it is emitted). A previous version of this
+    // helper used `'batch.completed'`, which matches zero calls and silently
+    // passes every assertion (false-green). Keep the name in sync with source.
+    function expectNoBatchCompletedEvent(step: ReturnType<typeof createMockStep>) {
+      const calls = step.sendEvent.mock.calls
+      const batchCompletedCalls = calls.filter((call) => {
+        const event = call[1] as { name?: string } | undefined
+        return event?.name === 'pipeline.batch-completed'
+      })
+      expect(batchCompletedCalls).toHaveLength(0)
+    }
+
     // T57
     it('[P0] should NOT complete batch when 1 file still processing', async () => {
       const { processFilePipeline } = await import('./processFile')
@@ -926,7 +943,10 @@ describe('processFilePipeline — partial results (Story 3.4)', () => {
         step,
       })
 
-      expect(step.sendEvent).not.toHaveBeenCalled()
+      // S-FIX-5 added `score.updated` event emission from the L1/L2 scoring
+      // steps, so `sendEvent` IS called even when batch doesn't complete.
+      // The invariant we care about: no `batch.completed` event was emitted.
+      expectNoBatchCompletedEvent(step)
     })
 
     // T58
@@ -955,7 +975,9 @@ describe('processFilePipeline — partial results (Story 3.4)', () => {
         step,
       })
 
-      expect(step.sendEvent).not.toHaveBeenCalled()
+      // CAS guard held — no duplicate `batch.completed` event emitted.
+      // (`score.updated` from S-FIX-5 may still fire, that's orthogonal.)
+      expectNoBatchCompletedEvent(step)
     })
 
     // T59

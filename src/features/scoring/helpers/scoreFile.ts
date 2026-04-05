@@ -14,6 +14,7 @@ import { CONTRIBUTING_STATUSES, NEW_PAIR_FILE_THRESHOLD } from '@/features/scori
 import { calculateMqmScore } from '@/features/scoring/mqmCalculator'
 import { loadPenaltyWeights } from '@/features/scoring/penaltyWeightLoader'
 import type { ContributingFinding, FindingsSummary, FindingStatus } from '@/features/scoring/types'
+import { canonicalizeBcp47 } from '@/lib/language/bcp47'
 import { logger } from '@/lib/logger'
 import {
   createBulkNotification,
@@ -93,8 +94,11 @@ export async function scoreFile({
   }
 
   const totalWords = segmentRows.reduce((sum, s) => sum + s.wordCount, 0)
-  const sourceLang = segmentRows[0]!.sourceLang
-  const targetLang = segmentRows[0]!.targetLang
+  // F3: canonicalize on read so downstream language-pair lookups (penalty
+  // weights, graduation notifications, auto-pass config) work against both
+  // canonical post-RC segments and any legacy segments written pre-RC.
+  const sourceLang = canonicalizeBcp47(segmentRows[0]!.sourceLang)
+  const targetLang = canonicalizeBcp47(segmentRows[0]!.targetLang)
 
   // Load findings — calculator will filter by CONTRIBUTING_STATUSES
   // When layerFilter is set (pipeline context): only that layer's findings

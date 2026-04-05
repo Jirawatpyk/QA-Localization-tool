@@ -20,6 +20,7 @@ import {
   excelColumnMappingSchema,
 } from '@/features/parser/validation/excelMappingSchema'
 import { requireRole } from '@/lib/auth/requireRole'
+import { canonicalizeBcp47 } from '@/lib/language/bcp47'
 import { logger } from '@/lib/logger'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { ActionResult } from '@/types/actionResult'
@@ -196,9 +197,13 @@ export async function parseFile(
       }
     }
 
-    sourceLang = project.sourceLang
+    // RC-4: canonicalize on read too. New projects go through `createProjectSchema`
+    // which canonicalizes via `.transform()` (RC-2), but legacy rows from before
+    // this fix may hold mixed-case tags — canonicalize defensively so segments
+    // always get canonical `sourceLang`/`targetLang` regardless of upstream state.
+    sourceLang = canonicalizeBcp47(project.sourceLang)
     // targetLangs is a jsonb string[] — use first element as default
-    targetLang = project.targetLangs[0] ?? 'und'
+    targetLang = canonicalizeBcp47(project.targetLangs[0] ?? 'und')
 
     const parseResult = await parseExcelBilingual(
       buffer,
@@ -269,9 +274,25 @@ export async function parseFile(
     }
 
     parsedSegments = parseResult.data.segments
-    sourceLang = parseResult.data.sourceLang
-    targetLang = parseResult.data.targetLang
+    // RC-4: canonicalize XLIFF header values before they propagate to segments.
+    // XLIFF/SDLXLIFF files carry raw `<source-language>` / `<target-language>`
+    // attributes which may use any BCP-47 casing (`en-US`, `zh-Hant-TW`, etc.).
+    // Storing them canonical keeps comparisons in downstream pipeline layers
+    // (ruleEngine, scoreFile, flagForNative) consistent with project-level tags.
+    sourceLang = canonicalizeBcp47(parseResult.data.sourceLang)
+    targetLang = canonicalizeBcp47(parseResult.data.targetLang)
   }
+
+  // RC-4: canonicalize every per-segment language tag before batch insert.
+  // Per-row language may be overridden via languageColumn (Excel bilingual)
+  // or carried from per-trans-unit attrs (XLIFF) — either path can introduce
+  // mixed case. Normalize here so `segments.sourceLang` / `segments.targetLang`
+  // columns are guaranteed canonical.
+  parsedSegments = parsedSegments.map((seg) => ({
+    ...seg,
+    sourceLang: canonicalizeBcp47(seg.sourceLang),
+    targetLang: canonicalizeBcp47(seg.targetLang),
+  }))
 
   // 6.4 — Batch insert segments + atomically update file status to 'parsed'
   // Both happen inside a single transaction for consistency (no orphan 'parsing' state)

@@ -4,6 +4,7 @@ import Link from 'next/link'
 
 import { FILE_HISTORY_PAGE_SIZE } from '@/features/batch/types'
 import { FileAssignmentCell } from '@/features/project/components/FileAssignmentCell'
+import type { AppRole } from '@/lib/auth/getCurrentUser'
 import { L1_COMPLETED_STATUSES } from '@/types/pipeline'
 import type { DbFileStatus } from '@/types/pipeline'
 
@@ -33,6 +34,7 @@ type FileHistoryTableProps = {
   onPageChange: (page: number) => void
   projectId: string
   targetLanguage?: string | undefined
+  currentUserRole: AppRole
   onRefresh?: (() => void) | undefined
 }
 
@@ -68,6 +70,7 @@ export function FileHistoryTable({
   onPageChange,
   projectId,
   targetLanguage,
+  currentUserRole,
   onRefresh,
 }: FileHistoryTableProps) {
   // Server already paginates — use totalCount for page calculation
@@ -161,6 +164,7 @@ export function FileHistoryTable({
                     fileName={file.fileName}
                     projectId={projectId}
                     targetLanguage={targetLanguage ?? ''}
+                    currentUserRole={currentUserRole}
                     assigneeName={file.assigneeName}
                     priority={file.assignmentPriority}
                     onAssigned={onRefresh}

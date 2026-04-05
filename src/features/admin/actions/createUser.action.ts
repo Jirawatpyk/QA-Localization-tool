@@ -34,7 +34,10 @@ export async function createUser(input: unknown): Promise<ActionResult<CreateUse
     return { success: false, code: 'VALIDATION_ERROR', error: parsed.error.message }
   }
 
-  const { email, displayName, role } = parsed.data
+  // F9: `parsed.data.nativeLanguages` is already canonical via RC-2 schema
+  // transform. The earlier explicit `canonicalizeLanguages()` call was a no-op
+  // and has been removed — schema transforms are the single source of truth.
+  const { email, displayName, role, nativeLanguages } = parsed.data
 
   // Create user in Supabase Auth via admin API (with app_metadata for JWT claims)
   const adminClient = createAdminClient()
@@ -62,6 +65,7 @@ export async function createUser(input: unknown): Promise<ActionResult<CreateUse
         tenantId: currentUser.tenantId,
         email,
         displayName,
+        nativeLanguages,
       })
 
       await tx.insert(userRoles).values({
@@ -76,7 +80,7 @@ export async function createUser(input: unknown): Promise<ActionResult<CreateUse
         entityType: 'user',
         entityId: authData.user.id,
         action: 'user.created',
-        newValue: { email, role, displayName },
+        newValue: { email, role, displayName, nativeLanguages },
       })
     })
   } catch {

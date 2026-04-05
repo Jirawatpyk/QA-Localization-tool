@@ -27,6 +27,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { createProject } from '@/features/project/actions/createProject.action'
 import { COMMON_LANGUAGES } from '@/features/project/validation/languages'
 import { createProjectSchema } from '@/features/project/validation/projectSchemas'
+import { canonicalizeBcp47 } from '@/lib/language/bcp47'
 
 type ProjectCreateDialogProps = {
   open: boolean
@@ -44,8 +45,13 @@ export function ProjectCreateDialog({ open, onOpenChange }: ProjectCreateDialogP
   const [formResetKey, setFormResetKey] = useState(0)
 
   function toggleTargetLang(code: string) {
+    // RC-5: canonicalize at the entry point so `targetLangs` state is always
+    // in the same form as the canonical display values below. Without this,
+    // state from URL params or form defaults could hold mixed-case tags that
+    // break the `.includes()` checkbox check.
+    const canonical = canonicalizeBcp47(code)
     setTargetLangs((prev) =>
-      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code],
+      prev.includes(canonical) ? prev.filter((c) => c !== canonical) : [...prev, canonical],
     )
   }
 
@@ -91,7 +97,13 @@ export function ProjectCreateDialog({ open, onOpenChange }: ProjectCreateDialogP
     })
   }
 
-  const availableTargetLangs = COMMON_LANGUAGES.filter((lang) => lang.code !== sourceLang)
+  // RC-5: canonical compare — `sourceLang` state should be canonical (via
+  // the Select onValueChange wrapper below), but defend against mixed-case
+  // `COMMON_LANGUAGES.code` entries (e.g., `zh-Hant`) by canonicalizing both.
+  const canonicalSourceLang = sourceLang ? canonicalizeBcp47(sourceLang) : ''
+  const availableTargetLangs = COMMON_LANGUAGES.filter(
+    (lang) => canonicalizeBcp47(lang.code) !== canonicalSourceLang,
+  )
 
   return (
     <Dialog
@@ -154,7 +166,11 @@ export function ProjectCreateDialog({ open, onOpenChange }: ProjectCreateDialogP
             <Label htmlFor="source-lang">
               Source Language <span className="text-destructive">*</span>
             </Label>
-            <Select value={sourceLang} onValueChange={setSourceLang}>
+            <Select
+              value={sourceLang}
+              // RC-5: canonicalize on input so state matches canonical form.
+              onValueChange={(value) => setSourceLang(canonicalizeBcp47(value))}
+            >
               <SelectTrigger id="source-lang" className="w-full">
                 <SelectValue placeholder="Select source language" />
               </SelectTrigger>
@@ -181,7 +197,11 @@ export function ProjectCreateDialog({ open, onOpenChange }: ProjectCreateDialogP
               {availableTargetLangs.map((lang) => (
                 <label key={lang.code} className="flex items-center gap-2 text-sm">
                   <Checkbox
-                    checked={targetLangs.includes(lang.code)}
+                    // RC-5: compare canonical forms — `targetLangs` state is
+                    // always canonical (via toggleTargetLang), but `lang.code`
+                    // may come from `COMMON_LANGUAGES` with mixed case (e.g.
+                    // `zh-Hant`). Normalize both sides for the compare.
+                    checked={targetLangs.includes(canonicalizeBcp47(lang.code))}
                     onCheckedChange={() => toggleTargetLang(lang.code)}
                   />
                   {lang.label}

@@ -22,6 +22,7 @@ import { estimateMaxCost, releaseBudget, reserveBudget, settleBudget } from '@/l
 import { qaProvider } from '@/lib/ai/client'
 import { estimateCost, logAIUsage } from '@/lib/ai/costs'
 import { requireRole } from '@/lib/auth/requireRole'
+import { canonicalizeBcp47 } from '@/lib/language/bcp47'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types'
 import type { TenantId } from '@/types/tenant'
@@ -108,7 +109,12 @@ export async function getBackTranslation(
       return { success: false, error: 'Segment not found', code: 'NOT_FOUND' }
     }
 
-    const languagePair = `${segment.sourceLang}→${segment.targetLang}`
+    // F3: canonicalize both sides of the cache key. Pre-RC segments may carry
+    // raw mixed-case tags which would produce a DIFFERENT cache key than
+    // canonical segments, causing duplicate generations + wasted AI budget.
+    const sourceLang = canonicalizeBcp47(segment.sourceLang)
+    const targetLang = canonicalizeBcp47(segment.targetLang)
+    const languagePair = `${sourceLang}→${targetLang}`
 
     // Compute hash (Guardrail #57)
     const targetTextHash = await computeTargetTextHash(segment.targetText)
@@ -203,12 +209,14 @@ export async function getBackTranslation(
       segmentNumber: r.segmentNumber,
     }))
 
-    // Build prompt
+    // Build prompt — use canonicalized `sourceLang`/`targetLang` from above
+    // (not the raw `segment.*` values) so language-conditional prompt branches
+    // in buildBTPrompt receive stable lowercased tags.
     const { system, user: userPrompt } = buildBTPrompt({
       sourceText: segment.sourceText,
       targetText: segment.targetText,
-      sourceLang: segment.sourceLang,
-      targetLang: segment.targetLang,
+      sourceLang,
+      targetLang,
       contextSegments,
     })
 

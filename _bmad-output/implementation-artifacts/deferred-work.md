@@ -95,3 +95,12 @@
 - ~~**D1: `max-w-[1400px]` in app layout constrains review page at wide viewports**~~ ✅ DONE — Added `has-[[data-review-layout]]:max-w-none` on wrapper + `data-review-layout` attribute on review layout
 - ~~**D2: `DetailPanel` component + `ui.store` dead code cleanup**~~ ✅ DONE — Deleted `detail-panel.tsx`, removed `detailPanelOpen`/`toggleDetailPanel`/`setDetailPanelOpen` from ui.store + tests + setup
 - ~~**D3: `'tablet'` naming in layoutMode conflicts with UX spec terminology**~~ ✅ DONE — Renamed to `'compact'` in LayoutMode type, getLayoutMode, ReviewPageClient, and all tests
+
+## Deferred from: code review of s-fix-14 (2026-04-05) — ALL RESOLVED (same session)
+
+- ~~**D1: No optimistic-lock on concurrent admin edits**~~ ✅ DONE — `updateUserLanguagesSchema` accepts optional `previousLanguages` snapshot; server returns `CONFLICT` on mismatch. `LanguagePairEditor` sends pre-click snapshot. 4 new tests.
+- ~~**D2: Auto-suggest tie-break strict `<`**~~ ✅ DONE — removed redundant comparison; SQL `ORDER BY workload` provides deterministic tie-break, first matched row always auto-suggested. Test updated.
+- ~~**D3: `CommandEmpty` cmdk behavior**~~ ✅ DONE — moved `EmptyReviewerState` out of cmdk's `Command`/`CommandEmpty` into sibling conditional that renders unconditionally when no matches.
+- ~~**D4: Empty-tenant dead-end**~~ ✅ DONE — added guidance text linking to `Projects → Settings` in both `NewUserLanguageChips` and `LanguagePairEditor` empty states.
+- ~~**D5: Max-20 boundary test**~~ ✅ DONE — covered by P10 (`accepts exactly 20`, `rejects 21`).
+- ~~**D6: Position-based insert assertions**~~ ✅ DONE — `__table` sentinels via `vi.hoisted()` + `findInsert(calls, tableName)` helper replaces `insertCalls[0]` / `insertCalls[length-1]`.

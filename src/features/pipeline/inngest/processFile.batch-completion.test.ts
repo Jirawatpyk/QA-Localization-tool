@@ -225,8 +225,13 @@ describe('processFile - batch completion step', () => {
       step: mockStep,
     })
 
-    // Should NOT emit batch-completed — sendEvent not called at all
-    expect(mockStep.sendEvent).not.toHaveBeenCalled()
+    // Should NOT emit `pipeline.batch-completed`. Other events (`score.updated`
+    // from S-FIX-5) may fire — that's orthogonal to batch completion semantics.
+    const batchCompletedCalls = mockStep.sendEvent.mock.calls.filter((call) => {
+      const event = call[1] as { name?: string } | undefined
+      return event?.name === 'pipeline.batch-completed'
+    })
+    expect(batchCompletedCalls).toHaveLength(0)
   })
 
   it('[P0] should skip batch completion entirely when uploadBatchId is undefined', async () => {
@@ -244,8 +249,13 @@ describe('processFile - batch completion step', () => {
       step: mockStep,
     })
 
-    // Should NOT call step.run for batch check, and NOT call step.sendEvent
-    expect(mockStep.sendEvent).not.toHaveBeenCalled()
+    // Should NOT call step.run for batch check and NOT emit `pipeline.batch-completed`.
+    // (`score.updated` from S-FIX-5 may still fire — orthogonal to batch completion.)
+    const batchCompletedCalls = mockStep.sendEvent.mock.calls.filter((call) => {
+      const event = call[1] as { name?: string } | undefined
+      return event?.name === 'pipeline.batch-completed'
+    })
+    expect(batchCompletedCalls).toHaveLength(0)
     // Economy mode: L1 + score-L1 + L2 + score-L1L2 = 4 calls, batch check step is skipped
     expect(mockStep.run).toHaveBeenCalledTimes(4)
     // Should still return result with L1L2 layer (economy mode runs L1 + L2)

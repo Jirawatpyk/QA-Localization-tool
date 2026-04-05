@@ -59,6 +59,7 @@ export default async function FileHistoryPage({
         initialFiles={initialFiles}
         initialTotalCount={initialTotalCount}
         targetLanguage={targetLanguage}
+        currentUserRole={currentUser.role}
       />
     </div>
   )

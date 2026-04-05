@@ -79,6 +79,7 @@ describe('FileHistoryTable', () => {
     onFilterChange: vi.fn(),
     onPageChange: vi.fn(),
     projectId: 'd4e5f6a1-b2c3-4d4e-bf5a-6b7c8d9e0f1a',
+    currentUserRole: 'admin' as const,
   }
 
   beforeEach(() => {

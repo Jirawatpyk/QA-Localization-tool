@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 
 import { getFileHistory } from '@/features/batch/actions/getFileHistory.action'
+import type { AppRole } from '@/lib/auth/getCurrentUser'
 import type { DbFileStatus } from '@/types/pipeline'
 
 import { FileHistoryTable } from './FileHistoryTable'
@@ -25,6 +26,7 @@ type FileHistoryPageClientProps = {
   initialFiles: FileRow[]
   initialTotalCount: number
   targetLanguage?: string | undefined
+  currentUserRole: AppRole
 }
 
 export function FileHistoryPageClient({
@@ -32,6 +34,7 @@ export function FileHistoryPageClient({
   initialFiles,
   initialTotalCount,
   targetLanguage,
+  currentUserRole,
 }: FileHistoryPageClientProps) {
   const [filter, setFilter] = useState<FileHistoryFilter>('all')
   const [page, setPage] = useState(1)
@@ -86,6 +89,7 @@ export function FileHistoryPageClient({
         onPageChange={handlePageChange}
         projectId={projectId}
         targetLanguage={targetLanguage}
+        currentUserRole={currentUserRole}
         onRefresh={() => fetchFiles(filter, page)}
       />
     </div>

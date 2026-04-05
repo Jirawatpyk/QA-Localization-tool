@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { type ChangeEvent, type FormEvent, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
@@ -15,6 +16,7 @@ import {
 } from '@/components/ui/select'
 import { createUser } from '@/features/admin/actions/createUser.action'
 import { updateUserRole } from '@/features/admin/actions/updateUserRole.action'
+import { LanguagePairEditor } from '@/features/admin/components/LanguagePairEditor'
 import type { AppRole } from '@/lib/auth/getCurrentUser'
 
 type UserRow = {
@@ -23,6 +25,7 @@ type UserRow = {
   displayName: string
   createdAt: Date
   role: string | null
+  nativeLanguages: string[] | null
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -31,22 +34,45 @@ const ROLE_LABELS: Record<string, string> = {
   native_reviewer: 'Native Reviewer',
 }
 
-export function UserManagement({ users }: { users: UserRow[] }) {
+const REVIEWER_ROLES = new Set<string>(['qa_reviewer', 'native_reviewer'])
+
+export function UserManagement({
+  users,
+  availableLanguages,
+}: {
+  users: UserRow[]
+  availableLanguages: string[]
+}) {
   const [isPending, startTransition] = useTransition()
   const [showAddForm, setShowAddForm] = useState(false)
   const [newEmail, setNewEmail] = useState('')
   const [newName, setNewName] = useState('')
   const [newRole, setNewRole] = useState<AppRole>('qa_reviewer')
+  const [newLanguages, setNewLanguages] = useState<string[]>([])
+
+  // Local optimistic overrides: only holds rows with in-flight save. Non-pending
+  // rows read directly from the `users` prop (server is the source of truth).
+  const [languagesByUser, setLanguagesByUser] = useState<Record<string, string[]>>({})
+  // Pending set: rows whose optimistic value has not yet been confirmed by the server.
+  // `revalidatePath` reconciliation MUST NOT wipe these — otherwise a sibling row's
+  // in-flight toggle flickers/reverts while its own save is still resolving.
+  const [pendingUserIds, setPendingUserIds] = useState<Set<string>>(() => new Set())
 
   function handleAddUser(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     startTransition(async () => {
-      const result = await createUser({ email: newEmail, displayName: newName, role: newRole })
+      const result = await createUser({
+        email: newEmail,
+        displayName: newName,
+        role: newRole,
+        nativeLanguages: newRole === 'admin' ? [] : newLanguages,
+      })
       if (result.success) {
         toast.success(`User ${newEmail} created`)
         setShowAddForm(false)
         setNewEmail('')
         setNewName('')
+        setNewLanguages([])
       } else {
         toast.error(result.error)
       }
@@ -61,6 +87,32 @@ export function UserManagement({ users }: { users: UserRow[] }) {
       } else {
         toast.error(result.error)
       }
+    })
+  }
+
+  function handleLanguagesUpdate(userId: string, next: string[]) {
+    setLanguagesByUser((prev) => ({ ...prev, [userId]: next }))
+    setPendingUserIds((prev) => {
+      if (prev.has(userId)) return prev
+      const nextSet = new Set(prev)
+      nextSet.add(userId)
+      return nextSet
+    })
+  }
+
+  function handleLanguagesSettled(userId: string) {
+    // Server action resolved — drop the optimistic override and let the server
+    // prop (refreshed by revalidatePath) become authoritative on next render.
+    setPendingUserIds((prev) => {
+      if (!prev.has(userId)) return prev
+      const nextSet = new Set(prev)
+      nextSet.delete(userId)
+      return nextSet
+    })
+    setLanguagesByUser((prev) => {
+      if (!(userId in prev)) return prev
+      const { [userId]: _drop, ...rest } = prev
+      return rest
     })
   }
 
@@ -112,6 +164,21 @@ export function UserManagement({ users }: { users: UserRow[] }) {
               </Select>
             </div>
           </div>
+
+          {newRole !== 'admin' && (
+            <div className="space-y-2" data-testid="new-user-languages-section">
+              <Label>Language Pairs</Label>
+              <p className="text-text-muted text-xs">
+                Optional — assign here or edit later from the user list.
+              </p>
+              <NewUserLanguageChips
+                selected={newLanguages}
+                available={availableLanguages}
+                onChange={setNewLanguages}
+              />
+            </div>
+          )}
+
           <Button type="submit" disabled={isPending}>
             {isPending ? 'Creating...' : 'Create User'}
           </Button>
@@ -125,38 +192,136 @@ export function UserManagement({ users }: { users: UserRow[] }) {
               <th className="px-4 py-3 text-left font-medium">Name</th>
               <th className="px-4 py-3 text-left font-medium">Email</th>
               <th className="px-4 py-3 text-left font-medium">Role</th>
+              <th className="px-4 py-3 text-left font-medium">Language Pairs</th>
               <th className="px-4 py-3 text-left font-medium">Joined</th>
             </tr>
           </thead>
           <tbody>
-            {users.map((user) => (
-              <tr key={user.id} className="border-b border-border last:border-0">
-                <td className="px-4 py-3">{user.displayName}</td>
-                <td className="px-4 py-3 text-text-muted">{user.email}</td>
-                <td className="px-4 py-3">
-                  <Select
-                    value={user.role ?? 'qa_reviewer'}
-                    onValueChange={(v: string) => handleRoleChange(user.id, v)}
-                    disabled={isPending}
-                  >
-                    <SelectTrigger className="h-8 w-[160px]">
-                      <SelectValue>{ROLE_LABELS[user.role ?? 'qa_reviewer']}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="qa_reviewer">QA Reviewer</SelectItem>
-                      <SelectItem value="native_reviewer">Native Reviewer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </td>
-                <td className="px-4 py-3 text-text-muted">
-                  {new Date(user.createdAt).toLocaleDateString()}
-                </td>
-              </tr>
-            ))}
+            {users.map((user) => {
+              // Read from optimistic override only while a save is in-flight for this row.
+              // Non-pending rows read directly from server props so sibling writes cannot
+              // wipe or revert another row's live state (P4).
+              const currentLanguages = pendingUserIds.has(user.id)
+                ? (languagesByUser[user.id] ?? user.nativeLanguages ?? [])
+                : (user.nativeLanguages ?? [])
+              const isReviewer = REVIEWER_ROLES.has(user.role ?? 'qa_reviewer')
+              return (
+                <tr key={user.id} className="border-b border-border last:border-0">
+                  <td className="px-4 py-3">{user.displayName}</td>
+                  <td className="px-4 py-3 text-text-muted">{user.email}</td>
+                  <td className="px-4 py-3">
+                    <Select
+                      value={user.role ?? 'qa_reviewer'}
+                      onValueChange={(v: string) => handleRoleChange(user.id, v)}
+                      disabled={isPending}
+                    >
+                      <SelectTrigger className="h-8 w-[160px]">
+                        <SelectValue>{ROLE_LABELS[user.role ?? 'qa_reviewer']}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="qa_reviewer">QA Reviewer</SelectItem>
+                        <SelectItem value="native_reviewer">Native Reviewer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  <td className="px-4 py-3">
+                    {isReviewer ? (
+                      <LanguagePairEditor
+                        userId={user.id}
+                        displayName={user.displayName}
+                        currentLanguages={currentLanguages}
+                        // R2-P2: server-truth baseline for optimistic lock.
+                        // Always read from the raw prop so rapid double-clicks
+                        // never snapshot an in-flight optimistic value.
+                        serverLanguages={user.nativeLanguages ?? []}
+                        availableLanguages={availableLanguages}
+                        onUpdate={(next) => handleLanguagesUpdate(user.id, next)}
+                        onSettled={() => handleLanguagesSettled(user.id)}
+                      />
+                    ) : (
+                      <span
+                        className="text-text-muted text-xs italic"
+                        data-testid="language-pair-na"
+                      >
+                        N/A
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-text-muted">
+                    {new Date(user.createdAt).toLocaleDateString()}
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Lightweight local chip toggle for the Create User form.
+ * Does NOT call the Server Action — selection is submitted with the createUser call.
+ */
+function NewUserLanguageChips({
+  selected,
+  available,
+  onChange,
+}: {
+  selected: string[]
+  available: string[]
+  onChange: (next: string[]) => void
+}) {
+  if (available.length === 0) {
+    return (
+      <div className="space-y-1" data-testid="new-user-language-chips-empty">
+        <p className="text-text-muted text-xs">No language pairs configured for this tenant yet.</p>
+        <p className="text-text-muted text-xs">
+          Configure language pairs in{' '}
+          <Link
+            href="/projects"
+            className="text-primary underline hover:no-underline"
+            data-testid="new-user-language-chips-configure-link"
+          >
+            Projects → Settings
+          </Link>{' '}
+          first, then assign them to reviewers here.
+        </p>
+      </div>
+    )
+  }
+
+  function toggle(lang: string) {
+    if (selected.includes(lang)) {
+      onChange(selected.filter((l) => l !== lang))
+    } else {
+      onChange([...selected, lang])
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2" data-testid="new-user-language-chips">
+      {available.map((lang) => {
+        const active = selected.includes(lang)
+        return (
+          <button
+            key={lang}
+            type="button"
+            onClick={() => toggle(lang)}
+            className={
+              active
+                ? 'rounded-full border border-primary bg-primary px-3 py-1 text-xs text-primary-foreground'
+                : 'rounded-full border border-border bg-background px-3 py-1 text-xs text-text-muted hover:bg-muted'
+            }
+            aria-pressed={active}
+            data-testid={`new-user-language-chip-${lang}`}
+          >
+            {lang}
+          </button>
+        )
+      })}
     </div>
   )
 }

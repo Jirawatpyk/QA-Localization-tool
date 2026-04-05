@@ -30,15 +30,34 @@ vi.mock('@/lib/supabase/admin', () => ({
 
 // Mock DB with transaction support
 const mockTransactionCb = vi.fn()
+const mockInsertValues = vi.fn().mockResolvedValue(undefined)
+const insertCalls: InsertCall[] = []
 vi.mock('@/db/client', () => ({
   db: {
     transaction: (cb: (tx: unknown) => Promise<unknown>) => mockTransactionCb(cb),
   },
 }))
 
-vi.mock('@/db/schema/auditLogs', () => ({ auditLogs: {} }))
-vi.mock('@/db/schema/userRoles', () => ({ userRoles: {} }))
-vi.mock('@/db/schema/users', () => ({ users: {} }))
+// Sentinels: give each schema mock a unique marker so the test can identify
+// which table an insert call targeted without relying on call order (D6).
+const { usersTable, userRolesTable, auditLogsTable } = vi.hoisted(() => ({
+  usersTable: { __table: 'users' as const },
+  userRolesTable: { __table: 'user_roles' as const },
+  auditLogsTable: { __table: 'audit_logs' as const },
+}))
+vi.mock('@/db/schema/auditLogs', () => ({ auditLogs: auditLogsTable }))
+vi.mock('@/db/schema/userRoles', () => ({ userRoles: userRolesTable }))
+vi.mock('@/db/schema/users', () => ({ users: usersTable }))
+
+type InsertCall = { table: unknown; values: unknown }
+function findInsert(calls: InsertCall[], tableName: 'users' | 'user_roles' | 'audit_logs') {
+  return calls.find(
+    (c) =>
+      typeof c.table === 'object' &&
+      c.table !== null &&
+      (c.table as { __table?: string }).__table === tableName,
+  )
+}
 
 // Mock logger
 const mockLogger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }
@@ -54,15 +73,19 @@ describe('createUser', () => {
     role: 'admin' as const,
   }
 
-  // Mock transaction executor that simulates successful tx
+  // Mock transaction executor that simulates successful tx and records insert calls
   const successfulTx = {
-    insert: () => ({
-      values: vi.fn().mockResolvedValue(undefined),
+    insert: (table: unknown) => ({
+      values: (values: unknown) => {
+        insertCalls.push({ table, values })
+        return mockInsertValues(values)
+      },
     }),
   }
 
   beforeEach(() => {
     vi.clearAllMocks()
+    insertCalls.length = 0
     // Default: transaction runs the callback with mock tx
     mockTransactionCb.mockImplementation(async (cb) => cb(successfulTx))
   })
@@ -239,6 +262,76 @@ describe('createUser', () => {
     // No auth or DB calls should have been made
     expect(mockAuthCreateUser).not.toHaveBeenCalled()
     expect(mockTransactionCb).not.toHaveBeenCalled()
+  })
+
+  it('should default nativeLanguages to empty array when omitted', async () => {
+    mockRequireRole.mockResolvedValue(adminUser)
+    mockAuthCreateUser.mockResolvedValue({
+      data: { user: { id: NEW_USER_ID } },
+      error: null,
+    })
+
+    const { createUser } = await import('./createUser.action')
+    const result = await createUser({
+      email: 'new@test.com',
+      displayName: 'New User',
+      role: 'qa_reviewer',
+    })
+
+    expect(result.success).toBe(true)
+    // Locate the users insert by table identity, not by call order (D6).
+    const usersInsert = findInsert(insertCalls, 'users')
+    expect(usersInsert).toBeDefined()
+    expect(usersInsert!.values).toMatchObject({ nativeLanguages: [] })
+  })
+
+  it('should pass nativeLanguages through to users insert and audit log', async () => {
+    mockRequireRole.mockResolvedValue(adminUser)
+    mockAuthCreateUser.mockResolvedValue({
+      data: { user: { id: NEW_USER_ID } },
+      error: null,
+    })
+
+    const { createUser } = await import('./createUser.action')
+    const result = await createUser({
+      email: 'new@test.com',
+      displayName: 'New User',
+      role: 'native_reviewer',
+      // Non-canonical input: mixed case + unsorted
+      nativeLanguages: ['th', 'ja-JP'],
+    })
+
+    expect(result.success).toBe(true)
+    const usersInsert = findInsert(insertCalls, 'users')
+    expect(usersInsert).toBeDefined()
+    // R3-P1: canonicalized on write (lowercased + sorted)
+    expect(usersInsert!.values).toMatchObject({
+      email: 'new@test.com',
+      nativeLanguages: ['ja-jp', 'th'],
+    })
+    // Locate audit insert by table identity (D6) — order-independent.
+    const auditInsert = findInsert(insertCalls, 'audit_logs')
+    expect(auditInsert).toBeDefined()
+    expect(auditInsert!.values).toMatchObject({
+      action: 'user.created',
+      newValue: expect.objectContaining({ nativeLanguages: ['ja-jp', 'th'] }),
+    })
+  })
+
+  it('should reject duplicate languages (Guardrail #24)', async () => {
+    mockRequireRole.mockResolvedValue(adminUser)
+
+    const { createUser } = await import('./createUser.action')
+    const result = await createUser({
+      email: 'new@test.com',
+      displayName: 'New User',
+      role: 'qa_reviewer',
+      nativeLanguages: ['th', 'th'],
+    })
+
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.code).toBe('VALIDATION_ERROR')
+    expect(mockAuthCreateUser).not.toHaveBeenCalled()
   })
 
   it('should return FORBIDDEN when user is not admin', async () => {

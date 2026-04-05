@@ -345,8 +345,9 @@ describe('scoreFile', () => {
         criticalCount: 0,
         projectId: VALID_PROJECT_ID,
         tenantId: VALID_TENANT_ID,
-        sourceLang: 'en-US',
-        targetLang: 'th-TH',
+        // scoreFile canonicalizes on read (F3)
+        sourceLang: 'en-us',
+        targetLang: 'th-th',
       }),
     )
   })
@@ -1171,8 +1172,9 @@ describe('scoreFile', () => {
     // checkAutoPass should be called with first segment's lang pair
     expect(mockCheckAutoPass).toHaveBeenCalledWith(
       expect.objectContaining({
-        sourceLang: 'en-US',
-        targetLang: 'th-TH', // first segment's targetLang, not 'ja-JP'
+        // scoreFile canonicalizes on read (F3)
+        sourceLang: 'en-us',
+        targetLang: 'th-th', // first segment's targetLang, not 'ja-JP'
       }),
     )
   })
@@ -1212,8 +1214,9 @@ describe('scoreFile', () => {
 
     expect(mockCheckAutoPass).toHaveBeenCalledWith(
       expect.objectContaining({
-        sourceLang: 'ja-JP',
-        targetLang: 'ko-KR',
+        // F3: scoreFile canonicalizes on read
+        sourceLang: 'ja-jp',
+        targetLang: 'ko-kr',
       }),
     )
   })

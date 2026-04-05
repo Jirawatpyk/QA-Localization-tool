@@ -18,6 +18,7 @@ import { flagForNativeSchema } from '@/features/review/validation/reviewAction.s
 import type { FlagForNativeInput } from '@/features/review/validation/reviewAction.schema'
 import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { requireRole } from '@/lib/auth/requireRole'
+import { canonicalizeBcp47 } from '@/lib/language/bcp47'
 import { createNotification, NOTIFICATION_TYPES } from '@/lib/notifications/createNotification'
 import type { ActionResult } from '@/types/actionResult'
 import { FINDING_STATUSES } from '@/types/finding'
@@ -121,6 +122,8 @@ export async function flagForNative(
   }
 
   // Step 3a: Resolve target language from segment (needed for reviewer language check)
+  // F3: canonicalize on read. Post-RC segments store canonical tags, but any
+  // legacy segments written before RC-4 may hold raw tags — normalize defensively.
   let targetLang = 'unknown'
   if (finding.segmentId) {
     const segRows = await db
@@ -129,11 +132,21 @@ export async function flagForNative(
       .where(and(eq(segments.id, finding.segmentId), withTenant(segments.tenantId, tenantId)))
       .limit(1)
     if (segRows.length > 0) {
-      targetLang = segRows[0]!.targetLang
+      targetLang = canonicalizeBcp47(segRows[0]!.targetLang)
     }
   }
 
   // Step 3b: Verify assignedTo is native_reviewer with matching language (Guardrail #64)
+  // F3: canonicalize DB-side `users.nativeLanguages` array so the JSONB `@>`
+  // compare works against legacy rows with mixed-case tags.
+  const canonicalNativeLanguagesExpr = sql`COALESCE(
+    (
+      SELECT jsonb_agg(lower(value))
+      FROM jsonb_array_elements_text(${users.nativeLanguages}) AS value
+    ),
+    '[]'::jsonb
+  )`
+
   const reviewerRows = await db
     .select({
       id: users.id,
@@ -153,8 +166,9 @@ export async function flagForNative(
       and(
         eq(users.id, assignedTo),
         withTenant(users.tenantId, tenantId),
-        // jsonb containment: nativeLanguages @> ["th"] (CF-7 fix: was using fileId UUID)
-        sql`${users.nativeLanguages} @> ${JSON.stringify([targetLang])}::jsonb`,
+        // jsonb containment: canonicalized nativeLanguages @> canonical target.
+        // Both sides lowercase so legacy non-canonical rows still match (F3).
+        sql`${canonicalNativeLanguagesExpr} @> ${JSON.stringify([targetLang])}::jsonb`,
       ),
     )
     .limit(1)

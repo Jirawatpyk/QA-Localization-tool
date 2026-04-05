@@ -53,8 +53,10 @@ describe('projectSchemas', () => {
         processingMode: 'economy',
       })
       expect(result.success).toBe(false)
+      // F7: error message now comes from the shared bcp47LanguageSchema in
+      // `@/lib/language/bcp47.ts`, which has a longer help text. Match loosely.
       if (!result.success) {
-        expect(result.error.issues[0]?.message).toBe('Invalid BCP-47 language code')
+        expect(result.error.issues[0]?.message).toMatch(/BCP-47/)
       }
     })
 
@@ -204,6 +206,87 @@ describe('projectSchemas', () => {
         mutedCategories: ['accuracy', 'fluency'],
       })
       expect(result.success).toBe(true)
+    })
+
+    // ---- RC-2: schema .transform() canonicalization ----
+
+    it('RC-2: should canonicalize sourceLang + targetLang (lowercase)', () => {
+      const result = updateLanguagePairConfigSchema.safeParse({
+        projectId: '550e8400-e29b-41d4-a716-446655440000',
+        sourceLang: 'EN-US',
+        targetLang: 'zh-Hant-CN',
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.sourceLang).toBe('en-us')
+        expect(result.data.targetLang).toBe('zh-hant-cn')
+      }
+    })
+  })
+
+  // ---- RC-2: createProjectSchema canonicalization ----
+
+  describe('createProjectSchema — canonicalization (RC-2)', () => {
+    it('RC-2: should canonicalize sourceLang on parse', () => {
+      const result = createProjectSchema.safeParse({
+        name: 'Test',
+        sourceLang: 'EN-US',
+        targetLangs: ['th'],
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.sourceLang).toBe('en-us')
+      }
+    })
+
+    it('RC-2: should canonicalize + sort + dedupe targetLangs', () => {
+      const result = createProjectSchema.safeParse({
+        name: 'Test',
+        sourceLang: 'en',
+        // Non-canonical input: mixed case, unsorted
+        targetLangs: ['TH-TH', 'ja-JP', 'zh-Hant'],
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.targetLangs).toEqual(['ja-jp', 'th-th', 'zh-hant'])
+      }
+    })
+
+    it('F8: should REJECT case-insensitive duplicate targetLangs', () => {
+      // F8 (post-review): refine now explicitly rejects duplicates instead of
+      // silently collapsing via transform. User gets an error they can act on.
+      const result = createProjectSchema.safeParse({
+        name: 'Test',
+        sourceLang: 'en',
+        targetLangs: ['th-TH', 'th-th'], // both canonicalize to 'th-th'
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0]?.message).toBe('Duplicate target languages are not allowed')
+      }
+    })
+
+    it('F5: should reject when sourceLang matches any targetLang after canonicalization', () => {
+      const result = createProjectSchema.safeParse({
+        name: 'Test',
+        sourceLang: 'en',
+        targetLangs: ['EN-US', 'EN'], // EN canonicalizes to 'en' = sourceLang
+      })
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('updateLanguagePairConfigSchema — cross-field validation (F5)', () => {
+    it('should reject when sourceLang equals targetLang after canonicalization', () => {
+      const result = updateLanguagePairConfigSchema.safeParse({
+        projectId: '550e8400-e29b-41d4-a716-446655440000',
+        sourceLang: 'en',
+        targetLang: 'EN', // canonicalizes to 'en' = sourceLang
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0]?.message).toBe('Source and target languages must differ')
+      }
     })
   })
 })

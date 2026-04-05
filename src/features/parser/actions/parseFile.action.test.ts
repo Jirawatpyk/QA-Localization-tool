@@ -347,8 +347,9 @@ describe('parseFile action', () => {
             tenantId: TENANT_ID,
             fileId: FILE_ID,
             projectId: PROJECT_ID,
-            sourceLang: 'en-US',
-            targetLang: 'th-TH',
+            // RC-4: parseFile canonicalizes language tags before segment insert
+            sourceLang: 'en-us',
+            targetLang: 'th-th',
             segmentNumber: 1,
             wordCount: expect.any(Number),
           }),
@@ -517,8 +518,9 @@ describe('parseFile action', () => {
       expect(secondBatchCall?.[0]).toMatchObject({
         tenantId: TENANT_ID,
         projectId: PROJECT_ID,
-        sourceLang: 'en-US',
-        targetLang: 'de-DE',
+        // RC-4: canonical form
+        sourceLang: 'en-us',
+        targetLang: 'de-de',
       })
     })
   })
@@ -762,7 +764,8 @@ describe('parseFile action', () => {
         expect.arrayContaining([
           expect.objectContaining({
             tenantId: TENANT_ID,
-            targetLang: 'de-DE',
+            // RC-4: canonical form
+            targetLang: 'de-de',
           }),
         ]),
       )
@@ -984,8 +987,9 @@ describe('parseFile action', () => {
       expect(insertChain.values).toHaveBeenCalledWith(
         expect.arrayContaining([
           expect.objectContaining({
-            sourceLang: 'en-US',
-            targetLang: 'th-TH',
+            // RC-4: canonical form
+            sourceLang: 'en-us',
+            targetLang: 'th-th',
           }),
         ]),
       )
@@ -1179,11 +1183,14 @@ describe('parseFile action', () => {
       // Notes column used as languageColumn proxy — values like "Greeting", "Farewell", etc.
       await parseFile(FILE_ID, { ...excelMapping, languageColumn: 'Notes' })
 
-      // First segment's targetLang should come from the Notes column ("Greeting"), not project default
+      // First segment's targetLang should come from the Notes column ("Greeting"),
+      // not project default. RC-4 canonicalizes on write, so the expected value is
+      // lowercased. (This fixture uses "Greeting" as a test value — not a real
+      // BCP-47 tag — but the canonicalization is still applied.)
       const firstBatch = insertChain.values.mock.calls[0]?.[0] as
         | Array<Record<string, unknown>>
         | undefined
-      expect(firstBatch?.[0]?.targetLang).toBe('Greeting')
+      expect(firstBatch?.[0]?.targetLang).toBe('greeting')
     })
 
     it('should leave XLIFF behavior unchanged when fileType is sdlxliff (4.4)', async () => {

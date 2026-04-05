@@ -7,12 +7,14 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { UrgentBadge } from '@/components/ui/UrgentBadge'
 import { FileAssignmentDialog } from '@/features/project/components/FileAssignmentDialog'
+import type { AppRole } from '@/lib/auth/getCurrentUser'
 
 type FileAssignmentCellProps = {
   fileId: string
   fileName: string
   projectId: string
   targetLanguage: string
+  currentUserRole: AppRole
   assigneeName?: string | null | undefined
   priority?: 'normal' | 'urgent' | null | undefined
   onAssigned?: (() => void) | undefined
@@ -23,6 +25,7 @@ export function FileAssignmentCell({
   fileName,
   projectId,
   targetLanguage,
+  currentUserRole,
   assigneeName,
   priority,
   onAssigned,
@@ -58,6 +61,7 @@ export function FileAssignmentCell({
         fileName={fileName}
         projectId={projectId}
         targetLanguage={targetLanguage}
+        currentUserRole={currentUserRole}
         onAssigned={onAssigned}
       />
     </>
