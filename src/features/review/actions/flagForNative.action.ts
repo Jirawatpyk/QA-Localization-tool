@@ -137,16 +137,7 @@ export async function flagForNative(
   }
 
   // Step 3b: Verify assignedTo is native_reviewer with matching language (Guardrail #64)
-  // F3: canonicalize DB-side `users.nativeLanguages` array so the JSONB `@>`
-  // compare works against legacy rows with mixed-case tags.
-  const canonicalNativeLanguagesExpr = sql`COALESCE(
-    (
-      SELECT jsonb_agg(lower(value))
-      FROM jsonb_array_elements_text(${users.nativeLanguages}) AS value
-    ),
-    '[]'::jsonb
-  )`
-
+  // Post-migration 0025: direct column reference — all rows canonical.
   const reviewerRows = await db
     .select({
       id: users.id,
@@ -168,7 +159,8 @@ export async function flagForNative(
         withTenant(users.tenantId, tenantId),
         // jsonb containment: canonicalized nativeLanguages @> canonical target.
         // Both sides lowercase so legacy non-canonical rows still match (F3).
-        sql`${canonicalNativeLanguagesExpr} @> ${JSON.stringify([targetLang])}::jsonb`,
+        // Post-migration 0025: canonical column, direct @> compare.
+        sql`${users.nativeLanguages} @> ${JSON.stringify([targetLang])}::jsonb`,
       ),
     )
     .limit(1)

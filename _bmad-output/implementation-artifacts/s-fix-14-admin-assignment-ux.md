@@ -385,6 +385,14 @@ Claude Opus 4.6 (1M ctx) — Amelia (bmad-agent-dev)
     - Type-check: GREEN
     - Lint: 0 errors
   - **Net effect**: All rolling-bug pattern holes closed. Legacy data regression mitigated without a migration (SQL-side canonicalization). Single source of truth schema in `@/lib/language/bcp47.ts` enforces canonicalization at all validation boundaries. No pre-existing failures blocking the suite.
+- 2026-04-06 — Commit `9594cef feat(S-FIX-14): Admin & Assignment UX + root-cause canonicalization refactor` — 37 files, +3565/-256. Pre-commit lint-staged + type-check passed.
+- 2026-04-06 — **Code review R6 (post-commit)** — Blind + Edge + Auditor against the committed snapshot. **Auditor: CLEAN** — all 42 tracked patches verified (ACs 5/5 + R1 10/10 + R2 9/9 + R3 3/3 + R4 3/3 + F 12/12), 4718/4718 tests GREEN, 0 regressions vs spec. **Adversarial layers found 4 issues** (2 duplicated across hunters):
+  - **G1 (High)**: `ProjectCreateDialog` Select — `COMMON_LANGUAGES` has `'zh-Hant'` uppercase; state canonicalizes to `'zh-hant'` but `SelectItem value='zh-Hant'` → Radix can't find match → placeholder shown after selection. User-visible regression introduced by RC-5 client-side canonicalization. **Fix**: module-load `COMMON_LANGUAGES_CANONICAL` with all codes pre-canonicalized; SelectItem uses canonical value; downstream equality checks simplified to plain `.includes()`.
+  - **G2 (Medium)**: `parseFile` canonicalization silently degrades `undefined` → `''` via F4 null-safety, violating Guardrail #14 "fail loud". Empty strings would pass NOT NULL checks and poison every downstream language comparison. **Fix**: `|| 'und'` fallback at all 3 canonicalization call sites in `parseFile.action.ts` (project read path, XLIFF header path, per-segment map).
+  - **G3 (Low, both hunters)**: `bcp47.test.ts` max-length test false-green — items `'a1','a2'…` fail per-item regex before `.max()` refine evaluates. **Fix**: use 6 valid tags (`['en','th','ja','ko','es','de']`) + assert the message contains `"Maximum 5"`.
+  - **G4 (Low, both hunters)**: `getEligibleReviewersSchema.targetLanguage` used hand-rolled `z.string().min(2).max(35).transform(canonicalizeBcp47)` — no regex validation, violating F7 single-source-of-truth. **Fix**: replace with shared `bcp47LanguageSchema` import.
+  - **Verification**: type-check GREEN, lint 0 errors, impacted-dirs suite **1103/1103 GREEN**. G1-G4 cleanly applied.
+  - **Deferred as tech debt (non-blocking)**: JWT stale role for `includeAll` (RBAC M3 question), lowercase BCP-47 display UX (needs `displayBcp47()` helper), deprecated re-export paths still imported by some files, no RLS test for F2 SQL, stale `batch.completed` comment phrasing, dead `prevOpen` reset block in `LanguagePairEditor`, potential `jsonb_array_elements_text` throw on non-string legacy data, subquery perf on large tenants.
 
 ## Review Findings (R4 — 2026-04-05)
 

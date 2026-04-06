@@ -1441,6 +1441,27 @@ These were flagged by agent memory but verified as **FIXED** on 2026-02-25:
 - **Origin:** Deep Verification 2026-04-03, D-01/D-02
 - **Status:** DEFERRED → S-FIX-11 (Dashboard Polish)
 
+---
+
+## Category 8: Language Canonicalization (S-FIX-14)
+
+### ~~TD-LANG-002~~ RLS integration test for nativeLanguages SQL canonicalization
+- **Severity:** Medium
+- **Files:** `src/db/__tests__/rls/nativeLanguages-canonicalization.rls.test.ts` (NEW)
+- **Description:** Unit-level drizzle mocks couldn't catch the R2→R3 CONFLICT-loop bug or R3→R4 read-side regression because `jsonb_agg(lower(value))` SQL was never evaluated. Added 4 RLS integration tests (real Postgres) covering: legacy non-canonical row read, null COALESCE, non-array jsonb_typeof guard, and basic storage verification.
+- **Origin:** S-FIX-14 CR R6 Edge Hunter finding 7.3
+- **Status:** RESOLVED (2026-04-06 — `src/db/__tests__/rls/nativeLanguages-canonicalization.rls.test.ts`)
+
+### ~~TD-LANG-001~~ Subquery perf — GIN index disabled by SQL-side canonicalization
+- **Severity:** Low (acceptable until scale hit)
+- **Files:** `src/features/project/actions/getEligibleReviewers.action.ts`, `src/features/admin/actions/updateUserLanguages.action.ts`, `src/features/review/actions/flagForNative.action.ts`
+- **Description:** SQL `jsonb_agg(lower(value)) FROM jsonb_array_elements_text(...)` subqueries bypassed GIN index on `users.native_languages`.
+- **Fix:** Migration `0025_canonicalize_language_tags.sql` backfills all language columns to canonical lowercase+sorted form. Post-migration: all 3 `jsonb_agg` subqueries removed and replaced with direct column references (`users.nativeLanguages @> ...`), re-enabling GIN index. Read-side canonicalization in `admin/page.tsx` and `updateUserLanguages.action.ts` also simplified (direct reads, no per-row normalization).
+- **Origin:** S-FIX-14 CR R6 Edge Hunter finding 2.1
+- **Status:** RESOLVED (2026-04-06 — migration 0025 + subquery removal)
+
+---
+
 ### ~~TD-UX-020~~ → S-FIX-21: Duplicate file detection not implemented
 - **Severity:** Low
 - **Files:** `src/features/upload/` components

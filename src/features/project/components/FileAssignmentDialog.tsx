@@ -30,6 +30,7 @@ import { getEligibleReviewers } from '@/features/project/actions/getEligibleRevi
 import type { ReviewerOption } from '@/features/project/actions/getEligibleReviewers.action'
 import { ReviewerSelector } from '@/features/project/components/ReviewerSelector'
 import type { AppRole } from '@/lib/auth/getCurrentUser'
+import { displayBcp47 } from '@/lib/language/bcp47'
 import type { FileAssignmentPriority } from '@/types/assignment'
 
 type FileAssignmentDialogProps = {
@@ -292,7 +293,7 @@ export function FileAssignmentDialog({
             <AlertDialogTitle>Assign unmatched reviewer?</AlertDialogTitle>
             <AlertDialogDescription>
               {targetLanguage
-                ? `This reviewer is not assigned to ${targetLanguage}. Assign anyway?`
+                ? `This reviewer is not assigned to ${displayBcp47(targetLanguage)}. Assign anyway?`
                 : 'This reviewer is not a language match for this file. Assign anyway?'}
             </AlertDialogDescription>
           </AlertDialogHeader>

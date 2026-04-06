@@ -197,13 +197,14 @@ export async function parseFile(
       }
     }
 
-    // RC-4: canonicalize on read too. New projects go through `createProjectSchema`
-    // which canonicalizes via `.transform()` (RC-2), but legacy rows from before
-    // this fix may hold mixed-case tags — canonicalize defensively so segments
-    // always get canonical `sourceLang`/`targetLang` regardless of upstream state.
-    sourceLang = canonicalizeBcp47(project.sourceLang)
+    // RC-4 + G2: canonicalize on read too. New projects go through
+    // `createProjectSchema` which canonicalizes via `.transform()` (RC-2), but
+    // legacy rows from before this fix may hold mixed-case tags. `|| 'und'`
+    // fallback prevents empty-string poisoning of NOT NULL segment columns
+    // if upstream project data is malformed.
+    sourceLang = canonicalizeBcp47(project.sourceLang) || 'und'
     // targetLangs is a jsonb string[] — use first element as default
-    targetLang = canonicalizeBcp47(project.targetLangs[0] ?? 'und')
+    targetLang = canonicalizeBcp47(project.targetLangs[0] ?? 'und') || 'und'
 
     const parseResult = await parseExcelBilingual(
       buffer,
@@ -279,19 +280,22 @@ export async function parseFile(
     // attributes which may use any BCP-47 casing (`en-US`, `zh-Hant-TW`, etc.).
     // Storing them canonical keeps comparisons in downstream pipeline layers
     // (ruleEngine, scoreFile, flagForNative) consistent with project-level tags.
-    sourceLang = canonicalizeBcp47(parseResult.data.sourceLang)
-    targetLang = canonicalizeBcp47(parseResult.data.targetLang)
+    // G2: XLIFF parsers may yield empty attrs for malformed files; fall back
+    // to the BCP-47 `und` subtag instead of the empty string `canonicalizeBcp47`
+    // returns for null/undefined input (see F4 null-safety).
+    sourceLang = canonicalizeBcp47(parseResult.data.sourceLang) || 'und'
+    targetLang = canonicalizeBcp47(parseResult.data.targetLang) || 'und'
   }
 
-  // RC-4: canonicalize every per-segment language tag before batch insert.
-  // Per-row language may be overridden via languageColumn (Excel bilingual)
-  // or carried from per-trans-unit attrs (XLIFF) — either path can introduce
-  // mixed case. Normalize here so `segments.sourceLang` / `segments.targetLang`
-  // columns are guaranteed canonical.
+  // RC-4 + G2: canonicalize every per-segment language tag before batch insert.
+  // Per-row language may be overridden via languageColumn (Excel bilingual) or
+  // carried from per-trans-unit attrs (XLIFF) — either path can introduce mixed
+  // case. `|| 'und'` fallback prevents empty-string poisoning of NOT NULL
+  // columns when per-row metadata is missing.
   parsedSegments = parsedSegments.map((seg) => ({
     ...seg,
-    sourceLang: canonicalizeBcp47(seg.sourceLang),
-    targetLang: canonicalizeBcp47(seg.targetLang),
+    sourceLang: canonicalizeBcp47(seg.sourceLang) || 'und',
+    targetLang: canonicalizeBcp47(seg.targetLang) || 'und',
   }))
 
   // 6.4 — Batch insert segments + atomically update file status to 'parsed'

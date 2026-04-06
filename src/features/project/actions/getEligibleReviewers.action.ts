@@ -9,9 +9,9 @@ import { withTenant } from '@/db/helpers/withTenant'
 import { fileAssignments } from '@/db/schema/fileAssignments'
 import { userRoles } from '@/db/schema/userRoles'
 import { users } from '@/db/schema/users'
-import { normalizeBcp47 } from '@/features/admin/validation/userSchemas'
 import { getEligibleReviewersSchema } from '@/features/project/validation/fileAssignmentSchemas'
 import { requireRole } from '@/lib/auth/requireRole'
+import { canonicalizeBcp47 } from '@/lib/language/bcp47'
 import type { ActionResult } from '@/types/actionResult'
 
 export type ReviewerOption = {
@@ -45,12 +45,23 @@ export async function getEligibleReviewers(
 
   // Security: includeAll reveals ALL tenant reviewers regardless of language match.
   // Only admins may use the fallback (prevents non-admin reviewer user enumeration).
-  // Guardrail #62 — defense in depth: UI hides CTA to non-admins, Server Action enforces here.
-  if (includeAll && currentUser.role !== 'admin') {
-    return {
-      success: false,
-      code: 'FORBIDDEN',
-      error: 'Admin access required for full reviewer list',
+  //
+  // TD1: use `requireRole('admin', 'write')` to perform a FRESH DB check on the
+  // user's role instead of trusting JWT claims. Per the M3 pattern
+  // (CLAUDE.md Architecture > RBAC M3), reads may trust JWT for speed, but
+  // `includeAll` is a privilege-escalation-adjacent fallback — a demoted admin
+  // whose JWT has not yet refreshed would otherwise still enumerate reviewers.
+  // Guardrail #62 — defence in depth: UI hides the CTA to non-admins, this
+  // Server Action enforces against the current DB state.
+  if (includeAll) {
+    try {
+      await requireRole('admin', 'write')
+    } catch {
+      return {
+        success: false,
+        code: 'FORBIDDEN',
+        error: 'Admin access required for full reviewer list',
+      }
     }
   }
 
@@ -60,7 +71,7 @@ export async function getEligibleReviewers(
   // like `th-TH`, `ja-JP`, `zh-Hant-TW`). JSONB `@>` and JS `.includes()` are
   // both case-sensitive, so without normalization every file with an uppercase
   // target tag matched ZERO reviewers — the feature was broken in production.
-  const targetLanguage = normalizeBcp47(rawTargetLanguage)
+  const targetLanguage = canonicalizeBcp47(rawTargetLanguage)
 
   // LEFT JOIN file_assignments + COUNT FILTER for workload (Guardrail #83)
   // Language-pair match: canonicalized user.native_languages @> canonical target
@@ -72,24 +83,14 @@ export async function getEligibleReviewers(
   // self-update). The UX spec models nativeLanguages as a reviewer property.
   const REVIEWER_ROLES = ['qa_reviewer', 'native_reviewer'] as const
 
-  // F3: canonicalize the DB side of the JSONB compare on-the-fly so legacy
-  // rows written before RC-1 (holding mixed-case tags like `['th-TH']`) still
-  // match against the canonical lookup key `['th-th']`. Without this, every
-  // file assignment lookup for pre-RC reviewers returns zero matches.
-  const canonicalNativeLanguagesExpr = sql`COALESCE(
-    (
-      SELECT jsonb_agg(lower(value))
-      FROM jsonb_array_elements_text(${users.nativeLanguages}) AS value
-    ),
-    '[]'::jsonb
-  )`
-
+  // Post-migration 0025: all rows are canonical. Direct column reference
+  // re-enables GIN index on `users.native_languages` (TD-LANG-001 resolved).
   const whereFilters = includeAll
     ? [withTenant(users.tenantId, tenantId)]
     : [
         withTenant(users.tenantId, tenantId),
-        // Language-pair filter: canonicalized reviewer native_languages contains target
-        sql`${canonicalNativeLanguagesExpr} @> ${targetLangJsonb}::jsonb`,
+        // Language-pair filter: reviewer's nativeLanguages (canonical) @> canonical target
+        sql`${users.nativeLanguages} @> ${targetLangJsonb}::jsonb`,
       ]
 
   const reviewers = await db
@@ -132,7 +133,7 @@ export async function getEligibleReviewers(
   // regardless of DB state. `targetLanguage` is already canonical (schema +
   // R4-P1 action-level normalization).
   const enriched = reviewers.map((r) => {
-    const canonicalNativeLanguages = (r.nativeLanguages ?? []).map(normalizeBcp47)
+    const canonicalNativeLanguages = (r.nativeLanguages ?? []).map(canonicalizeBcp47)
     return {
       ...r,
       nativeLanguages: canonicalNativeLanguages,

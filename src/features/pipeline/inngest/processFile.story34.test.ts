@@ -945,7 +945,7 @@ describe('processFilePipeline — partial results (Story 3.4)', () => {
 
       // S-FIX-5 added `score.updated` event emission from the L1/L2 scoring
       // steps, so `sendEvent` IS called even when batch doesn't complete.
-      // The invariant we care about: no `batch.completed` event was emitted.
+      // The invariant we care about: no `pipeline.batch-completed` event was emitted.
       expectNoBatchCompletedEvent(step)
     })
 

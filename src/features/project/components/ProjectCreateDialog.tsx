@@ -27,7 +27,20 @@ import { Textarea } from '@/components/ui/textarea'
 import { createProject } from '@/features/project/actions/createProject.action'
 import { COMMON_LANGUAGES } from '@/features/project/validation/languages'
 import { createProjectSchema } from '@/features/project/validation/projectSchemas'
-import { canonicalizeBcp47 } from '@/lib/language/bcp47'
+import { canonicalizeBcp47, displayBcp47 } from '@/lib/language/bcp47'
+
+// G1: canonicalize `COMMON_LANGUAGES` entries once at module load so the
+// `value` passed to Radix Select matches the canonical form held in local
+// state. Without this, `COMMON_LANGUAGES.code = 'zh-Hant'` would render as
+// `SelectItem value='zh-Hant'` but state (after `onValueChange` canonicalize)
+// would be `'zh-hant'` — Radix fails to find the matching item and silently
+// displays the placeholder instead of the user's selection.
+const COMMON_LANGUAGES_CANONICAL: { code: string; label: string }[] = COMMON_LANGUAGES.map(
+  (lang) => ({
+    code: canonicalizeBcp47(lang.code),
+    label: lang.label,
+  }),
+)
 
 type ProjectCreateDialogProps = {
   open: boolean
@@ -97,13 +110,10 @@ export function ProjectCreateDialog({ open, onOpenChange }: ProjectCreateDialogP
     })
   }
 
-  // RC-5: canonical compare — `sourceLang` state should be canonical (via
-  // the Select onValueChange wrapper below), but defend against mixed-case
-  // `COMMON_LANGUAGES.code` entries (e.g., `zh-Hant`) by canonicalizing both.
-  const canonicalSourceLang = sourceLang ? canonicalizeBcp47(sourceLang) : ''
-  const availableTargetLangs = COMMON_LANGUAGES.filter(
-    (lang) => canonicalizeBcp47(lang.code) !== canonicalSourceLang,
-  )
+  // G1: both sides are canonical — `sourceLang` via `onValueChange`, and
+  // `COMMON_LANGUAGES_CANONICAL.code` via module-load transform. Simple
+  // equality is safe here.
+  const availableTargetLangs = COMMON_LANGUAGES_CANONICAL.filter((lang) => lang.code !== sourceLang)
 
   return (
     <Dialog
@@ -175,9 +185,10 @@ export function ProjectCreateDialog({ open, onOpenChange }: ProjectCreateDialogP
                 <SelectValue placeholder="Select source language" />
               </SelectTrigger>
               <SelectContent>
-                {COMMON_LANGUAGES.map((lang) => (
+                {COMMON_LANGUAGES_CANONICAL.map((lang) => (
                   <SelectItem key={lang.code} value={lang.code}>
-                    {lang.label} ({lang.code})
+                    {/* TD2: display canonical-cased form in the parenthetical. */}
+                    {lang.label} ({displayBcp47(lang.code)})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -197,11 +208,11 @@ export function ProjectCreateDialog({ open, onOpenChange }: ProjectCreateDialogP
               {availableTargetLangs.map((lang) => (
                 <label key={lang.code} className="flex items-center gap-2 text-sm">
                   <Checkbox
-                    // RC-5: compare canonical forms — `targetLangs` state is
-                    // always canonical (via toggleTargetLang), but `lang.code`
-                    // may come from `COMMON_LANGUAGES` with mixed case (e.g.
-                    // `zh-Hant`). Normalize both sides for the compare.
-                    checked={targetLangs.includes(canonicalizeBcp47(lang.code))}
+                    // G1: `lang.code` is now canonical (from
+                    // `COMMON_LANGUAGES_CANONICAL`) and `targetLangs` state is
+                    // canonical (via `toggleTargetLang`). Plain `.includes()`
+                    // is safe.
+                    checked={targetLangs.includes(lang.code)}
                     onCheckedChange={() => toggleTargetLang(lang.code)}
                   />
                   {lang.label}

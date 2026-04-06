@@ -14,7 +14,7 @@ import { requireRole } from '@/lib/auth/requireRole'
 // F6: single source of truth for language canonicalization + set compare.
 // The RC refactor centralized these in `@/lib/language/bcp47`; a local copy
 // drifted here during earlier rounds and is now deleted.
-import { canonicalizeLanguages, languageSetsEqual } from '@/lib/language/bcp47'
+import { languageSetsEqual } from '@/lib/language/bcp47'
 import type { ActionResult } from '@/types/actionResult'
 
 type UpdateUserLanguagesResult = {
@@ -58,10 +58,10 @@ export async function updateUserLanguages(
     return { success: false, code: 'NOT_FOUND', error: 'User not found' }
   }
 
-  // Read-side canonicalization: legacy rows from pre-canonicalization writes
-  // (or test seeds) may be non-canonical. Normalize on read so the JS lock
-  // check is order/case-agnostic vs. older rows.
-  const previousLanguages = canonicalizeLanguages(current.nativeLanguages ?? [])
+  // Post-migration 0025: DB values are canonical. Read directly — no
+  // read-side canonicalization needed (was `canonicalizeLanguages(...)` before
+  // the backfill). `?? []` unifies null with empty.
+  const previousLanguages = current.nativeLanguages ?? []
 
   // Optimistic-lock snapshot compare (R2-P1 + R3-P1): both sides are now
   // canonicalized, so set equality reduces to positional equality. Kept as
@@ -94,20 +94,17 @@ export async function updateUserLanguages(
   //    compare matches the JS canonical form for BOTH fresh and legacy rows.
   //    Wrapped in a CTE-like subquery so the array element conversion runs
   //    once per row.
-  const canonicalDbExpr = sql`COALESCE(
-    (
-      SELECT jsonb_agg(lower(value) ORDER BY lower(value))
-      FROM jsonb_array_elements_text(${users.nativeLanguages}) AS value
-    ),
-    '[]'::jsonb
-  )`
-
+  // Post-migration 0025: all rows are canonical (lowercase + sorted). The
+  // SQL-side `jsonb_agg(lower(value))` subquery that R3-P1→F2→TD7 built up
+  // is no longer needed — direct column reference re-enables GIN index usage
+  // and eliminates the per-row subquery overhead (TD-LANG-001 resolved).
+  // COALESCE still needed for NULL → '[]' unification.
   const updateWhere =
     clientPrevious !== undefined
       ? and(
           eq(users.id, userId),
           withTenant(users.tenantId, currentUser.tenantId),
-          sql`${canonicalDbExpr} IS NOT DISTINCT FROM ${JSON.stringify(previousLanguages)}::jsonb`,
+          sql`COALESCE(${users.nativeLanguages}, '[]'::jsonb) IS NOT DISTINCT FROM ${JSON.stringify(previousLanguages)}::jsonb`,
         )
       : and(eq(users.id, userId), withTenant(users.tenantId, currentUser.tenantId))
 

@@ -65,6 +65,42 @@ export function canonicalizeLanguages(langs: readonly (string | null | undefined
 }
 
 /**
+ * Reconstruct the RFC 5646 recommended display casing for a BCP-47 tag.
+ *
+ * - Primary language subtag: lowercase (`th`, `zh`, `en`)
+ * - Script subtag (4 letters): Title case (`Hant`, `Cyrl`)
+ * - Region subtag (2 letters or 3 digits): UPPERCASE (`TH`, `US`, `419`)
+ * - Variant / extension / private-use: lowercase
+ *
+ * Use at display boundaries ONLY — storage, comparison, SQL predicates, and
+ * cache keys MUST continue to use `canonicalizeBcp47()` (lowercase). Calling
+ * code should never round-trip `displayBcp47` → storage; canonical and
+ * display forms are semantically equivalent but syntactically distinct.
+ *
+ * Example: `displayBcp47('zh-hant-tw')` → `'zh-Hant-TW'`, while
+ * `canonicalizeBcp47('zh-Hant-TW')` → `'zh-hant-tw'`.
+ */
+export function displayBcp47(tag: string | null | undefined): string {
+  if (typeof tag !== 'string' || tag.length === 0) return ''
+  const parts = tag.trim().split('-')
+  return parts
+    .map((part, idx) => {
+      if (idx === 0) return part.toLowerCase()
+      if (part.length === 4) {
+        // 4-letter subtag = script code → Title case
+        return part[0]!.toUpperCase() + part.slice(1).toLowerCase()
+      }
+      if (part.length === 2 || /^\d{3}$/.test(part)) {
+        // 2-letter region (ISO 3166-1 alpha-2) or 3-digit (UN M.49) → UPPERCASE
+        return part.toUpperCase()
+      }
+      // Variant, extension, private-use: lowercase per RFC 5646
+      return part.toLowerCase()
+    })
+    .join('-')
+}
+
+/**
  * Set equality under canonicalization. Inputs may be in any order or casing;
  * returns true iff they represent the same set of BCP-47 tags.
  *

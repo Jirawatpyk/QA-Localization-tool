@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { updateUserLanguages } from '@/features/admin/actions/updateUserLanguages.action'
+import { displayBcp47 } from '@/lib/language/bcp47'
 import { cn } from '@/lib/utils'
 
 export type LanguagePairEditorProps = {
@@ -55,11 +56,11 @@ export function LanguagePairEditor({
 }: LanguagePairEditorProps) {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
-  // Render-time reset pattern (Guardrail #21) — reset local state on re-open
-  const [prevOpen, setPrevOpen] = useState(open)
-  if (prevOpen !== open) {
-    setPrevOpen(open)
-  }
+  // TD6: Removed dead Guardrail #21 render-time reset block. This popover has
+  // NO local form state to reset on re-open — the `prevOpen` dance was a
+  // copy-paste from FileAssignmentDialog where it gates real state-clearing.
+  // If a search/filter state is added in the future, the pattern should be
+  // reinstated here.
 
   function handleToggle(lang: string) {
     // Snapshot pre-toggle state at click time. `currentLanguages` is a prop owned
@@ -134,7 +135,7 @@ export function LanguagePairEditor({
                   className={cn('mr-2 size-4', selected ? 'opacity-100' : 'opacity-0')}
                   aria-hidden="true"
                 />
-                <span>{lang}</span>
+                <span>{displayBcp47(lang)}</span>
               </CommandItem>
             )
           })}
@@ -175,7 +176,8 @@ export function LanguagePairEditor({
                   className="text-xs"
                   data-testid="language-pair-badge"
                 >
-                  {lang}
+                  {/* TD2: storage is canonical lowercase; display uses RFC 5646 casing */}
+                  {displayBcp47(lang)}
                 </Badge>
               ))
             )}

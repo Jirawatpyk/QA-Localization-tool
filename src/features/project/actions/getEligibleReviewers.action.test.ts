@@ -203,7 +203,9 @@ describe('getEligibleReviewers', () => {
   })
 
   it('should compute isLanguageMatch per reviewer when includeAll=true', async () => {
-    // includeAll requires admin role (P1 security gate)
+    // includeAll requires admin role — TD1: second requireRole call (write
+    // intent) hits DB fresh. Mock BOTH calls to return admin.
+    mockRequireRole.mockResolvedValueOnce({ ...mockCurrentUser, role: 'admin' })
     mockRequireRole.mockResolvedValueOnce({ ...mockCurrentUser, role: 'admin' })
     const reviewers = [
       {
@@ -249,7 +251,9 @@ describe('getEligibleReviewers', () => {
   })
 
   it('should not auto-suggest any reviewer when includeAll=true and none match target language', async () => {
-    // includeAll requires admin role (P1 security gate)
+    // includeAll requires admin role — TD1: second requireRole call (write
+    // intent) hits DB fresh. Mock BOTH calls to return admin.
+    mockRequireRole.mockResolvedValueOnce({ ...mockCurrentUser, role: 'admin' })
     mockRequireRole.mockResolvedValueOnce({ ...mockCurrentUser, role: 'admin' })
     const reviewers = [
       {
@@ -272,8 +276,11 @@ describe('getEligibleReviewers', () => {
     }
   })
 
-  it('should return FORBIDDEN when non-admin requests includeAll=true (P1 security gate)', async () => {
-    // Default mockCurrentUser has role 'qa_reviewer' — must be rejected.
+  it('should return FORBIDDEN when non-admin requests includeAll=true (P1 + TD1 security gate)', async () => {
+    // First `requireRole('qa_reviewer', 'read')` succeeds with default mock;
+    // TD1's second `requireRole('admin', 'write')` must throw for non-admin.
+    mockRequireRole.mockResolvedValueOnce(mockCurrentUser) // qa_reviewer (read)
+    mockRequireRole.mockRejectedValueOnce(new Error('Not admin')) // admin write fails
     const result = await getEligibleReviewers({ targetLanguage: 'th', includeAll: true })
     expect(result.success).toBe(false)
     if (!result.success) {
@@ -286,6 +293,8 @@ describe('getEligibleReviewers', () => {
     // not just that the mock output happens to lack admins. The spy on
     // drizzle `inArray` (module-level mock above) captures every call — we
     // assert one was made with the reviewer-role tuple.
+    // TD1: includeAll now performs two requireRole calls (read + write).
+    mockRequireRole.mockResolvedValueOnce({ ...mockCurrentUser, role: 'admin' })
     mockRequireRole.mockResolvedValueOnce({ ...mockCurrentUser, role: 'admin' })
     dbState.returnValues = [[]] // empty result — we're testing the call site, not the data
 

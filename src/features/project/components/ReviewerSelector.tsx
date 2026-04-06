@@ -16,6 +16,7 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import type { ReviewerOption } from '@/features/project/actions/getEligibleReviewers.action'
+import { displayBcp47 } from '@/lib/language/bcp47'
 import { cn } from '@/lib/utils'
 
 type ReviewerSelectorProps = {
@@ -267,7 +268,7 @@ function EmptyReviewerState({
       <div className="space-y-1">
         <p className="text-foreground text-sm font-medium">
           {targetLanguage
-            ? `No reviewers available for ${targetLanguage}`
+            ? `No reviewers available for ${displayBcp47(targetLanguage)}`
             : 'No reviewers available for this file'}
         </p>
         {isAdmin ? (

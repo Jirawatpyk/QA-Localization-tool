@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { canonicalizeBcp47 } from '@/lib/language/bcp47'
+import { bcp47LanguageSchema } from '@/lib/language/bcp47'
 import { FILE_ASSIGNMENT_PRIORITIES, FILE_ASSIGNMENT_STATUSES } from '@/types/assignment'
 
 export const assignFileSchema = z.object({
@@ -35,12 +35,12 @@ export const heartbeatSchema = z.object({
 export type HeartbeatInput = z.infer<typeof heartbeatSchema>
 
 export const getEligibleReviewersSchema = z.object({
-  // F12: canonicalize at the schema boundary — RC-2 pattern. The R4-P1 manual
-  // `normalizeBcp47(rawTargetLanguage)` in the action is redundant once schema
-  // transforms, but kept for defence in depth.
-  // Bumped `.max` from 10 to 35 to align with `bcp47LanguageSchema` in
-  // `@/lib/language/bcp47` (10 was too tight for tags like `zh-Hant-HK`).
-  targetLanguage: z.string().min(2).max(35).transform(canonicalizeBcp47),
+  // G4: use the shared `bcp47LanguageSchema` (length + regex + canonicalize
+  // transform) instead of a hand-rolled `z.string().min(2).max(35)` — single
+  // source of truth per F7. Previously this field accepted malformed input
+  // like `'!!bad!!'` which would lowercase and produce a silent zero-match
+  // query; now it rejects non-BCP-47 strings at the validation boundary.
+  targetLanguage: bcp47LanguageSchema,
   includeAll: z.boolean().default(false),
 })
 

@@ -18,6 +18,7 @@ import { createUser } from '@/features/admin/actions/createUser.action'
 import { updateUserRole } from '@/features/admin/actions/updateUserRole.action'
 import { LanguagePairEditor } from '@/features/admin/components/LanguagePairEditor'
 import type { AppRole } from '@/lib/auth/getCurrentUser'
+import { displayBcp47 } from '@/lib/language/bcp47'
 
 type UserRow = {
   id: string
@@ -318,7 +319,9 @@ function NewUserLanguageChips({
             aria-pressed={active}
             data-testid={`new-user-language-chip-${lang}`}
           >
-            {lang}
+            {/* TD2: display canonical-cased form (e.g., `zh-Hant-TW`) even
+                though `lang` is stored as canonical lowercase. */}
+            {displayBcp47(lang)}
           </button>
         )
       })}

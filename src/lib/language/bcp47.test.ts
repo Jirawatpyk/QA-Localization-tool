@@ -5,6 +5,7 @@ import {
   bcp47LanguageSchema,
   canonicalizeBcp47,
   canonicalizeLanguages,
+  displayBcp47,
   languageSetsEqual,
   normalizeBcp47,
 } from './bcp47'
@@ -173,12 +174,54 @@ describe('bcp47LanguageArraySchema', () => {
   })
 
   it('rejects arrays exceeding max', () => {
-    const result = schema.safeParse(['a1', 'a2', 'a3', 'a4', 'a5', 'a6'])
+    // G3: use 6 VALID tags so the per-item regex passes and the array-level
+    // `.max(5)` refine is actually exercised. The earlier version used `'a1'`
+    // etc. which fail the regex first — the assertion passed for the wrong
+    // reason (false-green) and did not guard the max constraint at all.
+    const result = schema.safeParse(['en', 'th', 'ja', 'ko', 'es', 'de'])
     expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toContain('Maximum 5')
+    }
   })
 
   it('accepts empty array', () => {
     const result = schema.safeParse([])
     expect(result.success).toBe(true)
+  })
+})
+
+describe('displayBcp47', () => {
+  it.each([
+    ['th', 'th'],
+    ['en', 'en'],
+    ['yue', 'yue'],
+    ['th-th', 'th-TH'],
+    ['en-us', 'en-US'],
+    ['zh-cn', 'zh-CN'],
+    ['zh-hant', 'zh-Hant'],
+    ['zh-hant-tw', 'zh-Hant-TW'],
+    ['zh-hans-hk', 'zh-Hans-HK'],
+    ['es-419', 'es-419'], // numeric region stays UPPERCASE (all digits)
+  ])('displayBcp47(%s) → %s', (input, expected) => {
+    expect(displayBcp47(input)).toBe(expected)
+  })
+
+  it('returns empty string for null/undefined', () => {
+    expect(displayBcp47(null)).toBe('')
+    expect(displayBcp47(undefined)).toBe('')
+    expect(displayBcp47('')).toBe('')
+  })
+
+  it('is idempotent on already-display-cased input', () => {
+    expect(displayBcp47('zh-Hant-TW')).toBe('zh-Hant-TW')
+    expect(displayBcp47('en-US')).toBe('en-US')
+  })
+
+  it('round-trips with canonicalizeBcp47 (display → canonical → display)', () => {
+    const display = 'zh-Hant-TW'
+    const canonical = canonicalizeBcp47(display)
+    expect(canonical).toBe('zh-hant-tw')
+    expect(displayBcp47(canonical)).toBe(display)
   })
 })
