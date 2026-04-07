@@ -13,6 +13,7 @@ import { findings } from '@/db/schema/findings'
 import { reviewActions } from '@/db/schema/reviewActions'
 import { segments } from '@/db/schema/segments'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
+import { buildFeedbackEventRow } from '@/features/review/helpers/buildFeedbackEventRow'
 import { getNewState } from '@/features/review/utils/state-transitions'
 import { bulkActionSchema } from '@/features/review/validation/reviewAction.schema'
 import type { BulkActionInput } from '@/features/review/validation/reviewAction.schema'
@@ -307,27 +308,24 @@ export async function bulkAction(input: BulkActionInput): Promise<ActionResult<B
       // CR-H4: Batch INSERT feedback_events (single round-trip instead of N)
       const feedbackRows = processed.map((p) => {
         const lang = p.segmentId ? segmentLangMap.get(p.segmentId) : undefined
-        return {
+        return buildFeedbackEventRow({
           tenantId,
           fileId,
           projectId,
           findingId: p.findingId,
           reviewerId: userId,
-          action: 'reject' as const,
+          action: 'reject',
+          isFalsePositive: true,
           findingCategory: p.category,
           originalSeverity: p.severity,
-          isFalsePositive: true,
-          reviewerIsNative: !determineNonNative(
-            user.nativeLanguages,
-            lang?.targetLang ?? 'unknown',
-          ),
           layer: p.detectedByLayer,
           detectedByLayer: p.detectedByLayer,
-          sourceLang: lang?.sourceLang ?? 'unknown',
-          targetLang: lang?.targetLang ?? 'unknown',
+          sourceLang: lang?.sourceLang ?? '',
+          targetLang: lang?.targetLang ?? '',
           sourceText: p.sourceTextExcerpt ?? '',
           originalTarget: p.targetTextExcerpt ?? '',
-        }
+          reviewerNativeLanguages: user.nativeLanguages,
+        })
       })
       if (feedbackRows.length > 0) {
         await db.insert(feedbackEvents).values(feedbackRows)

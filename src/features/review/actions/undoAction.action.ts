@@ -11,9 +11,9 @@ import { findings } from '@/db/schema/findings'
 import { segments } from '@/db/schema/segments'
 import { executeUndoRedo } from '@/features/review/actions/helpers/executeUndoRedo'
 import type { UndoRedoResult } from '@/features/review/actions/helpers/executeUndoRedo'
+import { buildFeedbackEventRow } from '@/features/review/helpers/buildFeedbackEventRow'
 import { undoActionSchema } from '@/features/review/validation/undoAction.schema'
 import type { UndoActionInput } from '@/features/review/validation/undoAction.schema'
-import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
 import type { ActionResult } from '@/types/actionResult'
@@ -90,24 +90,26 @@ export async function undoAction(input: UndoActionInput): Promise<ActionResult<U
           }
         }
 
-        await db.insert(feedbackEvents).values({
-          tenantId: user.tenantId,
-          fileId,
-          projectId,
-          findingId,
-          reviewerId: user.id,
-          action: 'undo_reject',
-          findingCategory: meta.category,
-          originalSeverity: meta.severity,
-          isFalsePositive: false,
-          reviewerIsNative: !determineNonNative(user.nativeLanguages, targetLang),
-          layer: meta.detectedByLayer,
-          detectedByLayer: meta.detectedByLayer,
-          sourceLang,
-          targetLang,
-          sourceText: meta.sourceTextExcerpt ?? '',
-          originalTarget: meta.targetTextExcerpt ?? '',
-        })
+        await db.insert(feedbackEvents).values(
+          buildFeedbackEventRow({
+            tenantId: user.tenantId,
+            fileId,
+            projectId,
+            findingId,
+            reviewerId: user.id,
+            action: 'undo_reject',
+            isFalsePositive: false,
+            findingCategory: meta.category,
+            originalSeverity: meta.severity,
+            layer: meta.detectedByLayer,
+            detectedByLayer: meta.detectedByLayer,
+            sourceLang,
+            targetLang,
+            sourceText: meta.sourceTextExcerpt ?? '',
+            originalTarget: meta.targetTextExcerpt ?? '',
+            reviewerNativeLanguages: user.nativeLanguages,
+          }),
+        )
       }
     } catch (feedbackErr) {
       logger.error({ err: feedbackErr, findingId }, 'feedback_events insert failed for undo-reject')

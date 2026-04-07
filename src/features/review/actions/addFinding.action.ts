@@ -12,6 +12,7 @@ import { reviewActions } from '@/db/schema/reviewActions'
 import { segments } from '@/db/schema/segments'
 import { taxonomyDefinitions } from '@/db/schema/taxonomyDefinitions'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
+import { buildFeedbackEventRow } from '@/features/review/helpers/buildFeedbackEventRow'
 import { addFindingSchema } from '@/features/review/validation/reviewAction.schema'
 import type { AddFindingInput } from '@/features/review/validation/reviewAction.schema'
 import { determineNonNative } from '@/lib/auth/determineNonNative'
@@ -188,24 +189,26 @@ export async function addFinding(input: AddFindingInput): Promise<ActionResult<A
 
   // Insert feedback_events for AI training (FR80 — best-effort)
   try {
-    await db.insert(feedbackEvents).values({
-      tenantId,
-      fileId,
-      projectId,
-      findingId,
-      reviewerId: userId,
-      action: 'manual_add',
-      findingCategory: category,
-      originalSeverity: severity,
-      isFalsePositive: false,
-      reviewerIsNative: !isNonNative,
-      layer: 'Manual',
-      detectedByLayer: 'Manual',
-      sourceLang: segment.sourceLang,
-      targetLang: segment.targetLang,
-      sourceText: sourceExcerpt,
-      originalTarget: targetExcerpt,
-    })
+    await db.insert(feedbackEvents).values(
+      buildFeedbackEventRow({
+        tenantId,
+        fileId,
+        projectId,
+        findingId,
+        reviewerId: userId,
+        action: 'manual_add',
+        isFalsePositive: false,
+        findingCategory: category,
+        originalSeverity: severity,
+        layer: 'Manual',
+        detectedByLayer: 'Manual',
+        sourceLang: segment.sourceLang,
+        targetLang: segment.targetLang,
+        sourceText: sourceExcerpt,
+        originalTarget: targetExcerpt,
+        reviewerNativeLanguages: user.nativeLanguages,
+      }),
+    )
   } catch (feedbackErr) {
     logger.error({ err: feedbackErr, findingId }, 'feedback_events insert failed for addFinding')
   }
