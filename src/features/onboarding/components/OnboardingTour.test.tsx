@@ -25,7 +25,15 @@ vi.mock('@/features/onboarding/actions/updateTourState.action', () => ({
   updateTourState: vi.fn().mockResolvedValue({ success: true, data: { success: true } }),
 }))
 
+vi.mock('@/features/onboarding/dismissState', () => ({
+  isDismissed: vi.fn().mockReturnValue(false),
+  markDismissed: vi.fn(),
+  clearDismissed: vi.fn(),
+  _resetForTesting: vi.fn(),
+}))
+
 import { updateTourState } from '@/features/onboarding/actions/updateTourState.action'
+import { isDismissed, markDismissed } from '@/features/onboarding/dismissState'
 
 import { OnboardingTour } from './OnboardingTour'
 
@@ -37,6 +45,7 @@ const DYNAMIC_IMPORT_TIMEOUT = { timeout: 3000 }
 describe('OnboardingTour', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(isDismissed).mockReturnValue(false)
     // Default: desktop viewport — configurable:true required to allow redefinition between tests/workers
     Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true, configurable: true })
   })
@@ -130,6 +139,7 @@ describe('OnboardingTour', () => {
     mockGetActiveIndex.mockReturnValue(1)
     driverConfig?.onCloseClick?.()
 
+    expect(markDismissed).toHaveBeenCalledWith('setup')
     expect(updateTourState).toHaveBeenCalledWith({
       action: 'dismiss',
       tourId: 'setup',
@@ -163,11 +173,14 @@ describe('OnboardingTour', () => {
       dismissedAtStep: 2,
     })
 
+    // After dismiss, isDismissed now returns true
+    vi.mocked(isDismissed).mockReturnValue(true)
+
     // Simulate onDestroyed firing after destroy()
     vi.mocked(updateTourState).mockClear()
     driverConfig?.onDestroyed?.()
 
-    // onDestroyed should NOT fire complete because dismissedRef is true
+    // onDestroyed should NOT fire complete because isDismissed('setup') is true
     expect(updateTourState).not.toHaveBeenCalled()
   })
 
@@ -206,6 +219,9 @@ describe('OnboardingTour', () => {
       | { onCloseClick?: () => void }
       | undefined
     driverConfig?.onCloseClick?.()
+
+    // After dismiss, isDismissed returns true
+    vi.mocked(isDismissed).mockReturnValue(true)
 
     // Clear mocks to track new calls
     mockDriverFn.mockClear()
@@ -269,5 +285,87 @@ describe('OnboardingTour', () => {
       action: 'complete',
       tourId: 'setup',
     })
+  })
+
+  // ────────────────────────────────────────────────
+  // S-FIX-6: Restart clears session dismiss state → tour re-activates (AC5)
+  // ────────────────────────────────────────────────
+
+  it('should re-init tour after restart clears session dismiss state', async () => {
+    const { rerender } = render(<OnboardingTour userId="usr-1" userMetadata={null} />)
+
+    await vi.waitFor(() => {
+      expect(mockDriverFn).toHaveBeenCalledTimes(1)
+    }, DYNAMIC_IMPORT_TIMEOUT)
+
+    // Simulate dismiss via X button
+    const driverConfig = mockDriverFn.mock.calls[0]?.[0] as
+      | { onCloseClick?: () => void }
+      | undefined
+    mockGetActiveIndex.mockReturnValue(0)
+    driverConfig?.onCloseClick?.()
+
+    // After dismiss, isDismissed returns true
+    vi.mocked(isDismissed).mockReturnValue(true)
+
+    // Clear mocks to track new calls
+    mockDriverFn.mockClear()
+
+    // Verify dismiss state blocks re-init (rerender with stale metadata)
+    rerender(<OnboardingTour userId="usr-1" userMetadata={{ dismissed_at_step: { setup: 1 } }} />)
+    await new Promise((r) => setTimeout(r, 50))
+    expect(mockDriverFn).not.toHaveBeenCalled()
+
+    // Simulate restart: HelpMenu calls clearDismissed + router.refresh()
+    // isDismissed now returns false (cleared by HelpMenu)
+    vi.mocked(isDismissed).mockReturnValue(false)
+
+    // Re-render with cleared metadata (restart clears dismissed_at_step)
+    rerender(
+      <OnboardingTour userId="usr-1" userMetadata={{ dismissed_at_step: { setup: null } }} />,
+    )
+
+    // Tour MUST re-initialize after restart (dismiss state cleared)
+    await vi.waitFor(() => {
+      expect(mockDriverFn).toHaveBeenCalledTimes(1)
+    }, DYNAMIC_IMPORT_TIMEOUT)
+  })
+
+  // ────────────────────────────────────────────────
+  // S-FIX-6 Regression: Dismiss survives full unmount + remount
+  // Original bug: useRef(false) resets on remount — caught by unmount() + render(), NOT rerender()
+  // ────────────────────────────────────────────────
+
+  it('should NOT re-init tour after dismiss when component is fully unmounted and remounted with stale metadata', async () => {
+    const { unmount } = render(<OnboardingTour userId="usr-1" userMetadata={null} />)
+
+    await vi.waitFor(() => {
+      expect(mockDriverFn).toHaveBeenCalledTimes(1)
+    }, DYNAMIC_IMPORT_TIMEOUT)
+
+    // Simulate dismiss via X button
+    const driverConfig = mockDriverFn.mock.calls[0]?.[0] as
+      | { onCloseClick?: () => void }
+      | undefined
+    driverConfig?.onCloseClick?.()
+
+    // After dismiss, isDismissed returns true (session state persisted)
+    vi.mocked(isDismissed).mockReturnValue(true)
+
+    // Full unmount — simulates real navigation (component destroyed)
+    unmount()
+
+    // Clear mocks to track fresh mount
+    mockDriverFn.mockClear()
+
+    // Fresh mount with STALE metadata (server hasn't persisted yet — dismissed_at_step still null)
+    // This is the exact race condition: server action in-flight, user navigates back
+    render(<OnboardingTour userId="usr-1" userMetadata={null} />)
+
+    // Wait long enough for the async dynamic import to resolve (if it were to fire)
+    await new Promise((r) => setTimeout(r, 50))
+
+    // Tour must NOT re-init because isDismissed('setup') blocks it
+    expect(mockDriverFn).not.toHaveBeenCalled()
   })
 })

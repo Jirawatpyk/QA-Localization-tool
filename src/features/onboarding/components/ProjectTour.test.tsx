@@ -29,17 +29,33 @@ vi.mock('driver.js', () => ({
 
 vi.mock('driver.js/dist/driver.css', () => ({}))
 
+const mockUsePathname = vi.fn(() => '/projects/proj-1/upload')
+
+vi.mock('next/navigation', () => ({
+  usePathname: () => mockUsePathname(),
+}))
+
 vi.mock('@/features/onboarding/actions/updateTourState.action', () => ({
   updateTourState: vi.fn().mockResolvedValue({ success: true, data: { success: true } }),
 }))
 
+vi.mock('@/features/onboarding/dismissState', () => ({
+  isDismissed: vi.fn().mockReturnValue(false),
+  markDismissed: vi.fn(),
+  clearDismissed: vi.fn(),
+  _resetForTesting: vi.fn(),
+}))
+
 import { updateTourState } from '@/features/onboarding/actions/updateTourState.action'
+import { isDismissed, markDismissed } from '@/features/onboarding/dismissState'
 
 import { ProjectTour } from './ProjectTour'
 
 describe('ProjectTour', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(isDismissed).mockReturnValue(false)
+    mockUsePathname.mockReturnValue('/projects/proj-1/upload')
     // Default: desktop viewport — configurable:true required to allow redefinition between tests
     Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true, configurable: true })
   })
@@ -121,6 +137,7 @@ describe('ProjectTour', () => {
     mockGetActiveIndex.mockReturnValue(1)
     driverConfig?.onCloseClick?.()
 
+    expect(markDismissed).toHaveBeenCalledWith('project')
     expect(updateTourState).toHaveBeenCalledWith({
       action: 'dismiss',
       tourId: 'project',
@@ -193,11 +210,14 @@ describe('ProjectTour', () => {
       dismissedAtStep: 2,
     })
 
+    // After dismiss, isDismissed now returns true
+    vi.mocked(isDismissed).mockReturnValue(true)
+
     // Simulate onDestroyed firing after destroy()
     vi.mocked(updateTourState).mockClear()
     driverConfig?.onDestroyed?.()
 
-    // onDestroyed should NOT fire complete because dismissedRef is true
+    // onDestroyed should NOT fire complete because isDismissed('project') is true
     expect(updateTourState).not.toHaveBeenCalled()
   })
 
@@ -237,6 +257,9 @@ describe('ProjectTour', () => {
       | undefined
     driverConfig?.onCloseClick?.()
 
+    // After dismiss, isDismissed returns true
+    vi.mocked(isDismissed).mockReturnValue(true)
+
     // Clear mocks to track new calls
     mockDriverFn.mockClear()
 
@@ -244,13 +267,13 @@ describe('ProjectTour', () => {
     // this represents a non-restart refresh where dismiss is preserved in DB.
     rerender(<ProjectTour userId="usr-1" userMetadata={{ dismissed_at_step: { project: 1 } }} />)
 
-    // Tour must NOT re-initialize because dismissed_at_step.project is still set
+    // Tour must NOT re-initialize because isDismissed('project') is true
     await vi.waitFor(() => {
       expect(mockDriverFn).not.toHaveBeenCalled()
     })
   })
 
-  it('[P1] should re-init tour after restart clears dismissed_at_step in same session', async () => {
+  it('[P1] should re-init tour after restart clears session dismiss state', async () => {
     const { rerender } = render(<ProjectTour userId="usr-1" userMetadata={null} />)
 
     await vi.waitFor(() => {
@@ -264,15 +287,25 @@ describe('ProjectTour', () => {
     mockGetActiveIndex.mockReturnValue(0)
     driverConfig?.onCloseClick?.()
 
+    // After dismiss, isDismissed returns true
+    vi.mocked(isDismissed).mockReturnValue(true)
+
     // Clear mocks to track new calls
     mockDriverFn.mockClear()
 
-    // Simulate restart: server action clears project_tour_completed and
-    // dismissed_at_step.project → router.refresh() flows cleared metadata back.
-    // dismissed_at_step.project is null (falsy) — restart signal.
+    // Verify dismiss state blocks re-init (rerender with stale metadata)
+    rerender(<ProjectTour userId="usr-1" userMetadata={{ dismissed_at_step: { project: 1 } }} />)
+    await new Promise((r) => setTimeout(r, 50))
+    expect(mockDriverFn).not.toHaveBeenCalled()
+
+    // Simulate restart: HelpMenu calls clearDismissed + router.refresh()
+    // isDismissed now returns false (cleared by HelpMenu)
+    vi.mocked(isDismissed).mockReturnValue(false)
+
+    // Re-render with cleared metadata (restart clears dismissed_at_step)
     rerender(<ProjectTour userId="usr-1" userMetadata={{ dismissed_at_step: { project: null } }} />)
 
-    // Tour MUST re-initialize after restart (dismissedRef was reset)
+    // Tour MUST re-initialize after restart (dismiss state cleared)
     await vi.waitFor(() => {
       expect(mockDriverFn).toHaveBeenCalledTimes(1)
     })
@@ -368,10 +401,6 @@ describe('ProjectTour', () => {
   // ────────────────────────────────────────────────
 
   it('[P1] should re-init tour after restart when userMetadata has no dismissed_at_step (completed-then-restart path)', async () => {
-    // Real scenario: user previously dismissed (dismissed_at_step.project = 1),
-    // session resumes at step 1, user dismisses again (dismissedRef = true),
-    // then restarts. If user had only project_tour_completed set (no dismissed_at_step),
-    // restart writes { project_tour_completed: null } — dismissed_at_step stays absent.
     const { rerender } = render(
       <ProjectTour userId="usr-1" userMetadata={{ dismissed_at_step: { project: 1 } }} />,
     )
@@ -385,16 +414,25 @@ describe('ProjectTour', () => {
       | { onCloseClick?: () => void }
       | undefined
     mockGetActiveIndex.mockReturnValue(0)
-    driverConfig?.onCloseClick?.() // dismissedRef.current = true
+    driverConfig?.onCloseClick?.()
+
+    // After dismiss, isDismissed returns true
+    vi.mocked(isDismissed).mockReturnValue(true)
 
     mockDriverFn.mockClear()
 
+    // Verify dismiss state blocks re-init
+    rerender(<ProjectTour userId="usr-1" userMetadata={{ dismissed_at_step: { project: 1 } }} />)
+    await new Promise((r) => setTimeout(r, 50))
+    expect(mockDriverFn).not.toHaveBeenCalled()
+
+    // Restart: HelpMenu calls clearDismissed → isDismissed returns false
+    vi.mocked(isDismissed).mockReturnValue(false)
+
     // Restart action cleared project_tour_completed but dismissed_at_step was absent
-    // → server returns { project_tour_completed: null } (no dismissed_at_step key)
     rerender(<ProjectTour userId="usr-1" userMetadata={{ project_tour_completed: null }} />)
 
-    // C1: dismissedRef.current=true AND !userMetadata?.dismissed_at_step?.project = !undefined = true
-    // → dismissedRef reset to false → tour fires
+    // Tour re-inits because isDismissed is false
     await vi.waitFor(() => {
       expect(mockDriverFn).toHaveBeenCalledTimes(1)
     })
@@ -422,6 +460,79 @@ describe('ProjectTour', () => {
       action: 'dismiss',
       tourId: 'project',
       dismissedAtStep: 1,
+    })
+  })
+
+  // ────────────────────────────────────────────────
+  // S-FIX-6 Regression: Dismiss survives full unmount + remount
+  // Original bug: useRef(false) resets on remount — caught by unmount() + render(), NOT rerender()
+  // ────────────────────────────────────────────────
+
+  it('[P0] should NOT re-init tour after dismiss when component is fully unmounted and remounted with stale metadata', async () => {
+    const { unmount } = render(<ProjectTour userId="usr-1" userMetadata={null} />)
+
+    await vi.waitFor(() => {
+      expect(mockDriverFn).toHaveBeenCalledTimes(1)
+    })
+
+    // Simulate dismiss via X button
+    const driverConfig = mockDriverFn.mock.calls[0]?.[0] as
+      | { onCloseClick?: () => void }
+      | undefined
+    driverConfig?.onCloseClick?.()
+
+    // After dismiss, isDismissed returns true (session state persisted)
+    vi.mocked(isDismissed).mockReturnValue(true)
+
+    // Full unmount — simulates real navigation (component destroyed)
+    unmount()
+
+    // Clear mocks to track fresh mount
+    mockDriverFn.mockClear()
+
+    // Fresh mount with STALE metadata (server hasn't persisted yet)
+    render(<ProjectTour userId="usr-1" userMetadata={null} />)
+
+    // Wait long enough for the async dynamic import to resolve (if it were to fire)
+    await new Promise((r) => setTimeout(r, 50))
+
+    // Tour must NOT re-init because isDismissed('project') blocks it
+    expect(mockDriverFn).not.toHaveBeenCalled()
+  })
+
+  // ────────────────────────────────────────────────
+  // S-FIX-6: Route guard — suppress tour on /review/ page (MULTI-02)
+  // ────────────────────────────────────────────────
+
+  it('[P0] should suppress tour when pathname includes /review/', async () => {
+    mockUsePathname.mockReturnValue('/projects/proj-1/review/session-abc')
+
+    render(<ProjectTour userId="usr-1" userMetadata={null} />)
+
+    // Wait long enough for the async dynamic import to resolve (if it were to fire)
+    await new Promise((r) => setTimeout(r, 50))
+
+    // Driver was NOT initialized because route guard blocks it
+    expect(mockDriverFn).not.toHaveBeenCalled()
+  })
+
+  it('[P1] should activate tour on project upload page (not /review/)', async () => {
+    mockUsePathname.mockReturnValue('/projects/proj-1/upload')
+
+    render(<ProjectTour userId="usr-1" userMetadata={null} />)
+
+    await vi.waitFor(() => {
+      expect(mockDriverFn).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('[P1] should activate tour on project glossary page (not /review/)', async () => {
+    mockUsePathname.mockReturnValue('/projects/proj-1/glossary')
+
+    render(<ProjectTour userId="usr-1" userMetadata={null} />)
+
+    await vi.waitFor(() => {
+      expect(mockDriverFn).toHaveBeenCalledTimes(1)
     })
   })
 })

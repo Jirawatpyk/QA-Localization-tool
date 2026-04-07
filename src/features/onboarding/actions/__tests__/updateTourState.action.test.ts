@@ -267,8 +267,8 @@ describe('updateTourState action', () => {
     expect(setCall?.metadata?.dismissed_at_step?.project ?? null).toBeNull()
   })
 
-  it('[P1] should clear project_tour_completed when restart called without dismissed_at_step', async () => {
-    // Covers the false branch of `if (newMetadata.dismissed_at_step)` in restart action
+  it('[P1] should clear project_tour_completed and init dismissed_at_step when restart called without dismissed_at_step', async () => {
+    // Even when dismissed_at_step was absent, restart always writes { [tourId]: null }
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'usr-test-001',
       email: 'qa@tenant-a.test',
@@ -288,12 +288,17 @@ describe('updateTourState action', () => {
     expect(result.success).toBe(true)
 
     const setCall = mockSet.mock.calls[0]?.[0] as
-      | { metadata?: { project_tour_completed?: string | null; dismissed_at_step?: unknown } }
+      | {
+          metadata?: {
+            project_tour_completed?: string | null
+            dismissed_at_step?: Record<string, unknown>
+          }
+        }
       | undefined
 
     expect(setCall?.metadata?.project_tour_completed).toBeNull()
-    // dismissed_at_step must NOT be written when it was absent from the original metadata
-    expect(setCall?.metadata?.dismissed_at_step).toBeUndefined()
+    // dismissed_at_step is always initialized with tourId: null on restart
+    expect(setCall?.metadata?.dismissed_at_step).toEqual({ project: null })
   })
 
   it('[P1] should return DB_ERROR (not throw) when DB update fails', async () => {

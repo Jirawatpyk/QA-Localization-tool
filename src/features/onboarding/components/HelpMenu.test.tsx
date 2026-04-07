@@ -26,6 +26,11 @@ vi.mock('@/features/onboarding/actions/updateTourState.action', () => ({
   updateTourState: (...args: unknown[]) => mockUpdateTourState(...args),
 }))
 
+const mockClearDismissed = vi.fn()
+vi.mock('@/features/onboarding/dismissState', () => ({
+  clearDismissed: (...args: unknown[]) => mockClearDismissed(...args),
+}))
+
 import { HelpMenu } from './HelpMenu'
 
 describe('HelpMenu', () => {
@@ -74,6 +79,22 @@ describe('HelpMenu', () => {
     })
   })
 
+  it('[P1] should NOT show "Restart Project Tour" menu item on review page', async () => {
+    mockUsePathname.mockReturnValue('/projects/proj-123/review/session-abc')
+
+    render(<HelpMenu />)
+
+    const trigger = screen.getByTestId('help-menu-trigger')
+    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('restart-tour-btn')).toBeDefined()
+    })
+
+    // "Restart Project Tour" should NOT be visible on review page
+    expect(screen.queryByTestId('restart-project-tour-btn')).toBeNull()
+  })
+
   it('[P1] should NOT show "Restart Project Tour" menu item on dashboard', async () => {
     mockUsePathname.mockReturnValue('/dashboard')
 
@@ -115,6 +136,56 @@ describe('HelpMenu', () => {
     await waitFor(() => {
       expect(mockRefresh).toHaveBeenCalled()
     })
+
+    // clearDismissed must be called with tourId before router.refresh
+    expect(mockClearDismissed).toHaveBeenCalledWith('project')
+  })
+
+  it('[P1] should call clearDismissed with "setup" when "Restart Tour" is clicked', async () => {
+    mockUsePathname.mockReturnValue('/dashboard')
+
+    render(<HelpMenu />)
+
+    const trigger = screen.getByTestId('help-menu-trigger')
+    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('restart-tour-btn')).toBeDefined()
+    })
+
+    fireEvent.click(screen.getByTestId('restart-tour-btn'))
+
+    await waitFor(() => {
+      expect(mockRefresh).toHaveBeenCalled()
+    })
+
+    expect(mockClearDismissed).toHaveBeenCalledWith('setup')
+  })
+
+  it('[P1] should NOT call clearDismissed when updateTourState fails', async () => {
+    mockUsePathname.mockReturnValue('/projects/proj-fail/upload')
+    mockUpdateTourState.mockResolvedValue({
+      success: false,
+      code: 'DB_ERROR',
+      error: 'Failed',
+    })
+
+    render(<HelpMenu />)
+
+    const trigger = screen.getByTestId('help-menu-trigger')
+    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('restart-project-tour-btn')).toBeDefined()
+    })
+
+    fireEvent.click(screen.getByTestId('restart-project-tour-btn'))
+
+    await waitFor(() => {
+      expect(mockUpdateTourState).toHaveBeenCalled()
+    })
+
+    expect(mockClearDismissed).not.toHaveBeenCalled()
   })
 
   it('[P1] should NOT call router.refresh() when updateTourState returns { success: false }', async () => {

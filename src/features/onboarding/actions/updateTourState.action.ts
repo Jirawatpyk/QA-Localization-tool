@@ -33,12 +33,9 @@ export async function updateTourState(input: unknown): Promise<ActionResult<{ su
 
   if (action === 'complete') {
     newMetadata[tourCompletedKey] = new Date().toISOString()
-    // Clear dismissed_at_step for this tour
-    if (newMetadata.dismissed_at_step) {
-      newMetadata.dismissed_at_step = {
-        ...newMetadata.dismissed_at_step,
-        [tourId]: null,
-      }
+    newMetadata.dismissed_at_step = {
+      ...newMetadata.dismissed_at_step,
+      [tourId]: null,
     }
   } else if (action === 'dismiss') {
     newMetadata.dismissed_at_step = {
@@ -47,11 +44,9 @@ export async function updateTourState(input: unknown): Promise<ActionResult<{ su
     }
   } else if (action === 'restart') {
     newMetadata[tourCompletedKey] = null
-    if (newMetadata.dismissed_at_step) {
-      newMetadata.dismissed_at_step = {
-        ...newMetadata.dismissed_at_step,
-        [tourId]: null,
-      }
+    newMetadata.dismissed_at_step = {
+      ...newMetadata.dismissed_at_step,
+      [tourId]: null,
     }
   }
 

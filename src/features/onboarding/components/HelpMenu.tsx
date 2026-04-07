@@ -12,18 +12,20 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { updateTourState } from '@/features/onboarding/actions/updateTourState.action'
+import { clearDismissed } from '@/features/onboarding/dismissState'
 import type { TourId } from '@/features/onboarding/types'
 
 export function HelpMenu() {
   const router = useRouter()
   const pathname = usePathname()
   const [isPending, startTransition] = useTransition()
-  const isProjectRoute = pathname.startsWith('/projects/')
+  const isProjectRoute = pathname.startsWith('/projects/') && !/\/review(\/|$)/.test(pathname)
 
   function handleRestartTour(tourId: TourId) {
     startTransition(async () => {
       const result = await updateTourState({ action: 'restart', tourId })
       if (result.success) {
+        clearDismissed(tourId)
         router.refresh()
       } else {
         toast.error('Failed to restart tour. Please try again.')

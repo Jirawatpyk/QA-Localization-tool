@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-02-15
-last_updated: 2026-04-06  # s-fix-14 done (final CR: RC + 12 post-refactor fixes, 4718/4718 GREEN, 0 pre-existing failures)
+last_updated: 2026-04-07  # s-fix-7 story created (ready-for-dev)
 project: qa-localization-tool
 project_key: NOKEY
 tracking_system: file-system
@@ -227,7 +227,7 @@ development_status:
   # Root cause: src/features/onboarding/components/ProjectTour.tsx — dismissedRef lost on remount
   # Fix: Persist dismiss state correctly across all tour scopes (dashboard + project)
   # Ref: DEEP-VERIFICATION-CHECKLIST.md > Onboarding, screenshot deep-26
-  s-fix-6-onboarding-persistence: backlog
+  s-fix-6-onboarding-persistence: done
 
   # S-FIX-7: Concurrent Review Soft Lock [L]
   # Findings: MULTI-01 (P1)
@@ -235,7 +235,7 @@ development_status:
   # Fix: DB heartbeat lock on first action, "In review by" banner, view-only mode, 30min timeout
   # Depends: S-FIX-14 (need language pair assignment for reviewer matching)
   # Ref: DEEP-VERIFICATION-CHECKLIST.md > Concurrent, UX-SPEC > Edge Case #3
-  s-fix-7-concurrent-soft-lock: backlog
+  s-fix-7-concurrent-soft-lock: ready-for-dev
 
   # S-FIX-8: Bulk Operations [L]
   # Findings: R-13 (P1), TD-UX-006

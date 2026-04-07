@@ -6,6 +6,7 @@ import 'driver.js/dist/driver.css'
 import { useEffect, useRef } from 'react'
 
 import { updateTourState } from '@/features/onboarding/actions/updateTourState.action'
+import { isDismissed, markDismissed } from '@/features/onboarding/dismissState'
 import type { UserMetadata } from '@/features/onboarding/types'
 
 // Type the driver instance from v1.x API
@@ -40,17 +41,10 @@ const LAST_STEP_INDEX = SETUP_TOUR_STEPS.length - 1
 
 export function OnboardingTour({ userId, userMetadata }: OnboardingTourProps) {
   const driverRef = useRef<DriverInstance | null>(null)
-  const dismissedRef = useRef(false)
 
   useEffect(() => {
     if (userMetadata?.setup_tour_completed) return
-    // Reset dismissedRef when a restart has cleared dismissed_at_step.
-    // After router.refresh() from HelpMenu restart, userMetadata reflects the
-    // server-cleared state (dismissed_at_step.setup = null/undefined).
-    if (dismissedRef.current && !userMetadata?.dismissed_at_step?.setup) {
-      dismissedRef.current = false
-    }
-    if (dismissedRef.current) return
+    if (isDismissed('setup')) return
     if (typeof window !== 'undefined' && window.innerWidth < 768) return
 
     let cancelled = false
@@ -73,7 +67,7 @@ export function OnboardingTour({ userId, userMetadata }: OnboardingTourProps) {
         stagePadding: 8,
         stageRadius: 6,
         onCloseClick: () => {
-          dismissedRef.current = true
+          markDismissed('setup')
           const currentIndex = driverObj.getActiveIndex() ?? 0
           updateTourState({
             action: 'dismiss',
@@ -86,7 +80,7 @@ export function OnboardingTour({ userId, userMetadata }: OnboardingTourProps) {
         },
         onDestroyed: () => {
           // Guard: skip if destroyed via X button (dismiss) or cleanup (unmount)
-          if (dismissedRef.current || cancelled) return
+          if (isDismissed('setup') || cancelled) return
           const activeIndex = driverObj.getActiveIndex()
           if (activeIndex === LAST_STEP_INDEX) {
             updateTourState({ action: 'complete', tourId: 'setup' }).catch(() => {
