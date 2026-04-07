@@ -6,6 +6,7 @@ import { and, eq } from 'drizzle-orm'
 import { revalidatePath, revalidateTag } from 'next/cache'
 
 import { db } from '@/db/client'
+import { batchInsert } from '@/db/helpers/batchInsert'
 import { withTenant } from '@/db/helpers/withTenant'
 import { glossaries } from '@/db/schema/glossaries'
 import { glossaryTerms } from '@/db/schema/glossaryTerms'
@@ -143,15 +144,13 @@ export async function importGlossary(formData: FormData): Promise<ActionResult<I
     }
 
     // Batch insert terms (already sanitized before dedup)
-    for (let i = 0; i < uniqueTerms.length; i += BATCH_SIZE) {
-      const batch = uniqueTerms.slice(i, i + BATCH_SIZE).map((term) => ({
-        glossaryId: created.id,
-        tenantId: currentUser.tenantId,
-        sourceTerm: term.sourceTerm,
-        targetTerm: term.targetTerm,
-      }))
-      await tx.insert(glossaryTerms).values(batch)
-    }
+    const termValues = uniqueTerms.map((term) => ({
+      glossaryId: created.id,
+      tenantId: currentUser.tenantId,
+      sourceTerm: term.sourceTerm,
+      targetTerm: term.targetTerm,
+    }))
+    await batchInsert(tx, glossaryTerms, termValues, BATCH_SIZE)
 
     return created
   })

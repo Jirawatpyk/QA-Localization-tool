@@ -3,6 +3,7 @@ import { and, eq } from 'drizzle-orm'
 import { NonRetriableError } from 'inngest'
 
 import { db } from '@/db/client'
+import { batchInsert } from '@/db/helpers/batchInsert'
 import { withTenant } from '@/db/helpers/withTenant'
 import { files } from '@/db/schema/files'
 import { findings } from '@/db/schema/findings'
@@ -564,10 +565,7 @@ export async function runL2ForFile({
           ),
         )
 
-      for (let i = 0; i < findingInserts.length; i += FINDING_BATCH_SIZE) {
-        const batch = findingInserts.slice(i, i + FINDING_BATCH_SIZE)
-        await tx.insert(findings).values(batch)
-      }
+      await batchInsert(tx, findings, findingInserts, FINDING_BATCH_SIZE)
 
       // Status update inside same transaction — atomic with findings
       await tx

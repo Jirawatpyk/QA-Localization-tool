@@ -6,6 +6,7 @@ import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { db } from '@/db/client'
+import { batchInsert } from '@/db/helpers/batchInsert'
 import { withTenant } from '@/db/helpers/withTenant'
 import { files } from '@/db/schema/files'
 import { projects } from '@/db/schema/projects'
@@ -367,26 +368,23 @@ async function batchInsertSegments(
     // Delete old segments first (re-run case: file reset to 'uploaded' still has old segments)
     await tx.delete(segments).where(eq(segments.fileId, fileId))
 
-    for (let i = 0; i < parsedSegments.length; i += SEGMENT_BATCH_SIZE) {
-      const batch = parsedSegments.slice(i, i + SEGMENT_BATCH_SIZE)
-      const values = batch.map((seg) => ({
-        fileId,
-        projectId,
-        tenantId, // withTenant enforced via explicit value
-        segmentNumber: seg.segmentNumber,
-        sourceText: seg.sourceText,
-        targetText: seg.targetText,
-        sourceLang: seg.sourceLang,
-        targetLang: seg.targetLang,
-        wordCount: seg.wordCount,
-        confirmationState: seg.confirmationState,
-        matchPercentage: seg.matchPercentage,
-        translatorComment: seg.translatorComment,
-        inlineTags: seg.inlineTags,
-      }))
+    const segmentValues = parsedSegments.map((seg) => ({
+      fileId,
+      projectId,
+      tenantId, // withTenant enforced via explicit value
+      segmentNumber: seg.segmentNumber,
+      sourceText: seg.sourceText,
+      targetText: seg.targetText,
+      sourceLang: seg.sourceLang,
+      targetLang: seg.targetLang,
+      wordCount: seg.wordCount,
+      confirmationState: seg.confirmationState,
+      matchPercentage: seg.matchPercentage,
+      translatorComment: seg.translatorComment,
+      inlineTags: seg.inlineTags,
+    }))
 
-      await tx.insert(segments).values(values)
-    }
+    await batchInsert(tx, segments, segmentValues, SEGMENT_BATCH_SIZE)
 
     // Atomically update file status to 'parsed' within the same transaction
     await tx
