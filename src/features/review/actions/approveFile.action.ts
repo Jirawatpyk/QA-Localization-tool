@@ -11,7 +11,7 @@ import { scores } from '@/db/schema/scores'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { assertLockOwnership } from '@/features/review/helpers/assertLockOwnership'
 import { requireRole } from '@/lib/auth/requireRole'
-import { logger } from '@/lib/logger'
+import { tryNonFatal } from '@/lib/utils/tryNonFatal'
 import type { ActionErrorCode } from '@/types/actionErrorCode'
 import type { ActionResult } from '@/types/actionResult'
 import type { ScoreStatus } from '@/types/finding'
@@ -127,18 +127,18 @@ export async function approveFile(input: ApproveFileInput): Promise<ActionResult
   }
 
   // Audit log (non-fatal on error path)
-  try {
-    await writeAuditLog({
-      tenantId,
-      userId: user.id,
-      entityType: 'file',
-      entityId: fileId,
-      action: 'file.approve',
-      newValue: { mqmScore: score.mqmScore, status: score.status },
-    })
-  } catch (auditErr) {
-    logger.error({ err: auditErr, fileId }, 'Audit log write failed for file approve')
-  }
+  await tryNonFatal(
+    () =>
+      writeAuditLog({
+        tenantId,
+        userId: user.id,
+        entityType: 'file',
+        entityId: fileId,
+        action: 'file.approve',
+        newValue: { mqmScore: score.mqmScore, status: score.status },
+      }),
+    { operation: 'audit log (approveFile)', meta: { fileId } },
+  )
 
   return {
     success: true,

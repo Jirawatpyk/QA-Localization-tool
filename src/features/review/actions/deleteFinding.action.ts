@@ -14,7 +14,7 @@ import { deleteFindingSchema } from '@/features/review/validation/reviewAction.s
 import type { DeleteFindingInput } from '@/features/review/validation/reviewAction.schema'
 import { requireRole } from '@/lib/auth/requireRole'
 import { inngest } from '@/lib/inngest/client'
-import { logger } from '@/lib/logger'
+import { tryNonFatal } from '@/lib/utils/tryNonFatal'
 import type { ActionResult } from '@/types/actionResult'
 
 type DeleteFindingResult = {
@@ -100,42 +100,42 @@ export async function deleteFinding(
   })
 
   // Audit log (best-effort)
-  try {
-    await writeAuditLog({
-      tenantId,
-      userId,
-      entityType: 'finding',
-      entityId: findingId,
-      action: 'finding.delete',
-      oldValue: {
-        severity: finding.severity,
-        category: finding.category,
-        detectedByLayer: 'Manual',
-      },
-      newValue: {},
-    })
-  } catch (auditErr) {
-    logger.error({ err: auditErr, findingId }, 'Audit log write failed for deleteFinding')
-  }
+  await tryNonFatal(
+    () =>
+      writeAuditLog({
+        tenantId,
+        userId,
+        entityType: 'finding',
+        entityId: findingId,
+        action: 'finding.delete',
+        oldValue: {
+          severity: finding.severity,
+          category: finding.category,
+          detectedByLayer: 'Manual',
+        },
+        newValue: {},
+      }),
+    { operation: 'audit log (deleteFinding)', meta: { findingId } },
+  )
 
   // Inngest event for score recalculation (best-effort)
-  try {
-    await inngest.send({
-      name: 'finding.changed',
-      data: {
-        findingId,
-        fileId,
-        projectId,
-        tenantId,
-        previousState: 'manual',
-        newState: 'manual', // Deleted — use same state for event compatibility
-        triggeredBy: userId,
-        timestamp: new Date().toISOString(),
-      },
-    })
-  } catch (inngestErr) {
-    logger.error({ err: inngestErr, findingId }, 'Inngest event send failed for deleteFinding')
-  }
+  await tryNonFatal(
+    () =>
+      inngest.send({
+        name: 'finding.changed',
+        data: {
+          findingId,
+          fileId,
+          projectId,
+          tenantId,
+          previousState: 'manual',
+          newState: 'manual', // Deleted — use same state for event compatibility
+          triggeredBy: userId,
+          timestamp: new Date().toISOString(),
+        },
+      }),
+    { operation: 'inngest event (deleteFinding)', meta: { findingId } },
+  )
 
   return {
     success: true,

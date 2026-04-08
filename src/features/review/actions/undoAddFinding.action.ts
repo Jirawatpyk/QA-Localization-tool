@@ -9,11 +9,12 @@ import { withTenant } from '@/db/helpers/withTenant'
 import { findings } from '@/db/schema/findings'
 import { reviewActions } from '@/db/schema/reviewActions'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
+import { assertLockOwnership } from '@/features/review/helpers/assertLockOwnership'
 import { undoAddFindingSchema } from '@/features/review/validation/undoAction.schema'
 import type { UndoAddFindingInput } from '@/features/review/validation/undoAction.schema'
 import { requireRole } from '@/lib/auth/requireRole'
 import { inngest } from '@/lib/inngest/client'
-import { logger } from '@/lib/logger'
+import { tryNonFatal } from '@/lib/utils/tryNonFatal'
 import type { ActionResult } from '@/types/actionResult'
 
 type UndoAddResult = {
@@ -44,6 +45,10 @@ export async function undoAddFinding(
 
   const { findingId, fileId, projectId } = parsed.data
   const { id: userId, tenantId } = user
+
+  // S-FIX-7: Lock ownership check (AC3 — defense-in-depth)
+  const lockError = await assertLockOwnership(fileId, tenantId, userId)
+  if (lockError) return lockError
 
   // Verify finding exists (Guardrail #1, #4)
   const rows = await db
@@ -77,38 +82,38 @@ export async function undoAddFinding(
   })
 
   // Audit log (best-effort)
-  try {
-    await writeAuditLog({
-      tenantId,
-      userId,
-      entityType: 'finding',
-      entityId: findingId,
-      action: 'finding.undo_add',
-      oldValue: { findingId },
-      newValue: {},
-    })
-  } catch (auditErr) {
-    logger.error({ err: auditErr, findingId }, 'Audit log write failed for undoAddFinding')
-  }
+  await tryNonFatal(
+    () =>
+      writeAuditLog({
+        tenantId,
+        userId,
+        entityType: 'finding',
+        entityId: findingId,
+        action: 'finding.undo_add',
+        oldValue: { findingId },
+        newValue: {},
+      }),
+    { operation: 'audit log (undoAddFinding)', meta: { findingId } },
+  )
 
   // Inngest event for score recalculation (best-effort)
-  try {
-    await inngest.send({
-      name: 'finding.changed',
-      data: {
-        findingId,
-        fileId,
-        projectId,
-        tenantId,
-        previousState: 'manual',
-        newState: 'manual',
-        triggeredBy: userId,
-        timestamp: new Date().toISOString(),
-      },
-    })
-  } catch (inngestErr) {
-    logger.error({ err: inngestErr, findingId }, 'Inngest event send failed for undoAddFinding')
-  }
+  await tryNonFatal(
+    () =>
+      inngest.send({
+        name: 'finding.changed',
+        data: {
+          findingId,
+          fileId,
+          projectId,
+          tenantId,
+          previousState: 'manual',
+          newState: 'manual',
+          triggeredBy: userId,
+          timestamp: new Date().toISOString(),
+        },
+      }),
+    { operation: 'inngest event (undoAddFinding)', meta: { findingId } },
+  )
 
   return {
     success: true,

@@ -13,7 +13,7 @@ import { getNewState } from '@/features/review/utils/state-transitions'
 import type { ReviewAction } from '@/features/review/utils/state-transitions'
 import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { inngest } from '@/lib/inngest/client'
-import { logger } from '@/lib/logger'
+import { tryNonFatal } from '@/lib/utils/tryNonFatal'
 import type { ActionResult } from '@/types/actionResult'
 import { DETECTED_BY_LAYERS, FINDING_SEVERITIES, FINDING_STATUSES } from '@/types/finding'
 import type { DetectedByLayer, FindingSeverity, FindingStatus } from '@/types/finding'
@@ -195,48 +195,45 @@ export async function executeReviewAction({
     })
   })
 
-  // H3: Audit log — kept as try-catch (best-effort for review actions).
+  // H3: Audit log — kept as best-effort for review actions.
   // Guardrail #2 says happy-path should let throw, but executeReviewAction's callers
   // (acceptFinding, flagFinding) do `return executeReviewAction(...)` with NO try-catch.
   // If audit throws, the client sees an error even though the finding status change succeeded.
   // Decision: audit is best-effort here — the primary value (status change) must not fail.
-  try {
-    await writeAuditLog({
-      tenantId,
-      userId,
-      entityType: 'finding',
-      entityId: findingId,
-      action: `finding.${action}`,
-      oldValue: { status: currentState },
-      newValue: { status: newState, non_native: isNonNative },
-    })
-  } catch (auditErr) {
-    logger.error({ err: auditErr, findingId, action }, 'Audit log write failed for review action')
-  }
+  await tryNonFatal(
+    () =>
+      writeAuditLog({
+        tenantId,
+        userId,
+        entityType: 'finding',
+        entityId: findingId,
+        action: `finding.${action}`,
+        oldValue: { status: currentState },
+        newValue: { status: newState, non_native: isNonNative },
+      }),
+    { operation: `audit log (executeReviewAction:${action})`, meta: { findingId } },
+  )
 
   // Send Inngest event for score recalculation (full FindingChangedEventData schema)
-  // CR-R2-H1: try-catch post-commit side effect — DB transaction already committed,
+  // CR-R2-H1: post-commit side effect — DB transaction already committed,
   // Inngest failure must not propagate error to client (same pattern as audit log above)
-  try {
-    await inngest.send({
-      name: 'finding.changed',
-      data: {
-        findingId,
-        fileId,
-        projectId,
-        tenantId,
-        previousState: currentState,
-        newState,
-        triggeredBy: userId,
-        timestamp: new Date().toISOString(),
-      },
-    })
-  } catch (inngestErr) {
-    logger.error(
-      { err: inngestErr, findingId, action },
-      'Inngest event send failed for review action — score recalculation may be delayed',
-    )
-  }
+  await tryNonFatal(
+    () =>
+      inngest.send({
+        name: 'finding.changed',
+        data: {
+          findingId,
+          fileId,
+          projectId,
+          tenantId,
+          previousState: currentState,
+          newState,
+          triggeredBy: userId,
+          timestamp: new Date().toISOString(),
+        },
+      }),
+    { operation: `inngest event (executeReviewAction:${action})`, meta: { findingId } },
+  )
 
   return {
     success: true,

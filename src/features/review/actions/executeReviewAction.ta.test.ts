@@ -152,7 +152,7 @@ describe('executeReviewAction — TA expansion', () => {
     // Inngest error logged but not propagated
     expect(mockLogger.error).toHaveBeenCalledWith(
       expect.objectContaining({ err: expect.any(Error) }),
-      expect.stringContaining('Inngest event send failed'),
+      expect.stringContaining('inngest event (executeReviewAction:accept) failed (non-fatal)'),
     )
   })
 
@@ -174,7 +174,7 @@ describe('executeReviewAction — TA expansion', () => {
     // Audit error was logged, not propagated
     expect(mockLogger.error).toHaveBeenCalledWith(
       expect.objectContaining({ err: expect.any(Error) }),
-      expect.stringContaining('Audit log write failed'),
+      expect.stringContaining('audit log (executeReviewAction:accept) failed (non-fatal)'),
     )
   })
 

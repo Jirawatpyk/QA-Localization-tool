@@ -17,7 +17,7 @@ import type { OverrideSeverityInput } from '@/features/review/validation/reviewA
 import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { requireRole } from '@/lib/auth/requireRole'
 import { inngest } from '@/lib/inngest/client'
-import { logger } from '@/lib/logger'
+import { tryNonFatal } from '@/lib/utils/tryNonFatal'
 import type { ActionResult } from '@/types/actionResult'
 import { FINDING_SEVERITIES, FINDING_STATUSES } from '@/types/finding'
 import type { FindingSeverity, FindingStatus } from '@/types/finding'
@@ -171,68 +171,68 @@ export async function overrideSeverity(
   })
 
   // Audit log (best-effort — Guardrail #2)
-  try {
-    await writeAuditLog({
-      tenantId,
-      userId,
-      entityType: 'finding',
-      entityId: findingId,
-      action: 'finding.override',
-      oldValue: { severity: currentSeverity },
-      newValue: { severity: newSeverity, non_native: isNonNative },
-    })
-  } catch (auditErr) {
-    logger.error({ err: auditErr, findingId }, 'Audit log write failed for severity override')
-  }
+  await tryNonFatal(
+    () =>
+      writeAuditLog({
+        tenantId,
+        userId,
+        entityType: 'finding',
+        entityId: findingId,
+        action: 'finding.override',
+        oldValue: { severity: currentSeverity },
+        newValue: { severity: newSeverity, non_native: isNonNative },
+      }),
+    { operation: 'audit log (overrideSeverity)', meta: { findingId } },
+  )
 
   // Inngest event for score recalculation (best-effort)
-  try {
-    await inngest.send({
-      name: 'finding.changed',
-      data: {
-        findingId,
-        fileId,
-        projectId,
-        tenantId,
-        previousState: (FINDING_STATUSES.includes(finding.status as FindingStatus)
-          ? finding.status
-          : 'pending') as FindingStatus,
-        newState: (FINDING_STATUSES.includes(finding.status as FindingStatus)
-          ? finding.status
-          : 'pending') as FindingStatus,
-        triggeredBy: userId,
-        timestamp: new Date().toISOString(),
-      },
-    })
-  } catch (inngestErr) {
-    logger.error({ err: inngestErr, findingId }, 'Inngest event send failed for severity override')
-  }
+  await tryNonFatal(
+    () =>
+      inngest.send({
+        name: 'finding.changed',
+        data: {
+          findingId,
+          fileId,
+          projectId,
+          tenantId,
+          previousState: (FINDING_STATUSES.includes(finding.status as FindingStatus)
+            ? finding.status
+            : 'pending') as FindingStatus,
+          newState: (FINDING_STATUSES.includes(finding.status as FindingStatus)
+            ? finding.status
+            : 'pending') as FindingStatus,
+          triggeredBy: userId,
+          timestamp: new Date().toISOString(),
+        },
+      }),
+    { operation: 'inngest event (overrideSeverity)', meta: { findingId } },
+  )
 
   // Insert feedback_events for AI training (FR79 — best-effort)
-  try {
-    // CR-R1 M1 fix: reuse segment lookup from above (was duplicated query)
-    await db.insert(feedbackEvents).values({
-      tenantId,
-      fileId,
-      projectId,
-      findingId,
-      reviewerId: userId,
-      action: 'change_severity',
-      findingCategory: finding.category,
-      originalSeverity: currentSeverity,
-      newSeverity,
-      isFalsePositive: false,
-      reviewerIsNative: !isNonNative,
-      layer: finding.detectedByLayer,
-      detectedByLayer: finding.detectedByLayer,
-      sourceLang: segmentSourceLang,
-      targetLang: segmentTargetLang,
-      sourceText: finding.sourceTextExcerpt ?? '',
-      originalTarget: finding.targetTextExcerpt ?? '',
-    })
-  } catch (feedbackErr) {
-    logger.error({ err: feedbackErr, findingId }, 'feedback_events insert failed for override')
-  }
+  // CR-R1 M1 fix: reuse segment lookup from above (was duplicated query)
+  await tryNonFatal(
+    () =>
+      db.insert(feedbackEvents).values({
+        tenantId,
+        fileId,
+        projectId,
+        findingId,
+        reviewerId: userId,
+        action: 'change_severity',
+        findingCategory: finding.category,
+        originalSeverity: currentSeverity,
+        newSeverity,
+        isFalsePositive: false,
+        reviewerIsNative: !isNonNative,
+        layer: finding.detectedByLayer,
+        detectedByLayer: finding.detectedByLayer,
+        sourceLang: segmentSourceLang,
+        targetLang: segmentTargetLang,
+        sourceText: finding.sourceTextExcerpt ?? '',
+        originalTarget: finding.targetTextExcerpt ?? '',
+      }),
+    { operation: 'feedback_events insert (overrideSeverity)', meta: { findingId } },
+  )
 
   return {
     success: true,

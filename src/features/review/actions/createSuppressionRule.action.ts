@@ -22,6 +22,7 @@ import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { requireRole } from '@/lib/auth/requireRole'
 import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
+import { tryNonFatal } from '@/lib/utils/tryNonFatal'
 import type { ActionResult } from '@/types/actionResult'
 import type { DetectedByLayer, FindingSeverity } from '@/types/finding'
 
@@ -239,50 +240,47 @@ export async function createSuppressionRule(
   }
 
   // Best-effort audit log (Guardrail #2)
-  try {
-    await writeAuditLog({
-      tenantId,
-      userId,
-      entityType: 'suppression_rule',
-      entityId: ruleId,
-      action: 'suppression_rule.created',
-      newValue: {
-        ruleId,
-        category,
-        pattern,
-        scope,
-        duration,
-        autoRejectedCount: toAutoReject.length,
-      },
-    })
-  } catch (auditErr) {
-    logger.error({ err: auditErr, ruleId }, 'Audit log write failed for suppression rule creation')
-  }
+  await tryNonFatal(
+    () =>
+      writeAuditLog({
+        tenantId,
+        userId,
+        entityType: 'suppression_rule',
+        entityId: ruleId,
+        action: 'suppression_rule.created',
+        newValue: {
+          ruleId,
+          category,
+          pattern,
+          scope,
+          duration,
+          autoRejectedCount: toAutoReject.length,
+        },
+      }),
+    { operation: 'audit log (createSuppressionRule)', meta: { ruleId } },
+  )
 
   // Best-effort single Inngest event after batch (NOT per-finding)
   if (toAutoReject.length > 0) {
     const firstFinding = toAutoReject[0]!
-    try {
-      await inngest.send({
-        name: 'finding.changed',
-        data: {
-          findingId: firstFinding.id,
-          fileId: firstFinding.findingFileId ?? currentFileId, // CR-H8: guard nullable FK
-          projectId,
-          tenantId,
-          previousState: 'pending',
-          newState: 'rejected',
-          triggeredBy: userId,
-          timestamp: new Date().toISOString(),
-          batchId,
-        },
-      })
-    } catch (inngestErr) {
-      logger.error(
-        { err: inngestErr, ruleId, batchId },
-        'Inngest event send failed for suppression auto-reject',
-      )
-    }
+    await tryNonFatal(
+      () =>
+        inngest.send({
+          name: 'finding.changed',
+          data: {
+            findingId: firstFinding.id,
+            fileId: firstFinding.findingFileId ?? currentFileId, // CR-H8: guard nullable FK
+            projectId,
+            tenantId,
+            previousState: 'pending',
+            newState: 'rejected',
+            triggeredBy: userId,
+            timestamp: new Date().toISOString(),
+            batchId,
+          },
+        }),
+      { operation: 'inngest event (createSuppressionRule)', meta: { ruleId, batchId } },
+    )
   }
 
   return {

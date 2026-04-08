@@ -13,7 +13,7 @@ import { assertLockOwnership } from '@/features/review/helpers/assertLockOwnersh
 import { updateNoteTextSchema } from '@/features/review/validation/reviewAction.schema'
 import type { UpdateNoteTextInput } from '@/features/review/validation/reviewAction.schema'
 import { requireRole } from '@/lib/auth/requireRole'
-import { logger } from '@/lib/logger'
+import { tryNonFatal } from '@/lib/utils/tryNonFatal'
 import type { ActionResult } from '@/types/actionResult'
 
 type UpdateNoteTextResult = {
@@ -117,19 +117,19 @@ export async function updateNoteText(
     .where(and(eq(reviewActions.id, actionRow.id), withTenant(reviewActions.tenantId, tenantId)))
 
   // Audit log (best-effort — Guardrail #2)
-  try {
-    await writeAuditLog({
-      tenantId,
-      userId,
-      entityType: 'finding',
-      entityId: findingId,
-      action: 'finding.note_text_update',
-      oldValue: { noteText: (existingMetadata as Record<string, unknown>).noteText ?? null },
-      newValue: { noteText },
-    })
-  } catch (auditErr) {
-    logger.error({ err: auditErr, findingId }, 'Audit log write failed for updateNoteText')
-  }
+  await tryNonFatal(
+    () =>
+      writeAuditLog({
+        tenantId,
+        userId,
+        entityType: 'finding',
+        entityId: findingId,
+        action: 'finding.note_text_update',
+        oldValue: { noteText: (existingMetadata as Record<string, unknown>).noteText ?? null },
+        newValue: { noteText },
+      }),
+    { operation: 'audit log (updateNoteText)', meta: { findingId } },
+  )
 
   return {
     success: true,

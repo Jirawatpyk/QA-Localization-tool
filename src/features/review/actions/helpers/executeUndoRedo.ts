@@ -11,7 +11,7 @@ import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { assertLockOwnership } from '@/features/review/helpers/assertLockOwnership'
 import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { inngest } from '@/lib/inngest/client'
-import { logger } from '@/lib/logger'
+import { tryNonFatal } from '@/lib/utils/tryNonFatal'
 import type { ActionResult } from '@/types/actionResult'
 import type { FindingStatus } from '@/types/finding'
 import type { TenantId } from '@/types/tenant'
@@ -127,41 +127,38 @@ export async function executeUndoRedo({
   })
 
   // Audit log (best-effort — Guardrail #2)
-  try {
-    await writeAuditLog({
-      tenantId,
-      userId,
-      entityType: 'finding',
-      entityId: findingId,
-      action: `finding.${actionType}`,
-      oldValue: { status: currentState },
-      newValue: { status: targetState, non_native: isNonNative },
-    })
-  } catch (auditErr) {
-    logger.error({ err: auditErr, findingId, actionType }, 'Audit log write failed for undo/redo')
-  }
+  await tryNonFatal(
+    () =>
+      writeAuditLog({
+        tenantId,
+        userId,
+        entityType: 'finding',
+        entityId: findingId,
+        action: `finding.${actionType}`,
+        oldValue: { status: currentState },
+        newValue: { status: targetState, non_native: isNonNative },
+      }),
+    { operation: `audit log (executeUndoRedo:${actionType})`, meta: { findingId } },
+  )
 
   // Inngest event for score recalculation (best-effort)
-  try {
-    await inngest.send({
-      name: 'finding.changed',
-      data: {
-        findingId,
-        fileId,
-        projectId,
-        tenantId,
-        previousState: currentState,
-        newState: targetState,
-        triggeredBy: userId,
-        timestamp: new Date().toISOString(),
-      },
-    })
-  } catch (inngestErr) {
-    logger.error(
-      { err: inngestErr, findingId, actionType },
-      'Inngest event send failed for undo/redo',
-    )
-  }
+  await tryNonFatal(
+    () =>
+      inngest.send({
+        name: 'finding.changed',
+        data: {
+          findingId,
+          fileId,
+          projectId,
+          tenantId,
+          previousState: currentState,
+          newState: targetState,
+          triggeredBy: userId,
+          timestamp: new Date().toISOString(),
+        },
+      }),
+    { operation: `inngest event (executeUndoRedo:${actionType})`, meta: { findingId } },
+  )
 
   return {
     success: true,

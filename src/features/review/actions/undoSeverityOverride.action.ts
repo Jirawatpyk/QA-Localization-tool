@@ -10,12 +10,13 @@ import { findings } from '@/db/schema/findings'
 import { reviewActions } from '@/db/schema/reviewActions'
 import { segments } from '@/db/schema/segments'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
+import { assertLockOwnership } from '@/features/review/helpers/assertLockOwnership'
 import { undoSeverityOverrideSchema } from '@/features/review/validation/undoAction.schema'
 import type { UndoSeverityOverrideInput } from '@/features/review/validation/undoAction.schema'
 import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { requireRole } from '@/lib/auth/requireRole'
 import { inngest } from '@/lib/inngest/client'
-import { logger } from '@/lib/logger'
+import { tryNonFatal } from '@/lib/utils/tryNonFatal'
 import type { ActionResult } from '@/types/actionResult'
 import type { FindingSeverity, FindingStatus } from '@/types/finding'
 
@@ -56,6 +57,10 @@ export async function undoSeverityOverride(
     expectedCurrentSeverity,
   } = parsed.data
   const { id: userId, tenantId } = user
+
+  // S-FIX-7: Lock ownership check (AC3 — defense-in-depth)
+  const lockError = await assertLockOwnership(fileId, tenantId, userId)
+  if (lockError) return lockError
 
   // Fetch finding (Guardrail #1, #4)
   const rows = await db
@@ -135,45 +140,42 @@ export async function undoSeverityOverride(
   })
 
   // Audit log (best-effort)
-  try {
-    await writeAuditLog({
-      tenantId,
-      userId,
-      entityType: 'finding',
-      entityId: findingId,
-      action: 'finding.undo_severity_override',
-      oldValue: { severity: currentSeverity },
-      newValue: {
-        severity: previousSeverity,
-        originalSeverity: previousOriginalSeverity,
-        non_native: isNonNative,
-      },
-    })
-  } catch (auditErr) {
-    logger.error({ err: auditErr, findingId }, 'Audit log write failed for undo severity override')
-  }
+  await tryNonFatal(
+    () =>
+      writeAuditLog({
+        tenantId,
+        userId,
+        entityType: 'finding',
+        entityId: findingId,
+        action: 'finding.undo_severity_override',
+        oldValue: { severity: currentSeverity },
+        newValue: {
+          severity: previousSeverity,
+          originalSeverity: previousOriginalSeverity,
+          non_native: isNonNative,
+        },
+      }),
+    { operation: 'audit log (undoSeverityOverride)', meta: { findingId } },
+  )
 
   // Inngest event (severity affects MQM score)
-  try {
-    await inngest.send({
-      name: 'finding.changed',
-      data: {
-        findingId,
-        fileId,
-        projectId,
-        tenantId,
-        previousState: currentStatus,
-        newState: currentStatus,
-        triggeredBy: userId,
-        timestamp: new Date().toISOString(),
-      },
-    })
-  } catch (inngestErr) {
-    logger.error(
-      { err: inngestErr, findingId },
-      'Inngest event send failed for undo severity override',
-    )
-  }
+  await tryNonFatal(
+    () =>
+      inngest.send({
+        name: 'finding.changed',
+        data: {
+          findingId,
+          fileId,
+          projectId,
+          tenantId,
+          previousState: currentStatus,
+          newState: currentStatus,
+          triggeredBy: userId,
+          timestamp: new Date().toISOString(),
+        },
+      }),
+    { operation: 'inngest event (undoSeverityOverride)', meta: { findingId } },
+  )
 
   return {
     success: true,
