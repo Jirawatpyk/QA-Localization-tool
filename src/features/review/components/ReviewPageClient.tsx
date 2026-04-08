@@ -413,22 +413,24 @@ export function ReviewPageClient({
   )
 
   const handleBulkAccept = useCallback(() => {
+    if (isReadOnly) return // S-FIX-7 AC6: read-only guard
     if (selectedIds.size > 5) {
       setBulkConfirmAction('accept')
       setBulkConfirmOpen(true)
     } else {
       executeBulk('accept').catch(() => toast.error('Bulk accept failed'))
     }
-  }, [selectedIds.size, executeBulk])
+  }, [selectedIds.size, executeBulk, isReadOnly])
 
   const handleBulkReject = useCallback(() => {
+    if (isReadOnly) return // S-FIX-7 AC6: read-only guard
     if (selectedIds.size > 5) {
       setBulkConfirmAction('reject')
       setBulkConfirmOpen(true)
     } else {
       executeBulk('reject').catch(() => toast.error('Bulk reject failed'))
     }
-  }, [selectedIds.size, executeBulk])
+  }, [selectedIds.size, executeBulk, isReadOnly])
 
   const handleClearBulkSelection = useCallback(() => {
     clearSelection()
@@ -464,6 +466,7 @@ export function ReviewPageClient({
   // CR-R2 P1-2: shared native confirm handler with stale rollback guard
   const executeNativeConfirm = useCallback(
     (findingId: string) => {
+      if (isReadOnly) return // S-FIX-7 AC6: read-only guard
       const store = useReviewStore.getState()
       const f = getStoreFileState(store, fileId).findingsMap.get(findingId)
       if (!f) return
@@ -520,12 +523,13 @@ export function ReviewPageClient({
           toast.error('Confirm failed')
         })
     },
-    [fileId, projectId],
+    [fileId, projectId, isReadOnly],
   )
 
   // CR-R2 P0-2: shared native override handler with dynamic status
   const executeNativeOverride = useCallback(
     (findingId: string, newStatus: 'accepted' | 'rejected') => {
+      if (isReadOnly) return // S-FIX-7 AC6: read-only guard
       const store = useReviewStore.getState()
       const f = getStoreFileState(store, fileId).findingsMap.get(findingId)
       if (!f) return
@@ -611,10 +615,12 @@ export function ReviewPageClient({
       source: handleSourceIssue,
       override: () => {
         // CR-R1-M2: guard — don't open menu if no finding focused (prevents stale open state)
-        if (!activeFindingIdRef.current) return
+        if (!activeFindingIdRef.current || isReadOnly) return // S-FIX-7 AC6
         setIsOverrideMenuOpen(true)
       },
-      add: () => setIsAddFindingDialogOpen(true),
+      add: () => {
+        if (!isReadOnly) setIsAddFindingDialogOpen(true)
+      }, // S-FIX-7 AC6
       // CR-R2: use shared handlers (P0-2 status picker + P1-2 stale rollback guard)
       confirmNative: executeNativeConfirm,
       overrideNative: () => {
@@ -952,10 +958,7 @@ export function ReviewPageClient({
   })
 
   // Register Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y
-  useUndoRedoHotkeys({
-    undo: performUndo,
-    redo: performRedo,
-  })
+  useUndoRedoHotkeys({ undo: performUndo, redo: performRedo }, { readOnly: isReadOnly })
 
   // Wire Realtime subscriptions (TD-TENANT-003: pass tenantId for compound filter)
   useScoreSubscription(fileId, tenantId)
@@ -986,6 +989,7 @@ export function ReviewPageClient({
         action: {
           label: 'Suppress this pattern',
           onClick: () => {
+            if (isReadOnly) return // S-FIX-7 AC6
             // CF-H2 fix: store in ref (stable) AND state (triggers render)
             pendingPatternRef.current = patternRef
             setPendingPattern(patternRef)
@@ -1132,6 +1136,7 @@ export function ReviewPageClient({
   }
 
   function handleApprove() {
+    if (isReadOnly) return // S-FIX-7 AC6: read-only guard
     startApproveTransition(async () => {
       const result = await approveFile({ fileId, projectId })
       if (result.success) {

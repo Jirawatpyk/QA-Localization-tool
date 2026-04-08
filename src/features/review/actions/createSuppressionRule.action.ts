@@ -14,6 +14,7 @@ import { reviewActions } from '@/db/schema/reviewActions'
 import { segments } from '@/db/schema/segments'
 import { suppressionRules } from '@/db/schema/suppressionRules'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
+import { assertLockOwnership } from '@/features/review/helpers/assertLockOwnership'
 import { computeWordOverlap, extractKeywords } from '@/features/review/utils/pattern-detection'
 import { suppressionRuleSchema } from '@/features/review/validation/suppressionRule.schema'
 import type { CreateSuppressionRuleInput } from '@/features/review/validation/suppressionRule.schema'
@@ -72,6 +73,11 @@ export async function createSuppressionRule(
   }
 
   const { id: userId, tenantId } = user
+
+  // S-FIX-7: Lock ownership check (AC3 — defense-in-depth)
+  const lockError = await assertLockOwnership(currentFileId, tenantId, userId)
+  if (lockError) return lockError
+
   const batchId = crypto.randomUUID()
   const patternKeywords = pattern.split(',').map((k) => k.trim().toLocaleLowerCase())
 

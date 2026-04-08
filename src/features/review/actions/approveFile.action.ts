@@ -9,6 +9,7 @@ import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { scores } from '@/db/schema/scores'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
+import { assertLockOwnership } from '@/features/review/helpers/assertLockOwnership'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
 import type { ActionErrorCode } from '@/types/actionErrorCode'
@@ -80,7 +81,11 @@ export async function approveFile(input: ApproveFileInput): Promise<ActionResult
     }
   }
 
-  const { tenantId } = user
+  const { tenantId, id: userId } = user
+
+  // S-FIX-7: Lock ownership check (AC3 — defense-in-depth)
+  const lockError = await assertLockOwnership(fileId, tenantId, userId)
+  if (lockError) return lockError
 
   // Fetch score with tenant isolation + cross-project guard (RT-2)
   const [score] = await db

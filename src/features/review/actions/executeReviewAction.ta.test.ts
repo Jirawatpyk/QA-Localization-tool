@@ -94,6 +94,9 @@ vi.mock('@/db/schema/reviewActions', () => ({
 vi.mock('@/lib/logger', () => ({
   logger: mockLogger,
 }))
+vi.mock('@/features/review/helpers/assertLockOwnership', () => ({
+  assertLockOwnership: vi.fn().mockResolvedValue(null),
+}))
 
 // ── Import after mocks ──
 

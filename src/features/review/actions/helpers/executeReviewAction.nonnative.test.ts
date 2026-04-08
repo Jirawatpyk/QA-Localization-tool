@@ -109,6 +109,9 @@ vi.mock('@/db/schema/reviewActions', () => ({
 vi.mock('@/lib/logger', () => ({
   logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }))
+vi.mock('@/features/review/helpers/assertLockOwnership', () => ({
+  assertLockOwnership: vi.fn().mockResolvedValue(null),
+}))
 
 import { executeReviewAction } from '@/features/review/actions/helpers/executeReviewAction'
 

@@ -126,6 +126,9 @@ vi.mock('@/db/schema/segments', () => ({
     targetLang: 'target_lang',
   },
 }))
+vi.mock('@/features/review/helpers/assertLockOwnership', () => ({
+  assertLockOwnership: vi.fn().mockResolvedValue(null),
+}))
 
 import { createSuppressionRule } from '@/features/review/actions/createSuppressionRule.action'
 

@@ -7,6 +7,7 @@ import { noteFinding } from '@/features/review/actions/noteFinding.action'
 import { rejectFinding } from '@/features/review/actions/rejectFinding.action'
 import { sourceIssueFinding } from '@/features/review/actions/sourceIssueFinding.action'
 import { useFocusManagement } from '@/features/review/hooks/use-focus-management'
+import { useLockGuard } from '@/features/review/hooks/use-read-only-mode'
 import { useReviewStore, getStoreFileState } from '@/features/review/stores/review.store'
 import type { UndoEntryAction } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
@@ -71,6 +72,7 @@ export function useReviewActions({
   isNonNative = false,
 }: UseReviewActionsOptions) {
   const { autoAdvance } = useFocusManagement()
+  const { selfAssignIfNeeded } = useLockGuard()
   // H1 fix: useState for UI-facing loading state (triggers re-render for spinner)
   // Ref kept for synchronous double-click guard (checked before await)
   const inFlightRef = useRef(false)
@@ -81,15 +83,30 @@ export function useReviewActions({
   const executeAction = useCallback(
     async (findingId: string, action: ReviewAction) => {
       // Double-click prevention (Guardrail #13 — avoid swallowed errors)
+      // Set in-flight synchronously BEFORE any await to prevent race on double-click
       if (inFlightRef.current) return
+      inFlightRef.current = true
+
+      // S-FIX-7 AC1: Self-assign on first review action for unassigned files
+      const lockOutcome = await selfAssignIfNeeded(fileId, projectId)
+      if (lockOutcome === 'conflict') {
+        inFlightRef.current = false // Release lock before early return
+        return
+      }
 
       const state = useReviewStore.getState()
       const fs = getStoreFileState(state, fileId)
       const finding = fs.findingsMap.get(findingId)
-      if (!finding) return
+      if (!finding) {
+        inFlightRef.current = false
+        return
+      }
 
       // Runtime verify: store value → validated FindingStatus (Guardrail #3)
-      if (!FINDING_STATUSES.includes(finding.status as FindingStatus)) return
+      if (!FINDING_STATUSES.includes(finding.status as FindingStatus)) {
+        inFlightRef.current = false
+        return
+      }
 
       const currentStatus = finding.status as FindingStatus
       const newState = getNewState(action, currentStatus)
@@ -97,6 +114,7 @@ export function useReviewActions({
       // No-op transition — info toast and skip
       if (newState === null) {
         toast.info(`Finding already ${currentStatus}`)
+        inFlightRef.current = false
         return
       }
 
@@ -111,7 +129,7 @@ export function useReviewActions({
         hasNonNativeAction: finding.hasNonNativeAction || isNonNative,
       })
 
-      inFlightRef.current = true
+      // S-FIX-7: inFlightRef.current already set at the top of executeAction
       setIsInFlight(true)
       setActiveAction(action)
       try {
@@ -297,7 +315,7 @@ export function useReviewActions({
         setActiveAction(null)
       }
     },
-    [fileId, projectId, autoAdvance, sourceLang, targetLang, isNonNative],
+    [fileId, projectId, autoAdvance, sourceLang, targetLang, isNonNative, selfAssignIfNeeded],
   )
 
   const handleAccept = useCallback(

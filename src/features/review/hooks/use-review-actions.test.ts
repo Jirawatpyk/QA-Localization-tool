@@ -281,6 +281,11 @@ describe('useReviewActions', () => {
       // Second call — should be ignored
       const secondCall = result.current.handleAccept(VALID_FINDING_ID)
 
+      // S-FIX-7: Flush microtasks so selfAssignIfNeeded (async) completes and
+      // mockAcceptFinding is called (capturing resolveAction) before we resolve
+      await Promise.resolve()
+      await Promise.resolve()
+
       // Resolve the first call
       resolveAction?.({ success: true, data: {} })
       await firstCall

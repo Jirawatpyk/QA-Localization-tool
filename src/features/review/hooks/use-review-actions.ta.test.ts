@@ -286,6 +286,11 @@ describe('useReviewActions — TA expansion', () => {
     await act(async () => {
       const promise = result.current.handleAccept(FINDING_1)
 
+      // S-FIX-7: Flush microtasks so selfAssignIfNeeded completes and
+      // mockAcceptFinding captures resolveAction before we call it
+      await Promise.resolve()
+      await Promise.resolve()
+
       // Realtime pushes 'flagged' while action is in-flight
       mockFindingsMap.set(FINDING_1, {
         id: FINDING_1,

@@ -8,6 +8,7 @@ import { findings } from '@/db/schema/findings'
 import { reviewActions } from '@/db/schema/reviewActions'
 import { segments } from '@/db/schema/segments'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
+import { assertLockOwnership } from '@/features/review/helpers/assertLockOwnership'
 import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
@@ -48,6 +49,10 @@ export async function executeUndoRedo({
   user,
 }: ExecuteUndoRedoParams): Promise<ActionResult<UndoRedoResult>> {
   const { id: userId, tenantId } = user
+
+  // S-FIX-7: Lock ownership check (AC3 — defense-in-depth)
+  const lockError = await assertLockOwnership(fileId, tenantId, userId)
+  if (lockError) return lockError
 
   // Fetch finding with tenant isolation (Guardrail #1)
   const rows = await db

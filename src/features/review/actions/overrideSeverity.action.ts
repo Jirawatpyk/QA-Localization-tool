@@ -11,6 +11,7 @@ import { findings } from '@/db/schema/findings'
 import { reviewActions } from '@/db/schema/reviewActions'
 import { segments } from '@/db/schema/segments'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
+import { assertLockOwnership } from '@/features/review/helpers/assertLockOwnership'
 import { overrideSeveritySchema } from '@/features/review/validation/reviewAction.schema'
 import type { OverrideSeverityInput } from '@/features/review/validation/reviewAction.schema'
 import { determineNonNative } from '@/lib/auth/determineNonNative'
@@ -51,6 +52,10 @@ export async function overrideSeverity(
 
   const { findingId, fileId, projectId, newSeverity } = parsed.data
   const { id: userId, tenantId } = user
+
+  // S-FIX-7: Lock ownership check (AC3 — defense-in-depth)
+  const lockError = await assertLockOwnership(fileId, tenantId, userId)
+  if (lockError) return lockError
 
   // Fetch finding with tenant isolation (Guardrail #1, #4)
   const rows = await db

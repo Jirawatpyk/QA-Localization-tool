@@ -190,6 +190,13 @@
       "when": 1774891900000,
       "tag": "0025_canonicalize_language_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1774892000000,
+      "tag": "0026_s_fix_7_self_assign_rls",
+      "breakpoints": true
     }
   ]
 }

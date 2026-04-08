@@ -9,6 +9,7 @@ import { withTenant } from '@/db/helpers/withTenant'
 import { findingAssignments } from '@/db/schema/findingAssignments'
 import { findingComments } from '@/db/schema/findingComments'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
+import { assertLockOwnership } from '@/features/review/helpers/assertLockOwnership'
 import { addFindingCommentSchema } from '@/features/review/validation/reviewAction.schema'
 import type { AddFindingCommentInput } from '@/features/review/validation/reviewAction.schema'
 import { requireRole } from '@/lib/auth/requireRole'
@@ -68,6 +69,10 @@ export async function addFindingComment(
   }
 
   const assignment = assignmentRows[0]!
+
+  // S-FIX-7: Lock ownership check (AC3 — defense-in-depth)
+  const lockError = await assertLockOwnership(assignment.fileId, tenantId, userId)
+  if (lockError) return lockError
 
   // Ownership check: must be assigned_to, assigned_by, or admin
   if (role !== 'admin' && userId !== assignment.assignedTo && userId !== assignment.assignedBy) {

@@ -43,6 +43,9 @@ vi.mock('@/lib/inngest/client', () => ({
 vi.mock('@/lib/logger', () => ({
   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }))
+vi.mock('@/features/review/helpers/assertLockOwnership', () => ({
+  assertLockOwnership: vi.fn().mockResolvedValue(null),
+}))
 
 import { undoBulkAction } from '@/features/review/actions/undoBulkAction.action'
 

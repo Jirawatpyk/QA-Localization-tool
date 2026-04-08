@@ -1,9 +1,9 @@
 /**
- * RLS Tests: file_assignments — role-scoped access (Story 6.1, AC5)
+ * RLS Tests: file_assignments — role-scoped access (Story 6.1 AC5 + S-FIX-7 AC2)
  *
  * T1: Admin sees all tenant file_assignments (SELECT)
  * T2: QA reviewer sees all tenant file_assignments (SELECT)
- * T3: Native reviewer sees ONLY own assignments (SELECT)
+ * T3: Native reviewer sees ALL tenant assignments (SELECT — expanded in S-FIX-7)
  * T4: Cross-tenant isolation (Tenant B cannot see Tenant A)
  * T5: Admin can INSERT file_assignments
  * T6: QA reviewer can INSERT file_assignments
@@ -11,11 +11,13 @@
  * T8: Assigned reviewer can UPDATE own assignment
  * T9: Admin can DELETE assignments
  * T10: Native reviewer cannot DELETE assignments
+ * T11: Native reviewer can INSERT own self-assignment (S-FIX-7)
+ * T12: Native reviewer CANNOT insert assignment for another user (S-FIX-7)
+ * T13: Native reviewer can SELECT another reviewer's assignment (S-FIX-7 lock visibility)
+ * T14: Cross-tenant native reviewer cannot see other tenant's assignments (S-FIX-7)
  *
  * Run with: `npm run test:rls`
  */
-import { randomUUID } from 'node:crypto'
-
 import { createClient } from '@supabase/supabase-js'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -28,9 +30,12 @@ const TEST_PASSWORD = 'test-password-123!'
 let tenantA: TestTenant
 let tenantB: TestTenant
 let nativeUser: { id: string; jwt: string }
+let nativeUser2: { id: string; jwt: string }
+let nativeTenantB: { id: string; jwt: string }
 let qaUser: { id: string; jwt: string }
 let projectId: string
 let fileId: string
+let file2Id: string
 let assignmentForAdmin: string
 let assignmentForNative: string
 
@@ -91,6 +96,56 @@ beforeAll(async () => {
   })
   nativeUser = { id: nativeAuth!.user!.id, jwt: nativeSession!.session!.access_token }
 
+  // Second native reviewer in Tenant A (for T13: lock visibility)
+  const { data: native2Auth } = await admin.auth.admin.createUser({
+    email: 'rls-fa-native2@test.local',
+    password: TEST_PASSWORD,
+    email_confirm: true,
+  })
+  await admin.from('users').insert({
+    id: native2Auth!.user!.id,
+    tenant_id: tenantA.id,
+    email: 'rls-fa-native2@test.local',
+    display_name: 'Native User 2',
+  })
+  await admin
+    .from('user_roles')
+    .insert({ user_id: native2Auth!.user!.id, tenant_id: tenantA.id, role: 'native_reviewer' })
+  await admin.auth.admin.updateUserById(native2Auth!.user!.id, {
+    app_metadata: { tenant_id: tenantA.id, user_role: 'native_reviewer' },
+  })
+  const native2Anon = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false } })
+  const { data: native2Session } = await native2Anon.auth.signInWithPassword({
+    email: 'rls-fa-native2@test.local',
+    password: TEST_PASSWORD,
+  })
+  nativeUser2 = { id: native2Auth!.user!.id, jwt: native2Session!.session!.access_token }
+
+  // Native reviewer in Tenant B (for T14: cross-tenant isolation)
+  const { data: nativeBAuth } = await admin.auth.admin.createUser({
+    email: 'rls-fa-native-b@test.local',
+    password: TEST_PASSWORD,
+    email_confirm: true,
+  })
+  await admin.from('users').insert({
+    id: nativeBAuth!.user!.id,
+    tenant_id: tenantB.id,
+    email: 'rls-fa-native-b@test.local',
+    display_name: 'Native Tenant B',
+  })
+  await admin
+    .from('user_roles')
+    .insert({ user_id: nativeBAuth!.user!.id, tenant_id: tenantB.id, role: 'native_reviewer' })
+  await admin.auth.admin.updateUserById(nativeBAuth!.user!.id, {
+    app_metadata: { tenant_id: tenantB.id, user_role: 'native_reviewer' },
+  })
+  const nativeBAnon = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false } })
+  const { data: nativeBSession } = await nativeBAnon.auth.signInWithPassword({
+    email: 'rls-fa-native-b@test.local',
+    password: TEST_PASSWORD,
+  })
+  nativeTenantB = { id: nativeBAuth!.user!.id, jwt: nativeBSession!.session!.access_token }
+
   // Create project + file for assignments
   const { data: project } = await admin
     .from('projects')
@@ -147,11 +202,12 @@ beforeAll(async () => {
     })
     .select('id')
     .single()
+  file2Id = file2!.id
 
   const { data: a2 } = await admin
     .from('file_assignments')
     .insert({
-      file_id: file2!.id,
+      file_id: file2Id,
       project_id: projectId,
       tenant_id: tenantA.id,
       assigned_to: nativeUser.id,
@@ -170,7 +226,12 @@ afterAll(async () => {
   await admin.from('projects').delete().eq('id', projectId)
 
   // Cleanup users
-  for (const email of ['rls-fa-qa@test.local', 'rls-fa-native@test.local']) {
+  for (const email of [
+    'rls-fa-qa@test.local',
+    'rls-fa-native@test.local',
+    'rls-fa-native2@test.local',
+    'rls-fa-native-b@test.local',
+  ]) {
     const { data } = await admin.auth.admin.listUsers({ perPage: 1000 })
     const user = data?.users?.find((u) => u.email === email)
     if (user) {
@@ -209,18 +270,17 @@ describe('file_assignments RLS', () => {
     expect(data!.length).toBeGreaterThanOrEqual(2)
   })
 
-  // T3: Native reviewer sees ONLY own assignments
-  it('T3: native reviewer sees ONLY own assignments', async () => {
+  // T3: Native reviewer sees ALL tenant assignments (S-FIX-7 expanded SELECT)
+  it('T3: native reviewer sees ALL tenant file_assignments', async () => {
     const client = tenantClient(nativeUser.jwt)
     const { data, error } = await client
       .from('file_assignments')
-      .select('id, assigned_to')
+      .select('id')
       .eq('project_id', projectId)
 
     expect(error).toBeNull()
-    // Should see only the assignment where assigned_to = nativeUser.id
-    expect(data!.length).toBe(1)
-    expect(data![0]!.assigned_to).toBe(nativeUser.id)
+    // S-FIX-7: native_reviewer now has tenant-wide SELECT (lock visibility)
+    expect(data!.length).toBeGreaterThanOrEqual(2)
   })
 
   // T4: Cross-tenant isolation
@@ -367,7 +427,7 @@ describe('file_assignments RLS', () => {
   // T10: Native reviewer cannot DELETE
   it('T10: native reviewer cannot DELETE assignments', async () => {
     const client = tenantClient(nativeUser.jwt)
-    const { error } = await client.from('file_assignments').delete().eq('id', assignmentForNative)
+    await client.from('file_assignments').delete().eq('id', assignmentForNative)
 
     // RLS should prevent this — either error or no rows affected
     // Supabase returns no error but 0 rows for RLS denial on DELETE
@@ -378,5 +438,103 @@ describe('file_assignments RLS', () => {
       .single()
 
     expect(check).not.toBeNull() // Row still exists
+  })
+
+  // === S-FIX-7: Self-assign + Lock Visibility ===
+
+  // T11: Native reviewer can INSERT own self-assignment
+  it('T11: native reviewer can INSERT own self-assignment', async () => {
+    // Create a temp file to avoid partial unique index conflict
+    const { data: tempFile } = await admin
+      .from('files')
+      .insert({
+        project_id: projectId,
+        tenant_id: tenantA.id,
+        file_name: 'test-t11.sdlxliff',
+        file_type: 'sdlxliff',
+        file_size_bytes: 256,
+        storage_path: `${tenantA.id}/${projectId}/t11/test-t11.sdlxliff`,
+      })
+      .select('id')
+      .single()
+
+    const client = tenantClient(nativeUser.jwt)
+    const { error } = await client.from('file_assignments').insert({
+      file_id: tempFile!.id,
+      project_id: projectId,
+      tenant_id: tenantA.id,
+      assigned_to: nativeUser.id,
+      assigned_by: nativeUser.id, // Self-assign: assigned_to = assigned_by = self
+      status: 'in_progress',
+    })
+
+    expect(error).toBeNull()
+
+    // Cleanup
+    await admin.from('file_assignments').delete().eq('file_id', tempFile!.id)
+    await admin.from('files').delete().eq('id', tempFile!.id)
+  })
+
+  // T12: Native reviewer CANNOT insert assignment for another user
+  it('T12: native reviewer CANNOT insert assignment for another user', async () => {
+    const { data: tempFile } = await admin
+      .from('files')
+      .insert({
+        project_id: projectId,
+        tenant_id: tenantA.id,
+        file_name: 'test-t12.sdlxliff',
+        file_type: 'sdlxliff',
+        file_size_bytes: 256,
+        storage_path: `${tenantA.id}/${projectId}/t12/test-t12.sdlxliff`,
+      })
+      .select('id')
+      .single()
+
+    const client = tenantClient(nativeUser.jwt)
+
+    // Try to assign to nativeUser2 (not self) — should be blocked by RLS
+    const { error } = await client.from('file_assignments').insert({
+      file_id: tempFile!.id,
+      project_id: projectId,
+      tenant_id: tenantA.id,
+      assigned_to: nativeUser2.id, // NOT self
+      assigned_by: nativeUser.id,
+      status: 'assigned',
+    })
+
+    // RLS should block: native_reviewer INSERT requires assigned_to = assigned_by = auth.uid()
+    expect(error).not.toBeNull()
+
+    // Cleanup temp file
+    await admin.from('file_assignments').delete().eq('file_id', tempFile!.id)
+    await admin.from('files').delete().eq('id', tempFile!.id)
+  })
+
+  // T13: Native reviewer can SELECT another reviewer's active assignment (lock visibility)
+  it("T13: native reviewer can see another reviewer's assignment", async () => {
+    // nativeUser2 should see nativeUser's assignment on file2 (assigned to nativeUser)
+    const client = tenantClient(nativeUser2.jwt)
+    const { data, error } = await client
+      .from('file_assignments')
+      .select('id, assigned_to')
+      .eq('file_id', file2Id)
+
+    expect(error).toBeNull()
+    expect(data!.length).toBeGreaterThanOrEqual(1)
+    // Should include nativeUser's assignment
+    const nativeAssignment = data!.find((a) => a.assigned_to === nativeUser.id)
+    expect(nativeAssignment).toBeDefined()
+  })
+
+  // T14: Cross-tenant native reviewer cannot see other tenant's assignments
+  it('T14: cross-tenant native reviewer cannot see other tenant assignments', async () => {
+    const client = tenantClient(nativeTenantB.jwt)
+    const { data, error } = await client
+      .from('file_assignments')
+      .select('id')
+      .eq('project_id', projectId)
+
+    expect(error).toBeNull()
+    expect(data).toEqual([])
   })
 })

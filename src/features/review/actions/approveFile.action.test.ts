@@ -88,6 +88,9 @@ vi.mock('@/db/schema/files', () => ({
 vi.mock('@/lib/logger', () => ({
   logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }))
+vi.mock('@/features/review/helpers/assertLockOwnership', () => ({
+  assertLockOwnership: vi.fn().mockResolvedValue(null),
+}))
 
 // Static import — stub file exists at this path, Vite can resolve it
 import { approveFile } from '@/features/review/actions/approveFile.action'

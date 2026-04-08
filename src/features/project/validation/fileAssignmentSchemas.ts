@@ -52,3 +52,10 @@ export const getFileAssignmentSchema = z.object({
 })
 
 export type GetFileAssignmentInput = z.infer<typeof getFileAssignmentSchema>
+
+export const selfAssignFileSchema = z.object({
+  fileId: z.string().uuid(),
+  projectId: z.string().uuid(),
+})
+
+export type SelfAssignFileInput = z.infer<typeof selfAssignFileSchema>

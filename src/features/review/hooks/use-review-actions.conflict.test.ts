@@ -160,6 +160,10 @@ describe('useReviewActions — conflict resolution (P2-07)', () => {
     await act(async () => {
       const actionPromise = result.current.handleAccept(FINDING_ID)
 
+      // S-FIX-7: Flush microtasks so selfAssignIfNeeded completes
+      await Promise.resolve()
+      await Promise.resolve()
+
       // Simulate Realtime pushing "rejected" while action is in-flight
       // This changes the map directly (as Realtime handler would)
       mockFindingsMap.set(FINDING_ID, { id: FINDING_ID, status: 'rejected' })

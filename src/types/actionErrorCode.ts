@@ -24,6 +24,7 @@ export type ActionErrorCode =
   | 'INVALID_STATUS'
   | 'INVALID_TRANSITION'
   | 'LIMIT_EXCEEDED'
+  | 'LOCK_CONFLICT'
   | 'NOT_FOUND'
   | 'NOT_MANUAL'
   | 'PARSE_ERROR'

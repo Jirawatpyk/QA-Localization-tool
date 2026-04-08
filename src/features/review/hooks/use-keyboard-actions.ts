@@ -384,12 +384,17 @@ type UndoRedoHandlers = {
 }
 
 /** Register Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y in 'review' scope */
-export function useUndoRedoHotkeys(handlers: UndoRedoHandlers): void {
+export function useUndoRedoHotkeys(
+  handlers: UndoRedoHandlers,
+  options?: { readOnly?: boolean },
+): void {
   const { register } = useKeyboardActions()
   const handlersRef = useRef(handlers)
+  const readOnlyRef = useRef(options?.readOnly ?? false)
 
   useEffect(() => {
     handlersRef.current = handlers
+    readOnlyRef.current = options?.readOnly ?? false
   })
 
   useEffect(() => {
@@ -400,6 +405,7 @@ export function useUndoRedoHotkeys(handlers: UndoRedoHandlers): void {
       register(
         'ctrl+z',
         () => {
+          if (readOnlyRef.current) return // S-FIX-7 AC6: suppress in read-only
           handlersRef.current.undo()
         },
         {
@@ -416,6 +422,7 @@ export function useUndoRedoHotkeys(handlers: UndoRedoHandlers): void {
       register(
         'ctrl+shift+z',
         () => {
+          if (readOnlyRef.current) return // S-FIX-7 AC6
           handlersRef.current.redo()
         },
         {
@@ -432,6 +439,7 @@ export function useUndoRedoHotkeys(handlers: UndoRedoHandlers): void {
       register(
         'ctrl+y',
         () => {
+          if (readOnlyRef.current) return // S-FIX-7 AC6
           handlersRef.current.redo()
         },
         {
