@@ -96,4 +96,16 @@ describe('buildFeedbackEventRow', () => {
 
     expect(row.reviewerIsNative).toBe(false)
   })
+
+  it('should use pre-computed reviewerIsNative when provided', () => {
+    const row = buildFeedbackEventRow({
+      ...baseParams,
+      action: 'manual_add',
+      isFalsePositive: false,
+      reviewerNativeLanguages: ['ja'], // would be false if computed
+      reviewerIsNative: true, // override
+    })
+
+    expect(row.reviewerIsNative).toBe(true)
+  })
 })

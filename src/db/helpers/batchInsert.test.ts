@@ -14,13 +14,15 @@ const fakeTable = {} as never
 describe('batchInsert', () => {
   it('should insert all rows in a single batch when count <= batchSize', async () => {
     const tx = createMockTx()
+    const valuesMock = tx.insert(fakeTable).values
+    tx.insert.mockClear() // reset count after capturing reference
     const rows = [{ id: 1 }, { id: 2 }, { id: 3 }]
 
     await batchInsert(tx as never, fakeTable, rows, 100)
 
     expect(tx.insert).toHaveBeenCalledTimes(1)
     expect(tx.insert).toHaveBeenCalledWith(fakeTable)
-    expect(tx.insert(fakeTable).values).toHaveBeenCalledWith(rows)
+    expect(valuesMock).toHaveBeenCalledWith(rows)
   })
 
   it('should split into multiple batches when count > batchSize', async () => {

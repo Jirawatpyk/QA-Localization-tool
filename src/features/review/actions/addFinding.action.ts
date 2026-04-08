@@ -207,6 +207,7 @@ export async function addFinding(input: AddFindingInput): Promise<ActionResult<A
         sourceText: sourceExcerpt,
         originalTarget: targetExcerpt,
         reviewerNativeLanguages: user.nativeLanguages,
+        reviewerIsNative: !isNonNative,
       }),
     )
   } catch (feedbackErr) {

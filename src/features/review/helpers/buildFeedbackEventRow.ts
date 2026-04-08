@@ -1,3 +1,4 @@
+import type { feedbackEvents } from '@/db/schema/feedbackEvents'
 import { determineNonNative } from '@/lib/auth/determineNonNative'
 
 type FeedbackAction =
@@ -29,7 +30,30 @@ interface BuildFeedbackEventRowParams {
   originalTarget: string
   /** Reviewer's native languages (BCP-47). Used to compute reviewerIsNative. */
   reviewerNativeLanguages: string[]
+  /** Pre-computed value. If provided, skips determineNonNative call. */
+  reviewerIsNative?: boolean
 }
+
+/** Subset of feedback_events columns that this helper populates. */
+type FeedbackEventRow = Pick<
+  typeof feedbackEvents.$inferInsert,
+  | 'tenantId'
+  | 'fileId'
+  | 'projectId'
+  | 'findingId'
+  | 'reviewerId'
+  | 'action'
+  | 'findingCategory'
+  | 'originalSeverity'
+  | 'isFalsePositive'
+  | 'reviewerIsNative'
+  | 'layer'
+  | 'detectedByLayer'
+  | 'sourceLang'
+  | 'targetLang'
+  | 'sourceText'
+  | 'originalTarget'
+>
 
 /**
  * Build a feedback_events row for AI training data collection.
@@ -39,7 +63,7 @@ interface BuildFeedbackEventRowParams {
  *
  * Used by: addFinding, bulkAction, undoAction
  */
-export function buildFeedbackEventRow(params: BuildFeedbackEventRowParams) {
+export function buildFeedbackEventRow(params: BuildFeedbackEventRowParams): FeedbackEventRow {
   const sourceLang = params.sourceLang || 'unknown'
   const targetLang = params.targetLang || 'unknown'
 
@@ -53,7 +77,8 @@ export function buildFeedbackEventRow(params: BuildFeedbackEventRowParams) {
     findingCategory: params.findingCategory,
     originalSeverity: params.originalSeverity,
     isFalsePositive: params.isFalsePositive,
-    reviewerIsNative: !determineNonNative(params.reviewerNativeLanguages, targetLang),
+    reviewerIsNative:
+      params.reviewerIsNative ?? !determineNonNative(params.reviewerNativeLanguages, targetLang),
     layer: params.layer,
     detectedByLayer: params.detectedByLayer,
     sourceLang,
