@@ -489,7 +489,7 @@ export const tenants = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
+  (_table) => [
     pgPolicy('Tenant isolation: DELETE', {
       as: 'permissive',
       for: 'delete',
@@ -893,7 +893,7 @@ export const taxonomyDefinitions = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
+  (_table) => [
     pgPolicy('Read: all authenticated', {
       as: 'permissive',
       for: 'select',

@@ -40,7 +40,7 @@ describe.skipIf(!DATABASE_URL)('Upload Route — Real DB Integration', () => {
   let tenantAId: TenantId
   let tenantBId: TenantId
   let projectAId: string
-  let projectBId: string
+  let _projectBId: string
   let userAId: string
   let batchId: string
 
@@ -88,7 +88,7 @@ describe.skipIf(!DATABASE_URL)('Upload Route — Real DB Integration', () => {
         targetLangs: ['ja'],
       })
       .returning({ id: projects.id })
-    projectBId = projectB!.id
+    _projectBId = projectB!.id
 
     const [batch] = await testDb
       .insert(uploadBatches)

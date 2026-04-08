@@ -1,5 +1,4 @@
 import { and, eq, sql } from 'drizzle-orm'
-import { NonRetriableError } from 'inngest'
 
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'

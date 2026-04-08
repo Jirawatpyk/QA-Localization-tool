@@ -18,7 +18,6 @@ import type {
   SegmentCheckContext,
   SegmentRecord,
 } from '@/features/pipeline/engine/types'
-import { asTenantId } from '@/types/tenant'
 
 // ── Fixed IDs (deterministic, parallel-safe) ──
 

@@ -2,9 +2,10 @@
  * Generates test-glossary.xlsx fixture for glossary Excel parser integration tests.
  * Run: node src/test/fixtures/glossary/generate-xlsx.mjs
  */
-import ExcelJS from 'exceljs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+
+import ExcelJS from 'exceljs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -45,6 +46,7 @@ async function generate() {
 
   const outPath = path.join(__dirname, 'test-glossary.xlsx')
   await workbook.xlsx.writeFile(outPath)
+  // eslint-disable-next-line no-console -- one-off CLI fixture generator
   console.log(`Generated: ${outPath}`)
 }
 

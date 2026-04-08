@@ -21,7 +21,6 @@ import { missingCheckReports } from '@/db/schema/missingCheckReports'
 import { parityReports } from '@/db/schema/parityReports'
 import { projects } from '@/db/schema/projects'
 import { tenants } from '@/db/schema/tenants'
-import { users } from '@/db/schema/users'
 import { asTenantId, type TenantId } from '@/types/tenant'
 
 /**
@@ -52,9 +51,9 @@ describe.skipIf(!DATABASE_URL)('Parity DB Integration — Real DB', () => {
   let fileIdA: string
   let userIdA: string
 
-  // Tenant B (for isolation tests)
+  // Tenant B (for isolation tests — fixture seeded but not directly read in current test cases)
   let tenantIdB: TenantId
-  let projectIdB: string
+  let _projectIdB: string
   let userIdB: string
 
   beforeAll(async () => {
@@ -126,7 +125,7 @@ describe.skipIf(!DATABASE_URL)('Parity DB Integration — Real DB', () => {
         targetLangs: ['ja'],
       })
       .returning({ id: projects.id })
-    projectIdB = projB!.id
+    _projectIdB = projB!.id
   })
 
   afterAll(async () => {

@@ -1,12 +1,7 @@
 import { faker } from '@faker-js/faker'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
-import {
-  buildL2Response,
-  buildSegmentRow,
-  BUDGET_EXHAUSTED,
-  BUDGET_HAS_QUOTA,
-} from '@/test/fixtures/ai-responses'
+import { buildL2Response, buildSegmentRow, BUDGET_HAS_QUOTA } from '@/test/fixtures/ai-responses'
 import { asTenantId } from '@/types/tenant'
 
 // ── Hoisted mocks ──

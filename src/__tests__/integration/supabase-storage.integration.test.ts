@@ -147,7 +147,7 @@ describe.skipIf(!hasSupabase)('Supabase Storage RLS Integration', () => {
 
   // Path: {tenantId}/{projectId}/{fileHash}/{fileName}
   let pathA: string
-  let pathB: string
+  let _pathB: string
 
   beforeAll(async () => {
     adminClient = createAdminStorageClient()
@@ -202,7 +202,7 @@ describe.skipIf(!hasSupabase)('Supabase Storage RLS Integration', () => {
     }
 
     pathA = `${tenantA.tenantId}/${projectIdA}/${fileHash}/${fileName}`
-    pathB = `${tenantB.tenantId}/${projectIdB}/${fileHash}/${fileName}`
+    _pathB = `${tenantB.tenantId}/${projectIdB}/${fileHash}/${fileName}`
   }, 30000)
 
   afterAll(async () => {

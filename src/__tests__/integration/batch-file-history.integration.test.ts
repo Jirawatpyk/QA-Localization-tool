@@ -42,7 +42,7 @@ describe.skipIf(!DATABASE_URL)('getFileHistory — Real DB Integration', () => {
   // Tenant B (isolation test)
   let tenantBId: TenantId
   let projectBId: string
-  let fileBId: string
+  let _fileBId: string
 
   beforeAll(async () => {
     queryClient = postgres(DATABASE_URL, { max: 5 })
@@ -194,7 +194,7 @@ describe.skipIf(!DATABASE_URL)('getFileHistory — Real DB Integration', () => {
         status: 'parsed',
       })
       .returning({ id: files.id })
-    fileBId = fileB!.id
+    _fileBId = fileB!.id
   })
 
   afterAll(async () => {

@@ -587,12 +587,12 @@ export function ReviewPageClient({
           toast.error('Override failed')
         })
     },
-    [fileId, projectId],
+    [fileId, projectId, isReadOnly],
   )
 
   // Register review hotkeys — A/R/F wired to real handlers (Story 4.2)
   // CR-C1: use ref (synchronous, no re-render dependency) for hotkey dispatch
-  const getSelectedId = useCallback(() => activeFindingIdRef.current, [])
+  const getSelectedId = useCallback(() => activeFindingIdRef.current, [activeFindingIdRef])
   // Story 4.3: Note two-path handler for hotkey
   // CR-R1-H3: capture findingId at open time so NoteInput submit uses correct target
   const handleNoteHotkey = useCallback(
@@ -694,7 +694,7 @@ export function ReviewPageClient({
     return () => {
       for (const cleanup of cleanups) cleanup()
     }
-  }, [register, fileId, isNativeReviewer])
+  }, [register, fileId, isNativeReviewer, activeFindingIdRef])
 
   // J/K navigation from review-zone scope (Guardrail #28: review area, not just grid)
   const navigateNextRef = useRef<(() => void) | null>(null)
@@ -771,7 +771,7 @@ export function ReviewPageClient({
         navigatePrevRef.current?.()
       }
     },
-    [fileId],
+    [fileId, activeFindingIdRef],
   )
 
   // TD-ARCH-001: per-instance init guard (ref) + per-file initialized flag (Map).
@@ -853,7 +853,7 @@ export function ReviewPageClient({
     }
     // initialData in deps: effect re-runs on RSC revalidation but processedFileIdRef guard
     // prevents re-initialization for the same file. Only genuine file navigation triggers init.
-  }, [fileId, initialData, projectId, tenantId, resetForFile, setFindings, updateScore])
+  }, [fileId, initialData, projectId, tenantId, resetForFile, setFindings, updateScore, setFilter])
 
   // Story 4.6: Load active suppressions on file load + session cleanup
   const setActiveSuppressions = useReviewStore((s) => s.setActiveSuppressions)
