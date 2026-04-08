@@ -13,6 +13,7 @@ import { findings } from '@/db/schema/findings'
 import { reviewActions } from '@/db/schema/reviewActions'
 import { segments } from '@/db/schema/segments'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
+import { assertLockOwnership } from '@/features/review/helpers/assertLockOwnership'
 import { buildFeedbackEventRow } from '@/features/review/helpers/buildFeedbackEventRow'
 import { getNewState } from '@/features/review/utils/state-transitions'
 import { bulkActionSchema } from '@/features/review/validation/reviewAction.schema'
@@ -21,6 +22,7 @@ import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { requireRole } from '@/lib/auth/requireRole'
 import { inngest } from '@/lib/inngest/client'
 import { logger } from '@/lib/logger'
+import { tryNonFatal } from '@/lib/utils/tryNonFatal'
 import type { ActionResult } from '@/types/actionResult'
 import { FINDING_STATUSES } from '@/types/finding'
 import type { DetectedByLayer, FindingSeverity, FindingStatus } from '@/types/finding'
@@ -90,6 +92,11 @@ export async function bulkAction(input: BulkActionInput): Promise<ActionResult<B
   }
 
   const { id: userId, tenantId } = user
+
+  // S-FIX-7: Lock ownership check (AC3 — defense-in-depth)
+  const lockError = await assertLockOwnership(fileId, tenantId, userId)
+  if (lockError) return lockError
+
   const batchId = crypto.randomUUID()
 
   // Fetch all findings with tenant isolation (Guardrail #1)
@@ -245,19 +252,19 @@ export async function bulkAction(input: BulkActionInput): Promise<ActionResult<B
   }
 
   // Best-effort audit log (Guardrail #2)
-  try {
-    await writeAuditLog({
-      tenantId,
-      userId,
-      entityType: 'finding',
-      entityId: batchId,
-      action: `finding.bulk_${action}`,
-      oldValue: { findingCount: processed.length },
-      newValue: { batchId, processedCount: processed.length, non_native: isNonNative },
-    })
-  } catch (auditErr) {
-    logger.error({ err: auditErr, batchId }, 'Audit log write failed for bulk action')
-  }
+  await tryNonFatal(
+    () =>
+      writeAuditLog({
+        tenantId,
+        userId,
+        entityType: 'finding',
+        entityId: batchId,
+        action: `finding.bulk_${action}`,
+        oldValue: { findingCount: processed.length },
+        newValue: { batchId, processedCount: processed.length, non_native: isNonNative },
+      }),
+    { operation: 'audit log (bulk action)', meta: { batchId } },
+  )
 
   // Best-effort Inngest event — single event using first processed finding (Guardrail #13)
   const firstProcessed = processed[0]!
@@ -285,54 +292,57 @@ export async function bulkAction(input: BulkActionInput): Promise<ActionResult<B
 
   // feedback_events for reject (AI training data) — best-effort, non-fatal
   if (action === 'reject') {
-    try {
-      // Batch-fetch segment language data (Guardrail #5: guard empty)
-      const segmentIds = processed.map((p) => p.segmentId).filter((id): id is string => id !== null)
+    await tryNonFatal(
+      async () => {
+        // Batch-fetch segment language data (Guardrail #5: guard empty)
+        const segmentIds = processed
+          .map((p) => p.segmentId)
+          .filter((id): id is string => id !== null)
 
-      const segmentLangMap = new Map<string, { sourceLang: string; targetLang: string }>()
-      if (segmentIds.length > 0) {
-        const segRows = await db
-          .select({
-            id: segments.id,
-            sourceLang: segments.sourceLang,
-            targetLang: segments.targetLang,
-          })
-          .from(segments)
-          .where(and(inArray(segments.id, segmentIds), withTenant(segments.tenantId, tenantId)))
+        const segmentLangMap = new Map<string, { sourceLang: string; targetLang: string }>()
+        if (segmentIds.length > 0) {
+          const segRows = await db
+            .select({
+              id: segments.id,
+              sourceLang: segments.sourceLang,
+              targetLang: segments.targetLang,
+            })
+            .from(segments)
+            .where(and(inArray(segments.id, segmentIds), withTenant(segments.tenantId, tenantId)))
 
-        for (const seg of segRows) {
-          segmentLangMap.set(seg.id, { sourceLang: seg.sourceLang, targetLang: seg.targetLang })
+          for (const seg of segRows) {
+            segmentLangMap.set(seg.id, { sourceLang: seg.sourceLang, targetLang: seg.targetLang })
+          }
         }
-      }
 
-      // CR-H4: Batch INSERT feedback_events (single round-trip instead of N)
-      const feedbackRows = processed.map((p) => {
-        const lang = p.segmentId ? segmentLangMap.get(p.segmentId) : undefined
-        return buildFeedbackEventRow({
-          tenantId,
-          fileId,
-          projectId,
-          findingId: p.findingId,
-          reviewerId: userId,
-          action: 'reject',
-          isFalsePositive: true,
-          findingCategory: p.category,
-          originalSeverity: p.severity,
-          layer: p.detectedByLayer,
-          detectedByLayer: p.detectedByLayer,
-          sourceLang: lang?.sourceLang ?? '',
-          targetLang: lang?.targetLang ?? '',
-          sourceText: p.sourceTextExcerpt ?? '',
-          originalTarget: p.targetTextExcerpt ?? '',
-          reviewerNativeLanguages: user.nativeLanguages,
+        // CR-H4: Batch INSERT feedback_events (single round-trip instead of N)
+        const feedbackRows = processed.map((p) => {
+          const lang = p.segmentId ? segmentLangMap.get(p.segmentId) : undefined
+          return buildFeedbackEventRow({
+            tenantId,
+            fileId,
+            projectId,
+            findingId: p.findingId,
+            reviewerId: userId,
+            action: 'reject',
+            isFalsePositive: true,
+            findingCategory: p.category,
+            originalSeverity: p.severity,
+            layer: p.detectedByLayer,
+            detectedByLayer: p.detectedByLayer,
+            sourceLang: lang?.sourceLang ?? '',
+            targetLang: lang?.targetLang ?? '',
+            sourceText: p.sourceTextExcerpt ?? '',
+            originalTarget: p.targetTextExcerpt ?? '',
+            reviewerNativeLanguages: user.nativeLanguages,
+          })
         })
-      })
-      if (feedbackRows.length > 0) {
-        await db.insert(feedbackEvents).values(feedbackRows)
-      }
-    } catch (feedbackErr) {
-      logger.error({ err: feedbackErr, batchId }, 'feedback_events insert failed for bulk reject')
-    }
+        if (feedbackRows.length > 0) {
+          await db.insert(feedbackEvents).values(feedbackRows)
+        }
+      },
+      { operation: 'feedback_events insert (bulk reject)', meta: { batchId } },
+    )
   }
 
   const serverTimestamp = serverUpdatedAt.toISOString()

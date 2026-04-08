@@ -12,13 +12,15 @@ import { reviewActions } from '@/db/schema/reviewActions'
 import { segments } from '@/db/schema/segments'
 import { taxonomyDefinitions } from '@/db/schema/taxonomyDefinitions'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
+import { MAX_EXCERPT_LENGTH } from '@/features/pipeline/engine/constants'
+import { assertLockOwnership } from '@/features/review/helpers/assertLockOwnership'
 import { buildFeedbackEventRow } from '@/features/review/helpers/buildFeedbackEventRow'
 import { addFindingSchema } from '@/features/review/validation/reviewAction.schema'
 import type { AddFindingInput } from '@/features/review/validation/reviewAction.schema'
 import { determineNonNative } from '@/lib/auth/determineNonNative'
 import { requireRole } from '@/lib/auth/requireRole'
 import { inngest } from '@/lib/inngest/client'
-import { logger } from '@/lib/logger'
+import { tryNonFatal } from '@/lib/utils/tryNonFatal'
 import type { ActionResult } from '@/types/actionResult'
 import type { FindingSeverity } from '@/types/finding'
 
@@ -52,6 +54,10 @@ export async function addFinding(input: AddFindingInput): Promise<ActionResult<A
 
   const { fileId, projectId, segmentId, category, severity, description, suggestion } = parsed.data
   const { id: userId, tenantId } = user
+
+  // S-FIX-7: Lock ownership check (AC3 — defense-in-depth)
+  const lockError = await assertLockOwnership(fileId, tenantId, userId)
+  if (lockError) return lockError
 
   // Validate segment exists and belongs to file (Guardrail #1, #4)
   const segRows = await db
@@ -88,8 +94,8 @@ export async function addFinding(input: AddFindingInput): Promise<ActionResult<A
   if (catRows.length === 0) {
     return { success: false, error: 'Category not found or inactive', code: 'INVALID_CATEGORY' }
   }
-  const sourceExcerpt = segment.sourceText.slice(0, 500)
-  const targetExcerpt = segment.targetText.slice(0, 500)
+  const sourceExcerpt = segment.sourceText.slice(0, MAX_EXCERPT_LENGTH)
+  const targetExcerpt = segment.targetText.slice(0, MAX_EXCERPT_LENGTH)
 
   // Story 5.2a CR-R1: hoist non-native detection for reuse in audit log (AC6)
   const isNonNative = determineNonNative(user.nativeLanguages, segment.targetLang)
@@ -154,65 +160,65 @@ export async function addFinding(input: AddFindingInput): Promise<ActionResult<A
   const findingId = newFinding.id
 
   // Audit log (best-effort)
-  try {
-    await writeAuditLog({
-      tenantId,
-      userId,
-      entityType: 'finding',
-      entityId: findingId,
-      action: 'finding.add',
-      oldValue: {},
-      newValue: { status: 'manual', severity, category, non_native: isNonNative },
-    })
-  } catch (auditErr) {
-    logger.error({ err: auditErr, findingId }, 'Audit log write failed for addFinding')
-  }
+  await tryNonFatal(
+    () =>
+      writeAuditLog({
+        tenantId,
+        userId,
+        entityType: 'finding',
+        entityId: findingId,
+        action: 'finding.add',
+        oldValue: {},
+        newValue: { status: 'manual', severity, category, non_native: isNonNative },
+      }),
+    { operation: 'audit log (addFinding)', meta: { findingId } },
+  )
 
   // Inngest event for score recalculation (best-effort)
-  try {
-    await inngest.send({
-      name: 'finding.changed',
-      data: {
-        findingId,
-        fileId,
-        projectId,
-        tenantId,
-        previousState: 'pending', // New finding — no prior state, use 'pending' as baseline
-        newState: 'manual',
-        triggeredBy: userId,
-        timestamp: new Date().toISOString(),
-      },
-    })
-  } catch (inngestErr) {
-    logger.error({ err: inngestErr, findingId }, 'Inngest event send failed for addFinding')
-  }
+  await tryNonFatal(
+    () =>
+      inngest.send({
+        name: 'finding.changed',
+        data: {
+          findingId,
+          fileId,
+          projectId,
+          tenantId,
+          previousState: 'pending', // New finding — no prior state, use 'pending' as baseline
+          newState: 'manual',
+          triggeredBy: userId,
+          timestamp: new Date().toISOString(),
+        },
+      }),
+    { operation: 'inngest event (addFinding)', meta: { findingId } },
+  )
 
   // Insert feedback_events for AI training (FR80 — best-effort)
-  try {
-    await db.insert(feedbackEvents).values(
-      buildFeedbackEventRow({
-        tenantId,
-        fileId,
-        projectId,
-        findingId,
-        reviewerId: userId,
-        action: 'manual_add',
-        isFalsePositive: false,
-        findingCategory: category,
-        originalSeverity: severity,
-        layer: 'Manual',
-        detectedByLayer: 'Manual',
-        sourceLang: segment.sourceLang,
-        targetLang: segment.targetLang,
-        sourceText: sourceExcerpt,
-        originalTarget: targetExcerpt,
-        reviewerNativeLanguages: user.nativeLanguages,
-        reviewerIsNative: !isNonNative,
-      }),
-    )
-  } catch (feedbackErr) {
-    logger.error({ err: feedbackErr, findingId }, 'feedback_events insert failed for addFinding')
-  }
+  await tryNonFatal(
+    () =>
+      db.insert(feedbackEvents).values(
+        buildFeedbackEventRow({
+          tenantId,
+          fileId,
+          projectId,
+          findingId,
+          reviewerId: userId,
+          action: 'manual_add',
+          isFalsePositive: false,
+          findingCategory: category,
+          originalSeverity: severity,
+          layer: 'Manual',
+          detectedByLayer: 'Manual',
+          sourceLang: segment.sourceLang,
+          targetLang: segment.targetLang,
+          sourceText: sourceExcerpt,
+          originalTarget: targetExcerpt,
+          reviewerNativeLanguages: user.nativeLanguages,
+          reviewerIsNative: !isNonNative,
+        }),
+      ),
+    { operation: 'feedback_events insert (addFinding)', meta: { findingId } },
+  )
 
   return {
     success: true,
