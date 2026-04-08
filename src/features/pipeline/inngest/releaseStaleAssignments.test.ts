@@ -135,10 +135,15 @@ describe('releaseStaleAssignments', () => {
 
     dbState.returnValues = [[row1, row2]]
 
-    // First audit log fails, second succeeds
-    mockWriteAuditLog
-      .mockRejectedValueOnce(new Error('audit failed'))
-      .mockResolvedValueOnce(undefined)
+    // R4-D3: reject by matching the SPECIFIC row id so the test is robust against
+    // mock reorder. Previously `mockRejectedValueOnce(...)` depended on the exact
+    // order writeAuditLog was called; with Promise.allSettled that order is
+    // technically deterministic but fragile. Matching on entityId makes the test
+    // explicit about which row is meant to fail.
+    mockWriteAuditLog.mockImplementation((args: Record<string, unknown>) => {
+      if (args.entityId === 'row-1') return Promise.reject(new Error('audit failed for row-1'))
+      return Promise.resolve(undefined)
+    })
 
     const { mockStep, stepIds } = createStepMock()
 
@@ -152,7 +157,14 @@ describe('releaseStaleAssignments', () => {
     // rejection count. R3-M1: add counter assertion so a future refactor that
     // reinstates the inner try/catch would fail this test.
     expect(result.releasedCount).toBe(2)
-    expect(result.auditFailures).toBe(1) // first mock rejected
+    expect(result.auditFailures).toBe(1) // exactly row-1 rejected
     expect(mockWriteAuditLog).toHaveBeenCalledTimes(2)
+    // R4-D3: verify both rows were attempted (not just counted)
+    expect(mockWriteAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({ entityId: 'row-1', action: 'auto_release' }),
+    )
+    expect(mockWriteAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({ entityId: 'row-2', action: 'auto_release' }),
+    )
   })
 })

@@ -80,43 +80,63 @@ export async function selfAssignFile(input: unknown): Promise<ActionResult<SelfA
   const { fileId, projectId } = parsed.data
   const { tenantId, id: userId } = currentUser
 
-  // S-FIX-7 H4: verify file belongs to project (FK exists but no relation check otherwise)
-  const fileRows = await db
-    .select({ projectId: files.projectId })
-    .from(files)
-    .where(and(eq(files.id, fileId), withTenant(files.tenantId, tenantId)))
-    .limit(1)
+  // R2-D1 + R5-M1: wrap the file-project verification + INSERT in a single
+  // transaction AND acquire a row-level lock via `SELECT ... FOR UPDATE` so
+  // an admin can't move the file to another project between our SELECT and
+  // INSERT. The plain transaction alone (default READ COMMITTED) does NOT
+  // prevent this race — each statement gets a fresh snapshot. `.for('update')`
+  // takes a ROW SHARE lock on the files row that blocks concurrent UPDATE
+  // until our transaction commits.
+  const txResult = await db.transaction(async (tx) => {
+    // S-FIX-7 H4: verify file belongs to project
+    const fileRows = await tx
+      .select({ projectId: files.projectId })
+      .from(files)
+      .where(and(eq(files.id, fileId), withTenant(files.tenantId, tenantId)))
+      .for('update')
+      .limit(1)
 
-  if (fileRows.length === 0) {
+    if (fileRows.length === 0) {
+      return { kind: 'not_found' as const }
+    }
+    if (fileRows[0]!.projectId !== projectId) {
+      return { kind: 'project_mismatch' as const }
+    }
+
+    // Attempt INSERT with ON CONFLICT DO NOTHING (partial unique index handles race)
+    const inserted = await tx
+      .insert(fileAssignments)
+      .values({
+        fileId,
+        projectId,
+        tenantId,
+        assignedTo: userId,
+        assignedBy: userId,
+        status: 'in_progress' as FileAssignmentStatus,
+        priority: 'normal' as FileAssignmentPriority,
+        startedAt: new Date(),
+        lastActiveAt: new Date(),
+      })
+      .onConflictDoNothing({
+        target: [fileAssignments.fileId, fileAssignments.tenantId],
+        where: sql`status IN ('assigned', 'in_progress')`,
+      })
+      .returning()
+
+    return { kind: 'ok' as const, rows: inserted }
+  })
+
+  if (txResult.kind === 'not_found') {
     return { success: false, code: 'NOT_FOUND', error: 'File not found' }
   }
-  if (fileRows[0]!.projectId !== projectId) {
+  if (txResult.kind === 'project_mismatch') {
     return {
       success: false,
       code: 'VALIDATION_ERROR',
       error: 'File does not belong to project',
     }
   }
-
-  // Attempt INSERT with ON CONFLICT DO NOTHING (partial unique index handles race)
-  const insertRows = await db
-    .insert(fileAssignments)
-    .values({
-      fileId,
-      projectId,
-      tenantId,
-      assignedTo: userId,
-      assignedBy: userId,
-      status: 'in_progress' as FileAssignmentStatus,
-      priority: 'normal' as FileAssignmentPriority,
-      startedAt: new Date(),
-      lastActiveAt: new Date(),
-    })
-    .onConflictDoNothing({
-      target: [fileAssignments.fileId, fileAssignments.tenantId],
-      where: sql`status IN ('assigned', 'in_progress')`,
-    })
-    .returning()
+  const insertRows = txResult.rows
 
   // Self-assign succeeded
   if (insertRows.length > 0) {

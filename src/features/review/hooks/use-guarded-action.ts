@@ -3,11 +3,7 @@
 import { useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 
-import {
-  useLockGuard,
-  useReadOnlyAnnouncer,
-  useReadOnlyMode,
-} from '@/features/review/hooks/use-read-only-mode'
+import { useLockGuard, useReadOnlyAnnouncer } from '@/features/review/hooks/use-read-only-mode'
 
 /**
  * S-FIX-7 R4.5: unified guard for every review mutation entry point.
@@ -77,8 +73,11 @@ type GuardedActionFn = (
 ) => Promise<GuardedActionOutcome>
 
 export function useGuardedAction(): GuardedActionFn {
-  const isReadOnly = useReadOnlyMode()
-  const { selfAssignIfNeeded } = useLockGuard()
+  // R5-L2: read isReadOnly + selfAssignIfNeeded from a single useLockGuard()
+  // call instead of subscribing to ReadOnlyContext twice via useReadOnlyMode +
+  // useLockGuard. Harmless before (same context, single provider subscribe
+  // internally) but cleaner and more intentional.
+  const { isReadOnly, selfAssignIfNeeded } = useLockGuard()
   const announceReadOnly = useReadOnlyAnnouncer()
   // Per-hook-instance ref — each consumer component gets its own sync guard.
   // Rapid double-click on the SAME handler instance is blocked; rapid click

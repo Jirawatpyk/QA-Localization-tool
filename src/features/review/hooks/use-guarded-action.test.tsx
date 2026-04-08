@@ -86,6 +86,11 @@ describe('useGuardedAction', () => {
 
     expect(secondOutcome).toBe('in-flight')
     expect(action).toHaveBeenCalledTimes(1) // only the first call ran
+    // R5-M4: assert the second call short-circuited AT Layer 2 (in-flight ref)
+    // BEFORE reaching Layer 3 (selfAssignIfNeeded). If a regression moved the
+    // ref flip back to AFTER the await, the second call would reach selfAssign
+    // and this assertion would fail — catching the race immediately.
+    expect(mockSelfAssignIfNeeded).toHaveBeenCalledTimes(1)
   })
 
   it('Layer 3: self-assign conflict → returns conflict + does NOT run action', async () => {

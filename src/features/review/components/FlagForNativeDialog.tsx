@@ -101,6 +101,11 @@ export function FlagForNativeDialog({
     setIsSubmitting(true)
     setError(null)
 
+    // R5-M2: track whether the inner action already set an inline error so we
+    // can distinguish "server validation failed" (specific error shown) from
+    // "generic outcome failure" (generic fallback).
+    let handledInline = false
+
     const outcome = await guardedAction('flag for native review', fileId, projectId, async () => {
       const result = await flagForNative({
         findingId,
@@ -124,17 +129,31 @@ export function FlagForNativeDialog({
           flaggerComment: comment,
         })
       } else {
+        // R5-M2: set inline error with the specific message from the server
+        // and DO NOT throw — throwing triggered guardedAction's generic toast
+        // on top of our inline error, giving the user two conflicting messages.
         setError(result.error)
-        throw new Error(result.error) // surface to guardedAction so it counts as 'threw'
+        handledInline = true
       }
     })
 
     setIsSubmitting(false)
 
-    // Surface conflict via inline error state (dialog stays open per R3-H3 pattern)
+    // R5-M2: surface dialog-level feedback for EVERY non-success outcome that
+    // didn't already set an inline error, not just 'conflict'. Readonly and
+    // in-flight should be rare (the dialog's outer `disabled` + isValid guard
+    // catches most) but if they slip through, give the user feedback.
+    if (handledInline) return
     if (outcome === 'conflict') {
       setError('File is now being reviewed by another user')
+    } else if (outcome === 'readonly') {
+      setError('Cannot flag while in read-only mode')
+    } else if (outcome === 'error') {
+      setError('Failed to acquire lock — please try again')
+    } else if (outcome === 'threw') {
+      setError('Unexpected error — please try again')
     }
+    // 'in-flight' and 'ran' need no inline error
   }, [
     isValid,
     isSubmitting,

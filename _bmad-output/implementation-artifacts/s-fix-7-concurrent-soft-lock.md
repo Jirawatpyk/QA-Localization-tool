@@ -270,7 +270,7 @@ The `isReadOnly` flag from `useReadOnlyMode()` MUST be checked and enforced in A
   - [x] 7.4 Add `disabled={isReadOnly}` to `NoteInput` component
   - [x] 7.5 Add `isReadOnly` guard on `handleApprove` function
   - [x] 7.6 Add `isReadOnly` guard on `executeNativeConfirm` and `overrideNativeReview` handlers
-  - [x] 7.7 Test: render ReviewPageClient inside `ReadOnlyContext` with `isReadOnly: true`, verify all action handlers are no-ops and all buttons disabled
+  - [ ] 7.7 Test: render ReviewPageClient inside `ReadOnlyContext` with `isReadOnly: true`, verify all action handlers are no-ops and all buttons disabled — **DEFERRED as R3-D2** (`useGuardedAction.test.tsx` covers the Layer 1 readonly branch at the hook level; component-level integration test deferred per R5-M5 audit)
 
 - [x] Task 8: Lock state polling (AC: #7)
   - [x] 8.1 Add adaptive polling in `SoftLockWrapper` — call `getFileAssignment`:
@@ -752,6 +752,42 @@ The Acceptance Auditor layer being partial means spec-deviation coverage is inco
 #### Failed Review Layers
 
 Both Edge Case Hunter and Acceptance Auditor failed with API overload after 2+ retries each. Inline verification performed for the 4 highest-risk Blind Hunter claims + 4 spec compliance questions (AC4 null scope, AC6 completeness, AC8 conflict dialog behavior, R3-C1 navigation UX). Coverage is ~70% of a full 3-layer review. Recommend CR R5 with full coverage if any new concerns emerge during R4 patch application.
+
+---
+
+### Code Review — Round 5 (2026-04-08, Amelia)
+
+**Scope:** commit `f171f0a` (R3+R4+R4.5+helper refactor, 12 files, +1158/-534) + uncommitted R4.5 leftovers (R4-D3 + R2-D1). Diff ~2224 lines.
+
+**Layers run:** Blind Hunter ✅ (7 findings), Acceptance Auditor ✅ (13 findings), Edge Case Hunter ❌ API overload. 2/3 coverage.
+
+**Summary:** **1 HIGH** (I introduced a regression) + 5 MED + 3 LOW = **6 actionable patches**. Zero CRIT.
+
+#### Patches (High — regression from R4.5 refactor)
+
+- [ ] [Review R5][Patch] **R5-H1: `handleApprove` useTransition regression — `isApproving` pending state broken** [`ReviewPageClient.tsx:1158-1173`] — I broke it. Old code was `startApproveTransition(async () => { await selfAssignIfNeeded(); await approveFile(...) })` — transition correctly tracked the full server roundtrip. New code is `startApproveTransition(() => { void guardedAction(...) })` — the callback is SYNC and uses `void` so transition ends immediately, `isApproving` flips back to `false` within microseconds, user never sees "Approving..." and button is not visually disabled during the real server request. Fix: `startApproveTransition(() => guardedAction(...))` (return the promise) OR `startApproveTransition(async () => { await guardedAction(...) })`. Detected by Blind Hunter + Acceptance Auditor.
+
+#### Patches (Medium)
+
+- [ ] [Review R5][Patch] **R5-M1: `selfAssignFile` transaction doesn't actually prevent the race described in the comment** [`selfAssignFile.action.ts:84-135`] — I wrapped SELECT + INSERT in `db.transaction()` but used the default READ COMMITTED isolation with plain `tx.select(...).from(files)`. In READ COMMITTED, each statement inside a transaction gets a fresh snapshot — a concurrent commit can still change `files.projectId` between the SELECT and INSERT. The atomicity claim requires either `SELECT ... FOR UPDATE` on the files row, SERIALIZABLE isolation, or folding the projectId check into the INSERT via `WHERE EXISTS`. Current partial unique index still protects against duplicate assignments, but the specific "admin moves file mid-operation" scenario is NOT protected. Fix: add `.for('update')` to the SELECT — `tx.select(...).from(files).where(...).for('update').limit(1)`. Detected by Blind Hunter.
+- [ ] [Review R5][Patch] **R5-M2: `FlagForNativeDialog` double-error UX + isSubmitting leak on non-conflict outcomes** [`FlagForNativeDialog.tsx:98-150`] — (a) on action throw, `setError(result.error)` runs inside the action body AND guardedAction's catch fires `toast.error(Failed to flag for native review — please try again)` — user sees TWO error messages, the specific inline one and a generic toast. (b) `setIsSubmitting(true)` runs before guardedAction, but if outcome is `'readonly'` / `'in-flight'` / `'error'` / `'threw'`, no inline error state is set — user sees dialog with enabled submit button but no feedback. Fix: (a) don't `throw new Error(result.error)` — return from action body instead, let `setError` inside handleSubmit own the UX; (b) set `setError` for ALL failure outcomes, not just `'conflict'`. Detected by Blind Hunter + Acceptance Auditor.
+- [ ] [Review R5][Patch] **R5-M3: `BulkConfirmDialog.onConfirm` bypasses `useGuardedAction` — no read-only re-check** [`ReviewPageClient.tsx:1659-1671`] — the commit body justified "it runs outside guardedAction wrapper (guardedAction already released)" — but (a) between dialog open and Confirm click, polling can set `isReadOnly=true` (e.g., another user took over the lock). Clicking Confirm now: no `isReadOnly` check → `executeBulk` runs → server-side `assertLockOwnership` rejects → toast error. Server-side defense holds but UI promise is broken. (b) This is the ONLY remaining handwritten guard in the file — Mona's rolling-bug rule says "attack root cause, not call sites". Fix: wrap onConfirm with `guardedAction('bulk confirm', ...)` OR add `if (isReadOnly) return` + close dialog. Detected by Acceptance Auditor.
+- [ ] [Review R5][Patch] **R5-M4: `useGuardedAction.test.tsx` in-flight test lacks counter assertion** [`use-guarded-action.test.tsx:57-87`] — the test kicks off 2 calls and asserts `secondOutcome === 'in-flight'`. But it does NOT assert `mockSelfAssignIfNeeded` was called exactly once. If a regression moves the ref flip back to after `await`, the second call could still reach selfAssign and the test might still pass under some timings. Fix: add `expect(mockSelfAssignIfNeeded).toHaveBeenCalledTimes(1)` so the assertion proves the second call short-circuited at Layer 2. Detected by Blind Hunter.
+- [ ] [Review R5][Patch] **R5-M5: Task 7.7 test still not written — spec `[x]` is false** — deferred from R3-D2 but spec still checks it off. Per Guardrail #27 "TD quick fix < 2hr must have Story ID". Fix: either un-check Task 7.7 + add to deferred-work.md with reason, OR write the test (render ReviewPageClient inside ReadOnlyContext + verify all 11 entry points no-op). Recommend un-check + defer since useGuardedAction.test.tsx now covers the contract at the unit level. Detected by Acceptance Auditor.
+
+#### Deferred (R5)
+
+- [x] [Review R5][Defer] **R5-L1: `useGuardedAction` hook has no unmount cleanup path** — async actions that resolve after component unmount will still call toast (sonner tolerates this). No actual bug.
+- [x] [Review R5][Defer] **R5-L2: `useReadOnlyMode()` + `useLockGuard()` both read the same context** — harmless single subscription per context instance. Could be `const { isReadOnly, selfAssignIfNeeded } = useLockGuard()`. Micro-cleanup.
+- [x] [Review R5][Defer] **R5-L3: Dead comment referencing "innerAction" helper** [`ReviewPageClient.tsx:~482`] — comment describes a non-existent construct. Cleanup.
+
+#### Dismissed (R5)
+
+(none — all BH/AA findings were valid)
+
+#### Failed Review Layer
+
+**Edge Case Hunter:** API overload after 2 retries. BH + AA together provided strong overlap coverage on the HIGH finding and most MED items. Edge case concerns not covered: strict-mode double-mount interactions with the new hook, concurrent handler dispatch (bulk + approve simultaneously), rapid click timing edge cases between handlers sharing the same `inFlightRef`. Coverage ~75%.
 
 #### Dismissed (not reported to user)
 

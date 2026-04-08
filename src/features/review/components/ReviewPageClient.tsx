@@ -484,9 +484,9 @@ export function ReviewPageClient({
         const f = getStoreFileState(store, fileId).findingsMap.get(findingId)
         if (!f) return
         const optimisticUpdatedAt = new Date().toISOString()
-        // R4.5: action body declares its own innerAction so we can `await` the
-        // entire confirmNativeReview promise chain — guardedAction's in-flight
-        // ref must stay flipped until the server roundtrip completes.
+        // R4.5: `await` the full confirmNativeReview promise chain (including
+        // .then/.catch) so guardedAction's in-flight ref stays flipped until
+        // the server roundtrip completes — not just until the promise is created.
         store.setFinding(findingId, { ...f, status: 'accepted', updatedAt: optimisticUpdatedAt })
         // CR-R2 F7: Push undo entry (consistent with all other review actions)
         useReviewStore.getState().pushUndo({
@@ -1156,8 +1156,13 @@ export function ReviewPageClient({
   }
 
   function handleApprove() {
-    startApproveTransition(() => {
-      void guardedAction('approve file', fileId, projectId, async () => {
+    // R5-H1: await the guardedAction promise inside the transition callback so
+    // `isApproving` pending state correctly tracks the full server roundtrip.
+    // Previously `() => { void guardedAction(...) }` made the callback SYNC →
+    // transition ended immediately → `isApproving` flipped back to false in
+    // microseconds → button never visually disabled → "Approving..." never shown.
+    startApproveTransition(async () => {
+      await guardedAction('approve file', fileId, projectId, async () => {
         const result = await approveFile({ fileId, projectId })
         if (result.success) {
           toast.success('File approved')
@@ -1657,6 +1662,15 @@ export function ReviewPageClient({
               selectedFindings={selectedFindingsForDialog}
               totalSelectedCount={selectedIds.size}
               onConfirm={() => {
+                // R5-M3: re-check isReadOnly at Confirm time. Between dialog open
+                // and Confirm click (could be seconds), polling can flip to
+                // read-only if another reviewer took over the lock. Previously
+                // onConfirm just fired executeBulk → server-side assertLockOwnership
+                // caught it but UI showed no "silently disabled" behavior.
+                if (isReadOnly) {
+                  setBulkConfirmOpen(false)
+                  return
+                }
                 // R4-H1: sync in-flight guard on Confirm click — handleBulkAccept's
                 // `finally` block cleared bulkInFlightRef after opening this dialog,
                 // so a rapid double-click on "Confirm" would otherwise fire two
