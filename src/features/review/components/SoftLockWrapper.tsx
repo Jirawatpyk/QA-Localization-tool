@@ -128,10 +128,13 @@ export function SoftLockWrapper({
       // → MUST navigate away because reloading the same URL remounts SoftLockWrapper
       // which fires autoTransition() → flips `assigned` back to `in_progress`, re-locking
       // the reviewer. Task 9 never tested the Release button flow — only direct SQL.
+      //
+      // E2E-C1 fix: navigate to /files (file listing) not /projects/${projectId}
+      // — the latter has no page.tsx and 404s via the project's not-found.tsx.
       if (isSelfAssigned) {
         window.location.reload()
       } else {
-        window.location.href = `/projects/${projectId}`
+        window.location.href = `/projects/${projectId}/files`
       }
     })
   }
