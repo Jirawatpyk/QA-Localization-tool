@@ -268,27 +268,24 @@ export async function bulkAction(input: BulkActionInput): Promise<ActionResult<B
 
   // Best-effort Inngest event — single event using first processed finding (Guardrail #13)
   const firstProcessed = processed[0]!
-  try {
-    await inngest.send({
-      name: 'finding.changed',
-      data: {
-        findingId: firstProcessed.findingId,
-        fileId,
-        projectId,
-        tenantId,
-        previousState: firstProcessed.previousState,
-        newState: firstProcessed.newState,
-        triggeredBy: userId,
-        timestamp: new Date().toISOString(),
-        batchId,
-      },
-    })
-  } catch (inngestErr) {
-    logger.error(
-      { err: inngestErr, batchId },
-      'Inngest event send failed for bulk action — score recalculation may be delayed',
-    )
-  }
+  await tryNonFatal(
+    () =>
+      inngest.send({
+        name: 'finding.changed',
+        data: {
+          findingId: firstProcessed.findingId,
+          fileId,
+          projectId,
+          tenantId,
+          previousState: firstProcessed.previousState,
+          newState: firstProcessed.newState,
+          triggeredBy: userId,
+          timestamp: new Date().toISOString(),
+          batchId,
+        },
+      }),
+    { operation: 'inngest event (bulk action)', meta: { batchId } },
+  )
 
   // feedback_events for reject (AI training data) — best-effort, non-fatal
   if (action === 'reject') {

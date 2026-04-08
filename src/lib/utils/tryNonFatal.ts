@@ -23,7 +23,8 @@ export async function tryNonFatal<T>(
   try {
     return await op()
   } catch (err) {
-    logger.error({ err, ...context.meta }, `${context.operation} failed (non-fatal)`)
+    // Spread meta first so `err` always wins on key collision (defensive)
+    logger.error({ ...context.meta, err }, `${context.operation} failed (non-fatal)`)
     return null
   }
 }

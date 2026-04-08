@@ -60,4 +60,29 @@ describe('tryNonFatal', () => {
     expect(result).toBeNull()
     expect(logger.error).toHaveBeenCalled()
   })
+
+  it('should handle non-Error throws (string)', async () => {
+    const result = await tryNonFatal(() => Promise.reject('not an error'), {
+      operation: 'oddball',
+    })
+
+    expect(result).toBeNull()
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ err: 'not an error' }),
+      'oddball failed (non-fatal)',
+    )
+  })
+
+  it('should let `err` win over meta key collision (defensive)', async () => {
+    const realErr = new Error('real error')
+    await tryNonFatal(() => Promise.reject(realErr), {
+      operation: 'collision',
+      meta: { err: 'fake meta err', findingId: 'f1' },
+    })
+
+    const logCall = vi.mocked(logger.error).mock.calls.at(-1)!
+    const payload = logCall[0] as { err: unknown; findingId: string }
+    expect(payload.err).toBe(realErr) // real error wins over meta's 'err' key
+    expect(payload.findingId).toBe('f1')
+  })
 })
