@@ -4,6 +4,18 @@ import { createContext, useContext } from 'react'
 import { create } from 'zustand'
 
 import type { DetectedPattern, SuppressionRule } from '@/features/review/types'
+import { loadFilterCache, clearFilterCache } from '@/features/review/utils/filter-cache'
+import { findingMatchesFilters, DEFAULT_FILTER_STATE } from '@/features/review/utils/filter-helpers'
+import type { FilterState } from '@/features/review/utils/filter-helpers'
+import type { RejectionTracker } from '@/features/review/utils/pattern-detection'
+import type {
+  DetectedByLayer,
+  Finding,
+  FindingSeverity,
+  FindingStatus,
+  LayerCompleted,
+  ScoreStatus,
+} from '@/types/finding'
 
 // ── Undo/Redo Types (Story 4.4b — SINGLE SOURCE OF TRUTH) ──
 
@@ -64,19 +76,6 @@ export type UndoEntry = {
 
 // ── Filter State (Story 4.5: extended with category + confidence) ──
 // Types and filter helper re-exported from shared util (so store mocks don't break it)
-
-import { loadFilterCache, clearFilterCache } from '@/features/review/utils/filter-cache'
-import { findingMatchesFilters, DEFAULT_FILTER_STATE } from '@/features/review/utils/filter-helpers'
-import type { FilterState } from '@/features/review/utils/filter-helpers'
-import type { RejectionTracker } from '@/features/review/utils/pattern-detection'
-import type {
-  DetectedByLayer,
-  Finding,
-  FindingSeverity,
-  FindingStatus,
-  LayerCompleted,
-  ScoreStatus,
-} from '@/types/finding'
 
 /**
  * TD-ARCH-002: Get the active file's FileState from the Map.

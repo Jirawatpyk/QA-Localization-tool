@@ -43,7 +43,7 @@ vi.mock('sonner', () => ({
 }))
 
 // Must import AFTER vi.mock declarations
-// eslint-disable-next-line import/order -- must be after vi.mock
+
 import { toast } from 'sonner'
 
 describe('useNotifications hook', () => {

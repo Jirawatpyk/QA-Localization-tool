@@ -2,7 +2,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
-// eslint-disable-next-line import/order -- vi.mock hoisting splits internal imports
 import type { FileReviewData } from '@/features/review/actions/getFileReviewData.action'
 
 vi.mock('server-only', () => ({}))

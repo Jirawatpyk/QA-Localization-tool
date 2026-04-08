@@ -176,6 +176,20 @@ const eslintConfig = defineConfig([
       "no-console": "off",
     },
   },
+  // Test files use vi.hoisted() + vi.mock() between import statements,
+  // which conflicts with import/order's "newlines-between: always" rule.
+  // Disable import/order for tests — production code still enforces it.
+  {
+    files: [
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "**/__tests__/**",
+      "src/test/**",
+    ],
+    rules: {
+      "import/order": "off",
+    },
+  },
   // Allow direct createClient in Supabase factory files & RLS tests
   {
     files: [
