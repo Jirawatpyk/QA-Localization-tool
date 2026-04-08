@@ -16,7 +16,31 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
+      testIgnore: '**/visual/**',
       use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      // Visual regression — fixed viewport, screenshot comparison
+      // Run: npx playwright test --project=visual
+      // Update baselines: npx playwright test --project=visual --update-snapshots
+      name: 'visual',
+      testMatch: '**/visual/**/*.visual.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 800 },
+        // Disable animations for stable screenshots
+        launchOptions: {
+          args: ['--force-prefers-reduced-motion'],
+        },
+      },
+      expect: {
+        toHaveScreenshot: {
+          // Allow tiny rendering differences (font hinting, anti-aliasing)
+          maxDiffPixelRatio: 0.01,
+          // CSS-level mask for dynamic content (timestamps, randomized IDs)
+          stylePath: './e2e/visual/screenshot.css',
+        },
+      },
     },
   ],
   webServer: {

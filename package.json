@@ -11,6 +11,8 @@
     "test:unit": "vitest run --project unit",
     "test:rls": "vitest run --project rls",
     "test:e2e": "playwright test",
+    "test:visual": "playwright test --project=visual",
+    "test:visual:update": "playwright test --project=visual --update-snapshots",
     "test": "vitest run",
     "test:ai": "vitest run --project ai-integration",
     "test:parity": "cross-env GOLDEN_CORPUS_PATH=docs/test-data/Golden-Test-Mona vitest run --project integration src/__tests__/integration/golden-corpus* src/__tests__/integration/clean-corpus* src/__tests__/integration/tier2*",

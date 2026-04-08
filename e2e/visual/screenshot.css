@@ -1,0 +1,27 @@
+/*
+ * Visual regression stylesheet — applied during screenshot capture only.
+ * Hides/normalizes dynamic content that would cause false positives.
+ */
+
+/* Disable all CSS animations and transitions for deterministic screenshots */
+*,
+*::before,
+*::after {
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+}
+
+/* Hide caret blink */
+* {
+  caret-color: transparent !important;
+}
+
+/* Hide elements that change between runs (use [data-visual-mask] in components) */
+[data-visual-mask],
+[data-testid*='timestamp'],
+[data-testid*='last-updated'],
+[data-testid*='created-at'] {
+  visibility: hidden !important;
+}
