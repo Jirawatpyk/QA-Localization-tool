@@ -12,6 +12,7 @@ import { updateModelPinningSchema } from '@/features/pipeline/validation/pipelin
 import { ALL_AVAILABLE_MODELS } from '@/lib/ai/models'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
+import { tryNonFatal } from '@/lib/utils/tryNonFatal'
 import type { ActionResult } from '@/types/actionResult'
 
 /**
@@ -63,18 +64,18 @@ export async function updateModelPinning(input: unknown): Promise<ActionResult<u
     }
 
     // Audit log
-    try {
-      await writeAuditLog({
-        tenantId: currentUser.tenantId,
-        userId: currentUser.id,
-        entityType: 'project',
-        entityId: projectId,
-        action: 'project.model_pinned',
-        newValue: { layer, model },
-      })
-    } catch (auditErr) {
-      logger.error({ err: auditErr, projectId }, 'Audit log failed for model pin (non-fatal)')
-    }
+    await tryNonFatal(
+      () =>
+        writeAuditLog({
+          tenantId: currentUser.tenantId,
+          userId: currentUser.id,
+          entityType: 'project',
+          entityId: projectId,
+          action: 'project.model_pinned',
+          newValue: { layer, model },
+        }),
+      { operation: 'audit log (updateModelPinning)', meta: { projectId, layer, model } },
+    )
 
     return { success: true, data: undefined }
   } catch (err) {

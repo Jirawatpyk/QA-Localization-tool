@@ -13,6 +13,7 @@ import type { MissingCheckStatus } from '@/features/parity/types'
 import { reportMissingCheckSchema } from '@/features/parity/validation/paritySchemas'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
+import { tryNonFatal } from '@/lib/utils/tryNonFatal'
 import type { ActionResult } from '@/types/actionResult'
 
 function generateTrackingReference(): string {
@@ -76,17 +77,17 @@ export async function reportMissingCheck(
       return { success: false, error: 'Failed to create report', code: 'INTERNAL_ERROR' }
     }
 
-    try {
-      await writeAuditLog({
-        action: 'missing_check_reported',
-        tenantId: user.tenantId,
-        userId: user.id,
-        entityType: 'missing_check_report',
-        entityId: report.id,
-      })
-    } catch (auditErr) {
-      logger.error({ err: auditErr }, 'Non-fatal: failed to write audit log for missing check')
-    }
+    await tryNonFatal(
+      () =>
+        writeAuditLog({
+          action: 'missing_check_reported',
+          tenantId: user.tenantId,
+          userId: user.id,
+          entityType: 'missing_check_report',
+          entityId: report.id,
+        }),
+      { operation: 'audit log (reportMissingCheck)', meta: { reportId: report.id } },
+    )
 
     logger.info({ trackingReference }, 'Missing check reported')
 

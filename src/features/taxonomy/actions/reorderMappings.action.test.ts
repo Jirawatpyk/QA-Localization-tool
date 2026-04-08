@@ -237,10 +237,10 @@ describe('reorderMappings', () => {
     }
     // Audit was attempted
     expect(mockWriteAuditLog).toHaveBeenCalledTimes(1)
-    // CR R2 M3 fix: logger.error called when audit fails (Guardrail #2, pino arg order)
+    // CR R2 M3 fix: logger.error called when audit fails (via tryNonFatal wrapper)
     expect(mockLoggerError).toHaveBeenCalledWith(
       expect.objectContaining({ err: expect.any(Error) }),
-      'Audit log failed after taxonomy reorder',
+      'audit log (reorderMappings) failed (non-fatal)',
     )
     // revalidateTag still called
     expect(mockRevalidateTag).toHaveBeenCalledWith('taxonomy', 'minutes')

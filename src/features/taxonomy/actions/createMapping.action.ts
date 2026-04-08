@@ -12,6 +12,7 @@ import type { Severity, TaxonomyMapping } from '@/features/taxonomy/types'
 import { createMappingSchema } from '@/features/taxonomy/validation/taxonomySchemas'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
+import { tryNonFatal } from '@/lib/utils/tryNonFatal'
 import type { ActionResult } from '@/types/actionResult'
 
 export async function createMapping(input: unknown): Promise<ActionResult<TaxonomyMapping>> {
@@ -50,23 +51,23 @@ export async function createMapping(input: unknown): Promise<ActionResult<Taxono
   }
 
   // Guardrail #2: audit + cache non-fatal on happy path
-  try {
-    await writeAuditLog({
-      tenantId: currentUser.tenantId,
-      userId: currentUser.id,
-      entityType: 'taxonomy_definition',
-      entityId: created.id,
-      action: 'taxonomy_definition.created',
-      newValue: {
-        category: created.category,
-        parentCategory: created.parentCategory,
-        internalName: created.internalName,
-        severity: created.severity,
-      },
-    })
-  } catch (auditErr) {
-    logger.error({ err: auditErr }, 'Audit log failed after taxonomy create')
-  }
+  await tryNonFatal(
+    () =>
+      writeAuditLog({
+        tenantId: currentUser.tenantId,
+        userId: currentUser.id,
+        entityType: 'taxonomy_definition',
+        entityId: created.id,
+        action: 'taxonomy_definition.created',
+        newValue: {
+          category: created.category,
+          parentCategory: created.parentCategory,
+          internalName: created.internalName,
+          severity: created.severity,
+        },
+      }),
+    { operation: 'audit log (createMapping)', meta: { mappingId: created.id } },
+  )
 
   try {
     revalidateTag('taxonomy', 'minutes')

@@ -11,6 +11,7 @@ import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { reorderMappingsSchema } from '@/features/taxonomy/validation/taxonomySchemas'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
+import { tryNonFatal } from '@/lib/utils/tryNonFatal'
 import type { ActionResult } from '@/types/actionResult'
 
 export async function reorderMappings(input: unknown): Promise<ActionResult<{ updated: number }>> {
@@ -80,19 +81,19 @@ export async function reorderMappings(input: unknown): Promise<ActionResult<{ up
 
   // CR R1 H2 fix: Guardrail #2 error-path — audit failure after successful DB update
   // must not crash the action or trigger optimistic revert in the caller
-  try {
-    await writeAuditLog({
-      tenantId: currentUser.tenantId,
-      userId: currentUser.id,
-      entityType: 'taxonomy_definition',
-      entityId: firstItem.id,
-      action: 'taxonomy_definition.reordered',
-      newValue: { order: parsed.data },
-    })
-  } catch (auditErr) {
-    // Non-fatal: DB transaction succeeded — audit is defense-in-depth (Guardrail #2)
-    logger.error({ err: auditErr }, 'Audit log failed after taxonomy reorder')
-  }
+  // Non-fatal: DB transaction succeeded — audit is defense-in-depth (Guardrail #2)
+  await tryNonFatal(
+    () =>
+      writeAuditLog({
+        tenantId: currentUser.tenantId,
+        userId: currentUser.id,
+        entityType: 'taxonomy_definition',
+        entityId: firstItem.id,
+        action: 'taxonomy_definition.reordered',
+        newValue: { order: parsed.data },
+      }),
+    { operation: 'audit log (reorderMappings)', meta: { firstId: firstItem.id } },
+  )
 
   // U8 fix: revalidateTag failure after successful DB commit must not crash the action
   // or trigger optimistic revert in the caller (same non-fatal pattern as audit log above)

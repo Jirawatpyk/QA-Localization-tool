@@ -11,7 +11,7 @@ import { projects } from '@/db/schema/projects'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { updateProjectSchema } from '@/features/project/validation/projectSchemas'
 import { requireRole } from '@/lib/auth/requireRole'
-import { logger } from '@/lib/logger'
+import { tryNonFatal } from '@/lib/utils/tryNonFatal'
 import { isUuid } from '@/lib/validation/uuid'
 import type { ActionResult } from '@/types/actionResult'
 import type { ProcessingMode } from '@/types/pipeline'
@@ -72,24 +72,24 @@ export async function updateProject(
     return { success: false, code: 'UPDATE_FAILED', error: 'Failed to update project' }
   }
 
-  try {
-    await writeAuditLog({
-      tenantId: currentUser.tenantId,
-      userId: currentUser.id,
-      entityType: 'project',
-      entityId: projectId,
-      action: 'project.updated',
-      oldValue: {
-        name: existing.name,
-        description: existing.description,
-        processingMode: existing.processingMode,
-        autoPassThreshold: existing.autoPassThreshold,
-      },
-      newValue: { ...parsed.data },
-    })
-  } catch (auditErr) {
-    logger.error({ err: auditErr, projectId }, 'Audit log failed for project update (non-fatal)')
-  }
+  await tryNonFatal(
+    () =>
+      writeAuditLog({
+        tenantId: currentUser.tenantId,
+        userId: currentUser.id,
+        entityType: 'project',
+        entityId: projectId,
+        action: 'project.updated',
+        oldValue: {
+          name: existing.name,
+          description: existing.description,
+          processingMode: existing.processingMode,
+          autoPassThreshold: existing.autoPassThreshold,
+        },
+        newValue: { ...parsed.data },
+      }),
+    { operation: 'audit log (updateProject)', meta: { projectId } },
+  )
 
   revalidatePath('/projects')
   revalidatePath(`/projects/${projectId}/settings`)

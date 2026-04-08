@@ -11,8 +11,8 @@ import { updateRoleSchema } from '@/features/admin/validation/userSchemas'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import type { AppRole } from '@/lib/auth/getCurrentUser'
 import { requireRole } from '@/lib/auth/requireRole'
-import { logger } from '@/lib/logger'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { tryNonFatal } from '@/lib/utils/tryNonFatal'
 import type { ActionResult } from '@/types/actionResult'
 
 type UpdateRoleResult = { userId: string; newRole: AppRole }
@@ -76,19 +76,19 @@ export async function updateUserRole(input: unknown): Promise<ActionResult<Updat
         and(eq(userRoles.userId, userId), withTenant(userRoles.tenantId, currentUser.tenantId)),
       )
     // Audit the failed attempt + rollback for traceability (Guardrail #2: non-fatal on error path)
-    try {
-      await writeAuditLog({
-        tenantId: currentUser.tenantId,
-        userId: currentUser.id,
-        entityType: 'user_role',
-        entityId: userId,
-        action: 'role.update_rolled_back',
-        oldValue: { role: previousRole, attemptedRole: newRole },
-        newValue: { role: previousRole, reason: 'auth_metadata_update_failed' },
-      })
-    } catch (auditErr) {
-      logger.error({ err: auditErr }, 'updateUserRole: rollback audit log failed')
-    }
+    await tryNonFatal(
+      () =>
+        writeAuditLog({
+          tenantId: currentUser.tenantId,
+          userId: currentUser.id,
+          entityType: 'user_role',
+          entityId: userId,
+          action: 'role.update_rolled_back',
+          oldValue: { role: previousRole, attemptedRole: newRole },
+          newValue: { role: previousRole, reason: 'auth_metadata_update_failed' },
+        }),
+      { operation: 'audit log rollback (updateUserRole)', meta: { userId } },
+    )
     return { success: false, code: 'INTERNAL_ERROR', error: 'Failed to update auth metadata' }
   }
 

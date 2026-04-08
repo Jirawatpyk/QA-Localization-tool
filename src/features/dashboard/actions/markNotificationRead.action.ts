@@ -9,7 +9,7 @@ import { notifications } from '@/db/schema/notifications'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { markNotificationReadSchema } from '@/features/dashboard/validation/notificationSchemas'
 import { getCurrentUser } from '@/lib/auth/getCurrentUser'
-import { logger } from '@/lib/logger'
+import { tryNonFatal } from '@/lib/utils/tryNonFatal'
 import type { ActionResult } from '@/types/actionResult'
 
 export async function markNotificationRead(input: unknown): Promise<ActionResult<void>> {
@@ -51,18 +51,18 @@ export async function markNotificationRead(input: unknown): Promise<ActionResult
 
   // Use nil UUID for batch operations (entity_id is UUID column, "all" is invalid)
   const NIL_UUID = '00000000-0000-0000-0000-000000000000'
-  try {
-    await writeAuditLog({
-      tenantId: currentUser.tenantId,
-      userId: currentUser.id,
-      entityType: 'notification',
-      entityId: notificationId === 'all' ? NIL_UUID : notificationId,
-      action: notificationId === 'all' ? 'notification.read_all' : 'notification.read',
-      newValue: { isRead: true },
-    })
-  } catch (auditErr) {
-    logger.error({ err: auditErr }, 'Audit log failed for notification read (non-fatal)')
-  }
+  await tryNonFatal(
+    () =>
+      writeAuditLog({
+        tenantId: currentUser.tenantId,
+        userId: currentUser.id,
+        entityType: 'notification',
+        entityId: notificationId === 'all' ? NIL_UUID : notificationId,
+        action: notificationId === 'all' ? 'notification.read_all' : 'notification.read',
+        newValue: { isRead: true },
+      }),
+    { operation: 'audit log (markNotificationRead)', meta: { notificationId } },
+  )
 
   return { success: true, data: undefined }
 }

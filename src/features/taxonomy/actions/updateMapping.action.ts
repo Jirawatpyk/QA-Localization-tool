@@ -12,6 +12,7 @@ import type { Severity, TaxonomyMapping } from '@/features/taxonomy/types'
 import { updateMappingSchema } from '@/features/taxonomy/validation/taxonomySchemas'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
+import { tryNonFatal } from '@/lib/utils/tryNonFatal'
 import { isUuid } from '@/lib/validation/uuid'
 import type { ActionResult } from '@/types/actionResult'
 
@@ -70,25 +71,25 @@ export async function updateMapping(
   const { updatedAt: _, ...auditNewValue } = updateValues
 
   // Guardrail #2: audit + cache non-fatal on happy path
-  try {
-    await writeAuditLog({
-      tenantId: currentUser.tenantId,
-      userId: currentUser.id,
-      entityType: 'taxonomy_definition',
-      entityId: mappingId,
-      action: 'taxonomy_definition.updated',
-      oldValue: {
-        category: existing.category,
-        parentCategory: existing.parentCategory,
-        internalName: existing.internalName,
-        severity: existing.severity,
-        description: existing.description,
-      },
-      newValue: auditNewValue,
-    })
-  } catch (auditErr) {
-    logger.error({ err: auditErr }, 'Audit log failed after taxonomy update')
-  }
+  await tryNonFatal(
+    () =>
+      writeAuditLog({
+        tenantId: currentUser.tenantId,
+        userId: currentUser.id,
+        entityType: 'taxonomy_definition',
+        entityId: mappingId,
+        action: 'taxonomy_definition.updated',
+        oldValue: {
+          category: existing.category,
+          parentCategory: existing.parentCategory,
+          internalName: existing.internalName,
+          severity: existing.severity,
+          description: existing.description,
+        },
+        newValue: auditNewValue,
+      }),
+    { operation: 'audit log (updateMapping)', meta: { mappingId } },
+  )
 
   try {
     revalidateTag('taxonomy', 'minutes')

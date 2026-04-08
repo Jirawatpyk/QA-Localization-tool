@@ -10,7 +10,7 @@ import { projects } from '@/db/schema/projects'
 import { uploadBatches } from '@/db/schema/uploadBatches'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { requireRole } from '@/lib/auth/requireRole'
-import { logger } from '@/lib/logger'
+import { tryNonFatal } from '@/lib/utils/tryNonFatal'
 import type { ActionResult } from '@/types/actionResult'
 
 import type { BatchRecord } from '../types'
@@ -57,18 +57,18 @@ export async function createBatch(input: unknown): Promise<ActionResult<BatchRec
   }
 
   // H1: non-fatal — do not abort batch creation if audit write fails
-  try {
-    await writeAuditLog({
-      tenantId: currentUser.tenantId,
-      userId: currentUser.id,
-      entityType: 'upload_batch',
-      entityId: batch.id,
-      action: 'upload_batch.created',
-      newValue: { projectId, fileCount },
-    })
-  } catch (auditErr) {
-    logger.error({ err: auditErr, batchId: batch.id }, 'Audit log write failed for upload batch')
-  }
+  await tryNonFatal(
+    () =>
+      writeAuditLog({
+        tenantId: currentUser.tenantId,
+        userId: currentUser.id,
+        entityType: 'upload_batch',
+        entityId: batch.id,
+        action: 'upload_batch.created',
+        newValue: { projectId, fileCount },
+      }),
+    { operation: 'audit log (createBatch)', meta: { batchId: batch.id } },
+  )
 
   return {
     success: true,

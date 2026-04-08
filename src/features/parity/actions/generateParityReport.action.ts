@@ -18,6 +18,7 @@ import { generateParityReportSchema } from '@/features/parity/validation/parityS
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { tryNonFatal } from '@/lib/utils/tryNonFatal'
 import type { ActionResult } from '@/types/actionResult'
 
 type ParityReportResult = {
@@ -152,17 +153,17 @@ export async function generateParityReport(
       return { success: false, error: 'Failed to create report', code: 'INTERNAL_ERROR' }
     }
 
-    try {
-      await writeAuditLog({
-        action: 'parity_report_generated',
-        tenantId: user.tenantId,
-        userId: user.id,
-        entityType: 'parity_report',
-        entityId: report.id,
-      })
-    } catch (auditErr) {
-      logger.error({ err: auditErr }, 'Non-fatal: failed to write audit log for parity report')
-    }
+    await tryNonFatal(
+      () =>
+        writeAuditLog({
+          action: 'parity_report_generated',
+          tenantId: user.tenantId,
+          userId: user.id,
+          entityType: 'parity_report',
+          entityId: report.id,
+        }),
+      { operation: 'audit log (generateParityReport)', meta: { reportId: report.id } },
+    )
 
     return {
       success: true,
