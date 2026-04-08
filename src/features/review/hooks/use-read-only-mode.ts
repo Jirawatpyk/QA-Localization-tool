@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext } from 'react'
+import { createContext, useCallback, useContext, useRef } from 'react'
 
 /**
  * Self-assign result — returned by the lock guard before review actions.
@@ -63,10 +63,17 @@ export function useLockGuard(): ReadOnlyContextValue {
  */
 const LIVE_REGION_DATA_ATTR = 'data-readonly-announcer'
 let liveRegionRef: HTMLElement | null = null
+// Note: liveRegionRef is intentionally module-level — the aria-live region is a
+// singleton DOM element shared by all announcer instances. The setTimeout handle
+// (R4-M1) is now per-hook-instance via useRef to prevent cross-instance race.
 
 function ensureLiveRegion(): HTMLElement | null {
   if (typeof document === 'undefined') return null
   if (liveRegionRef && liveRegionRef.isConnected) return liveRegionRef
+  // R3-M8: clean up any stale regions from prior module loads (dev HMR or
+  // hot-swap). Without this, long dev sessions accumulate orphaned divs.
+  const stale = document.querySelectorAll(`[${LIVE_REGION_DATA_ATTR}="true"]`)
+  stale.forEach((el) => el.remove())
   const region = document.createElement('div')
   region.setAttribute(LIVE_REGION_DATA_ATTR, 'true')
   region.setAttribute('role', 'status')
@@ -81,15 +88,30 @@ function ensureLiveRegion(): HTMLElement | null {
 }
 
 export function useReadOnlyAnnouncer(): (actionLabel: string) => void {
+  // R4-M1: per-hook-instance timer ref. A module-level `let` was shared across
+  // all mounted announcers — component A's rapid-fire clearTimeout clobbered
+  // component B's pending announcement, dropping the SR message.
+  const announceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   return useCallback((actionLabel: string) => {
     const region = ensureLiveRegion()
     if (!region) return
+
+    // R3-M7: cancel any pending announcement (for THIS hook instance) before
+    // starting a new one. Rapid consecutive calls otherwise race: the later
+    // call's clear() can run after the earlier call's setTimeout writes its
+    // message, leaving the region empty for the SR.
+    if (announceTimerRef.current) {
+      clearTimeout(announceTimerRef.current)
+      announceTimerRef.current = null
+    }
 
     // Clear then set so screen readers re-announce identical messages.
     // setTimeout(100) is more reliable than rAF for SR pickup across browsers.
     region.textContent = ''
     const message = `${actionLabel} ignored — file is read-only`
-    setTimeout(() => {
+    announceTimerRef.current = setTimeout(() => {
+      announceTimerRef.current = null
       if (region.isConnected) region.textContent = message
     }, 100)
   }, [])

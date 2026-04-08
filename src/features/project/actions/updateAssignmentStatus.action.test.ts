@@ -276,4 +276,121 @@ describe('updateAssignmentStatus', () => {
       expect(result.code).toBe('VALIDATION_ERROR')
     }
   })
+
+  // R3-D3: regression tests for R2-C1 cancel privilege gate
+  // (native_reviewer must not destroy admin-assigned rows via direct `cancelled` POST)
+  describe('R2-C1: cancel privilege gate', () => {
+    it('should allow native_reviewer to cancel own self-assigned file (isSelfAssigned=true)', async () => {
+      // Self-assigned row: assignedBy === assignedTo
+      const selfAssigned = makeAssignment({
+        status: 'in_progress',
+        assignedTo: USER_ASSIGNEE_ID,
+        assignedBy: USER_ASSIGNEE_ID, // self-assign
+      })
+      const cancelled = makeAssignment({
+        status: 'cancelled',
+        assignedTo: USER_ASSIGNEE_ID,
+        assignedBy: USER_ASSIGNEE_ID,
+        completedAt: new Date(),
+      })
+      mockRequireRole.mockResolvedValueOnce({
+        ...mockCurrentUser,
+        role: 'native_reviewer' as const,
+      })
+      dbState.returnValues = [[selfAssigned], [cancelled]]
+
+      const result = await updateAssignmentStatus({
+        assignmentId: ASSIGNMENT_ID,
+        projectId: PROJECT_ID,
+        status: 'cancelled',
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.status).toBe('cancelled')
+      }
+    })
+
+    it('should FORBIDDEN when native_reviewer cancels admin-assigned file', async () => {
+      // Admin-assigned row: assignedBy ≠ assignedTo
+      const adminAssigned = makeAssignment({
+        status: 'in_progress',
+        assignedTo: USER_ASSIGNEE_ID,
+        assignedBy: USER_ASSIGNER_ID, // different = admin-assigned
+      })
+      mockRequireRole.mockResolvedValueOnce({
+        ...mockCurrentUser,
+        role: 'native_reviewer' as const,
+      })
+      dbState.returnValues = [[adminAssigned]]
+
+      const result = await updateAssignmentStatus({
+        assignmentId: ASSIGNMENT_ID,
+        projectId: PROJECT_ID,
+        status: 'cancelled',
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.code).toBe('FORBIDDEN')
+        expect(result.error).toContain('self-assigner or an admin')
+      }
+      // Guard must fire BEFORE UPDATE runs
+      expect(dbState.callIndex).toBe(1) // only SELECT, no UPDATE
+    })
+
+    it('should allow admin to cancel any assignment (admin override)', async () => {
+      const adminAssigned = makeAssignment({
+        status: 'in_progress',
+        assignedTo: USER_ASSIGNEE_ID,
+        assignedBy: USER_ASSIGNER_ID,
+      })
+      const cancelled = makeAssignment({
+        status: 'cancelled',
+        completedAt: new Date(),
+      })
+      mockRequireRole.mockResolvedValueOnce({
+        ...mockCurrentUser,
+        role: 'admin' as const,
+      })
+      dbState.returnValues = [[adminAssigned], [cancelled]]
+
+      const result = await updateAssignmentStatus({
+        assignmentId: ASSIGNMENT_ID,
+        projectId: PROJECT_ID,
+        status: 'cancelled',
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.status).toBe('cancelled')
+      }
+    })
+
+    it('should allow qa_reviewer (treated as admin-level) to cancel any assignment', async () => {
+      const adminAssigned = makeAssignment({
+        status: 'in_progress',
+        assignedTo: USER_ASSIGNEE_ID,
+        assignedBy: USER_ASSIGNER_ID,
+      })
+      const cancelled = makeAssignment({
+        status: 'cancelled',
+        completedAt: new Date(),
+      })
+      // qa_reviewer is treated as admin-tier by the isAdmin flag in the code
+      mockRequireRole.mockResolvedValueOnce({
+        ...mockCurrentUser,
+        role: 'qa_reviewer' as const,
+      })
+      dbState.returnValues = [[adminAssigned], [cancelled]]
+
+      const result = await updateAssignmentStatus({
+        assignmentId: ASSIGNMENT_ID,
+        projectId: PROJECT_ID,
+        status: 'cancelled',
+      })
+
+      expect(result.success).toBe(true)
+    })
+  })
 })

@@ -147,11 +147,12 @@ describe('releaseStaleAssignments', () => {
     // Guardrail #13: step IDs must be deterministic + unique
     expect(new Set(stepIds).size).toBe(stepIds.length)
 
-    // Should still complete and report both as released
-    // L5 fix: audit log loop is now Promise.allSettled — caught failures don't propagate
-    // (the inner try/catch in the audit lambda swallows errors and returns undefined,
-    // so allSettled sees them as fulfilled). auditFailures only counts true rejections.
+    // R2-C2 fix: audit log loop uses Promise.allSettled with NO inner try/catch,
+    // so inner throws propagate as rejections. `auditFailures` must reflect real
+    // rejection count. R3-M1: add counter assertion so a future refactor that
+    // reinstates the inner try/catch would fail this test.
     expect(result.releasedCount).toBe(2)
+    expect(result.auditFailures).toBe(1) // first mock rejected
     expect(mockWriteAuditLog).toHaveBeenCalledTimes(2)
   })
 })

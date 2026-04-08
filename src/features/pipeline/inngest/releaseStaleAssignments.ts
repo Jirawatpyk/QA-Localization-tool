@@ -1,4 +1,4 @@
-import { and, eq, lt } from 'drizzle-orm'
+import { and, eq, isNull, lt, or } from 'drizzle-orm'
 
 import { db } from '@/db/client'
 import { fileAssignments } from '@/db/schema/fileAssignments'
@@ -29,6 +29,9 @@ const handlerFn = async ({
 
     // AC4: release only 'in_progress' assignments that have been inactive for 30+ minutes.
     // Boundary: lastActiveAt strictly less than (now - 30min) → released. Exactly 30 min ago = still active.
+    // R3-M2: also release rows with NULL lastActiveAt — Postgres `NULL < timestamp`
+    // evaluates to NULL (not TRUE), so lt() silently excludes them. Currently no code
+    // path sets in_progress with null lastActiveAt, but a future regression could.
     // NOTE: 'assigned' rows (admin pre-assignments reviewer never opened) are intentionally
     // NOT released by this cron — see S-FIX-7b for the `assigned` row lifecycle gap.
     const allStale = await db
@@ -39,7 +42,10 @@ const handlerFn = async ({
         updatedAt: new Date(),
       })
       .where(
-        and(eq(fileAssignments.status, 'in_progress'), lt(fileAssignments.lastActiveAt, threshold)),
+        and(
+          eq(fileAssignments.status, 'in_progress'),
+          or(lt(fileAssignments.lastActiveAt, threshold), isNull(fileAssignments.lastActiveAt)),
+        ),
       )
       .returning({
         id: fileAssignments.id,

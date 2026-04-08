@@ -50,16 +50,15 @@ import { SearchInput } from '@/features/review/components/SearchInput'
 import { SeverityOverrideMenu } from '@/features/review/components/SeverityOverrideMenu'
 import { SuppressPatternDialog } from '@/features/review/components/SuppressPatternDialog'
 import { useFindingsSubscription } from '@/features/review/hooks/use-findings-subscription'
+import { useGuardedAction } from '@/features/review/hooks/use-guarded-action'
 import {
   useKeyboardActions,
   useReviewHotkeys,
   useUndoRedoHotkeys,
 } from '@/features/review/hooks/use-keyboard-actions'
-import {
-  useLockGuard,
-  useReadOnlyAnnouncer,
-  useReadOnlyMode,
-} from '@/features/review/hooks/use-read-only-mode'
+// useLockGuard + useReadOnlyAnnouncer are now consumed inside useGuardedAction;
+// ReviewPageClient only needs the boolean view via useReadOnlyMode for visual disable props
+import { useReadOnlyMode } from '@/features/review/hooks/use-read-only-mode'
 import { useReviewActions } from '@/features/review/hooks/use-review-actions'
 import { useScoreSubscription } from '@/features/review/hooks/use-score-subscription'
 import { useThresholdSubscription } from '@/features/review/hooks/use-threshold-subscription'
@@ -173,8 +172,11 @@ export function ReviewPageClient({
   initialData,
 }: ReviewPageClientProps) {
   const isReadOnly = useReadOnlyMode()
-  const { selfAssignIfNeeded } = useLockGuard()
-  const announceReadOnly = useReadOnlyAnnouncer() // H9: a11y feedback for SR users
+  // R4.5: unified guard — replaces the duplicated read-only / inflight / selfAssign /
+  // try-catch / a11y-announce pattern across 11+ call sites that caused R1→R4 rolling bugs.
+  // useGuardedAction internally consumes useLockGuard + useReadOnlyAnnouncer so callers
+  // don't need to wire them up themselves.
+  const guardedAction = useGuardedAction()
   const resetForFile = useReviewStore((s) => s.resetForFile)
   const setFilter = useReviewStore((s) => s.setFilter)
   const setFindings = useReviewStore((s) => s.setFindings)
@@ -418,53 +420,27 @@ export function ReviewPageClient({
     [fileId, projectId, clearSelection, setSelectionMode, setBulkInFlight, initialData.isNonNative],
   )
 
-  const handleBulkAccept = useCallback(async () => {
-    if (isReadOnly) {
-      announceReadOnly('bulk accept') // H9: a11y feedback
-      return // S-FIX-7 AC6: read-only guard
-    }
-    // S-FIX-7 C3 fix: self-assign before bulk mutation
-    const outcome = await selfAssignIfNeeded(fileId, projectId)
-    if (outcome === 'conflict') return
-    if (selectedIds.size > 5) {
-      setBulkConfirmAction('accept')
-      setBulkConfirmOpen(true)
-    } else {
-      executeBulk('accept').catch(() => toast.error('Bulk accept failed'))
-    }
-  }, [
-    selectedIds.size,
-    executeBulk,
-    isReadOnly,
-    selfAssignIfNeeded,
-    fileId,
-    projectId,
-    announceReadOnly,
-  ])
+  const handleBulkAccept = useCallback(() => {
+    void guardedAction('bulk accept', fileId, projectId, async () => {
+      if (selectedIds.size > 5) {
+        setBulkConfirmAction('accept')
+        setBulkConfirmOpen(true)
+      } else {
+        await executeBulk('accept')
+      }
+    })
+  }, [selectedIds.size, executeBulk, fileId, projectId, guardedAction])
 
-  const handleBulkReject = useCallback(async () => {
-    if (isReadOnly) {
-      announceReadOnly('bulk reject') // H9: a11y feedback
-      return // S-FIX-7 AC6: read-only guard
-    }
-    // S-FIX-7 C3 fix: self-assign before bulk mutation
-    const outcome = await selfAssignIfNeeded(fileId, projectId)
-    if (outcome === 'conflict') return
-    if (selectedIds.size > 5) {
-      setBulkConfirmAction('reject')
-      setBulkConfirmOpen(true)
-    } else {
-      executeBulk('reject').catch(() => toast.error('Bulk reject failed'))
-    }
-  }, [
-    selectedIds.size,
-    executeBulk,
-    isReadOnly,
-    selfAssignIfNeeded,
-    fileId,
-    projectId,
-    announceReadOnly,
-  ])
+  const handleBulkReject = useCallback(() => {
+    void guardedAction('bulk reject', fileId, projectId, async () => {
+      if (selectedIds.size > 5) {
+        setBulkConfirmAction('reject')
+        setBulkConfirmOpen(true)
+      } else {
+        await executeBulk('reject')
+      }
+    })
+  }, [selectedIds.size, executeBulk, fileId, projectId, guardedAction])
 
   const handleClearBulkSelection = useCallback(() => {
     clearSelection()
@@ -486,7 +462,10 @@ export function ReviewPageClient({
   const [isOverrideMenuOpen, setIsOverrideMenuOpen] = useState(false)
   const [isAddFindingDialogOpen, setIsAddFindingDialogOpen] = useState(false)
   // CR-R1-H2: in-flight guard for override/reset (prevent rapid double-override corruption)
-  const overrideInFlightRef = useRef(false)
+  // R4.5: bulkInFlightRef + overrideInFlightRef removed — useGuardedAction owns
+  // the per-handler in-flight guard. BulkConfirmDialog still has its own ref
+  // because the >5 confirm path runs OUTSIDE the guarded action.
+  const bulkInFlightRef = useRef(false)
   // CR-R1-H3: capture findingId at NoteInput open time (prevent stale closure)
   const noteTargetIdRef = useRef<string | null>(null)
 
@@ -499,135 +478,134 @@ export function ReviewPageClient({
 
   // CR-R2 P1-2: shared native confirm handler with stale rollback guard
   const executeNativeConfirm = useCallback(
-    async (findingId: string) => {
-      if (isReadOnly) return // S-FIX-7 AC6: read-only guard
-      // S-FIX-7 C3 fix: self-assign before native confirm mutation
-      const lockOutcome = await selfAssignIfNeeded(fileId, projectId)
-      if (lockOutcome === 'conflict') return
-      const store = useReviewStore.getState()
-      const f = getStoreFileState(store, fileId).findingsMap.get(findingId)
-      if (!f) return
-      const optimisticUpdatedAt = new Date().toISOString()
-      store.setFinding(findingId, { ...f, status: 'accepted', updatedAt: optimisticUpdatedAt })
-      // CR-R2 F7: Push undo entry (consistent with all other review actions)
-      useReviewStore.getState().pushUndo({
-        id: crypto.randomUUID(),
-        type: 'single',
-        action: 'accept',
-        findingId,
-        batchId: null,
-        previousStates: new Map([[findingId, f.status]]),
-        newStates: new Map([[findingId, 'accepted' as FindingStatus]]),
-        previousSeverity: null,
-        newSeverity: null,
-        findingSnapshot: null,
-        description: 'Confirm native review',
-        timestamp: Date.now(),
-        staleFindings: new Set(),
-      })
-      void confirmNativeReview({ findingId, fileId, projectId })
-        .then((result) => {
-          if (result.success) {
-            const curr = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
-              findingId,
-            )
-            if (curr) {
-              useReviewStore.getState().setFinding(findingId, {
-                ...curr,
-                status: result.data.newState,
-                updatedAt: result.data.serverUpdatedAt,
-                assignmentStatus: 'confirmed',
-              })
+    (findingId: string) => {
+      void guardedAction('confirm native review', fileId, projectId, async () => {
+        const store = useReviewStore.getState()
+        const f = getStoreFileState(store, fileId).findingsMap.get(findingId)
+        if (!f) return
+        const optimisticUpdatedAt = new Date().toISOString()
+        // R4.5: action body declares its own innerAction so we can `await` the
+        // entire confirmNativeReview promise chain — guardedAction's in-flight
+        // ref must stay flipped until the server roundtrip completes.
+        store.setFinding(findingId, { ...f, status: 'accepted', updatedAt: optimisticUpdatedAt })
+        // CR-R2 F7: Push undo entry (consistent with all other review actions)
+        useReviewStore.getState().pushUndo({
+          id: crypto.randomUUID(),
+          type: 'single',
+          action: 'accept',
+          findingId,
+          batchId: null,
+          previousStates: new Map([[findingId, f.status]]),
+          newStates: new Map([[findingId, 'accepted' as FindingStatus]]),
+          previousSeverity: null,
+          newSeverity: null,
+          findingSnapshot: null,
+          description: 'Confirm native review',
+          timestamp: Date.now(),
+          staleFindings: new Set(),
+        })
+        await confirmNativeReview({ findingId, fileId, projectId })
+          .then((result) => {
+            if (result.success) {
+              const curr = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
+                findingId,
+              )
+              if (curr) {
+                useReviewStore.getState().setFinding(findingId, {
+                  ...curr,
+                  status: result.data.newState,
+                  updatedAt: result.data.serverUpdatedAt,
+                  assignmentStatus: 'confirmed',
+                })
+              }
+              toast.success('Finding confirmed')
+            } else {
+              const curr = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
+                findingId,
+              )
+              if (curr && curr.updatedAt === optimisticUpdatedAt) {
+                useReviewStore.getState().setFinding(findingId, f)
+              }
+              toast.error(result.error ?? 'Confirm failed')
             }
-            toast.success('Finding confirmed')
-          } else {
+          })
+          .catch(() => {
             const curr = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
               findingId,
             )
             if (curr && curr.updatedAt === optimisticUpdatedAt) {
               useReviewStore.getState().setFinding(findingId, f)
             }
-            toast.error(result.error ?? 'Confirm failed')
-          }
-        })
-        .catch(() => {
-          const curr = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
-            findingId,
-          )
-          if (curr && curr.updatedAt === optimisticUpdatedAt) {
-            useReviewStore.getState().setFinding(findingId, f)
-          }
-          toast.error('Confirm failed')
-        })
+            toast.error('Confirm failed')
+          })
+      })
     },
-    [fileId, projectId, isReadOnly, selfAssignIfNeeded],
+    [fileId, projectId, guardedAction],
   )
 
   // CR-R2 P0-2: shared native override handler with dynamic status
   const executeNativeOverride = useCallback(
-    async (findingId: string, newStatus: 'accepted' | 'rejected') => {
-      if (isReadOnly) return // S-FIX-7 AC6: read-only guard
-      // S-FIX-7 C3 fix: self-assign before native override mutation
-      const lockOutcome = await selfAssignIfNeeded(fileId, projectId)
-      if (lockOutcome === 'conflict') return
-      const store = useReviewStore.getState()
-      const f = getStoreFileState(store, fileId).findingsMap.get(findingId)
-      if (!f) return
-      const optimisticUpdatedAt = new Date().toISOString()
-      store.setFinding(findingId, { ...f, status: newStatus, updatedAt: optimisticUpdatedAt })
-      // CR-R2 F7: Push undo entry (consistent with all other review actions)
-      useReviewStore.getState().pushUndo({
-        id: crypto.randomUUID(),
-        type: 'single',
-        action: newStatus === 'accepted' ? 'accept' : 'reject',
-        findingId,
-        batchId: null,
-        previousStates: new Map([[findingId, f.status]]),
-        newStates: new Map([[findingId, newStatus as FindingStatus]]),
-        previousSeverity: null,
-        newSeverity: null,
-        findingSnapshot: null,
-        description: `Override native review to ${newStatus}`,
-        timestamp: Date.now(),
-        staleFindings: new Set(),
-      })
-      void overrideNativeReview({ findingId, fileId, projectId, newStatus })
-        .then((result) => {
-          if (result.success) {
-            const curr = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
-              findingId,
-            )
-            if (curr) {
-              useReviewStore.getState().setFinding(findingId, {
-                ...curr,
-                status: result.data.newState,
-                updatedAt: result.data.serverUpdatedAt,
-                assignmentStatus: 'overridden',
-              })
+    (findingId: string, newStatus: 'accepted' | 'rejected') => {
+      void guardedAction('override native review', fileId, projectId, async () => {
+        const store = useReviewStore.getState()
+        const f = getStoreFileState(store, fileId).findingsMap.get(findingId)
+        if (!f) return
+        const optimisticUpdatedAt = new Date().toISOString()
+        store.setFinding(findingId, { ...f, status: newStatus, updatedAt: optimisticUpdatedAt })
+        // CR-R2 F7: Push undo entry (consistent with all other review actions)
+        useReviewStore.getState().pushUndo({
+          id: crypto.randomUUID(),
+          type: 'single',
+          action: newStatus === 'accepted' ? 'accept' : 'reject',
+          findingId,
+          batchId: null,
+          previousStates: new Map([[findingId, f.status]]),
+          newStates: new Map([[findingId, newStatus as FindingStatus]]),
+          previousSeverity: null,
+          newSeverity: null,
+          findingSnapshot: null,
+          description: `Override native review to ${newStatus}`,
+          timestamp: Date.now(),
+          staleFindings: new Set(),
+        })
+        await overrideNativeReview({ findingId, fileId, projectId, newStatus })
+          .then((result) => {
+            if (result.success) {
+              const curr = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
+                findingId,
+              )
+              if (curr) {
+                useReviewStore.getState().setFinding(findingId, {
+                  ...curr,
+                  status: result.data.newState,
+                  updatedAt: result.data.serverUpdatedAt,
+                  assignmentStatus: 'overridden',
+                })
+              }
+              toast.success(`Overridden to ${result.data.newState}`)
+            } else {
+              // CR-R2 P1-2: check staleness before rollback
+              const curr = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
+                findingId,
+              )
+              if (curr && curr.updatedAt === optimisticUpdatedAt) {
+                useReviewStore.getState().setFinding(findingId, f)
+              }
+              toast.error(result.error ?? 'Override failed')
             }
-            toast.success(`Overridden to ${result.data.newState}`)
-          } else {
-            // CR-R2 P1-2: check staleness before rollback
+          })
+          .catch(() => {
             const curr = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
               findingId,
             )
             if (curr && curr.updatedAt === optimisticUpdatedAt) {
               useReviewStore.getState().setFinding(findingId, f)
             }
-            toast.error(result.error ?? 'Override failed')
-          }
-        })
-        .catch(() => {
-          const curr = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
-            findingId,
-          )
-          if (curr && curr.updatedAt === optimisticUpdatedAt) {
-            useReviewStore.getState().setFinding(findingId, f)
-          }
-          toast.error('Override failed')
-        })
+            toast.error('Override failed')
+          })
+      })
     },
-    [fileId, projectId, isReadOnly, selfAssignIfNeeded],
+    [fileId, projectId, guardedAction],
   )
 
   // Register review hotkeys — A/R/F wired to real handlers (Story 4.2)
@@ -1178,24 +1156,19 @@ export function ReviewPageClient({
   }
 
   function handleApprove() {
-    if (isReadOnly) {
-      announceReadOnly('approve file') // H9: a11y feedback
-      return // S-FIX-7 AC6: read-only guard
-    }
-    startApproveTransition(async () => {
-      // S-FIX-7 C3 fix: self-assign before approve
-      const lockOutcome = await selfAssignIfNeeded(fileId, projectId)
-      if (lockOutcome === 'conflict') return
-      const result = await approveFile({ fileId, projectId })
-      if (result.success) {
-        toast.success('File approved')
-      } else {
-        if (result.code === 'SCORE_STALE') {
-          toast.error('Score is being recalculated — please wait and retry')
+    startApproveTransition(() => {
+      void guardedAction('approve file', fileId, projectId, async () => {
+        const result = await approveFile({ fileId, projectId })
+        if (result.success) {
+          toast.success('File approved')
         } else {
-          toast.error(result.error ?? 'An unexpected error occurred')
+          if (result.code === 'SCORE_STALE') {
+            toast.error('Score is being recalculated — please wait and retry')
+          } else {
+            toast.error(result.error ?? 'An unexpected error occurred')
+          }
         }
-      }
+      })
     })
   }
 
@@ -1324,89 +1297,77 @@ export function ReviewPageClient({
 
   // CR-R1-M1: shared delete handler for desktop aside + mobile sheet (DRY)
   const handleDeleteFinding = useCallback(
-    async (findingId: string) => {
-      if (isReadOnly) {
-        announceReadOnly('delete finding') // R2-H5: a11y feedback (same pattern as handleApprove)
-        return // S-FIX-7 AC6: read-only guard
-      }
-      // S-FIX-7 C3 fix: self-assign before delete
-      const lockOutcome = await selfAssignIfNeeded(fileId, projectId)
-      if (lockOutcome === 'conflict') return
-      // Capture snapshot BEFORE server call — Realtime may remove it before .then() runs
-      const findingSnapshot = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
-        findingId,
-      )
-      if (!findingSnapshot) {
-        toast.error('Finding already removed')
-        return
-      }
-      void deleteFinding({ findingId, fileId, projectId })
-        .then((result) => {
-          if (result.success) {
-            const finding = findingSnapshot
-            useReviewStore.getState().removeFinding(findingId)
-            handleActiveFindingChange(null)
-            // Explicit setSelectedFinding needed for mobile path — handleActiveFindingChange
-            // only syncs Zustand selectedId in aside mode (see use-viewport-transition.ts)
-            setSelectedFinding(null)
-            toast.success('Finding deleted')
+    (findingId: string) => {
+      void guardedAction('delete finding', fileId, projectId, async () => {
+        // Capture snapshot BEFORE server call — Realtime may remove it before .then() runs
+        const findingSnapshot = getStoreFileState(
+          useReviewStore.getState(),
+          fileId,
+        ).findingsMap.get(findingId)
+        if (!findingSnapshot) {
+          toast.error('Finding already removed')
+          return
+        }
+        await deleteFinding({ findingId, fileId, projectId })
+          .then((result) => {
+            if (result.success) {
+              const finding = findingSnapshot
+              useReviewStore.getState().removeFinding(findingId)
+              handleActiveFindingChange(null)
+              // Explicit setSelectedFinding needed for mobile path — handleActiveFindingChange
+              // only syncs Zustand selectedId in aside mode (see use-viewport-transition.ts)
+              setSelectedFinding(null)
+              toast.success('Finding deleted')
 
-            // Story 4.4b: Push undo entry with full snapshot for re-insert
-            if (finding) {
-              useReviewStore.getState().pushUndo({
-                id: crypto.randomUUID(),
-                type: 'single',
-                action: 'delete',
-                findingId,
-                batchId: null,
-                previousStates: new Map([[findingId, finding.status]]),
-                newStates: new Map(),
-                previousSeverity: null,
-                newSeverity: null,
-                findingSnapshot: {
-                  id: finding.id,
-                  segmentId: finding.segmentId,
-                  fileId: finding.fileId ?? fileId,
-                  projectId: finding.projectId,
-                  tenantId: finding.tenantId,
-                  reviewSessionId: finding.reviewSessionId,
-                  status: finding.status,
-                  severity: finding.severity,
-                  originalSeverity: finding.originalSeverity,
-                  category: finding.category,
-                  description: finding.description,
-                  detectedByLayer: finding.detectedByLayer,
-                  aiModel: finding.aiModel,
-                  aiConfidence: finding.aiConfidence,
-                  suggestedFix: finding.suggestedFix,
-                  sourceTextExcerpt: finding.sourceTextExcerpt,
-                  targetTextExcerpt: finding.targetTextExcerpt,
-                  scope: finding.scope,
-                  relatedFileIds: finding.relatedFileIds,
-                  segmentCount: finding.segmentCount,
-                  createdAt: finding.createdAt,
-                  updatedAt: finding.updatedAt,
-                },
-                description: 'Delete finding',
-                timestamp: Date.now(),
-                staleFindings: new Set(),
-              })
+              // Story 4.4b: Push undo entry with full snapshot for re-insert
+              if (finding) {
+                useReviewStore.getState().pushUndo({
+                  id: crypto.randomUUID(),
+                  type: 'single',
+                  action: 'delete',
+                  findingId,
+                  batchId: null,
+                  previousStates: new Map([[findingId, finding.status]]),
+                  newStates: new Map(),
+                  previousSeverity: null,
+                  newSeverity: null,
+                  findingSnapshot: {
+                    id: finding.id,
+                    segmentId: finding.segmentId,
+                    fileId: finding.fileId ?? fileId,
+                    projectId: finding.projectId,
+                    tenantId: finding.tenantId,
+                    reviewSessionId: finding.reviewSessionId,
+                    status: finding.status,
+                    severity: finding.severity,
+                    originalSeverity: finding.originalSeverity,
+                    category: finding.category,
+                    description: finding.description,
+                    detectedByLayer: finding.detectedByLayer,
+                    aiModel: finding.aiModel,
+                    aiConfidence: finding.aiConfidence,
+                    suggestedFix: finding.suggestedFix,
+                    sourceTextExcerpt: finding.sourceTextExcerpt,
+                    targetTextExcerpt: finding.targetTextExcerpt,
+                    scope: finding.scope,
+                    relatedFileIds: finding.relatedFileIds,
+                    segmentCount: finding.segmentCount,
+                    createdAt: finding.createdAt,
+                    updatedAt: finding.updatedAt,
+                  },
+                  description: 'Delete finding',
+                  timestamp: Date.now(),
+                  staleFindings: new Set(),
+                })
+              }
+            } else {
+              toast.error(result.error ?? 'Delete failed')
             }
-          } else {
-            toast.error(result.error ?? 'Delete failed')
-          }
-        })
-        .catch(() => toast.error('Delete failed'))
+          })
+          .catch(() => toast.error('Delete failed'))
+      })
     },
-    [
-      fileId,
-      projectId,
-      setSelectedFinding,
-      handleActiveFindingChange,
-      isReadOnly,
-      selfAssignIfNeeded,
-      announceReadOnly,
-    ],
+    [fileId, projectId, setSelectedFinding, handleActiveFindingChange, guardedAction],
   )
 
   // mobileDrawerOpen, showToggleButton, handleToggleDrawer, prevLayoutForSheet,
@@ -1696,7 +1657,17 @@ export function ReviewPageClient({
               selectedFindings={selectedFindingsForDialog}
               totalSelectedCount={selectedIds.size}
               onConfirm={() => {
-                executeBulk(bulkConfirmAction).catch(() => toast.error('Bulk operation failed'))
+                // R4-H1: sync in-flight guard on Confirm click — handleBulkAccept's
+                // `finally` block cleared bulkInFlightRef after opening this dialog,
+                // so a rapid double-click on "Confirm" would otherwise fire two
+                // concurrent executeBulk calls.
+                if (bulkInFlightRef.current) return
+                bulkInFlightRef.current = true
+                void executeBulk(bulkConfirmAction)
+                  .catch(() => toast.error('Bulk operation failed'))
+                  .finally(() => {
+                    bulkInFlightRef.current = false
+                  })
               }}
             />
 
@@ -1786,167 +1757,157 @@ export function ReviewPageClient({
                 originalSeverity={activeFinding.originalSeverity}
                 open={isOverrideMenuOpen}
                 onOpenChange={setIsOverrideMenuOpen}
-                onOverride={async (newSeverity) => {
+                onOverride={(newSeverity) => {
                   setIsOverrideMenuOpen(false)
-                  if (!activeFindingState || overrideInFlightRef.current) return
-                  // S-FIX-7 C3 fix: self-assign before override
-                  const lockOutcome = await selfAssignIfNeeded(fileId, projectId)
-                  if (lockOutcome === 'conflict') return
-                  // Optimistic store update
-                  const store = useReviewStore.getState()
-                  const f = getStoreFileState(store, fileId).findingsMap.get(activeFindingState)
-                  if (f) {
-                    store.setFinding(activeFindingState, {
-                      ...f,
-                      originalSeverity: f.originalSeverity ?? f.severity,
-                      severity: newSeverity,
-                      updatedAt: new Date().toISOString(),
+                  if (!activeFindingState) return
+                  void guardedAction('override severity', fileId, projectId, async () => {
+                    // Optimistic store update
+                    const store = useReviewStore.getState()
+                    const f = getStoreFileState(store, fileId).findingsMap.get(activeFindingState)
+                    if (f) {
+                      store.setFinding(activeFindingState, {
+                        ...f,
+                        originalSeverity: f.originalSeverity ?? f.severity,
+                        severity: newSeverity,
+                        updatedAt: new Date().toISOString(),
+                      })
+                    }
+                    await overrideSeverity({
+                      findingId: activeFindingState,
+                      fileId,
+                      projectId,
+                      newSeverity,
                     })
-                  }
-                  overrideInFlightRef.current = true
-                  void overrideSeverity({
-                    findingId: activeFindingState,
-                    fileId,
-                    projectId,
-                    newSeverity,
-                  })
-                    .then((result) => {
-                      if (result.success) {
-                        // CR-R1-H4: sync server timestamp to prevent Realtime merge guard rejection
-                        const curr = getStoreFileState(
-                          useReviewStore.getState(),
-                          fileId,
-                        ).findingsMap.get(activeFindingState)
-                        if (curr) {
-                          useReviewStore.getState().setFinding(activeFindingState, {
-                            ...curr,
-                            updatedAt: result.data.serverUpdatedAt,
-                          })
-                        }
-                        toast.success(`Severity overridden to ${newSeverity}`)
-
-                        // Story 4.4b CR-C1: Push undo entry for severity override (AC3)
-                        useReviewStore.getState().pushUndo({
-                          id: crypto.randomUUID(),
-                          type: 'single',
-                          action: 'severity_override',
-                          findingId: activeFindingState,
-                          batchId: null,
-                          previousStates: new Map([[activeFindingState, f?.status ?? 'pending']]),
-                          newStates: new Map([[activeFindingState, f?.status ?? 'pending']]),
-                          previousSeverity: {
-                            severity: f?.severity ?? newSeverity,
-                            originalSeverity: f?.originalSeverity ?? null,
-                          },
-                          newSeverity,
-                          findingSnapshot: null,
-                          description: `Override severity (${f?.severity ?? '?'} → ${newSeverity})`,
-                          timestamp: Date.now(),
-                          staleFindings: new Set(),
-                        })
-                      } else {
-                        // Rollback optimistic update
-                        if (f) {
+                      .then((result) => {
+                        if (result.success) {
+                          // CR-R1-H4: sync server timestamp to prevent Realtime merge guard rejection
                           const curr = getStoreFileState(
                             useReviewStore.getState(),
                             fileId,
                           ).findingsMap.get(activeFindingState)
-                          if (curr)
+                          if (curr) {
                             useReviewStore.getState().setFinding(activeFindingState, {
                               ...curr,
-                              severity: f.severity,
-                              originalSeverity: f.originalSeverity,
+                              updatedAt: result.data.serverUpdatedAt,
                             })
+                          }
+                          toast.success(`Severity overridden to ${newSeverity}`)
+
+                          // Story 4.4b CR-C1: Push undo entry for severity override (AC3)
+                          useReviewStore.getState().pushUndo({
+                            id: crypto.randomUUID(),
+                            type: 'single',
+                            action: 'severity_override',
+                            findingId: activeFindingState,
+                            batchId: null,
+                            previousStates: new Map([[activeFindingState, f?.status ?? 'pending']]),
+                            newStates: new Map([[activeFindingState, f?.status ?? 'pending']]),
+                            previousSeverity: {
+                              severity: f?.severity ?? newSeverity,
+                              originalSeverity: f?.originalSeverity ?? null,
+                            },
+                            newSeverity,
+                            findingSnapshot: null,
+                            description: `Override severity (${f?.severity ?? '?'} → ${newSeverity})`,
+                            timestamp: Date.now(),
+                            staleFindings: new Set(),
+                          })
+                        } else {
+                          // Rollback optimistic update
+                          if (f) {
+                            const curr = getStoreFileState(
+                              useReviewStore.getState(),
+                              fileId,
+                            ).findingsMap.get(activeFindingState)
+                            if (curr)
+                              useReviewStore.getState().setFinding(activeFindingState, {
+                                ...curr,
+                                severity: f.severity,
+                                originalSeverity: f.originalSeverity,
+                              })
+                          }
+                          toast.error(result.error ?? 'Override failed')
                         }
-                        toast.error(result.error ?? 'Override failed')
-                      }
-                    })
-                    .catch(() => toast.error('Override failed'))
-                    .finally(() => {
-                      overrideInFlightRef.current = false
-                    })
+                      })
+                      .catch(() => toast.error('Override failed'))
+                  })
                 }}
-                onReset={async () => {
+                onReset={() => {
                   setIsOverrideMenuOpen(false)
-                  if (!activeFindingState || !activeFinding || overrideInFlightRef.current) return
+                  if (!activeFindingState || !activeFinding) return
                   const orig = activeFinding.originalSeverity
                   if (!orig) return
-                  // S-FIX-7 C3 fix: self-assign before override reset
-                  const lockOutcome = await selfAssignIfNeeded(fileId, projectId)
-                  if (lockOutcome === 'conflict') return
-                  // Optimistic store update for reset
-                  const store = useReviewStore.getState()
-                  const f = getStoreFileState(store, fileId).findingsMap.get(activeFindingState)
-                  if (f) {
-                    store.setFinding(activeFindingState, {
-                      ...f,
-                      severity: orig,
-                      originalSeverity: null,
-                      updatedAt: new Date().toISOString(),
+                  void guardedAction('reset severity', fileId, projectId, async () => {
+                    // Optimistic store update for reset
+                    const store = useReviewStore.getState()
+                    const f = getStoreFileState(store, fileId).findingsMap.get(activeFindingState)
+                    if (f) {
+                      store.setFinding(activeFindingState, {
+                        ...f,
+                        severity: orig,
+                        originalSeverity: null,
+                        updatedAt: new Date().toISOString(),
+                      })
+                    }
+                    await overrideSeverity({
+                      findingId: activeFindingState,
+                      fileId,
+                      projectId,
+                      newSeverity: orig,
                     })
-                  }
-                  overrideInFlightRef.current = true
-                  void overrideSeverity({
-                    findingId: activeFindingState,
-                    fileId,
-                    projectId,
-                    newSeverity: orig,
-                  })
-                    .then((result) => {
-                      if (result.success) {
-                        // CR-R1-H4: sync server timestamp
-                        const curr = getStoreFileState(
-                          useReviewStore.getState(),
-                          fileId,
-                        ).findingsMap.get(activeFindingState)
-                        if (curr) {
-                          useReviewStore.getState().setFinding(activeFindingState, {
-                            ...curr,
-                            updatedAt: result.data.serverUpdatedAt,
-                          })
-                        }
-                        toast.success('Severity reset to original')
-
-                        // Story 4.4b CR-C1: Push undo entry for severity reset (AC3)
-                        useReviewStore.getState().pushUndo({
-                          id: crypto.randomUUID(),
-                          type: 'single',
-                          action: 'severity_override',
-                          findingId: activeFindingState,
-                          batchId: null,
-                          previousStates: new Map([[activeFindingState, f?.status ?? 'pending']]),
-                          newStates: new Map([[activeFindingState, f?.status ?? 'pending']]),
-                          previousSeverity: {
-                            severity: f?.severity ?? orig,
-                            originalSeverity: f?.originalSeverity ?? null,
-                          },
-                          newSeverity: orig,
-                          findingSnapshot: null,
-                          description: `Reset severity (${f?.severity ?? '?'} → ${orig})`,
-                          timestamp: Date.now(),
-                          staleFindings: new Set(),
-                        })
-                      } else {
-                        // Rollback
-                        if (f) {
+                      .then((result) => {
+                        if (result.success) {
+                          // CR-R1-H4: sync server timestamp
                           const curr = getStoreFileState(
                             useReviewStore.getState(),
                             fileId,
                           ).findingsMap.get(activeFindingState)
-                          if (curr)
+                          if (curr) {
                             useReviewStore.getState().setFinding(activeFindingState, {
                               ...curr,
-                              severity: f.severity,
-                              originalSeverity: f.originalSeverity,
+                              updatedAt: result.data.serverUpdatedAt,
                             })
+                          }
+                          toast.success('Severity reset to original')
+
+                          // Story 4.4b CR-C1: Push undo entry for severity reset (AC3)
+                          useReviewStore.getState().pushUndo({
+                            id: crypto.randomUUID(),
+                            type: 'single',
+                            action: 'severity_override',
+                            findingId: activeFindingState,
+                            batchId: null,
+                            previousStates: new Map([[activeFindingState, f?.status ?? 'pending']]),
+                            newStates: new Map([[activeFindingState, f?.status ?? 'pending']]),
+                            previousSeverity: {
+                              severity: f?.severity ?? orig,
+                              originalSeverity: f?.originalSeverity ?? null,
+                            },
+                            newSeverity: orig,
+                            findingSnapshot: null,
+                            description: `Reset severity (${f?.severity ?? '?'} → ${orig})`,
+                            timestamp: Date.now(),
+                            staleFindings: new Set(),
+                          })
+                        } else {
+                          // Rollback
+                          if (f) {
+                            const curr = getStoreFileState(
+                              useReviewStore.getState(),
+                              fileId,
+                            ).findingsMap.get(activeFindingState)
+                            if (curr)
+                              useReviewStore.getState().setFinding(activeFindingState, {
+                                ...curr,
+                                severity: f.severity,
+                                originalSeverity: f.originalSeverity,
+                              })
+                          }
+                          toast.error(result.error ?? 'Reset failed')
                         }
-                        toast.error(result.error ?? 'Reset failed')
-                      }
-                    })
-                    .catch(() => toast.error('Reset failed'))
-                    .finally(() => {
-                      overrideInFlightRef.current = false
-                    })
+                      })
+                      .catch(() => toast.error('Reset failed'))
+                  })
                 }}
                 trigger={<span className="hidden" />}
               />
@@ -1961,92 +1922,94 @@ export function ReviewPageClient({
               defaultSegmentId={
                 activeFindingState ? (findingsMap.get(activeFindingState)?.segmentId ?? null) : null
               }
-              onSubmit={async (data) => {
-                setIsAddFindingDialogOpen(false)
-                // S-FIX-7 C3 fix: self-assign before add finding
-                const lockOutcome = await selfAssignIfNeeded(fileId, projectId)
-                if (lockOutcome === 'conflict') return
-                void addFinding({ ...data, fileId, projectId })
-                  .then((result) => {
-                    if (result.success) {
-                      toast.success('Manual finding added')
-                      // Add new finding to store so it renders immediately
-                      const store = useReviewStore.getState()
-                      const newFinding: Finding = {
-                        id: result.data.findingId,
-                        tenantId,
-                        projectId,
-                        sessionId: '',
-                        segmentId: data.segmentId,
-                        severity: result.data.severity,
-                        originalSeverity: null,
-                        category: result.data.category,
-                        status: 'manual',
-                        description: result.data.description,
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString(),
-                        fileId,
-                        detectedByLayer: 'Manual',
-                        aiModel: null,
-                        aiConfidence: null,
-                        suggestedFix: data.suggestion,
-                        // H2 fix: populate from segments data to avoid flicker until Realtime arrives
-                        sourceTextExcerpt:
-                          initialData.segments
-                            .find((s) => s.id === data.segmentId)
-                            ?.sourceText?.substring(0, 100) ?? null,
-                        targetTextExcerpt: null, // target text not available in segments list
-                        segmentCount: 1,
-                        scope: 'per-file',
-                        reviewSessionId: null,
-                        relatedFileIds: null,
-                      }
-                      store.setFinding(result.data.findingId, newFinding)
-
-                      // Story 4.4b: Push undo entry for manual add (CR-C2: include snapshot for redo)
-                      store.pushUndo({
-                        id: crypto.randomUUID(),
-                        type: 'single',
-                        action: 'add',
-                        findingId: result.data.findingId,
-                        batchId: null,
-                        previousStates: new Map(),
-                        newStates: new Map([[result.data.findingId, 'manual']]),
-                        previousSeverity: null,
-                        newSeverity: null,
-                        findingSnapshot: {
-                          id: newFinding.id,
-                          segmentId: newFinding.segmentId || null,
-                          fileId: newFinding.fileId ?? fileId,
-                          projectId,
+              onSubmit={(data) => {
+                void guardedAction('add finding', fileId, projectId, async () => {
+                  // R3-H3: dismiss dialog ONLY after self-assign succeeded — guardedAction
+                  // returns 'conflict'/'error' before calling this body so the dialog stays
+                  // open and the user can copy their typed input before manually closing.
+                  setIsAddFindingDialogOpen(false)
+                  await addFinding({ ...data, fileId, projectId })
+                    .then((result) => {
+                      if (result.success) {
+                        toast.success('Manual finding added')
+                        // Add new finding to store so it renders immediately
+                        const store = useReviewStore.getState()
+                        const newFinding: Finding = {
+                          id: result.data.findingId,
                           tenantId,
-                          reviewSessionId: null,
-                          status: 'manual',
-                          severity: newFinding.severity,
+                          projectId,
+                          sessionId: '',
+                          segmentId: data.segmentId,
+                          severity: result.data.severity,
                           originalSeverity: null,
-                          category: newFinding.category,
-                          description: newFinding.description,
+                          category: result.data.category,
+                          status: 'manual',
+                          description: result.data.description,
+                          createdAt: new Date().toISOString(),
+                          updatedAt: new Date().toISOString(),
+                          fileId,
                           detectedByLayer: 'Manual',
                           aiModel: null,
                           aiConfidence: null,
-                          suggestedFix: newFinding.suggestedFix,
-                          sourceTextExcerpt: newFinding.sourceTextExcerpt,
-                          targetTextExcerpt: null,
-                          scope: 'per-file',
-                          relatedFileIds: null,
+                          suggestedFix: data.suggestion,
+                          // H2 fix: populate from segments data to avoid flicker until Realtime arrives
+                          sourceTextExcerpt:
+                            initialData.segments
+                              .find((s) => s.id === data.segmentId)
+                              ?.sourceText?.substring(0, 100) ?? null,
+                          targetTextExcerpt: null, // target text not available in segments list
                           segmentCount: 1,
-                          createdAt: newFinding.createdAt,
-                          updatedAt: newFinding.updatedAt,
-                        },
-                        description: 'Add manual finding',
-                        timestamp: Date.now(),
-                        staleFindings: new Set(),
-                      })
-                    } else {
-                      toast.error(result.error ?? 'Failed to add finding')
-                    }
-                  })
-                  .catch(() => toast.error('Failed to add finding'))
+                          scope: 'per-file',
+                          reviewSessionId: null,
+                          relatedFileIds: null,
+                        }
+                        store.setFinding(result.data.findingId, newFinding)
+
+                        // Story 4.4b: Push undo entry for manual add (CR-C2: include snapshot for redo)
+                        store.pushUndo({
+                          id: crypto.randomUUID(),
+                          type: 'single',
+                          action: 'add',
+                          findingId: result.data.findingId,
+                          batchId: null,
+                          previousStates: new Map(),
+                          newStates: new Map([[result.data.findingId, 'manual']]),
+                          previousSeverity: null,
+                          newSeverity: null,
+                          findingSnapshot: {
+                            id: newFinding.id,
+                            segmentId: newFinding.segmentId || null,
+                            fileId: newFinding.fileId ?? fileId,
+                            projectId,
+                            tenantId,
+                            reviewSessionId: null,
+                            status: 'manual',
+                            severity: newFinding.severity,
+                            originalSeverity: null,
+                            category: newFinding.category,
+                            description: newFinding.description,
+                            detectedByLayer: 'Manual',
+                            aiModel: null,
+                            aiConfidence: null,
+                            suggestedFix: newFinding.suggestedFix,
+                            sourceTextExcerpt: newFinding.sourceTextExcerpt,
+                            targetTextExcerpt: null,
+                            scope: 'per-file',
+                            relatedFileIds: null,
+                            segmentCount: 1,
+                            createdAt: newFinding.createdAt,
+                            updatedAt: newFinding.updatedAt,
+                          },
+                          description: 'Add manual finding',
+                          timestamp: Date.now(),
+                          staleFindings: new Set(),
+                        })
+                      } else {
+                        toast.error(result.error ?? 'Failed to add finding')
+                      }
+                    })
+                    .catch(() => toast.error('Failed to add finding'))
+                })
               }}
             />
           </div>

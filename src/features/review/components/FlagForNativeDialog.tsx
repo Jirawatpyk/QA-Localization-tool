@@ -23,6 +23,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { flagForNative } from '@/features/review/actions/flagForNative.action'
 import { getNativeReviewers } from '@/features/review/actions/getNativeReviewers.action'
+import { useGuardedAction } from '@/features/review/hooks/use-guarded-action'
 
 const COMMENT_MIN = 10
 const COMMENT_MAX = 500
@@ -54,6 +55,9 @@ export function FlagForNativeDialog({
   projectId,
   onSuccess,
 }: FlagForNativeDialogProps) {
+  // R4.5: useGuardedAction encapsulates read-only/inflight/selfAssign/try-catch
+  // — replaces the R3-H5 + R4-H2 inline pattern with the unified helper
+  const guardedAction = useGuardedAction()
   const [reviewers, setReviewers] = useState<NativeReviewer[]>([])
   const [selectedReviewer, setSelectedReviewer] = useState('')
   const [comment, setComment] = useState('')
@@ -97,31 +101,39 @@ export function FlagForNativeDialog({
     setIsSubmitting(true)
     setError(null)
 
-    const result = await flagForNative({
-      findingId,
-      fileId,
-      projectId,
-      assignedTo: selectedReviewer,
-      flaggerComment: comment,
+    const outcome = await guardedAction('flag for native review', fileId, projectId, async () => {
+      const result = await flagForNative({
+        findingId,
+        fileId,
+        projectId,
+        assignedTo: selectedReviewer,
+        flaggerComment: comment,
+      })
+
+      if (result.success) {
+        toast.success('Finding flagged for native review')
+        onOpenChange(false)
+        // CR-M4: pass assignment data back for store merge
+        const reviewerName = reviewers.find((r) => r.id === selectedReviewer)?.displayName ?? ''
+        onSuccess?.({
+          // CR-R2 P0-1: use real assignmentId from server response
+          assignmentId:
+            ((result.data as Record<string, unknown>).assignmentId as string) ??
+            result.data.findingId,
+          assignedToName: reviewerName,
+          flaggerComment: comment,
+        })
+      } else {
+        setError(result.error)
+        throw new Error(result.error) // surface to guardedAction so it counts as 'threw'
+      }
     })
 
     setIsSubmitting(false)
 
-    if (result.success) {
-      toast.success('Finding flagged for native review')
-      onOpenChange(false)
-      // CR-M4: pass assignment data back for store merge
-      const reviewerName = reviewers.find((r) => r.id === selectedReviewer)?.displayName ?? ''
-      onSuccess?.({
-        // CR-R2 P0-1: use real assignmentId from server response
-        assignmentId:
-          ((result.data as Record<string, unknown>).assignmentId as string) ??
-          result.data.findingId,
-        assignedToName: reviewerName,
-        flaggerComment: comment,
-      })
-    } else {
-      setError(result.error)
+    // Surface conflict via inline error state (dialog stays open per R3-H3 pattern)
+    if (outcome === 'conflict') {
+      setError('File is now being reviewed by another user')
     }
   }, [
     isValid,
@@ -134,6 +146,7 @@ export function FlagForNativeDialog({
     onOpenChange,
     onSuccess,
     reviewers,
+    guardedAction,
   ])
 
   return (

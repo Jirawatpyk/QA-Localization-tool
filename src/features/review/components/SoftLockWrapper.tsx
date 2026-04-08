@@ -81,9 +81,13 @@ export function SoftLockWrapper({
     assignmentId: isOwnAssignment ? assignmentId : null,
     enabled: isOwnActive,
     // H6: surface lock loss when heartbeat returns permanent failure (cancelled/auth lost)
+    // R3-M3: sonner toast id coalesces duplicate "lock expired" calls from both
+    // the heartbeat path and the visibilitychange path in SoftLockWrapper above
     onPermanentFailure: () => {
       setAssignment(null)
-      toast.warning('Your review lock has expired — click any action to re-acquire')
+      toast.warning('Your review lock has expired — click any action to re-acquire', {
+        id: 'lock-expired',
+      })
     },
   })
 
@@ -114,9 +118,20 @@ export function SoftLockWrapper({
         projectId,
         status: releaseStatus,
       })
-      if (result.success) {
-        // Reload to re-fetch assignment state from server
+      if (!result.success) {
+        // R3-H4 fix: surface failure to user instead of silently swallowing
+        toast.error(result.error ?? 'Failed to release file')
+        return
+      }
+      // R3-C1 fix: self-assigned → reload is safe (cancelled row excluded from
+      // getFileAssignment filter, fresh mount sees unassigned state). Admin-assigned
+      // → MUST navigate away because reloading the same URL remounts SoftLockWrapper
+      // which fires autoTransition() → flips `assigned` back to `in_progress`, re-locking
+      // the reviewer. Task 9 never tested the Release button flow — only direct SQL.
+      if (isSelfAssigned) {
         window.location.reload()
+      } else {
+        window.location.href = `/projects/${projectId}`
       }
     })
   }
@@ -127,23 +142,25 @@ export function SoftLockWrapper({
   useEffect(() => {
     if (!currentUserId) return
 
+    // R3-H7: local flag for unmount guard — async setAssignment/toast calls
+    // must be gated so they don't fire after the component unmounts
+    let cancelled = false
+
     function handleVisibilityChange() {
       if (document.visibilityState !== 'visible') return
       if (!isOwnAssignment) return // only relevant when we believe we hold the lock
 
       void getFileAssignment({ fileId, projectId }).then((result) => {
+        if (cancelled) return // R3-H7: unmount guard
         if (!result.success) return
         const polled = result.data.assignment
-        // R2-H3: detect lock loss in 3 cases:
-        // (1) no polled row at all (cron deleted),
-        // (2) polled row belongs to someone else (takeover),
-        // (3) polled row is ours but status transitioned to cancelled/completed
-        //     (cron auto-released our own lock — H5 tightened isOwnAssignment to require active status)
-        const ownLockLost =
-          !polled ||
-          polled.assignedTo !== currentUserId ||
-          polled.status === 'cancelled' ||
-          polled.status === 'completed'
+        // R3-H6 correction: `getFileAssignment` already filters to
+        // inArray(status, ['assigned','in_progress']) at the SQL level —
+        // cancelled/completed rows are NEVER returned. The only reachable
+        // lock-loss signal is either no row at all OR the row belongs to
+        // another user (takeover). The original R2-H3 fix added unreachable
+        // `polled.status === 'cancelled'` branches; this corrects the logic.
+        const ownLockLost = !polled || polled.assignedTo !== currentUserId
         if (ownLockLost) {
           setAssignment(
             polled
@@ -160,13 +177,20 @@ export function SoftLockWrapper({
                 }
               : null,
           )
-          toast.warning('Your review lock has expired — click any action to re-acquire')
+          // R3-M3: coalesce with heartbeat's onPermanentFailure via sonner toast id
+          // so the same lock-loss event doesn't fire two duplicate toasts
+          toast.warning('Your review lock has expired — click any action to re-acquire', {
+            id: 'lock-expired',
+          })
         }
       })
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      cancelled = true // R3-H7: mark unmounted so in-flight promises short-circuit
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [currentUserId, isOwnAssignment, fileId, projectId])
 
   // S-FIX-7 AC1: Self-assign on first review action for unassigned files

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { addFindingComment } from '@/features/review/actions/addFindingComment.action'
 import { getFindingComments } from '@/features/review/actions/getFindingComments.action'
+import { useReadOnlyMode } from '@/features/review/hooks/use-read-only-mode'
 
 const BODY_MIN = 1
 const BODY_MAX = 1000
@@ -37,6 +38,10 @@ export function FindingCommentThread({
   findingAssignmentId,
   flaggerComment,
 }: FindingCommentThreadProps) {
+  // R3-M6: AC6 gap — FindingCommentThread was never wired to read-only context.
+  // Server-side assertLockOwnership catches the mutation, but UX spec requires
+  // the UI to silently disable input in read-only mode.
+  const isReadOnly = useReadOnlyMode()
   const [comments, setComments] = useState<Comment[]>([])
   const [newComment, setNewComment] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -57,6 +62,7 @@ export function FindingCommentThread({
   }, [findingAssignmentId])
 
   const handleSubmit = useCallback(async () => {
+    if (isReadOnly) return // R3-M6: read-only guard
     if (newComment.length < BODY_MIN || newComment.length > BODY_MAX || isSubmitting) return
 
     setIsSubmitting(true)
@@ -87,7 +93,7 @@ export function FindingCommentThread({
     } else {
       toast.error(result.error)
     }
-  }, [findingId, findingAssignmentId, newComment, isSubmitting])
+  }, [findingId, findingAssignmentId, newComment, isSubmitting, isReadOnly])
 
   return (
     <div className="space-y-3">
@@ -134,14 +140,17 @@ export function FindingCommentThread({
         <Textarea
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
-          placeholder="Add a comment (1-1000 characters)"
+          placeholder={
+            isReadOnly ? 'Comments disabled in read-only mode' : 'Add a comment (1-1000 characters)'
+          }
           maxLength={BODY_MAX}
+          disabled={isReadOnly}
           rows={2}
         />
         <Button
           size="sm"
           onClick={handleSubmit}
-          disabled={newComment.length < BODY_MIN || isSubmitting}
+          disabled={newComment.length < BODY_MIN || isSubmitting || isReadOnly}
         >
           {isSubmitting ? 'Sending...' : 'Add Comment'}
         </Button>

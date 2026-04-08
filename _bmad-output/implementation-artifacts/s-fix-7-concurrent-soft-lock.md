@@ -625,6 +625,134 @@ _(none — all originally-deferred items applied in CR R2)_
 
 The Acceptance Auditor layer being partial means spec-deviation coverage is incomplete beyond the 6 audited questions. Recommend re-running CR R3 with this layer when API recovers if any new spec concerns surface during R2 patch application.
 
+---
+
+### Code Review — Round 3 (2026-04-08, Amelia)
+
+**Scope:** review of commit `7a28aa6` (the consolidated R1+R2 batch, 23 files, 902 insertions). Diff: `HEAD~1..HEAD -- src/**`, 1767 lines.
+
+**Layers run:** Blind Hunter ✅ (9 findings), Edge Case Hunter ✅ (13 findings), Acceptance Auditor ✅ (5 findings). **All 3 layers completed successfully this round.**
+
+**Summary:** 1 CRIT + 7 HIGH + 8 MED = **16 patches**; 6 defer/low; 3 dismissed.
+
+#### Patches (Critical — block sign-off)
+
+- [ ] [Review R3][Patch] **R3-C1: Release button for admin-assigned files is STILL BROKEN — auto-transition re-locks on reload** [`SoftLockWrapper.tsx:91-93, 111-122`; `use-soft-lock.ts:98-105`] — the C4 patch only fixed self-assigned releases (→ `cancelled`). Admin-assigned release flow is broken in two compound ways: (1) `handleRelease` picks `'assigned'` for admin-assigned + calls `window.location.reload()`. On reload, `getFileAssignment` returns the row with `status='assigned'` and `assignedTo=currentUser`. `useSoftLock.isOwnAssignment=true` (H5 fix includes `'assigned'` as active). `SoftLockWrapper.useEffect` fires `autoTransition()` → `assigned → in_progress` → reviewer is re-locked immediately. (2) If user clicks Release while status is still `assigned` (admin pre-assigned, autoTransition hasn't fired yet), `handleRelease` picks `'assigned'` but `VALID_TRANSITIONS.assigned` doesn't include `'assigned'` → server returns INVALID_TRANSITION → `handleRelease` silently swallows the failure. Task 9 Playwright verification never tested the Release button flow (only tested via direct SQL). Fix: after successful release of an admin-assigned file, navigate away to the project page instead of reloading — OR add a sessionStorage flag that suppresses `autoTransition()` for one mount. Detected by Edge Case Hunter + Blind Hunter.
+
+#### Patches (High)
+
+- [ ] [Review R3][Patch] **R3-H1: `handleBulkAccept`/`handleBulkReject` rapid double-click fires two concurrent `bulkAction` calls** [`ReviewPageClient.tsx:415-460`] — no synchronous in-flight guard before the `await selfAssignIfNeeded(...)`. `setBulkInFlight(true)` runs INSIDE `executeBulk`, which is awaited AFTER self-assign. Both clicks enter, both self-assign (idempotent — OK), both call `executeBulk` concurrently → double mutation + double toast. Fix: set an in-flight ref synchronously at the top of `handleBulkAccept`/`handleBulkReject` before any await. Detected by Edge Case Hunter.
+- [ ] [Review R3][Patch] **R3-H2: `OverrideMenu.onOverride`/`onReset` double-submit race** [`ReviewPageClient.tsx:1789-1876`] — `overrideInFlightRef.current = true` is set AFTER `await selfAssignIfNeeded(...)`, not before. Rapid double-click: both clicks pass the `overrideInFlightRef.current === false` check before either sets it to true. Same bug in `onReset`. Fix: set the ref synchronously at the top, reset in `.finally()`. Detected by Edge Case Hunter.
+- [ ] [Review R3][Patch] **R3-H3: `AddFindingDialog.onSubmit` closes dialog BEFORE `selfAssignIfNeeded` — typed data lost on conflict** [`ReviewPageClient.tsx:1964-1968`] — `setIsAddFindingDialogOpen(false)` runs synchronously, THEN `await selfAssignIfNeeded`. If conflict, the handler returns silently. User sees the dialog closed, no toast, their typed-in description/category/suggestion discarded. Fix: call `selfAssignIfNeeded` BEFORE closing the dialog. On conflict, keep dialog open + surface toast. Detected by Edge Case Hunter.
+- [ ] [Review R3][Patch] **R3-H4: `handleRelease` swallows non-success ActionResult — no user feedback on failure** [`SoftLockWrapper.tsx:111-122`] — `if (result.success) { reload }` has no else branch. If `updateAssignmentStatus` returns CONFLICT (concurrent takeover), VALIDATION_ERROR (schema drift), or the new R2-C1 FORBIDDEN (unexpectedly — shouldn't happen from the UI but could during test), UI silently fails. User clicks Release, button un-spins, nothing happens. Fix: add `else { toast.error(result.error ?? 'Failed to release file') }`. Detected by Edge Case Hunter.
+- [ ] [Review R3][Patch] **R3-H5: `FlagForNativeDialog.handleSubmit` bypasses `selfAssignIfNeeded`** [`FlagForNativeDialog.tsx` submit handler] — the dialog calls `flagForNative(...)` directly without calling `selfAssignIfNeeded` first. C3's `isReadOnly` guard only prevents OPENING the dialog; once open, submit proceeds. On an unassigned file, flagging silently bypasses the C3 "self-assign before mutation" contract. Server-side `assertLockOwnership` returns null (no lock exists) → mutation proceeds with no `file_assignments` row created. Fix: dialog needs access to `useLockGuard()` and must call `selfAssignIfNeeded` before `flagForNative`. Detected by Edge Case Hunter.
+- [ ] [Review R3][Patch] **R3-H6: R2-H3 visibilitychange `cancelled`/`completed` branches are DEAD CODE** [`SoftLockWrapper.tsx:142-146`; `getFileAssignment.action.ts:68`] — my R2-H3 fix added `polled.status === 'cancelled' || polled.status === 'completed'` to the `ownLockLost` check. But `getFileAssignment` filters with `inArray(fileAssignments.status, ['assigned', 'in_progress'])` — cancelled/completed rows can NEVER be returned. Only the `!polled` path is reachable. The R2-H3 fix was misguided — the detection path is "no row returned" not "row with cancelled status". Fix: either (a) remove the dead branches + update the R2-H3 comment, OR (b) broaden `getFileAssignment` to return the latest row regardless of status so the client can distinguish "no row at all" from "your row was cancelled". Recommended **(b)** for better UX. Detected by Edge Case Hunter.
+- [ ] [Review R3][Patch] **R3-H7: `handleVisibilityChange` has no unmount guard for async `setAssignment`** [`SoftLockWrapper.tsx:134-165`] — R2-H2 added `isMountedRef` to `useFilePresence` but the same async-after-await pattern exists in the visibilitychange handler with no guard. If user navigates away between visibility change and promise resolution, `setAssignment` fires on an unmounted component + phantom toast. Fix: add `let cancelled = false` local + cleanup flip. Detected by Blind Hunter + Edge Case Hunter.
+
+#### Patches (Medium)
+
+- [ ] [Review R3][Patch] **R3-M1: R2-C2 test has stale comment + missing `auditFailures` assertion** [`releaseStaleAssignments.test.ts:151-155`] — test comment still describes pre-R2-C2 behavior ("inner try/catch swallows errors") which contradicts the actual fix. Test only asserts `result.releasedCount === 2`, never `expect(result.auditFailures).toBe(1)`. A future refactor that reinstates the inner try/catch would silently break the counter. Fix: remove stale comment, add counter assertion. Detected by Blind Hunter + Acceptance Auditor.
+- [ ] [Review R3][Patch] **R3-M2: Cron does not release `in_progress` rows with `lastActiveAt = NULL`** [`releaseStaleAssignments.ts:41-42`] — Postgres `NULL < timestamp` evaluates to NULL (not TRUE), so `lt(lastActiveAt, threshold)` excludes NULL rows. Currently no code path sets `in_progress` with null `lastActiveAt` (selfAssignFile sets it, updateAssignmentStatus sets it on transition), but future paths could. Fix: `or(lt(lastActiveAt, threshold), isNull(lastActiveAt))` — OR set a NOT NULL constraint on the column to make the invariant enforceable at the DB level. Detected by Edge Case Hunter.
+- [ ] [Review R3][Patch] **R3-M3: Duplicate "lock expired" toasts fire from 2 paths** [`SoftLockWrapper.tsx:83-88` (useFilePresence onPermanentFailure) + `134-165` (visibilitychange handler)] — scenario: tab background 30+ min, cron cancels row, user returns. `handleVisibilityChange` fetches → `!polled` → `setAssignment(null)` + toast. `isVisibleRef` flips true → heartbeat interval next tick → `NOT_FOUND` → `onPermanentFailure` → `setAssignment(null)` + toast. Two duplicate toasts. Fix: use `toast.warning(msg, { id: 'lock-expired' })` so sonner deduplicates by id, OR add a shared `lockLostRef` to gate the second caller. Detected by Edge Case Hunter.
+- [ ] [Review R3][Patch] **R3-M4: `useFilePresence` strict-mode double-mount: stale promise from first mount fires callback on second mount** [`use-file-presence.ts:56-102`] — React 19 strict mode (dev) mounts the effect twice. First mount: `isMountedRef.current = true`, initial heartbeat promise A scheduled. Cleanup: ref = false. Second mount: ref = true again. Promise A resolves after second mount, `.then` checks `!isMountedRef.current` → false (flipped back) → calls `onPermanentFailureRef.current?.()` on the remounted instance. The `isMountedRef` pattern is INCORRECT for double-mount; need an effect-local sentinel. Fix: `const effectId = Symbol(); let currentEffectId = effectId; return () => { currentEffectId = null }` + compare in then-handler. Detected by Edge Case Hunter.
+- [ ] [Review R3][Patch] **R3-M5: `executeNativeConfirm`/`executeNativeOverride` don't call `announceReadOnly` — inconsistent a11y** [`ReviewPageClient.tsx:503` and `569`] — silent return in read-only mode without aria-live feedback, unlike `handleApprove`/`handleBulkAccept`/`handleBulkReject`/`handleDeleteFinding`. SR users get no confirmation their action was blocked — inconsistency violates WCAG 4.1.3 parity across action paths. Fix: add `announceReadOnly('confirm native review')` / `announceReadOnly('override native review')` before the return. Detected by Edge Case Hunter.
+- [ ] [Review R3][Patch] **R3-M6: AC6 gap — `FindingCommentThread` missing `isReadOnly` guard** [`FindingCommentThread.tsx:144`] — zero references to `isReadOnly` / `useReadOnlyMode`; textarea and "Post" submit button stay enabled in read-only mode. Line 144 only disables on length/in-flight. Rendered inside `FindingDetailContent` without `isReadOnly` plumbing. Server-side `assertLockOwnership` in `addFindingComment.action.ts` catches the request (defense-in-depth holds), but AC6's "silently disabled" UX requirement is not met. Task 7 checklist `[x]` is FALSE for this entry point. Fix: add `disabled` prop from `useReadOnlyMode()`. Detected by Acceptance Auditor.
+- [ ] [Review R3][Patch] **R3-M7: `useReadOnlyAnnouncer` `setTimeout(100)` handles race on rapid announcements** [`use-read-only-mode.ts:1736-1747`] — if two blocked actions fire within 100ms, two `setTimeout` handles race. The later call's empty-clear (`region.textContent = ''`) may win after the earlier call's setTimeout wrote its message — announcement clobbered. Fix: clear pending timeout handle on re-invoke, OR use a single debounced setTimeout. Detected by Blind Hunter.
+- [ ] [Review R3][Patch] **R3-M8: `useReadOnlyAnnouncer` module-level `liveRegionRef` dev HMR leak** [`use-read-only-mode.ts:62-84`] — on HMR reload, module re-executes, `liveRegionRef` resets to null, but the previously-appended `<div>` stays in `document.body`. Long dev sessions accumulate orphaned regions. Prod is fine (one module load per page). Fix: on module init, query + remove any existing `[data-readonly-announcer="true"]` elements. Detected by Blind Hunter + Acceptance Auditor.
+
+#### Deferred (R3)
+
+- [x] [Review R3][Defer] **R3-D1: `selfAssignIfNeeded` falls through when own assignment is `completed`** [`SoftLockWrapper.tsx:1346-1354`] — edge case if user races an Undo against completion. Falls through to `selfAssignFile` which INSERTs a new row (partial unique index doesn't cover completed). Minor data cleanliness concern; completed files shouldn't accept new mutations anyway. File as future cleanup.
+- [x] [Review R3][Defer] **R3-D2: Task 7.7 no test artifact** — spec `[x]` but no `ReviewPageClient + ReadOnlyContext + isReadOnly:true` render test exists. Regression risk for the AC6 audit table. File as test infrastructure TD.
+- [x] [Review R3][Defer] **R3-D3: R2-C1 gate has no regression test** [`updateAssignmentStatus.action.test.ts`] — the R2-C1 privilege guard is unverified. Should have positive-and-negative test pair. File as test gap TD.
+- [x] [Review R3][Defer] **R3-D4: L6 diagnostic separation is cosmetic only** [`releaseStaleAssignments.ts:80-93`] — operator-facing message is identical for tenant validation vs audit write failures; only distinguishable via `err.reason`. Not blocking. File as observability polish.
+- [x] [Review R3][Defer] **R3-D5: `validateTenantId` throws after UPDATE commits** [`releaseStaleAssignments.ts:357-368`] — the row is already cancelled when validation fails. Observability concern, not correctness. File as operational resilience TD.
+- [x] [Review R3][Defer] **R3-D6: `FlagForNativeDialog.onSuccess` assignmentId fallback to findingId** [`FlagForNativeDialog.tsx:116-119`] — pre-existing pattern; stronger typing needed on server action return. File as type-safety cleanup.
+
+#### Dismissed (not reported)
+
+- **BH HIGH: R2-C1 gate doesn't verify caller is the assignee** — FALSE POSITIVE. Verified at `updateAssignmentStatus.action.ts:70-75`: the earlier ownership check `if (!isAssignee && !isAssigner && !isAdmin) return FORBIDDEN` blocks unrelated callers BEFORE they can reach the new R2-C1 gate. User_C (neither assignee nor assigner nor admin) is blocked at line 73 regardless.
+- **EC HIGH: `assertLockOwnership` returns null when no lock exists** — ARCHITECTURAL DESIGN, not a bug. The spec says "defense-in-depth" meaning client-side `selfAssignIfNeeded` is primary, server-side check is backup. A direct API bypass is a pre-existing architectural concern that predates S-FIX-7 and would require an `INSERT ON CONFLICT SELECT assignment_id FOR UPDATE` atomic pattern to fix. Out of scope for this story.
+- **BH LOW: `VALID_TRANSITIONS.assigned` now includes `cancelled` — audit trail "why"** — audit log already captures actor + old/new status via the existing `assignment_status_changed` action log. The "why" is contextual (self-release via button, admin cancel, cron auto-release) and should be inferred from action+actor. Acceptable.
+
+---
+
+### Code Review — Round 4 (2026-04-08, Amelia)
+
+**Scope:** review of R3 uncommitted patches (16 patches across 8 files, 553 line diff).
+
+**Layers run:** Blind Hunter ✅ (12 findings). Edge Case Hunter ❌ API overload. Acceptance Auditor ❌ API overload. **Replaced failed layers with inline verification** for the 4 highest-risk BH claims + 4 spec compliance questions.
+
+**Summary:** 0 CRIT + 3 HIGH + 2 MED = **5 patches**; 3 defer/low; 4 dismissed as false-positive/noise.
+
+#### Patches (High)
+
+- [x] [Review R4][Patch] **R4-H1: `bulkInFlightRef` cleared before BulkConfirmDialog's `onConfirm` runs → >5 path unguarded against double-click** [`ReviewPageClient.tsx:421-450, 1717-1726`] — when user bulk-accepts >5 items: `handleBulkAccept` flips ref to true, awaits self-assign, opens confirm dialog, `finally` block immediately clears ref, user clicks "Confirm" in dialog → `onConfirm={() => { executeBulk(bulkConfirmAction)... }}` runs WITHOUT any ref guard. Rapid double-click on Confirm button triggers two concurrent `executeBulk` calls. Fix: add sync guard inside `onConfirm`:
+  ```typescript
+  onConfirm={() => {
+    if (bulkInFlightRef.current) return
+    bulkInFlightRef.current = true
+    void executeBulk(bulkConfirmAction)
+      .catch(() => toast.error('Bulk operation failed'))
+      .finally(() => { bulkInFlightRef.current = false })
+  }}
+  ```
+  Detected by Blind Hunter + inline verification.
+
+- [x] [Review R4][Patch] **R4-H2: `FlagForNativeDialog.handleSubmit` — `selfAssignIfNeeded` throw leaves dialog stuck at `isSubmitting=true`** [`FlagForNativeDialog.tsx:100-110`] — the R3-H5 patch added `const lockOutcome = await selfAssignIfNeeded(...)` with only a `'conflict'` branch. If `selfAssignIfNeeded` REJECTS (network error, server 500, anything non-conflict), the `await` throws, the outer promise rejects silently, and `setIsSubmitting(false)` is never called. Dialog stuck with grayed-out buttons forever. Fix: wrap in try/catch:
+  ```typescript
+  try {
+    const lockOutcome = await selfAssignIfNeeded(fileId, projectId)
+    if (lockOutcome === 'conflict') { ... return }
+    const result = await flagForNative({ ... })
+    ...
+  } catch (err) {
+    setError('Failed to acquire lock — please try again')
+  } finally {
+    setIsSubmitting(false)
+  }
+  ```
+  Detected by Blind Hunter.
+
+- [x] [Review R4][Patch] **R4-H3: `AddFindingDialog.onSubmit` — `selfAssignIfNeeded` throw leaves dialog open with no feedback** [`ReviewPageClient.tsx:1994-2006`] — R3-H3 reordered `selfAssignIfNeeded` BEFORE `setIsAddFindingDialogOpen(false)`. Good intent, but if selfAssign REJECTS, the handler promise rejects silently: no toast, no dialog state reset, no error surfaced. User sees dialog unchanged with typed data still there but no indication that submit failed. Fix: wrap in try/catch + toast.error on throw:
+  ```typescript
+  onSubmit={async (data) => {
+    try {
+      const lockOutcome = await selfAssignIfNeeded(fileId, projectId)
+      if (lockOutcome === 'conflict') return
+      setIsAddFindingDialogOpen(false)
+      void addFinding({ ... })
+    } catch (err) {
+      toast.error('Failed to acquire lock — please try again')
+    }
+  }}
+  ```
+  Detected by Blind Hunter.
+
+#### Patches (Medium)
+
+- [x] [Review R4][Patch] **R4-M1: `announceTimerRef` module-level singleton shared across component instances → cross-instance cancellation** [`use-read-only-mode.ts:66`] — `let announceTimerRef: ReturnType<typeof setTimeout> | null = null` at module scope. Two review components mounted simultaneously (split panel, dev StrictMode double-mount, tests) share the same timer ref. Component A calls `announce('approve')`, schedules timer. Component B calls `announce('bulk accept')` 50ms later, cancels A's timer, schedules its own. A's message lost. Fix: move timer ref to `useRef` per hook instance, OR use per-element tracking via `dataset.timerId`. Detected by Blind Hunter.
+- [x] [Review R4][Patch] **R4-M2: `overrideInFlightRef` not cleared on component unmount during await** [`ReviewPageClient.tsx:1808-1825`] — R3-H2 flipped ref before await. If user navigates away between `overrideInFlightRef.current = true` and the `.then/.catch/.finally` chain resolves, the ref stays stuck at `true`. Not a bug because the ref is scoped to the component instance — unmount destroys it — BUT if the component remounts under React StrictMode double-mount, the ref is re-created fresh on remount, so no stuck state. Actually safe on unmount. **Downgraded:** this is not an issue because React refs are recreated per mount. **DISMISS.**
+
+#### Deferred (R4)
+
+- [x] [Review R4][Defer] **R4-D1: `SoftLockWrapper` visibilitychange misses status transitions** — BH flagged that `ownLockLost` no longer detects `polled.status` changes. Inline verification: the polling interval at 5-15s catches status changes via `setAssignment((prev) => ...)` debounce path. Visibilitychange is a one-shot check; polling is the authoritative ongoing detection. Not a gap.
+- [x] [Review R4][Defer] **R4-D2: `window.location.href` navigation race** — `handleRelease` sets navigation href then exits. Concurrent click could fire before browser starts navigating. Low probability (release button is in `startReleaseTransition` which disables button via `isReleasePending`). File as UX polish if users report issues.
+- [x] [Review R4][Defer] **R4-D3: Test assertion `auditFailures === 1` brittle to mock order** — the test relies on `mockRejectedValueOnce` ordering. Robust test would assert a range or count rejected calls. File as test quality TD.
+- [x] [Review R4][Defer] **R4-D4: `R3-M2` AC4 scope expansion** — spec WHERE clause is strictly `lt(threshold)`, R3-M2 adds `or(isNull)`. Benign defensive correction (NULL lastActiveAt means "never active", which is MORE stale not less). Document as intentional widening.
+- [x] [Review R4][Defer] **R4-D5: R3-H3/R3-H5 conflict behavior keeps dialog open** — spec AC8 says "switch to read-only + toast.info + original action NOT executed". The toast fires via `SoftLockWrapper.selfAssignIfNeeded`; the dialog stays open so user can copy typed data. Mixed interpretation: strict spec reading says dialog should close (switch to read-only = UI disabled); pragmatic reading says dialog-open is better UX. Defer for PM/UX clarification.
+
+#### Dismissed (R4)
+
+- **BH HIGH: `FindingCommentThread` uses `useReadOnlyMode()` without guaranteed provider** — FALSE POSITIVE. Verified at `use-read-only-mode.ts:33-36`: `createContext` has default value `{ isReadOnly: false, selfAssignIfNeeded: defaultSelfAssign }`. Hook called outside provider returns `isReadOnly=false` — no crash, same behavior as pre-patch.
+- **BH MED: `isSelfAssigned` not declared in diff** — FALSE POSITIVE. Verified at `SoftLockWrapper.tsx:113`: `const isSelfAssigned = assignment.assignedBy === assignment.assignedTo` inside `handleRelease`. Declaration was outside BH's diff hunk window.
+- **BH MED: `intervalRef` shared across effect runs** — BH self-retracted during analysis. Cleanup correctly clears the interval; new effect sets a new interval. No leak.
+- **BH LOW: `ReviewPageClient.onOverride` comment says "release sync guard on conflict" but optimistic update is elsewhere** — minor flow confusion; code is functionally correct (conflict clears ref + returns, success path falls through to optimistic update + existing `.finally()` clears ref).
+
+#### Failed Review Layers
+
+Both Edge Case Hunter and Acceptance Auditor failed with API overload after 2+ retries each. Inline verification performed for the 4 highest-risk Blind Hunter claims + 4 spec compliance questions (AC4 null scope, AC6 completeness, AC8 conflict dialog behavior, R3-C1 navigation UX). Coverage is ~70% of a full 3-layer review. Recommend CR R5 with full coverage if any new concerns emerge during R4 patch application.
+
 #### Dismissed (not reported to user)
 
 - BH #1/#2 (bulkAction/addFinding "missing lock check") — false positive, both DO call assertLockOwnership (Blind Hunter saw only partial diff)

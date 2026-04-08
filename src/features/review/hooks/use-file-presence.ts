@@ -28,9 +28,6 @@ export function useFilePresence({
 }: UseFilePresenceOptions) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const isVisibleRef = useRef(true)
-  // R2-H2: track mount state so async heartbeats that resolve AFTER unmount
-  // don't invoke the failure callback on a detached component instance
-  const isMountedRef = useRef(true)
   const onPermanentFailureRef = useRef(onPermanentFailure)
   // Keep latest callback in ref so the effect can call it without re-creating the interval
   // (useEffect, not render-time write — Guardrail React Compiler purity)
@@ -56,8 +53,14 @@ export function useFilePresence({
   useEffect(() => {
     if (!enabled || !assignmentId) return
 
-    // R2-H2: flag mount on effect start; cleanup flips to false
-    isMountedRef.current = true
+    // R3-M4: use an effect-local `cancelled` flag (captured by closures inside
+    // THIS effect run) instead of a shared `isMountedRef`. The ref pattern was
+    // incorrect for React strict-mode double-mount: cleanup flips ref to false,
+    // second mount flips it back to true, and in-flight promises from the FIRST
+    // mount then pass the check and call the callback on the remounted instance.
+    // A local `let cancelled = false` is captured per-effect-run, so each
+    // scheduled promise sees ONLY its own effect's flag.
+    let cancelled = false
 
     function handleVisibilityChange() {
       isVisibleRef.current = document.visibilityState === 'visible'
@@ -74,8 +77,7 @@ export function useFilePresence({
 
     // Send initial heartbeat
     void sendHeartbeat().then((outcome) => {
-      // R2-H2: gate on mount state to prevent stale setState/toast on detached component
-      if (!isMountedRef.current) return
+      if (cancelled) return
       if (outcome === 'permanent') {
         killInterval()
         onPermanentFailureRef.current?.()
@@ -86,7 +88,7 @@ export function useFilePresence({
     // Start interval
     intervalRef.current = setInterval(() => {
       void sendHeartbeat().then((outcome) => {
-        if (!isMountedRef.current) return
+        if (cancelled) return
         if (outcome === 'permanent') {
           killInterval()
           onPermanentFailureRef.current?.()
@@ -95,7 +97,7 @@ export function useFilePresence({
     }, HEARTBEAT_INTERVAL_MS)
 
     return () => {
-      isMountedRef.current = false
+      cancelled = true
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       killInterval()
     }
