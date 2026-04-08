@@ -1459,7 +1459,7 @@ export function ReviewPageClient({
                   <button
                     type="button"
                     onClick={handleApprove}
-                    disabled={!canApprove}
+                    disabled={!canApprove || isReadOnly}
                     className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
                   >
                     {isApproving ? 'Approving...' : 'Approve'}

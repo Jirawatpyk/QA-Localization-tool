@@ -101,7 +101,8 @@ export function SoftLockWrapper({
         status: 'assigned' as FileAssignmentStatus,
       })
       if (result.success) {
-        setAssignment(null)
+        // Reload to re-fetch assignment state from server (Story 6.1 behavior)
+        window.location.reload()
       }
     })
   }

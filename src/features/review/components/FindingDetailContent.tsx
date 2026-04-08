@@ -19,6 +19,7 @@ import {
   SegmentContextCrossFile,
 } from '@/features/review/components/SegmentContextList'
 import { SeverityIndicator } from '@/features/review/components/SeverityIndicator'
+import { useReadOnlyMode } from '@/features/review/hooks/use-read-only-mode'
 import { useSegmentContext } from '@/features/review/hooks/use-segment-context'
 import { useFileState } from '@/features/review/stores/review.store'
 import type { FindingForDisplay } from '@/features/review/types'
@@ -107,6 +108,8 @@ export function FindingDetailContent({
   assignmentId,
   flaggerComment,
 }: FindingDetailContentProps) {
+  // S-FIX-7 AC6: read-only enforcement for aside-mode ReviewActionBar
+  const isReadOnly = useReadOnlyMode()
   const [contextRange, setContextRange] = useState(contextRangeProp ?? 2)
 
   // CR-R2 F4: Render-time adjustment pattern (Guardrail — no setState in useEffect for React Compiler)
@@ -305,7 +308,7 @@ export function FindingDetailContent({
             onSource={onSource}
             onOverride={onOverride}
             onAdd={onAdd}
-            isDisabled={!finding || isActionInFlight}
+            isDisabled={!finding || isActionInFlight || isReadOnly}
             isInFlight={isActionInFlight}
             activeAction={activeAction}
             findingNumber={findingNumber}
@@ -320,7 +323,7 @@ export function FindingDetailContent({
             <div className="pt-2">
               <button
                 type="button"
-                disabled={isActionInFlight}
+                disabled={isActionInFlight || isReadOnly}
                 onClick={() => onDelete?.(finding.id)}
                 data-testid="delete-finding-button"
                 className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-sm font-medium bg-error/10 text-error border border-error/20 hover:bg-error/20 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
