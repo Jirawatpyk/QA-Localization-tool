@@ -18,7 +18,17 @@ type ReadOnlyContextValue = {
   selfAssignIfNeeded: (fileId: string, projectId: string) => Promise<SelfAssignOutcome>
 }
 
-const defaultSelfAssign = async () => 'proceed' as const
+// L8 fix: warn if a consumer uses the default (no SoftLockWrapper ancestor).
+// In production this is a silent no-op fallback; in dev it surfaces missing wrappers.
+const defaultSelfAssign = async () => {
+  // eslint-disable-next-line no-restricted-syntax -- client hook can't import @/lib/env (server-only); NODE_ENV is build-inlined by Next.js
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn(
+      '[useLockGuard] selfAssignIfNeeded called without SoftLockWrapper ancestor — lock guard is bypassed.',
+    )
+  }
+  return 'proceed' as const
+}
 
 export const ReadOnlyContext = createContext<ReadOnlyContextValue>({
   isReadOnly: false,
