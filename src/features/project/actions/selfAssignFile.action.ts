@@ -7,11 +7,13 @@ import { and, eq, inArray, sql } from 'drizzle-orm'
 import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { fileAssignments } from '@/db/schema/fileAssignments'
+import { files } from '@/db/schema/files'
 import { users } from '@/db/schema/users'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import { selfAssignFileSchema } from '@/features/project/validation/fileAssignmentSchemas'
 import { requireRole } from '@/lib/auth/requireRole'
 import { logger } from '@/lib/logger'
+import { tryNonFatal } from '@/lib/utils/tryNonFatal'
 import type { ActionResult } from '@/types/actionResult'
 import type { FileAssignmentPriority, FileAssignmentStatus } from '@/types/assignment'
 
@@ -27,7 +29,17 @@ type SelfAssignResult = {
     lastActiveAt: string | null
     assigneeName: string
   }
+  /**
+   * `true` if a NEW row was inserted (success path).
+   * `false` if conflict and we returned the existing row (own or other).
+   */
   created: boolean
+  /**
+   * M12: explicit discriminator — `true` when the existing/new lock is owned by the caller,
+   * `false` when another reviewer holds it. Callers should check this BEFORE proceeding
+   * with mutations even if `success: true`.
+   */
+  ownedBySelf: boolean
 }
 
 /**
@@ -39,17 +51,52 @@ export async function selfAssignFile(input: unknown): Promise<ActionResult<SelfA
   let currentUser
   try {
     currentUser = await requireRole('native_reviewer', 'write')
-  } catch {
-    return { success: false, code: 'UNAUTHORIZED', error: 'Not authenticated' }
+  } catch (err) {
+    // L10 fix: distinguish FORBIDDEN (insufficient role) from UNAUTHORIZED (no auth)
+    const code =
+      typeof err === 'object' &&
+      err !== null &&
+      'code' in err &&
+      (err as { code: unknown }).code === 'FORBIDDEN'
+        ? ('FORBIDDEN' as const)
+        : ('UNAUTHORIZED' as const)
+    return {
+      success: false,
+      code,
+      error: code === 'FORBIDDEN' ? 'Insufficient role' : 'Not authenticated',
+    }
   }
 
   const parsed = selfAssignFileSchema.safeParse(input)
   if (!parsed.success) {
-    return { success: false, code: 'VALIDATION_ERROR', error: parsed.error.message }
+    // M4 fix: use first issue message instead of stringified array
+    return {
+      success: false,
+      code: 'VALIDATION_ERROR',
+      error: parsed.error.issues[0]?.message ?? 'Invalid input',
+    }
   }
 
   const { fileId, projectId } = parsed.data
   const { tenantId, id: userId } = currentUser
+
+  // S-FIX-7 H4: verify file belongs to project (FK exists but no relation check otherwise)
+  const fileRows = await db
+    .select({ projectId: files.projectId })
+    .from(files)
+    .where(and(eq(files.id, fileId), withTenant(files.tenantId, tenantId)))
+    .limit(1)
+
+  if (fileRows.length === 0) {
+    return { success: false, code: 'NOT_FOUND', error: 'File not found' }
+  }
+  if (fileRows[0]!.projectId !== projectId) {
+    return {
+      success: false,
+      code: 'VALIDATION_ERROR',
+      error: 'File does not belong to project',
+    }
+  }
 
   // Attempt INSERT with ON CONFLICT DO NOTHING (partial unique index handles race)
   const insertRows = await db
@@ -75,15 +122,20 @@ export async function selfAssignFile(input: unknown): Promise<ActionResult<SelfA
   if (insertRows.length > 0) {
     const row = insertRows[0]!
 
-    // Audit log (non-fatal in happy path — let it throw, caller catches)
-    await writeAuditLog({
-      tenantId,
-      userId,
-      entityType: 'file_assignment',
-      entityId: row.id,
-      action: 'self_assign',
-      newValue: { assignmentId: row.id, fileId },
-    })
+    // S-FIX-7 H8: audit log non-fatal — INSERT already committed, never let audit
+    // failure mask the success and confuse the user with "self-assign failed" toast
+    await tryNonFatal(
+      () =>
+        writeAuditLog({
+          tenantId,
+          userId,
+          entityType: 'file_assignment',
+          entityId: row.id,
+          action: 'self_assign',
+          newValue: { assignmentId: row.id, fileId },
+        }),
+      { operation: 'selfAssignFile audit log', meta: { assignmentId: row.id } },
+    )
 
     logger.info({ assignmentId: row.id, fileId, userId }, 'Self-assignment created')
 
@@ -109,6 +161,7 @@ export async function selfAssignFile(input: unknown): Promise<ActionResult<SelfA
           assigneeName: userRow?.displayName ?? currentUser.email,
         },
         created: true,
+        ownedBySelf: true, // we just inserted it
       },
     }
   }
@@ -145,6 +198,30 @@ export async function selfAssignFile(input: unknown): Promise<ActionResult<SelfA
 
   const existing = existingRows[0]!
 
+  // M3 fix: NULL fallback for displayName (users.displayName is nullable)
+  const displayNameFallback = existing.assigneeName ?? 'another reviewer'
+
+  // M11: audit log contested-lock attempt for incident forensics
+  // (only when ANOTHER user holds the lock, not when own existing assignment)
+  if (existing.assignedTo !== userId) {
+    await tryNonFatal(
+      () =>
+        writeAuditLog({
+          tenantId,
+          userId,
+          entityType: 'file_assignment',
+          entityId: existing.id,
+          action: 'self_assign_conflict',
+          newValue: {
+            attemptedFileId: fileId,
+            existingAssignmentId: existing.id,
+            existingAssignedTo: existing.assignedTo,
+          },
+        }),
+      { operation: 'selfAssignFile conflict audit', meta: { fileId } },
+    )
+  }
+
   // If the existing lock holder is the current user, return it as success
   if (existing.assignedTo === userId) {
     return {
@@ -159,9 +236,10 @@ export async function selfAssignFile(input: unknown): Promise<ActionResult<SelfA
           status: existing.status as FileAssignmentStatus,
           priority: existing.priority as FileAssignmentPriority,
           lastActiveAt: existing.lastActiveAt?.toISOString() ?? null,
-          assigneeName: existing.assigneeName,
+          assigneeName: existing.assigneeName ?? currentUser.email,
         },
         created: false,
+        ownedBySelf: true, // existing row is ours
       },
     }
   }
@@ -179,9 +257,10 @@ export async function selfAssignFile(input: unknown): Promise<ActionResult<SelfA
         status: existing.status as FileAssignmentStatus,
         priority: existing.priority as FileAssignmentPriority,
         lastActiveAt: existing.lastActiveAt?.toISOString() ?? null,
-        assigneeName: existing.assigneeName,
+        assigneeName: displayNameFallback,
       },
       created: false,
+      ownedBySelf: false, // M12: explicit signal — caller MUST short-circuit mutation
     },
   }
 }

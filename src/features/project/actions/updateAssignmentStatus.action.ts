@@ -26,8 +26,8 @@ type FileAssignment = {
 
 // Valid status transitions
 const VALID_TRANSITIONS: Record<FileAssignmentStatus, FileAssignmentStatus[]> = {
-  assigned: ['in_progress'],
-  in_progress: ['completed', 'assigned'], // assigned = release
+  assigned: ['in_progress', 'cancelled'],
+  in_progress: ['completed', 'assigned', 'cancelled'], // assigned = release back to admin pool, cancelled = self-assigned release
   completed: [],
   cancelled: [],
 }
@@ -86,6 +86,21 @@ export async function updateAssignmentStatus(
     }
   }
 
+  // R2-C1: privilege escalation guard — `cancelled` may only be chosen by the
+  // ORIGINAL self-assigner (self-release) OR an admin/QA (override). A native
+  // reviewer who was admin-assigned MUST transition through `assigned` (release
+  // back to the admin pool) rather than destroy the assignment.
+  if (newStatus === 'cancelled') {
+    const isSelfAssigned = current.assignedBy === current.assignedTo
+    if (!isSelfAssigned && !isAdmin) {
+      return {
+        success: false,
+        code: 'FORBIDDEN',
+        error: 'Only the original self-assigner or an admin can cancel an assignment',
+      }
+    }
+  }
+
   // Build update payload
   const updatePayload: Record<string, unknown> = {
     status: newStatus,
@@ -97,8 +112,11 @@ export async function updateAssignmentStatus(
     updatePayload.lastActiveAt = new Date()
   } else if (newStatus === 'completed') {
     updatePayload.completedAt = new Date()
+  } else if (newStatus === 'cancelled') {
+    // Self-assign release: cancel completely so the file can be picked up by anyone
+    updatePayload.completedAt = new Date()
   } else if (newStatus === 'assigned' && oldStatus === 'in_progress') {
-    // Release: clear started_at
+    // Admin-assign release: revert to assigned state, clear started_at
     updatePayload.startedAt = null
     updatePayload.lastActiveAt = null
   }

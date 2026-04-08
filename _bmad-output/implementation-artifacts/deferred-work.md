@@ -104,3 +104,14 @@
 - ~~**D4: Empty-tenant dead-end**~~ ✅ DONE — added guidance text linking to `Projects → Settings` in both `NewUserLanguageChips` and `LanguagePairEditor` empty states.
 - ~~**D5: Max-20 boundary test**~~ ✅ DONE — covered by P10 (`accepts exactly 20`, `rejects 21`).
 - ~~**D6: Position-based insert assertions**~~ ✅ DONE — `__table` sentinels via `vi.hoisted()` + `findInsert(calls, tableName)` helper replaces `insertCalls[0]` / `insertCalls[length-1]`.
+
+## Deferred from: code review of s-fix-7 (2026-04-08) — ALL RESOLVED (same session, CR R2)
+
+- ~~**H6: `useFilePresence` heartbeat dies on transient failure**~~ ✅ DONE — `sendHeartbeat()` now returns `'ok'|'transient'|'permanent'`. Permanent (NOT_FOUND/UNAUTHORIZED) → kill interval + `onPermanentFailure` callback. Transient → keep interval running. SoftLockWrapper wires callback to surface "lock expired" toast.
+- ~~**H9: Read-only denied actions have no a11y feedback**~~ ✅ DONE — new `useReadOnlyAnnouncer()` hook in `use-read-only-mode.ts`. Creates global sr-only `role="status" aria-live="polite"` region. One announcement per action label per session. Wired into handleApprove + handleBulkAccept + handleBulkReject.
+- ~~**M7: `step.run` test mock collapses `id` param**~~ ✅ DONE — `createStepMock()` factory in `releaseStaleAssignments.test.ts` tracks step IDs and asserts uniqueness via `new Set(stepIds).size === stepIds.length`. Guardrail #13 enforced.
+- ~~**M11: No audit log on `selfAssignFile` contested-lock attempts**~~ ✅ DONE — `self_assign_conflict` audit entry written via `tryNonFatal` in the contested-lock branch (only when ANOTHER user holds the lock; idempotent re-self-assign by owner is silent).
+- ~~**L3: UX States Checklist mostly unchecked**~~ ✅ DONE — all 6 checklist boxes (Loading/Error/Empty/Success/Partial/UX-Spec) checked off in story doc.
+- ~~**L5: Sequential audit-log loop in cron**~~ ✅ DONE — `Promise.allSettled` parallelizes the per-row audit writes. Wall-time now O(1) instead of O(N). Cron return shape extended with `auditFailures` count for observability.
+- ~~**L7: `assertLockOwnership` has no admin-override escape hatch**~~ ✅ DONE — optional `role` parameter; `role === 'admin'` short-circuits the lock check entirely. Existing callers unchanged (param defaults to undefined).
+- ~~**M12: `selfAssignFile` contract refinement**~~ ✅ DONE (originally listed as patch, deferred to scope-creep concern, then applied in same R2 batch) — explicit `ownedBySelf: boolean` discriminator added to `SelfAssignResult`. SoftLockWrapper.selfAssignIfNeeded updated to use it instead of inferring from `assignedTo === currentUserId`.

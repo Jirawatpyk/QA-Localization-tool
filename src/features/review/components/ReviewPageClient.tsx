@@ -55,7 +55,11 @@ import {
   useReviewHotkeys,
   useUndoRedoHotkeys,
 } from '@/features/review/hooks/use-keyboard-actions'
-import { useReadOnlyMode } from '@/features/review/hooks/use-read-only-mode'
+import {
+  useLockGuard,
+  useReadOnlyAnnouncer,
+  useReadOnlyMode,
+} from '@/features/review/hooks/use-read-only-mode'
 import { useReviewActions } from '@/features/review/hooks/use-review-actions'
 import { useScoreSubscription } from '@/features/review/hooks/use-score-subscription'
 import { useThresholdSubscription } from '@/features/review/hooks/use-threshold-subscription'
@@ -169,6 +173,8 @@ export function ReviewPageClient({
   initialData,
 }: ReviewPageClientProps) {
   const isReadOnly = useReadOnlyMode()
+  const { selfAssignIfNeeded } = useLockGuard()
+  const announceReadOnly = useReadOnlyAnnouncer() // H9: a11y feedback for SR users
   const resetForFile = useReviewStore((s) => s.resetForFile)
   const setFilter = useReviewStore((s) => s.setFilter)
   const setFindings = useReviewStore((s) => s.setFindings)
@@ -412,25 +418,53 @@ export function ReviewPageClient({
     [fileId, projectId, clearSelection, setSelectionMode, setBulkInFlight, initialData.isNonNative],
   )
 
-  const handleBulkAccept = useCallback(() => {
-    if (isReadOnly) return // S-FIX-7 AC6: read-only guard
+  const handleBulkAccept = useCallback(async () => {
+    if (isReadOnly) {
+      announceReadOnly('bulk accept') // H9: a11y feedback
+      return // S-FIX-7 AC6: read-only guard
+    }
+    // S-FIX-7 C3 fix: self-assign before bulk mutation
+    const outcome = await selfAssignIfNeeded(fileId, projectId)
+    if (outcome === 'conflict') return
     if (selectedIds.size > 5) {
       setBulkConfirmAction('accept')
       setBulkConfirmOpen(true)
     } else {
       executeBulk('accept').catch(() => toast.error('Bulk accept failed'))
     }
-  }, [selectedIds.size, executeBulk, isReadOnly])
+  }, [
+    selectedIds.size,
+    executeBulk,
+    isReadOnly,
+    selfAssignIfNeeded,
+    fileId,
+    projectId,
+    announceReadOnly,
+  ])
 
-  const handleBulkReject = useCallback(() => {
-    if (isReadOnly) return // S-FIX-7 AC6: read-only guard
+  const handleBulkReject = useCallback(async () => {
+    if (isReadOnly) {
+      announceReadOnly('bulk reject') // H9: a11y feedback
+      return // S-FIX-7 AC6: read-only guard
+    }
+    // S-FIX-7 C3 fix: self-assign before bulk mutation
+    const outcome = await selfAssignIfNeeded(fileId, projectId)
+    if (outcome === 'conflict') return
     if (selectedIds.size > 5) {
       setBulkConfirmAction('reject')
       setBulkConfirmOpen(true)
     } else {
       executeBulk('reject').catch(() => toast.error('Bulk reject failed'))
     }
-  }, [selectedIds.size, executeBulk, isReadOnly])
+  }, [
+    selectedIds.size,
+    executeBulk,
+    isReadOnly,
+    selfAssignIfNeeded,
+    fileId,
+    projectId,
+    announceReadOnly,
+  ])
 
   const handleClearBulkSelection = useCallback(() => {
     clearSelection()
@@ -465,8 +499,11 @@ export function ReviewPageClient({
 
   // CR-R2 P1-2: shared native confirm handler with stale rollback guard
   const executeNativeConfirm = useCallback(
-    (findingId: string) => {
+    async (findingId: string) => {
       if (isReadOnly) return // S-FIX-7 AC6: read-only guard
+      // S-FIX-7 C3 fix: self-assign before native confirm mutation
+      const lockOutcome = await selfAssignIfNeeded(fileId, projectId)
+      if (lockOutcome === 'conflict') return
       const store = useReviewStore.getState()
       const f = getStoreFileState(store, fileId).findingsMap.get(findingId)
       if (!f) return
@@ -523,13 +560,16 @@ export function ReviewPageClient({
           toast.error('Confirm failed')
         })
     },
-    [fileId, projectId, isReadOnly],
+    [fileId, projectId, isReadOnly, selfAssignIfNeeded],
   )
 
   // CR-R2 P0-2: shared native override handler with dynamic status
   const executeNativeOverride = useCallback(
-    (findingId: string, newStatus: 'accepted' | 'rejected') => {
+    async (findingId: string, newStatus: 'accepted' | 'rejected') => {
       if (isReadOnly) return // S-FIX-7 AC6: read-only guard
+      // S-FIX-7 C3 fix: self-assign before native override mutation
+      const lockOutcome = await selfAssignIfNeeded(fileId, projectId)
+      if (lockOutcome === 'conflict') return
       const store = useReviewStore.getState()
       const f = getStoreFileState(store, fileId).findingsMap.get(findingId)
       if (!f) return
@@ -587,7 +627,7 @@ export function ReviewPageClient({
           toast.error('Override failed')
         })
     },
-    [fileId, projectId, isReadOnly],
+    [fileId, projectId, isReadOnly, selfAssignIfNeeded],
   )
 
   // Register review hotkeys — A/R/F wired to real handlers (Story 4.2)
@@ -645,6 +685,7 @@ export function ReviewPageClient({
         register(
           'shift+f',
           () => {
+            if (isReadOnly) return // S-FIX-7 H3: read-only guard
             const findingId = activeFindingIdRef.current
             if (!findingId) return
             setFlagDialogFindingId(findingId)
@@ -664,6 +705,7 @@ export function ReviewPageClient({
       register(
         'ctrl+a',
         () => {
+          if (isReadOnly) return // S-FIX-7 H3: read-only guard (no bulk mode in read-only)
           useReviewStore.getState().selectAllFiltered()
         },
         {
@@ -694,7 +736,7 @@ export function ReviewPageClient({
     return () => {
       for (const cleanup of cleanups) cleanup()
     }
-  }, [register, fileId, isNativeReviewer, activeFindingIdRef])
+  }, [register, fileId, isNativeReviewer, activeFindingIdRef, isReadOnly])
 
   // J/K navigation from review-zone scope (Guardrail #28: review area, not just grid)
   const navigateNextRef = useRef<(() => void) | null>(null)
@@ -1136,8 +1178,14 @@ export function ReviewPageClient({
   }
 
   function handleApprove() {
-    if (isReadOnly) return // S-FIX-7 AC6: read-only guard
+    if (isReadOnly) {
+      announceReadOnly('approve file') // H9: a11y feedback
+      return // S-FIX-7 AC6: read-only guard
+    }
     startApproveTransition(async () => {
+      // S-FIX-7 C3 fix: self-assign before approve
+      const lockOutcome = await selfAssignIfNeeded(fileId, projectId)
+      if (lockOutcome === 'conflict') return
       const result = await approveFile({ fileId, projectId })
       if (result.success) {
         toast.success('File approved')
@@ -1276,7 +1324,14 @@ export function ReviewPageClient({
 
   // CR-R1-M1: shared delete handler for desktop aside + mobile sheet (DRY)
   const handleDeleteFinding = useCallback(
-    (findingId: string) => {
+    async (findingId: string) => {
+      if (isReadOnly) {
+        announceReadOnly('delete finding') // R2-H5: a11y feedback (same pattern as handleApprove)
+        return // S-FIX-7 AC6: read-only guard
+      }
+      // S-FIX-7 C3 fix: self-assign before delete
+      const lockOutcome = await selfAssignIfNeeded(fileId, projectId)
+      if (lockOutcome === 'conflict') return
       // Capture snapshot BEFORE server call — Realtime may remove it before .then() runs
       const findingSnapshot = getStoreFileState(useReviewStore.getState(), fileId).findingsMap.get(
         findingId,
@@ -1343,7 +1398,15 @@ export function ReviewPageClient({
         })
         .catch(() => toast.error('Delete failed'))
     },
-    [fileId, projectId, setSelectedFinding, handleActiveFindingChange],
+    [
+      fileId,
+      projectId,
+      setSelectedFinding,
+      handleActiveFindingChange,
+      isReadOnly,
+      selfAssignIfNeeded,
+      announceReadOnly,
+    ],
   )
 
   // mobileDrawerOpen, showToggleButton, handleToggleDrawer, prevLayoutForSheet,
@@ -1560,7 +1623,7 @@ export function ReviewPageClient({
                 onAccept={() => activeFindingState && handleAccept(activeFindingState)}
                 onReject={() => activeFindingState && handleReject(activeFindingState)}
                 onFlag={() => {
-                  if (!activeFindingState) return
+                  if (!activeFindingState || isReadOnly) return // S-FIX-7 H3: read-only guard
                   // CR-C3 fix: open FlagForNativeDialog for QA reviewers instead of simple flag
                   if (!isNativeReviewer) {
                     setFlagDialogFindingId(activeFindingState)
@@ -1700,6 +1763,7 @@ export function ReviewPageClient({
             {/* Story 4.3: NoteInput popover (AC1 Path 2) */}
             <NoteInput
               open={isNoteInputOpen}
+              disabled={isReadOnly}
               onSubmit={(noteText) => {
                 setIsNoteInputOpen(false)
                 // CR-R1-H3: use ref-captured findingId from open time, not current activeFindingState
@@ -1722,9 +1786,12 @@ export function ReviewPageClient({
                 originalSeverity={activeFinding.originalSeverity}
                 open={isOverrideMenuOpen}
                 onOpenChange={setIsOverrideMenuOpen}
-                onOverride={(newSeverity) => {
+                onOverride={async (newSeverity) => {
                   setIsOverrideMenuOpen(false)
                   if (!activeFindingState || overrideInFlightRef.current) return
+                  // S-FIX-7 C3 fix: self-assign before override
+                  const lockOutcome = await selfAssignIfNeeded(fileId, projectId)
+                  if (lockOutcome === 'conflict') return
                   // Optimistic store update
                   const store = useReviewStore.getState()
                   const f = getStoreFileState(store, fileId).findingsMap.get(activeFindingState)
@@ -1799,11 +1866,14 @@ export function ReviewPageClient({
                       overrideInFlightRef.current = false
                     })
                 }}
-                onReset={() => {
+                onReset={async () => {
                   setIsOverrideMenuOpen(false)
                   if (!activeFindingState || !activeFinding || overrideInFlightRef.current) return
                   const orig = activeFinding.originalSeverity
                   if (!orig) return
+                  // S-FIX-7 C3 fix: self-assign before override reset
+                  const lockOutcome = await selfAssignIfNeeded(fileId, projectId)
+                  if (lockOutcome === 'conflict') return
                   // Optimistic store update for reset
                   const store = useReviewStore.getState()
                   const f = getStoreFileState(store, fileId).findingsMap.get(activeFindingState)
@@ -1891,8 +1961,11 @@ export function ReviewPageClient({
               defaultSegmentId={
                 activeFindingState ? (findingsMap.get(activeFindingState)?.segmentId ?? null) : null
               }
-              onSubmit={(data) => {
+              onSubmit={async (data) => {
                 setIsAddFindingDialogOpen(false)
+                // S-FIX-7 C3 fix: self-assign before add finding
+                const lockOutcome = await selfAssignIfNeeded(fileId, projectId)
+                if (lockOutcome === 'conflict') return
                 void addFinding({ ...data, fileId, projectId })
                   .then((result) => {
                     if (result.success) {
@@ -2028,6 +2101,7 @@ export function ReviewPageClient({
                     onAccept={handleAccept}
                     onReject={handleReject}
                     onFlag={(id) => {
+                      if (isReadOnly) return // S-FIX-7 H3: read-only guard
                       if (!isNativeReviewer) {
                         setFlagDialogFindingId(id)
                         setFlagDialogOpen(true)
@@ -2087,6 +2161,7 @@ export function ReviewPageClient({
               onAccept={handleAccept}
               onReject={handleReject}
               onFlag={(id) => {
+                if (isReadOnly) return // S-FIX-7 H3: read-only guard
                 if (!isNativeReviewer) {
                   setFlagDialogFindingId(id)
                   setFlagDialogOpen(true)

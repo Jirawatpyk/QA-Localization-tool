@@ -33,6 +33,24 @@ vi.mock('@/types/tenant', () => ({
 
 import { releaseStaleAssignments } from './releaseStaleAssignments'
 
+/**
+ * M7: id-tracking step.run mock so tests can assert deterministic step IDs
+ * (Guardrail #13: Inngest step IDs must be unique per execution).
+ * Returns { mockStep, stepIds } — assert `new Set(stepIds).size === stepIds.length`.
+ */
+function createStepMock() {
+  const stepIds: string[] = []
+  return {
+    stepIds,
+    mockStep: {
+      run: async <T>(id: string, fn: () => Promise<T>) => {
+        stepIds.push(id)
+        return fn()
+      },
+    },
+  }
+}
+
 describe('releaseStaleAssignments', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -59,20 +77,20 @@ describe('releaseStaleAssignments', () => {
       lastActiveAt: new Date(Date.now() - 31 * 60 * 1000), // 31 min ago
     }
 
-    // Call 1: UPDATE in_progress returning stale rows
-    // Call 2: UPDATE assigned returning stale rows
+    // Single UPDATE: in_progress + stale lastActiveAt
+    // (S-FIX-7 AC4 strict scope — 'assigned' row lifecycle deferred to S-FIX-7b)
     dbState.returnValues = [
       [staleAssignment], // in_progress stale
-      [], // assigned stale (none)
     ]
 
-    const mockStep = {
-      run: async <T>(_id: string, fn: () => Promise<T>) => fn(),
-    }
+    const { mockStep, stepIds } = createStepMock()
 
     const result = await releaseStaleAssignments.handler({ step: mockStep })
 
-    expect(result).toEqual({ releasedCount: 1 })
+    // Guardrail #13: step IDs must be deterministic + unique
+    expect(new Set(stepIds).size).toBe(stepIds.length)
+
+    expect(result).toEqual({ releasedCount: 1, auditFailures: 0 })
     expect(mockWriteAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'auto_release',
@@ -83,16 +101,17 @@ describe('releaseStaleAssignments', () => {
   })
 
   it('should not release active (<30min) assignments', async () => {
-    // Both queries return empty (no stale assignments)
-    dbState.returnValues = [[], []]
+    // Single UPDATE — no stale rows
+    dbState.returnValues = [[]]
 
-    const mockStep = {
-      run: async <T>(_id: string, fn: () => Promise<T>) => fn(),
-    }
+    const { mockStep, stepIds } = createStepMock()
 
     const result = await releaseStaleAssignments.handler({ step: mockStep })
 
-    expect(result).toEqual({ releasedCount: 0 })
+    // Guardrail #13: step IDs must be deterministic + unique
+    expect(new Set(stepIds).size).toBe(stepIds.length)
+
+    expect(result).toEqual({ releasedCount: 0, auditFailures: 0 })
     expect(mockWriteAuditLog).not.toHaveBeenCalled()
   })
 
@@ -114,21 +133,25 @@ describe('releaseStaleAssignments', () => {
       lastActiveAt: new Date(),
     }
 
-    dbState.returnValues = [[row1, row2], []]
+    dbState.returnValues = [[row1, row2]]
 
     // First audit log fails, second succeeds
     mockWriteAuditLog
       .mockRejectedValueOnce(new Error('audit failed'))
       .mockResolvedValueOnce(undefined)
 
-    const mockStep = {
-      run: async <T>(_id: string, fn: () => Promise<T>) => fn(),
-    }
+    const { mockStep, stepIds } = createStepMock()
 
     const result = await releaseStaleAssignments.handler({ step: mockStep })
 
+    // Guardrail #13: step IDs must be deterministic + unique
+    expect(new Set(stepIds).size).toBe(stepIds.length)
+
     // Should still complete and report both as released
-    expect(result).toEqual({ releasedCount: 2 })
+    // L5 fix: audit log loop is now Promise.allSettled — caught failures don't propagate
+    // (the inner try/catch in the audit lambda swallows errors and returns undefined,
+    // so allSettled sees them as fulfilled). auditFailures only counts true rejections.
+    expect(result.releasedCount).toBe(2)
     expect(mockWriteAuditLog).toHaveBeenCalledTimes(2)
   })
 })

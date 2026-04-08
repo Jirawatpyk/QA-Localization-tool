@@ -46,7 +46,12 @@ export default async function ReviewPage({
 
   return (
     <div className="p-6">
-      <SoftLockWrapper assignment={assignment} currentUserId={currentUserId} projectId={projectId}>
+      <SoftLockWrapper
+        assignment={assignment}
+        currentUserId={currentUserId}
+        projectId={projectId}
+        fileId={fileId}
+      >
         <ReviewPageClient
           fileId={fileId}
           projectId={projectId}

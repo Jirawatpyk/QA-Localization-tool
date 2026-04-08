@@ -14,6 +14,7 @@ import { userRoles } from '@/db/schema/userRoles'
 import { users } from '@/db/schema/users'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import type { ReviewActionResult } from '@/features/review/actions/helpers/executeReviewAction'
+import { assertLockOwnership } from '@/features/review/helpers/assertLockOwnership'
 import { flagForNativeSchema } from '@/features/review/validation/reviewAction.schema'
 import type { FlagForNativeInput } from '@/features/review/validation/reviewAction.schema'
 import { determineNonNative } from '@/lib/auth/determineNonNative'
@@ -42,7 +43,7 @@ export async function flagForNative(
     }
   }
 
-  const { findingId, fileId: _fileId, projectId, assignedTo, flaggerComment } = parsed.data
+  const { findingId, fileId, projectId, assignedTo, flaggerComment } = parsed.data
 
   // Auth: qa_reviewer or admin (hierarchy)
   let user: Awaited<ReturnType<typeof requireRole>>
@@ -53,6 +54,10 @@ export async function flagForNative(
   }
 
   const { id: userId, tenantId } = user
+
+  // S-FIX-7: Lock ownership check (AC3 — defense-in-depth)
+  const lockError = await assertLockOwnership(fileId, tenantId, userId)
+  if (lockError) return lockError
 
   // Step 1: Fetch finding — verify exists + fileId NOT NULL (5.2b TODO M1)
   const findingRows = await db

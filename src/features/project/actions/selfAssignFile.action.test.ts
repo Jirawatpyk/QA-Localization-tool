@@ -25,6 +25,7 @@ const { dbState, dbMockModule } = vi.hoisted(() =>
 vi.mock('@/db/client', () => dbMockModule)
 vi.mock('@/db/helpers/withTenant', () => ({ withTenant: vi.fn() }))
 vi.mock('@/db/schema/fileAssignments', () => ({ fileAssignments: {} }))
+vi.mock('@/db/schema/files', () => ({ files: {} }))
 vi.mock('@/db/schema/users', () => ({ users: {} }))
 
 const mockRequireRole = vi.fn().mockResolvedValue(mockUser)
@@ -84,8 +85,10 @@ describe('selfAssignFile', () => {
     const assignmentId = faker.string.uuid()
     const now = new Date()
 
-    // Call 1: INSERT .returning() → inserted row
     dbState.returnValues = [
+      // Call 1 (S-FIX-7 H4): SELECT files for project verification
+      [{ projectId: validInput.projectId }],
+      // Call 2: INSERT .returning() → inserted row
       [
         {
           id: assignmentId,
@@ -98,7 +101,7 @@ describe('selfAssignFile', () => {
           lastActiveAt: now,
         },
       ],
-      // Call 2: SELECT users.displayName
+      // Call 3: SELECT users.displayName
       [{ displayName: 'Test Reviewer' }],
     ]
 
@@ -127,10 +130,12 @@ describe('selfAssignFile', () => {
     const otherUserId = faker.string.uuid()
     const existingAssignmentId = faker.string.uuid()
 
-    // Call 1: INSERT .returning() → empty (conflict, DO NOTHING)
     dbState.returnValues = [
+      // Call 1 (H4): SELECT files
+      [{ projectId: validInput.projectId }],
+      // Call 2: INSERT .returning() → empty (conflict, DO NOTHING)
       [],
-      // Call 2: SELECT existing lock holder
+      // Call 3: SELECT existing lock holder
       [
         {
           id: existingAssignmentId,
@@ -151,21 +156,30 @@ describe('selfAssignFile', () => {
     expect(result.success).toBe(true)
     if (result.success) {
       expect(result.data.created).toBe(false)
+      expect(result.data.ownedBySelf).toBe(false) // M12: explicit discriminator
       expect(result.data.assignment.assignedTo).toBe(otherUserId)
       expect(result.data.assignment.assigneeName).toBe('Other Reviewer')
     }
 
-    // No audit log on conflict
-    expect(mockWriteAuditLog).not.toHaveBeenCalled()
+    // M11 fix: contested-lock conflict NOW writes a `self_assign_conflict` audit entry
+    expect(mockWriteAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'self_assign_conflict',
+        entityType: 'file_assignment',
+        entityId: existingAssignmentId,
+      }),
+    )
   })
 
   it('should return own existing assignment when self already holds lock', async () => {
     const existingAssignmentId = faker.string.uuid()
 
-    // Call 1: INSERT .returning() → empty (conflict, own lock already exists)
     dbState.returnValues = [
+      // Call 1 (H4): SELECT files
+      [{ projectId: validInput.projectId }],
+      // Call 2: INSERT .returning() → empty (conflict, own lock already exists)
       [],
-      // Call 2: SELECT existing — own assignment
+      // Call 3: SELECT existing — own assignment
       [
         {
           id: existingAssignmentId,
@@ -186,12 +200,16 @@ describe('selfAssignFile', () => {
     expect(result.success).toBe(true)
     if (result.success) {
       expect(result.data.created).toBe(false)
+      expect(result.data.ownedBySelf).toBe(true) // R2-M3: explicit discriminator check
       expect(result.data.assignment.assignedTo).toBe(mockUser.id)
     }
   })
 
-  it('should use withTenant for tenant isolation', async () => {
+  it('should require write mode auth via requireRole(native_reviewer, write)', async () => {
     dbState.returnValues = [
+      // Call 1 (H4): SELECT files
+      [{ projectId: validInput.projectId }],
+      // Call 2: INSERT
       [
         {
           id: faker.string.uuid(),
@@ -204,12 +222,43 @@ describe('selfAssignFile', () => {
           lastActiveAt: new Date(),
         },
       ],
+      // Call 3: SELECT users.displayName
       [{ displayName: 'Test Reviewer' }],
     ]
 
     await selfAssignFile(validInput)
 
-    // requireRole is called with write mode
+    // Auth verification: write mode required (per Guardrail RBAC M3)
     expect(mockRequireRole).toHaveBeenCalledWith('native_reviewer', 'write')
+  })
+
+  it('should reject when file does not belong to project (S-FIX-7 H4)', async () => {
+    const otherProjectId = faker.string.uuid()
+    dbState.returnValues = [
+      // Call 1 (H4): SELECT files — file belongs to a DIFFERENT project
+      [{ projectId: otherProjectId }],
+    ]
+
+    const result = await selfAssignFile(validInput)
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('VALIDATION_ERROR')
+      expect(result.error).toContain('does not belong to project')
+    }
+  })
+
+  it('should return NOT_FOUND when file does not exist', async () => {
+    dbState.returnValues = [
+      // Call 1 (H4): SELECT files — empty
+      [],
+    ]
+
+    const result = await selfAssignFile(validInput)
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('NOT_FOUND')
+    }
   })
 })

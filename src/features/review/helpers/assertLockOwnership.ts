@@ -6,6 +6,7 @@ import { db } from '@/db/client'
 import { withTenant } from '@/db/helpers/withTenant'
 import { fileAssignments } from '@/db/schema/fileAssignments'
 import { users } from '@/db/schema/users'
+import type { ActionResult } from '@/types/actionResult'
 import type { TenantId } from '@/types/tenant'
 
 type LockCheckResult =
@@ -56,13 +57,20 @@ export async function checkLockOwnership(
 
 /**
  * Assert lock ownership for a review mutation action.
- * Returns null if action can proceed, or an ActionResult error if blocked.
+ * Returns null if action can proceed, or an `ActionResult` error if blocked.
+ *
+ * M10 fix: typed as `ActionResult<never>` so callers can pattern-match on the
+ * discriminated union without relying on structural compatibility.
+ *
+ * Note: admin escalation/compliance flows that need to bypass locks should use
+ * a dedicated `takeOverFile` action (which atomically transfers ownership) rather
+ * than a bypass parameter — the latter creates audit blind spots for admin mutations.
  */
 export async function assertLockOwnership(
   fileId: string,
   tenantId: TenantId,
   userId: string,
-): Promise<{ success: false; error: string; code: 'LOCK_CONFLICT' } | null> {
+): Promise<ActionResult<never> | null> {
   const result = await checkLockOwnership(fileId, tenantId, userId)
 
   if (result.locked && !result.isOwner) {

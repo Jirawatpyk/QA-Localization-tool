@@ -27,9 +27,11 @@ const handlerFn = async ({
   const result = await step.run('release-stale-assignments', async () => {
     const threshold = new Date(Date.now() - AUTO_RELEASE_THRESHOLD_MIN * 60 * 1000)
 
-    // Find and update stale assignments in one query
-    // AC4 boundary: exactly 30 min = still active, 30m+1s = released (lt, not lte)
-    const staleRows = await db
+    // AC4: release only 'in_progress' assignments that have been inactive for 30+ minutes.
+    // Boundary: lastActiveAt strictly less than (now - 30min) → released. Exactly 30 min ago = still active.
+    // NOTE: 'assigned' rows (admin pre-assignments reviewer never opened) are intentionally
+    // NOT released by this cron — see S-FIX-7b for the `assigned` row lifecycle gap.
+    const allStale = await db
       .update(fileAssignments)
       .set({
         status: 'cancelled',
@@ -48,32 +50,15 @@ const handlerFn = async ({
         lastActiveAt: fileAssignments.lastActiveAt,
       })
 
-    // Also release assigned status with no activity for 30+ min
-    const staleAssigned = await db
-      .update(fileAssignments)
-      .set({
-        status: 'cancelled',
-        completedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(
-        and(eq(fileAssignments.status, 'assigned'), lt(fileAssignments.lastActiveAt, threshold)),
-      )
-      .returning({
-        id: fileAssignments.id,
-        fileId: fileAssignments.fileId,
-        projectId: fileAssignments.projectId,
-        assignedTo: fileAssignments.assignedTo,
-        tenantId: fileAssignments.tenantId,
-        lastActiveAt: fileAssignments.lastActiveAt,
-      })
-
-    const allStale = [...staleRows, ...staleAssigned]
-
     // Write audit logs per row (Guardrail #2: non-fatal in error path)
-    for (const row of allStale) {
-      try {
-        const tenantId = validateTenantId(row.tenantId)
+    // L5 fix: parallelize via Promise.allSettled — N rows complete in 1*latency, not N*latency.
+    // R2-C2 fix: let inner errors REJECT so allSettled can count them. Inner try/catch
+    // would swallow failures and make `auditFailures` permanently 0. Logging still happens
+    // in the rejection handler below.
+    const auditResults = await Promise.allSettled(
+      allStale.map(async (row) => {
+        // L6 + R2-M1: validate tenantId — throw to be counted in failures
+        const tenantId = validateTenantId(row.tenantId) // throws on invalid UUID
         await writeAuditLog({
           tenantId,
           userId: row.assignedTo,
@@ -87,17 +72,32 @@ const handlerFn = async ({
             lastActiveAt: row.lastActiveAt?.toISOString() ?? null,
           },
         })
-      } catch (auditErr) {
+      }),
+    )
+
+    // Count and log real rejections (now that inner try/catch is gone, allSettled sees them)
+    let auditFailures = 0
+    auditResults.forEach((result, idx) => {
+      if (result.status === 'rejected') {
+        auditFailures++
+        const row = allStale[idx]!
         logger.error(
-          { err: auditErr, assignmentId: row.id },
+          {
+            err: result.reason,
+            assignmentId: row.id,
+            rawTenantId: row.tenantId,
+          },
           'release-stale-assignments: audit log write failed',
         )
       }
-    }
+    })
 
-    logger.info({ releasedCount: allStale.length }, 'Stale file assignments auto-released')
+    logger.info(
+      { releasedCount: allStale.length, auditFailures },
+      'Stale file assignments auto-released',
+    )
 
-    return { releasedCount: allStale.length }
+    return { releasedCount: allStale.length, auditFailures }
   })
 
   return result

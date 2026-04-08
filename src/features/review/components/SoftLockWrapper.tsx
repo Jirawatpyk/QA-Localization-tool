@@ -12,7 +12,7 @@ import { useFilePresence } from '@/features/review/hooks/use-file-presence'
 import { useInactivityWarning } from '@/features/review/hooks/use-inactivity-warning'
 import { ReadOnlyContext } from '@/features/review/hooks/use-read-only-mode'
 import { useSoftLock } from '@/features/review/hooks/use-soft-lock'
-import type { FileAssignmentStatus } from '@/types/assignment'
+import type { FileAssignmentPriority, FileAssignmentStatus } from '@/types/assignment'
 
 /** Polling intervals for lock state detection (AC7) */
 const LOCK_POLL_FAST_MS = 5_000 // When read-only (waiting for lock release)
@@ -25,6 +25,8 @@ type FileAssignment = {
   assignedTo: string
   assignedBy: string
   status: FileAssignmentStatus
+  // L2 fix: priority must be in the local type — polling sets it and `as FileAssignment` cast hid the drift
+  priority: FileAssignmentPriority
   lastActiveAt: string | null
   assigneeName: string
 }
@@ -33,6 +35,7 @@ type SoftLockWrapperProps = {
   assignment: FileAssignment | null
   currentUserId: string | null
   projectId: string
+  fileId: string
   children: React.ReactNode
 }
 
@@ -48,6 +51,7 @@ export function SoftLockWrapper({
   assignment: initialAssignment,
   currentUserId,
   projectId,
+  fileId,
   children,
 }: SoftLockWrapperProps) {
   // S-FIX-7: Mutable assignment state (starts from server prop, updated on self-assign/poll)
@@ -76,6 +80,11 @@ export function SoftLockWrapper({
   useFilePresence({
     assignmentId: isOwnAssignment ? assignmentId : null,
     enabled: isOwnActive,
+    // H6: surface lock loss when heartbeat returns permanent failure (cancelled/auth lost)
+    onPermanentFailure: () => {
+      setAssignment(null)
+      toast.warning('Your review lock has expired — click any action to re-acquire')
+    },
   })
 
   // Auto-transition on mount: assigned→in_progress (AC7)
@@ -94,26 +103,83 @@ export function SoftLockWrapper({
 
   function handleRelease() {
     if (!assignment) return
+    // S-FIX-7 C4 fix: self-assigned files (assignedBy === assignedTo) must be CANCELLED
+    // on release so other reviewers can self-assign. Admin-assigned files revert to
+    // 'assigned' state (Story 6.1 behavior — admin pool re-assign).
+    const isSelfAssigned = assignment.assignedBy === assignment.assignedTo
+    const releaseStatus: FileAssignmentStatus = isSelfAssigned ? 'cancelled' : 'assigned'
     startReleaseTransition(async () => {
       const result = await updateAssignmentStatus({
         assignmentId: assignment.id,
         projectId,
-        status: 'assigned' as FileAssignmentStatus,
+        status: releaseStatus,
       })
       if (result.success) {
-        // Reload to re-fetch assignment state from server (Story 6.1 behavior)
+        // Reload to re-fetch assignment state from server
         window.location.reload()
       }
     })
   }
 
+  // S-FIX-7 H7: when tab returns to visible, re-fetch assignment state to detect
+  // a stale lock (cron auto-cancelled while tab was background). If we discover
+  // our lock was lost, surface a toast so the user knows to re-self-assign.
+  useEffect(() => {
+    if (!currentUserId) return
+
+    function handleVisibilityChange() {
+      if (document.visibilityState !== 'visible') return
+      if (!isOwnAssignment) return // only relevant when we believe we hold the lock
+
+      void getFileAssignment({ fileId, projectId }).then((result) => {
+        if (!result.success) return
+        const polled = result.data.assignment
+        // R2-H3: detect lock loss in 3 cases:
+        // (1) no polled row at all (cron deleted),
+        // (2) polled row belongs to someone else (takeover),
+        // (3) polled row is ours but status transitioned to cancelled/completed
+        //     (cron auto-released our own lock — H5 tightened isOwnAssignment to require active status)
+        const ownLockLost =
+          !polled ||
+          polled.assignedTo !== currentUserId ||
+          polled.status === 'cancelled' ||
+          polled.status === 'completed'
+        if (ownLockLost) {
+          setAssignment(
+            polled
+              ? {
+                  id: polled.id,
+                  fileId: polled.fileId,
+                  projectId: polled.projectId,
+                  assignedTo: polled.assignedTo,
+                  assignedBy: polled.assignedBy,
+                  status: polled.status as FileAssignmentStatus,
+                  priority: polled.priority as FileAssignmentPriority,
+                  lastActiveAt: polled.lastActiveAt,
+                  assigneeName: polled.assigneeName,
+                }
+              : null,
+          )
+          toast.warning('Your review lock has expired — click any action to re-acquire')
+        }
+      })
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [currentUserId, isOwnAssignment, fileId, projectId])
+
   // S-FIX-7 AC1: Self-assign on first review action for unassigned files
   const selfAssignIfNeeded = useCallback(
     async (fileId: string, pId: string) => {
-      // Already has assignment — no self-assign needed
-      if (assignment) {
+      // R2-H4: only early-return when assignment is ACTIVE. If it's stale
+      // (cancelled/completed — e.g., cron released it but poll hasn't caught up),
+      // fall through to selfAssignFile so the server is the source of truth.
+      const isActive =
+        assignment && (assignment.status === 'assigned' || assignment.status === 'in_progress')
+      if (isActive) {
         if (isOwnAssignment) return 'already-assigned' as const
-        return 'conflict' as const // Another user's lock
+        return 'conflict' as const // Another user's active lock
       }
 
       const result = await selfAssignFile({ fileId, projectId: pId })
@@ -122,53 +188,31 @@ export function SoftLockWrapper({
         return 'conflict' as const
       }
 
-      const { assignment: newAssignment, created } = result.data
+      // M12: use explicit ownedBySelf discriminator instead of inferring from assignedTo
+      const { assignment: newAssignment, created, ownedBySelf } = result.data
 
-      if (created) {
-        // Self-assign succeeded
-        setAssignment({
-          id: newAssignment.id,
-          fileId: newAssignment.fileId,
-          projectId: newAssignment.projectId,
-          assignedTo: newAssignment.assignedTo,
-          assignedBy: newAssignment.assignedBy,
-          status: newAssignment.status,
-          lastActiveAt: newAssignment.lastActiveAt,
-          assigneeName: newAssignment.assigneeName,
-        })
-        return 'proceed' as const
-      }
-
-      // Conflict: another reviewer got there first (AC8)
-      if (newAssignment.assignedTo !== currentUserId) {
-        setAssignment({
-          id: newAssignment.id,
-          fileId: newAssignment.fileId,
-          projectId: newAssignment.projectId,
-          assignedTo: newAssignment.assignedTo,
-          assignedBy: newAssignment.assignedBy,
-          status: newAssignment.status,
-          lastActiveAt: newAssignment.lastActiveAt,
-          assigneeName: newAssignment.assigneeName,
-        })
-        toast.info(`File is now being reviewed by ${newAssignment.assigneeName}`)
-        return 'conflict' as const
-      }
-
-      // Own existing assignment (idempotent)
-      setAssignment({
+      const next = {
         id: newAssignment.id,
         fileId: newAssignment.fileId,
         projectId: newAssignment.projectId,
         assignedTo: newAssignment.assignedTo,
         assignedBy: newAssignment.assignedBy,
         status: newAssignment.status,
+        priority: newAssignment.priority,
         lastActiveAt: newAssignment.lastActiveAt,
         assigneeName: newAssignment.assigneeName,
-      })
-      return 'already-assigned' as const
+      }
+      setAssignment(next)
+
+      if (!ownedBySelf) {
+        // Conflict: another reviewer got there first (AC8)
+        toast.info(`File is now being reviewed by ${newAssignment.assigneeName}`)
+        return 'conflict' as const
+      }
+      return created ? ('proceed' as const) : ('already-assigned' as const)
     },
-    [assignment, isOwnAssignment, currentUserId],
+    // M12: currentUserId no longer needed — we now rely on server's ownedBySelf flag
+    [assignment, isOwnAssignment],
   )
 
   // S-FIX-7 AC7: Lock state polling for release detection
@@ -197,31 +241,39 @@ export function SoftLockWrapper({
     }
 
     async function poll() {
-      // Need a fileId to poll — get from current assignment or from page context
-      const fileId = assignment?.fileId
-      if (!fileId) return
-
+      // S-FIX-7 C2 fix: poll uses page-level fileId prop, not assignment.fileId
+      // (assignment may be null when monitoring for new locks per AC7)
       const result = await getFileAssignment({ fileId, projectId })
       if (!result.success) return
 
       const polledAssignment = result.data.assignment
-      // Update assignment state on change
-      if (polledAssignment) {
-        setAssignment({
+
+      // S-FIX-7 H1 fix: debounce — skip setAssignment if no meaningful change
+      setAssignment((prev) => {
+        if (!polledAssignment) {
+          return prev === null ? prev : null
+        }
+        if (
+          prev &&
+          prev.id === polledAssignment.id &&
+          prev.status === polledAssignment.status &&
+          prev.assignedTo === polledAssignment.assignedTo &&
+          prev.lastActiveAt === polledAssignment.lastActiveAt
+        ) {
+          return prev
+        }
+        return {
           id: polledAssignment.id,
           fileId: polledAssignment.fileId,
           projectId: polledAssignment.projectId,
           assignedTo: polledAssignment.assignedTo,
           assignedBy: polledAssignment.assignedBy,
           status: polledAssignment.status as FileAssignmentStatus,
-          priority: polledAssignment.priority,
+          priority: polledAssignment.priority as FileAssignmentPriority,
           lastActiveAt: polledAssignment.lastActiveAt,
           assigneeName: polledAssignment.assigneeName,
-        } as FileAssignment)
-      } else {
-        // Lock released
-        setAssignment(null)
-      }
+        }
+      })
     }
 
     pollIntervalRef.current = setInterval(() => {
@@ -234,7 +286,7 @@ export function SoftLockWrapper({
         pollIntervalRef.current = null
       }
     }
-  }, [isOwnAssignment, isReadOnly, lockState, currentUserId, assignment?.fileId, projectId])
+  }, [isOwnAssignment, isReadOnly, lockState, currentUserId, fileId, projectId])
 
   const contextValue = useMemo(
     () => ({ isReadOnly, selfAssignIfNeeded }),

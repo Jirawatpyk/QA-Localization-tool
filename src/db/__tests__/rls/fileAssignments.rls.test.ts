@@ -427,17 +427,26 @@ describe('file_assignments RLS', () => {
   // T10: Native reviewer cannot DELETE
   it('T10: native reviewer cannot DELETE assignments', async () => {
     const client = tenantClient(nativeUser.jwt)
-    await client.from('file_assignments').delete().eq('id', assignmentForNative)
+    // M9 fix: capture both result fields and assert RLS denial signal
+    const { data: deletedRows, error } = await client
+      .from('file_assignments')
+      .delete()
+      .eq('id', assignmentForNative)
+      .select('id')
 
-    // RLS should prevent this — either error or no rows affected
-    // Supabase returns no error but 0 rows for RLS denial on DELETE
+    // RLS denies DELETE for native_reviewer — Supabase returns either error OR empty data
+    // (different versions behave differently — accept either)
+    const wasDenied = !!error || !deletedRows || deletedRows.length === 0
+    expect(wasDenied).toBe(true)
+
+    // Confirm row still exists in DB
     const { data: check } = await admin
       .from('file_assignments')
       .select('id')
       .eq('id', assignmentForNative)
       .single()
 
-    expect(check).not.toBeNull() // Row still exists
+    expect(check).not.toBeNull()
   })
 
   // === S-FIX-7: Self-assign + Lock Visibility ===

@@ -20,14 +20,21 @@ type UseInactivityWarningOptions = {
  *
  * Guardrail #20: prefers-reduced-motion:reduce on toast entry — handled by sonner.
  */
+// M5 throttle: at most 1 ref-write per 1000ms — mousemove fires ~60 Hz otherwise
+const ACTIVITY_THROTTLE_MS = 1_000
+
 export function useInactivityWarning({ assignmentId, enabled }: UseInactivityWarningOptions) {
   const lastActivityRef = useRef(0)
+  const lastThrottleRef = useRef(0)
   const toastIdRef = useRef<string | number | null>(null)
   const checkIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Reset activity timer on any user interaction
+  // Reset activity timer on any user interaction (M5: throttled)
   const resetActivity = useCallback(() => {
-    lastActivityRef.current = Date.now()
+    const now = Date.now()
+    if (now - lastThrottleRef.current < ACTIVITY_THROTTLE_MS) return
+    lastThrottleRef.current = now
+    lastActivityRef.current = now
 
     // Dismiss warning toast if visible
     if (toastIdRef.current !== null) {
@@ -70,7 +77,16 @@ export function useInactivityWarning({ assignmentId, enabled }: UseInactivityWar
       if (elapsed >= INACTIVITY_WARNING_MS && toastIdRef.current === null) {
         toastIdRef.current = toast.warning(
           'Your review lock expires in 5 minutes. Click anywhere to keep reviewing.',
-          { duration: Infinity },
+          {
+            duration: Infinity,
+            // M6 fix: clear ref if sonner dismisses externally so future warnings re-show
+            onDismiss: () => {
+              toastIdRef.current = null
+            },
+            onAutoClose: () => {
+              toastIdRef.current = null
+            },
+          },
         )
       }
     }, CHECK_INTERVAL_MS)

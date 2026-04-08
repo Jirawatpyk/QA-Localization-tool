@@ -11,6 +11,11 @@ type NoteInputProps = {
   open: boolean
   onSubmit: (noteText: string) => void
   onDismiss: () => void
+  /**
+   * S-FIX-7 H2: when true, textarea + Save button are disabled (read-only mode).
+   * Submit handler also short-circuits to prevent any mutation.
+   */
+  disabled?: boolean
 }
 
 /**
@@ -19,7 +24,7 @@ type NoteInputProps = {
  * Guardrail #11: resets form on re-open.
  * Guardrail #27: focus indicator 2px indigo, 4px offset.
  */
-export function NoteInput({ open, onSubmit, onDismiss }: NoteInputProps) {
+export function NoteInput({ open, onSubmit, onDismiss, disabled = false }: NoteInputProps) {
   const [text, setText] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -42,11 +47,12 @@ export function NoteInput({ open, onSubmit, onDismiss }: NoteInputProps) {
   }, [open])
 
   const handleSubmit = useCallback(() => {
+    if (disabled) return // S-FIX-7 H2: read-only guard
     const trimmed = text.trim()
     if (trimmed.length > 0) {
       onSubmit(trimmed)
     }
-  }, [text, onSubmit])
+  }, [text, onSubmit, disabled])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -115,6 +121,7 @@ export function NoteInput({ open, onSubmit, onDismiss }: NoteInputProps) {
             }
           }}
           maxLength={MAX_NOTE_LENGTH}
+          disabled={disabled}
           placeholder="Add a note about this finding... (Enter to save, Shift+Enter for newline)"
           onKeyDown={handleKeyDown}
           className="min-h-20 resize-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
@@ -140,7 +147,7 @@ export function NoteInput({ open, onSubmit, onDismiss }: NoteInputProps) {
               type="button"
               size="sm"
               onClick={handleSubmit}
-              disabled={text.trim().length === 0}
+              disabled={text.trim().length === 0 || disabled}
               data-testid="note-save-button"
               className="focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4"
             >

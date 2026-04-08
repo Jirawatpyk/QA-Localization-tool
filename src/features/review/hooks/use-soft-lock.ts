@@ -72,7 +72,13 @@ export function useSoftLock({ assignment, currentUserId }: UseSoftLockOptions): 
   const [lockState, setLockState] = useState<LockState>('unlocked')
   const [isStale, setIsStale] = useState(false)
 
-  const isOwnAssignment = !!currentUserId && assignment?.assignedTo === currentUserId
+  // S-FIX-7 H5: tighten isOwnAssignment to require active status.
+  // Without status check, a cancelled/completed self-assignment would still
+  // be treated as "own", skipping polling and showing stale "You are reviewing" UI.
+  const isOwnAssignment =
+    !!currentUserId &&
+    assignment?.assignedTo === currentUserId &&
+    (assignment?.status === 'assigned' || assignment?.status === 'in_progress')
   const lastActiveAt = assignment?.lastActiveAt ? new Date(assignment.lastActiveAt) : null
 
   // Stale check via interval — Date.now() only inside effect callback (React Compiler purity)

@@ -11,6 +11,7 @@ import { findings } from '@/db/schema/findings'
 import { reviewActions } from '@/db/schema/reviewActions'
 import { writeAuditLog } from '@/features/audit/actions/writeAuditLog'
 import type { ReviewActionResult } from '@/features/review/actions/helpers/executeReviewAction'
+import { assertLockOwnership } from '@/features/review/helpers/assertLockOwnership'
 import { confirmNativeSchema } from '@/features/review/validation/reviewAction.schema'
 import type { ConfirmNativeInput } from '@/features/review/validation/reviewAction.schema'
 import { requireRole } from '@/lib/auth/requireRole'
@@ -47,6 +48,10 @@ export async function confirmNativeReview(
   }
 
   const { id: userId, tenantId } = user
+
+  // S-FIX-7: Lock ownership check (AC3 — defense-in-depth)
+  const lockError = await assertLockOwnership(fileId, tenantId, userId)
+  if (lockError) return lockError
 
   // Fetch assignment — verify current user is assigned (Guardrail #64)
   const assignmentRows = await db

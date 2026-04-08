@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react'
+import { createContext, useCallback, useContext } from 'react'
 
 /**
  * Self-assign result — returned by the lock guard before review actions.
@@ -41,4 +41,56 @@ export function useReadOnlyMode(): boolean {
 
 export function useLockGuard(): ReadOnlyContextValue {
   return useContext(ReadOnlyContext)
+}
+
+/**
+ * H9: aria-live announcer for read-only denials.
+ *
+ * Returns a function `announce(actionLabel)` that fires an sr-only aria-live
+ * polite announcement every time. Screen-reader users get feedback on every
+ * silently-blocked mutation attempt (WCAG SC 4.1.3 Status Messages).
+ *
+ * Usage:
+ * ```
+ * const announce = useReadOnlyAnnouncer()
+ * if (isReadOnly) { announce('approve file'); return }
+ * ```
+ *
+ * R2-H1 fix: removed the once-per-session dedupe Set — repeated denials now
+ * re-announce. R2-M4 fix: uses a module-level ref for the live region (not
+ * getElementById) to avoid ID collisions; uses setTimeout(100) instead of rAF
+ * so screen readers reliably pick up the new textContent.
+ */
+const LIVE_REGION_DATA_ATTR = 'data-readonly-announcer'
+let liveRegionRef: HTMLElement | null = null
+
+function ensureLiveRegion(): HTMLElement | null {
+  if (typeof document === 'undefined') return null
+  if (liveRegionRef && liveRegionRef.isConnected) return liveRegionRef
+  const region = document.createElement('div')
+  region.setAttribute(LIVE_REGION_DATA_ATTR, 'true')
+  region.setAttribute('role', 'status')
+  region.setAttribute('aria-live', 'polite')
+  region.setAttribute('aria-atomic', 'true')
+  // sr-only styles (Tailwind sr-only equivalent)
+  region.style.cssText =
+    'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0'
+  document.body.appendChild(region)
+  liveRegionRef = region
+  return region
+}
+
+export function useReadOnlyAnnouncer(): (actionLabel: string) => void {
+  return useCallback((actionLabel: string) => {
+    const region = ensureLiveRegion()
+    if (!region) return
+
+    // Clear then set so screen readers re-announce identical messages.
+    // setTimeout(100) is more reliable than rAF for SR pickup across browsers.
+    region.textContent = ''
+    const message = `${actionLabel} ignored — file is read-only`
+    setTimeout(() => {
+      if (region.isConnected) region.textContent = message
+    }, 100)
+  }, [])
 }

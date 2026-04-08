@@ -1,6 +1,6 @@
 # Story S-FIX-7: Concurrent Review Soft Lock
 
-Status: review
+Status: in-progress
 
 ## Story
 
@@ -198,11 +198,11 @@ The `isReadOnly` flag from `useReadOnlyMode()` MUST be checked and enforced in A
 ## UX States Checklist (Guardrail #96)
 
 - [x] **Loading state:** N/A — no new loading UI (reuses existing SoftLockWrapper)
-- [ ] **Error state:** Self-assignment failure → toast "File is now being reviewed by {name}" + switch to read-only
-- [ ] **Empty state:** N/A — file always has content (empty file has separate route guard)
-- [ ] **Success state:** Self-assignment success → "You are reviewing this file" bar appears
-- [ ] **Partial state:** N/A — no progressive loading
-- [ ] **UX Spec match:** Verified against `_bmad-output/planning-artifacts/ux-design-specification/core-user-experience.md` Edge Case #3
+- [x] **Error state:** Self-assignment failure → toast "File is now being reviewed by {name}" + switch to read-only ✅ implemented in SoftLockWrapper.selfAssignIfNeeded conflict path
+- [x] **Empty state:** N/A — file always has content (empty file has separate route guard)
+- [x] **Success state:** Self-assignment success → "You are reviewing this file" bar appears ✅ implemented as own-assignment-bar at SoftLockWrapper.tsx:247
+- [x] **Partial state:** N/A — no progressive loading
+- [x] **UX Spec match:** Verified against `_bmad-output/planning-artifacts/ux-design-specification/core-user-experience.md` Edge Case #3 ✅ verified during Task 9 Playwright MCP session
 
 ## Tasks / Subtasks
 
@@ -502,3 +502,140 @@ Claude Opus 4.6 (1M context)
 - 29 action test files in `src/features/review/actions/` — added `vi.mock('@/features/review/helpers/assertLockOwnership', ...)` (done by agent)
 - `src/features/review/components/FindingDetailContent.tsx` — (Task 9 fix) added `useReadOnlyMode` hook + `|| isReadOnly` to ReviewActionBar `isDisabled` and Delete button — this is the aside-mode action bar, separate from ReviewPageClient's main action bar
 - Reverted `SoftLockWrapper.handleRelease` to use `window.location.reload()` (originally my change set local assignment to null, but that left stale server state visible after polling)
+
+### Review Findings
+
+**Code Review — 2026-04-08 (Amelia)**
+
+Review scope: commits `034c535..HEAD` (3 commits, 63 files, +2095/-57). Three reviewers: Blind Hunter, Edge Case Hunter, Acceptance Auditor.
+
+**Summary:** 4 CRIT, 7 HIGH, 12 MED, 5 LOW, 1 decision-needed, 7 deferred, ~10 dismissed as noise/false-positive.
+
+#### Decision Needed
+
+- [x] [Review][Decision] **M1 RESOLVED → Option A (strict AC4 compliance)** — removed second UPDATE for `status='assigned'`. Gap captured in new story `s-fix-7b-assigned-row-lifecycle.md`. Original finding: **M1: AC4 Inngest cron releases `assigned` rows (out of spec)** — `releaseStaleAssignments.ts:52-69` runs a second UPDATE for `status='assigned'` in addition to `'in_progress'`. AC4 spec only authorized `in_progress`. Was this scope expansion intentional during Task 9 verification, or accidental? Impact: admin pre-assignments with stale `lastActiveAt` (e.g., 30+ min since admin created them without the reviewer opening the file) are silently auto-cancelled. Options: (a) remove second UPDATE to match spec strictly, (b) keep + update spec to include `assigned` (need PM approval), (c) keep but only when `startedAt IS NOT NULL` so admin pre-assignments are exempt.
+
+#### Patches (Critical — block sign-off)
+
+- [x] [Review][Patch] **C1: 8 mutation actions have NO server-side `assertLockOwnership` check** — spec's Task 3.4 claim "executeReviewAction helper covers 8 actions" is false: `confirmNativeReview.action.ts`, `flagForNative.action.ts`, `overrideNativeReview.action.ts` only import the TYPE `ReviewActionResult` and implement their own logic; they never call `executeReviewAction()`. Spec's Task 3.5 claim "executeUndoRedo covers 7 undo/redo actions" is also false: only `undoAction.action.ts` and `redoAction.action.ts` use the helper; `undoAddFinding.action.ts`, `undoDeleteFinding.action.ts`, `undoSeverityOverride.action.ts`, `undoBulkAction.action.ts`, `redoBulkAction.action.ts` do not. All 8 bypass the lock check entirely. AC3 defense-in-depth broken. Fix: add `assertLockOwnership(fileId, tenantId, userId)` + early-return to each after auth and input validation.
+- [x] [Review][Patch] **C2: Polling never detects a NEW lock when no initial assignment** [`SoftLockWrapper.tsx:199-202`] — `function poll() { const fileId = assignment?.fileId; if (!fileId) return }`. When `initialAssignment === null`, `fileId` is undefined, `poll()` returns immediately on every tick. AC7 explicitly requires 15s polling "monitoring for new locks" in the unlocked state — currently broken for any reviewer viewing an unassigned file. Fix: pass `fileId` as an explicit prop to `SoftLockWrapper` (hoist from page-level) so polling is independent of assignment state.
+- [x] [Review][Patch] **C3: 6 mutation entry points never call `selfAssignIfNeeded`** [`ReviewPageClient.tsx:415-433, 467-527, 530-?, 1138-1152`] — only `useReviewActions.executeAction` (accept/reject/flag/note/sourceIssue) calls `selfAssignIfNeeded`. These paths bypass it and go straight to server actions: `handleBulkAccept`/`handleBulkReject`, `executeNativeConfirm`, `executeNativeOverride`, `handleApprove`, Add Finding dialog submit, Delete Finding, Override Severity. AC1 lists Approve, Confirm Native, Bulk, Add Finding, Override Severity as first-action triggers — none self-assign. On an unassigned file: two reviewers can simultaneously approve, bulk-accept, add findings with zero lock record. Fix: wrap each of the 6 handlers with `await selfAssignIfNeeded(fileId, projectId)` + short-circuit on `'conflict'`.
+- [x] [Review][Patch] **C4: "Release file" button does not actually release self-assigned files** [`SoftLockWrapper.tsx:95-108`, `updateAssignmentStatus.action.ts:100-104`] — Release flips status `in_progress → assigned` with `lastActiveAt: null`. The partial unique index `WHERE status IN ('assigned','in_progress')` still covers `'assigned'`, so another reviewer's `selfAssignFile` still gets ON CONFLICT and sees the original user as lock holder. Plus `lastActiveAt IS NULL` never matches `lt(lastActiveAt, threshold)` in the Inngest cron, so the row never auto-cancels. Page reloads post-release and `autoTransition()` flips `assigned → in_progress` again, re-locking. For self-assigned files, Release is a no-op loop. Task 9 verified "release" only via direct SQL, not via the Release button — the button flow was never actually tested. Fix: `status: 'cancelled'` for self-assigned files (`assignedBy === assignedTo`), or `'assigned'` only when admin-assigned.
+
+#### Patches (High)
+
+- [x] [Review][Patch] **H1: Task 8.4 "debounce state update" unimplemented** [`SoftLockWrapper.tsx:209-224`] — spec Task 8.4 is `[x]` but `setInterval(poll)` calls `setAssignment` unconditionally on every poll with no equality check or debounce. Fix: compare polled data against local state and skip `setAssignment` on no-op.
+- [x] [Review][Patch] **H2: `NoteInput` component missing `disabled` prop (Task 7.4)** [`NoteInput.tsx`] — Task 7.4 marked `[x]` but the component has zero `isReadOnly`/`disabled` references. Textarea editable in read-only mode. Server-side `updateNoteText.action.ts` has the lock check, so defense holds — but UX spec's "silently disabled" requirement is not met. Fix: add `disabled` prop, wire from `useReadOnlyMode()`.
+- [x] [Review][Patch] **H3: FlagForNativeDialog open trigger and Shift+F hotkey unguarded in read-only** [`ReviewPageClient.tsx:642-660, 1562-1568, 2030-2036, 2089-2095`] — Task 7.3 claims `[x]` but Shift+F hotkey and the four button onClick paths don't check `isReadOnly`. Server-side `flagForNative.action.ts` is already unguarded (see C1). Fix: add `isReadOnly` guard to hotkey effect and button handlers, then fix C1 server-side too.
+- [x] [Review][Patch] **H4: `selfAssignFile` does not verify file belongs to project** [`selfAssignFile.action.ts:55-72`] — INSERT uses `fileId` and `projectId` blindly. FKs exist but no check that the file actually belongs to the project. A crafted request can create a `file_assignments` row pairing mismatched fileId + projectId. Fix: `SELECT files.projectId FROM files WHERE files.id = fileId AND withTenant(files.tenantId, tenantId)` before INSERT; assert `file.projectId === projectId`.
+- [x] [Review][Patch] **H5: `isOwnAssignment` stale UI after cron auto-release** [`SoftLockWrapper.tsx:75-79, 177-185`, `use-soft-lock.ts:computeState`] — `isOwnAssignment` is computed from `assignedTo === currentUserId` only, independent of status. If cron cancels a row while the tab is background, `isOwnAssignment` stays true, polling is skipped, heartbeat dies on NOT_FOUND and never recovers. Tab shows "You are reviewing this file" forever; user acts but no lock exists. Fix: tighten `isOwnAssignment` to require `status IN ('assigned','in_progress')`, or keep polling on own-but-inactive.
+- [x] [Review][Patch] **H7: Background tab → invisible inactivity warning + silent lock loss** [`use-inactivity-warning.ts:44-91`, `use-file-presence.ts:22-52`] — browser throttles `setInterval(30s)` to ~1min in background tabs, warning toast fires invisibly, heartbeat is paused by visibility-pause, cron cancels row after 30 min. User returns to find lock gone with no UX feedback. Fix: on `visibilitychange → visible`, re-fetch assignment status and surface "Your lock has expired" toast if cancelled, then offer re-self-assign or navigate-away.
+- [x] [Review][Patch] **H8: `selfAssignFile` happy-path `writeAuditLog` exception bubbles up** [`selfAssignFile.action.ts:79-86`] — audit log is unwrapped; if it throws after the row is committed, the Server Action returns an error, client toasts "Self-assign failed", but the row exists. Next click goes through the conflict path and succeeds — confusing error-then-success UX. Fix: wrap in `tryNonFatal({ feature: 'selfAssignFile', op: 'writeAuditLog' })` from `@/lib/utils/tryNonFatal`.
+
+#### Patches (Medium)
+
+- [x] [Review][Patch] **M2 N/A — superseded by M1-A** [`releaseStaleAssignments.ts:32-50`] — original finding: 2 non-atomic UPDATEs racing. After M1-A removed the second UPDATE for `status='assigned'`, only 1 UPDATE remains; no race possible. M2 is automatically resolved.
+- [x] [Review][Patch] **M3: `assigneeName` NULL fallback missing in conflict return paths** [`selfAssignFile.action.ts:162, 182`] — success path uses `userRow?.displayName ?? currentUser.email`, but conflict paths return `existing.assigneeName` raw. `users.displayName` is nullable. Toast renders "reviewed by undefined". Fix: add `?? 'another reviewer'` fallback or fetch email in JOIN.
+- [x] [Review][Patch] **M4: `selfAssignFile` returns stringified `parsed.error.message` on validation error** [`selfAssignFile.action.ts:48`] — other actions use `parsed.error.issues[0]?.message ?? 'Invalid input'`. Fix: align with existing pattern.
+- [x] [Review][Patch] **M5: Unthrottled `mousemove` listener in inactivity warning** [`use-inactivity-warning.ts:62-65`] — `mousemove` fires ~60 Hz and each call writes `lastActivityRef` and branches. Fix: throttle via ref (1 Hz) — `if (Date.now() - lastThrottleRef.current < 1000) return`.
+- [x] [Review][Patch] **M6: Warning `toastIdRef` stale if sonner dismisses externally** [`use-inactivity-warning.ts:70-75`] — `if (toastIdRef.current === null)` guards against re-show, but ref is never cleared by sonner's own dismiss path. Fix: pass `onDismiss: () => { toastIdRef.current = null }` to `toast.warning()`.
+- [x] [Review][Patch] **M8: Test "should use withTenant for tenant isolation" doesn't verify withTenant** [`selfAssignFile.action.test.ts:1338-1359`] — test only asserts `requireRole` call; no withTenant mock assertion. Misleading green. Fix: either assert on `withTenant` spy or rename test.
+- [x] [Review][Patch] **M9: RLS test T10 lost its `error` destructure assertion** [`fileAssignments.rls.test.ts:687-697`] — DELETE test now only verifies row persists, not that RLS returned an error. Weaker signal. Fix: restore `const { error } = await ...` and assert `expect(error).toBeTruthy()`.
+- [x] [Review][Patch] **M10: `assertLockOwnership` return-type coupling is fragile** [`assertLockOwnership.ts`] — helper returns `{ success: false; error: string; code: 'LOCK_CONFLICT' } | null`. 17 callsites rely on structural compatibility with `ActionResult<T>`'s error variant. Fix: type as `ActionResult<never> | null` to make the relationship explicit.
+- [x] [Review][Defer] **M12 DEFERRED — contract refinement, no behavior change** [`selfAssignFile.action.ts:169-186`] — original concern: contested-lock returns `success: true` with `created: false`, fragile for future callers. Current sole caller (`SoftLockWrapper.selfAssignIfNeeded`) correctly checks `assignedTo === currentUserId`, so behavior is correct today. Refactoring to `LOCK_CONFLICT` error would touch the wrapper's 3 setAssignment paths and tests, with zero behavior delta. Defer to a future contract-cleanup story.
+- [x] [Review][Patch] **M13: Boundary comment says "30m+1s" but code is "30m+1ms"** [`s-fix-7-concurrent-soft-lock.md:131`, `releaseStaleAssignments.ts:31`] — comment and AC4 say "30m+1s = auto-released". Actual behavior: `lt(lastActiveAt, threshold)` triggers at 30m+1ms. Fix: update comment/spec wording to `"strictly greater than 30 minutes"`.
+
+#### Patches (Low)
+
+- [x] [Review][Patch] **L2: `SoftLockWrapper` `FileAssignment` local type missing `priority`** [`SoftLockWrapper.tsx:21-30, 2546-2548`] — polling payload includes `priority`, cast via `as FileAssignment` to suppress TS. Fix: add `priority: FileAssignmentPriority` to the local type.
+- [x] [Review][Patch] **L6: `validateTenantId` throw inside audit-log try/catch logs confusingly** [`releaseStaleAssignments.ts:76-95`] — diagnostic message is ambiguous between "tenant ID validation failed" and "audit log write failed". Fix: separate the two concerns or use distinct error messages.
+- [x] [Review][Patch] **L8: Default `ReadOnlyContext.selfAssignIfNeeded` returns `'proceed'` silently** [`use-read-only-mode.ts`] — tests or misrendered components bypass the guard entirely. Fix: default should log a dev warning or throw so missing `SoftLockWrapper` is loud.
+- [x] [Review][Patch] **L10: `selfAssignFile` test mocks FORBIDDEN as UNAUTHORIZED** [`selfAssignFile.action.test.ts:1204-1217`] — action's catch block returns `UNAUTHORIZED` for any throw from `requireRole`, losing FORBIDDEN semantics. Fix: either rethrow the ActionResult or pattern-match `e.code === 'FORBIDDEN'`.
+
+#### Originally Deferred — APPLIED IN CR R2 (2026-04-08)
+
+- [x] [Review][Patch] **H6 APPLIED:** distinguish transient vs permanent heartbeat errors [`use-file-presence.ts`] — `sendHeartbeat()` now returns `'ok' | 'transient' | 'permanent'`. Permanent (NOT_FOUND/UNAUTHORIZED) kills interval + invokes new `onPermanentFailure` callback. Transient (network) keeps interval running. SoftLockWrapper wires the callback to surface "Your review lock has expired" toast.
+- [x] [Review][Patch] **H9 APPLIED:** aria-live announcer for read-only denials [`use-read-only-mode.ts`, `ReviewPageClient.tsx`] — new `useReadOnlyAnnouncer()` hook creates a global sr-only `role="status" aria-live="polite"` region. Wired into `handleApprove`, `handleBulkAccept`, `handleBulkReject` (most-frequently-hit). One announcement per action label per session.
+- [x] [Review][Patch] **M7 APPLIED:** `createStepMock()` factory tracks step IDs and asserts uniqueness via `new Set(stepIds).size === stepIds.length` — Guardrail #13 enforced.
+- [x] [Review][Patch] **M11 APPLIED:** `self_assign_conflict` audit entry written via `tryNonFatal` in the contested-lock branch. Forensic trail for "who tried to take whose lock at what time".
+- [x] [Review][Patch] **L3 APPLIED:** UX States Checklist boxes all checked off (Loading/Error/Empty/Success/Partial/UX-Spec) per Guardrail #96.
+- [x] [Review][Patch] **L5 APPLIED:** `Promise.allSettled` parallelizes the per-row audit log loop. Cron now returns `{ releasedCount, auditFailures }`. Wall-time scales O(1) instead of O(N).
+- [x] [Review][Patch] **L7 APPLIED:** Optional `role` parameter in `assertLockOwnership` — `role === 'admin'` short-circuits the lock check (compliance/escalation flow). Callers wishing to use it pass `currentUser.role`; existing callers default to undefined and behave unchanged.
+- [x] [Review][Patch] **M12 APPLIED:** `selfAssignFile` now returns explicit `ownedBySelf: boolean` discriminator. `SoftLockWrapper.selfAssignIfNeeded` updated to use it instead of inferring from `assignedTo === currentUserId`. Future callers can pattern-match on the explicit flag.
+
+#### Still Deferred (won't fix in this story)
+
+_(none — all originally-deferred items applied in CR R2)_
+
+---
+
+### Code Review — Round 2 (2026-04-08, Amelia)
+
+**Scope:** review of CR R1 + R2 patches + parallel Boy Scout commits. Diff `1ec6779..HEAD + uncommitted` (3587 lines, 19 source files).
+
+**Layers run:** Blind Hunter ✅ (16 findings), Edge Case Hunter ✅ (9 findings), Acceptance Auditor ❌ (API overload after 3 retries) — replaced with manual inline audit of 6 critical spec questions: AC3 completeness, C4 server-side authorization, Boy Scout conflict, Guardrail #9, AC6 dialog guards, M11 audit gating.
+
+**Summary:** 3 CRIT + 5 HIGH + 4 MED = **12 patches**; 2 defer; 7 dismissed as noise/false-positive.
+
+#### Patches (Critical — block sign-off)
+
+- [x] [Review R2][Patch] **R2-C1: `updateAssignmentStatus` privilege escalation — native_reviewer can cancel admin-assigned files** [`updateAssignmentStatus.action.ts:28-87`] — the C4 patch widened `VALID_TRANSITIONS` to allow `assigned → cancelled` and `in_progress → cancelled`, but the ownership gate only checks `isAssignee || isAssigner || isAdmin`. A native_reviewer who is `isAssignee` for an admin-assigned file can POST `updateAssignmentStatus({ status: 'cancelled' })` directly (bypassing the client's `isSelfAssigned` check) and destroy the admin's assignment. Client `handleRelease` correctly picks 'assigned' for admin-assigned vs 'cancelled' for self-assigned, but the server doesn't enforce this distinction. Fix: add server-side guard — `cancelled` only allowed when `current.assignedBy === current.assignedTo` (self-assigned) OR `isAdmin`. Detected by Blind Hunter + Edge Case Hunter + inline audit.
+- [x] [Review R2][Patch] **R2-C2: `releaseStaleAssignments.auditFailures` counter is dead metric — always 0** [`releaseStaleAssignments.ts:56-98`] — the L5 Promise.allSettled refactor wraps each audit write in an inner try/catch that swallows the error and returns undefined. `Promise.allSettled` sees all as `fulfilled`, so `auditResults.filter((r) => r.status === 'rejected').length` is permanently 0. Any dashboard/alert keyed on `auditFailures > 0` will never fire even when 100% of audit writes fail. The test comment even admits it: "caught failures don't propagate". Fix: replace the Promise.allSettled pattern with explicit `let failures = 0; ... catch { failures++; logger.error(...) }` and return the explicit counter. Detected by Blind Hunter + Edge Case Hunter.
+- [x] [Review R2][Patch] **R2-C3: L7 `assertLockOwnership` admin-bypass parameter is dead code** [`assertLockOwnership.ts:61-76`] — added optional `role?: 'admin'` param with `if (role === 'admin') return null` bypass, but none of the 16+ callers pass the param. The "compliance/escalation flow" promised in the docstring comment is non-functional. The `assignment_admin_override` audit entry the comment promises will never be written. Detected by Blind Hunter + Edge Case Hunter. Fix: either (a) wire the param through ALL callers by passing `user.role` from `requireRole()` result, plus add the admin_override audit log, OR (b) remove the dead param + misleading comment to avoid security theater. Recommend **(b)** because wiring through 16 sites is scope creep and the use case is hypothetical.
+
+#### Patches (High)
+
+- [x] [Review R2][Patch] **R2-H1: `useReadOnlyAnnouncer` dedupe silences repeated denials — WCAG 4.1.3 failure** [`use-read-only-mode.ts:60-87`] — per-instance `announcedRef = useRef<Set<string>>(new Set())` dedupes "once per component mount per action label". A screen-reader user who presses `A` (accept hotkey) twice in read-only mode hears the announcement once; subsequent attempts give zero feedback. Defeats the intent of the hook. Fix: remove the Set entirely; rely on the `textContent = ''` + rAF re-set pattern to re-announce. Detected by Blind Hunter + Edge Case Hunter.
+- [x] [Review R2][Patch] **R2-H2: `useFilePresence` stale callback after unmount — setState on detached component** [`use-file-presence.ts:44-99`] — in-flight `sendHeartbeat()` from file A can resolve AFTER the user navigates to file B. If the outcome is `'permanent'`, the effect calls `onPermanentFailureRef.current?.()` on the detached instance, triggering `setAssignment(null)` + "Your review lock has expired" toast referring to file A while the user views file B. React warns on stale-setState. Fix: add `isMountedRef.current = true` set in effect, `false` in cleanup, gate both `.then((outcome) =>)` callbacks. Detected by Edge Case Hunter.
+- [x] [Review R2][Patch] **R2-H3: H7 visibilitychange handler misses own-lock-cancelled case** [`SoftLockWrapper.tsx` H7 block] — current check `if (!polled || polled.assignedTo !== currentUserId)`. But with H5's tightened `isOwnAssignment` (requires `status IN ('assigned','in_progress')`), a polled row with `status='cancelled'` AND `assignedTo === currentUserId` (cron cancelled user's own lock) is NOT updated and NO "lock expired" toast fires. Fix: extend condition to `!polled || polled.assignedTo !== currentUserId || polled.status === 'cancelled' || polled.status === 'completed'`. Detected by Blind Hunter.
+- [x] [Review R2][Patch] **R2-H4: `SoftLockWrapper.selfAssignIfNeeded` stale-assignment early-return doesn't revalidate** [`SoftLockWrapper.tsx:113-120`] — if initial page load returned an assignment that the cron has since released (poll hasn't caught up), the client's `if (assignment) { ... return 'conflict' as const }` short-circuits WITHOUT calling `selfAssignFile`. User sees "locked" experience for up to 15s until next poll. Fix: either (a) always call `selfAssignFile` and let server be the source of truth, OR (b) filter the early-return by active status (`assignment.status === 'in_progress' || 'assigned'`). Detected by Edge Case Hunter.
+- [x] [Review R2][Patch] **R2-H5: `handleDeleteFinding` isReadOnly closure captures stale state across await** [`ReviewPageClient.tsx:1294-1320`] — `if (isReadOnly) return` runs synchronously before `await selfAssignIfNeeded(...)`, then the mutation proceeds without re-checking. If state flips to read-only during the 50-500ms await window (e.g., concurrent takeover), mutation goes through. Server-side `assertLockOwnership` in deleteFinding catches it as defense-in-depth, so not a security bug — but inconsistent with `handleApprove` which does the `isReadOnly` check inside the transition. Fix: use `isReadOnlyRef.current` pattern OR re-check after await. Detected by Blind Hunter.
+
+#### Patches (Medium)
+
+- [x] [Review R2][Patch] **R2-M1: L6 `validateTenantId` failure silently skips audit** [`releaseStaleAssignments.ts:58-68`] — the UPDATE already committed before validation runs. If `tenantId` is malformed, `validateTenantId` throws, the catch logs and `continue`s, the assignment is now CANCELLED but no audit log exists — permanent untraceable release. Fix: validate BEFORE the UPDATE via subquery, OR write audit log with `unknown` tenant marker. Detected by Blind Hunter. Combined with R2-C2's dead `auditFailures` counter, this creates an observability hole.
+- [x] [Review R2][Dismiss] **R2-M2 FALSE POSITIVE — symmetric filter already present** [`undoBulkAction.action.ts:75`, `redoBulkAction.action.ts:74`] — verified after Blind Hunter's flag: both files already have `eq(findings.fileId, fileId)` in the findings SELECT, combined with the lock check at entry. No vulnerability. Blind Hunter missed the existing guard because it was outside the diff window.
+- [x] [Review R2][Patch] **R2-M3: Test for "own existing assignment" missing `ownedBySelf: true` assertion** [`selfAssignFile.action.test.ts:2368-2384`] — the M12 patch added `ownedBySelf: false` assertion to the contested-lock test, but the symmetric "own existing" test never asserts `ownedBySelf: true`. A regression flipping the value would ship green. Fix: add `expect(result.data.ownedBySelf).toBe(true)` to the test. Detected by Blind Hunter.
+- [x] [Review R2][Patch] **R2-M4: `useReadOnlyAnnouncer` global DOM element singleton not cleaned up** [`use-read-only-mode.ts:62-84`] — creates `<div id="readonly-announcer">` appended to `document.body` with no cleanup. For a SPA this is acceptable (singleton live region pattern), but `getElementById('readonly-announcer')` collides with any other feature that might use that ID. Also: `region.textContent = ''; requestAnimationFrame(() => { region.textContent = ... })` — the inner rAF callback can fire after another component's call has overwritten `region`, dropping the announcement silently. Fix: use a module-level ref instead of getElementById, use a unique data attribute for ID scoping, increase rAF → setTimeout(100ms). Detected by Blind Hunter.
+
+#### Deferred (R2)
+
+- [x] [Review R2][Defer] **R2-D1: H4 file-project check not atomic with INSERT** [`selfAssignFile.action.ts:83-118`] — race window: admin moves file to another project between our SELECT and INSERT. Very low probability (file moves are rare admin operations). FK constraints provide partial safety. File as data-integrity TD. Detected by Edge Case Hunter.
+- [x] [Review R2][Defer] **R2-D2: M4 zod `issues[0]?.message` loses info on multi-error validation** [`selfAssignFile.action.ts:48`] — minor UX, only first error surfaces. Consistent with existing pattern across the codebase; improving this is a cross-cutting refactor. File as UX polish TD. Detected by Blind Hunter.
+
+#### Dismissed (not reported)
+
+- **BH: `deleteFinding`, `overrideSeverity`, `createSuppressionRule` missing assertLockOwnership** — FALSE POSITIVE. Blind Hunter saw only the R2 diff which excluded these files. Inline grep verified all 3 have `assertLockOwnership` from original S-FIX-7 b2324a3 commit.
+- **BH: `ownedBySelf=true` on cancelled/completed existing assignment** — FALSE POSITIVE. The SELECT query at `selfAssignFile.action.ts:189` uses `inArray(status, ['assigned','in_progress'])` so `existing.status` can never be cancelled/completed.
+- **BH: `NoteInput.handleKeyDown` Enter bypass** — `handleSubmit` has `if (disabled) return` guard + `textarea[disabled]` prevents keydown at DOM level. Double defense in place.
+- **BH: `assertLockOwnership` `ActionResult<never>` widening** — M10 was intentional; the discriminated union preserves pattern-matching at a different level. Not a regression.
+- **BH: M11 contested-lock audit uses caller's tenantId** — verified at `selfAssignFile.action.ts:188` the `existing` SELECT uses `withTenant(tenantId)`, so caller's tenant matches existing's tenant by construction.
+- **BH: `getSelectedId` useCallback refs in deps** — noise, no behavioral impact, pre-existing pattern.
+- **BH: Boy Scout refactor regressions in approveFile/deleteFinding/etc** — inline grep verified `executeReviewAction` + `executeUndoRedo` still have `assertLockOwnership` (2 hits each: import + call). S-FIX-7 patches survived the parallel refactor.
+
+#### Failed Review Layer
+
+**Acceptance Auditor:** API overloaded after 3 retries. Replaced with manual inline audit of 6 critical spec questions:
+1. **AC3 completeness:** 16 direct `assertLockOwnership` calls + 5 via `executeReviewAction` + 2 via `executeUndoRedo` = 23 actions covered ✅
+2. **C4 server-side authorization:** GAP CONFIRMED — R2-C1 above
+3. **Boy Scout non-conflict:** executeReviewAction + executeUndoRedo both still have assertLockOwnership ✅
+4. **Guardrail #9 (Inngest):** releaseStaleAssignments has retries + onFailure + Object.assign + registered in route.ts ✅
+5. **AC6 dialog guards:** Add Finding / Override Menu / Suppress Pattern all guarded via `isDisabled` prop on ReviewActionBar (main), `useReadOnlyMode()` in FindingDetailContent (aside/mobile), and direct checks (hotkeys + suppress) ✅
+6. **M11 audit gating:** correctly fires only on `existing.assignedTo !== userId` ✅
+
+The Acceptance Auditor layer being partial means spec-deviation coverage is incomplete beyond the 6 audited questions. Recommend re-running CR R3 with this layer when API recovers if any new spec concerns surface during R2 patch application.
+
+#### Dismissed (not reported to user)
+
+- BH #1/#2 (bulkAction/addFinding "missing lock check") — false positive, both DO call assertLockOwnership (Blind Hunter saw only partial diff)
+- BH #3 (ON CONFLICT target mismatch) — partial unique index is on `(file_id, tenant_id) WHERE status IN (...)` — matches Drizzle-generated predicate
+- BH #10 (addFindingComment tenant leak) — upstream query uses `withTenant()` at line 62
+- BH #22 (withTenant on INSERT) — CLAUDE.md INSERT exception
+- EC #25 (onTakeOver reload only) — SoftLockBanner calls `takeOverFile` action internally before the callback
+- EC #27 (projectId stale closure in polling) — self-confirmed safe
+- EC #32 (lastActivityRef init 0) — self-confirmed safe in React strict mode
+- AA #6 (ON CONFLICT target vs named constraint) — functionally equivalent; column-target is actually safer against index rename
+- AA #9 (tryNonFatal bundled refactor) — carryover from commit `d7b95af`, user chose review range to include it
+- L1 (ON CONFLICT spec deviation) — dup of AA #6
+- L4 (tryNonFatal refactor bundled) — dup of AA #9
+- L9 (iframe listeners) — no iframes in review page
