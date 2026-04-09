@@ -203,6 +203,78 @@ You will systematically re-do the entire story creation process, but with a crit
 - Missing previous story context that could cause errors
 - Missing anti-pattern prevention that could lead to duplicate code
 - Missing security or performance requirements
+- **Verification tasks without artifact references** (see 5.1.1)
+- **UI-mutation stories missing an E2E gate task** (see 5.1.2)
+
+#### **5.1.1 Verification artifact rule (A2 from S-FIX-7 retro 2026-04-09)**
+
+For every task in `## Tasks / Subtasks`, check if the task title matches the **verification pattern**:
+
+**Trigger words (case-insensitive):**
+
+- `verif` / `verify` / `verification`
+- `E2E` / `end-to-end`
+- `Playwright` / `Playwright MCP`
+- `multi-user` / `multi-reviewer`
+- `real DB` / `real database` / `real AI` / `against production`
+- `manual verify` / `manual test`
+- `Task 9` (historical — old stories followed this numbering)
+
+**Rule:** Any task matching the pattern MUST include a sub-bullet referencing a concrete artifact. Acceptable artifact types:
+
+- Test file path: `e2e/**/*.spec.ts`, `src/**/*.test.ts`
+- Script file: `scripts/*.mjs`, `scripts/*.ts`
+- Screenshot/snapshot directory: `.playwright-mcp/*`, `_bmad-output/*-audit/*`
+- Manual verification log: explicit reference to a Dev Agent Record sub-section with commands run + date
+- Playwright MCP session: reference to a stored session artifact
+
+**Examples:**
+
+❌ **FAIL** — bare checkbox, no audit trail:
+
+```
+- [ ] Task 9: Multi-user verification via Playwright MCP
+```
+
+✅ **PASS** — artifact inline:
+
+```
+- [ ] Task 9: Multi-user verification via Playwright MCP
+  - [ ] 9.1 Test data setup: `scripts/sfix7-setup-test-data.mjs`
+  - [ ] 9.2 E2E script: `e2e/s-fix-7-release-button.spec.ts`
+  - [ ] 9.3 Document results in Dev Agent Record → E2E Verification section
+```
+
+**Flag as CRITICAL** any verification task without an artifact reference. Cite the S-FIX-7 retro as precedent: self-asserted Task 9 without an artifact cascaded into 5 CR rounds and ~64 patches.
+
+**Reference memory:**
+
+- `memory/feedback-task-9-requires-artifact.md`
+- `memory/feedback-e2e-between-cr-rounds.md`
+- `memory/project-sfix7-retro.md`
+
+#### **5.1.2 E2E gate for UI-mutation stories (A1 from S-FIX-7 retro)**
+
+If the story creates or modifies **interactive UI flows** (buttons, dialogs, navigation, forms, async state transitions), check that the `## Tasks / Subtasks` section includes a **Task 0: E2E gate** task:
+
+**Expected pattern:**
+
+```
+- [ ] Task 0: E2E gate — Playwright MCP session before CR R1
+  - [ ] 0.1 Write test data setup script (`scripts/{story-key}-setup.mjs`)
+  - [ ] 0.2 Click through happy path + 1-2 edge cases in real browser
+  - [ ] 0.3 Capture DB state before/after with verification script
+  - [ ] 0.4 Document results in Dev Agent Record → E2E Verification section
+```
+
+**Skip Task 0 rule:** Only acceptable if the story is:
+
+- Pure server logic (no UI surface)
+- Data migration (no runtime UI)
+- Test-only changes
+- Documentation-only changes
+
+**Flag as CRITICAL** any UI-mutation story that lacks a Task 0 E2E gate. Paper review cannot catch runtime-only bugs (useTransition timing, URL 404 at nav time, React strict-mode, transaction isolation).
 
 #### **5.2 Enhancement Opportunities (Should Add)**
 

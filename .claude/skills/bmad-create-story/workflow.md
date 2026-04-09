@@ -334,6 +334,64 @@ frameworks</action>
 context engine analysis completed - comprehensive developer guide created"</action>
 </step>
 
+<step n="5.5" goal="Verification artifact rule enforcement (A2 from S-FIX-7 retro)">
+  <critical>🛡️ VERIFICATION TASKS REQUIRE ARTIFACT REFERENCES — prevents self-asserted checkboxes</critical>
+
+<action>Scan the `## Tasks / Subtasks` section of {default_output_file} for verification-pattern tasks</action>
+
+**Trigger words (case-insensitive) to identify verification tasks:**
+
+- `verif`, `verify`, `verification`
+- `E2E`, `end-to-end`
+- `Playwright`, `Playwright MCP`
+- `multi-user`, `multi-reviewer`
+- `real DB`, `real database`, `real AI`, `against production`
+- `manual verify`, `manual test`
+
+**For each verification task found:**
+
+- Check that the task includes a sub-bullet referencing a concrete artifact:
+  - Test file path (`e2e/*.spec.ts`, `src/**/*.test.ts`)
+  - Script file (`scripts/*.mjs`)
+  - Screenshot/snapshot directory (`.playwright-mcp/*`)
+  - Manual verification log reference (Dev Agent Record → specific section)
+
+  <check if="verification task lacks artifact reference">
+    <action>Augment the task with a sub-bullet template matching the story's test infrastructure</action>
+    <output>
+⚠️ Verification task "{{task_title}}" lacks artifact reference. Adding sub-bullet:
+  - [ ] {{task_num}}.N Artifact: `scripts/{{story_key}}-{{verification_kind}}.mjs`
+    </output>
+  </check>
+
+<action>If the story creates/modifies INTERACTIVE UI flows, ensure a `Task 0: E2E gate` task exists BEFORE any other implementation tasks</action>
+
+**E2E gate detection:** Does the story touch any of:
+
+- Buttons, dialogs, navigation, forms
+- Async state transitions (startTransition, useTransition)
+- Client-side routing changes
+- UI mutations (create/update/delete from UI)
+
+  <check if="story is UI-mutation AND no Task 0 E2E gate present">
+    <action>Prepend to `## Tasks / Subtasks`:</action>
+    ```
+    - [ ] Task 0: E2E gate — Playwright MCP session before CR R1
+      - [ ] 0.1 Write test data setup script (`scripts/{{story_key}}-setup.mjs`)
+      - [ ] 0.2 Click through happy path + 1-2 edge cases in real browser
+      - [ ] 0.3 Capture DB state before/after with verification script
+      - [ ] 0.4 Document results in Dev Agent Record → E2E Verification section
+    ```
+    <output>
+🚨 UI-mutation story detected — adding E2E gate task per A1 from S-FIX-7 retro.
+Paper review cannot catch runtime bugs (useTransition timing, URL resolution,
+React strict-mode). Task 0 must run BEFORE CR R1.
+    </output>
+  </check>
+
+<action>Reference: `memory/feedback-task-9-requires-artifact.md` + `memory/feedback-e2e-between-cr-rounds.md` + `memory/project-sfix7-retro.md`</action>
+</step>
+
 <step n="6" goal="Update sprint status and finalize">
   <action>Validate the newly created story file {default_output_file} against `./checklist.md` and apply any required fixes before finalizing</action>
   <action>Save story document unconditionally</action>
