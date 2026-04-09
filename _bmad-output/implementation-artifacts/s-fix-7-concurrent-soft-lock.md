@@ -1,6 +1,6 @@
 # Story S-FIX-7: Concurrent Review Soft Lock
 
-Status: in-progress
+Status: done
 
 ## Story
 
@@ -788,6 +788,97 @@ Both Edge Case Hunter and Acceptance Auditor failed with API overload after 2+ r
 #### Failed Review Layer
 
 **Edge Case Hunter:** API overload after 2 retries. BH + AA together provided strong overlap coverage on the HIGH finding and most MED items. Edge case concerns not covered: strict-mode double-mount interactions with the new hook, concurrent handler dispatch (bulk + approve simultaneously), rapid click timing edge cases between handlers sharing the same `inFlightRef`. Coverage ~75%.
+
+---
+
+### E2E Verification — Playwright MCP Live Session (2026-04-09)
+
+After 5 CR rounds of paper review yielded ~63 patches but also ~5 regressions introduced during the fix cycle, a final real-browser verification session was run against the local dev server + Postgres. **5 critical flows tested end-to-end; 1 new bug found and fixed.**
+
+**Test data:** `alpha@sfix7.test` (admin) + `beta@sfix7.test` (qa_reviewer) in tenant `f714c0be...`, project `e918bd32...`, file `79b79d59...`. Setup via `scripts/sfix7-setup-test-data.mjs`.
+
+**Verified flows:**
+
+- [x] **E2E-V1 (C3 + R5-H1):** Approve button on unassigned file
+  - Alpha clicked Approve on an unassigned file
+  - **C3:** DB confirmed new `file_assignments` row `status=in_progress`, `assignedBy=assignedTo=alpha` ✓
+  - **C3:** UI showed "You are reviewing this file / Release file" bar ✓
+  - **R5-H1:** "Approving..." pending state visible for **1700ms** during the real server roundtrip (polled button text every 100ms, captured 17 consecutive "Approving..." samples) ✓
+  - Pre-R5-H1 fix would have shown "Approving..." for <1ms (test-invisible)
+
+- [x] **E2E-V3 (C4):** Release button on self-assigned file
+  - Click Release → `updateAssignmentStatus({status: 'cancelled'})`
+  - DB confirmed row `status=cancelled` ✓
+  - Page reloaded (correct for self-assigned) ✓
+  - Fresh unassigned state shown — **no autoTransition re-lock** (cancelled rows excluded from `getFileAssignment` filter) ✓
+
+- [x] **E2E-V4 (R2-C1):** Privilege escalation gate
+  - Server-side gate verified via **4 R3-D3 unit tests** (updateAssignmentStatus.action.test.ts): native_reviewer cancel own self-assigned ✓, cancel admin-assigned → FORBIDDEN ✓, admin cancel any ✓, qa_reviewer ✓
+  - Full Server Action CSRF bypass from browser not feasible; unit tests authoritative for this guard
+
+- [x] **E2E-V2 (R3-C1):** Release button on admin-assigned file
+  - Seeded admin-assigned row (`assignedBy=beta, assignedTo=alpha`)
+  - Alpha clicked Release → `handleRelease` detected `assignedBy !== assignedTo` → picked `status='assigned'`
+  - Client navigated away via `window.location.href = /projects/${projectId}`
+  - **DB state:** row `status=assigned`, `self=false`, `lastActiveAt=null` ✓
+  - **No autoTransition re-lock** (SoftLockWrapper unmounted on navigation) ✓
+  - **🚨 E2E-C1 NEW BUG FOUND:** the original R3-C1 fix navigated to `/projects/${projectId}` which has **no `page.tsx`** — only sub-routes + layout exist. User landed on the project's `not-found.tsx` (404). **Fixed** by changing navigate target to `/projects/${projectId}/files` (the file listing page). Re-verified: URL changed correctly, file listing page rendered, zero console errors.
+
+- [x] **E2E-V5 (C2):** Polling detects new lock on unassigned file
+  - Clean baseline: Alpha on unassigned file, no banners (all `null`)
+  - Beta self-assigned via direct SQL
+  - Wait 20s for 15s polling interval
+  - **Result after 20s:**
+    - `soft-lock-banner`: "This file is being reviewed by User Beta — last active just now / View read-only / Take over"
+    - `read-only-banner`: "Read-only mode — assigned to User Beta"
+  - **C2 `fileId` prop hoisting works end-to-end** — polling correctly detected a lock that didn't exist at initial page load
+
+**Findings during E2E:**
+- **1 new bug (E2E-C1)** — 404 on `/projects/${projectId}` navigate target. **Fixed** in commit `dbb3806`.
+- **0 regressions** from R5 patches — useGuardedAction hook works correctly for Approve flow
+- **0 unexpected console errors** after E2E-C1 fix
+- **0 bugs** in polling, self-assign, release, auto-release detection paths
+
+**Coverage:**
+- ✅ AC1 (self-assign on first action) — Approve tested
+- ✅ AC3 (server-side lock check) — via unit tests
+- ✅ AC4 (cron auto-release) — covered by unit + integration tests (not E2E because 30-min wait impractical)
+- ✅ AC6 (read-only enforcement) — banners appeared correctly on Beta lock detection
+- ✅ AC7 (polling) — 15s slow interval verified
+- ✅ AC8 (conflict handling) — covered via polling behavior (lock detection toasts on state change)
+
+**Not covered in this E2E session (prior Task 9 verification + unit tests):**
+- AC2 RLS policies (unit tests + existing RLS suite)
+- AC4 30-minute cron boundary (unit tests)
+- AC5 25-minute warning toast (unit tests — requires 25-min wait)
+- AC8 race condition (covered via unit test + R3-D3 RLS tests)
+
+**E2E artifacts:**
+- `scripts/sfix7-setup-test-data.mjs` — idempotent test data setup
+- `scripts/sfix7-cancel-all.mjs` — cancel all active rows for this file (new, supersedes hardcoded `sfix7-release-lock.mjs`)
+- `scripts/sfix7-r2c1-seed.mjs` — seeds admin-assigned row for R3-C1 testing
+- `scripts/sfix7-beta-selfassign.mjs` — seeds Beta self-assignment for C2 polling test
+- `scripts/sfix7-debug-lock.mjs` — diagnostic for `getFileAssignment` query
+
+### Verdict
+
+**S-FIX-7 is code-complete.** The 5 CR rounds + 1 E2E session surfaced ~64 patches closing 9 CRIT + 20 HIGH bugs across:
+- Defense-in-depth gaps in 8 server actions (C1)
+- Polling architecture broken on unassigned files (C2)
+- 6 mutation entry points bypassing self-assign (C3)
+- Release button broken twice in different ways (C4 + R3-C1 + E2E-C1)
+- Privilege escalation via direct `cancelled` POST (R2-C1)
+- Dead observability counter (R2-C2)
+- Dead admin bypass parameter (R2-C3)
+- 3 async-throw regressions during the helper refactor (R4-H1/H2/H3)
+- 1 transition regression during the mechanical refactor (R5-H1)
+- Multiple edge cases in race conditions, unmount safety, and a11y
+
+Root cause of the bug volume: **Task 9 verification in the original commit was SQL-only**, not button flow. That single shortcut cascaded into 5 rounds of paper review missing bugs that real clicks would have caught immediately.
+
+**Lesson → memory:** E2E verification BETWEEN CR rounds catches regressions paper review misses.
+
+Story status: **in-progress → done** (after final commit).
 
 #### Dismissed (not reported to user)
 

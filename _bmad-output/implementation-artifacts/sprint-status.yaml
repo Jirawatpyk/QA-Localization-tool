@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-02-15
-last_updated: 2026-04-08  # s-fix-7 CR R2 batch-applied (3 CRIT + 5 HIGH + 3 MED patches; 1 false positive, 2 deferred)
+last_updated: 2026-04-09  # s-fix-7 DONE — 5 CR rounds + E2E verification complete (~64 patches, 9 CRIT + 20 HIGH closed)
 project: qa-localization-tool
 project_key: NOKEY
 tracking_system: file-system
@@ -235,7 +235,7 @@ development_status:
   # Fix: DB heartbeat lock on first action, "In review by" banner, view-only mode, 30min timeout
   # Depends: S-FIX-14 (need language pair assignment for reviewer matching)
   # Ref: DEEP-VERIFICATION-CHECKLIST.md > Concurrent, UX-SPEC > Edge Case #3
-  s-fix-7-concurrent-soft-lock: in-progress  # CR R1 batch-applied 26 patches; needs E2E verification
+  s-fix-7-concurrent-soft-lock: done  # 5 CR rounds + E2E Playwright MCP verification complete
   s-fix-7b-assigned-row-lifecycle: backlog  # spawned from S-FIX-7 CR — `assigned` row TTL gap, needs PM AC lock
 
   # S-FIX-8: Bulk Operations [L]
